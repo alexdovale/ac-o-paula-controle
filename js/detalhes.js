@@ -388,69 +388,54 @@ function renderChecklist(actionKey) {
     containerEl.innerHTML = ''; 
 
     // ========================================================
-    // SEÇÃO DE DADOS SOCIOECONÔMICOS (PROFISSÃO, ESTADO CIVIL, GANHOS)
+    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL (sem "Não sei informar")
     // ========================================================
     const socioSection = document.createElement('div');
     socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
     socioSection.innerHTML = `
-        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS</h4>
+        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
         
         <!-- PROFISSÃO -->
         <div class="mb-4">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / OCUPAÇÃO</label>
-            <div class="flex flex-wrap gap-2 items-center">
-                <input type="text" id="socio-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
-                    <input type="checkbox" id="socio-profissao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                </label>
-            </div>
+            <input type="text" id="socio-profissao" placeholder="Digite a profissão" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
         </div>
         
         <!-- ESTADO CIVIL -->
         <div class="mb-4">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
-            <div class="flex flex-wrap gap-2 items-center">
-                <select id="socio-estado-civil" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                    <option value="">Selecione</option>
-                    <option value="Solteiro(a)">Solteiro(a)</option>
-                    <option value="Casado(a)">Casado(a)</option>
-                    <option value="União Estável">União Estável</option>
-                    <option value="Divorciado(a)">Divorciado(a)</option>
-                    <option value="Viúvo(a)">Viúvo(a)</option>
-                    <option value="Separado(a)">Separado(a)</option>
-                </select>
-                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
-                    <input type="checkbox" id="socio-estado-civil-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                </label>
-            </div>
+            <select id="socio-estado-civil" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="">Selecione</option>
+                <option value="Solteiro(a)">Solteiro(a)</option>
+                <option value="Casado(a)">Casado(a)</option>
+                <option value="União Estável">União Estável</option>
+                <option value="Divorciado(a)">Divorciado(a)</option>
+                <option value="Viúvo(a)">Viúvo(a)</option>
+                <option value="Separado(a)">Separado(a)</option>
+            </select>
         </div>
         
-        <!-- GANHOS LÍQUIDOS MENSAIS -->
+        <!-- GANHOS LÍQUIDOS -->
         <div class="mb-2">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">GANHOS LÍQUIDOS MENSAIS (R$)</label>
-            <div class="flex flex-wrap gap-2 items-center">
-                <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
-                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
-                    <input type="checkbox" id="socio-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                </label>
-            </div>
+            <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
             <div class="flex flex-wrap gap-3 mt-2">
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="CLT"> CLT
                 </label>
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO
                 </label>
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA
                 </label>
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
                 </label>
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO
                 </label>
-                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
                     <input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS
                 </label>
             </div>
@@ -458,7 +443,7 @@ function renderChecklist(actionKey) {
     `;
     containerEl.appendChild(socioSection);
     
-    // Lógica de máscara de dinheiro para o campo de ganhos
+    // Máscara de dinheiro para ganhos do assistido
     const ganhosInput = socioSection.querySelector('#socio-ganhos');
     if (ganhosInput) {
         ganhosInput.addEventListener('input', (e) => {
@@ -466,60 +451,13 @@ function renderChecklist(actionKey) {
             e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
         });
     }
-    
-    // Lógica de "Não sei informar" para Profissão
-    const profNaoSei = socioSection.querySelector('#socio-profissao-nao-sei');
-    const profInput = socioSection.querySelector('#socio-profissao');
-    if (profNaoSei && profInput) {
-        profNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                profInput.disabled = true;
-                profInput.value = 'Não informado';
-            } else {
-                profInput.disabled = false;
-                profInput.value = '';
-            }
-        });
-    }
-    
-    // Lógica de "Não sei informar" para Estado Civil
-    const civilNaoSei = socioSection.querySelector('#socio-estado-civil-nao-sei');
-    const civilSelect = socioSection.querySelector('#socio-estado-civil');
-    if (civilNaoSei && civilSelect) {
-        civilNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                civilSelect.disabled = true;
-                civilSelect.value = 'Não informado';
-            } else {
-                civilSelect.disabled = false;
-                civilSelect.value = '';
-            }
-        });
-    }
-    
-    // Lógica de "Não sei informar" para Ganhos
-    const ganhosNaoSei = socioSection.querySelector('#socio-ganhos-nao-sei');
-    if (ganhosNaoSei && ganhosInput) {
-        ganhosNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                ganhosInput.disabled = true;
-                ganhosInput.value = 'Não informado';
-            } else {
-                ganhosInput.disabled = false;
-                ganhosInput.value = '';
-            }
-        });
-    }
 
-    // Carregar dados salvos anteriormente
+    // Carregar dados salvos do assistido principal
     if (saved?.socioData) {
         const socioSaved = saved.socioData;
-        if (socioSaved.profissao) profInput.value = socioSaved.profissao;
-        if (socioSaved.profissaoNaoSei && profNaoSei) profNaoSei.checked = true;
-        if (socioSaved.estadoCivil) civilSelect.value = socioSaved.estadoCivil;
-        if (socioSaved.estadoCivilNaoSei && civilNaoSei) civilNaoSei.checked = true;
-        if (socioSaved.ganhos) ganhosInput.value = socioSaved.ganhos;
-        if (socioSaved.ganhosNaoSei && ganhosNaoSei) ganhosNaoSei.checked = true;
+        if (socioSaved.profissao) document.getElementById('socio-profissao').value = socioSaved.profissao;
+        if (socioSaved.estadoCivil) document.getElementById('socio-estado-civil').value = socioSaved.estadoCivil;
+        if (socioSaved.ganhos) document.getElementById('socio-ganhos').value = socioSaved.ganhos;
         if (socioSaved.fonteRenda) {
             const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
             if (radio) radio.checked = true;
@@ -648,7 +586,7 @@ function setupCheckboxEvents(containerEl) {
 }
 
 /* ========================================================
-   5. FORMULÁRIO DO RÉU
+   5. FORMULÁRIO DO RÉU (COM "NÃO SEI INFORMAR")
    ======================================================== */
 function renderReuForm(containerId) {
     const container = getEl(containerId);
@@ -674,6 +612,7 @@ function renderReuForm(containerId) {
                 ${renderReuIdentificacao()}
                 ${renderReuResidencial()}
                 ${renderReuComercial()}
+                ${renderReuSocioeconomico()}
             </div>
             ${renderReuSaveButton()}
         </div>
@@ -682,6 +621,7 @@ function renderReuForm(containerId) {
     initReuUnicoCheckbox();
     initCepSearch();
     initReuSaveButton();
+    initReuSocioeconomicoEvents();
 }
 
 function renderReuIdentificacao() {
@@ -743,7 +683,7 @@ function renderReuResidencial() {
 
 function renderReuComercial() {
     return `
-        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200">
+        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
             <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-gray-600 rounded"></span>3. DADOS DE TRABALHO</h4>
             <div class="space-y-3">
                 <div><label class="text-[9px] font-black text-gray-400 uppercase">Empresa</label><input type="text" id="empresa-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
@@ -761,6 +701,76 @@ function renderReuComercial() {
                     <div><label class="text-[9px] font-black text-gray-400 uppercase">CEP Comercial</label><input type="text" id="cep-comercial-reu" placeholder="00000-000" maxlength="9" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
                 </div>
                 <div class="flex justify-end"><button type="button" id="buscar-cep-comercial-reu-btn" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Buscar CEP Comercial</button></div>
+            </div>
+        </div>
+    `;
+}
+
+function renderReuSocioeconomico() {
+    return `
+        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
+            <h4 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-blue-600 rounded"></span>4. PERFIL SOCIOECONÔMICO DO RÉU</h4>
+            <div class="space-y-3">
+                <!-- PROFISSÃO (com Não sei informar) -->
+                <div>
+                    <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO / OCUPAÇÃO</label>
+                    <div class="flex flex-wrap gap-2 items-center mt-1">
+                        <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" id="reu-profissao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                        </label>
+                    </div>
+                </div>
+
+                <!-- ESTADO CIVIL (com Não sei informar) -->
+                <div>
+                    <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
+                    <div class="flex flex-wrap gap-2 items-center mt-1">
+                        <select id="reu-estado-civil" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                            <option value="">Selecione</option>
+                            <option value="Solteiro(a)">Solteiro(a)</option>
+                            <option value="Casado(a)">Casado(a)</option>
+                            <option value="União Estável">União Estável</option>
+                            <option value="Divorciado(a)">Divorciado(a)</option>
+                            <option value="Viúvo(a)">Viúvo(a)</option>
+                            <option value="Separado(a)">Separado(a)</option>
+                        </select>
+                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" id="reu-estado-civil-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                        </label>
+                    </div>
+                </div>
+
+                <!-- GANHOS LÍQUIDOS (com Não sei informar) -->
+                <div>
+                    <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
+                    <div class="flex flex-wrap gap-2 items-center mt-1">
+                        <input type="text" id="reu-ganhos" placeholder="R$ 0,00" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
+                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                        </label>
+                    </div>
+                    <div class="flex flex-wrap gap-3 mt-2">
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="CLT"> CLT
+                        </label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO
+                        </label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA
+                        </label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
+                        </label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO
+                        </label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
+                            <input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS
+                        </label>
+                    </div>
+                </div>
             </div>
         </div>
     `;
@@ -826,6 +836,61 @@ function initCepSearch() {
     if (buscarComercialBtn && cepComercial) {
         buscarComercialBtn.addEventListener('click', () => buscarCEP(cepComercial.value, 'comercial'));
         cepComercial.addEventListener('blur', () => buscarCEP(cepComercial.value, 'comercial'));
+    }
+}
+
+function initReuSocioeconomicoEvents() {
+    // Máscara para ganhos do réu
+    const ganhosInput = document.getElementById('reu-ganhos');
+    if (ganhosInput) {
+        ganhosInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+        });
+    }
+
+    // Lógica "Não sei informar" para Profissão do Réu
+    const profNaoSei = document.getElementById('reu-profissao-nao-sei');
+    const profInput = document.getElementById('reu-profissao');
+    if (profNaoSei && profInput) {
+        profNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                profInput.disabled = true;
+                profInput.value = 'Não informado';
+            } else {
+                profInput.disabled = false;
+                profInput.value = '';
+            }
+        });
+    }
+
+    // Lógica "Não sei informar" para Estado Civil do Réu
+    const civilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
+    const civilSelect = document.getElementById('reu-estado-civil');
+    if (civilNaoSei && civilSelect) {
+        civilNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                civilSelect.disabled = true;
+                civilSelect.value = 'Não informado';
+            } else {
+                civilSelect.disabled = false;
+                civilSelect.value = '';
+            }
+        });
+    }
+
+    // Lógica "Não sei informar" para Ganhos do Réu
+    const ganhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
+    if (ganhosNaoSei && ganhosInput) {
+        ganhosNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                ganhosInput.disabled = true;
+                ganhosInput.value = 'Não informado';
+            } else {
+                ganhosInput.disabled = false;
+                ganhosInput.value = '';
+            }
+        });
     }
 }
 
@@ -934,7 +999,15 @@ function getReuDataFromForm() {
         bairro_comercial: getEl('bairro-comercial-reu')?.value || '',
         cidade_comercial: getEl('cidade-comercial-reu')?.value || '',
         uf_comercial: getEl('estado-comercial-reu')?.value || '',
-        cep_comercial: getEl('cep-comercial-reu')?.value || ''
+        cep_comercial: getEl('cep-comercial-reu')?.value || '',
+        // DADOS SOCIOECONÔMICOS DO RÉU (com "Não sei informar")
+        profissao: getEl('reu-profissao')?.value || '',
+        profissaoNaoSei: getEl('reu-profissao-nao-sei')?.checked || false,
+        estadoCivil: getEl('reu-estado-civil')?.value || '',
+        estadoCivilNaoSei: getEl('reu-estado-civil-nao-sei')?.checked || false,
+        ganhos: getEl('reu-ganhos')?.value || '',
+        ganhosNaoSei: getEl('reu-ganhos-nao-sei')?.checked || false,
+        fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
     };
 }
 
@@ -973,6 +1046,36 @@ function fillReuData(d) {
     setValue('cidade-comercial-reu', d.cidade_comercial);
     setValue('estado-comercial-reu', d.uf_comercial);
     setValue('cep-comercial-reu', d.cep_comercial);
+    
+    // Preencher dados socioeconômicos do réu
+    setValue('reu-profissao', d.profissao);
+    if (d.profissaoNaoSei) {
+        const profNaoSei = getEl('reu-profissao-nao-sei');
+        if (profNaoSei) profNaoSei.checked = true;
+        const profInput = getEl('reu-profissao');
+        if (profInput) profInput.disabled = true;
+    }
+    
+    setValue('reu-estado-civil', d.estadoCivil);
+    if (d.estadoCivilNaoSei) {
+        const civilNaoSei = getEl('reu-estado-civil-nao-sei');
+        if (civilNaoSei) civilNaoSei.checked = true;
+        const civilSelect = getEl('reu-estado-civil');
+        if (civilSelect) civilSelect.disabled = true;
+    }
+    
+    setValue('reu-ganhos', d.ganhos);
+    if (d.ganhosNaoSei) {
+        const ganhosNaoSei = getEl('reu-ganhos-nao-sei');
+        if (ganhosNaoSei) ganhosNaoSei.checked = true;
+        const ganhosInput = getEl('reu-ganhos');
+        if (ganhosInput) ganhosInput.disabled = true;
+    }
+    
+    if (d.fonteRenda) {
+        const radio = document.querySelector(`input[name="reu-fonte-renda"][value="${d.fonteRenda}"]`);
+        if (radio) radio.checked = true;
+    }
     
     setTimeout(() => updateReuVisibility(d), 100);
 }
@@ -1019,14 +1122,11 @@ async function handlePdf() {
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
         
-        // Coletar dados socioeconômicos para o PDF
+        // Coletar dados socioeconômicos do assistido principal
         const socioData = {
             profissao: document.getElementById('socio-profissao')?.value || '',
-            profissaoNaoSei: document.getElementById('socio-profissao-nao-sei')?.checked || false,
             estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-            estadoCivilNaoSei: document.getElementById('socio-estado-civil-nao-sei')?.checked || false,
             ganhos: document.getElementById('socio-ganhos')?.value || '',
-            ganhosNaoSei: document.getElementById('socio-ganhos-nao-sei')?.checked || false,
             fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
         };
         
@@ -1056,22 +1156,46 @@ async function handlePdf() {
 
 function addSocioToPdfData(documentosTextos, socioData) {
     documentosTextos.push({ id: 'socio-titulo', text: '📋 DADOS SOCIOECONÔMICOS DO ASSISTIDO:' });
-    
-    let profissao = socioData.profissao;
-    if (socioData.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${profissao || 'Não informado'}` });
-    
-    let estadoCivil = socioData.estadoCivil;
-    if (socioData.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'socio-civil', text: `   • Estado Civil: ${estadoCivil || 'Não informado'}` });
-    
-    let ganhos = socioData.ganhos;
-    if (socioData.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'socio-ganhos', text: `   • Ganhos Líquidos Mensais: ${ganhos || 'Não informado'}` });
-    
+    documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${socioData.profissao || 'Não informado'}` });
+    documentosTextos.push({ id: 'socio-civil', text: `   • Estado Civil: ${socioData.estadoCivil || 'Não informado'}` });
+    documentosTextos.push({ id: 'socio-ganhos', text: `   • Ganhos Líquidos Mensais: ${socioData.ganhos || 'Não informado'}` });
     if (socioData.fonteRenda) {
         documentosTextos.push({ id: 'socio-fonte', text: `   • Fonte de Renda: ${socioData.fonteRenda}` });
     }
+}
+
+function addReuToPdfData(documentosTextos, reu) {
+    documentosTextos.push({ id: 'reu-titulo', text: '👤 DADOS DA QUALIFICAÇÃO DO RÉU:' });
+    if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `   • Nome: ${reu.nome}` });
+    if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `   • CPF: ${reu.cpf}` });
+    if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `   • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
+    
+    // Adicionar dados socioeconômicos do réu ao PDF
+    let profissao = reu.profissao;
+    if (reu.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'reu-prof', text: `   • Profissão do Réu: ${profissao || 'Não informado'}` });
+    
+    let estadoCivil = reu.estadoCivil;
+    if (reu.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'reu-civil', text: `   • Estado Civil do Réu: ${estadoCivil || 'Não informado'}` });
+    
+    let ganhos = reu.ganhos;
+    if (reu.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `   • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
+    
+    if (reu.fonteRenda) {
+        documentosTextos.push({ id: 'reu-fonte', text: `   • Fonte de Renda do Réu: ${reu.fonteRenda}` });
+    }
+}
+
+function addExpensesToPdfData(documentosTextos, gastos) {
+    if (!gastos.checkExibirGastos) return;
+    documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS:' });
+    EXPENSE_CATEGORIES.forEach(cat => {
+        if (gastos[cat.id] && gastos[cat.id] !== 'R$ 0,00') {
+            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: ${gastos[cat.id]}` });
+        }
+    });
 }
 
 function collectCheckedDocuments() {
@@ -1088,23 +1212,6 @@ function collectCheckedDocuments() {
     return documentos;
 }
 
-function addReuToPdfData(documentosTextos, reu) {
-    documentosTextos.push({ id: 'reu-titulo', text: '👤 DADOS DA QUALIFICAÇÃO DO RÉU:' });
-    if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `   • Nome: ${reu.nome}` });
-    if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `   • CPF: ${reu.cpf}` });
-    if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `   • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
-}
-
-function addExpensesToPdfData(documentosTextos, gastos) {
-    if (!gastos.checkExibirGastos) return;
-    documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS:' });
-    EXPENSE_CATEGORIES.forEach(cat => {
-        if (gastos[cat.id] && gastos[cat.id] !== 'R$ 0,00') {
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: ${gastos[cat.id]}` });
-        }
-    });
-}
-
 async function handleSave(closeModal = true) {
     if (!currentAssistedId || !currentPautaId || !db) {
         showNotification("Dados incompletos para salvar", "error");
@@ -1114,14 +1221,11 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
-    // Coletar dados socioeconômicos
+    // Coletar dados socioeconômicos do assistido principal
     const socioData = {
         profissao: document.getElementById('socio-profissao')?.value || '',
-        profissaoNaoSei: document.getElementById('socio-profissao-nao-sei')?.checked || false,
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-        estadoCivilNaoSei: document.getElementById('socio-estado-civil-nao-sei')?.checked || false,
         ganhos: document.getElementById('socio-ganhos')?.value || '',
-        ganhosNaoSei: document.getElementById('socio-ganhos-nao-sei')?.checked || false,
         fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
     };
     
@@ -1202,29 +1306,23 @@ export function gerarLinkCaptacao() {
         return;
     }
 
-    // Busca os dados do assistido atual para pegar o Telefone
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     const telefoneRaw = assisted?.telefone || '';
     const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
 
-    // Lógica blindada para URL (Garante que a pasta do GitHub Pages seja mantida)
     let path = window.location.pathname; 
-    path = path.replace('index.html', ''); // Tira o index.html se estiver na URL
-    if (!path.endsWith('/')) path += '/';  // Garante a barra no final
+    path = path.replace('index.html', '');
+    if (!path.endsWith('/')) path += '/';
     
-    // Monta o link absoluto
     const link = `${window.location.origin}${path}captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
 
-    // Monta a Mensagem Padrão
     const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
     const mensagem = encodeURIComponent(`Olá, ${nome}! Por favor, clique no link abaixo para preencher seus dados preliminares e adiantar seu atendimento na Defensoria Pública:\n\n🔗 ${link}`);
 
-    // Copia para área de transferência
     navigator.clipboard.writeText(link).then(() => {
         showNotification("Link copiado para a área de transferência!", "success");
     }).catch(err => console.error(err));
 
-    // Exibe o Modal e gerencia QR Code e Botões
     const modalQr = document.getElementById('modal-captacao-qr');
     const qrContainer = document.getElementById('qrcode-display');
     const btnWa = document.getElementById('btn-share-wa');
@@ -1285,7 +1383,6 @@ export function setupDetailsModal(config) {
     getEl('print-checklist-btn').onclick = handlePdf; 
     getEl('reset-checklist-btn').onclick = handleReset;
     
-    // Bind para o botão de Captação Direta
     const btnCaptacao = getEl('btn-gerar-captacao');
     if (btnCaptacao) {
         btnCaptacao.onclick = gerarLinkCaptacao;
