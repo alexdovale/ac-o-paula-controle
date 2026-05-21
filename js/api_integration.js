@@ -1,7 +1,7 @@
 /**
  * SIGAP - Módulo de Integração (API & Mocks)
  * Simulação da Arquitetura de Microsserviços da DPRJ (SCI + Verde)
- * Este arquivo deve ser carregado no index.html ANTES do script principal.
+ * Atualizado com Trava de LGPD para o 1º Login.
  */
 
 import { PautaService } from './pauta.js';
@@ -14,7 +14,7 @@ const ApiIntegration = {
 
     // ========================================================================
     // 1. MOCK DO BANCO DE DADOS: SCI (Sistema Corporativo Interno)
-    // Responsável por Identidade, Perfis e Lotação (Onde o servidor trabalha)
+    // Adicionado o campo "lgpdAceito" para simular o controle do 1º login
     // ========================================================================
     _mockBDSci: [
         { 
@@ -23,7 +23,8 @@ const ApiIntegration = {
             nome: "Alex do vale", 
             cargo: "Servidor Público", 
             orgaoVinculadoId: "123", 
-            orgaoNome: "1ª D.P. Cível de Duque de Caxias" 
+            orgaoNome: "1ª D.P. Cível de Duque de Caxias",
+            lgpdAceito: false // False = Primeiro login, precisa aceitar!
         },
         { 
             matricula: "10101", 
@@ -31,7 +32,8 @@ const ApiIntegration = {
             nome: "Carlos Eduardo Alves", 
             cargo: "Defensor Público", 
             orgaoVinculadoId: "123", 
-            orgaoNome: "1ª D.P. Cível de Duque de Caxias" 
+            orgaoNome: "1ª D.P. Cível de Duque de Caxias",
+            lgpdAceito: true // Já aceitou antes
         },
         { 
             matricula: "20202", 
@@ -39,7 +41,8 @@ const ApiIntegration = {
             nome: "Mariana Souza", 
             cargo: "Servidora Administrativa", 
             orgaoVinculadoId: "456", 
-            orgaoNome: "Núcleo de Família de Duque de Caxias" 
+            orgaoNome: "Núcleo de Família de Duque de Caxias",
+            lgpdAceito: false
         },
         { 
             matricula: "30303", 
@@ -47,13 +50,13 @@ const ApiIntegration = {
             nome: "Rafael Lima", 
             cargo: "Estagiário", 
             orgaoVinculadoId: "789", 
-            orgaoNome: "Núcleo de Atendimento de Belford Roxo" 
+            orgaoNome: "Núcleo de Atendimento de Belford Roxo",
+            lgpdAceito: true
         }
     ],
 
     // ========================================================================
     // 2. MOCK DO BANCO DE DADOS: SISTEMA VERDE
-    // Responsável pelos Casos, Pautas e Agendamentos vinculados ao Órgão
     // ========================================================================
     _mockBDVerde: {
         "123": [ // Pauta da 1ª D.P. Cível de Duque de Caxias
@@ -72,7 +75,7 @@ const ApiIntegration = {
     /**
      * PASSO 1: AUTENTICAÇÃO NO SCI
      * Simula o login do servidor e descobre em qual órgão ele está lotado.
-     * Agora aceita E-mail Institucional ou Matrícula.
+     * AGORA VERIFICA O LGPD!
      */
     async autenticarServidorNoSCI(identificador) {
         console.log(`📡 [Mock SCI] Validando credenciais e buscando lotação para: ${identificador}`);
@@ -91,13 +94,42 @@ const ApiIntegration = {
             throw new Error("Servidor não encontrado no SCI. E-mail ou matrícula inválida.");
         }
 
+        // --- TRAVA DO LGPD: Verifica se o servidor já aceitou os termos ---
+        // Checamos o localStorage (simulando persistência local) ou o banco de dados
+        const lgpdAceitoLocalmente = localStorage.getItem(`sigep_lgpd_accepted_${servidor.matricula}`) === 'true';
+        
+        if (!servidor.lgpdAceito && !lgpdAceitoLocalmente) {
+            console.warn(`⚠️ [LGPD] Servidor ${servidor.nome} no primeiro acesso. Exigindo aceite.`);
+            servidor.precisaAceitarLGPD = true; // Flag que o front-end vai ler para abrir o modal
+        } else {
+            servidor.precisaAceitarLGPD = false;
+        }
+
         console.log(`✅ [Mock SCI] Servidor logado: ${servidor.nome} | Lotação: ${servidor.orgaoNome} (ID: ${servidor.orgaoVinculadoId})`);
         return servidor;
     },
 
     /**
+     * NOVO: FUNÇÃO PARA REGISTRAR O ACEITE DO LGPD NO BANCO
+     * Chama essa função quando o usuário clicar em "Confirmar" no modal de LGPD
+     */
+    async confirmarAceiteLGPD(matricula) {
+        console.log(`🔒 [LGPD] Registrando aceite digital para matrícula: ${matricula}`);
+        
+        // Simula atualização no banco de dados
+        const servidorIndex = this._mockBDSci.findIndex(s => s.matricula === matricula);
+        if (servidorIndex !== -1) {
+            this._mockBDSci[servidorIndex].lgpdAceito = true;
+        }
+
+        // Salva localmente para não pedir de novo neste navegador
+        localStorage.setItem(`sigep_lgpd_accepted_${matricula}`, 'true');
+        
+        return true;
+    },
+
+    /**
      * PASSO 2: BUSCA DA PAUTA NO VERDE (Usado no ato de criar a pauta)
-     * Busca a pauta baseada EXCLUSIVAMENTE no ID do órgão retornado pelo SCI.
      */
     async buscarDadosPautaOficial(orgaoId) {
         if (!orgaoId) return [];
@@ -117,13 +149,26 @@ const ApiIntegration = {
 
     /**
      * FLUXO COMPLETO DE DEMONSTRAÇÃO
-     * Use esta função na sua UI para mostrar a jornada completa aos avaliadores.
      */
     async demonstrarFluxoIntegracao(identificadorSimulado) {
         try {
             // 1. Vai no SCI e descobre quem é o cara e onde ele trabalha
             const dadosServidor = await this.autenticarServidorNoSCI(identificadorSimulado);
             
+            // SE O CARA PRECISAR ACEITAR O LGPD, INTERROMPE AQUI!
+            if (dadosServidor.precisaAceitarLGPD) {
+                // Abre o modal do LGPD no Front-End
+                const modalLgpd = document.getElementById('lgpd-acceptance-modal');
+                if (modalLgpd) modalLgpd.classList.remove('hidden');
+                
+                // Retorna apenas os dados do servidor informando que está pendente de aceite
+                return {
+                    servidor: dadosServidor,
+                    pauta: null,
+                    status: "PENDING_LGPD"
+                };
+            }
+
             if (window.showNotification) {
                 showNotification(`Login SCI: Bem-vindo(a), ${dadosServidor.nome}. Lotação: ${dadosServidor.orgaoNome}`, "success");
             }
@@ -133,7 +178,8 @@ const ApiIntegration = {
             
             return {
                 servidor: dadosServidor,
-                pauta: pautaDoDia
+                pauta: pautaDoDia,
+                status: "SUCCESS"
             };
 
         } catch (error) {
