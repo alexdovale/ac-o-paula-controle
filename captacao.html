@@ -1,4 +1,4 @@
-```html
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -29,6 +29,12 @@
                  class="h-20 w-auto mx-auto mb-3 object-contain">
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">Triagem Digital</h1>
             <p class="text-sm text-slate-500 mt-1">Preencha os dados abaixo para adiantar seu atendimento na Defensoria.</p>
+            
+            <!-- ASSUNTO DA DEMANDA - SERÁ PREENCHIDO DINAMICAMENTE -->
+            <div id="assunto-demanda-container" class="mt-4 p-3 bg-blue-50 border border-blue-200 rounded-xl hidden">
+                <p class="text-[10px] font-black text-blue-600 uppercase tracking-wider">Assunto do Atendimento</p>
+                <p id="assunto-demanda-texto" class="text-sm font-bold text-blue-800 mt-1"></p>
+            </div>
         </div>
 
         <form id="form-captacao" class="space-y-6">
@@ -173,7 +179,6 @@
         import { firebaseConfig } from './js/config.js';
         import { EXPENSE_CATEGORIES } from './js/detalhes.js';
 
-        // documentsData vem do window (definido no detalhes.js)
         const documentsData = window.documentsData;
 
         if (!documentsData) {
@@ -186,7 +191,6 @@
 
         let pautaId, assistedId, actionKey;
 
-        // Máscaras Gerais
         const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
@@ -198,7 +202,6 @@
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
-        // Inicialização
         async function init() {
             const params = new URLSearchParams(window.location.search);
             pautaId = params.get('pid');
@@ -209,7 +212,6 @@
                 return;
             }
 
-            // Renderizar Planilha de Gastos
             const containerGastos = document.getElementById('gastos-container');
             if (containerGastos && EXPENSE_CATEGORIES) {
                 EXPENSE_CATEGORIES.forEach(cat => {
@@ -225,7 +227,6 @@
                 });
             }
 
-            // Lógica de Soma dos Gastos
             document.querySelectorAll('.gasto-input').forEach(inp => {
                 inp.addEventListener('input', (e) => {
                     let v = e.target.value.replace(/\D/g, '');
@@ -250,6 +251,17 @@
                     if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
 
+                    // EXIBIR O ASSUNTO DA DEMANDA NA PARTE SUPERIOR
+                    if (data.selectedAction || data.documentChecklist?.action) {
+                        const assuntoTexto = data.selectedAction || (documentsData[data.documentChecklist?.action]?.title) || 'Não informado';
+                        const assuntoContainer = document.getElementById('assunto-demanda-container');
+                        const assuntoTextoEl = document.getElementById('assunto-demanda-texto');
+                        if (assuntoContainer && assuntoTextoEl) {
+                            assuntoTextoEl.textContent = assuntoTexto;
+                            assuntoContainer.classList.remove('hidden');
+                        }
+                    }
+
                     if (data.documentChecklist?.action) {
                         actionKey = data.documentChecklist.action;
                         renderChecklist(actionKey, data.documentChecklist.checkedIds || [], data.documentChecklist.docTypes || {});
@@ -269,7 +281,6 @@
             }
         }
 
-        // Renderizar Checklist Dinâmico
         function renderChecklist(key, savedIds, savedTypes) {
             const data = documentsData[key];
             const container = document.getElementById('checklist-area');
@@ -337,7 +348,6 @@
             if (docCounter) docCounter.textContent = `${count} marcados`;
         }
 
-        // Controle de Visibilidade
         const checkReuUnico = document.getElementById('check-reu-unico');
         const contentReu = document.getElementById('content-reu-completo');
         if (checkReuUnico && contentReu) {
@@ -354,7 +364,6 @@
             });
         }
 
-        // Buscador de CEP
         async function buscarCepAPI(cepInputId, isComercial = false) {
             const cepInput = document.getElementById(cepInputId);
             if (!cepInput) return;
@@ -405,7 +414,6 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
-        // SALVAR DADOS
         const form = document.getElementById('form-captacao');
         if (form) {
             form.addEventListener('submit', async (e) => {
@@ -488,4 +496,3 @@
     </script>
 </body>
 </html>
-```
