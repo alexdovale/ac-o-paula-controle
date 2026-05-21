@@ -1,3 +1,4 @@
+
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -385,6 +386,145 @@ function renderChecklist(actionKey) {
     getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = ''; 
+
+    // ========================================================
+    // SEÇÃO DE DADOS SOCIOECONÔMICOS (PROFISSÃO, ESTADO CIVIL, GANHOS)
+    // ========================================================
+    const socioSection = document.createElement('div');
+    socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
+    socioSection.innerHTML = `
+        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS</h4>
+        
+        <!-- PROFISSÃO -->
+        <div class="mb-4">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / OCUPAÇÃO</label>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input type="text" id="socio-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                    <input type="checkbox" id="socio-profissao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                </label>
+            </div>
+        </div>
+        
+        <!-- ESTADO CIVIL -->
+        <div class="mb-4">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
+            <div class="flex flex-wrap gap-2 items-center">
+                <select id="socio-estado-civil" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                    <option value="">Selecione</option>
+                    <option value="Solteiro(a)">Solteiro(a)</option>
+                    <option value="Casado(a)">Casado(a)</option>
+                    <option value="União Estável">União Estável</option>
+                    <option value="Divorciado(a)">Divorciado(a)</option>
+                    <option value="Viúvo(a)">Viúvo(a)</option>
+                    <option value="Separado(a)">Separado(a)</option>
+                </select>
+                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                    <input type="checkbox" id="socio-estado-civil-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                </label>
+            </div>
+        </div>
+        
+        <!-- GANHOS LÍQUIDOS MENSAIS -->
+        <div class="mb-2">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">GANHOS LÍQUIDOS MENSAIS (R$)</label>
+            <div class="flex flex-wrap gap-2 items-center">
+                <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
+                <label class="flex items-center gap-1 text-[10px] font-bold text-gray-500 cursor-pointer">
+                    <input type="checkbox" id="socio-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                </label>
+            </div>
+            <div class="flex flex-wrap gap-3 mt-2">
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="CLT"> CLT
+                </label>
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO
+                </label>
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA
+                </label>
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
+                </label>
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO
+                </label>
+                <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
+                    <input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS
+                </label>
+            </div>
+        </div>
+    `;
+    containerEl.appendChild(socioSection);
+    
+    // Lógica de máscara de dinheiro para o campo de ganhos
+    const ganhosInput = socioSection.querySelector('#socio-ganhos');
+    if (ganhosInput) {
+        ganhosInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+        });
+    }
+    
+    // Lógica de "Não sei informar" para Profissão
+    const profNaoSei = socioSection.querySelector('#socio-profissao-nao-sei');
+    const profInput = socioSection.querySelector('#socio-profissao');
+    if (profNaoSei && profInput) {
+        profNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                profInput.disabled = true;
+                profInput.value = 'Não informado';
+            } else {
+                profInput.disabled = false;
+                profInput.value = '';
+            }
+        });
+    }
+    
+    // Lógica de "Não sei informar" para Estado Civil
+    const civilNaoSei = socioSection.querySelector('#socio-estado-civil-nao-sei');
+    const civilSelect = socioSection.querySelector('#socio-estado-civil');
+    if (civilNaoSei && civilSelect) {
+        civilNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                civilSelect.disabled = true;
+                civilSelect.value = 'Não informado';
+            } else {
+                civilSelect.disabled = false;
+                civilSelect.value = '';
+            }
+        });
+    }
+    
+    // Lógica de "Não sei informar" para Ganhos
+    const ganhosNaoSei = socioSection.querySelector('#socio-ganhos-nao-sei');
+    if (ganhosNaoSei && ganhosInput) {
+        ganhosNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                ganhosInput.disabled = true;
+                ganhosInput.value = 'Não informado';
+            } else {
+                ganhosInput.disabled = false;
+                ganhosInput.value = '';
+            }
+        });
+    }
+
+    // Carregar dados salvos anteriormente
+    if (saved?.socioData) {
+        const socioSaved = saved.socioData;
+        if (socioSaved.profissao) profInput.value = socioSaved.profissao;
+        if (socioSaved.profissaoNaoSei && profNaoSei) profNaoSei.checked = true;
+        if (socioSaved.estadoCivil) civilSelect.value = socioSaved.estadoCivil;
+        if (socioSaved.estadoCivilNaoSei && civilNaoSei) civilNaoSei.checked = true;
+        if (socioSaved.ganhos) ganhosInput.value = socioSaved.ganhos;
+        if (socioSaved.ganhosNaoSei && ganhosNaoSei) ganhosNaoSei.checked = true;
+        if (socioSaved.fonteRenda) {
+            const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
+            if (radio) radio.checked = true;
+        }
+    }
 
     data.sections.forEach((section, sIdx) => {
         const sectionDiv = document.createElement('div');
@@ -879,14 +1019,27 @@ async function handlePdf() {
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
         
+        // Coletar dados socioeconômicos para o PDF
+        const socioData = {
+            profissao: document.getElementById('socio-profissao')?.value || '',
+            profissaoNaoSei: document.getElementById('socio-profissao-nao-sei')?.checked || false,
+            estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
+            estadoCivilNaoSei: document.getElementById('socio-estado-civil-nao-sei')?.checked || false,
+            ganhos: document.getElementById('socio-ganhos')?.value || '',
+            ganhosNaoSei: document.getElementById('socio-ganhos-nao-sei')?.checked || false,
+            fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
+        };
+        
         if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
         addExpensesToPdfData(documentosTextos, gastos);
+        addSocioToPdfData(documentosTextos, socioData);
         
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
+            socioData: socioData,
             demandasAdicionais: demandasAdicionaisLocais 
         };
         
@@ -898,6 +1051,26 @@ async function handlePdf() {
     } catch (err) {
         console.error("Falha ao processar PDF:", err);
         showNotification("Erro na emissão do PDF", "error");
+    }
+}
+
+function addSocioToPdfData(documentosTextos, socioData) {
+    documentosTextos.push({ id: 'socio-titulo', text: '📋 DADOS SOCIOECONÔMICOS DO ASSISTIDO:' });
+    
+    let profissao = socioData.profissao;
+    if (socioData.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${profissao || 'Não informado'}` });
+    
+    let estadoCivil = socioData.estadoCivil;
+    if (socioData.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'socio-civil', text: `   • Estado Civil: ${estadoCivil || 'Não informado'}` });
+    
+    let ganhos = socioData.ganhos;
+    if (socioData.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'socio-ganhos', text: `   • Ganhos Líquidos Mensais: ${ganhos || 'Não informado'}` });
+    
+    if (socioData.fonteRenda) {
+        documentosTextos.push({ id: 'socio-fonte', text: `   • Fonte de Renda: ${socioData.fonteRenda}` });
     }
 }
 
@@ -941,13 +1114,25 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
+    // Coletar dados socioeconômicos
+    const socioData = {
+        profissao: document.getElementById('socio-profissao')?.value || '',
+        profissaoNaoSei: document.getElementById('socio-profissao-nao-sei')?.checked || false,
+        estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
+        estadoCivilNaoSei: document.getElementById('socio-estado-civil-nao-sei')?.checked || false,
+        ganhos: document.getElementById('socio-ganhos')?.value || '',
+        ganhosNaoSei: document.getElementById('socio-ganhos-nao-sei')?.checked || false,
+        fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
+    };
+    
     const payload = {
         documentChecklist: {
             action: currentChecklistAction,
             checkedIds: checkedIds,
             docTypes: getDocTypesFromForm(),
             reuData: getReuDataFromForm(),
-            expenseData: getExpenseDataFromForm()
+            expenseData: getExpenseDataFromForm(),
+            socioData: socioData
         },
         demandas: {
             quantidade: demandasAdicionaisLocais.length,
