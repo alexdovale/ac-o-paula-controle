@@ -1,4 +1,5 @@
-// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo Defensoria Raw)
+
+// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,7 +76,13 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ FUNÇÃO: Transforma o link da logo em Base64 para nunca falhar no jsPDF
+// ⭐ LOGO DO SIGEP (URL RAW)
+const LOGO_SIGEP_URL = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/assets/logo/imagem%20(4).png";
+
+// ⭐ LOGO DA DEFENSORIA (URL RAW)
+const LOGO_DEFENSORIA_URL = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/logo_defensoria.png";
+
+// ⭐ FUNÇÃO: Carrega imagem e converte para Base64
 const loadImageBase64 = (url) => {
     return new Promise((resolve) => {
         const img = new Image();
@@ -92,7 +99,29 @@ const loadImageBase64 = (url) => {
     });
 };
 
-// Lógica principal de geração da Ata
+// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP em qualquer PDF
+const addLogoHeader = async (doc, startY = 20) => {
+    const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
+    if (logoBase64) {
+        try {
+            doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - 30, startY, 20, 20);
+        } catch(e) {
+            console.warn("Erro ao inserir logo SIGEP no PDF", e);
+        }
+    }
+    return logoBase64 !== null;
+};
+
+// ⭐ FUNÇÃO: Adiciona rodapé padrão com data/hora e página
+const addFooter = (doc, pageNumber, totalPages) => {
+    const pageHeight = doc.internal.pageSize.getHeight();
+    doc.setFontSize(8);
+    doc.setTextColor(150, 150, 150);
+    doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | ${new Date().toLocaleString('pt-BR')} | Página ${pageNumber}`, 
+             doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
+};
+
+// Lógica principal de geração da Ata (com ambas as logos)
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
@@ -106,17 +135,23 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐ LOGO OFICIAL DA DEFENSORIA (URL RAW) ⭐
-    const logoUrl = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/logo_defensoria.png";
-    const base64Logo = await loadImageBase64(logoUrl);
-    
-    // Inserindo a logo
-    if (base64Logo) {
+    // ⭐ LOGO DO SIGEP (canto superior direito)
+    const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
+    if (logoSigep) {
         try { 
-            // Ajustei ligeiramente as coordenadas para a logo ficar centralizada e proporcional
-            doc.addImage(base64Logo, 'PNG', 52, 8, 106, 25); 
+            doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 35, 8, 25, 25); 
         } catch(e) { 
-            console.warn("Erro ao inserir logo no PDF", e); 
+            console.warn("Erro ao inserir logo SIGEP na Ata", e); 
+        }
+    }
+
+    // ⭐ LOGO DA DEFENSORIA (centralizada superior)
+    const logoDefensoria = await loadImageBase64(LOGO_DEFENSORIA_URL);
+    if (logoDefensoria) {
+        try { 
+            doc.addImage(logoDefensoria, 'PNG', 52, 8, 106, 25); 
+        } catch(e) { 
+            console.warn("Erro ao inserir logo Defensoria na Ata", e); 
         }
     }
 
@@ -245,6 +280,9 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
+            await addLogoHeader(doc, 20);
+
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.text("PLANILHA DE DESPESAS ATUAIS", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
@@ -301,6 +339,9 @@ export const PDFService = {
                 margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
             });
 
+            // ⭐ Rodapé
+            addFooter(doc, 1, 1);
+
             doc.save(`Planilha_Despesas_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
@@ -316,6 +357,9 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            
+            // ⭐ Rodapé
+            addFooter(doc, 1, 1);
 
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -333,6 +377,9 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            
+            // ⭐ Rodapé
+            addFooter(doc, 1, 1);
 
             const pdfBlob = doc.output('blob');
             const pdfUrl = URL.createObjectURL(pdfBlob);
@@ -351,18 +398,21 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
+            await addLogoHeader(docPDF, 20);
+
             const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74); 
-            docPDF.text(`Relatório de Atendidos - ${pautaNome}`, 40, 40);
+            docPDF.text(`Relatório de Atendidos - ${pautaNome}`, 40, 55);
 
             docPDF.setFontSize(10);
             docPDF.setTextColor(100);
             const totalAssuntos = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
-            docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 68);
+            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
+            docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 83);
 
             const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Validado Verde"]];
 
@@ -398,12 +448,15 @@ export const PDFService = {
             docPDF.autoTable({
                 head: head,
                 body: body,
-                startY: 80,
+                startY: 100,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
                 columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
             });
+
+            // ⭐ Rodapé
+            addFooter(docPDF, 1, 1);
 
             docPDF.save(`atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -419,17 +472,20 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
+            await addLogoHeader(docPDF, 20);
+
             const faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74);
-            docPDF.text(`Relatório de Faltosos - ${pautaNome}`, 40, 40);
+            docPDF.text(`Relatório de Faltosos - ${pautaNome}`, 40, 55);
 
             docPDF.setFontSize(10);
             docPDF.setTextColor(100);
-            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 55);
-            docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, 68);
+            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
+            docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, 83);
 
             const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às", "Verde"]];
 
@@ -452,7 +508,7 @@ export const PDFService = {
             docPDF.autoTable({
                 head: head,
                 body: body,
-                startY: 85,
+                startY: 100,
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
@@ -462,6 +518,9 @@ export const PDFService = {
                     5: { fontStyle: 'bold' } 
                 }
             });
+
+            // ⭐ Rodapé
+            addFooter(docPDF, 1, 1);
 
             docPDF.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -476,6 +535,9 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
+
+            // ⭐ Logo SIGEP no topo
+            await addLogoHeader(docPDF, 15);
 
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg3 === 'string' ? arg3 : 'Geral');
             const colaboradores = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
@@ -535,17 +597,20 @@ export const PDFService = {
 
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); 
-            docPDF.text("Lista de Presença da Equipe", 14, 25);
-            docPDF.text(`Pauta: ${pautaNome}`, 14, 40);
+            docPDF.text("Lista de Presença da Equipe", 14, 40);
+            docPDF.text(`Pauta: ${pautaNome}`, 14, 55);
 
             docPDF.autoTable({
                 head: header,
                 body: tableData,
-                startY: 55,
+                startY: 70,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 9, halign: 'center', valign: 'middle' }
             });
+
+            // ⭐ Rodapé
+            addFooter(docPDF, 1, 1);
 
             docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
@@ -566,10 +631,27 @@ export const PDFService = {
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
+            // ⭐ Logo SIGEP no topo
+            const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
+            if (logoSigep) {
+                try {
+                    doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 45, 15, 35, 35);
+                } catch(e) {
+                    console.warn("Erro ao inserir logo SIGEP no PDF", e);
+                }
+            }
+
             const checkPage = (heightToAdd = 20) => {
                 if (y + heightToAdd >= pageHeight - 50) {
+                    const pageNumber = doc.internal.getNumberOfPages() + 1;
+                    addFooter(doc, pageNumber, 1);
                     doc.addPage();
-                    y = 60; 
+                    y = 60;
+                    if (logoSigep) {
+                        try {
+                            doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 45, 15, 35, 35);
+                        } catch(e) {}
+                    }
                 }
             };
 
@@ -590,6 +672,39 @@ export const PDFService = {
             addText(`Assistido: ${assistedName.toUpperCase()}`, false, 11);
             addText(`Ação: ${actionTitle}`, false, 11);
             y += 30;
+
+            // DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
+            if (checklistData.socioData) {
+                const s = checklistData.socioData;
+                let temDadosSocio = false;
+                const dadosSocio = [];
+                
+                if (s.profissao && s.profissao.trim() !== '') {
+                    dadosSocio.push(`Profissão: ${s.profissao}`);
+                    temDadosSocio = true;
+                }
+                if (s.estadoCivil && s.estadoCivil.trim() !== '') {
+                    dadosSocio.push(`Estado Civil: ${s.estadoCivil}`);
+                    temDadosSocio = true;
+                }
+                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
+                    dadosSocio.push(`Ganhos Líquidos: ${s.ganhos}`);
+                    temDadosSocio = true;
+                }
+                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
+                    dadosSocio.push(`Fonte de Renda: ${s.fonteRenda}`);
+                    temDadosSocio = true;
+                }
+                
+                if (temDadosSocio) {
+                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
+                    y += 10;
+                    dadosSocio.forEach(dado => {
+                        addText(`• ${dado}`, false, 10, 20);
+                    });
+                    y += 20;
+                }
+            }
 
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
@@ -628,19 +743,22 @@ export const PDFService = {
                 let totalGastos = 0;
                 categoriasNome.forEach(c => {
                     const valorStr = g[c.id] || 'R$ 0,00';
-                    addText(`${c.label}: ${valorStr}`, false, 10, 20); 
-                    const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                    totalGastos += num;
+                    if (valorStr !== 'R$ 0,00') {
+                        addText(`${c.label}: ${valorStr}`, false, 10, 20); 
+                        const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                        totalGastos += num;
+                    }
                 });
 
                 if (totalGastos > 0) {
                     y += 5; 
                     const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`${totalFormatado}`, true, 10, 20); 
+                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20); 
                 }
                 y += 20;
             }
 
+            // DADOS DO RÉU
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
                 addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
@@ -692,6 +810,62 @@ export const PDFService = {
                     }
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
+
+                // DADOS SOCIOECONÔMICOS DO RÉU
+                let temDadosReuSocio = false;
+                const dadosReuSocio = [];
+                
+                let profissaoReu = r.profissao;
+                if (r.profissaoNaoSei) profissaoReu = 'Não informado (Não soube informar)';
+                if (profissaoReu && profissaoReu.trim() !== '' && !r.profissaoNaoSei) {
+                    dadosReuSocio.push(`Profissão: ${profissaoReu}`);
+                    temDadosReuSocio = true;
+                } else if (r.profissaoNaoSei) {
+                    dadosReuSocio.push(`Profissão: Não informado (Não soube informar)`);
+                    temDadosReuSocio = true;
+                }
+                
+                let estadoCivilReu = r.estadoCivil;
+                if (r.estadoCivilNaoSei) estadoCivilReu = 'Não informado (Não soube informar)';
+                if (estadoCivilReu && estadoCivilReu.trim() !== '' && !r.estadoCivilNaoSei) {
+                    dadosReuSocio.push(`Estado Civil: ${estadoCivilReu}`);
+                    temDadosReuSocio = true;
+                } else if (r.estadoCivilNaoSei) {
+                    dadosReuSocio.push(`Estado Civil: Não informado (Não soube informar)`);
+                    temDadosReuSocio = true;
+                }
+                
+                let ganhosReu = r.ganhos;
+                if (r.ganhosNaoSei) ganhosReu = 'Não informado (Não soube informar)';
+                if (ganhosReu && ganhosReu.trim() !== '' && ganhosReu !== 'R$ 0,00' && !r.ganhosNaoSei) {
+                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhosReu}`);
+                    temDadosReuSocio = true;
+                } else if (r.ganhosNaoSei) {
+                    dadosReuSocio.push(`Ganhos Líquidos: Não informado (Não soube informar)`);
+                    temDadosReuSocio = true;
+                }
+                
+                if (r.fonteRenda && r.fonteRenda.trim() !== '') {
+                    dadosReuSocio.push(`Fonte de Renda: ${r.fonteRenda}`);
+                    temDadosReuSocio = true;
+                }
+                
+                if (temDadosReuSocio) {
+                    y += 10;
+                    addText("PERFIL SOCIOECONÔMICO DO RÉU:", true, 11);
+                    y += 10;
+                    dadosReuSocio.forEach(dado => {
+                        addText(`• ${dado}`, false, 10, 20);
+                    });
+                    y += 20;
+                }
+            }
+
+            // ⭐ Rodapé na última página
+            const totalPages = doc.internal.getNumberOfPages();
+            for (let i = 1; i <= totalPages; i++) {
+                doc.setPage(i);
+                addFooter(doc, i, totalPages);
             }
 
             doc.save(`Checklist_SIGEP_${assistedName.replace(/\s+/g, '_')}.pdf`);
