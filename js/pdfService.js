@@ -1,5 +1,5 @@
 
-// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs)
+// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs EXCETO ATA SOCIAL)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -99,7 +99,7 @@ const loadImageBase64 = (url) => {
     });
 };
 
-// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP em qualquer PDF
+// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP (EXCETO na Ata Social)
 const addLogoHeader = async (doc, startY = 20) => {
     const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
     if (logoBase64) {
@@ -121,7 +121,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// Lógica principal de geração da Ata (com ambas as logos)
+// Lógica principal de geração da Ata (apenas logo da Defensoria, SEM logo do SIGEP)
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
@@ -135,17 +135,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐ LOGO DO SIGEP (canto superior direito)
-    const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
-    if (logoSigep) {
-        try { 
-            doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 35, 8, 25, 25); 
-        } catch(e) { 
-            console.warn("Erro ao inserir logo SIGEP na Ata", e); 
-        }
-    }
-
-    // ⭐ LOGO DA DEFENSORIA (centralizada superior)
+    // ⭐ APENAS LOGO DA DEFENSORIA (centralizada superior) - SEM LOGO DO SIGEP
     const logoDefensoria = await loadImageBase64(LOGO_DEFENSORIA_URL);
     if (logoDefensoria) {
         try { 
@@ -358,7 +348,7 @@ export const PDFService = {
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
-            // ⭐ Rodapé
+            // ⭐ Rodapé (SEM logo do SIGEP, apenas a logo da Defensoria já está no cabeçalho)
             addFooter(doc, 1, 1);
 
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
