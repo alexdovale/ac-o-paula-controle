@@ -9,13 +9,17 @@
         .sigep-gradient { background: linear-gradient(135deg, #059669 0%, #047857 100%); }
         .custom-checkbox:checked + div { background-color: #059669; border-color: #059669; }
         .custom-checkbox:checked + div svg { display: block; }
+        
+        /* Ocultar input number arrows */
+        input[type=number]::-webkit-inner-spin-button, 
+        input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans pb-10">
 
     <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mb-4"></div>
-        <p class="text-sm font-bold text-slate-500 animate-pulse">Carregando formulário...</p>
+        <p class="text-sm font-bold text-slate-500 animate-pulse">Carregando seu formulário...</p>
     </div>
 
     <div class="max-w-md mx-auto p-4 hidden" id="app-content">
@@ -24,53 +28,143 @@
                 <span class="text-2xl">⚖️</span>
             </div>
             <h1 class="text-2xl font-black text-slate-800 tracking-tight">Triagem Digital</h1>
-            <p class="text-sm text-slate-500 mt-1">Preencha os dados abaixo para adiantar seu atendimento.</p>
+            <p class="text-sm text-slate-500 mt-1">Preencha os dados abaixo para adiantar seu atendimento na Defensoria.</p>
         </div>
 
         <form id="form-captacao" class="space-y-6">
             
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">1. Seus Dados</h2>
-                <input type="text" id="nome-assistido" required placeholder="Nome Completo" class="w-full p-3 bg-slate-50 border rounded-xl mb-3 text-sm">
-                <div class="grid grid-cols-2 gap-3">
-                    <input type="text" id="cpf-assistido" placeholder="CPF" class="w-full p-3 bg-slate-50 border rounded-xl text-sm" inputmode="numeric">
-                    <input type="tel" id="telefone-assistido" placeholder="WhatsApp" class="w-full p-3 bg-slate-50 border rounded-xl text-sm" inputmode="numeric">
-                </div>
-            </section>
-
-            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">2. Documentos</h2>
-                <div id="checklist-area" class="space-y-2 text-xs"></div>
-            </section>
-
-            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-black text-red-600 uppercase mb-4 border-b pb-2">3. Dados do Réu</h2>
-                <div class="space-y-2">
-                    <input type="text" id="reu-nome" placeholder="Nome Completo do Réu" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
-                    <input type="text" id="reu-cpf" placeholder="CPF do Réu" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
-                    <input type="text" id="reu-rua" placeholder="Rua / Logradouro" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
-                    <div class="grid grid-cols-2 gap-2">
-                        <input type="text" id="reu-numero" placeholder="Número" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
-                        <input type="text" id="reu-bairro" placeholder="Bairro" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase">Nome Completo</label>
+                        <input type="text" id="nome-assistido" required placeholder="Seu nome" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500">
                     </div>
-                    <input type="text" id="reu-empresa" placeholder="Empresa onde trabalha" class="w-full p-3 bg-slate-50 border rounded-xl text-sm">
+                    <div class="grid grid-cols-2 gap-3">
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase">CPF</label>
+                            <input type="text" id="cpf-assistido" placeholder="000.000.000-00" maxlength="14" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
+                        </div>
+                        <div>
+                            <label class="text-[10px] font-black text-gray-400 uppercase">WhatsApp</label>
+                            <input type="tel" id="telefone-assistido" required placeholder="(00) 90000-0000" maxlength="15" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
+                        </div>
+                    </div>
                 </div>
             </section>
 
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">4. Planilha de Gastos</h2>
-                <div id="gastos-container" class="space-y-3"></div>
+                <h2 class="text-xs font-black text-green-700 uppercase mb-2 border-b pb-2 flex items-center justify-between">
+                    <span>2. Documentos</span>
+                    <span id="doc-counter" class="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded-full">0 marcados</span>
+                </h2>
+                <p class="text-[11px] text-slate-500 mb-4 leading-tight">Marque os documentos que você já possui e indique se estão em formato físico (papel) ou digital (celular/PDF).</p>
+                <div id="checklist-area" class="space-y-3"></div>
             </section>
 
-            <button type="submit" id="btn-enviar" class="w-full sigep-gradient text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-transform">
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-black text-red-600 uppercase mb-4 border-b pb-2">3. Dados da Parte Contrária (Réu)</h2>
+                
+                <div class="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 cursor-pointer" onclick="document.getElementById('check-reu-unico').click()">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500 pointer-events-none" checked>
+                        <label class="text-xs font-bold text-red-800 cursor-pointer pointer-events-none">
+                            TENHO DADOS DE ENDEREÇO DO RÉU
+                        </label>
+                    </div>
+                </div>
+
+                <div id="content-reu-completo" class="space-y-6">
+                    <div class="space-y-3">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase border-b pb-1">Identificação</h3>
+                        <input type="text" id="nome-reu" placeholder="Nome Completo do Réu" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="cpf-reu" placeholder="CPF do Réu" maxlength="14" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" inputmode="numeric">
+                            <input type="tel" id="telefone-reu" placeholder="Telefone do Réu" maxlength="15" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" inputmode="numeric">
+                        </div>
+                    </div>
+
+                    <div class="space-y-3">
+                        <h3 class="text-[10px] font-black text-slate-400 uppercase border-b pb-1">Endereço Residencial (Para Citação)</h3>
+                        <div class="flex gap-2">
+                            <input type="text" id="cep-reu" placeholder="CEP" maxlength="9" class="flex-grow p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm" inputmode="numeric">
+                            <button type="button" id="btn-buscar-cep-reu" class="bg-slate-700 text-white font-bold px-4 rounded-xl text-xs hover:bg-slate-800 transition">BUSCAR</button>
+                        </div>
+                        <input type="text" id="rua-reu" placeholder="Logradouro (Rua, Av, etc)" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="text" id="numero-reu" placeholder="Número" class="col-span-1 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <input type="text" id="complemento-reu" placeholder="Complemento" class="col-span-2 w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <input type="text" id="bairro-reu" placeholder="Bairro" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="cidade-reu" placeholder="Cidade" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                            <select id="estado-reu" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                                <option value="">UF</option>
+                                <option value="AC">AC</option><option value="AL">AL</option><option value="AP">AP</option><option value="AM">AM</option><option value="BA">BA</option><option value="CE">CE</option><option value="DF">DF</option><option value="ES">ES</option><option value="GO">GO</option><option value="MA">MA</option><option value="MT">MT</option><option value="MS">MS</option><option value="MG">MG</option><option value="PA">PA</option><option value="PB">PB</option><option value="PR">PR</option><option value="PE">PE</option><option value="PI">PI</option><option value="RJ">RJ</option><option value="RN">RN</option><option value="RS">RS</option><option value="RO">RO</option><option value="RR">RR</option><option value="SC">SC</option><option value="SP">SP</option><option value="SE">SE</option><option value="TO">TO</option>
+                            </select>
+                        </div>
+                        <input type="text" id="referencia-reu" placeholder="Ponto de Referência" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm">
+                    </div>
+
+                    <div class="space-y-3 bg-slate-100 p-4 rounded-xl border border-slate-200">
+                        <h3 class="text-[10px] font-black text-slate-500 uppercase border-b border-slate-300 pb-1">Dados de Trabalho (Opcional)</h3>
+                        <input type="text" id="empresa-reu" placeholder="Empresa onde trabalha" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                        <div class="flex gap-2">
+                            <input type="text" id="cep-comercial-reu" placeholder="CEP Comercial" maxlength="9" class="flex-grow p-3 bg-white border border-slate-200 rounded-xl text-sm" inputmode="numeric">
+                            <button type="button" id="btn-buscar-cep-com" class="bg-slate-500 text-white font-bold px-4 rounded-xl text-xs hover:bg-slate-600 transition">BUSCAR</button>
+                        </div>
+                        <input type="text" id="rua-comercial-reu" placeholder="Rua Comercial" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                        <div class="grid grid-cols-3 gap-3">
+                            <input type="text" id="numero-comercial-reu" placeholder="Nº" class="col-span-1 w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                            <input type="text" id="complemento-comercial-reu" placeholder="Compl." class="col-span-2 w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <div class="grid grid-cols-2 gap-3">
+                            <input type="text" id="bairro-comercial-reu" placeholder="Bairro" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                            <input type="text" id="cidade-comercial-reu" placeholder="Cidade" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                        </div>
+                        <select id="estado-comercial-reu" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm">
+                            <option value="">UF</option>
+                            <option value="RJ">RJ</option><option value="SP">SP</option><option value="MG">MG</option><option value="ES">ES</option><option value="PR">PR</option><option value="SC">SC</option><option value="RS">RS</option>
+                        </select>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">4. Planilha de Gastos Mensais</h2>
+                
+                <div class="bg-green-50 p-4 rounded-xl border border-green-200 mb-4 cursor-pointer" onclick="document.getElementById('check-exibir-gastos').click()">
+                    <div class="flex items-center gap-3">
+                        <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500 pointer-events-none" checked>
+                        <label class="text-xs font-bold text-green-800 cursor-pointer pointer-events-none">
+                            PREENCHER DESPESAS
+                        </label>
+                    </div>
+                </div>
+
+                <div id="content-planilha-gastos" class="space-y-4">
+                    <div id="gastos-container" class="space-y-3"></div>
+                    <div class="flex justify-between items-center bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4">
+                        <span class="text-xs font-black uppercase tracking-wider">Total Calculado:</span>
+                        <span id="gasto-total" class="text-lg font-black">R$ 0,00</span>
+                    </div>
+                </div>
+            </section>
+
+            <button type="submit" id="btn-enviar" class="w-full sigep-gradient text-white font-black py-4 rounded-2xl shadow-lg active:scale-95 transition-transform flex justify-center items-center gap-2">
+                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg>
                 ENVIAR DADOS
             </button>
         </form>
     </div>
 
     <div id="success-screen" class="hidden fixed inset-0 bg-green-600 z-50 flex flex-col items-center justify-center p-6 text-center text-white">
-        <h2 class="text-3xl font-black mb-2">Dados Enviados!</h2>
-        <p>Aguarde ser chamado pela nossa equipe.</p>
+        <div class="w-20 h-20 bg-white rounded-full flex items-center justify-center mb-6 shadow-xl animate-bounce">
+            <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+        </div>
+        <h2 class="text-3xl font-black mb-2">Tudo Certo!</h2>
+        <p class="text-green-100 text-sm mb-4">Seus dados e documentos foram enviados com sucesso.</p>
+        <p class="text-white font-bold bg-green-800/40 px-6 py-3 rounded-full text-sm">Você já pode fechar esta tela e aguardar ser chamado(a).</p>
     </div>
 
     <script type="module">
@@ -79,76 +173,269 @@
         import { firebaseConfig } from './js/config.js';
         import { documentsData, EXPENSE_CATEGORIES } from './js/detalhes.js';
 
-        const db = getFirestore(initializeApp(firebaseConfig));
-        const params = new URLSearchParams(window.location.search);
-        const pid = params.get('pid');
-        const aid = params.get('aid');
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
+        let pautaId, assistedId, actionKey;
+
+        // Máscaras Gerais
+        const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+        const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
+        const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
+
+        document.getElementById('cpf-assistido').addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
+        document.getElementById('telefone-assistido').addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
+        document.getElementById('cpf-reu').addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
+        document.getElementById('telefone-reu').addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
+        document.getElementById('cep-reu').addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
+        document.getElementById('cep-comercial-reu').addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
+
+        // Inicialização
         async function init() {
+            const params = new URLSearchParams(window.location.search);
+            pautaId = params.get('pid');
+            assistedId = params.get('aid');
+
+            if (!pautaId || !assistedId) {
+                alert("Link inválido. Por favor, solicite um novo link.");
+                return;
+            }
+
+            // Renderizar Planilha de Gastos
             const containerGastos = document.getElementById('gastos-container');
             EXPENSE_CATEGORIES.forEach(cat => {
                 containerGastos.innerHTML += `
-                    <div class="flex justify-between items-center text-xs">
-                        <span class="font-bold text-slate-600">${cat.label}</span>
-                        <input type="text" id="gasto-${cat.id}" class="w-24 p-2 border rounded-lg text-right" placeholder="R$ 0,00">
+                    <div class="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-lg">
+                        <div>
+                            <p class="text-[11px] font-bold text-green-800 uppercase">${cat.label}</p>
+                            <p class="text-[9px] text-slate-400">${cat.desc}</p>
+                        </div>
+                        <input type="text" id="gasto-${cat.id}" class="gasto-input w-24 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
                     </div>
                 `;
             });
 
+            // Lógica de Soma dos Gastos
+            document.querySelectorAll('.gasto-input').forEach(inp => {
+                inp.addEventListener('input', (e) => {
+                    let v = e.target.value.replace(/\D/g, '');
+                    e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+                    let total = 0;
+                    document.querySelectorAll('.gasto-input').forEach(i => {
+                        total += parseFloat(i.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                    });
+                    document.getElementById('gasto-total').textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
+                });
+            });
+
             try {
-                const docSnap = await getDoc(doc(db, "pautas", pid, "attendances", aid));
+                const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistedId));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    document.getElementById('nome-assistido').value = data.name || '';
+                    
+                    if (data.name) document.getElementById('nome-assistido').value = data.name;
+                    if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
+                    if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
+
                     if (data.documentChecklist?.action) {
-                        renderChecklist(data.documentChecklist.action, data.documentChecklist.checkedIds || []);
+                        actionKey = data.documentChecklist.action;
+                        renderChecklist(actionKey, data.documentChecklist.checkedIds || [], data.documentChecklist.docTypes || {});
+                    } else {
+                        document.getElementById('checklist-area').innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto ainda não definido pela Defensoria. Siga para o próximo passo.</div>`;
                     }
+
                     document.getElementById('loading-screen').classList.add('hidden');
                     document.getElementById('app-content').classList.remove('hidden');
                 }
-            } catch (err) { console.error(err); }
+            } catch (error) {
+                console.error("Erro:", error);
+                alert("Erro ao conectar com a Defensoria.");
+            }
         }
 
-        function renderChecklist(key, savedIds) {
-            const container = document.getElementById('checklist-area');
+        // Renderizar Checklist Dinâmico com opção Físico/Digital
+        function renderChecklist(key, savedIds, savedTypes) {
             const data = documentsData[key];
-            data.sections.forEach((sec, sIdx) => {
-                sec.docs.forEach((docItem, dIdx) => {
-                    if (typeof docItem === 'string') {
-                        const id = `doc-${key}-${sIdx}-${dIdx}`;
-                        container.innerHTML += `
-                            <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer">
-                                <input type="checkbox" id="${id}" class="citizen-checkbox" ${savedIds.includes(id) ? 'checked' : ''}>
-                                ${docItem}
-                            </label>`;
+            const container = document.getElementById('checklist-area');
+            if (!data) return;
+
+            data.sections.forEach((section, sIdx) => {
+                const sectionDiv = document.createElement('div');
+                sectionDiv.className = "mb-4";
+                sectionDiv.innerHTML = `<h3 class="text-[10px] font-black text-slate-400 uppercase mb-2 border-b pb-1">${section.title}</h3>`;
+                
+                section.docs.forEach((docItem, dIdx) => {
+                    if (typeof docItem === 'object' && docItem.type === 'title') {
+                        sectionDiv.innerHTML += `<div class="text-[10px] font-bold text-blue-600 bg-blue-50 p-2 rounded mt-2 mb-1 uppercase">${docItem.text}</div>`;
+                    } else {
+                        const docText = typeof docItem === 'string' ? docItem : docItem.text;
+                        const id = `doc-${key}-${sIdx}-${dIdx}`; 
+                        const isChecked = savedIds.includes(id);
+                        const typeVal = savedTypes[id] || 'Físico';
+
+                        sectionDiv.innerHTML += `
+                            <div class="flex flex-col border border-slate-100 rounded-xl mb-2 bg-white overflow-hidden transition-all">
+                                <label class="flex items-start gap-3 p-3 cursor-pointer hover:bg-slate-50">
+                                    <input type="checkbox" id="${id}" class="custom-checkbox sr-only doc-checkbox" ${isChecked ? 'checked' : ''} onchange="toggleDocType('${id}')">
+                                    <div class="w-5 h-5 border-2 border-slate-300 rounded bg-white mt-0.5 flex-shrink-0 flex items-center justify-center transition-colors">
+                                        <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
+                                    </div>
+                                    <span class="text-[11px] font-medium text-slate-700 leading-tight">${docText}</span>
+                                </label>
+                                <div id="type-box-${id}" class="bg-slate-50 border-t border-slate-100 p-2 flex gap-4 justify-center ${isChecked ? '' : 'hidden'}">
+                                    <label class="flex items-center gap-1 text-[10px] font-bold text-slate-500 cursor-pointer">
+                                        <input type="radio" name="type-${id}" value="Físico" ${typeVal === 'Físico' ? 'checked' : ''}> FÍSICO
+                                    </label>
+                                    <label class="flex items-center gap-1 text-[10px] font-bold text-slate-500 cursor-pointer">
+                                        <input type="radio" name="type-${id}" value="Digital" ${typeVal === 'Digital' ? 'checked' : ''}> DIGITAL (Celular/PDF)
+                                    </label>
+                                </div>
+                            </div>
+                        `;
                     }
                 });
+                container.appendChild(sectionDiv);
             });
+            updateDocCounter();
         }
 
-        document.getElementById('form-captacao').onsubmit = async (e) => {
-            e.preventDefault();
-            const gastos = {};
-            EXPENSE_CATEGORIES.forEach(cat => gastos[cat.id] = document.getElementById(`gasto-${cat.id}`).value);
+        // Função global para mostrar/ocultar os radio buttons e atualizar contador
+        window.toggleDocType = function(id) {
+            const cb = document.getElementById(id);
+            const box = document.getElementById(`type-box-${id}`);
+            if(cb && box) {
+                if(cb.checked) {
+                    box.classList.remove('hidden');
+                    if(!box.querySelector('input:checked')) box.querySelector('input[value="Físico"]').checked = true;
+                } else {
+                    box.classList.add('hidden');
+                }
+            }
+            updateDocCounter();
+        }
+
+        function updateDocCounter() {
+            const count = document.querySelectorAll('.doc-checkbox:checked').length;
+            document.getElementById('doc-counter').textContent = `${count} marcados`;
+        }
+
+        // Controle de Visibilidade das Seções Opcionais
+        document.getElementById('check-reu-unico').addEventListener('change', function() {
+            document.getElementById('content-reu-completo').style.display = this.checked ? 'block' : 'none';
+        });
+
+        document.getElementById('check-exibir-gastos').addEventListener('change', function() {
+            document.getElementById('content-planilha-gastos').style.display = this.checked ? 'block' : 'none';
+        });
+
+        // Buscador de CEP via API (ViaCEP)
+        async function buscarCepAPI(cepInputId, isComercial = false) {
+            const cep = document.getElementById(cepInputId).value.replace(/\D/g, '');
+            if (cep.length !== 8) return alert("CEP inválido");
             
-            await updateDoc(doc(db, "pautas", pid, "attendances", aid), {
+            const btn = isComercial ? document.getElementById('btn-buscar-cep-com') : document.getElementById('btn-buscar-cep-reu');
+            const originalText = btn.textContent;
+            btn.textContent = "...";
+            btn.disabled = true;
+
+            try {
+                const res = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await res.json();
+                if (!data.erro) {
+                    if (isComercial) {
+                        document.getElementById('rua-comercial-reu').value = data.logradouro || '';
+                        document.getElementById('bairro-comercial-reu').value = data.bairro || '';
+                        document.getElementById('cidade-comercial-reu').value = data.localidade || '';
+                        document.getElementById('estado-comercial-reu').value = data.uf || '';
+                    } else {
+                        document.getElementById('rua-reu').value = data.logradouro || '';
+                        document.getElementById('bairro-reu').value = data.bairro || '';
+                        document.getElementById('cidade-reu').value = data.localidade || '';
+                        document.getElementById('estado-reu').value = data.uf || '';
+                    }
+                } else {
+                    alert("CEP não encontrado.");
+                }
+            } catch (e) { alert("Erro ao buscar CEP."); }
+            
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+
+        document.getElementById('btn-buscar-cep-reu').onclick = () => buscarCepAPI('cep-reu', false);
+        document.getElementById('btn-buscar-cep-com').onclick = () => buscarCepAPI('cep-comercial-reu', true);
+
+        // SALVAR DADOS (SUBMIT)
+        document.getElementById('form-captacao').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-enviar');
+            btn.innerHTML = `<div class="animate-spin rounded-full h-5 w-5 border-b-2 border-white"></div> SALVANDO...`;
+            btn.disabled = true;
+
+            // Coleta Docs
+            const checkedIds = [];
+            const docTypes = {};
+            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                checkedIds.push(cb.id);
+                const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                docTypes[cb.id] = radio ? radio.value : 'Físico';
+            });
+
+            // Coleta Gastos
+            const gastos = { checkExibirGastos: document.getElementById('check-exibir-gastos').checked };
+            EXPENSE_CATEGORIES.forEach(c => {
+                let v = document.getElementById(`gasto-${c.id}`).value;
+                gastos[c.id] = v ? v : 'R$ 0,00';
+            });
+
+            // Coleta Réu
+            const reuData = {
+                checkReuUnico: document.getElementById('check-reu-unico').checked,
+                nome: document.getElementById('reu-nome').value,
+                cpf: document.getElementById('reu-cpf').value,
+                telefone: document.getElementById('telefone-reu').value,
+                cep: document.getElementById('cep-reu').value,
+                rua: document.getElementById('rua-reu').value,
+                numero: document.getElementById('reu-numero').value,
+                complemento: document.getElementById('complemento-reu').value,
+                bairro: document.getElementById('reu-bairro').value,
+                cidade: document.getElementById('cidade-reu').value,
+                uf: document.getElementById('estado-reu').value,
+                referencia: document.getElementById('referencia-reu').value,
+                empresa: document.getElementById('reu-empresa').value,
+                cep_comercial: document.getElementById('cep-comercial-reu').value,
+                rua_comercial: document.getElementById('rua-comercial-reu').value,
+                numero_comercial: document.getElementById('numero-comercial-reu').value,
+                complemento_comercial: document.getElementById('complemento-comercial-reu').value,
+                bairro_comercial: document.getElementById('bairro-comercial-reu').value,
+                cidade_comercial: document.getElementById('cidade-comercial-reu').value,
+                uf_comercial: document.getElementById('estado-comercial-reu').value
+            };
+
+            const payload = {
                 name: document.getElementById('nome-assistido').value,
                 cpf: document.getElementById('cpf-assistido').value,
                 telefone: document.getElementById('telefone-assistido').value,
-                "documentChecklist.checkedIds": Array.from(document.querySelectorAll('.citizen-checkbox:checked')).map(cb => cb.id),
-                "documentChecklist.reuData": {
-                    nome: document.getElementById('reu-nome').value,
-                    rua: document.getElementById('reu-rua').value,
-                    bairro: document.getElementById('reu-bairro').value,
-                    cpf: document.getElementById('reu-cpf').value,
-                    empresa: document.getElementById('reu-empresa').value
-                },
+                "documentChecklist.checkedIds": checkedIds,
+                "documentChecklist.docTypes": docTypes,
+                "documentChecklist.reuData": reuData,
                 "documentChecklist.expenseData": gastos,
-                documentState: 'pre_triagem_concluida'
-            });
-            document.getElementById('app-content').classList.add('hidden');
-            document.getElementById('success-screen').classList.remove('hidden');
-        };
+                documentState: 'pre_triagem_concluida', 
+                lastActionBy: 'Cidadão (App Web)',
+                lastActionTimestamp: new Date().toISOString()
+            };
+
+            try {
+                await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
+                document.getElementById('app-content').classList.add('hidden');
+                document.getElementById('success-screen').classList.remove('hidden');
+            } catch (error) {
+                console.error("Erro ao salvar:", error);
+                alert("Erro ao enviar dados. Tente novamente.");
+                btn.innerHTML = `ENVIAR DADOS`;
+                btn.disabled = false;
+            }
+        });
 
         window.addEventListener('DOMContentLoaded', init);
     </script>
