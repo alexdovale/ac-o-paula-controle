@@ -38,6 +38,8 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.23/jspdf.plugin.autotable.min.js"></script>
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; min-height: 100vh; }
@@ -1483,6 +1485,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                             </div>
                         </div>
                         <div class="flex flex-wrap sm:flex-nowrap grid-cols-3 sm:grid-cols-none gap-2 w-full">
+                            <button id="btn-gerar-captacao" class="flex-1 sm:flex-none sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-3 rounded-lg text-xs uppercase shadow-sm hover:bg-blue-700 transition-colors">🔗 Captação</button>
                             <button id="print-checklist-btn" class="flex-1 sm:flex-none sm:w-24 bg-red-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm hover:bg-red-700 transition-colors">PDF</button>
                             <button id="reset-checklist-btn" class="flex-1 sm:flex-none sm:w-24 bg-amber-500 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm hover:bg-amber-600 transition-colors">Mudar</button>
                             <button id="save-checklist-btn" class="flex-1 sm:flex-none sm:w-32 bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-lg hover:bg-green-700 transition-colors">Salvar</button>
@@ -1648,6 +1651,23 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
     
+    <div id="modal-captacao-qr" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center relative" onclick="event.stopPropagation()">
+            <button onclick="document.getElementById('modal-captacao-qr').classList.add('hidden')" class="absolute top-3 right-3 text-gray-400 hover:text-red-500">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
+            </button>
+
+            <h3 class="text-lg font-black text-slate-800 mb-1">Captação Direta</h3>
+            <p class="text-xs text-slate-500 mb-5">Peça para o assistido apontar a câmera do celular para o código abaixo:</p>
+            
+            <div id="qrcode-display" class="flex justify-center p-4 bg-white border-4 border-slate-100 rounded-xl mb-4"></div>
+            
+            <p class="text-[10px] font-bold text-green-600 bg-green-50 p-2 rounded-lg">
+                ✓ Link copiado para a área de transferência! Você também pode enviar no WhatsApp.
+            </p>
+        </div>
+    </div>
+
     <script src="./js/api_integration.js" type="module"></script>
     <script type="module" src="./js/main.js"></script>
 
