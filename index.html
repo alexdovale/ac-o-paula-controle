@@ -592,6 +592,37 @@
         </div>
     </footer>
 
+    <!-- MODAL DE ACEITE LGPD (NOVO) -->
+    <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
+            <div class="text-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 mb-2">Bem-vindo(a) ao SIGEP!</h2>
+                <p class="text-sm text-gray-600">Para continuar e utilizar o sistema, é necessário ler e aceitar nossos Termos de Uso e a Política de Privacidade (LGPD).</p>
+            </div>
+            
+            <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
+                <label class="flex items-start cursor-pointer group">
+                    <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                    <span class="ml-3 text-sm text-gray-700">
+                        Eu li e aceito os <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Termos de Uso</button> do sistema.
+                    </span>
+                </label>
+                
+                <label class="flex items-start cursor-pointer group">
+                    <input type="checkbox" id="lgpd-check-privacidade" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
+                    <span class="ml-3 text-sm text-gray-700">
+                        Eu concordo com a <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Política de Privacidade (LGPD)</button> e com o tratamento dos dados inseridos.
+                    </span>
+                </label>
+            </div>
+            
+            <button id="btn-confirm-lgpd" disabled class="w-full bg-gray-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed">
+                Confirmar e Entrar
+            </button>
+        </div>
+    </div>
+    <!-- FIM DO MODAL LGPD -->
+
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
@@ -1684,6 +1715,12 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- CÓDIGO INJETADO PARA TRATAR O LGPD E BLOQUEAR O ERRO -->
+    <style>
+        /* CSS Hack para esconder o erro específico de lista de usuários que vem do main.js na tela de login */
+        body.is-logged-out .toast-error-userlist { display: none !important; }
+    </style>
+
     <script src="./js/api_integration.js" type="module"></script>
     <script type="module" src="./js/main.js"></script>
 
@@ -1716,11 +1753,13 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                         footerLinks.classList.add('flex');
                         footerInner.classList.remove('justify-center');
                         footerInner.classList.add('justify-between');
+                        document.body.classList.remove('is-logged-out'); // Remove a tag de bloqueio de erro
                     } else {
                         footerLinks.classList.add('hidden');
                         footerLinks.classList.remove('flex');
                         footerInner.classList.remove('justify-between');
                         footerInner.classList.add('justify-center');
+                        document.body.classList.add('is-logged-out'); // Adiciona tag para bloquear erro prematuro
                     }
                 };
                 
@@ -1728,6 +1767,76 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 const observer = new MutationObserver(updateFooterVisibility);
                 observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
             }
+
+            // ==========================================
+            // LÓGICA DO MODAL LGPD (NOVO)
+            // ==========================================
+            const lgpdModal = document.getElementById('lgpd-acceptance-modal');
+            const chkTermos = document.getElementById('lgpd-check-termos');
+            const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
+            const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
+            const pautaContainer = document.getElementById('pauta-selection-container');
+            const appContainer = document.getElementById('app-container');
+
+            // Verifica se o usuário já aceitou antes (salvo no LocalStorage do navegador)
+            // Dica: Para segurança total, idealmente grave essa flag no banco de dados do usuário ao invés do localStorage.
+            const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
+
+            // Função para checar se as duas caixas foram marcadas
+            const validateLgpdChecks = () => {
+                if (chkTermos.checked && chkPrivacidade.checked) {
+                    btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                    btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
+                    btnConfirmLgpd.disabled = false;
+                } else {
+                    btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
+                    btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    btnConfirmLgpd.disabled = true;
+                }
+            };
+
+            chkTermos.addEventListener('change', validateLgpdChecks);
+            chkPrivacidade.addEventListener('change', validateLgpdChecks);
+
+            // Quando o botão for clicado, salva o aceite e esconde o modal
+            btnConfirmLgpd.addEventListener('click', () => {
+                localStorage.setItem('sigep_lgpd_accepted', 'true');
+                lgpdModal.classList.add('hidden');
+                
+                // Exibe uma notificação amigável (se tiver a função showToast no seu main.js)
+                if(window.showToast) {
+                    window.showToast("Termos e Política aceitos com sucesso!", "success");
+                }
+            });
+
+            // Observador para detectar quando o usuário FAZ O LOGIN (sai da tela de login)
+            const authObserver = new MutationObserver(() => {
+                const isLoginHidden = loginContainer.classList.contains('hidden');
+                // Se ele logou e ainda NÃO aceitou o LGPD
+                if (isLoginHidden && !hasAcceptedLGPD) {
+                    // Mostra o modal travando a tela
+                    lgpdModal.classList.remove('hidden');
+                }
+            });
+
+            if (loginContainer) {
+                authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+            }
+
+            // ==========================================
+            // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
+            // ==========================================
+            // Isso intercepta os erros gerados na tela se o usuário não estiver logado
+            const originalConsoleError = console.error;
+            console.error = function() {
+                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
+                    if (document.body.classList.contains('is-logged-out')) {
+                        // Ignora o erro silenciosamente se estiver na tela de login
+                        return;
+                    }
+                }
+                originalConsoleError.apply(console, arguments);
+            };
 
             // ==========================================
             // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
