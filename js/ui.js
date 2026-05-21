@@ -782,7 +782,7 @@ export const UIService = {
                 </div>
             `;
 
-            // Oculta completamente o botão de avançar para a triagem / Apoio
+            // ⭐ PERFIL APOIO: Oculta completamente o botão de avançar para a triagem ⭐
             const atenderButton = canAttend
                 ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
                 : '';
@@ -878,7 +878,7 @@ export const UIService = {
         });
     },
 
-    // ⭐ TRAVADO PARA APOIO: Oculta visualmente os botões de avançar no card de Em Atendimento ⭐
+    // ⭐ PERFIL APOIO: Oculta visualmente os botões de avançar no card de Em Atendimento ⭐
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
@@ -1168,7 +1168,7 @@ export const UIService = {
         });
     },
     
-    // ⭐ TRAVADO PARA PERFIL APOIO: Oculta visualmente os botões administrativos no card de Distribuição ⭐
+    // ⭐ PERFIL APOIO: Oculta visualmente os botões administrativos no card de Distribuição ⭐
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1285,8 +1285,8 @@ export const UIService = {
                     <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors z-10">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : '';
+                        </svg>
+                    </button>` : '';
 
                 const actionControlsHtml = canManageDistribution
                     ? `<div class="mt-4 flex flex-col gap-2">
