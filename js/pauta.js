@@ -1,4 +1,3 @@
-// js/pauta.js - VERSÃO COMPLETA E CONSOLIDADA (PADRÃO SIGAP)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -489,7 +488,7 @@ export const PautaService = {
                 };
             }
 
-            cconst distributionHistory = assisted.distributionHistory || [];
+            const distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'attendance',
                 attendedBy: attendedBy || app.currentUserName,
@@ -1638,6 +1637,19 @@ export const PautaService = {
                 updateData.distributionStatus = 'distributed';
             }
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+            
+            // SE A PAUTA NÃO TEM DELEGAÇÃO, LIMPA O COLABORADOR PARA ELE FICAR LIVRE NOVAMENTE
+            if(app.currentPautaData && !app.currentPautaData.useDelegationFlow && currentAssisted && currentAssisted.assignedCollaborator) {
+               try {
+                   const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
+                   updateDoc(colabDocRef, {
+                       status: 'disponivel',
+                       currentAttendance: null
+                   });
+               } catch (e) {
+                   console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre ao reverter o atendimento.", e);
+               }
+            }
         }
 
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
