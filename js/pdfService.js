@@ -660,19 +660,52 @@ export const PDFService = {
             y += 30;
 
             // ========================================================
-            // ⭐ DADOS SOCIOECONÔMICOS REMOVIDOS DO PDF - NÃO SERÃO EXIBIDOS ⭐
+            // ⭐ DADOS SOCIOECONÔMICOS DO ASSISTIDO (SOMENTE TÍTULO E DADOS, SEM [X])
             // ========================================================
-            // (Os dados de Ocupação, Profissão, Estado Civil e Renda Familiar foram removidos conforme solicitado)
+            if (checklistData.socioData) {
+                const s = checklistData.socioData;
+                let temDadosSocio = false;
+                const dadosSocio = [];
+                
+                if (s.ocupacao && s.ocupacao.trim() !== '' && s.ocupacao !== 'Selecione a ocupação') {
+                    dadosSocio.push(`• Ocupação: ${s.ocupacao}`);
+                    temDadosSocio = true;
+                }
+                if (s.profissao && s.profissao.trim() !== '') {
+                    dadosSocio.push(`• Profissão: ${s.profissao}`);
+                    temDadosSocio = true;
+                }
+                if (s.estadoCivil && s.estadoCivil.trim() !== '' && s.estadoCivil !== 'Selecione') {
+                    dadosSocio.push(`• Estado Civil: ${s.estadoCivil}`);
+                    temDadosSocio = true;
+                }
+                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
+                    dadosSocio.push(`• Renda Familiar: ${s.ganhos}`);
+                    temDadosSocio = true;
+                }
+                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
+                    dadosSocio.push(`• Fonte de Renda: ${s.fonteRenda}`);
+                    temDadosSocio = true;
+                }
+                
+                if (temDadosSocio) {
+                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
+                    y += 10;
+                    dadosSocio.forEach(dado => {
+                        addText(dado, false, 10, 20);
+                    });
+                    y += 20;
+                }
+            }
 
+            // ========================================================
+            // DOCUMENTAÇÃO ENTREGUE (mantém o [X] e Físico/Digital)
+            // ========================================================
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
             
             documentosTextos.forEach((item) => {
-                // ⭐ FILTRO CORRIGIDO: Remove APENAS as linhas que tenham DADOS SOCIOECONÔMICOS ou o caractere estranho Ø=ÜË
-                if (item.text && (item.text.includes('DADOS SOCIOECONÔMICOS') || item.text.includes('Ø=ÜË'))) return;
-
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
-                
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
             });
@@ -688,7 +721,7 @@ export const PDFService = {
             }
 
             // ========================================================
-            // PLANILHA DE GASTOS (MANTIDA)
+            // PLANILHA DE GASTOS
             // ========================================================
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
@@ -735,7 +768,7 @@ export const PDFService = {
             }
 
             // ========================================================
-            // DADOS DO RÉU (MANTIDOS)
+            // DADOS DO RÉU
             // ========================================================
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
@@ -789,7 +822,7 @@ export const PDFService = {
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
 
-                // DADOS SOCIOECONÔMICOS DO RÉU (MANTIDOS)
+                // DADOS SOCIOECONÔMICOS DO RÉU (com "Não sei informar")
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
