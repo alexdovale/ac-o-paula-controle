@@ -1921,50 +1921,51 @@ class SIGEPApp {
     }
 
     iniciarMonitorEnvelopes() {
-        if (this.monitorInterval) clearInterval(this.monitorInterval);
-        
-        const verificarDisponibilidade = () => {
-            if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
+        if (this.monitorInterval) clearInterval(this.monitorInterval);
+        
+        const verificarDisponibilidade = () => {
+            if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
 
-            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
-            
-            const colabsLivres = colabsAtivos.filter(c => {
-                const casosOcupando = this.allAssisted.filter(a => {
-                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
-                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
-                    return emAtendimentoNormal || pendenteAssinatura;
-                });
-                return casosOcupando.length === 0;
-            });
+            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+            
+            const colabsLivres = colabsAtivos.filter(c => {
+                const casosOcupando = this.allAssisted.filter(a => {
+                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                    return emAtendimentoNormal || pendenteAssinatura;
+                });
+                return casosOcupando.length === 0;
+            });
 
-            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-            if (!headerActions) return;
+            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+            if (!headerActions) return;
 
-            let btnEnvelope = document.getElementById('btn-colabs-disponiveis');
+            const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+            let btnEnvelope = document.getElementById(btnId);
 
-            if (colabsLivres.length > 0) {
-                if (!btnEnvelope) {
-                    btnEnvelope = document.createElement('button');
-                    btnEnvelope.id = 'btn-colabs-disponiveis';
-                    btnEnvelope.onclick = () => {
-                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                        alert(`Equipe livre no momento:\n\n${nomes}`);
-                    };
-                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-                }
-                
-                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-            } else {
-                if (btnEnvelope) btnEnvelope.remove();
-            }
-        };
+            if (colabsLivres.length > 0) {
+                if (!btnEnvelope) {
+                    btnEnvelope = document.createElement('button');
+                    btnEnvelope.id = btnId;
+                    btnEnvelope.onclick = () => {
+                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                        alert(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                    };
+                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+                }
+                
+                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+            } else {
+                if (btnEnvelope) btnEnvelope.remove();
+            }
+        };
 
-        verificarDisponibilidade();
-        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
-    }
-
+        verificarDisponibilidade();
+        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
+    }
+    
     async showPautaSelectionScreen() {
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
         
