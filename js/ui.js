@@ -941,10 +941,10 @@ export const UIService = {
                     </div>`;
             }
 
-            const buttonsContainerHtml = canDelegateOrFinalize 
+            cconst buttonsContainerHtml = canDelegateOrFinalize 
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="delegate-finalization-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
+                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
                                 Delegar
                             </button>
                             <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
