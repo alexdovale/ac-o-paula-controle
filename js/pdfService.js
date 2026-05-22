@@ -725,12 +725,12 @@ export const PDFService = {
                 y += 20;
             }
 
+            // ⭐ PLANILHA DE GASTOS ATUALIZADA (mesmas categorias do generatePlanilhaGastosPDF)
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 addText("PLANILHA DE GASTOS:", true, 11);
                 y += 10;
                 
-                // ⭐ NOVA PLANILHA DE GASTOS DETALHADA NO CHECKLIST
                 const categoriasNome = [
                     { id: 'creche_escola', label: 'Creche/escola' },
                     { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
@@ -748,19 +748,24 @@ export const PDFService = {
                 ];
 
                 let totalGastos = 0;
+                let temGastos = false;
+                
                 categoriasNome.forEach(c => {
                     const valorStr = g[c.id] || '';
-                    if (valorStr && valorStr !== 'R$ 0,00') {
-                        addText(`${c.label}: ${valorStr}`, false, 10, 20); 
+                    if (valorStr && valorStr !== 'R$ 0,00' && valorStr !== '') {
+                        addText(`${c.label}: ${valorStr}`, false, 10, 20);
                         const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                         totalGastos += num;
+                        temGastos = true;
                     }
                 });
 
-                if (totalGastos > 0) {
-                    y += 5; 
+                if (temGastos) {
+                    y += 5;
                     const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20); 
+                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20);
+                } else {
+                    addText("Nenhuma despesa informada.", false, 10, 20);
                 }
                 y += 20;
             }
