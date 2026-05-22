@@ -1639,7 +1639,8 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
             
             // SE A PAUTA NÃO TEM DELEGAÇÃO, LIMPA O COLABORADOR PARA ELE FICAR LIVRE NOVAMENTE
-            if(app.currentPautaData && !app.currentPautaData.useDelegationFlow && currentAssisted && currentAssisted.assignedCollaborator) {
+            // ADICIONEI A VERIFICAÇÃO !== 'manual' PARA EVITAR O ERRO
+            if(app.currentPautaData && !app.currentPautaData.useDelegationFlow && currentAssisted && currentAssisted.assignedCollaborator && currentAssisted.assignedCollaborator.id !== 'manual') {
                try {
                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
                    updateDoc(colabDocRef, {
