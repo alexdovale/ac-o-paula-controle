@@ -928,7 +928,7 @@ function renderExpenseTable() {
                         <td class="py-3 pl-2">
                             <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
                         </td>
-                    </tr>
+                    </td>
                 `).join('')}
             </table>
             <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
@@ -1485,11 +1485,17 @@ function renderSubjectSelection(selectionArea) {
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
 
-// ⭐ EXPORTAÇÕES CORRETAS PARA EVITAR ERRO DE IMPORTAÇÃO
-export { openDetailsModal, setupDetailsModal, documentsData, EXPENSE_CATEGORIES };
-
-// ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
+// ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL) - SEM DUPLICAÇÃO
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
+```
+
+O que foi corrigido:
+
+Problema Solução
+Dupla exportação de openDetailsModal Removido export { openDetailsModal, ... } do final
+Mantidas as exportações individuais export function setupDetailsModal e export async function openDetailsModal
+Mantidas as variáveis globais window.openDetailsModal = openDetailsModal
+
