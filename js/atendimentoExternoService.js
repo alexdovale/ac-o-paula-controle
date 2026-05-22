@@ -1,3 +1,5 @@
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO, CORES E PWA)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -127,12 +129,10 @@ export const AtendimentoExternoService = {
         const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
 
         if (isDelegacaoAtiva) {
-            // Modo Delegação: Badge mostra nome fixo
             badge.textContent = `👤 ${colaboradorNome}`;
             badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
             badge.classList.remove('hidden', 'animate-pulse');
         } else {
-            // Modo Finalização Direta: Toggle Livre/Ocupado
             const estaLivre = statusAtual === 'disponivel';
             badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
             badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
@@ -246,7 +246,6 @@ export const AtendimentoExternoService = {
             this.unsubscribeDashboard = null;
         }
 
-        // Renderiza o badge de status logo na inicialização
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
 
         const url = new URL(window.location.href);
@@ -293,6 +292,21 @@ export const AtendimentoExternoService = {
             areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
         }
 
+        if (!document.getElementById('btn-atalho-painel')) {
+            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+            const tituloBotao = isDefensor ? 'Ir para Minha Mesa de Distribuição' : 'Ir para Meus Atendimentos';
+            const btnHtml = `
+                <button id="btn-atalho-painel" class="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
+                    <span>${isDefensor ? '⚖️' : '📊'}</span> ${tituloBotao}
+                </button>
+            `;
+            areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
+            document.getElementById('btn-atalho-painel').onclick = () => {
+                sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
+                this.renderizarDashboardUnificado();
+            };
+        }
+
         this.renderHistorico(assistido);
 
         if (assistido.status === 'atendido') {
@@ -312,15 +326,18 @@ export const AtendimentoExternoService = {
                 setTimeout(() => {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
                         try {
-                            if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                            if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                                 const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
                                 await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
                                 this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
-                        } catch (e) { console.error(e); }
+                        } catch (e) { console.warn(e); }
                         this.renderizarDashboardUnificado();
                     };
                 }, 100);
+            }
+            if (headerBg) {
+                headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
             }
         } else {
             this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
@@ -597,11 +614,6 @@ export const AtendimentoExternoService = {
         const pautaIdSeguro = this.pautaId || '';
         const assistidoIdSeguro = this.assistidoId || '';
 
-        let tituloSucesso = "Atendimento Atualizado!";
-        let subtituloSucesso = "Ação registrada com sucesso.";
-        
-        let colaboradorDestinoObj = null;
-
         const objetoDemandasFinal = {
             quantidade: this.demandasAdicionaisLocais.length,
             descricoes: this.demandasAdicionaisLocais
@@ -632,8 +644,8 @@ export const AtendimentoExternoService = {
 
                 await updateDoc(docRef, {
                     status: statusDestinoFinal,
-                    attendedBy: colabSeguro,                    
-                    enviadoPor: enviadoPorServidor,            
+                    attendedBy: colabSeguro,                       
+                    enviadoPor: enviadoPorServidor,                
                     trabalhosPorUsuario: mapaProdutividadeBI,      
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
@@ -649,28 +661,19 @@ export const AtendimentoExternoService = {
                     })
                 });
                 
-                // Em fluxo direto (finalizando), tentamos já deixar o colaborador livre caso exista
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                // Segura atualização de status do colaborador (evita erro de documento inexistente)
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
                         status: 'disponivel',
                         currentAttendance: null
-                    }).catch(e => console.warn("Erro ao atualizar status do colaborador para disponível", e));
+                    }).catch(e => console.warn("Erro ao atualizar status do colaborador", e));
                 }
-
-                tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
             } 
             else if (this.fluxoSelecionado === 'distribuicao') {
                 const def = document.getElementById('select-defensor-distribuicao')?.value || '';
                 const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
-                if (!def) { 
-                    alert("Obrigatório selecionar um Defensor."); 
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
-                    return; 
-                }
+                if (!def) { alert("Obrigatório selecionar um Defensor."); this.isProcessing = false; btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
@@ -691,24 +694,15 @@ export const AtendimentoExternoService = {
                     })
                 });
                 
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
-
-                tituloSucesso = "Enviado à Distribuição!";
-                subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
             }
             else if (this.fluxoSelecionado === 'correcao') {
                 const def = document.getElementById('select-defensor-correcao')?.value || '';
                 const nota = document.getElementById('notas-correcao-dinamico')?.value || '';
-                if (!def) { 
-                    alert("Obrigatório selecionar um Defensor."); 
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
-                    return; 
-                }
+                if (!def) { alert("Obrigatório selecionar um Defensor."); this.isProcessing = false; btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
@@ -728,24 +722,15 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
-
-                tituloSucesso = "Enviado p/ Avaliação!";
-                subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
             }
             else if (this.fluxoSelecionado === 'devolver') {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
                 const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
-                if (!serv) { 
-                    alert("Selecione o servidor de destino."); 
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
-                    return; 
-                }
+                if (!serv) { alert("Selecione o servidor de destino."); this.isProcessing = false; btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === serv);
 
@@ -764,23 +749,14 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
-
-                tituloSucesso = "Processo Devolvido!";
-                subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
             }
             else if (this.fluxoSelecionado === 'transferir') {
                 const colega = document.getElementById('select-transferir-colega')?.value || '';
-                if (!colega) { 
-                    alert("Selecione um colega."); 
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false; 
-                    btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
-                    return; 
-                }
+                if (!colega) { alert("Selecione um colega."); this.isProcessing = false; btnFinalizar.disabled = false; btnFinalizar.textContent = "EXECUTAR AÇÃO"; return; }
                 
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === colega);
 
@@ -799,13 +775,10 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
-
-                tituloSucesso = "Transferência Ativa!";
-                subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
             } 
             else if (this.fluxoSelecionado === 'pausar') {
                 await updateDoc(docRef, {
@@ -824,17 +797,13 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
-
-                tituloSucesso = "Pausa Registrada";
-                subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
 
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
-                console.log(`✉️ Disparando e-mail para: ${colaboradorDestinoObj.email}`);
                 await EmailService.sendDelegationEmail(
                     colaboradorDestinoObj.email,
                     colaboradorDestinoObj.nome,
@@ -1046,15 +1015,6 @@ export const AtendimentoExternoService = {
     setupListeners() {
         document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
         document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
-
-        setTimeout(() => {
-            const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
-            if (btnBaixarPlanilha && this.assistidoData && this.assistidoData.documentChecklist?.expenseData) {
-                btnBaixarPlanilha.onclick = () => {
-                    PDFService.generatePlanilhaGastosPDF(this.assistidoData.name || 'Assistido', this.assistidoData.documentChecklist.expenseData);
-                };
-            }
-        }, 300);
     },
 
     switchTab(tab) {
@@ -1288,7 +1248,6 @@ export const AtendimentoExternoService = {
                 
                 const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
                 
-                // Sempre permite abrir os detalhes mesmo que finalizado, mantendo o botão
                 const linkIndividualDetalhes = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
                 
                 const atalhoVerdeCard = isDefensor ? `
