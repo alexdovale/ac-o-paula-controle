@@ -1,5 +1,3 @@
-// js/main.js - VERSÃO COM MEMÓRIA SEGURA E MONITOR DE EQUIPE LIVRE (SIGEP)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -355,8 +353,13 @@ class SIGEPApp {
             
             document.getElementById('ata-social-modal').classList.add('hidden');
             
-            if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
-                PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+            // Substuindo confirm() por showConfirmModal 
+            if (typeof showConfirmModal === 'function') {
+                showConfirmModal("Ação da Ata", "Deseja baixar o PDF diretamente?", () => {
+                    PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+                }, () => {
+                    PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
+                });
             } else {
                 PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
             }
@@ -563,7 +566,13 @@ class SIGEPApp {
             localStorage.removeItem('lastPautaName');
             localStorage.removeItem('lastPautaType');
 
-            if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
+            // Cleanup do monitor ao sair
+            if (this.monitorInterval) { 
+                clearInterval(this.monitorInterval); 
+                this.monitorInterval = null; 
+            }
+            // Destroi completamente qualquer botão de equipe livre para garantir que a tela de seleção não tenha "lixo"
+            document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
             UIService.showScreen('pautaSelection');
             if (this.auth?.currentUser) {
@@ -1035,7 +1044,13 @@ class SIGEPApp {
         });
         
         document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
-            if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
+            if (typeof showConfirmModal === 'function') {
+                showConfirmModal("Atenção", "Deseja mudar de assunto? Isso apagará o checklist atual.", () => {
+                    if (typeof window.switchToActionSelectionView === 'function') {
+                        window.switchToActionSelectionView();
+                    }
+                });
+            } else if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
                 if (typeof window.switchToActionSelectionView === 'function') {
                     window.switchToActionSelectionView();
                 }
@@ -1133,7 +1148,7 @@ class SIGEPApp {
                 return;
             }
             
-            const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
+            const selectedCollab = this.coladores?.find(c => c.nome === attendantName);
             let attendantData = selectedCollab ? 
                 { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
                 attendantName;
@@ -1478,24 +1493,12 @@ class SIGEPApp {
         document.body.addEventListener('click', async (e) => {
             if (e.target.classList.contains('remove-member-btn')) {
                 const email = e.target.dataset.email;
-                if (confirm(`Remover ${email} da pauta?`)) {
-                    try {
-                        const usersRef = collection(this.db, "users");
-                        const q = query(usersRef, where("email", "==", email));
-                        const querySnapshot = await getDocs(q);
-                        
-                        if (!querySnapshot.empty) {
-                            const userId = querySnapshot.docs[0].id;
-                            const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                            await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
-                            showNotification(`Membro ${email} removido`, "success");
-                            if (typeof ModalService?.openMembersModal === 'function') {
-                                await ModalService.openMembersModal(this);
-                            }
-                        }
-                    } catch (error) {
-                        showNotification("Erro ao remover membro", "error");
-                    }
+                if (typeof showConfirmModal === 'function') {
+                    showConfirmModal("Atenção", `Remover ${email} da pauta?`, async () => {
+                        await this.removeMemberAction(email);
+                    });
+                } else if (confirm(`Remover ${email} da pauta?`)) {
+                    await this.removeMemberAction(email);
                 }
             }
         });
@@ -1535,7 +1538,7 @@ class SIGEPApp {
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
             const adminPanelBtn = document.getElementById('admin-panel-btn');          
-            const adminBtnMain = document.getElementById('admin-btn-main');             
+            const adminBtnMain = document.getElementById('admin-btn-main');              
 
             if ((adminModal && adminModal.contains(e.target)) ||
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
@@ -1566,6 +1569,26 @@ class SIGEPApp {
         });
 
         this.setupAdminPanel();
+    }
+
+    async removeMemberAction(email) {
+        try {
+            const usersRef = collection(this.db, "users");
+            const q = query(usersRef, where("email", "==", email));
+            const querySnapshot = await getDocs(q);
+            
+            if (!querySnapshot.empty) {
+                const userId = querySnapshot.docs[0].id;
+                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
+                showNotification(`Membro ${email} removido`, "success");
+                if (typeof ModalService?.openMembersModal === 'function') {
+                    await ModalService.openMembersModal(this);
+                }
+            }
+        } catch (error) {
+            showNotification("Erro ao remover membro", "error");
+        }
     }
 
     async loadUserPreferences() {
@@ -1921,53 +1944,63 @@ class SIGEPApp {
     }
 
     iniciarMonitorEnvelopes() {
-        if (this.monitorInterval) clearInterval(this.monitorInterval);
-        
-        const verificarDisponibilidade = () => {
-            if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
+        if (this.monitorInterval) clearInterval(this.monitorInterval);
+        
+        const verificarDisponibilidade = () => {
+            // Remove imediatamente os botões órfãos de pautas anteriores
+            document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
+                if (btn.id !== `btn-colabs-disponiveis-${this.currentPauta?.id}`) {
+                    btn.remove();
+                }
+            });
 
-            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
-            
-            const colabsLivres = colabsAtivos.filter(c => {
-                const casosOcupando = this.allAssisted.filter(a => {
-                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
-                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
-                    return emAtendimentoNormal || pendenteAssinatura;
-                });
-                return casosOcupando.length === 0;
-            });
+            if (!this.currentPautaData?.useDelegationFlow || !this.colaboradores || this.colaboradores.length === 0) return;
 
-            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-            if (!headerActions) return;
+            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+            
+            const colabsLivres = colabsAtivos.filter(c => {
+                const casosOcupando = this.allAssisted.filter(a => {
+                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                    return emAtendimentoNormal || pendenteAssinatura;
+                });
+                return casosOcupando.length === 0;
+            });
 
-            const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-            let btnEnvelope = document.getElementById(btnId);
+            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+            if (!headerActions) return;
 
-            if (colabsLivres.length > 0) {
-                if (!btnEnvelope) {
-                    btnEnvelope = document.createElement('button');
-                    btnEnvelope.id = btnId;
-                    btnEnvelope.onclick = () => {
-                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                        alert(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
-                    };
-                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-                }
-                
-                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-            } else {
-                if (btnEnvelope) btnEnvelope.remove();
-            }
-        };
+            const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+            let btnEnvelope = document.getElementById(btnId);
 
-        verificarDisponibilidade();
-        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
-    }
+            if (colabsLivres.length > 0) {
+                if (!btnEnvelope) {
+                    btnEnvelope = document.createElement('button');
+                    btnEnvelope.id = btnId;
+                    btnEnvelope.onclick = () => {
+                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                        // Trocando alert por showNotification padrão para não bloquear o navegador
+                        showNotification(`Equipe livre no momento:\n\n${nomes.replace(/\n/g, '<br>')}`, 'info');
+                    };
+                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+                }
+                
+                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+            } else {
+                if (btnEnvelope) btnEnvelope.remove();
+            }
+        };
+
+        verificarDisponibilidade();
+        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
+    }
     
     async showPautaSelectionScreen() {
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
+        // Varredura para remover botões antigos que persistiram na interface
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         
         UIService.showScreen('pautaSelection');
         this.currentPautaFilter = this.currentPautaFilter || 'all';
