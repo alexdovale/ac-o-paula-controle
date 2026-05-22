@@ -1,9 +1,8 @@
-
 // js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO, CORES E PWA)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, where, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
@@ -126,7 +125,7 @@ export const AtendimentoExternoService = {
     async carregarColaboradoresGerais() {
         try {
             const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
-            this.todosColaboradores = snap.docs.map(d => d.data());
+            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
         } catch (error) {
             this.todosColaboradores = [];
@@ -260,6 +259,7 @@ export const AtendimentoExternoService = {
 
         document.getElementById('banner-transferencia')?.remove();
         document.getElementById('banner-atendido-trava')?.remove();
+        document.getElementById('btn-marcar-livre')?.remove(); // Limpa botao anterior se houver
 
         if (assistido.historicoTransferencia) {
             const bannerHtml = `
@@ -297,13 +297,43 @@ export const AtendimentoExternoService = {
             if (abaEncerramento) {
                 const cnpRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">🟢 Nº CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : '';
                 abaEncerramento.innerHTML = `
-                    <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2">
+                    <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2 mb-6">
                         <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
                         <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
-                        <p class="text-emerald-600 mt-1 text-xs font-medium">Este atendimento já foi finalizado e distribuído. Nenhuma operação adicional é permitida.</p>
+                        <p class="text-emerald-600 mt-1 text-xs font-medium leading-relaxed">Este atendimento já foi finalizado e processado. Você pode continuar visualizando os detalhes e históricos nas abas acima.</p>
                         ${cnpRef}
                     </div>
+
+                    <button id="btn-marcar-livre" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
+                        <span>👋</span> ESTOU LIVRE / IR PARA MESA
+                    </button>
                 `;
+
+                // Configura ação de atualizar status do colaborador para Livre
+                setTimeout(() => {
+                    const btnLivre = document.getElementById('btn-marcar-livre');
+                    if (btnLivre) {
+                        btnLivre.onclick = async () => {
+                            btnLivre.innerHTML = '<span class="animate-pulse">ATUALIZANDO STATUS...</span>';
+                            btnLivre.disabled = true;
+
+                            try {
+                                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                                    const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
+                                    await updateDoc(colabDocRef, {
+                                        status: 'disponivel',
+                                        currentAttendance: null
+                                    });
+                                }
+                            } catch (e) {
+                                console.warn("Erro silencioso ao marcar como livre:", e);
+                            }
+
+                            sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
+                            this.renderizarDashboardUnificado();
+                        };
+                    }
+                }, 100);
             }
             if (headerBg) {
                 headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
@@ -634,6 +664,16 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+                
+                // Em fluxo direto (finalizando), tentamos já deixar o colaborador livre caso exista
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, {
+                        status: 'disponivel',
+                        currentAttendance: null
+                    }).catch(e => console.warn("Erro ao atualizar status do colaborador para disponível", e));
+                }
+
                 tituloSucesso = "Atendimento Finalizado!";
                 subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
             } 
@@ -666,6 +706,12 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+                
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
+                }
+
                 tituloSucesso = "Enviado à Distribuição!";
                 subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
             }
@@ -697,6 +743,12 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
+                }
+
                 tituloSucesso = "Enviado p/ Avaliação!";
                 subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
             }
@@ -727,6 +779,12 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
+                }
+
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
             }
@@ -756,6 +814,12 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
+                }
+
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
             } 
@@ -775,6 +839,12 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
+
+                if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
+                }
+
                 tituloSucesso = "Pausa Registrada";
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
             }
@@ -1134,7 +1204,7 @@ export const AtendimentoExternoService = {
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     installBtn.classList.add('hidden');
-                    showNotification("App instalado com sucesso!", "success");
+                    // showNotification seria chamada aqui se estivesse disponivel globalmente
                 }
                 deferredPrompt = null;
             });
@@ -1255,6 +1325,9 @@ export const AtendimentoExternoService = {
                 
                 const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
                 
+                // Sempre permite abrir os detalhes mesmo que finalizado, mantendo o botão
+                const linkIndividualDetalhes = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
+                
                 const atalhoVerdeCard = isDefensor ? `
                     <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
                         <span>⚖️</span> Abrir Link no Verde
@@ -1272,7 +1345,12 @@ export const AtendimentoExternoService = {
                             <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide truncate">${escapeHTML(item.subject)}</p>
                             ${motivoUrgencia}
                             ${numProcessoHtml}
-                            ${atalhoVerdeCard}
+                            <div class="flex gap-2">
+                                ${atalhoVerdeCard}
+                                <a href="${linkIndividualDetalhes}" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-slate-600 hover:text-slate-800 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
+                                    <span>👁️</span> Revisar Detalhes
+                                </a>
+                            </div>
                         </div>
                         <div class="shrink-0 text-right w-full sm:w-auto mt-2 sm:mt-0 flex sm:flex-col justify-between sm:justify-start items-center sm:items-end">
                             ${labelStatusFinal}
