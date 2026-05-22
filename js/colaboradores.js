@@ -99,7 +99,6 @@ const CollaboratorService = {
         if (window.app) this.renderTable(window.app);
     },
 
-    // ⭐ NOVO: GERA O LINK FIXO DA MESA DE TRABALHO PARA O WHATSAPP ⭐
     copyDashboardLink(nomeColab) {
         if (!window.app || !window.app.currentPauta) return;
         let baseUrl = window.location.href.split('?')[0]; 
@@ -117,6 +116,7 @@ const CollaboratorService = {
         }
     },
 
+    // ⭐ ATA PERSISTENTE E FUNCIONAL ⭐
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
             showNotification("Selecione uma pauta primeiro", "error");
@@ -143,7 +143,10 @@ const CollaboratorService = {
                 app.currentPautaData = { ...app.currentPautaData, ...data };
             }
 
-            showNotification("Dados da Ata salvos com sucesso! 💾", "success");
+            showNotification("Dados do evento salvos com sucesso! 💾", "success");
+            // Fecha o modal após salvar
+            const modal = document.getElementById('ata-social-modal');
+            if (modal) modal.classList.add('hidden');
         } catch (error) {
             console.error("Erro ao salvar dados da ata:", error);
             showNotification("Erro ao salvar dados no banco.", "error");
@@ -164,16 +167,16 @@ const CollaboratorService = {
                 if (acaoEl) acaoEl.value = data.ataAcaoNome || app.currentPauta.name || '';
                 
                 const endEl = document.getElementById('ata-endereco');
-                if (endEl && data.ataEndereco) endEl.value = data.ataEndereco;
+                if (endEl) endEl.value = data.ataEndereco || '';
                 
                 const dataEl = document.getElementById('ata-data');
-                if (dataEl && data.ataData) dataEl.value = data.ataData;
+                if (dataEl) dataEl.value = data.ataData || '';
                 
                 const totalEl = document.getElementById('ata-total');
-                if (totalEl && data.ataTotalManual) totalEl.value = data.ataTotalManual;
+                if (totalEl) totalEl.value = data.ataTotalManual || '';
                 
                 const orgaoEl = document.getElementById('ata-orgao');
-                if (orgaoEl && data.ataOrgao) orgaoEl.value = data.ataOrgao;
+                if (orgaoEl) orgaoEl.value = data.ataOrgao || '';
             }
         } catch (error) {
             console.error("Erro ao carregar dados da ata:", error);
@@ -347,6 +350,7 @@ const CollaboratorService = {
             tbody.appendChild(row);
         });
 
+        // Initialize Styles
         if (!document.getElementById('toggle-css-colaboradores')) {
             const style = document.createElement('style');
             style.id = 'toggle-css-colaboradores';
@@ -390,7 +394,6 @@ const CollaboratorService = {
 
         const btnSaveAta = document.getElementById('save-ata-data-btn');
         if (btnSaveAta) {
-            // Remove o listener anterior de forma segura e adiciona o novo (Substituição de onclick para evitar stack leak)
             btnSaveAta.removeEventListener('click', btnSaveAta.onclickBackup);
             const handler = (e) => {
                 e.preventDefault();
@@ -402,11 +405,11 @@ const CollaboratorService = {
 
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
-            btnOpenAtaModal.addEventListener('click', () => {
+            btnOpenAtaModal.onclick = () => {
                 this.loadAtaData(app);
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
-            }, { once: false });
+            };
         }
 
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
