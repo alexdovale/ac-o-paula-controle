@@ -660,56 +660,40 @@ export const PDFService = {
             y += 30;
 
             // ========================================================
-            // ⭐ DADOS SOCIOECONÔMICOS DO ASSISTIDO (SOMENTE TÍTULO E DADOS, SEM [X])
-            // ========================================================
-            if (checklistData.socioData) {
-                const s = checklistData.socioData;
-                let temDadosSocio = false;
-                const dadosSocio = [];
-                
-                if (s.ocupacao && s.ocupacao.trim() !== '' && s.ocupacao !== 'Selecione a ocupação') {
-                    dadosSocio.push(`• Ocupação: ${s.ocupacao}`);
-                    temDadosSocio = true;
-                }
-                if (s.profissao && s.profissao.trim() !== '') {
-                    dadosSocio.push(`• Profissão: ${s.profissao}`);
-                    temDadosSocio = true;
-                }
-                if (s.estadoCivil && s.estadoCivil.trim() !== '' && s.estadoCivil !== 'Selecione') {
-                    dadosSocio.push(`• Estado Civil: ${s.estadoCivil}`);
-                    temDadosSocio = true;
-                }
-                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
-                    dadosSocio.push(`• Renda Familiar: ${s.ganhos}`);
-                    temDadosSocio = true;
-                }
-                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
-                    dadosSocio.push(`• Fonte de Renda: ${s.fonteRenda}`);
-                    temDadosSocio = true;
-                }
-                
-                if (temDadosSocio) {
-                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
-                    y += 10;
-                    dadosSocio.forEach(dado => {
-                        addText(dado, false, 10, 20);
-                    });
-                    y += 20;
-                }
-            }
-
-            // ========================================================
-            // DOCUMENTAÇÃO ENTREGUE (mantém o [X] e Físico/Digital)
+            // ⭐ DOCUMENTAÇÃO ENTREGUE (inclui dados socioeconômicos como itens)
             // ========================================================
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
             
+            // Primeiro, adicionar os documentos do checklist
             documentosTextos.forEach((item) => {
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
             });
-            y += 20;
+            
+            // Depois, adicionar os dados socioeconômicos do assistido (sem [X] e sem Físico/Digital)
+            if (checklistData.socioData) {
+                const s = checklistData.socioData;
+                
+                if (s.ocupacao && s.ocupacao.trim() !== '' && s.ocupacao !== 'Selecione a ocupação') {
+                    addText(`Ocupação: ${s.ocupacao}`, false, 10, 20);
+                }
+                if (s.profissao && s.profissao.trim() !== '') {
+                    addText(`Profissão: ${s.profissao}`, false, 10, 20);
+                }
+                if (s.estadoCivil && s.estadoCivil.trim() !== '' && s.estadoCivil !== 'Selecione') {
+                    addText(`Estado Civil: ${s.estadoCivil}`, false, 10, 20);
+                }
+                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
+                    addText(`Renda Familiar: ${s.ganhos}`, false, 10, 20);
+                }
+                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
+                    addText(`Fonte de Renda: ${s.fonteRenda}`, false, 10, 20);
+                }
+            }
+            
+            y += 10;
 
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
                 addText("DEMANDAS ADICIONAIS:", true, 11);
@@ -822,7 +806,7 @@ export const PDFService = {
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
 
-                // DADOS SOCIOECONÔMICOS DO RÉU (com "Não sei informar")
+                // DADOS SOCIOECONÔMICOS DO RÉU
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
