@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Gerenciamento de Pauta </title>
+    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
 
     <link class="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
@@ -102,7 +102,7 @@
         #main-wrapper { flex: 1 0 auto; }
     </style>
 </head>
-<body class="p-0 sm:p-0 md:p-0 is-logged-out">
+<body class="p-0 sm:p-0 md:p-0">
 
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
         ⚠️ Sem conexão. Trabalhando em Modo Offline no SIGEP.
@@ -139,14 +139,6 @@
                     <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Criar Conta</button>
                 </form>
-
-                <!-- Links de Políticas e Termos na Tela de Login -->
-                <div class="mt-6 pt-4 border-t border-gray-100 text-center text-xs text-gray-500">
-                    Ao entrar ou se cadastrar, você concorda com nossos <br>
-                    <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-green-600 hover:underline font-bold mt-1">Termos de Uso</button> e 
-                    <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-green-600 hover:underline font-bold">Política de Privacidade</button>.
-                </div>
-
             </div>
         </div>
 
@@ -175,7 +167,7 @@
                 <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
                     Ver Dashboard
                 </button>
-                <button id="btn-open-profile" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
+                <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
                     Meu Perfil
                 </button>
             </div>
@@ -992,7 +984,7 @@
                         <input type="checkbox" id="check-use-distribution" class="h-4 w-4 sm:h-5 sm:w-5 text-cyan-600 focus:ring-cyan-500 rounded mt-1">
                         <div class="flex-1">
                             <span class="font-semibold text-gray-700 block text-sm sm:text-base">Habilitar Fila de Distribuição?</span>
-                            <span class="text-[10px] sm:text-xs text-gray-500">Para processos que precisam de assinatura/protocolo</span>
+                            <span class="text-[10px] sm:text-xs text-gray-500">Para processos que precisam de protocolo.</span>
                         </div>
                     </label>
                 </div>
@@ -1002,7 +994,7 @@
                     <input type="radio" name="useDelegationFlow" value="false" class="h-4 w-4 sm:h-5 sm:w-5 text-red-600 focus:ring-red-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800 text-sm sm:text-base">Não, finalizar diretamente</span>
-                        <span class="block text-[10px] sm:text-xs text-gray-500">Pula a coluna "Em Atendimento".</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Pula a coluna "Em Atendimento".</span>
                     </span>
                 </label>
             </div>
@@ -1540,37 +1532,68 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
-    <!-- MODAL DE PREFERÊNCIAS E PERFIL (INSERIDO AQUI) -->
-    <div id="profile-modal" class="hidden fixed inset-0 flex items-center justify-center bg-black/50 z-50 p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-6 rounded-2xl w-full max-w-md shadow-2xl relative" onclick="event.stopPropagation()">
-            <button id="close-profile-x" class="absolute top-4 right-4 text-gray-400 hover:text-gray-600 text-2xl leading-none">&times;</button>
-            <h2 class="text-xl font-bold mb-4 border-b pb-2">Configurações de Perfil</h2>
-            
-            <div class="space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase">Nome Completo</label>
-                    <input type="text" id="edit-name" class="w-full border p-2 rounded outline-none focus:border-green-500 bg-gray-50" readonly>
+    <div id="user-preferences-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="this.classList.add('hidden')">
+        <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
+            <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center text-gray-800 border-b pb-4">Minhas Preferências - SIGEP</h2>
+            <div class="space-y-6 mb-6">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Nome</label>
+                        <input type="text" id="pref-user-name" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-black text-gray-500 uppercase mb-1">Email</label>
+                        <input type="email" id="pref-user-email" class="w-full p-2 border border-gray-300 rounded-lg bg-gray-100 text-sm" readonly>
+                    </div>
                 </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase">E-mail</label>
-                    <input type="email" id="edit-email" class="w-full border p-2 rounded outline-none focus:border-green-500 bg-gray-50" readonly>
+
+                <div class="pt-4 border-t border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">🔊 Sons de Notificação</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-enable-sounds-success" class="h-4 w-4 text-green-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Sucesso</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-enable-sounds-error" class="h-4 w-4 text-red-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Erro</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-enable-sounds-info" class="h-4 w-4 text-blue-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Informativo</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-enable-sounds-warning" class="h-4 w-4 text-orange-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Aviso</span>
+                        </label>
+                    </div>
                 </div>
-                
-                <div class="pt-2">
-                    <p class="text-[10px] text-gray-400 italic mb-3">* Os dados acima são vinculados ao banco de autenticação.</p>
-                </div>
-                
-                <div class="flex items-center justify-between pt-4 border-t border-gray-200">
-                    <span class="text-sm font-bold text-gray-700">Modo Escuro (BETA)</span>
-                    <button id="theme-toggle" class="w-12 h-6 bg-gray-300 rounded-full transition-all flex items-center p-1 relative">
-                        <div id="theme-knob" class="w-4 h-4 bg-white rounded-full transition-transform transform translate-x-0 shadow"></div>
-                    </button>
+
+                <div class="pt-4 border-t border-gray-100">
+                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">💬 Mensagens na Tela (Toasts)</h3>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-show-toasts-success" class="h-4 w-4 text-green-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Mostrar Sucesso</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-show-toasts-error" class="h-4 w-4 text-red-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Mostrar Erros</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-show-toasts-info" class="h-4 w-4 text-blue-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Mostrar Informações</span>
+                        </label>
+                        <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
+                            <input type="checkbox" id="pref-show-toasts-warning" class="h-4 w-4 text-orange-600 rounded" checked>
+                            <span class="ml-3 text-sm text-gray-700">Mostrar Avisos</span>
+                        </label>
+                    </div>
                 </div>
             </div>
-
-            <div class="mt-6 flex gap-2">
-                <button id="save-profile" class="flex-1 bg-green-600 text-white py-2 rounded-lg font-bold uppercase text-xs hover:bg-green-700 transition">Salvar Preferências</button>
-                <button id="close-profile" class="flex-1 bg-gray-200 text-gray-700 py-2 rounded-lg font-bold uppercase text-xs hover:bg-gray-300 transition">Fechar</button>
+            <div class="flex flex-col sm:flex-row justify-end gap-3 border-t pt-6">
+                <button id="cancel-user-preferences-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                <button id="save-user-preferences-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700 shadow-md transition">Salvar Alterações</button>
             </div>
         </div>
     </div>
@@ -1696,15 +1719,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
     <style>
         /* CSS Hack para esconder o erro específico de lista de usuários que vem do main.js na tela de login */
         body.is-logged-out .toast-error-userlist { display: none !important; }
-        
-        /* Tema Escuro - Classe Injetada */
-        html.dark body { background-color: #1a202c; color: #f8fafc; }
-        html.dark .bg-white { background-color: #1e293b; border-color: #334155; }
-        html.dark .text-gray-800, html.dark .text-gray-700, html.dark .text-gray-600 { color: #f1f5f9; }
-        html.dark .border-gray-200, html.dark .border-gray-300 { border-color: #334155; }
-        html.dark input, html.dark select, html.dark textarea { background-color: #0f172a; color: #f8fafc; border-color: #334155; }
-        html.dark .shadow-sm, html.dark .shadow-md, html.dark .shadow-lg, html.dark .shadow-xl { box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5); }
-        html.dark .bg-gray-50, html.dark .bg-gray-100 { background-color: #0f172a; }
     </style>
 
     <script src="./js/api_integration.js" type="module"></script>
@@ -1712,42 +1726,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // ==========================================
-            // DESTRUIDOR IMPLACÁVEL DE ERROS NA TELA DE LOGIN
-            // ==========================================
-            // Como os módulos importam showNotification diretamente, precisamos destruir o elemento HTML assim que ele tentar nascer.
-            const errorDestroyer = new MutationObserver((mutations) => {
-                if (!document.body.classList.contains('is-logged-out')) return;
-                
-                mutations.forEach((mutation) => {
-                    mutation.addedNodes.forEach((node) => {
-                        if (node.nodeType === 1) { // ELEMENT_NODE
-                            const text = node.textContent || '';
-                            if (text.includes('Erro ao carregar lista de usuários') || text.includes('permission-denied') || text.includes('Faltam permissões')) {
-                                // Esconde e remove o toast instantaneamente
-                                node.style.display = 'none';
-                                node.style.opacity = '0';
-                                setTimeout(() => node.remove(), 10);
-                            } else {
-                                // Verifica se o erro está dentro de um elemento filho
-                                const childError = Array.from(node.querySelectorAll('*')).find(el => {
-                                    const t = el.textContent || '';
-                                    return t.includes('Erro ao carregar lista de usuários') || t.includes('permission-denied');
-                                });
-                                if (childError) {
-                                    node.style.display = 'none';
-                                    node.style.opacity = '0';
-                                    setTimeout(() => node.remove(), 10);
-                                }
-                            }
-                        }
-                    });
-                });
-            });
-            
-            errorDestroyer.observe(document.body, { childList: true, subtree: true });
-
             const btnManual = document.getElementById('btn-footer-manual');
             const btnTermos = document.getElementById('btn-footer-termos');
             const btnPolitica = document.getElementById('btn-footer-politica');
@@ -1775,15 +1753,12 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                         footerLinks.classList.add('flex');
                         footerInner.classList.remove('justify-center');
                         footerInner.classList.add('justify-between');
-                        
                         document.body.classList.remove('is-logged-out'); // Remove a tag de bloqueio de erro
-                        checkLGPD(); // Dispara o LGPD logo após o login
                     } else {
                         footerLinks.classList.add('hidden');
                         footerLinks.classList.remove('flex');
                         footerInner.classList.remove('justify-between');
                         footerInner.classList.add('justify-center');
-                        
                         document.body.classList.add('is-logged-out'); // Adiciona tag para bloquear erro prematuro
                     }
                 };
@@ -1794,13 +1769,20 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             }
 
             // ==========================================
-            // LÓGICA DO MODAL LGPD (FOCADO NA CONTA)
+            // LÓGICA DO MODAL LGPD (NOVO)
             // ==========================================
             const lgpdModal = document.getElementById('lgpd-acceptance-modal');
             const chkTermos = document.getElementById('lgpd-check-termos');
             const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
             const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
+            const pautaContainer = document.getElementById('pauta-selection-container');
+            const appContainer = document.getElementById('app-container');
 
+            // Verifica se o usuário já aceitou antes (salvo no LocalStorage do navegador)
+            // Dica: Para segurança total, idealmente grave essa flag no banco de dados do usuário ao invés do localStorage.
+            const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
+
+            // Função para checar se as duas caixas foram marcadas
             const validateLgpdChecks = () => {
                 if (chkTermos.checked && chkPrivacidade.checked) {
                     btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
@@ -1816,121 +1798,45 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             chkTermos.addEventListener('change', validateLgpdChecks);
             chkPrivacidade.addEventListener('change', validateLgpdChecks);
 
-            // Verifica o LGPD de forma inteligente
-            async function checkLGPD() {
-                // Aguarda 1.5s para garantir que o firebase e o window.app.currentUser foram populados pelo main.js
-                setTimeout(async () => {
-                    const user = window.app?.auth?.currentUser;
-                    if (!user) return;
-                    
-                    const uid = user.uid;
-                    
-                    // 1. Checa a memória rápida do navegador para não fazer a tela piscar
-                    if (localStorage.getItem(`lgpd_accepted_${uid}`) === 'true') {
-                        return; // O usuário atual já aceitou neste PC
-                    }
-
-                    // 2. Se não tem no PC, checa no banco de dados definitivo (Firebase)
-                    try {
-                        const { getDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                        const userDoc = await getDoc(doc(window.app.db, "users", uid));
-                        
-                        // Se o banco diz que ele já aceitou (talvez tenha aceito no celular)
-                        if (userDoc.exists() && userDoc.data().lgpdAccepted === true) {
-                            localStorage.setItem(`lgpd_accepted_${uid}`, 'true'); // Salva no PC para a próxima
-                            return;
-                        }
-                    } catch(e) {
-                        console.warn("Aviso: Falha ao checar LGPD no banco, prosseguindo com modal", e);
-                    }
-
-                    // Se realmente nunca aceitou, força a tela do LGPD
-                    lgpdModal.classList.remove('hidden');
-                }, 1500);
-            }
-
-            // O que acontece quando ele clica em "Confirmar"
-            btnConfirmLgpd.addEventListener('click', async () => {
-                const user = window.app?.auth?.currentUser;
-                if (user) {
-                    const uid = user.uid;
-                    
-                    // Salva na máquina local
-                    localStorage.setItem(`lgpd_accepted_${uid}`, 'true');
-                    
-                    // Salva definitivamente no banco de dados do Firebase
-                    try {
-                        const { updateDoc, doc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                        await updateDoc(doc(window.app.db, "users", uid), { lgpdAccepted: true });
-                    } catch(e) {
-                        console.error("Erro ao salvar aceite do LGPD no banco de dados", e);
-                    }
-                }
-                
+            // Quando o botão for clicado, salva o aceite e esconde o modal
+            btnConfirmLgpd.addEventListener('click', () => {
+                localStorage.setItem('sigep_lgpd_accepted', 'true');
                 lgpdModal.classList.add('hidden');
-                if(window.showNotification) {
-                    window.showNotification("Termos e Política aceitos com sucesso!", "success");
+                
+                // Exibe uma notificação amigável (se tiver a função showToast no seu main.js)
+                if(window.showToast) {
+                    window.showToast("Termos e Política aceitos com sucesso!", "success");
                 }
             });
 
-            // ==========================================
-            // LÓGICA DO MODAL DE PERFIL
-            // ==========================================
-            const btnOpenProfile = document.getElementById('btn-open-profile');
-            const profileModal = document.getElementById('profile-modal');
-            const btnCloseProfile = document.getElementById('close-profile');
-            const btnCloseProfileX = document.getElementById('close-profile-x');
-            const btnSaveProfile = document.getElementById('save-profile');
-            const themeToggle = document.getElementById('theme-toggle');
-            const themeKnob = document.getElementById('theme-knob');
-            
-            const editName = document.getElementById('edit-name');
-            const editEmail = document.getElementById('edit-email');
+            // Observador para detectar quando o usuário FAZ O LOGIN (sai da tela de login)
+            const authObserver = new MutationObserver(() => {
+                const isLoginHidden = loginContainer.classList.contains('hidden');
+                // Se ele logou e ainda NÃO aceitou o LGPD
+                if (isLoginHidden && !hasAcceptedLGPD) {
+                    // Mostra o modal travando a tela
+                    lgpdModal.classList.remove('hidden');
+                }
+            });
 
-            // Restaura o tema salvo assim que a tela carrega
-            if (localStorage.getItem('theme') === 'dark') {
-                document.documentElement.classList.add('dark');
-                if (themeKnob) themeKnob.style.transform = 'translateX(24px)';
+            if (loginContainer) {
+                authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
             }
 
-            if (btnOpenProfile && profileModal) {
-                btnOpenProfile.addEventListener('click', () => {
-                    // Tenta puxar o nome e e-mail que estão salvos no window.app (main.js)
-                    if (window.app && window.app.auth && window.app.auth.currentUser) {
-                        editEmail.value = window.app.auth.currentUser.email || '';
-                        editName.value = window.app.currentUserName || window.app.auth.currentUser.displayName || '';
+            // ==========================================
+            // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
+            // ==========================================
+            // Isso intercepta os erros gerados na tela se o usuário não estiver logado
+            const originalConsoleError = console.error;
+            console.error = function() {
+                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
+                    if (document.body.classList.contains('is-logged-out')) {
+                        // Ignora o erro silenciosamente se estiver na tela de login
+                        return;
                     }
-                    profileModal.classList.remove('hidden');
-                });
-                
-                const closeProfileFn = () => profileModal.classList.add('hidden');
-                if (btnCloseProfile) btnCloseProfile.addEventListener('click', closeProfileFn);
-                if (btnCloseProfileX) btnCloseProfileX.addEventListener('click', closeProfileFn);
-
-                // Alternador de Modo Escuro (Front-end)
-                if (themeToggle && themeKnob) {
-                    themeToggle.addEventListener('click', () => {
-                        const isDark = document.documentElement.classList.contains('dark');
-                        if (isDark) {
-                            document.documentElement.classList.remove('dark');
-                            themeKnob.style.transform = 'translateX(0)';
-                            localStorage.setItem('theme', 'light');
-                        } else {
-                            document.documentElement.classList.add('dark');
-                            themeKnob.style.transform = 'translateX(24px)';
-                            localStorage.setItem('theme', 'dark');
-                        }
-                    });
                 }
-
-                // Salvar Preferências
-                if (btnSaveProfile) {
-                    btnSaveProfile.addEventListener('click', () => {
-                        if(window.showNotification) window.showNotification("Preferências de sistema atualizadas!", "success");
-                        closeProfileFn();
-                    });
-                }
-            }
+                originalConsoleError.apply(console, arguments);
+            };
 
             // ==========================================
             // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
