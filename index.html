@@ -984,7 +984,7 @@
                         <input type="checkbox" id="check-use-distribution" class="h-4 w-4 sm:h-5 sm:w-5 text-cyan-600 focus:ring-cyan-500 rounded mt-1">
                         <div class="flex-1">
                             <span class="font-semibold text-gray-700 block text-sm sm:text-base">Habilitar Fila de Distribuição?</span>
-                            <span class="text-[10px] sm:text-xs text-gray-500">Para processos que precisam de protocolo.</span>
+                            <span class="text-[10px] sm:text-xs text-gray-500">Para processos que precisam de assinatura/protocolo</span>
                         </div>
                     </label>
                 </div>
@@ -1704,6 +1704,42 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            
+            // ==========================================
+            // DESTRUIDOR IMPLACÁVEL DE ERROS NA TELA DE LOGIN
+            // ==========================================
+            // Como os módulos importam showNotification diretamente, precisamos destruir o elemento HTML assim que ele tentar nascer.
+            const errorDestroyer = new MutationObserver((mutations) => {
+                if (!document.body.classList.contains('is-logged-out')) return;
+                
+                mutations.forEach((mutation) => {
+                    mutation.addedNodes.forEach((node) => {
+                        if (node.nodeType === 1) { // ELEMENT_NODE
+                            const text = node.textContent || '';
+                            if (text.includes('Erro ao carregar lista de usuários') || text.includes('permission-denied') || text.includes('Faltam permissões')) {
+                                // Esconde e remove o toast instantaneamente
+                                node.style.display = 'none';
+                                node.style.opacity = '0';
+                                setTimeout(() => node.remove(), 10);
+                            } else {
+                                // Verifica se o erro está dentro de um elemento filho
+                                const childError = Array.from(node.querySelectorAll('*')).find(el => {
+                                    const t = el.textContent || '';
+                                    return t.includes('Erro ao carregar lista de usuários') || t.includes('permission-denied');
+                                });
+                                if (childError) {
+                                    node.style.display = 'none';
+                                    node.style.opacity = '0';
+                                    setTimeout(() => node.remove(), 10);
+                                }
+                            }
+                        }
+                    });
+                });
+            });
+            
+            errorDestroyer.observe(document.body, { childList: true, subtree: true });
+
             const btnManual = document.getElementById('btn-footer-manual');
             const btnTermos = document.getElementById('btn-footer-termos');
             const btnPolitica = document.getElementById('btn-footer-politica');
@@ -1830,39 +1866,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             });
 
             // ==========================================
-            // BLOQUEADOR DEFINITIVO DO ERRO NA TELA DE LOGIN
-            // ==========================================
-            // Bloqueia tanto o popup vermelho na tela quanto o erro sujo no console (F12)
-            
-            let realShowNotification = null;
-            Object.defineProperty(window, 'showNotification', {
-                get: function() { return realShowNotification; },
-                set: function(val) {
-                    realShowNotification = function(msg, type) {
-                        // Se o usuário não está logado e o erro fala de "usuários" ou "permissão"
-                        if (document.body.classList.contains('is-logged-out')) {
-                            if (msg && (msg.toLowerCase().includes('usuário') || msg.toLowerCase().includes('permissão') || msg.toLowerCase().includes('permission-denied'))) {
-                                return; // Joga a mensagem no lixo e não mostra na tela
-                            }
-                        }
-                        // Se não for o erro chato, exibe normalmente
-                        val(msg, type);
-                    };
-                }
-            });
-
-            const originalConsoleError = console.error;
-            console.error = function() {
-                if (document.body.classList.contains('is-logged-out')) {
-                    if (arguments[0] && typeof arguments[0] === 'string' && (arguments[0].includes('usuários') || arguments[0].includes('permission-denied'))) {
-                        return; // Oculta o erro vermelho do console de desenvolvedor
-                    }
-                }
-                originalConsoleError.apply(console, arguments);
-            };
-
-            // ==========================================
-            // LÓGICA DO MODAL DE PERFIL (INSERIDO AQUI)
+            // LÓGICA DO MODAL DE PERFIL
             // ==========================================
             const btnOpenProfile = document.getElementById('btn-open-profile');
             const profileModal = document.getElementById('profile-modal');
@@ -1914,7 +1918,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 // Salvar Preferências
                 if (btnSaveProfile) {
                     btnSaveProfile.addEventListener('click', () => {
-                        // (Por enquanto, apenas fecha. O nome e e-mail no Firebase exigem função específica de updateProfile no main.js)
                         if(window.showNotification) window.showNotification("Preferências de sistema atualizadas!", "success");
                         closeProfileFn();
                     });
