@@ -807,14 +807,204 @@ export const AtendimentoExternoService = {
     },
 
     renderHistorico(assistido) {
-        const lista = document.getElementById('lista-historico');
-        if (!lista) return;
+    const lista = document.getElementById('lista-historico');
+    if (!lista) return;
 
-        if (!assistido.documentChecklist || !assistido.documentChecklist.action) {
-            lista.innerHTML = `<div class="text-center py-10 opacity-50"><span class="text-4xl block mb-2">📭</span><p class="text-sm font-bold text-slate-500">Nenhum checklist de documentos registrado na recepção.</p></div>`;
-            return;
+    // ⭐ VERIFICA SE TEM DADOS DE CHECKLIST
+    const temChecklist = assistido.documentChecklist && assistido.documentChecklist.action;
+    
+    if (!temChecklist) {
+        lista.innerHTML = `<div class="text-center py-10 opacity-50"><span class="text-4xl block mb-2">📭</span><p class="text-sm font-bold text-slate-500">Nenhum checklist de documentos registrado na recepção.</p></div>`;
+        return;
+    }
+
+    const chk = assistido.documentChecklist;
+    const baseDeDados = documentsData || window.documentsData || {};
+    const actionData = baseDeDados[chk.action];
+    const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
+    
+    let html = `
+        <div class="bg-indigo-50 p-4 rounded-xl mb-6 border border-indigo-100 shadow-sm relative overflow-hidden">
+            <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500"></div>
+            <p class="text-[10px] text-indigo-400 font-black uppercase tracking-widest mb-1 pl-1">Ação Selecionada na Recepção:</p>
+            <p class="text-sm font-black text-indigo-800 uppercase pl-1">${actionTitle}</p>
+        </div>
+    `;
+
+    // ========================================================
+    // ⭐ DADOS SOCIOECONÔMICOS DO ASSISTIDO (NOVO)
+    // ========================================================
+    if (chk.socioData) {
+        const s = chk.socioData;
+        let temSocio = false;
+        let socioHtml = '';
+        
+        if (s.ocupacao && s.ocupacao.trim() !== '' && s.ocupacao !== 'Selecione a ocupação') {
+            socioHtml += `<div class="flex justify-between items-center py-1.5 border-b border-gray-100"><span class="text-[10px] font-black text-gray-400 uppercase">OCUPAÇÃO</span><span class="text-xs font-bold text-gray-700">${escapeHTML(s.ocupacao)}</span></div>`;
+            temSocio = true;
         }
+        if (s.profissao && s.profissao.trim() !== '') {
+            socioHtml += `<div class="flex justify-between items-center py-1.5 border-b border-gray-100"><span class="text-[10px] font-black text-gray-400 uppercase">PROFISSÃO</span><span class="text-xs font-bold text-gray-700">${escapeHTML(s.profissao)}</span></div>`;
+            temSocio = true;
+        }
+        if (s.estadoCivil && s.estadoCivil.trim() !== '' && s.estadoCivil !== 'Selecione') {
+            socioHtml += `<div class="flex justify-between items-center py-1.5 border-b border-gray-100"><span class="text-[10px] font-black text-gray-400 uppercase">ESTADO CIVIL</span><span class="text-xs font-bold text-gray-700">${escapeHTML(s.estadoCivil)}</span></div>`;
+            temSocio = true;
+        }
+        if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
+            socioHtml += `<div class="flex justify-between items-center py-1.5 border-b border-gray-100"><span class="text-[10px] font-black text-gray-400 uppercase">RENDA FAMILIAR</span><span class="text-xs font-bold text-gray-700">${escapeHTML(s.ganhos)}</span></div>`;
+            temSocio = true;
+        }
+        if (s.fonteRenda && s.fonteRenda.trim() !== '') {
+            socioHtml += `<div class="flex justify-between items-center py-1.5 border-b border-gray-100"><span class="text-[10px] font-black text-gray-400 uppercase">FONTE DE RENDA</span><span class="text-xs font-bold text-gray-700">${escapeHTML(s.fonteRenda)}</span></div>`;
+            temSocio = true;
+        }
+        
+        if (temSocio) {
+            html += `
+                <div class="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-gray-500"></div>
+                    <h4 class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
+                        <span>📋</span> PERFIL SOCIOECONÔMICO
+                    </h4>
+                    <div class="space-y-1">
+                        ${socioHtml}
+                    </div>
+                </div>
+            `;
+        }
+    }
 
+    // ========================================================
+    // ⭐ DOCUMENTOS ENTREGADOS
+    // ========================================================
+    if (chk.checkedIds && chk.checkedIds.length > 0) {
+        html += `<h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">📄 DOCUMENTOS EM POSSE</h4><ul class="space-y-2 mb-8">`;
+        
+        chk.checkedIds.forEach(id => {
+            if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
+            let docName = id.replace(/-/g, ' ').toUpperCase();
+            if (actionData && id.startsWith('doc-')) {
+                const parts = id.split('-');
+                const dIdx = parseInt(parts.pop());
+                const sIdx = parseInt(parts.pop());
+                if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
+                    const docObj = actionData.sections[sIdx].docs[dIdx];
+                    if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
+                }
+            }
+            const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
+            html += `
+                <li class="text-xs bg-white border border-slate-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
+                    <span class="font-bold text-slate-700 pr-2">📄 ${docName}</span> 
+                    <span class="font-black text-[9px] uppercase tracking-widest ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'} px-2 py-1 rounded shadow-sm border">${tipo}</span>
+                </li>
+            `;
+        });
+        html += `</ul>`;
+    }
+
+    // ========================================================
+    // ⭐ DEMANDAS ADICIONAIS
+    // ========================================================
+    if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
+        html += `
+            <div class="bg-violet-50 p-4 rounded-xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
+                <h4 class="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
+                    <span>⚖️</span> DEMANDAS ACUMULADAS
+                </h4>
+                <ul class="space-y-2">
+                    ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-2 rounded-lg border border-violet-100 shadow-sm flex items-center gap-2"><span class="text-violet-600">•</span> ${escapeHTML(dem)}</li>`).join('')}
+                </ul>
+            </div>
+        `;
+    }
+
+    // ========================================================
+    // ⭐ PLANILHA DE GASTOS
+    // ========================================================
+    if (chk.expenseData && chk.expenseData.checkExibirGastos) {
+        const g = chk.expenseData;
+        const categorias = [
+            { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
+            { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
+            { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
+            { id: 'outras', label: 'Outras' }
+        ];
+
+        let totalGastos = 0;
+        let gastosHtml = '';
+        
+        categorias.forEach(c => {
+            if (g[c.id] && g[c.id] !== 'R$ 0,00') {
+                gastosHtml += `<div class="flex justify-between text-xs mb-1.5"><span class="text-emerald-700 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900">${g[c.id]}</span></div>`;
+                const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                totalGastos += num;
+            }
+        });
+
+        if (totalGastos > 0) {
+            const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            
+            html += `
+                <div class="bg-emerald-50 p-5 rounded-xl mb-6 border border-emerald-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
+                    <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 pl-1 flex items-center gap-1">
+                        <span>💰</span> PLANILHA DE GASTOS
+                    </h4>
+                    <div class="pl-1 space-y-1 mb-4">
+                        ${gastosHtml}
+                    </div>
+                    <div class="flex justify-between font-black text-emerald-900 border-t-2 border-emerald-200 pt-3 mt-2 pl-1 text-sm">
+                        <span class="uppercase tracking-widest">TOTAL</span>
+                        <span>${totalFormatado}</span>
+                    </div>
+                    
+                    <button id="btn-baixar-planilha" class="mt-5 w-full bg-white border-2 border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
+                        <span>📄</span> Baixar Planilha PDF
+                    </button>
+                </div>
+            `;
+        }
+    }
+
+    // ========================================================
+    // ⭐ DADOS DO RÉU
+    // ========================================================
+    if (chk.reuData && chk.reuData.checkReuUnico) {
+        const reu = chk.reuData;
+        html += `
+            <div class="bg-rose-50 p-4 rounded-xl mb-6 border border-rose-200 shadow-sm relative overflow-hidden">
+                <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
+                <h4 class="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1"><span>👤</span> DADOS DO PÓLO PASSIVO (RÉU)</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-xs text-slate-700 pl-1">
+                    ${reu.nome ? `<p><b class="text-rose-900 font-black">Nome:</b> ${reu.nome}</p>` : ''}
+                    ${reu.cpf ? `<p><b class="text-rose-900 font-black">CPF:</b> ${reu.cpf}</p>` : ''}
+                    ${reu.telefone ? `<p><b class="text-rose-900 font-black">Tel:</b> ${reu.telefone}</p>` : ''}
+                    ${reu.cep ? `<p class="sm:col-span-2 pt-2 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1">Residência:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
+                    ${reu.empresa ? `<p class="sm:col-span-2 pt-2 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1">Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
+                </div>
+            </div>
+        `;
+    }
+
+    lista.innerHTML = html;
+    
+    // ⭐ Bind do botão de download da planilha
+    setTimeout(() => {
+        const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
+        if (btnBaixarPlanilha && assistido && assistido.documentChecklist?.expenseData) {
+            btnBaixarPlanilha.onclick = () => {
+                if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
+                    window.PDFService.generatePlanilhaGastosPDF(assistido.name || 'Assistido', assistido.documentChecklist.expenseData);
+                } else {
+                    alert("Erro: Módulo de PDF não carregado.");
+                }
+            };
+        }
+    }, 300);
+}
         const chk = assistido.documentChecklist;
         const baseDeDados = documentsData || window.documentsData || {};
         const actionData = baseDeDados[chk.action];
