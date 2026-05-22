@@ -1625,31 +1625,57 @@ export const PautaService = {
             }
         }
 
-        if (button.classList.contains('return-from-atendido-btn')) {
+       if (button.classList.contains('return-from-atendido-btn')) {
             const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            // Lógica unificada para reverter status
             let updateData = {
-                status: 'aguardando', attendant: null, attendedTime: null, attendedBy: null, attendedAt: null, finalizadoPeloColaborador: false, isConfirmed: false, confirmationDetails: null, distributionStatus: 'pending'
+                status: 'aguardando', 
+                attendedBy: null, 
+                attendedAt: null, 
+                finalizadoPeloColaborador: false, 
+                distributionStatus: 'pending'
             };
 
+            // Se for delegação ativa, voltamos para 'emAtendimento'
             if (currentAssisted && currentAssisted.assignedCollaborator) {
                 updateData.status = 'emAtendimento';
-                updateData.attendant = currentAssisted.assignedCollaborator.name;
                 updateData.distributionStatus = 'distributed';
             }
+
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
             
-            // SE A PAUTA NÃO TEM DELEGAÇÃO, LIMPA O COLABORADOR PARA ELE FICAR LIVRE NOVAMENTE
-            // ADICIONEI A VERIFICAÇÃO !== 'manual' PARA EVITAR O ERRO
-            if(app.currentPautaData && !app.currentPautaData.useDelegationFlow && currentAssisted && currentAssisted.assignedCollaborator && currentAssisted.assignedCollaborator.id !== 'manual') {
-               try {
-                   const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
-                   updateDoc(colabDocRef, {
-                       status: 'disponivel',
-                       currentAttendance: null
-                   });
-               } catch (e) {
-                   console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre ao reverter o atendimento.", e);
-               }
+            // SEGURANÇA: Só tenta limpar o colaborador no banco se o ID for válido (não for 'manual')
+            if (currentAssisted?.assignedCollaborator?.id && currentAssisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
+                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                } catch (e) {
+                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+                }
+            }
+        }
+
+        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                assignedCollaborator: null,
+                delegatedBy: null,
+                delegatedAt: null,
+                inAttendanceTime: null,
+                distributionStatus: null
+            }, app.currentUserName);
+            
+            // SEGURANÇA: Só tenta limpar o colaborador no banco se o ID for válido
+            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                } catch (e) {
+                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+                }
             }
         }
 
