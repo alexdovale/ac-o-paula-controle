@@ -386,20 +386,36 @@ export const PautaService = {
         }
     },
 
-    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
-        if (!assistedId || !collaboratorName) {
+   async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+        // Ajuste: Permite continuar se a opção "Não atribuir" (collaboratorId === 'null') for escolhida
+        if (!assistedId || (!collaboratorName && collaboratorId !== 'null')) {
             showNotification("Selecione um colaborador!", "error");
             return false;
         }
 
         try {
             const assisted = app.allAssisted.find(a => a.id === assistedId);
-            const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
 
             if (!assisted) {
                 showNotification("Erro: Assistido não encontrado no sistema.", "error");
                 return false;
             }
+
+            // SE O USUÁRIO ESCOLHEU "NÃO ATRIBUIR"
+            if (collaboratorId === 'null') {
+                await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
+                    assignedCollaborator: null, // O updateStatus limpará automaticamente o attendedBy e attendant
+                    delegatedBy: null,
+                    delegatedAt: null,
+                    delegationToken: null
+                }, app.currentUserName);
+                
+                showNotification("Atribuição removida. O card não está mais delegado a ninguém.", "info");
+                return true;
+            }
+
+            // Lógica normal de delegação
+            const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
 
             const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
                 ? crypto.randomUUID().substring(0, 8) 
@@ -418,7 +434,7 @@ export const PautaService = {
                 
                 await EmailService.sendDelegationEmail(
                     colab.email,        
-                    collaboratorName,     
+                    collaboratorName,      
                     assisted.name,        
                     app.currentUserName,  
                     app.currentPauta.id,  
