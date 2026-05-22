@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -59,14 +58,31 @@
                 </div>
             </section>
 
-            <!-- SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO (sem "Não sei informar") -->
+            <!-- SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-blue-700 uppercase mb-4 border-b pb-2">2. PERFIL SOCIOECONÔMICO</h2>
                 <div class="space-y-4">
-                    <!-- PROFISSÃO -->
+                    <!-- OCUPAÇÃO -->
                     <div>
-                        <label class="text-[10px] font-black text-gray-500 uppercase">PROFISSÃO / OCUPAÇÃO</label>
-                        <input type="text" id="socio-profissao" placeholder="Digite sua profissão" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                        <label class="text-[10px] font-black text-gray-500 uppercase">OCUPAÇÃO</label>
+                        <select id="socio-ocupacao" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
+                            <option value="">Selecione a ocupação</option>
+                            <option value="Empregado com vínculo (CLT)">Empregado com vínculo (CLT)</option>
+                            <option value="Empregado sem vínculo (Informal)">Empregado sem vínculo (Informal)</option>
+                            <option value="Autônomo">Autônomo</option>
+                            <option value="Aposentado">Aposentado</option>
+                            <option value="Do lar">Do lar</option>
+                            <option value="Pensionista">Pensionista</option>
+                            <option value="Beneficiário do INSS (BPC/LOAS)">Beneficiário do INSS (BPC/LOAS)</option>
+                            <option value="Desempregado">Desempregado</option>
+                            <option value="Estudante">Estudante</option>
+                        </select>
+                    </div>
+
+                    <!-- PROFISSÃO (aparece apenas para trabalho) -->
+                    <div id="socio-profissao-container" class="hidden">
+                        <label class="text-[10px] font-black text-gray-500 uppercase">PROFISSÃO / CARGO</label>
+                        <input type="text" id="socio-profissao" placeholder="Digite sua profissão ou cargo" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
                     <!-- ESTADO CIVIL -->
@@ -83,9 +99,9 @@
                         </select>
                     </div>
 
-                    <!-- GANHOS LÍQUIDOS -->
+                    <!-- RENDA FAMILIAR -->
                     <div>
-                        <label class="text-[10px] font-black text-gray-500 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
+                        <label class="text-[10px] font-black text-gray-500 uppercase">RENDA FAMILIAR (R$)</label>
                         <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" inputmode="numeric">
                         <!-- FONTE DE RENDA -->
                         <div class="flex flex-wrap gap-3 mt-3">
@@ -193,9 +209,31 @@
                             <span class="w-1 h-4 bg-blue-600 rounded"></span> PERFIL SOCIOECONÔMICO DO RÉU
                         </h3>
                         <div class="space-y-3">
-                            <!-- PROFISSÃO -->
+                            <!-- OCUPAÇÃO -->
                             <div>
-                                <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO / OCUPAÇÃO</label>
+                                <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
+                                <div class="flex flex-wrap gap-2 items-center mt-1">
+                                    <select id="reu-ocupacao" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                                        <option value="">Selecione</option>
+                                        <option value="Empregado com vínculo (CLT)">Empregado com vínculo (CLT)</option>
+                                        <option value="Empregado sem vínculo (Informal)">Empregado sem vínculo (Informal)</option>
+                                        <option value="Autônomo">Autônomo</option>
+                                        <option value="Aposentado">Aposentado</option>
+                                        <option value="Do lar">Do lar</option>
+                                        <option value="Pensionista">Pensionista</option>
+                                        <option value="Beneficiário do INSS (BPC/LOAS)">Beneficiário do INSS (BPC/LOAS)</option>
+                                        <option value="Desempregado">Desempregado</option>
+                                        <option value="Estudante">Estudante</option>
+                                    </select>
+                                    <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                                        <input type="checkbox" id="reu-ocupacao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                                    </label>
+                                </div>
+                            </div>
+
+                            <!-- PROFISSÃO (aparece apenas para trabalho) -->
+                            <div id="reu-profissao-container" class="hidden">
+                                <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                                 <div class="flex flex-wrap gap-2 items-center mt-1">
                                     <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
                                     <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
@@ -325,13 +363,37 @@
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
-        // Máscara para ganhos do assistido
+        // Máscara para renda familiar do assistido
         const ganhosInput = document.getElementById('socio-ganhos');
         if (ganhosInput) {
             ganhosInput.addEventListener('input', (e) => {
                 let v = e.target.value.replace(/\D/g, '');
                 e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
             });
+        }
+
+        // Lógica para mostrar/esconder campo de profissão do assistido
+        const ocupacaoSelect = document.getElementById('socio-ocupacao');
+        const profissaoContainer = document.getElementById('socio-profissao-container');
+        const profissaoInput = document.getElementById('socio-profissao');
+        
+        if (ocupacaoSelect && profissaoContainer) {
+            const checkProfissaoVisibility = () => {
+                const valor = ocupacaoSelect.value;
+                const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                         valor === 'Empregado sem vínculo (Informal)' || 
+                                         valor === 'Autônomo';
+                
+                if (mostrarProfissao) {
+                    profissaoContainer.classList.remove('hidden');
+                } else {
+                    profissaoContainer.classList.add('hidden');
+                    if (profissaoInput) profissaoInput.value = '';
+                }
+            };
+            
+            ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
+            checkProfissaoVisibility();
         }
 
         // Inicialização
@@ -388,12 +450,19 @@
                     // Carregar dados socioeconômicos do assistido
                     if (data.documentChecklist?.socioData) {
                         const socio = data.documentChecklist.socioData;
+                        if (socio.ocupacao) document.getElementById('socio-ocupacao').value = socio.ocupacao;
                         if (socio.profissao) document.getElementById('socio-profissao').value = socio.profissao;
                         if (socio.estadoCivil) document.getElementById('socio-estado-civil').value = socio.estadoCivil;
                         if (socio.ganhos) document.getElementById('socio-ganhos').value = socio.ganhos;
                         if (socio.fonteRenda) {
                             const radio = document.querySelector(`input[name="socio-fonte-renda"][value="${socio.fonteRenda}"]`);
                             if (radio) radio.checked = true;
+                        }
+                        
+                        // Reaplicar visibilidade da profissão
+                        if (ocupacaoSelect) {
+                            const event = new Event('change');
+                            ocupacaoSelect.dispatchEvent(event);
                         }
                     }
 
@@ -561,6 +630,97 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
+        // Lógica para mostrar/esconder profissão do réu
+        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
+        const reuProfissaoContainer = document.getElementById('reu-profissao-container');
+        const reuProfissaoInput = document.getElementById('reu-profissao');
+        
+        if (reuOcupacaoSelect && reuProfissaoContainer) {
+            const checkReuProfissaoVisibility = () => {
+                const valor = reuOcupacaoSelect.value;
+                const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                         valor === 'Empregado sem vínculo (Informal)' || 
+                                         valor === 'Autônomo';
+                
+                if (mostrarProfissao) {
+                    reuProfissaoContainer.classList.remove('hidden');
+                } else {
+                    reuProfissaoContainer.classList.add('hidden');
+                    if (reuProfissaoInput) reuProfissaoInput.value = '';
+                }
+            };
+            
+            reuOcupacaoSelect.addEventListener('change', checkReuProfissaoVisibility);
+            checkReuProfissaoVisibility();
+        }
+
+        // Lógica "Não sei informar" para Ocupação do Réu
+        const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
+        if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
+            reuOcupacaoNaoSei.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    reuOcupacaoSelect.disabled = true;
+                    reuOcupacaoSelect.value = 'Não informado';
+                    reuProfissaoContainer.classList.add('hidden');
+                } else {
+                    reuOcupacaoSelect.disabled = false;
+                    reuOcupacaoSelect.value = '';
+                }
+            });
+        }
+
+        // Lógica "Não sei informar" para Profissão do Réu
+        const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
+        if (reuProfissaoNaoSei && reuProfissaoInput) {
+            reuProfissaoNaoSei.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    reuProfissaoInput.disabled = true;
+                    reuProfissaoInput.value = 'Não informado';
+                } else {
+                    reuProfissaoInput.disabled = false;
+                    reuProfissaoInput.value = '';
+                }
+            });
+        }
+
+        // Lógica "Não sei informar" para Estado Civil do Réu
+        const reuCivilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
+        const reuCivilSelect = document.getElementById('reu-estado-civil');
+        if (reuCivilNaoSei && reuCivilSelect) {
+            reuCivilNaoSei.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    reuCivilSelect.disabled = true;
+                    reuCivilSelect.value = 'Não informado';
+                } else {
+                    reuCivilSelect.disabled = false;
+                    reuCivilSelect.value = '';
+                }
+            });
+        }
+
+        // Lógica "Não sei informar" para Ganhos do Réu
+        const reuGanhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
+        const reuGanhosInput = document.getElementById('reu-ganhos');
+        if (reuGanhosNaoSei && reuGanhosInput) {
+            reuGanhosNaoSei.addEventListener('change', (e) => {
+                if (e.target.checked) {
+                    reuGanhosInput.disabled = true;
+                    reuGanhosInput.value = 'Não informado';
+                } else {
+                    reuGanhosInput.disabled = false;
+                    reuGanhosInput.value = '';
+                }
+            });
+        }
+
+        // Máscara para ganhos do réu
+        if (reuGanhosInput) {
+            reuGanhosInput.addEventListener('input', (e) => {
+                let v = e.target.value.replace(/\D/g, '');
+                e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+            });
+        }
+
         // SALVAR DADOS
         const form = document.getElementById('form-captacao');
         if (form) {
@@ -588,8 +748,9 @@
                     });
                 }
 
-                // Dados socioeconômicos do assistido (sem "Não sei informar")
+                // Dados socioeconômicos do assistido
                 const socioData = {
+                    ocupacao: document.getElementById('socio-ocupacao')?.value || '',
                     profissao: document.getElementById('socio-profissao')?.value || '',
                     estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
                     ganhos: document.getElementById('socio-ganhos')?.value || '',
@@ -619,6 +780,8 @@
                     cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
                     uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
                     // Socioeconômicos do Réu
+                    ocupacao: document.getElementById('reu-ocupacao')?.value || '',
+                    ocupacaoNaoSei: document.getElementById('reu-ocupacao-nao-sei')?.checked || false,
                     profissao: document.getElementById('reu-profissao')?.value || '',
                     profissaoNaoSei: document.getElementById('reu-profissao-nao-sei')?.checked || false,
                     estadoCivil: document.getElementById('reu-estado-civil')?.value || '',
