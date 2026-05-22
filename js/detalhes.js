@@ -261,6 +261,25 @@ let allAssisted = [];
 let currentChecklistAction = null; 
 let demandasAdicionaisLocais = []; 
 
+// ⭐ VARIÁVEIS DE BACKUP PARA RECUPERAÇÃO
+let _backupAssistedId = null;
+let _backupPautaId = null;
+
+// ⭐ FUNÇÃO PARA RECUPERAR O ID QUANDO PERDIDO
+const ensureAssistedId = () => {
+    if (!currentAssistedId && _backupAssistedId) {
+        currentAssistedId = _backupAssistedId;
+        currentPautaId = _backupPautaId;
+        console.log("✅ ID recuperado do backup:", currentAssistedId);
+    }
+    if (!currentAssistedId && window._lastOpenedAssistedId) {
+        currentAssistedId = window._lastOpenedAssistedId;
+        currentPautaId = window._lastOpenedPautaId;
+        console.log("✅ ID recuperado do window:", currentAssistedId);
+    }
+    return currentAssistedId;
+};
+
 const getEl = (id) => document.getElementById(id);
 
 const normalizeLocal = (str) => str 
@@ -421,14 +440,14 @@ function renderChecklist(actionKey) {
     containerEl.innerHTML = ''; 
 
     // ========================================================
-    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL (com OCUPAÇÃO e PROFISSÃO)
+    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
     // ========================================================
     const socioSection = document.createElement('div');
     socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
     socioSection.innerHTML = `
         <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
         
-        <!-- OCUPAÇÃO (com opções) -->
+        <!-- OCUPAÇÃO -->
         <div class="mb-4">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
             <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
@@ -437,7 +456,7 @@ function renderChecklist(actionKey) {
             </select>
         </div>
         
-        <!-- PROFISSÃO (aparece apenas se ocupação for trabalho) -->
+        <!-- PROFISSÃO (aparece apenas para trabalho) -->
         <div id="socio-profissao-container" class="mb-4 hidden">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
             <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
@@ -485,7 +504,7 @@ function renderChecklist(actionKey) {
     `;
     containerEl.appendChild(socioSection);
     
-    // ⭐ LÓGICA: Mostrar/esconder campo de PROFISSÃO baseado na OCUPAÇÃO
+    // Lógica para mostrar/esconder campo de profissão
     const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
     const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
     const profissaoInput = socioSection.querySelector('#socio-profissao');
@@ -509,7 +528,7 @@ function renderChecklist(actionKey) {
         checkProfissaoVisibility();
     }
     
-    // Máscara de dinheiro para ganhos do assistido
+    // Máscara de dinheiro para renda familiar
     const ganhosInput = socioSection.querySelector('#socio-ganhos');
     if (ganhosInput) {
         ganhosInput.addEventListener('input', (e) => {
@@ -530,7 +549,6 @@ function renderChecklist(actionKey) {
             if (radio) radio.checked = true;
         }
         
-        // Reaplicar visibilidade da profissão após carregar dados
         if (ocupacaoSelect) {
             const event = new Event('change');
             ocupacaoSelect.dispatchEvent(event);
@@ -784,6 +802,7 @@ function renderReuSocioeconomico() {
         <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <h4 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-blue-600 rounded"></span>4. PERFIL SOCIOECONÔMICO DO RÉU</h4>
             <div class="space-y-3">
+                <!-- OCUPAÇÃO -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -796,7 +815,8 @@ function renderReuSocioeconomico() {
                         </label>
                     </div>
                 </div>
-                
+
+                <!-- PROFISSÃO (aparece apenas para trabalho) -->
                 <div id="reu-profissao-container" class="hidden">
                     <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -807,6 +827,7 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
+                <!-- ESTADO CIVIL -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -825,6 +846,7 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
+                <!-- GANHOS LÍQUIDOS -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -932,7 +954,7 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica para mostrar/esconder profissão do réu baseado na ocupação
+    // Lógica para mostrar/esconder profissão do réu
     const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
     const reuProfissaoContainer = document.getElementById('reu-profissao-container');
     const reuProfissaoInput = document.getElementById('reu-profissao');
@@ -986,24 +1008,24 @@ function initReuSocioeconomicoEvents() {
     }
 
     // Lógica "Não sei informar" para Estado Civil do Réu
-    const civilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
-    const civilSelect = document.getElementById('reu-estado-civil');
-    if (civilNaoSei && civilSelect) {
-        civilNaoSei.addEventListener('change', (e) => {
+    const reuCivilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
+    const reuCivilSelect = document.getElementById('reu-estado-civil');
+    if (reuCivilNaoSei && reuCivilSelect) {
+        reuCivilNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
-                civilSelect.disabled = true;
-                civilSelect.value = 'Não informado';
+                reuCivilSelect.disabled = true;
+                reuCivilSelect.value = 'Não informado';
             } else {
-                civilSelect.disabled = false;
-                civilSelect.value = '';
+                reuCivilSelect.disabled = false;
+                reuCivilSelect.value = '';
             }
         });
     }
 
     // Lógica "Não sei informar" para Ganhos do Réu
-    const ganhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
-    if (ganhosNaoSei && ganhosInput) {
-        ganhosNaoSei.addEventListener('change', (e) => {
+    const reuGanhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
+    if (reuGanhosNaoSei && ganhosInput) {
+        reuGanhosNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
                 ganhosInput.disabled = true;
                 ganhosInput.value = 'Não informado';
@@ -1209,7 +1231,6 @@ function fillReuData(d) {
     }
     
     setTimeout(() => {
-        // Reaplicar visibilidade da profissão após carregar dados
         const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
         if (reuOcupacaoSelect && !d.ocupacaoNaoSei) {
             const event = new Event('change');
@@ -1252,7 +1273,7 @@ function fillExpenseData(d) {
    ======================================================== */
 
 async function handlePdf() {
-    // ⭐ AGUARDAR PDFService CARREGAR (CORREÇÃO DO ERRO)
+    // ⭐ AGUARDAR PDFService CARREGAR
     if (!PDFService) {
         PDFService = await waitForPDFService();
     }
@@ -1283,14 +1304,12 @@ async function handlePdf() {
         
         if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
         addExpensesToPdfData(documentosTextos, gastos);
-        addSocioToPdfData(documentosTextos, socioData);
         
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            socioData: socioData,
             demandasAdicionais: demandasAdicionaisLocais 
         };
         
@@ -1302,19 +1321,6 @@ async function handlePdf() {
     } catch (err) {
         console.error("Falha ao processar PDF:", err);
         showNotification("Erro na emissão do PDF", "error");
-    }
-}
-
-function addSocioToPdfData(documentosTextos, socioData) {
-    documentosTextos.push({ id: 'socio-titulo', text: '📋 DADOS SOCIOECONÔMICOS DO ASSISTIDO:' });
-    documentosTextos.push({ id: 'socio-ocupacao', text: `   • Ocupação: ${socioData.ocupacao || 'Não informado'}` });
-    if (socioData.profissao && socioData.profissao !== '') {
-        documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${socioData.profissao}` });
-    }
-    documentosTextos.push({ id: 'socio-civil', text: `   • Estado Civil: ${socioData.estadoCivil || 'Não informado'}` });
-    documentosTextos.push({ id: 'socio-ganhos', text: `   • Renda Familiar: ${socioData.ganhos || 'Não informado'}` });
-    if (socioData.fonteRenda) {
-        documentosTextos.push({ id: 'socio-fonte', text: `   • Fonte de Renda: ${socioData.fonteRenda}` });
     }
 }
 
@@ -1373,8 +1379,16 @@ function collectCheckedDocuments() {
 }
 
 async function handleSave(closeModal = true) {
+    // ⭐ TENTAR RECUPERAR O ID SE ESTIVER PERDIDO
+    ensureAssistedId();
+    
     if (!currentAssistedId || !currentPautaId || !db) {
-        showNotification("Dados incompletos para salvar", "error");
+        console.error("Erro ao salvar - dados faltando:", { 
+            currentAssistedId, 
+            currentPautaId, 
+            db: !!db 
+        });
+        showNotification("Erro: assistido não identificado. Feche e reabra o modal.", "error");
         return;
     }
     
@@ -1417,6 +1431,7 @@ async function handleSave(closeModal = true) {
         }
         if (window.app && typeof window.app.refreshAssistedList === 'function') window.app.refreshAssistedList();
     } catch (e) {
+        console.error("Erro ao salvar:", e);
         showNotification("Falha ao salvar no banco", "error");
     }
 }
@@ -1566,6 +1581,14 @@ export async function openDetailsModal(config) {
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
+    
+    // ⭐ SALVAR BACKUP PARA RECUPERAÇÃO EM CASO DE PERDA
+    _backupAssistedId = currentAssistedId;
+    _backupPautaId = currentPautaId;
+    window._lastOpenedAssistedId = currentAssistedId;
+    window._lastOpenedPautaId = currentPautaId;
+    
+    console.log("✅ openDetailsModal - IDs salvos:", { currentAssistedId, currentPautaId });
     
     try {
         const docSnap = await getDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId));
