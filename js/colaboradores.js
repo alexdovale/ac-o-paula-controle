@@ -22,6 +22,105 @@ const CollaboratorService = {
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
 
+    // ⭐ FUNÇÃO DE EXPORTAR PDF PERSONALIZADO ⭐
+    async exportarPDFCustomizado(app) {
+        // 1. CAPTURA OS CHECKBOXES DA TELA
+        const checks = document.querySelectorAll('.pdf-col-selector:checked');
+        const camposEscolhidos = Array.from(checks).map(el => el.value);
+        
+        if (camposEscolhidos.length === 0) {
+            showNotification("Selecione pelo menos um campo para o PDF", "warning");
+            return;
+        }
+
+        // 2. CHAMA O PDF COM A LISTA FILTRADA
+        await window.PDFService.generateCollaboratorsPDF(
+            app.colaboradores, 
+            app.currentPauta.name, 
+            camposEscolhidos
+        );
+    },
+
+    // Abre modal de configuração do PDF
+    abrirModalExportacaoPDF(app) {
+        let modal = document.getElementById('export-pdf-config-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'export-pdf-config-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-50 flex items-center justify-center hidden';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
+                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg">📄 Configurar Exportação PDF</h3>
+                        <button onclick="document.getElementById('export-pdf-config-modal').classList.add('hidden')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                    </div>
+                    <div class="p-6">
+                        <p class="text-sm text-slate-600 mb-4">Selecione os campos que deseja incluir no PDF:</p>
+                        <div id="pdf-field-selector-modal" class="mb-6"></div>
+                        <div class="flex gap-3">
+                            <button id="confirm-export-pdf-btn" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition">
+                                Gerar PDF
+                            </button>
+                            <button onclick="document.getElementById('export-pdf-config-modal').classList.add('hidden')" class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition">
+                                Cancelar
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+        }
+
+        // Renderiza os checkboxes no modal
+        const container = document.getElementById('pdf-field-selector-modal');
+        if (container) {
+            const campos = [
+                { value: 'nome', label: 'Nome', default: true },
+                { value: 'cargo', label: 'Cargo', default: true },
+                { value: 'equipe', label: 'Equipe', default: true },
+                { value: 'identificador', label: 'Matrícula/ID', default: false },
+                { value: 'telefone', label: 'Telefone', default: false },
+                { value: 'email', label: 'E-mail', default: false },
+                { value: 'transporte', label: 'Transporte', default: false },
+                { value: 'horario', label: 'Horário de Chegada', default: true }
+            ];
+
+            container.innerHTML = campos.map(campo => `
+                <label class="flex items-center space-x-3 p-3 rounded-lg border border-slate-200 hover:bg-slate-50 cursor-pointer mb-2">
+                    <input type="checkbox" 
+                           class="pdf-col-selector w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" 
+                           value="${campo.value}" 
+                           ${campo.default ? 'checked' : ''}>
+                    <span class="text-sm text-slate-700 font-medium">${campo.label}</span>
+                </label>
+            `).join('');
+        }
+
+        // Configura o botão de confirmação
+        const confirmBtn = document.getElementById('confirm-export-pdf-btn');
+        if (confirmBtn) {
+            confirmBtn.onclick = async () => {
+                const checks = document.querySelectorAll('#pdf-field-selector-modal .pdf-col-selector:checked');
+                const camposEscolhidos = Array.from(checks).map(el => el.value);
+                
+                if (camposEscolhidos.length === 0) {
+                    showNotification("Selecione pelo menos um campo para o PDF", "warning");
+                    return;
+                }
+
+                await window.PDFService.generateCollaboratorsPDF(
+                    app.colaboradores, 
+                    app.currentPauta.name, 
+                    camposEscolhidos
+                );
+                
+                modal.classList.add('hidden');
+            };
+        }
+
+        modal.classList.remove('hidden');
+    },
+
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
         if (!idLimpo || idLimpo.length < 3) return;
@@ -144,7 +243,6 @@ const CollaboratorService = {
             }
 
             showNotification("Dados do evento salvos com sucesso! 💾", "success");
-            // Fecha o modal após salvar
             const modal = document.getElementById('ata-social-modal');
             if (modal) modal.classList.add('hidden');
         } catch (error) {
@@ -192,6 +290,7 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.configurarLogicaCargo();
         this.adicionarBotaoOrdenacao();
+        this.adicionarBotaoExportacaoPDF(app);
         
         if (app?.currentPauta?.id) {
             this.setupListener(app, app.currentPauta.id);
@@ -209,6 +308,22 @@ const CollaboratorService = {
         btn.innerHTML = this.ordemAtual === 'grupo' ? '<span class="mr-2">📁</span> Ordenar por Grupo' : '<span class="mr-2">🔤</span> Ordenar por Nome';
         btn.onclick = () => this.toggleOrdem();
         container.parentElement.insertBefore(btn, container);
+    },
+
+    adicionarBotaoExportacaoPDF(app) {
+        const btnExistente = document.getElementById('export-pdf-custom-btn');
+        if (btnExistente) btnExistente.remove();
+
+        const modalHeader = document.querySelector('#collaborators-modal .bg-white .flex-between');
+        if (!modalHeader) return;
+
+        const btnExport = document.createElement('button');
+        btnExport.id = 'export-pdf-custom-btn';
+        btnExport.className = 'bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2 px-4 rounded-lg transition-colors shadow-md flex items-center gap-2 text-sm';
+        btnExport.innerHTML = '📄 Exportar PDF Personalizado';
+        btnExport.onclick = () => this.abrirModalExportacaoPDF(app);
+        
+        modalHeader.appendChild(btnExport);
     },
 
     configurarLogicaCargo() {
@@ -311,7 +426,7 @@ const CollaboratorService = {
                         <div class="font-black text-violet-900 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
                             <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
                         </div>
-                    </td>
+                    </table>
                 `;
                 tbody.appendChild(trGrupo);
             }
