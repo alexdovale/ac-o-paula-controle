@@ -1260,16 +1260,85 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
-        // Card simplificado para MESA LIVRE
-        const desenharCardSimplificado = (item) => {
-            return `
-                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
-                    <span class="font-bold text-slate-700 truncate">${escapeHTML(item.name)}</span>
-                    <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">Finalizado</span>
+        // VERIFICA SE HÁ CASOS ATIVOS
+        const temAtivos = this.todosAtendimentosPauta.some(a => 
+            ['emAtendimento', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
+        );
+
+        // Se não tem casos ativos E não é defensor -> MESA LIVRE (mas mantém abas)
+        if (!temAtivos && !isDefensor) {
+            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' || a.status === 'aguardandoNumero');
+            
+            // Renderiza o dashboard com a estrutura de abas, mas conteúdo de "MESA LIVRE"
+            container.innerHTML = `
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
+                    <!-- Abas -->
+                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider">
+                        <button id="tab-dash-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none">Encerramento / Fluxo</button>
+                        <button id="tab-dash-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none">Histórico Recepção</button>
+                    </div>
+                    
+                    <!-- Conteúdo da Aba Encerramento (MESA LIVRE) -->
+                    <div id="aba-dash-encerramento" class="p-6 space-y-6">
+                        <div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm">
+                            <span class="text-5xl">✅</span>
+                            <h2 class="text-xl font-black text-slate-700 mt-4 uppercase tracking-widest">MESA LIVRE</h2>
+                            <p class="text-sm text-slate-500 font-bold mt-2">Nenhum caso pendente no momento.</p>
+                            <p class="text-xs text-slate-400 mt-4">⚡ Aguardando novos atendimentos ou transferências</p>
+                        </div>
+                        
+                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
+                            <h3 class="text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-3">📋 Últimos Atendimentos Concluídos (${finalizados.length})</h3>
+                            <div class="space-y-2 max-h-64 overflow-y-auto">
+                                ${finalizados.slice(0, 10).map(item => `
+                                    <div class="bg-white p-3 rounded-lg border border-indigo-100 flex justify-between items-center text-xs">
+                                        <span class="font-bold text-slate-700 truncate">${escapeHTML(item.name)}</span>
+                                        <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">${item.status === 'atendido' ? 'Finalizado' : 'Sem CNP'}</span>
+                                    </div>
+                                `).join('')}
+                                ${finalizados.length === 0 ? '<p class="text-center text-xs text-slate-400 py-4">Nenhum atendimento concluído ainda.</p>' : ''}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Conteúdo da Aba Histórico (vazio/vivo) -->
+                    <div id="aba-dash-historico" class="p-6 hidden animate-fade-in">
+                        <div class="text-center py-10">
+                            <span class="text-4xl block mb-4">📭</span>
+                            <p class="text-sm font-bold text-slate-500">Nenhum assistido com histórico disponível no momento.</p>
+                            <p class="text-xs text-slate-400 mt-2">Novos casos aparecerão aqui quando forem finalizados.</p>
+                        </div>
+                    </div>
                 </div>
             `;
-        };
 
+            // Setup dos listeners das abas do dashboard
+            const btnEncerramento = document.getElementById('tab-dash-encerramento');
+            const btnHistorico = document.getElementById('tab-dash-historico');
+            const abaEncerramento = document.getElementById('aba-dash-encerramento');
+            const abaHistorico = document.getElementById('aba-dash-historico');
+
+            if (btnEncerramento && btnHistorico) {
+                btnEncerramento.onclick = () => {
+                    btnEncerramento.className = "flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors";
+                    btnHistorico.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
+                    abaEncerramento.classList.remove('hidden');
+                    abaHistorico.classList.add('hidden');
+                };
+                btnHistorico.onclick = () => {
+                    btnHistorico.className = "flex-1 p-4 text-center font-black uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors";
+                    btnEncerramento.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
+                    abaHistorico.classList.remove('hidden');
+                    abaEncerramento.classList.add('hidden');
+                };
+            }
+
+            if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            if (wrapperBusca) wrapperBusca.classList.add('hidden');
+            return;
+        }
+
+        // MODO COMPLETO (código original para casos com pendências)
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
@@ -1366,31 +1435,7 @@ export const AtendimentoExternoService = {
             }
         };
 
-        // VERIFICA SE HÁ CASOS ATIVOS (MESA LIVRE)
-        const temAtivos = this.todosAtendimentosPauta.some(a => 
-            ['emAtendimento', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
-        );
-
-        if (!temAtivos && !isDefensor) {
-            // MODO DE MESA LIVRE (SIMPLIFICADO)
-            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido');
-            container.innerHTML = `
-                <div class="text-center py-10 bg-white border border-slate-200 rounded-2xl shadow-sm mb-6">
-                    <span class="text-4xl">✅</span>
-                    <h2 class="text-lg font-black text-slate-700 mt-4">MESA LIVRE</h2>
-                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Nenhum caso pendente no momento.</p>
-                </div>
-                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">Histórico de Concluídos (${finalizados.length})</h3>
-                <div class="space-y-2">
-                    ${finalizados.slice(0, 5).map(item => desenharCardSimplificado(item)).join('')}
-                </div>
-            `;
-            if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            if (wrapperBusca) wrapperBusca.classList.add('hidden');
-            return;
-        }
-
-        // MODO COMPLETO (código original para casos com pendências)
+        // Modo completo para Defensor ou Servidor com casos ativos
         if (isDefensor) {
             const pendentes = this.todosAtendimentosPauta.filter(a => 
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
