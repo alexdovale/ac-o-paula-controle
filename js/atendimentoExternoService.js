@@ -33,7 +33,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 export const AtendimentoExternoService = {
     pautaId: null,
-    pautaData: null,
     assistidoId: null,
     colaboradorNome: null,
     fluxoSelecionado: null,
@@ -67,14 +66,6 @@ export const AtendimentoExternoService = {
                 await signInAnonymously(auth);
             }
             
-            const pautaRef = doc(db, "pautas", this.pautaId);
-            const pautaDoc = await getDoc(pautaRef);
-            if (!pautaDoc.exists()) {
-                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-                return;
-            }
-            this.pautaData = pautaDoc.data();
-            
             await this.carregarColaboradoresGerais();
 
             if (!this.colaboradorAtual) {
@@ -97,6 +88,13 @@ export const AtendimentoExternoService = {
                 return;
             }
 
+            const pautaRef = doc(db, "pautas", this.pautaId);
+            const pautaDoc = await getDoc(pautaRef);
+            if (!pautaDoc.exists()) {
+                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
+                return;
+            }
+
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
 
@@ -115,7 +113,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            this.renderizarInterface(assistido, this.pautaData);
+            this.renderizarInterface(assistido, pautaDoc.data());
             this.setupListeners();
 
         } catch (error) {
@@ -131,29 +129,12 @@ export const AtendimentoExternoService = {
         const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
 
         if (isDelegacaoAtiva) {
+            // Modo Delegação: Badge mostra nome fixo
             badge.textContent = `👤 ${colaboradorNome}`;
             badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
             badge.classList.remove('hidden', 'animate-pulse');
         } else {
-            const estaLivre = statusAtual === 'disponivel';
-            badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
-            badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
-            badge.classList.remove('hidden');
-        }
-    },
-
-    atualizarIndicadorDeStatusDashboard() {
-        const badge = document.getElementById('status-indicator-dashboard');
-        if (!badge) return;
-
-        const isDelegacaoAtiva = this.pautaData?.useDelegationFlow === true;
-        const statusAtual = this.colaboradorAtual?.status;
-
-        if (isDelegacaoAtiva) {
-            badge.textContent = `👤 ${this.colaboradorNome}`;
-            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
-            badge.classList.remove('animate-pulse');
-        } else {
+            // Modo Finalização Direta: Toggle Livre/Ocupado
             const estaLivre = statusAtual === 'disponivel';
             badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
             badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
@@ -267,6 +248,7 @@ export const AtendimentoExternoService = {
             this.unsubscribeDashboard = null;
         }
 
+        // Renderiza o badge de status logo na inicialização
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
 
         const url = new URL(window.location.href);
@@ -672,6 +654,7 @@ export const AtendimentoExternoService = {
                     })
                 });
                 
+                // Em fluxo direto (finalizando), tentamos já deixar o colaborador livre caso exista
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
@@ -1165,11 +1148,6 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                 </div>
-                
-                <!-- BADGE DE STATUS DO DASHBOARD -->
-                <div id="status-indicator-dashboard" class="absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest z-20">
-                    🟢 LIVRE
-                </div>
             </div>
             
             <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
@@ -1186,9 +1164,6 @@ export const AtendimentoExternoService = {
                 </div>
             </div>
         `;
-
-        // Atualiza o badge de status no dashboard
-        this.atualizarIndicadorDeStatusDashboard();
 
         if (deferredPrompt) {
             const installBtn = document.getElementById('btn-install-pwa');
@@ -1247,9 +1222,6 @@ export const AtendimentoExternoService = {
     },
 
     atualizarListasDoDashboard() {
-        // Atualiza o badge de status sempre que a lista for atualizada
-        this.atualizarIndicadorDeStatusDashboard();
-        
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv = document.getElementById('tabs-dashboard');
         const wrapperBusca = document.getElementById('wrapper-busca-historico');
@@ -1260,85 +1232,6 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
-        // VERIFICA SE HÁ CASOS ATIVOS
-        const temAtivos = this.todosAtendimentosPauta.some(a => 
-            ['emAtendimento', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
-        );
-
-        // Se não tem casos ativos E não é defensor -> MESA LIVRE (mas mantém abas)
-        if (!temAtivos && !isDefensor) {
-            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' || a.status === 'aguardandoNumero');
-            
-            // Renderiza o dashboard com a estrutura de abas, mas conteúdo de "MESA LIVRE"
-            container.innerHTML = `
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-6">
-                    <!-- Abas -->
-                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider">
-                        <button id="tab-dash-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none">Encerramento / Fluxo</button>
-                        <button id="tab-dash-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none">Histórico Recepção</button>
-                    </div>
-                    
-                    <!-- Conteúdo da Aba Encerramento (MESA LIVRE) -->
-                    <div id="aba-dash-encerramento" class="p-6 space-y-6">
-                        <div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl shadow-sm">
-                            <span class="text-5xl">✅</span>
-                            <h2 class="text-xl font-black text-slate-700 mt-4 uppercase tracking-widest">MESA LIVRE</h2>
-                            <p class="text-sm text-slate-500 font-bold mt-2">Nenhum caso pendente no momento.</p>
-                            <p class="text-xs text-slate-400 mt-4">⚡ Aguardando novos atendimentos ou transferências</p>
-                        </div>
-                        
-                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                            <h3 class="text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-3">📋 Últimos Atendimentos Concluídos (${finalizados.length})</h3>
-                            <div class="space-y-2 max-h-64 overflow-y-auto">
-                                ${finalizados.slice(0, 10).map(item => `
-                                    <div class="bg-white p-3 rounded-lg border border-indigo-100 flex justify-between items-center text-xs">
-                                        <span class="font-bold text-slate-700 truncate">${escapeHTML(item.name)}</span>
-                                        <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">${item.status === 'atendido' ? 'Finalizado' : 'Sem CNP'}</span>
-                                    </div>
-                                `).join('')}
-                                ${finalizados.length === 0 ? '<p class="text-center text-xs text-slate-400 py-4">Nenhum atendimento concluído ainda.</p>' : ''}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- Conteúdo da Aba Histórico (vazio/vivo) -->
-                    <div id="aba-dash-historico" class="p-6 hidden animate-fade-in">
-                        <div class="text-center py-10">
-                            <span class="text-4xl block mb-4">📭</span>
-                            <p class="text-sm font-bold text-slate-500">Nenhum assistido com histórico disponível no momento.</p>
-                            <p class="text-xs text-slate-400 mt-2">Novos casos aparecerão aqui quando forem finalizados.</p>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            // Setup dos listeners das abas do dashboard
-            const btnEncerramento = document.getElementById('tab-dash-encerramento');
-            const btnHistorico = document.getElementById('tab-dash-historico');
-            const abaEncerramento = document.getElementById('aba-dash-encerramento');
-            const abaHistorico = document.getElementById('aba-dash-historico');
-
-            if (btnEncerramento && btnHistorico) {
-                btnEncerramento.onclick = () => {
-                    btnEncerramento.className = "flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors";
-                    btnHistorico.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
-                    abaEncerramento.classList.remove('hidden');
-                    abaHistorico.classList.add('hidden');
-                };
-                btnHistorico.onclick = () => {
-                    btnHistorico.className = "flex-1 p-4 text-center font-black uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors";
-                    btnEncerramento.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
-                    abaHistorico.classList.remove('hidden');
-                    abaEncerramento.classList.add('hidden');
-                };
-            }
-
-            if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            if (wrapperBusca) wrapperBusca.classList.add('hidden');
-            return;
-        }
-
-        // MODO COMPLETO (código original para casos com pendências)
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
@@ -1435,7 +1328,6 @@ export const AtendimentoExternoService = {
             }
         };
 
-        // Modo completo para Defensor ou Servidor com casos ativos
         if (isDefensor) {
             const pendentes = this.todosAtendimentosPauta.filter(a => 
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
