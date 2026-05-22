@@ -20,9 +20,20 @@
             opacity: 0.7;
         }
         
-        .form-blocked {
-            opacity: 0.8;
-            pointer-events: none;
+        /* Esconde os valores dos campos quando desabilitados por segurança */
+        input:disabled, select:disabled, textarea:disabled {
+            color: #9ca3af;
+            font-style: italic;
+        }
+        
+        /* Impressão - não mostrar dados sensíveis */
+        @media print {
+            .print-hide {
+                display: none !important;
+            }
+            body {
+                visibility: hidden;
+            }
         }
     </style>
 </head>
@@ -67,15 +78,9 @@
                         <label class="text-[10px] font-black text-gray-400 uppercase">NOME COMPLETO</label>
                         <input type="text" id="nome-assistido" readonly required class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-sm outline-none cursor-not-allowed">
                     </div>
-                    <div class="grid grid-cols-2 gap-3">
-                        <div>
-                            <label class="text-[10px] font-black text-gray-400 uppercase">CPF (OPCIONAL)</label>
-                            <input type="text" id="cpf-assistido" placeholder="000.000.000-00" maxlength="14" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
-                        </div>
-                        <div>
-                            <label class="text-[10px] font-black text-gray-400 uppercase">WHATSAPP</label>
-                            <input type="tel" id="telefone-assistido" required placeholder="(00) 90000-0000" maxlength="15" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
-                        </div>
+                    <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase">WHATSAPP</label>
+                        <input type="tel" id="telefone-assistido" required placeholder="(00) 90000-0000" maxlength="15" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
                     </div>
                 </div>
             </section>
@@ -84,7 +89,6 @@
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-blue-700 uppercase mb-4 border-b pb-2">2. PERFIL SOCIOECONÔMICO</h2>
                 <div class="space-y-4">
-                    <!-- OCUPAÇÃO -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">OCUPAÇÃO</label>
                         <select id="socio-ocupacao" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
@@ -101,13 +105,11 @@
                         </select>
                     </div>
 
-                    <!-- PROFISSÃO (aparece apenas para trabalho) -->
                     <div id="socio-profissao-container" class="hidden">
                         <label class="text-[10px] font-black text-gray-500 uppercase">PROFISSÃO / CARGO</label>
                         <input type="text" id="socio-profissao" placeholder="Digite sua profissão ou cargo" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
                     </div>
 
-                    <!-- ESTADO CIVIL -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">ESTADO CIVIL</label>
                         <select id="socio-estado-civil" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
@@ -121,11 +123,9 @@
                         </select>
                     </div>
 
-                    <!-- RENDA FAMILIAR -->
                     <div>
                         <label class="text-[10px] font-black text-gray-500 uppercase">RENDA FAMILIAR (R$)</label>
                         <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" inputmode="numeric">
-                        <!-- FONTE DE RENDA -->
                         <div class="flex flex-wrap gap-3 mt-3">
                             <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
                                 <input type="radio" name="socio-fonte-renda" value="CLT"> CLT
@@ -225,13 +225,11 @@
                         </select>
                     </div>
 
-                    <!-- PERFIL SOCIOECONÔMICO DO RÉU (com "Não sei informar") -->
                     <div class="bg-blue-50 p-4 rounded-xl border border-blue-200">
                         <h3 class="text-[10px] font-black text-blue-700 uppercase mb-3 flex items-center gap-2">
                             <span class="w-1 h-4 bg-blue-600 rounded"></span> PERFIL SOCIOECONÔMICO DO RÉU
                         </h3>
                         <div class="space-y-3">
-                            <!-- OCUPAÇÃO -->
                             <div>
                                 <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
                                 <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -253,7 +251,6 @@
                                 </div>
                             </div>
 
-                            <!-- PROFISSÃO (aparece apenas para trabalho) -->
                             <div id="reu-profissao-container" class="hidden">
                                 <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                                 <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -264,7 +261,6 @@
                                 </div>
                             </div>
 
-                            <!-- ESTADO CIVIL -->
                             <div>
                                 <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
                                 <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -283,7 +279,6 @@
                                 </div>
                             </div>
 
-                            <!-- GANHOS LÍQUIDOS -->
                             <div>
                                 <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
                                 <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -351,8 +346,13 @@
             <svg class="w-10 h-10 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
         </div>
         <h2 class="text-3xl font-black mb-2">TUDO CERTO!</h2>
-        <p class="text-green-100 text-sm mb-4">Seus dados foram enviados com sucesso.</p>
-        <p class="text-white font-bold bg-green-800/40 px-6 py-3 rounded-full text-sm">Você já pode fechar esta tela e aguardar ser chamado(a).</p>
+        <p class="text-green-100 text-sm mb-4">Seus dados foram enviados com sucesso para a Defensoria.</p>
+        <p class="text-white font-bold bg-green-800/40 px-6 py-3 rounded-full text-sm">Você já pode fechar esta tela. Seus dados estão protegidos.</p>
+        
+        <!-- ⭐ BOTÃO PARA FECHAR A PÁGINA (SEGURANÇA) -->
+        <button onclick="window.close()" class="mt-6 bg-white text-green-700 font-bold px-6 py-2 rounded-full text-sm shadow-lg hover:bg-green-50 transition">
+            Fechar esta página
+        </button>
     </div>
 
     <script type="module">
@@ -376,16 +376,17 @@
         let realtimeUnsubscribe = null;
 
         // Máscaras
-        const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
 
-        document.getElementById('cpf-assistido')?.addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
         document.getElementById('telefone-assistido')?.addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
         document.getElementById('cpf-reu')?.addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
         document.getElementById('telefone-reu')?.addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
+
+        // Máscara CPF (apenas para réu)
+        const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 
         // Máscara para renda familiar do assistido
         const ganhosInput = document.getElementById('socio-ganhos');
@@ -420,7 +421,66 @@
             checkProfissaoVisibility();
         }
 
-        // ⭐ FUNÇÃO PARA BLOQUEAR O FORMULÁRIO
+        // ⭐ FUNÇÃO PARA LIMPAR DADOS SENSÍVEIS DO FORMULÁRIO (SEGURANÇA)
+        function limparDadosSensiveis() {
+            // Limpa campos que podem conter dados pessoais
+            const camposParaLimpar = [
+                'telefone-assistido',
+                'socio-profissao',
+                'socio-ganhos',
+                'nome-reu',
+                'cpf-reu',
+                'telefone-reu',
+                'cep-reu',
+                'rua-reu',
+                'numero-reu',
+                'complemento-reu',
+                'bairro-reu',
+                'cidade-reu',
+                'referencia-reu',
+                'empresa-reu',
+                'cep-comercial-reu',
+                'rua-comercial-reu',
+                'numero-comercial-reu',
+                'complemento-comercial-reu',
+                'bairro-comercial-reu',
+                'cidade-comercial-reu',
+                'reu-profissao',
+                'reu-ganhos'
+            ];
+            
+            camposParaLimpar.forEach(id => {
+                const campo = document.getElementById(id);
+                if (campo) {
+                    campo.value = '';
+                    campo.placeholder = '🔒 Dado protegido';
+                    campo.classList.add('bg-gray-100', 'text-gray-400', 'italic');
+                }
+            });
+            
+            // Reset selects
+            const selectsParaLimpar = ['socio-ocupacao', 'socio-estado-civil', 'reu-ocupacao', 'reu-estado-civil', 'estado-reu', 'estado-comercial-reu'];
+            selectsParaLimpar.forEach(id => {
+                const select = document.getElementById(id);
+                if (select) {
+                    select.value = '';
+                    select.disabled = true;
+                    select.classList.add('bg-gray-100');
+                }
+            });
+            
+            // Desabilitar checkboxes
+            document.querySelectorAll('.doc-checkbox, .custom-checkbox, #check-reu-unico, #check-exibir-gastos').forEach(cb => {
+                if (cb) {
+                    cb.disabled = true;
+                    if (cb.parentElement) {
+                        cb.parentElement.style.opacity = '0.5';
+                    }
+                }
+            });
+        }
+
+        // ⭐ FUNÇÃO PARA BLOQUEAR O FORMULÁRIO E LIMPAR DADOS
         function bloquearFormulario(motivo) {
             if (formSubmitted) return;
             
@@ -430,6 +490,9 @@
             const blockedMsg = document.getElementById('blocked-message');
             const blockedMsgText = document.getElementById('blocked-message-text');
             
+            // ⭐ LIMPAR DADOS SENSÍVEIS POR SEGURANÇA
+            limparDadosSensiveis();
+            
             if (form) {
                 form.querySelectorAll('input, select, textarea, button').forEach(el => {
                     el.disabled = true;
@@ -437,90 +500,45 @@
                         el.classList.add('bg-gray-100', 'cursor-not-allowed');
                     }
                 });
-                // Desabilitar checkboxes customizados
-                document.querySelectorAll('.custom-checkbox').forEach(cb => {
-                    cb.disabled = true;
-                });
             }
             
             if (btn) {
                 btn.disabled = true;
-                btn.textContent = "🔒 FORMULÁRIO BLOQUEADO";
+                btn.textContent = "🔒 FORMULÁRIO FINALIZADO";
                 btn.classList.add('bg-gray-500', 'cursor-not-allowed');
                 btn.classList.remove('sigep-gradient', 'hover:scale-95');
             }
             
             if (blockedMsg && blockedMsgText) {
-                blockedMsgText.textContent = motivo;
+                blockedMsgText.textContent = motivo || "Seus dados foram enviados com segurança e não estão mais disponíveis nesta tela.";
                 blockedMsg.classList.remove('hidden');
+            }
+            
+            // ⭐ CANCELAR LISTENER EM TEMPO REAL
+            if (realtimeUnsubscribe) {
+                realtimeUnsubscribe();
+                realtimeUnsubscribe = null;
             }
         }
 
-        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO AINDA PODE SER EDITADO
-        // Status que permitem edição: 'pauta' e 'aguardando' (antes de ser movido)
-        async function checkIfStillEditable() {
+        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO JÁ FOI ENVIADO
+        async function checkIfAlreadySubmitted() {
             try {
                 const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistedId));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // Status que PERMITEM edição (apenas pauta e aguardando)
-                    const statusPermitidos = ['pauta', 'aguardando'];
-                    const statusAtual = data.status || 'pauta';
-                    
-                    // Verifica se o documento já foi finalizado (PDF emitido)
-                    const documentoFinalizado = data.documentState === 'saved' || 
-                                                data.documentState === 'pdf_emitido';
-                    
-                    // Se o status NÃO está na lista de permitidos, bloqueia
-                    const naoPodeEditar = !statusPermitidos.includes(statusAtual);
-                    
-                    if (naoPodeEditar || documentoFinalizado) {
-                        let motivo = "";
-                        if (naoPodeEditar) {
-                            motivo = "Seu atendimento já foi movimentado pela Defensoria. Não é mais possível editar os dados.";
-                        } else if (documentoFinalizado) {
-                            motivo = "Seu checklist já foi finalizado no sistema. Não é mais possível editar os dados.";
-                        }
-                        bloquearFormulario(motivo);
-                        return false; // Bloqueado
+                    // Se já tem documentState como 'pre_triagem_concluida', o formulário já foi enviado
+                    if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
+                        bloquearFormulario("Este formulário já foi enviado anteriormente. Seus dados estão protegidos.");
+                        return true;
                     }
                 }
-                return true; // Ainda pode editar
+                return false;
             } catch (error) {
-                console.error("Erro ao verificar status:", error);
-                return true;
+                console.error("Erro ao verificar envio:", error);
+                return false;
             }
-        }
-
-        // ⭐ SETUP DO REALTIME LISTENER
-        function setupRealtimeListener() {
-            if (realtimeUnsubscribe) return;
-            
-            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ onSnapshot }) => {
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-                realtimeUnsubscribe = onSnapshot(docRef, (snapshot) => {
-                    if (snapshot.exists()) {
-                        const data = snapshot.data();
-                        const statusPermitidos = ['pauta', 'aguardando'];
-                        const statusAtual = data.status || 'pauta';
-                        const documentoFinalizado = data.documentState === 'saved' || data.documentState === 'pdf_emitido';
-                        const naoPodeEditar = !statusPermitidos.includes(statusAtual);
-                        
-                        if ((naoPodeEditar || documentoFinalizado) && !formSubmitted) {
-                            let motivo = "";
-                            if (naoPodeEditar) {
-                                motivo = "Seu atendimento foi movimentado. Não é mais possível editar.";
-                            } else if (documentoFinalizado) {
-                                motivo = "Seu checklist foi finalizado. Não é mais possível editar.";
-                            }
-                            bloquearFormulario(motivo);
-                        }
-                    }
-                }, (error) => {
-                    console.error("Erro no listener:", error);
-                });
-            });
         }
 
         // Inicialização
@@ -570,18 +588,14 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // Preencher Nº AGENDAMENTO (readonly)
                     const numAgendamento = data.numeroAgendamento || data.numAgendamento || data.assistedManualNumAgendamento || '';
                     if (document.getElementById('num-agendamento')) {
                         document.getElementById('num-agendamento').value = numAgendamento;
                     }
                     
-                    // Preencher NOME (readonly)
                     if (data.name) document.getElementById('nome-assistido').value = data.name;
-                    if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
 
-                    // Carregar dados socioeconômicos do assistido
                     if (data.documentChecklist?.socioData) {
                         const socio = data.documentChecklist.socioData;
                         if (socio.ocupacao) document.getElementById('socio-ocupacao').value = socio.ocupacao;
@@ -622,12 +636,25 @@
                     document.getElementById('loading-screen')?.classList.add('hidden');
                     document.getElementById('app-content')?.classList.remove('hidden');
                     
-                    // ⭐ VERIFICAR SE AINDA PODE EDITAR
-                    const podeEditar = await checkIfStillEditable();
+                    // ⭐ VERIFICAR SE JÁ FOI ENVIADO
+                    const jaEnviado = await checkIfAlreadySubmitted();
                     
-                    // ⭐ SE PODE EDITAR, INICIA O REALTIME LISTENER
-                    if (podeEditar) {
-                        setupRealtimeListener();
+                    // ⭐ SE NÃO FOI ENVIADO, INICIA LISTENER (apenas para monitorar se alguém tentar enviar de novo)
+                    if (!jaEnviado) {
+                        // Pequeno timeout para garantir que o listener não interfira
+                        setTimeout(() => {
+                            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+                            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ onSnapshot }) => {
+                                realtimeUnsubscribe = onSnapshot(docRef, (snapshot) => {
+                                    if (snapshot.exists() && !formSubmitted) {
+                                        const data = snapshot.data();
+                                        if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
+                                            bloquearFormulario("Seus dados foram registrados com sucesso! Esta página está protegida.");
+                                        }
+                                    }
+                                });
+                            });
+                        }, 1000);
                     }
                 }
             } catch (error) {
@@ -872,7 +899,7 @@
                 e.preventDefault();
                 
                 if (formSubmitted) {
-                    alert("Este formulário já foi enviado ou bloqueado.");
+                    alert("Este formulário já foi enviado.");
                     return;
                 }
                 
@@ -898,7 +925,6 @@
                     });
                 }
 
-                // Dados socioeconômicos do assistido
                 const socioData = {
                     ocupacao: document.getElementById('socio-ocupacao')?.value || '',
                     profissao: document.getElementById('socio-profissao')?.value || '',
@@ -907,7 +933,6 @@
                     fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
                 };
 
-                // Dados do Réu
                 const reuData = {
                     checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                     nome: document.getElementById('nome-reu')?.value || '',
@@ -942,7 +967,6 @@
 
                 const payload = {
                     name: document.getElementById('nome-assistido')?.value || '',
-                    cpf: document.getElementById('cpf-assistido')?.value || '',
                     telefone: document.getElementById('telefone-assistido')?.value || '',
                     documentChecklist: {
                         action: actionKey,
@@ -959,8 +983,14 @@
 
                 try {
                     await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
+                    
+                    // ⭐ BLOQUEAR E LIMPAR TUDO APÓS ENVIO
+                    bloquearFormulario("Seus dados foram enviados com sucesso e estão protegidos!");
+                    
+                    // Mostrar tela de sucesso
                     document.getElementById('app-content')?.classList.add('hidden');
                     document.getElementById('success-screen')?.classList.remove('hidden');
+                    
                 } catch (error) {
                     console.error("Erro ao salvar:", error);
                     alert("Erro ao enviar dados. Tente novamente.");
