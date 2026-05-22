@@ -1,3 +1,4 @@
+
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -9,28 +10,7 @@
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 import { flatSubjects } from './assuntos.js';
-
-// ⭐ AGUARDAR PDFService CARREGAR (CORREÇÃO DO ERRO)
-let PDFService = null;
-
-const waitForPDFService = () => {
-    return new Promise((resolve) => {
-        if (window.PDFService) {
-            resolve(window.PDFService);
-        } else {
-            const checkInterval = setInterval(() => {
-                if (window.PDFService) {
-                    clearInterval(checkInterval);
-                    resolve(window.PDFService);
-                }
-            }, 100);
-            setTimeout(() => {
-                clearInterval(checkInterval);
-                resolve(null);
-            }, 5000);
-        }
-    });
-};
+import { PDFService } from './pdfService.js';
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
@@ -1071,7 +1051,7 @@ function renderExpenseTable() {
                         <td class="py-3 pl-2">
                             <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
                         </td>
-                    </tr>
+                    <tr>
                 `).join('')}
             </table>
             <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
@@ -1273,13 +1253,8 @@ function fillExpenseData(d) {
    ======================================================== */
 
 async function handlePdf() {
-    // ⭐ AGUARDAR PDFService CARREGAR
-    if (!PDFService) {
-        PDFService = await waitForPDFService();
-    }
-    
     if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
-        console.error("PDFService não carregado:", PDFService);
+        console.error("PDFService não disponível:", PDFService);
         showNotification("Erro: Motor de PDF não carregado. Recarregue a página.", "error");
         return;
     }
@@ -1383,7 +1358,7 @@ async function handleSave(closeModal = true) {
     ensureAssistedId();
     
     if (!currentAssistedId || !currentPautaId || !db) {
-        console.error("Erro ao salvar - dados faltando:", { 
+        console.error("❌ Erro ao salvar - IDs ausentes:", { 
             currentAssistedId, 
             currentPautaId, 
             db: !!db 
@@ -1391,6 +1366,8 @@ async function handleSave(closeModal = true) {
         showNotification("Erro: assistido não identificado. Feche e reabra o modal.", "error");
         return;
     }
+    
+    console.log("💾 Salvando assistido:", currentAssistedId);
     
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
@@ -1582,13 +1559,13 @@ export async function openDetailsModal(config) {
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
     
-    // ⭐ SALVAR BACKUP PARA RECUPERAÇÃO EM CASO DE PERDA
+    // ⭐ SALVAR BACKUP PARA RECUPERAÇÃO
     _backupAssistedId = currentAssistedId;
     _backupPautaId = currentPautaId;
     window._lastOpenedAssistedId = currentAssistedId;
     window._lastOpenedPautaId = currentPautaId;
     
-    console.log("✅ openDetailsModal - IDs salvos:", { currentAssistedId, currentPautaId });
+    console.log("📌 openDetailsModal - IDs salvos:", { currentAssistedId, currentPautaId });
     
     try {
         const docSnap = await getDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId));
