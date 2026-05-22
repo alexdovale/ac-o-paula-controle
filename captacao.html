@@ -14,11 +14,15 @@
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
         
-        /* Desabilitar campos readonly visualmente */
-        input:read-only, select:read-only {
+        input:read-only, select:read-only, input:disabled, select:disabled, textarea:disabled {
             background-color: #f3f4f6;
             cursor: not-allowed;
             opacity: 0.7;
+        }
+        
+        .form-blocked {
+            opacity: 0.8;
+            pointer-events: none;
         }
     </style>
 </head>
@@ -42,6 +46,12 @@
                 <p class="text-[10px] font-black text-gray-500 uppercase tracking-wider">ASSUNTO DO ATENDIMENTO</p>
                 <p id="assunto-demanda-texto" class="text-sm font-bold text-gray-900 uppercase mt-1"></p>
             </div>
+            
+            <!-- MENSAGEM DE BLOQUEIO -->
+            <div id="blocked-message" class="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-xl text-amber-800 text-sm font-semibold text-center hidden">
+                <span class="text-lg mr-2">🔒</span> 
+                <span id="blocked-message-text"></span>
+            </div>
         </div>
 
         <form id="form-captacao" class="space-y-6">
@@ -55,7 +65,7 @@
                     </div>
                     <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase">NOME COMPLETO</label>
-                        <input type="text" id="nome-assistido" readonly required placeholder="Seu nome" class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-sm outline-none cursor-not-allowed">
+                        <input type="text" id="nome-assistido" readonly required class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-sm outline-none cursor-not-allowed">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
@@ -362,7 +372,8 @@
         const db = getFirestore(app);
 
         let pautaId, assistedId, actionKey;
-        let formSubmitted = false; // ⭐ CONTROLE PARA EVITAR ENVIO DUPLICADO
+        let formSubmitted = false;
+        let realtimeUnsubscribe = null;
 
         // Máscaras
         const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -409,35 +420,107 @@
             checkProfissaoVisibility();
         }
 
-        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO JÁ FOI ENVIADO
-        async function checkIfAlreadySubmitted() {
+        // ⭐ FUNÇÃO PARA BLOQUEAR O FORMULÁRIO
+        function bloquearFormulario(motivo) {
+            if (formSubmitted) return;
+            
+            formSubmitted = true;
+            const form = document.getElementById('form-captacao');
+            const btn = document.getElementById('btn-enviar');
+            const blockedMsg = document.getElementById('blocked-message');
+            const blockedMsgText = document.getElementById('blocked-message-text');
+            
+            if (form) {
+                form.querySelectorAll('input, select, textarea, button').forEach(el => {
+                    el.disabled = true;
+                    if (el.tagName !== 'BUTTON') {
+                        el.classList.add('bg-gray-100', 'cursor-not-allowed');
+                    }
+                });
+                // Desabilitar checkboxes customizados
+                document.querySelectorAll('.custom-checkbox').forEach(cb => {
+                    cb.disabled = true;
+                });
+            }
+            
+            if (btn) {
+                btn.disabled = true;
+                btn.textContent = "🔒 FORMULÁRIO BLOQUEADO";
+                btn.classList.add('bg-gray-500', 'cursor-not-allowed');
+                btn.classList.remove('sigep-gradient', 'hover:scale-95');
+            }
+            
+            if (blockedMsg && blockedMsgText) {
+                blockedMsgText.textContent = motivo;
+                blockedMsg.classList.remove('hidden');
+            }
+        }
+
+        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO AINDA PODE SER EDITADO
+        // Status que permitem edição: 'pauta' e 'aguardando' (antes de ser movido)
+        async function checkIfStillEditable() {
             try {
                 const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistedId));
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    // Se já tem documentState como 'pre_triagem_concluida' ou 'saved', o formulário já foi enviado
-                    if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
-                        formSubmitted = true;
-                        // Desabilitar o formulário e mostrar mensagem
-                        const form = document.getElementById('form-captacao');
-                        const btn = document.getElementById('btn-enviar');
-                        if (form) {
-                            form.querySelectorAll('input, select, textarea, button').forEach(el => {
-                                if (el.id !== 'btn-enviar') el.disabled = true;
-                            });
+                    
+                    // Status que PERMITEM edição (apenas pauta e aguardando)
+                    const statusPermitidos = ['pauta', 'aguardando'];
+                    const statusAtual = data.status || 'pauta';
+                    
+                    // Verifica se o documento já foi finalizado (PDF emitido)
+                    const documentoFinalizado = data.documentState === 'saved' || 
+                                                data.documentState === 'pdf_emitido';
+                    
+                    // Se o status NÃO está na lista de permitidos, bloqueia
+                    const naoPodeEditar = !statusPermitidos.includes(statusAtual);
+                    
+                    if (naoPodeEditar || documentoFinalizado) {
+                        let motivo = "";
+                        if (naoPodeEditar) {
+                            motivo = "Seu atendimento já foi movimentado pela Defensoria. Não é mais possível editar os dados.";
+                        } else if (documentoFinalizado) {
+                            motivo = "Seu checklist já foi finalizado no sistema. Não é mais possível editar os dados.";
                         }
-                        if (btn) {
-                            btn.disabled = true;
-                            btn.textContent = "DADOS JÁ ENVIADOS";
-                            btn.classList.add('bg-gray-500', 'cursor-not-allowed');
-                            btn.classList.remove('sigep-gradient', 'hover:scale-95');
-                        }
-                        showNotification("Este formulário já foi enviado anteriormente.", "warning");
+                        bloquearFormulario(motivo);
+                        return false; // Bloqueado
                     }
                 }
+                return true; // Ainda pode editar
             } catch (error) {
-                console.error("Erro ao verificar envio:", error);
+                console.error("Erro ao verificar status:", error);
+                return true;
             }
+        }
+
+        // ⭐ SETUP DO REALTIME LISTENER
+        function setupRealtimeListener() {
+            if (realtimeUnsubscribe) return;
+            
+            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ onSnapshot }) => {
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+                realtimeUnsubscribe = onSnapshot(docRef, (snapshot) => {
+                    if (snapshot.exists()) {
+                        const data = snapshot.data();
+                        const statusPermitidos = ['pauta', 'aguardando'];
+                        const statusAtual = data.status || 'pauta';
+                        const documentoFinalizado = data.documentState === 'saved' || data.documentState === 'pdf_emitido';
+                        const naoPodeEditar = !statusPermitidos.includes(statusAtual);
+                        
+                        if ((naoPodeEditar || documentoFinalizado) && !formSubmitted) {
+                            let motivo = "";
+                            if (naoPodeEditar) {
+                                motivo = "Seu atendimento foi movimentado. Não é mais possível editar.";
+                            } else if (documentoFinalizado) {
+                                motivo = "Seu checklist foi finalizado. Não é mais possível editar.";
+                            }
+                            bloquearFormulario(motivo);
+                        }
+                    }
+                }, (error) => {
+                    console.error("Erro no listener:", error);
+                });
+            });
         }
 
         // Inicialização
@@ -487,13 +570,13 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    // ⭐ PREENCHER Nº AGENDAMENTO (readonly)
+                    // Preencher Nº AGENDAMENTO (readonly)
                     const numAgendamento = data.numeroAgendamento || data.numAgendamento || data.assistedManualNumAgendamento || '';
                     if (document.getElementById('num-agendamento')) {
                         document.getElementById('num-agendamento').value = numAgendamento;
                     }
                     
-                    // ⭐ PREENCHER NOME (readonly)
+                    // Preencher NOME (readonly)
                     if (data.name) document.getElementById('nome-assistido').value = data.name;
                     if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
@@ -539,8 +622,13 @@
                     document.getElementById('loading-screen')?.classList.add('hidden');
                     document.getElementById('app-content')?.classList.remove('hidden');
                     
-                    // ⭐ VERIFICAR SE JÁ FOI ENVIADO
-                    await checkIfAlreadySubmitted();
+                    // ⭐ VERIFICAR SE AINDA PODE EDITAR
+                    const podeEditar = await checkIfStillEditable();
+                    
+                    // ⭐ SE PODE EDITAR, INICIA O REALTIME LISTENER
+                    if (podeEditar) {
+                        setupRealtimeListener();
+                    }
                 }
             } catch (error) {
                 console.error("Erro:", error);
@@ -596,7 +684,7 @@
         }
 
         window.toggleDocType = function(id) {
-            if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
+            if (formSubmitted) return;
             const cb = document.getElementById(id);
             const box = document.getElementById(`type-box-${id}`);
             if(cb && box) {
@@ -621,7 +709,7 @@
         const contentReu = document.getElementById('content-reu-completo');
         if (checkReuUnico && contentReu) {
             checkReuUnico.addEventListener('change', function() {
-                if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
+                if (formSubmitted) return;
                 contentReu.style.display = this.checked ? 'block' : 'none';
             });
         }
@@ -630,7 +718,7 @@
         const contentGastos = document.getElementById('content-planilha-gastos');
         if (checkExibirGastos && contentGastos) {
             checkExibirGastos.addEventListener('change', function() {
-                if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
+                if (formSubmitted) return;
                 contentGastos.style.display = this.checked ? 'block' : 'none';
             });
         }
@@ -783,9 +871,8 @@
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
-                // ⭐ VERIFICAR SE JÁ FOI ENVIADO
                 if (formSubmitted) {
-                    alert("Este formulário já foi enviado anteriormente.");
+                    alert("Este formulário já foi enviado ou bloqueado.");
                     return;
                 }
                 
@@ -820,7 +907,7 @@
                     fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
                 };
 
-                // Dados do Réu (com "Não sei informar")
+                // Dados do Réu
                 const reuData = {
                     checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
                     nome: document.getElementById('nome-reu')?.value || '',
@@ -842,7 +929,6 @@
                     bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
                     cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
                     uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
-                    // Socioeconômicos do Réu
                     ocupacao: document.getElementById('reu-ocupacao')?.value || '',
                     ocupacaoNaoSei: document.getElementById('reu-ocupacao-nao-sei')?.checked || false,
                     profissao: document.getElementById('reu-profissao')?.value || '',
@@ -873,7 +959,6 @@
 
                 try {
                     await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
-                    formSubmitted = true;
                     document.getElementById('app-content')?.classList.add('hidden');
                     document.getElementById('success-screen')?.classList.remove('hidden');
                 } catch (error) {
