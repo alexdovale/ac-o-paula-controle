@@ -1,8 +1,6 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO, CORES E PWA)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, where, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, getDoc, updateDoc, collection, getDocs, query, arrayUnion, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
@@ -57,7 +55,7 @@ export const AtendimentoExternoService = {
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incomplete", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
@@ -119,6 +117,26 @@ export const AtendimentoExternoService = {
         } catch (error) {
             console.error("Erro geral na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados principal.");
+        }
+    },
+
+    atualizarIndicadorDeStatus(pautaData, statusAtual, colaboradorNome) {
+        const badge = document.getElementById('status-indicator');
+        if (!badge) return;
+
+        const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
+
+        if (isDelegacaoAtiva) {
+            // Modo Delegação: Badge mostra nome fixo
+            badge.textContent = `👤 ${colaboradorNome}`;
+            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
+            badge.classList.remove('hidden', 'animate-pulse');
+        } else {
+            // Modo Finalização Direta: Toggle Livre/Ocupado
+            const estaLivre = statusAtual === 'disponivel';
+            badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
+            badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
+            badge.classList.remove('hidden');
         }
     },
 
@@ -228,6 +246,9 @@ export const AtendimentoExternoService = {
             this.unsubscribeDashboard = null;
         }
 
+        // Renderiza o badge de status logo na inicialização
+        this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
+
         const url = new URL(window.location.href);
         url.searchParams.delete('view');
         window.history.pushState({}, '', url);
@@ -248,10 +269,7 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        document.getElementById('assistido-nome').className = 'text-white font-black text-xl sm:text-2xl truncate relative z-10';
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
-        
-        document.getElementById('assistido-assunto').className = 'text-blue-200 text-xs sm:text-sm font-semibold mt-1 uppercase tracking-wider relative z-10';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
         const areaColaborador = document.getElementById('area-colaborador');
@@ -259,7 +277,7 @@ export const AtendimentoExternoService = {
 
         document.getElementById('banner-transferencia')?.remove();
         document.getElementById('banner-atendido-trava')?.remove();
-        document.getElementById('btn-marcar-livre')?.remove(); // Limpa botao anterior se houver
+        document.getElementById('btn-marcar-livre')?.remove();
 
         if (assistido.historicoTransferencia) {
             const bannerHtml = `
@@ -275,33 +293,15 @@ export const AtendimentoExternoService = {
             areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
         }
 
-        if (!document.getElementById('btn-atalho-painel')) {
-            const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-            const tituloBotao = isDefensor ? 'Ir para Minha Mesa de Distribuição' : 'Ir para Meus Atendimentos';
-            const btnHtml = `
-                <button id="btn-atalho-painel" class="w-full bg-white border border-slate-200 text-slate-600 hover:bg-slate-50 hover:border-slate-300 font-bold py-3.5 px-4 rounded-xl shadow-sm transition-all text-xs flex items-center justify-center gap-2 mb-6 uppercase tracking-wider">
-                    <span>${isDefensor ? '⚖️' : '📊'}</span> ${tituloBotao}
-                </button>
-            `;
-            areaColaborador.insertAdjacentHTML('afterbegin', btnHtml);
-            document.getElementById('btn-atalho-painel').onclick = () => {
-                sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
-                this.renderizarDashboardUnificado();
-            };
-        }
-
         this.renderHistorico(assistido);
 
         if (assistido.status === 'atendido') {
             const abaEncerramento = document.getElementById('aba-encerramento');
             if (abaEncerramento) {
-                const cnpRef = assistido.numeroProcesso ? `<p class="mt-3 font-mono font-bold text-xs bg-white text-slate-700 px-3 py-2 rounded border inline-block select-all">🟢 Nº CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : '';
                 abaEncerramento.innerHTML = `
                     <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2 mb-6">
                         <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
                         <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
-                        <p class="text-emerald-600 mt-1 text-xs font-medium leading-relaxed">Este atendimento já foi finalizado e processado. Você pode continuar visualizando os detalhes e históricos nas abas acima.</p>
-                        ${cnpRef}
                     </div>
 
                     <button id="btn-marcar-livre" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
@@ -309,34 +309,18 @@ export const AtendimentoExternoService = {
                     </button>
                 `;
 
-                // Configura ação de atualizar status do colaborador para Livre
                 setTimeout(() => {
-                    const btnLivre = document.getElementById('btn-marcar-livre');
-                    if (btnLivre) {
-                        btnLivre.onclick = async () => {
-                            btnLivre.innerHTML = '<span class="animate-pulse">ATUALIZANDO STATUS...</span>';
-                            btnLivre.disabled = true;
-
-                            try {
-                                if (this.colaboradorAtual && this.colaboradorAtual.id) {
-                                    const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
-                                    await updateDoc(colabDocRef, {
-                                        status: 'disponivel',
-                                        currentAttendance: null
-                                    });
-                                }
-                            } catch (e) {
-                                console.warn("Erro silencioso ao marcar como livre:", e);
+                    document.getElementById('btn-marcar-livre').onclick = async () => {
+                        try {
+                            if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                                const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
+                                await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                                this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
-
-                            sessionStorage.setItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`, 'true');
-                            this.renderizarDashboardUnificado();
-                        };
-                    }
+                        } catch (e) { console.error(e); }
+                        this.renderizarDashboardUnificado();
+                    };
                 }, 100);
-            }
-            if (headerBg) {
-                headerBg.className = 'bg-emerald-600 p-5 sm:p-6 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500';
             }
         } else {
             this.renderizarAbaEncerramentoDinamica(assistido, pautaData);
