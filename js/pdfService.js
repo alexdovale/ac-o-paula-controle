@@ -696,20 +696,7 @@ export const PDFService = {
                     dadosSocio.push(`Fonte de Renda: ${s.fonteRenda}`);
                     temDadosSocio = true;
                 }
-                
-                if (temDadosSocio) {
-                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
-                    y += 10;
-                    dadosSocio.forEach(dado => {
-                        addText(`• ${dado}`, false, 10, 20);
-                    });
-                    y += 20;
-                } else {
-                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
-                    y += 10;
-                    addText("• Nenhum dado socioeconômico informado.", false, 10, 20);
-                    y += 20;
-                }
+            
             }
 
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
