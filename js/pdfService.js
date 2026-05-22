@@ -281,14 +281,21 @@ export const PDFService = {
             doc.setFontSize(10);
             doc.text(`Assistido(a): ${assistedName}`, 40, 90);
 
+            // ⭐ NOVA PLANILHA DE GASTOS DETALHADA (conforme imagem)
             const categorias = [
-                { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente\n(tais como condomínio, internet, luz e água)' },
+                { id: 'creche_escola', label: 'Creche/escola' },
+                { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
+                { id: 'explicadora', label: 'Explicadora' },
+                { id: 'transporte_escolar', label: 'Transporte escolar' },
                 { id: 'alimentacao', label: 'Alimentação' },
-                { id: 'educacao', label: 'Creche/escola / Curso / atividade extracurricular' },
-                { id: 'saude', label: 'Gastos com problemas de saúde / Plano de saúde / Medicamentos' },
-                { id: 'vestuario', label: 'Vestuário / Uniforme Escolar' },
-                { id: 'lazer', label: 'Transporte / Lazer' },
-                { id: 'outras', label: 'Outras (especificar)' }
+                { id: 'vestuario', label: 'Vestuário' },
+                { id: 'material_escolar', label: 'Material escolar / uniforme escolar' },
+                { id: 'medicamentos', label: 'Medicamentos' },
+                { id: 'plano_saude', label: 'Plano de saúde' },
+                { id: 'terapia', label: 'Terapia' },
+                { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente (tais como condomínio, internet, luz e água)' },
+                { id: 'saude_crianca', label: 'Gastos com problemas de saúde da criança' },
+                { id: 'outras', label: 'Outros (especificar)' }
             ];
 
             let total = 0;
@@ -300,33 +307,36 @@ export const PDFService = {
                     const num = parseFloat(String(valor).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                     total += num;
                     body.push([
-                        { content: cat.label, styles: { halign: 'center', valign: 'middle' } },
-                        { content: valor, styles: { halign: 'center', valign: 'middle' } }
+                        { content: cat.label, styles: { halign: 'left', valign: 'middle', cellPadding: 4 } },
+                        { content: valor, styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
+                    ]);
+                } else {
+                    // Linha em branco para preenchimento manual
+                    body.push([
+                        { content: cat.label, styles: { halign: 'left', valign: 'middle', cellPadding: 4 } },
+                        { content: '_______________', styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
                     ]);
                 }
             });
 
-            if (body.length === 0) {
-                 body.push([{content: 'Nenhuma despesa informada.', colSpan: 2, styles: {halign: 'center', fontStyle: 'italic'}}]);
-            } else {
-                 const totalFormatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                 body.push([
-                     { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center' } },
-                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center' } }
-                 ]);
-            }
+            // Linha do TOTAL
+            const totalFormatado = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+            body.push([
+                { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'right', cellPadding: 4 } },
+                { content: total > 0 ? totalFormatado : '_______________', styles: { fontStyle: 'bold', halign: 'right', cellPadding: 4 } }
+            ]);
 
             doc.autoTable({
                 startY: 110,
                 head: [[
-                    { content: 'DESCRIÇÃO', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } },
-                    { content: 'VALOR MENSAL', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } }
+                    { content: 'DESCRIÇÃO', styles: { halign: 'center', fontStyle: 'bold', fillColor: [200, 220, 200], textColor: [0,0,0], lineWidth: 0.5, lineColor: [0,0,0] } },
+                    { content: 'VALOR MENSAL', styles: { halign: 'center', fontStyle: 'bold', fillColor: [200, 220, 200], textColor: [0,0,0], lineWidth: 0.5, lineColor: [0,0,0] } }
                 ]],
                 body: body,
                 theme: 'grid',
-                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6 },
-                columnStyles: { 0: { cellWidth: 280 }, 1: { cellWidth: 150 } },
-                margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
+                styles: { lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0], fontSize: 9, cellPadding: 4 },
+                columnStyles: { 0: { cellWidth: 320 }, 1: { cellWidth: 120 } },
+                margin: { left: 40, right: 40 }
             });
 
             // ⭐ Rodapé
@@ -720,20 +730,27 @@ export const PDFService = {
                 addText("PLANILHA DE GASTOS:", true, 11);
                 y += 10;
                 
+                // ⭐ NOVA PLANILHA DE GASTOS DETALHADA NO CHECKLIST
                 const categoriasNome = [
-                    { id: 'moradia', label: '1. MORADIA (Habitação)' },
-                    { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
-                    { id: 'educacao', label: '3. EDUCAÇÃO' },
-                    { id: 'saude', label: '4. SAÚDE' },
-                    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE' },
-                    { id: 'lazer', label: '6. LAZER E TRANSPORTE' },
-                    { id: 'outras', label: '7. OUTRAS DESPESAS' }
+                    { id: 'creche_escola', label: 'Creche/escola' },
+                    { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
+                    { id: 'explicadora', label: 'Explicadora' },
+                    { id: 'transporte_escolar', label: 'Transporte escolar' },
+                    { id: 'alimentacao', label: 'Alimentação' },
+                    { id: 'vestuario', label: 'Vestuário' },
+                    { id: 'material_escolar', label: 'Material escolar / uniforme escolar' },
+                    { id: 'medicamentos', label: 'Medicamentos' },
+                    { id: 'plano_saude', label: 'Plano de saúde' },
+                    { id: 'terapia', label: 'Terapia' },
+                    { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente (condomínio, internet, luz, água)' },
+                    { id: 'saude_crianca', label: 'Gastos com problemas de saúde da criança' },
+                    { id: 'outras', label: 'Outros (especificar)' }
                 ];
 
                 let totalGastos = 0;
                 categoriasNome.forEach(c => {
-                    const valorStr = g[c.id] || 'R$ 0,00';
-                    if (valorStr !== 'R$ 0,00') {
+                    const valorStr = g[c.id] || '';
+                    if (valorStr && valorStr !== 'R$ 0,00') {
                         addText(`${c.label}: ${valorStr}`, false, 10, 20); 
                         const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                         totalGastos += num;
