@@ -660,40 +660,19 @@ export const PDFService = {
             y += 30;
 
             // ========================================================
-            // ⭐ DOCUMENTAÇÃO ENTREGUE (inclui dados socioeconômicos como itens)
+            // ⭐ DADOS SOCIOECONÔMICOS REMOVIDOS DO PDF - NÃO SERÃO EXIBIDOS ⭐
             // ========================================================
+            // (Os dados de Ocupação, Profissão, Estado Civil e Renda Familiar foram removidos conforme solicitado)
+
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
             
-            // Primeiro, adicionar os documentos do checklist
             documentosTextos.forEach((item) => {
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
             });
-            
-            // Depois, adicionar os dados socioeconômicos do assistido (sem [X] e sem Físico/Digital)
-            if (checklistData.socioData) {
-                const s = checklistData.socioData;
-                
-                if (s.ocupacao && s.ocupacao.trim() !== '' && s.ocupacao !== 'Selecione a ocupação') {
-                    addText(`Ocupação: ${s.ocupacao}`, false, 10, 20);
-                }
-                if (s.profissao && s.profissao.trim() !== '') {
-                    addText(`Profissão: ${s.profissao}`, false, 10, 20);
-                }
-                if (s.estadoCivil && s.estadoCivil.trim() !== '' && s.estadoCivil !== 'Selecione') {
-                    addText(`Estado Civil: ${s.estadoCivil}`, false, 10, 20);
-                }
-                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
-                    addText(`Renda Familiar: ${s.ganhos}`, false, 10, 20);
-                }
-                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
-                    addText(`Fonte de Renda: ${s.fonteRenda}`, false, 10, 20);
-                }
-            }
-            
-            y += 10;
+            y += 20;
 
             if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
                 addText("DEMANDAS ADICIONAIS:", true, 11);
@@ -705,7 +684,7 @@ export const PDFService = {
             }
 
             // ========================================================
-            // PLANILHA DE GASTOS
+            // PLANILHA DE GASTOS (MANTIDA)
             // ========================================================
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
@@ -752,7 +731,7 @@ export const PDFService = {
             }
 
             // ========================================================
-            // DADOS DO RÉU
+            // DADOS DO RÉU (MANTIDOS)
             // ========================================================
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
@@ -806,7 +785,7 @@ export const PDFService = {
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
 
-                // DADOS SOCIOECONÔMICOS DO RÉU
+                // DADOS SOCIOECONÔMICOS DO RÉU (MANTIDOS)
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
