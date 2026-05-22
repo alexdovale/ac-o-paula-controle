@@ -1,4 +1,3 @@
-
 // js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs EXCETO ATA SOCIAL)
 
 const ensureJsPDF = async () => {
@@ -673,7 +672,9 @@ export const PDFService = {
             addText(`Ação: ${actionTitle}`, false, 11);
             y += 30;
 
-            // DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
+            // ========================================================
+            // DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL (CORRIGIDO)
+            // ========================================================
             if (checklistData.socioData) {
                 const s = checklistData.socioData;
                 let temDadosSocio = false;
@@ -688,7 +689,7 @@ export const PDFService = {
                     temDadosSocio = true;
                 }
                 if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
-                    dadosSocio.push(`Ganhos Líquidos: ${s.ganhos}`);
+                    dadosSocio.push(`Ganhos Líquidos Mensais: ${s.ganhos}`);
                     temDadosSocio = true;
                 }
                 if (s.fonteRenda && s.fonteRenda.trim() !== '') {
@@ -702,6 +703,11 @@ export const PDFService = {
                     dadosSocio.forEach(dado => {
                         addText(`• ${dado}`, false, 10, 20);
                     });
+                    y += 20;
+                } else {
+                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
+                    y += 10;
+                    addText("• Nenhum dado socioeconômico informado.", false, 10, 20);
                     y += 20;
                 }
             }
@@ -725,7 +731,9 @@ export const PDFService = {
                 y += 20;
             }
 
-            // ⭐ PLANILHA DE GASTOS ATUALIZADA (mesmas categorias do generatePlanilhaGastosPDF)
+            // ========================================================
+            // PLANILHA DE GASTOS (CORRIGIDA)
+            // ========================================================
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 addText("PLANILHA DE GASTOS:", true, 11);
@@ -770,7 +778,9 @@ export const PDFService = {
                 y += 20;
             }
 
+            // ========================================================
             // DADOS DO RÉU
+            // ========================================================
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
                 addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
