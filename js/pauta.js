@@ -489,7 +489,7 @@ export const PautaService = {
                 };
             }
 
-            const distributionHistory = assisted.distributionHistory || [];
+            cconst distributionHistory = assisted.distributionHistory || [];
             distributionHistory.push({
                 type: 'attendance',
                 attendedBy: attendedBy || app.currentUserName,
@@ -506,6 +506,18 @@ export const PautaService = {
                 updates, 
                 app.currentUserName
             );
+
+            if (assisted.assignedCollaborator && assisted.assignedCollaborator.id && assisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                    await updateDoc(colabDocRef, {
+                        status: 'disponivel',
+                        currentAttendance: null
+                    });
+                } catch (e) {
+                    console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre.", e);
+                }
+            }
 
             const quemAtendeu = attendedBy || app.currentUserName;
             const quemDelegou = assisted.delegatedBy ? ` (delegado por ${assisted.delegatedBy})` : '';
