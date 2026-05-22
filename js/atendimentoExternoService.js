@@ -33,6 +33,7 @@ window.addEventListener('beforeinstallprompt', (e) => {
 
 export const AtendimentoExternoService = {
     pautaId: null,
+    pautaData: null,
     assistidoId: null,
     colaboradorNome: null,
     fluxoSelecionado: null,
@@ -66,6 +67,14 @@ export const AtendimentoExternoService = {
                 await signInAnonymously(auth);
             }
             
+            const pautaRef = doc(db, "pautas", this.pautaId);
+            const pautaDoc = await getDoc(pautaRef);
+            if (!pautaDoc.exists()) {
+                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
+                return;
+            }
+            this.pautaData = pautaDoc.data();
+            
             await this.carregarColaboradoresGerais();
 
             if (!this.colaboradorAtual) {
@@ -88,13 +97,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            const pautaRef = doc(db, "pautas", this.pautaId);
-            const pautaDoc = await getDoc(pautaRef);
-            if (!pautaDoc.exists()) {
-                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-                return;
-            }
-
             const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
             const docSnap = await getDoc(docRef);
 
@@ -113,7 +115,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            this.renderizarInterface(assistido, pautaDoc.data());
+            this.renderizarInterface(assistido, this.pautaData);
             this.setupListeners();
 
         } catch (error) {
@@ -129,12 +131,10 @@ export const AtendimentoExternoService = {
         const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
 
         if (isDelegacaoAtiva) {
-            // Modo Delegação: Badge mostra nome fixo
             badge.textContent = `👤 ${colaboradorNome}`;
             badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
             badge.classList.remove('hidden', 'animate-pulse');
         } else {
-            // Modo Finalização Direta: Toggle Livre/Ocupado
             const estaLivre = statusAtual === 'disponivel';
             badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
             badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
@@ -248,7 +248,6 @@ export const AtendimentoExternoService = {
             this.unsubscribeDashboard = null;
         }
 
-        // Renderiza o badge de status logo na inicialização
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
 
         const url = new URL(window.location.href);
@@ -654,7 +653,6 @@ export const AtendimentoExternoService = {
                     })
                 });
                 
-                // Em fluxo direto (finalizando), tentamos já deixar o colaborador livre caso exista
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
@@ -1232,6 +1230,16 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
+        // NOVA FUNÇÃO: desenhar card simplificado para MESA LIVRE
+        const desenharCardSimplificado = (item) => {
+            return `
+                <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
+                    <span class="font-bold text-slate-700 truncate">${escapeHTML(item.name)}</span>
+                    <span class="text-[9px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded uppercase">Finalizado</span>
+                </div>
+            `;
+        };
+
         const desenharCard = (item, isCardAberto) => {
             const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
@@ -1328,6 +1336,31 @@ export const AtendimentoExternoService = {
             }
         };
 
+        // VERIFICA SE HÁ CASOS ATIVOS (NOVO - MESA LIVRE)
+        const temAtivos = this.todosAtendimentosPauta.some(a => 
+            ['emAtendimento', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
+        );
+
+        if (!temAtivos && !isDefensor) {
+            // MODO DE MESA LIVRE (SIMPLIFICADO)
+            const finalizados = this.todosAtendimentosPauta.filter(a => a.status === 'atendido');
+            container.innerHTML = `
+                <div class="text-center py-10 bg-white border border-slate-200 rounded-2xl shadow-sm mb-6">
+                    <span class="text-4xl">✅</span>
+                    <h2 class="text-lg font-black text-slate-700 mt-4">MESA LIVRE</h2>
+                    <p class="text-xs text-slate-500 font-bold uppercase tracking-widest">Nenhum caso pendente no momento.</p>
+                </div>
+                <h3 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">Histórico de Concluídos (${finalizados.length})</h3>
+                <div class="space-y-2">
+                    ${finalizados.slice(0, 5).map(item => desenharCardSimplificado(item)).join('')}
+                </div>
+            `;
+            if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            if (wrapperBusca) wrapperBusca.classList.add('hidden');
+            return;
+        }
+
+        // MODO COMPLETO (restante do código original para casos com pendências)
         if (isDefensor) {
             const pendentes = this.todosAtendimentosPauta.filter(a => 
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
