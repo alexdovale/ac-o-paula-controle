@@ -632,9 +632,9 @@ export const AtendimentoExternoService = {
 
                 await updateDoc(docRef, {
                     status: statusDestinoFinal,
-                    attendedBy: colabSeguro,                      
-                    enviadoPor: enviadoPorServidor,               
-                    trabalhosPorUsuario: mapaProdutividadeBI,     
+                    attendedBy: colabSeguro,                    
+                    enviadoPor: enviadoPorServidor,            
+                    trabalhosPorUsuario: mapaProdutividadeBI,      
                     creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
@@ -860,14 +860,10 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ========================================================
-    // ⭐ FUNÇÃO RENDERHISTORICO COMPLETA E ATUALIZADA
-    // ========================================================
     renderHistorico(assistido) {
         const lista = document.getElementById('lista-historico');
         if (!lista) return;
 
-        // Verifica se tem dados de checklist
         const temChecklist = assistido.documentChecklist && assistido.documentChecklist.action;
         
         if (!temChecklist) {
@@ -888,9 +884,6 @@ export const AtendimentoExternoService = {
             </div>
         `;
 
-        // ========================================================
-        // ⭐ DADOS SOCIOECONÔMICOS DO ASSISTIDO (NOVO)
-        // ========================================================
         if (chk.socioData) {
             const s = chk.socioData;
             let temSocio = false;
@@ -932,9 +925,6 @@ export const AtendimentoExternoService = {
             }
         }
 
-        // ========================================================
-        // ⭐ DOCUMENTOS ENTREGADOS
-        // ========================================================
         if (chk.checkedIds && chk.checkedIds.length > 0) {
             html += `<h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">📄 DOCUMENTOS EM POSSE</h4><ul class="space-y-2 mb-8">`;
             
@@ -961,9 +951,6 @@ export const AtendimentoExternoService = {
             html += `</ul>`;
         }
 
-        // ========================================================
-        // ⭐ DEMANDAS ADICIONAIS
-        // ========================================================
         if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
             html += `
                 <div class="bg-violet-50 p-4 rounded-xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
@@ -978,9 +965,6 @@ export const AtendimentoExternoService = {
             `;
         }
 
-        // ========================================================
-        // ⭐ PLANILHA DE GASTOS
-        // ========================================================
         if (chk.expenseData && chk.expenseData.checkExibirGastos) {
             const g = chk.expenseData;
             const categorias = [
@@ -1026,9 +1010,6 @@ export const AtendimentoExternoService = {
             }
         }
 
-        // ========================================================
-        // ⭐ DADOS DO RÉU
-        // ========================================================
         if (chk.reuData && chk.reuData.checkReuUnico) {
             const reu = chk.reuData;
             html += `
@@ -1048,7 +1029,6 @@ export const AtendimentoExternoService = {
 
         lista.innerHTML = html;
         
-        // ⭐ Bind do botão de download da planilha
         setTimeout(() => {
             const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
             if (btnBaixarPlanilha && assistido && assistido.documentChecklist?.expenseData) {
@@ -1188,7 +1168,6 @@ export const AtendimentoExternoService = {
                 const { outcome } = await deferredPrompt.userChoice;
                 if (outcome === 'accepted') {
                     installBtn.classList.add('hidden');
-                    // showNotification seria chamada aqui se estivesse disponivel globalmente
                 }
                 deferredPrompt = null;
             });
