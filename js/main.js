@@ -561,9 +561,8 @@ class SIGEPApp {
             localStorage.removeItem('lastPautaName');
             localStorage.removeItem('lastPautaType');
 
+            // Limpa o monitor de colaboradores ao sair
             if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
-            
-            // Limpeza de botões órfãos ao sair
             document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
             UIService.showScreen('pautaSelection');
@@ -2156,63 +2155,6 @@ window.sortColaboradores = function(criterio) {
             let valB = (b[criterio] || '').toString().toLowerCase();
             if (valA < valB) return -1 * direction;
             if (valA > valB) return 1 * direction;
-            return 0;
-        });
-        
-        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
-            CollaboratorService.renderModalList(window.app);
-        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
-            CollaboratorService.updateList(window.app);
-        }
-    }
-};
-
-window.app = new SIGEPApp(); 
-
-setTimeout(() => {
-    if (window.app && typeof window.app.deletePauta === 'function') {
-        window.app.deletePauta = window.app.deletePauta.bind(window.app);
-    }
-}, 500);
-
-document.addEventListener('blur', async (e) => {
-    if (e.target.id === 'cep-reu') {
-        const cep = e.target.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                if (!data.erro) {
-                    document.getElementById('rua-reu').value = data.logradouro || '';
-                    document.getElementById('bairro-reu').value = data.bairro || '';
-                    document.getElementById('cidade-reu').value = data.localidade || '';
-                    document.getElementById('estado-reu').value = data.uf || '';
-                } else {
-                    showNotification("CEP não encontrado", "error");
-                }
-            } catch (error) {
-                showNotification("Erro ao buscar CEP", "error");
-            }
-        }
-    }
-}, true);
-
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
-    const content = document.getElementById('logic-explanation-padrao-content');
-    
-    if (toggleBtn && content) {
-        toggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            content.classList.toggle('hidden');
-            if (content.classList.contains('hidden')) {
-                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
-            } else {
-                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
-            }
-        });
-    }
-});
             return 0;
         });
         
