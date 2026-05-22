@@ -941,7 +941,7 @@ export const UIService = {
                     </div>`;
             }
 
-            cconst buttonsContainerHtml = canDelegateOrFinalize 
+            const buttonsContainerHtml = canDelegateOrFinalize 
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
