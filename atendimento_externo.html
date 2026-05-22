@@ -37,9 +37,15 @@
     <div class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+            
             <div class="flex flex-col overflow-hidden w-full relative z-10">
                 <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">CARREGANDO ATENDIMENTO...</h1>
                 <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Aguarde a sincronização de segurança...</p>
+            </div>
+
+            <!-- Indicador de Status "Livre" -->
+            <div id="status-indicator" class="hidden absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20">
+                🟢 LIVRE
             </div>
         </div>
 
