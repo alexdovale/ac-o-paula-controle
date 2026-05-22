@@ -1490,12 +1490,3 @@ window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
-```
-
-O que foi corrigido:
-
-Problema Solução
-Dupla exportação de openDetailsModal Removido export { openDetailsModal, ... } do final
-Mantidas as exportações individuais export function setupDetailsModal e export async function openDetailsModal
-Mantidas as variáveis globais window.openDetailsModal = openDetailsModal
-
