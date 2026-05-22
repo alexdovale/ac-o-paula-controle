@@ -1,3 +1,4 @@
+
 // js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs EXCETO ATA SOCIAL)
 
 const ensureJsPDF = async () => {
@@ -269,6 +270,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
             await addLogoHeader(doc, 20);
 
             doc.setFont("helvetica", "bold");
@@ -279,6 +281,7 @@ export const PDFService = {
             doc.setFontSize(10);
             doc.text(`Assistido(a): ${assistedName}`, 40, 90);
 
+            // ⭐ NOVA PLANILHA DE GASTOS DETALHADA (conforme imagem)
             const categorias = [
                 { id: 'creche_escola', label: 'Creche/escola' },
                 { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
@@ -308,6 +311,7 @@ export const PDFService = {
                         { content: valor, styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
                     ]);
                 } else {
+                    // Linha em branco para preenchimento manual
                     body.push([
                         { content: cat.label, styles: { halign: 'left', valign: 'middle', cellPadding: 4 } },
                         { content: '_______________', styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
@@ -315,6 +319,7 @@ export const PDFService = {
                 }
             });
 
+            // Linha do TOTAL
             const totalFormatado = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
             body.push([
                 { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'right', cellPadding: 4 } },
@@ -334,6 +339,7 @@ export const PDFService = {
                 margin: { left: 40, right: 40 }
             });
 
+            // ⭐ Rodapé
             addFooter(doc, 1, 1);
 
             doc.save(`Planilha_Despesas_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
@@ -352,6 +358,7 @@ export const PDFService = {
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
+            // ⭐ Rodapé (SEM logo do SIGEP, apenas a logo da Defensoria já está no cabeçalho)
             addFooter(doc, 1, 1);
 
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
@@ -371,6 +378,7 @@ export const PDFService = {
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
+            // ⭐ Rodapé
             addFooter(doc, 1, 1);
 
             const pdfBlob = doc.output('blob');
@@ -390,6 +398,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 20);
 
             const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
@@ -446,6 +455,7 @@ export const PDFService = {
                 columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
             });
 
+            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -462,6 +472,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 20);
 
             const faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
@@ -508,6 +519,7 @@ export const PDFService = {
                 }
             });
 
+            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -524,6 +536,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
 
+            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 15);
 
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg3 === 'string' ? arg3 : 'Geral');
@@ -596,6 +609,7 @@ export const PDFService = {
                 styles: { fontSize: 9, halign: 'center', valign: 'middle' }
             });
 
+            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -659,10 +673,38 @@ export const PDFService = {
             addText(`Ação: ${actionTitle}`, false, 11);
             y += 30;
 
-            // ========================================================
-            // ⭐ DADOS SOCIOECONÔMICOS REMOVIDOS DO PDF - NÃO SERÃO EXIBIDOS ⭐
-            // ========================================================
-            // (Os dados de Ocupação, Profissão, Estado Civil e Renda Familiar foram removidos conforme solicitado)
+            // DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
+            if (checklistData.socioData) {
+                const s = checklistData.socioData;
+                let temDadosSocio = false;
+                const dadosSocio = [];
+                
+                if (s.profissao && s.profissao.trim() !== '') {
+                    dadosSocio.push(`Profissão: ${s.profissao}`);
+                    temDadosSocio = true;
+                }
+                if (s.estadoCivil && s.estadoCivil.trim() !== '') {
+                    dadosSocio.push(`Estado Civil: ${s.estadoCivil}`);
+                    temDadosSocio = true;
+                }
+                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
+                    dadosSocio.push(`Ganhos Líquidos: ${s.ganhos}`);
+                    temDadosSocio = true;
+                }
+                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
+                    dadosSocio.push(`Fonte de Renda: ${s.fonteRenda}`);
+                    temDadosSocio = true;
+                }
+                
+                if (temDadosSocio) {
+                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
+                    y += 10;
+                    dadosSocio.forEach(dado => {
+                        addText(`• ${dado}`, false, 10, 20);
+                    });
+                    y += 20;
+                }
+            }
 
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
@@ -683,9 +725,7 @@ export const PDFService = {
                 y += 20;
             }
 
-            // ========================================================
-            // PLANILHA DE GASTOS (MANTIDA)
-            // ========================================================
+            // ⭐ PLANILHA DE GASTOS ATUALIZADA (mesmas categorias do generatePlanilhaGastosPDF)
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 addText("PLANILHA DE GASTOS:", true, 11);
@@ -730,9 +770,7 @@ export const PDFService = {
                 y += 20;
             }
 
-            // ========================================================
-            // DADOS DO RÉU (MANTIDOS)
-            // ========================================================
+            // DADOS DO RÉU
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
                 addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
@@ -785,44 +823,34 @@ export const PDFService = {
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
 
-                // DADOS SOCIOECONÔMICOS DO RÉU (MANTIDOS)
+                // DADOS SOCIOECONÔMICOS DO RÉU
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
-                let ocupacao = r.ocupacao;
-                if (r.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
-                if (ocupacao && ocupacao.trim() !== '' && !r.ocupacaoNaoSei) {
-                    dadosReuSocio.push(`Ocupação: ${ocupacao}`);
-                    temDadosReuSocio = true;
-                } else if (r.ocupacaoNaoSei) {
-                    dadosReuSocio.push(`Ocupação: Não informado (Não soube informar)`);
-                    temDadosReuSocio = true;
-                }
-                
-                let profissao = r.profissao;
-                if (r.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
-                if (profissao && profissao.trim() !== '' && !r.profissaoNaoSei) {
-                    dadosReuSocio.push(`Profissão: ${profissao}`);
+                let profissaoReu = r.profissao;
+                if (r.profissaoNaoSei) profissaoReu = 'Não informado (Não soube informar)';
+                if (profissaoReu && profissaoReu.trim() !== '' && !r.profissaoNaoSei) {
+                    dadosReuSocio.push(`Profissão: ${profissaoReu}`);
                     temDadosReuSocio = true;
                 } else if (r.profissaoNaoSei) {
                     dadosReuSocio.push(`Profissão: Não informado (Não soube informar)`);
                     temDadosReuSocio = true;
                 }
                 
-                let estadoCivil = r.estadoCivil;
-                if (r.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
-                if (estadoCivil && estadoCivil.trim() !== '' && !r.estadoCivilNaoSei) {
-                    dadosReuSocio.push(`Estado Civil: ${estadoCivil}`);
+                let estadoCivilReu = r.estadoCivil;
+                if (r.estadoCivilNaoSei) estadoCivilReu = 'Não informado (Não soube informar)';
+                if (estadoCivilReu && estadoCivilReu.trim() !== '' && !r.estadoCivilNaoSei) {
+                    dadosReuSocio.push(`Estado Civil: ${estadoCivilReu}`);
                     temDadosReuSocio = true;
                 } else if (r.estadoCivilNaoSei) {
                     dadosReuSocio.push(`Estado Civil: Não informado (Não soube informar)`);
                     temDadosReuSocio = true;
                 }
                 
-                let ganhos = r.ganhos;
-                if (r.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
-                if (ganhos && ganhos.trim() !== '' && ganhos !== 'R$ 0,00' && !r.ganhosNaoSei) {
-                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhos}`);
+                let ganhosReu = r.ganhos;
+                if (r.ganhosNaoSei) ganhosReu = 'Não informado (Não soube informar)';
+                if (ganhosReu && ganhosReu.trim() !== '' && ganhosReu !== 'R$ 0,00' && !r.ganhosNaoSei) {
+                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhosReu}`);
                     temDadosReuSocio = true;
                 } else if (r.ganhosNaoSei) {
                     dadosReuSocio.push(`Ganhos Líquidos: Não informado (Não soube informar)`);
