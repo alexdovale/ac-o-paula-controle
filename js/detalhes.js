@@ -10,8 +10,27 @@ import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.
 import { showNotification, escapeHTML } from './utils.js';
 import { flatSubjects } from './assuntos.js';
 
-// ⭐ Usar window.PDFService em vez de importação direta (evita erro de carregamento)
-const PDFService = window.PDFService;
+// ⭐ AGUARDAR PDFService CARREGAR (CORREÇÃO DO ERRO)
+let PDFService = null;
+
+const waitForPDFService = () => {
+    return new Promise((resolve) => {
+        if (window.PDFService) {
+            resolve(window.PDFService);
+        } else {
+            const checkInterval = setInterval(() => {
+                if (window.PDFService) {
+                    clearInterval(checkInterval);
+                    resolve(window.PDFService);
+                }
+            }, 100);
+            setTimeout(() => {
+                clearInterval(checkInterval);
+                resolve(null);
+            }, 5000);
+        }
+    });
+};
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
@@ -85,6 +104,19 @@ const ACTIONS_WITH_WORK_INFO = [
     'guarda',
     'regulamentacao_convivencia',
     'investigacao_paternidade'
+];
+
+// ⭐ OPÇÕES DE OCUPAÇÃO
+const OCUPACOES = [
+    'Empregado com vínculo (CLT)',
+    'Empregado sem vínculo (Informal)',
+    'Autônomo',
+    'Aposentado',
+    'Do lar',
+    'Pensionista',
+    'Beneficiário do INSS (BPC/LOAS)',
+    'Desempregado',
+    'Estudante'
 ];
 
 /* ========================================================
@@ -389,17 +421,26 @@ function renderChecklist(actionKey) {
     containerEl.innerHTML = ''; 
 
     // ========================================================
-    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL (sem "Não sei informar")
+    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL (com OCUPAÇÃO e PROFISSÃO)
     // ========================================================
     const socioSection = document.createElement('div');
     socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
     socioSection.innerHTML = `
         <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
         
-        <!-- PROFISSÃO -->
+        <!-- OCUPAÇÃO (com opções) -->
         <div class="mb-4">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / OCUPAÇÃO</label>
-            <input type="text" id="socio-profissao" placeholder="Digite a profissão" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
+            <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="">Selecione a ocupação</option>
+                ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>
+        </div>
+        
+        <!-- PROFISSÃO (aparece apenas se ocupação for trabalho) -->
+        <div id="socio-profissao-container" class="mb-4 hidden">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
+            <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
         </div>
         
         <!-- ESTADO CIVIL -->
@@ -416,9 +457,9 @@ function renderChecklist(actionKey) {
             </select>
         </div>
         
-        <!-- GANHOS LÍQUIDOS -->
+        <!-- RENDA FAMILIAR -->
         <div class="mb-2">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">GANHOS LÍQUIDOS MENSAIS (R$)</label>
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">RENDA FAMILIAR (R$)</label>
             <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
             <div class="flex flex-wrap gap-3 mt-2">
                 <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
@@ -444,6 +485,30 @@ function renderChecklist(actionKey) {
     `;
     containerEl.appendChild(socioSection);
     
+    // ⭐ LÓGICA: Mostrar/esconder campo de PROFISSÃO baseado na OCUPAÇÃO
+    const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
+    const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
+    const profissaoInput = socioSection.querySelector('#socio-profissao');
+    
+    if (ocupacaoSelect && profissaoContainer) {
+        const checkProfissaoVisibility = () => {
+            const valor = ocupacaoSelect.value;
+            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                     valor === 'Empregado sem vínculo (Informal)' || 
+                                     valor === 'Autônomo';
+            
+            if (mostrarProfissao) {
+                profissaoContainer.classList.remove('hidden');
+            } else {
+                profissaoContainer.classList.add('hidden');
+                if (profissaoInput) profissaoInput.value = '';
+            }
+        };
+        
+        ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
+        checkProfissaoVisibility();
+    }
+    
     // Máscara de dinheiro para ganhos do assistido
     const ganhosInput = socioSection.querySelector('#socio-ganhos');
     if (ganhosInput) {
@@ -456,12 +521,19 @@ function renderChecklist(actionKey) {
     // Carregar dados salvos do assistido principal
     if (saved?.socioData) {
         const socioSaved = saved.socioData;
-        if (socioSaved.profissao) document.getElementById('socio-profissao').value = socioSaved.profissao;
+        if (socioSaved.ocupacao) ocupacaoSelect.value = socioSaved.ocupacao;
+        if (socioSaved.profissao && profissaoInput) profissaoInput.value = socioSaved.profissao;
         if (socioSaved.estadoCivil) document.getElementById('socio-estado-civil').value = socioSaved.estadoCivil;
         if (socioSaved.ganhos) document.getElementById('socio-ganhos').value = socioSaved.ganhos;
         if (socioSaved.fonteRenda) {
             const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
             if (radio) radio.checked = true;
+        }
+        
+        // Reaplicar visibilidade da profissão após carregar dados
+        if (ocupacaoSelect) {
+            const event = new Event('change');
+            ocupacaoSelect.dispatchEvent(event);
         }
     }
 
@@ -712,9 +784,21 @@ function renderReuSocioeconomico() {
         <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <h4 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-blue-600 rounded"></span>4. PERFIL SOCIOECONÔMICO DO RÉU</h4>
             <div class="space-y-3">
-                <!-- PROFISSÃO (com Não sei informar) -->
                 <div>
-                    <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO / OCUPAÇÃO</label>
+                    <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
+                    <div class="flex flex-wrap gap-2 items-center mt-1">
+                        <select id="reu-ocupacao" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                            <option value="">Selecione</option>
+                            ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>
+                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
+                            <input type="checkbox" id="reu-ocupacao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="reu-profissao-container" class="hidden">
+                    <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
                         <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
                         <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
@@ -723,7 +807,6 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
-                <!-- ESTADO CIVIL (com Não sei informar) -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -742,7 +825,6 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
-                <!-- GANHOS LÍQUIDOS (com Não sei informar) -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -850,17 +932,55 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica "Não sei informar" para Profissão do Réu
-    const profNaoSei = document.getElementById('reu-profissao-nao-sei');
-    const profInput = document.getElementById('reu-profissao');
-    if (profNaoSei && profInput) {
-        profNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                profInput.disabled = true;
-                profInput.value = 'Não informado';
+    // Lógica para mostrar/esconder profissão do réu baseado na ocupação
+    const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
+    const reuProfissaoContainer = document.getElementById('reu-profissao-container');
+    const reuProfissaoInput = document.getElementById('reu-profissao');
+    
+    if (reuOcupacaoSelect && reuProfissaoContainer) {
+        const checkReuProfissaoVisibility = () => {
+            const valor = reuOcupacaoSelect.value;
+            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                     valor === 'Empregado sem vínculo (Informal)' || 
+                                     valor === 'Autônomo';
+            
+            if (mostrarProfissao) {
+                reuProfissaoContainer.classList.remove('hidden');
             } else {
-                profInput.disabled = false;
-                profInput.value = '';
+                reuProfissaoContainer.classList.add('hidden');
+                if (reuProfissaoInput) reuProfissaoInput.value = '';
+            }
+        };
+        
+        reuOcupacaoSelect.addEventListener('change', checkReuProfissaoVisibility);
+        checkReuProfissaoVisibility();
+    }
+
+    // Lógica "Não sei informar" para Ocupação do Réu
+    const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
+    if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
+        reuOcupacaoNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                reuOcupacaoSelect.disabled = true;
+                reuOcupacaoSelect.value = 'Não informado';
+                reuProfissaoContainer.classList.add('hidden');
+            } else {
+                reuOcupacaoSelect.disabled = false;
+                reuOcupacaoSelect.value = '';
+            }
+        });
+    }
+
+    // Lógica "Não sei informar" para Profissão do Réu
+    const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
+    if (reuProfissaoNaoSei && reuProfissaoInput) {
+        reuProfissaoNaoSei.addEventListener('change', (e) => {
+            if (e.target.checked) {
+                reuProfissaoInput.disabled = true;
+                reuProfissaoInput.value = 'Não informado';
+            } else {
+                reuProfissaoInput.disabled = false;
+                reuProfissaoInput.value = '';
             }
         });
     }
@@ -1001,7 +1121,9 @@ function getReuDataFromForm() {
         cidade_comercial: getEl('cidade-comercial-reu')?.value || '',
         uf_comercial: getEl('estado-comercial-reu')?.value || '',
         cep_comercial: getEl('cep-comercial-reu')?.value || '',
-        // DADOS SOCIOECONÔMICOS DO RÉU (com "Não sei informar")
+        // DADOS SOCIOECONÔMICOS DO RÉU
+        ocupacao: getEl('reu-ocupacao')?.value || '',
+        ocupacaoNaoSei: getEl('reu-ocupacao-nao-sei')?.checked || false,
         profissao: getEl('reu-profissao')?.value || '',
         profissaoNaoSei: getEl('reu-profissao-nao-sei')?.checked || false,
         estadoCivil: getEl('reu-estado-civil')?.value || '',
@@ -1049,6 +1171,14 @@ function fillReuData(d) {
     setValue('cep-comercial-reu', d.cep_comercial);
     
     // Preencher dados socioeconômicos do réu
+    setValue('reu-ocupacao', d.ocupacao);
+    if (d.ocupacaoNaoSei) {
+        const ocupNaoSei = getEl('reu-ocupacao-nao-sei');
+        if (ocupNaoSei) ocupNaoSei.checked = true;
+        const ocupSelect = getEl('reu-ocupacao');
+        if (ocupSelect) ocupSelect.disabled = true;
+    }
+    
     setValue('reu-profissao', d.profissao);
     if (d.profissaoNaoSei) {
         const profNaoSei = getEl('reu-profissao-nao-sei');
@@ -1078,7 +1208,15 @@ function fillReuData(d) {
         if (radio) radio.checked = true;
     }
     
-    setTimeout(() => updateReuVisibility(d), 100);
+    setTimeout(() => {
+        // Reaplicar visibilidade da profissão após carregar dados
+        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
+        if (reuOcupacaoSelect && !d.ocupacaoNaoSei) {
+            const event = new Event('change');
+            reuOcupacaoSelect.dispatchEvent(event);
+        }
+        updateReuVisibility(d);
+    }, 100);
 }
 
 function updateReuVisibility(d) {
@@ -1114,7 +1252,11 @@ function fillExpenseData(d) {
    ======================================================== */
 
 async function handlePdf() {
-    // ⭐ Verificar se PDFService está disponível
+    // ⭐ AGUARDAR PDFService CARREGAR (CORREÇÃO DO ERRO)
+    if (!PDFService) {
+        PDFService = await waitForPDFService();
+    }
+    
     if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
         console.error("PDFService não carregado:", PDFService);
         showNotification("Erro: Motor de PDF não carregado. Recarregue a página.", "error");
@@ -1132,6 +1274,7 @@ async function handlePdf() {
         
         // Coletar dados socioeconômicos do assistido principal
         const socioData = {
+            ocupacao: document.getElementById('socio-ocupacao')?.value || '',
             profissao: document.getElementById('socio-profissao')?.value || '',
             estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
             ganhos: document.getElementById('socio-ganhos')?.value || '',
@@ -1164,9 +1307,12 @@ async function handlePdf() {
 
 function addSocioToPdfData(documentosTextos, socioData) {
     documentosTextos.push({ id: 'socio-titulo', text: '📋 DADOS SOCIOECONÔMICOS DO ASSISTIDO:' });
-    documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${socioData.profissao || 'Não informado'}` });
+    documentosTextos.push({ id: 'socio-ocupacao', text: `   • Ocupação: ${socioData.ocupacao || 'Não informado'}` });
+    if (socioData.profissao && socioData.profissao !== '') {
+        documentosTextos.push({ id: 'socio-prof', text: `   • Profissão: ${socioData.profissao}` });
+    }
     documentosTextos.push({ id: 'socio-civil', text: `   • Estado Civil: ${socioData.estadoCivil || 'Não informado'}` });
-    documentosTextos.push({ id: 'socio-ganhos', text: `   • Ganhos Líquidos Mensais: ${socioData.ganhos || 'Não informado'}` });
+    documentosTextos.push({ id: 'socio-ganhos', text: `   • Renda Familiar: ${socioData.ganhos || 'Não informado'}` });
     if (socioData.fonteRenda) {
         documentosTextos.push({ id: 'socio-fonte', text: `   • Fonte de Renda: ${socioData.fonteRenda}` });
     }
@@ -1179,9 +1325,15 @@ function addReuToPdfData(documentosTextos, reu) {
     if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `   • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
     
     // Adicionar dados socioeconômicos do réu ao PDF
+    let ocupacao = reu.ocupacao;
+    if (reu.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'reu-ocupacao', text: `   • Ocupação do Réu: ${ocupacao || 'Não informado'}` });
+    
     let profissao = reu.profissao;
     if (reu.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-prof', text: `   • Profissão do Réu: ${profissao || 'Não informado'}` });
+    if (profissao && profissao !== '' && !reu.profissaoNaoSei) {
+        documentosTextos.push({ id: 'reu-prof', text: `   • Profissão do Réu: ${profissao}` });
+    }
     
     let estadoCivil = reu.estadoCivil;
     if (reu.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
@@ -1229,8 +1381,9 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
-    // Coletar dados socioeconômicos do assistido principal - CORRIGIDO (apenas uma declaração)
+    // Coletar dados socioeconômicos do assistido principal
     const socioData = {
+        ocupacao: document.getElementById('socio-ocupacao')?.value || '',
         profissao: document.getElementById('socio-profissao')?.value || '',
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
         ganhos: document.getElementById('socio-ganhos')?.value || '',
@@ -1493,7 +1646,7 @@ function renderSubjectSelection(selectionArea) {
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
 
-// ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL) - SEM DUPLICAÇÃO
+// ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
