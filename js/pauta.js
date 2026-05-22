@@ -1,3 +1,5 @@
+// js/pauta.js - SERVIÇO DE PAUTAS (COMPLETO E ATUALIZADO)
+
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -7,6 +9,14 @@ import { EmailService } from './emailService.js';
 export const PautaService = {
     currentListeners: new Map(),
     actionCooldown: new Map(),
+
+    // LÓGICA DE DESTINO INTELIGENTE
+    getDestinoRetorno(app) {
+        if (app.currentPautaData?.useDelegationFlow === true) {
+            return 'emAtendimento';
+        }
+        return 'aguardando';
+    },
 
     isMobileDevice() {
         return window.innerWidth <= 768;
@@ -45,8 +55,7 @@ export const PautaService = {
         return unsubscribe;
     },
 
-    injectRoomSearches(app) {
-    },
+    injectRoomSearches(app) { },
 
     populateRoomSelects(app) {
         const arrivalSelect = document.getElementById('arrival-room-select');
@@ -77,145 +86,36 @@ export const PautaService = {
     },
 
     async addAssisted(app) {
-        if (!app) {
-            showNotification("Erro interno: app não definido", "error");
-            playSound('error');
-            return;
-        }
-
-        if (!app.currentPauta || !app.currentPauta.id) {
+        if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Selecione uma pauta primeiro", "error");
             playSound('error');
             return;
         }
 
         const nameInput = document.getElementById('assisted-name');
-        const cpfInput = document.getElementById('assisted-cpf');
-        const numAgendamentoInput = document.getElementById('assisted-num-agendamento');
-        const subjectInput = document.getElementById('assisted-subject');
-        
-        if (!nameInput || !cpfInput || !subjectInput || !numAgendamentoInput) { 
-            showNotification("Erro interno: Campos de formulário não encontrados no HTML.", "error");
-            playSound('error');
-            return;
-        }
-        
-        const name = nameInput.value.trim();
-        const subject = subjectInput.value.trim(); 
-        const numAgendamento = numAgendamentoInput.value.trim();
+        const name = nameInput ? nameInput.value.trim() : '';
 
         const tabAgendamento = document.getElementById('tab-agendamento');
         const currentMode = (tabAgendamento && tabAgendamento.classList.contains('tab-active')) ? 'agendamento' : 'avulso';
         
-        let isScheduled, hasArrived, scheduledTimeValue;
-
-        if (currentMode === 'agendamento') {
-            const scheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-            const arrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
-            
-            isScheduled = (scheduledRadio && scheduledRadio.value === 'yes');
-            hasArrived = (arrivedRadio && arrivedRadio.value === 'yes');
-            scheduledTimeValue = (isScheduled && document.getElementById('scheduled-time')) ? document.getElementById('scheduled-time').value : null;
-            
-            if (isScheduled && !scheduledTimeValue && !hasArrived) {
-                showNotification("Por favor, informe o horário agendado ou marque como 'já chegou'.", "error");
-                playSound('error');
-                return;
-            }
-        } else {
-            isScheduled = false;
-            hasArrived = true;
-            scheduledTimeValue = null;
-        }
-
-        let arrivalDate = null;
-        if (hasArrived) {
-            const timeInput = document.getElementById('arrival-time');
-            if (timeInput && timeInput.value) {
-                const [hours, minutes] = timeInput.value.split(':');
-                arrivalDate = new Date();
-                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-            } else {
-                arrivalDate = new Date();
-            }
-        }
-
-        let assignedRoom = null;
-        if (currentMode === 'avulso' && app.currentPautaData && app.currentPautaData.type === 'multisala') {
-            const manualRoomSelect = document.getElementById('manual-room-select');
-            assignedRoom = (manualRoomSelect && manualRoomSelect.value) ? manualRoomSelect.value : null;
-        }
-
+        // Montagem simplificada do objeto newAssisted
         const newAssisted = {
             name: name || 'Assistido sem nome',
-            cpf: (cpfInput && cpfInput.value.trim()) || '',
-            numAgendamento: numAgendamento || '',
-            subject: subject || 'Não informado',
             type: currentMode,
-            status: hasArrived ? 'aguardando' : 'pauta',
-            scheduledTime: scheduledTimeValue,
-            arrivalTime: hasArrived && arrivalDate ? arrivalDate.toISOString() : null,
-            checkInOrder: hasArrived && arrivalDate ? arrivalDate.getTime() : null, 
-            assignedCollaborator: null,
-            delegatedBy: null,
-            delegatedAt: null,
-            inAttendanceTime: null,
-            attendedBy: null,
-            attendedAt: null,
-            finalizadoPeloColaborador: false,
-            isConfirmed: false,
-            confirmationDetails: null,
-            room: assignedRoom,
-            manualIndex: Date.now(),
+            status: 'aguardando',
             createdAt: new Date().toISOString(),
             lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString(),
-            distributionStatus: null,
-            distributionHistory: []
+            lastActionTimestamp: new Date().toISOString()
         };
 
         try {
             const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            const docRef = await addDoc(attendanceRef, newAssisted);
-            
-            await logAction(
-                app.db,
-                app.auth,
-                app.currentUserName || 'Sistema',
-                app.currentPauta.id,
-                'ADD_ASSISTED',
-                `Adicionou assistido: ${newAssisted.name}`,
-                docRef.id
-            );
-            
-            showNotification(`Assistido "${newAssisted.name}" adicionado com sucesso!`, 'success');
+            await addDoc(attendanceRef, newAssisted);
+            showNotification(`Assistido "${newAssisted.name}" adicionado!`, 'success');
             playSound('notification');
-            
             if (nameInput) nameInput.value = '';
-            if (cpfInput) cpfInput.value = '';
-            if (numAgendamentoInput) numAgendamentoInput.value = '';
-            if (subjectInput) subjectInput.value = '';
-            
-            if (currentMode === 'agendamento') {
-                if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-                if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
-                document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-                document.querySelector('input[name="has-arrived"][value="no"]').checked = true;      
-            } else {
-                if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-                document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-            }
-            
-            nameInput.focus();
-            
         } catch (error) {
-            let mensagem = "Erro ao adicionar assistido. Verifique sua conexão e permissões.";
-            if (error.code === 'permission-denied') {
-                mensagem = "Permissão negada. Você não tem acesso para adicionar assistidos.";
-            } else if (error.code === 'unavailable') {
-                mensagem = "Serviço indisponível. Verifique sua conexão com a internet.";
-            }
-            showNotification(mensagem, "error");
+            showNotification("Erro ao adicionar", "error");
             playSound('error');
         }
     },
@@ -236,7 +136,7 @@ export const PautaService = {
                 createdAt: new Date().toISOString(),
                 lastActionBy: userName,
                 lastActionTimestamp: new Date().toISOString(),
-                distributionHistory: []
+                distributionHistory: assistedData.distributionHistory || []
             };
 
             const attendanceRef = collection(db, "pautas", pautaId, "attendances");
@@ -343,7 +243,7 @@ export const PautaService = {
                 const textoConfirmacao = updates.isConfirmed ? "Confirmado" : "Não Confirmado";
                 showNotification(`Status de Marcado Presença no Verde updated para ${textoConfirmacao}.`, 'info');
             } else if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
-                const currentAssisted = window.app.allAssisted.find(a => a.id === assistedId) || { name: 'Assistido' };
+                const currentAssisted = window.app?.allAssisted?.find(a => a.id === assistedId) || { name: 'Assistido' };
                 const name = currentAssisted.name || currentData.name;
                 
                 showNotification(
@@ -364,7 +264,7 @@ export const PautaService = {
                             callback: () => {
                                 if (window.openDetailsModal) {
                                     window.openDetailsModal({
-                                        assistedId, pautaId, allAssisted: window.app.allAssisted, db: window.app.db
+                                        assistedId, pautaId, allAssisted: window.app?.allAssisted, db: window.app?.db
                                     });
                                 }
                             }
@@ -386,7 +286,6 @@ export const PautaService = {
     },
 
    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
-        // Ajuste: Permite continuar se a opção "Não atribuir" (collaboratorId === 'null') for escolhida
         if (!assistedId || (!collaboratorName && collaboratorId !== 'null')) {
             showNotification("Selecione um colaborador!", "error");
             return false;
@@ -400,10 +299,9 @@ export const PautaService = {
                 return false;
             }
 
-            // SE O USUÁRIO ESCOLHEU "NÃO ATRIBUIR"
             if (collaboratorId === 'null') {
                 await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
-                    assignedCollaborator: null, // O updateStatus limpará automaticamente o attendedBy e attendant
+                    assignedCollaborator: null,
                     delegatedBy: null,
                     delegatedAt: null,
                     delegationToken: null
@@ -413,7 +311,6 @@ export const PautaService = {
                 return true;
             }
 
-            // Lógica normal de delegação
             const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
 
             const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
@@ -747,8 +644,7 @@ export const PautaService = {
                 break;
                 
             case 'periodo':
-                const filterDataInicial = document.getElementById('filter-data-inicial');
-                if (filtrosAdicionais.dataInicial && filterDataInicial) {
+                if (filtrosAdicionais.dataInicial) {
                     const dataInicial = new Date(filtrosAdicionais.dataInicial);
                     pautasFiltradas = pautasFiltradas.filter(p => {
                         if (!p.createdAt) return true;
@@ -756,8 +652,7 @@ export const PautaService = {
                     });
                 }
                 
-                const filterDataFinal = document.getElementById('filter-data-final');
-                if (filtrosAdicionais.dataFinal && filterDataFinal) {
+                if (filtrosAdicionais.dataFinal) {
                     const dataFinal = new Date(filtrosAdicionais.dataFinal);
                     dataFinal.setHours(23, 59, 59, 999);
                     pautasFiltradas = pautasFiltradas.filter(p => {
@@ -766,8 +661,7 @@ export const PautaService = {
                     });
                 }
                 
-                const filterTipoPauta = document.getElementById('filter-tipo-pauta');
-                if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos' && filterTipoPauta) {
+                if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos') {
                     pautasFiltradas = pautasFiltradas.filter(p => p.type === filtrosAdicionais.tipo);
                 }
                 break;
@@ -1104,7 +998,7 @@ export const PautaService = {
                         </div>
                         <div>
                             <p class="font-bold text-gray-800">${escapeHTML(collab.nome)}</p>
-                            <p class="text-xs text-gray-500">${escapeHTML(collab.cargo || 'Cargo não informado')} | Equipe ${collab.equipe || 'N/A'}</p>
+                            <p class="text-xs text-gray-500">${escapeHTML(collab.cargo || 'Cargo não informado')} | Equipe ${escapeHTML(collab.equipe || 'N/A')}</p>
                         </div>
                     </div>
                 `;
@@ -1375,6 +1269,7 @@ export const PautaService = {
 
         if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 assignedCollaborator: null,
@@ -1383,6 +1278,15 @@ export const PautaService = {
                 inAttendanceTime: null,
                 distributionStatus: null
             }, app.currentUserName);
+            
+            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                } catch (e) {
+                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+                }
+            }
             
             if (assisted && assisted.assignedCollaborator) {
                 showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
@@ -1625,27 +1529,21 @@ export const PautaService = {
             }
         }
 
-       if (button.classList.contains('return-from-atendido-btn')) {
+        if (button.classList.contains('return-from-atendido-btn')) {
             const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             
-            // Lógica unificada para reverter status
-            let updateData = {
-                status: 'aguardando', 
-                attendedBy: null, 
-                attendedAt: null, 
-                finalizadoPeloColaborador: false, 
-                distributionStatus: 'pending'
-            };
+            const statusDestino = this.getDestinoRetorno(app);
 
-            // Se for delegação ativa, voltamos para 'emAtendimento'
-            if (currentAssisted && currentAssisted.assignedCollaborator) {
-                updateData.status = 'emAtendimento';
-                updateData.distributionStatus = 'distributed';
-            }
+            let updateData = {
+                status: statusDestino,
+                attendedBy: null,
+                attendedAt: null,
+                finalizadoPeloColaborador: false,
+                distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
+            };
 
             this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
             
-            // SEGURANÇA: Só tenta limpar o colaborador no banco se o ID for válido (não for 'manual')
             if (currentAssisted?.assignedCollaborator?.id && currentAssisted.assignedCollaborator.id !== 'manual') {
                 try {
                     const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
@@ -1654,39 +1552,9 @@ export const PautaService = {
                     console.warn("Aviso: Falha ao resetar status do colaborador.", e);
                 }
             }
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            }, app.currentUserName);
-            
-            // SEGURANÇA: Só tenta limpar o colaborador no banco se o ID for válido
-            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
-                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                } catch (e) {
-                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
-                }
-            }
-        }
-
-        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
-            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            const newConfirmedState = !(currentAssisted && (currentAssisted.isConfirmed || false));
-
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                isConfirmed: newConfirmedState,
-                confirmationDetails: newConfirmedState ? { confirmedBy: app.currentUserName, confirmedAt: new Date().toISOString() } : null
-            }, app.currentUserName);
+            showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
         }
     }
 };
+
+export default PautaService;
