@@ -668,7 +668,11 @@ export const PDFService = {
             y += 10;
             
             documentosTextos.forEach((item) => {
+                // ⭐ FILTRO CORRIGIDO: Remove APENAS as linhas que tenham DADOS SOCIOECONÔMICOS ou o caractere estranho Ø=ÜË
+                if (item.text && (item.text.includes('DADOS SOCIOECONÔMICOS') || item.text.includes('Ø=ÜË'))) return;
+
                 if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
+                
                 const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
                 addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
             });
