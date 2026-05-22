@@ -1229,7 +1229,8 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
-    // Coletar dados socioeconômicos do assistido principal    const socioData = {
+    // Coletar dados socioeconômicos do assistido principal - CORRIGIDO (apenas uma declaração)
+    const socioData = {
         profissao: document.getElementById('socio-profissao')?.value || '',
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
         ganhos: document.getElementById('socio-ganhos')?.value || '',
