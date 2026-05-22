@@ -1,4 +1,3 @@
-
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -9,8 +8,10 @@
 
 import { doc, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
-import { PDFService } from './pdfService.js';
 import { flatSubjects } from './assuntos.js';
+
+// ⭐ Usar window.PDFService em vez de importação direta (evita erro de carregamento)
+const PDFService = window.PDFService;
 
 /* ========================================================
    1. CONSTANTES E CONFIGURAÇÕES
@@ -928,7 +929,7 @@ function renderExpenseTable() {
                         <td class="py-3 pl-2">
                             <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
                         </td>
-                    </td>
+                    </tr>
                 `).join('')}
             </table>
             <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
@@ -1113,6 +1114,13 @@ function fillExpenseData(d) {
    ======================================================== */
 
 async function handlePdf() {
+    // ⭐ Verificar se PDFService está disponível
+    if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
+        console.error("PDFService não carregado:", PDFService);
+        showNotification("Erro: Motor de PDF não carregado. Recarregue a página.", "error");
+        return;
+    }
+    
     showNotification("Gerando PDF unificado...", "info");
     try {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
@@ -1221,8 +1229,7 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
-    // Coletar dados socioeconômicos do assistido principal
-    const socioData = {
+    // Coletar dados socioeconômicos do assistido principal    const socioData = {
         profissao: document.getElementById('socio-profissao')?.value || '',
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
         ganhos: document.getElementById('socio-ganhos')?.value || '',
