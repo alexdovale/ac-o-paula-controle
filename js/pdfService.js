@@ -1,5 +1,5 @@
 
-// js/pdfService.js - VERSÃO DEFINITIVA (SIGEP + Preview Ata + Logo SIGEP em TODOS os PDFs EXCETO ATA SOCIAL)
+// js/pdfService.js - VERSÃO ORIGINAL FUNCIONANDO
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -270,7 +270,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // ⭐ Logo SIGEP no topo
             await addLogoHeader(doc, 20);
 
             doc.setFont("helvetica", "bold");
@@ -281,21 +280,14 @@ export const PDFService = {
             doc.setFontSize(10);
             doc.text(`Assistido(a): ${assistedName}`, 40, 90);
 
-            // ⭐ NOVA PLANILHA DE GASTOS DETALHADA (conforme imagem)
             const categorias = [
-                { id: 'creche_escola', label: 'Creche/escola' },
-                { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
-                { id: 'explicadora', label: 'Explicadora' },
-                { id: 'transporte_escolar', label: 'Transporte escolar' },
+                { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente\n(tais como condomínio, internet, luz e água)' },
                 { id: 'alimentacao', label: 'Alimentação' },
-                { id: 'vestuario', label: 'Vestuário' },
-                { id: 'material_escolar', label: 'Material escolar / uniforme escolar' },
-                { id: 'medicamentos', label: 'Medicamentos' },
-                { id: 'plano_saude', label: 'Plano de saúde' },
-                { id: 'terapia', label: 'Terapia' },
-                { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente (tais como condomínio, internet, luz e água)' },
-                { id: 'saude_crianca', label: 'Gastos com problemas de saúde da criança' },
-                { id: 'outras', label: 'Outros (especificar)' }
+                { id: 'educacao', label: 'Creche/escola / Curso / atividade extracurricular' },
+                { id: 'saude', label: 'Gastos com problemas de saúde / Plano de saúde / Medicamentos' },
+                { id: 'vestuario', label: 'Vestuário / Uniforme Escolar' },
+                { id: 'lazer', label: 'Transporte / Lazer' },
+                { id: 'outras', label: 'Outras (especificar)' }
             ];
 
             let total = 0;
@@ -307,39 +299,35 @@ export const PDFService = {
                     const num = parseFloat(String(valor).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                     total += num;
                     body.push([
-                        { content: cat.label, styles: { halign: 'left', valign: 'middle', cellPadding: 4 } },
-                        { content: valor, styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
-                    ]);
-                } else {
-                    // Linha em branco para preenchimento manual
-                    body.push([
-                        { content: cat.label, styles: { halign: 'left', valign: 'middle', cellPadding: 4 } },
-                        { content: '_______________', styles: { halign: 'right', valign: 'middle', cellPadding: 4 } }
+                        { content: cat.label, styles: { halign: 'center', valign: 'middle' } },
+                        { content: valor, styles: { halign: 'center', valign: 'middle' } }
                     ]);
                 }
             });
 
-            // Linha do TOTAL
-            const totalFormatado = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-            body.push([
-                { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'right', cellPadding: 4 } },
-                { content: total > 0 ? totalFormatado : '_______________', styles: { fontStyle: 'bold', halign: 'right', cellPadding: 4 } }
-            ]);
+            if (body.length === 0) {
+                 body.push([{content: 'Nenhuma despesa informada.', colSpan: 2, styles: {halign: 'center', fontStyle: 'italic'}}]);
+            } else {
+                 const totalFormatted = total.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                 body.push([
+                     { content: 'TOTAL', styles: { fontStyle: 'bold', halign: 'center' } },
+                     { content: totalFormatted, styles: { fontStyle: 'bold', halign: 'center' } }
+                 ]);
+            }
 
             doc.autoTable({
                 startY: 110,
                 head: [[
-                    { content: 'DESCRIÇÃO', styles: { halign: 'center', fontStyle: 'bold', fillColor: [200, 220, 200], textColor: [0,0,0], lineWidth: 0.5, lineColor: [0,0,0] } },
-                    { content: 'VALOR MENSAL', styles: { halign: 'center', fontStyle: 'bold', fillColor: [200, 220, 200], textColor: [0,0,0], lineWidth: 0.5, lineColor: [0,0,0] } }
+                    { content: 'DESCRIÇÃO', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } },
+                    { content: 'VALOR MENSAL', styles: { halign: 'center', fontStyle: 'bold', fillColor: [255,255,255], textColor: [0,0,0], lineWidth: 1, lineColor: [0,0,0] } }
                 ]],
                 body: body,
                 theme: 'grid',
-                styles: { lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0], fontSize: 9, cellPadding: 4 },
-                columnStyles: { 0: { cellWidth: 320 }, 1: { cellWidth: 120 } },
-                margin: { left: 40, right: 40 }
+                styles: { lineColor: [0, 0, 0], lineWidth: 1, textColor: [0, 0, 0], fontSize: 10, cellPadding: 6 },
+                columnStyles: { 0: { cellWidth: 280 }, 1: { cellWidth: 150 } },
+                margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 }
             });
 
-            // ⭐ Rodapé
             addFooter(doc, 1, 1);
 
             doc.save(`Planilha_Despesas_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
@@ -358,7 +346,6 @@ export const PDFService = {
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
-            // ⭐ Rodapé (SEM logo do SIGEP, apenas a logo da Defensoria já está no cabeçalho)
             addFooter(doc, 1, 1);
 
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
@@ -378,7 +365,6 @@ export const PDFService = {
             
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
-            // ⭐ Rodapé
             addFooter(doc, 1, 1);
 
             const pdfBlob = doc.output('blob');
@@ -398,7 +384,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 20);
 
             const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
@@ -455,7 +440,6 @@ export const PDFService = {
                 columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
             });
 
-            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -472,7 +456,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 20);
 
             const faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
@@ -519,7 +502,6 @@ export const PDFService = {
                 }
             });
 
-            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -536,7 +518,6 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
 
-            // ⭐ Logo SIGEP no topo
             await addLogoHeader(docPDF, 15);
 
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg3 === 'string' ? arg3 : 'Geral');
@@ -609,7 +590,6 @@ export const PDFService = {
                 styles: { fontSize: 9, halign: 'center', valign: 'middle' }
             });
 
-            // ⭐ Rodapé
             addFooter(docPDF, 1, 1);
 
             docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
@@ -673,39 +653,6 @@ export const PDFService = {
             addText(`Ação: ${actionTitle}`, false, 11);
             y += 30;
 
-            // DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
-            if (checklistData.socioData) {
-                const s = checklistData.socioData;
-                let temDadosSocio = false;
-                const dadosSocio = [];
-                
-                if (s.profissao && s.profissao.trim() !== '') {
-                    dadosSocio.push(`Profissão: ${s.profissao}`);
-                    temDadosSocio = true;
-                }
-                if (s.estadoCivil && s.estadoCivil.trim() !== '') {
-                    dadosSocio.push(`Estado Civil: ${s.estadoCivil}`);
-                    temDadosSocio = true;
-                }
-                if (s.ganhos && s.ganhos.trim() !== '' && s.ganhos !== 'R$ 0,00') {
-                    dadosSocio.push(`Ganhos Líquidos: ${s.ganhos}`);
-                    temDadosSocio = true;
-                }
-                if (s.fonteRenda && s.fonteRenda.trim() !== '') {
-                    dadosSocio.push(`Fonte de Renda: ${s.fonteRenda}`);
-                    temDadosSocio = true;
-                }
-                
-                if (temDadosSocio) {
-                    addText("DADOS SOCIOECONÔMICOS DO ASSISTIDO:", true, 11);
-                    y += 10;
-                    dadosSocio.forEach(dado => {
-                        addText(`• ${dado}`, false, 10, 20);
-                    });
-                    y += 20;
-                }
-            }
-
             addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
             y += 10;
             
@@ -725,47 +672,35 @@ export const PDFService = {
                 y += 20;
             }
 
-            // ⭐ PLANILHA DE GASTOS ATUALIZADA (mesmas categorias do generatePlanilhaGastosPDF)
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 addText("PLANILHA DE GASTOS:", true, 11);
                 y += 10;
                 
                 const categoriasNome = [
-                    { id: 'creche_escola', label: 'Creche/escola' },
-                    { id: 'curso_atividade', label: 'Curso / atividade extracurricular' },
-                    { id: 'explicadora', label: 'Explicadora' },
-                    { id: 'transporte_escolar', label: 'Transporte escolar' },
-                    { id: 'alimentacao', label: 'Alimentação' },
-                    { id: 'vestuario', label: 'Vestuário' },
-                    { id: 'material_escolar', label: 'Material escolar / uniforme escolar' },
-                    { id: 'medicamentos', label: 'Medicamentos' },
-                    { id: 'plano_saude', label: 'Plano de saúde' },
-                    { id: 'terapia', label: 'Terapia' },
-                    { id: 'moradia', label: 'Moradia na parcela referente à criança/adolescente (condomínio, internet, luz, água)' },
-                    { id: 'saude_crianca', label: 'Gastos com problemas de saúde da criança' },
-                    { id: 'outras', label: 'Outros (especificar)' }
+                    { id: 'moradia', label: '1. MORADIA (Habitação)' },
+                    { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
+                    { id: 'educacao', label: '3. EDUCAÇÃO' },
+                    { id: 'saude', label: '4. SAÚDE' },
+                    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE' },
+                    { id: 'lazer', label: '6. LAZER E TRANSPORTE' },
+                    { id: 'outras', label: '7. OUTRAS DESPESAS' }
                 ];
 
                 let totalGastos = 0;
-                let temGastos = false;
-                
                 categoriasNome.forEach(c => {
-                    const valorStr = g[c.id] || '';
-                    if (valorStr && valorStr !== 'R$ 0,00' && valorStr !== '') {
-                        addText(`${c.label}: ${valorStr}`, false, 10, 20);
+                    const valorStr = g[c.id] || 'R$ 0,00';
+                    if (valorStr !== 'R$ 0,00') {
+                        addText(`${c.label}: ${valorStr}`, false, 10, 20); 
                         const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                         totalGastos += num;
-                        temGastos = true;
                     }
                 });
 
-                if (temGastos) {
-                    y += 5;
+                if (totalGastos > 0) {
+                    y += 5; 
                     const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20);
-                } else {
-                    addText("Nenhuma despesa informada.", false, 10, 20);
+                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20); 
                 }
                 y += 20;
             }
@@ -827,30 +762,40 @@ export const PDFService = {
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
-                let profissaoReu = r.profissao;
-                if (r.profissaoNaoSei) profissaoReu = 'Não informado (Não soube informar)';
-                if (profissaoReu && profissaoReu.trim() !== '' && !r.profissaoNaoSei) {
-                    dadosReuSocio.push(`Profissão: ${profissaoReu}`);
+                let ocupacao = r.ocupacao;
+                if (r.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
+                if (ocupacao && ocupacao.trim() !== '' && !r.ocupacaoNaoSei) {
+                    dadosReuSocio.push(`Ocupação: ${ocupacao}`);
+                    temDadosReuSocio = true;
+                } else if (r.ocupacaoNaoSei) {
+                    dadosReuSocio.push(`Ocupação: Não informado (Não soube informar)`);
+                    temDadosReuSocio = true;
+                }
+                
+                let profissao = r.profissao;
+                if (r.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
+                if (profissao && profissao.trim() !== '' && !r.profissaoNaoSei) {
+                    dadosReuSocio.push(`Profissão: ${profissao}`);
                     temDadosReuSocio = true;
                 } else if (r.profissaoNaoSei) {
                     dadosReuSocio.push(`Profissão: Não informado (Não soube informar)`);
                     temDadosReuSocio = true;
                 }
                 
-                let estadoCivilReu = r.estadoCivil;
-                if (r.estadoCivilNaoSei) estadoCivilReu = 'Não informado (Não soube informar)';
-                if (estadoCivilReu && estadoCivilReu.trim() !== '' && !r.estadoCivilNaoSei) {
-                    dadosReuSocio.push(`Estado Civil: ${estadoCivilReu}`);
+                let estadoCivil = r.estadoCivil;
+                if (r.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
+                if (estadoCivil && estadoCivil.trim() !== '' && !r.estadoCivilNaoSei) {
+                    dadosReuSocio.push(`Estado Civil: ${estadoCivil}`);
                     temDadosReuSocio = true;
                 } else if (r.estadoCivilNaoSei) {
                     dadosReuSocio.push(`Estado Civil: Não informado (Não soube informar)`);
                     temDadosReuSocio = true;
                 }
                 
-                let ganhosReu = r.ganhos;
-                if (r.ganhosNaoSei) ganhosReu = 'Não informado (Não soube informar)';
-                if (ganhosReu && ganhosReu.trim() !== '' && ganhosReu !== 'R$ 0,00' && !r.ganhosNaoSei) {
-                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhosReu}`);
+                let ganhos = r.ganhos;
+                if (r.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
+                if (ganhos && ganhos.trim() !== '' && ganhos !== 'R$ 0,00' && !r.ganhosNaoSei) {
+                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhos}`);
                     temDadosReuSocio = true;
                 } else if (r.ganhosNaoSei) {
                     dadosReuSocio.push(`Ganhos Líquidos: Não informado (Não soube informar)`);
