@@ -142,6 +142,25 @@ export const AtendimentoExternoService = {
         }
     },
 
+    atualizarIndicadorDeStatusDashboard() {
+        const badge = document.getElementById('status-indicator-dashboard');
+        if (!badge) return;
+
+        const isDelegacaoAtiva = this.pautaData?.useDelegationFlow === true;
+        const statusAtual = this.colaboradorAtual?.status;
+
+        if (isDelegacaoAtiva) {
+            badge.textContent = `👤 ${this.colaboradorNome}`;
+            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
+            badge.classList.remove('animate-pulse');
+        } else {
+            const estaLivre = statusAtual === 'disponivel';
+            badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
+            badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
+            badge.classList.remove('hidden');
+        }
+    },
+
     async carregarColaboradoresGerais() {
         try {
             const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
@@ -1146,6 +1165,11 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                 </div>
+                
+                <!-- BADGE DE STATUS DO DASHBOARD -->
+                <div id="status-indicator-dashboard" class="absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest z-20">
+                    🟢 LIVRE
+                </div>
             </div>
             
             <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
@@ -1162,6 +1186,9 @@ export const AtendimentoExternoService = {
                 </div>
             </div>
         `;
+
+        // Atualiza o badge de status no dashboard
+        this.atualizarIndicadorDeStatusDashboard();
 
         if (deferredPrompt) {
             const installBtn = document.getElementById('btn-install-pwa');
@@ -1220,6 +1247,9 @@ export const AtendimentoExternoService = {
     },
 
     atualizarListasDoDashboard() {
+        // Atualiza o badge de status sempre que a lista for atualizada
+        this.atualizarIndicadorDeStatusDashboard();
+        
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv = document.getElementById('tabs-dashboard');
         const wrapperBusca = document.getElementById('wrapper-busca-historico');
@@ -1230,7 +1260,7 @@ export const AtendimentoExternoService = {
         const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
         const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
 
-        // NOVA FUNÇÃO: desenhar card simplificado para MESA LIVRE
+        // Card simplificado para MESA LIVRE
         const desenharCardSimplificado = (item) => {
             return `
                 <div class="bg-white p-3 rounded-lg border border-slate-200 flex justify-between items-center text-xs">
@@ -1336,7 +1366,7 @@ export const AtendimentoExternoService = {
             }
         };
 
-        // VERIFICA SE HÁ CASOS ATIVOS (NOVO - MESA LIVRE)
+        // VERIFICA SE HÁ CASOS ATIVOS (MESA LIVRE)
         const temAtivos = this.todosAtendimentosPauta.some(a => 
             ['emAtendimento', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
         );
@@ -1360,7 +1390,7 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        // MODO COMPLETO (restante do código original para casos com pendências)
+        // MODO COMPLETO (código original para casos com pendências)
         if (isDefensor) {
             const pendentes = this.todosAtendimentosPauta.filter(a => 
                 ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
