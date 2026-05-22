@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
@@ -12,6 +13,13 @@
         
         input[type=number]::-webkit-inner-spin-button, 
         input[type=number]::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+        
+        /* Desabilitar campos readonly visualmente */
+        input:read-only, select:read-only {
+            background-color: #f3f4f6;
+            cursor: not-allowed;
+            opacity: 0.7;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans pb-10">
@@ -42,12 +50,16 @@
                 <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">1. SEUS DADOS</h2>
                 <div class="space-y-3">
                     <div>
+                        <label class="text-[10px] font-black text-gray-400 uppercase">Nº AGENDAMENTO / CÓDIGO</label>
+                        <input type="text" id="num-agendamento" readonly class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-sm outline-none cursor-not-allowed">
+                    </div>
+                    <div>
                         <label class="text-[10px] font-black text-gray-400 uppercase">NOME COMPLETO</label>
-                        <input type="text" id="nome-assistido" required placeholder="Seu nome" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500">
+                        <input type="text" id="nome-assistido" readonly required placeholder="Seu nome" class="w-full p-3 bg-gray-100 border border-gray-200 rounded-xl text-sm outline-none cursor-not-allowed">
                     </div>
                     <div class="grid grid-cols-2 gap-3">
                         <div>
-                            <label class="text-[10px] font-black text-gray-400 uppercase">CPF</label>
+                            <label class="text-[10px] font-black text-gray-400 uppercase">CPF (OPCIONAL)</label>
                             <input type="text" id="cpf-assistido" placeholder="000.000.000-00" maxlength="14" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-green-500" inputmode="numeric">
                         </div>
                         <div>
@@ -350,6 +362,7 @@
         const db = getFirestore(app);
 
         let pautaId, assistedId, actionKey;
+        let formSubmitted = false; // ⭐ CONTROLE PARA EVITAR ENVIO DUPLICADO
 
         // Máscaras
         const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
@@ -394,6 +407,37 @@
             
             ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
             checkProfissaoVisibility();
+        }
+
+        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO JÁ FOI ENVIADO
+        async function checkIfAlreadySubmitted() {
+            try {
+                const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistedId));
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    // Se já tem documentState como 'pre_triagem_concluida' ou 'saved', o formulário já foi enviado
+                    if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
+                        formSubmitted = true;
+                        // Desabilitar o formulário e mostrar mensagem
+                        const form = document.getElementById('form-captacao');
+                        const btn = document.getElementById('btn-enviar');
+                        if (form) {
+                            form.querySelectorAll('input, select, textarea, button').forEach(el => {
+                                if (el.id !== 'btn-enviar') el.disabled = true;
+                            });
+                        }
+                        if (btn) {
+                            btn.disabled = true;
+                            btn.textContent = "DADOS JÁ ENVIADOS";
+                            btn.classList.add('bg-gray-500', 'cursor-not-allowed');
+                            btn.classList.remove('sigep-gradient', 'hover:scale-95');
+                        }
+                        showNotification("Este formulário já foi enviado anteriormente.", "warning");
+                    }
+                }
+            } catch (error) {
+                console.error("Erro ao verificar envio:", error);
+            }
         }
 
         // Inicialização
@@ -443,6 +487,13 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
+                    // ⭐ PREENCHER Nº AGENDAMENTO (readonly)
+                    const numAgendamento = data.numeroAgendamento || data.numAgendamento || data.assistedManualNumAgendamento || '';
+                    if (document.getElementById('num-agendamento')) {
+                        document.getElementById('num-agendamento').value = numAgendamento;
+                    }
+                    
+                    // ⭐ PREENCHER NOME (readonly)
                     if (data.name) document.getElementById('nome-assistido').value = data.name;
                     if (data.cpf) document.getElementById('cpf-assistido').value = data.cpf;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
@@ -459,7 +510,6 @@
                             if (radio) radio.checked = true;
                         }
                         
-                        // Reaplicar visibilidade da profissão
                         if (ocupacaoSelect) {
                             const event = new Event('change');
                             ocupacaoSelect.dispatchEvent(event);
@@ -488,6 +538,9 @@
 
                     document.getElementById('loading-screen')?.classList.add('hidden');
                     document.getElementById('app-content')?.classList.remove('hidden');
+                    
+                    // ⭐ VERIFICAR SE JÁ FOI ENVIADO
+                    await checkIfAlreadySubmitted();
                 }
             } catch (error) {
                 console.error("Erro:", error);
@@ -543,6 +596,7 @@
         }
 
         window.toggleDocType = function(id) {
+            if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
             const cb = document.getElementById(id);
             const box = document.getElementById(`type-box-${id}`);
             if(cb && box) {
@@ -567,6 +621,7 @@
         const contentReu = document.getElementById('content-reu-completo');
         if (checkReuUnico && contentReu) {
             checkReuUnico.addEventListener('change', function() {
+                if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
                 contentReu.style.display = this.checked ? 'block' : 'none';
             });
         }
@@ -575,6 +630,7 @@
         const contentGastos = document.getElementById('content-planilha-gastos');
         if (checkExibirGastos && contentGastos) {
             checkExibirGastos.addEventListener('change', function() {
+                if (formSubmitted) return; // ⭐ NÃO PERMITE ALTERAÇÃO APÓS ENVIO
                 contentGastos.style.display = this.checked ? 'block' : 'none';
             });
         }
@@ -726,6 +782,13 @@
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
+                
+                // ⭐ VERIFICAR SE JÁ FOI ENVIADO
+                if (formSubmitted) {
+                    alert("Este formulário já foi enviado anteriormente.");
+                    return;
+                }
+                
                 const btn = document.getElementById('btn-enviar');
                 if (!btn) return;
                 
@@ -810,6 +873,7 @@
 
                 try {
                     await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
+                    formSubmitted = true;
                     document.getElementById('app-content')?.classList.add('hidden');
                     document.getElementById('success-screen')?.classList.remove('hidden');
                 } catch (error) {
