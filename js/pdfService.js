@@ -542,7 +542,7 @@ export const PDFService = {
         }
     },
 
-    async generateCollaboratorsPDF({ colaboradores, pautaNome = 'Geral', colunas = ['nome', 'cargo', 'equipe', 'transporte'] }) {
+    async generateCollaboratorsPDF(arg1, arg2, arg3) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -550,7 +550,26 @@ export const PDFService = {
 
             await addLogoHeader(docPDF, 15);
 
-            if (!colaboradores || !Array.isArray(colaboradores) || colaboradores.length === 0) {
+            // Variáveis que vão receber os dados de forma segura
+            let colaboradores = [];
+            let pautaNome = 'Geral';
+            let colunas = ['nome', 'cargo', 'equipe', 'transporte'];
+
+            // 🛡️ ADAPTAÇÃO BLINDADA: Aceita tanto o jeito NOVO quanto o VELHO
+            if (arg1 && !Array.isArray(arg1) && arg1.colaboradores) {
+                // Se veio do botão novo (formato de Objeto)
+                colaboradores = arg1.colaboradores || [];
+                pautaNome = arg1.pautaNome || 'Geral';
+                colunas = arg1.colunas || ['nome', 'cargo', 'equipe', 'transporte'];
+            } else if (Array.isArray(arg1)) {
+                // Se veio do botão vermelho antigo (Variáveis soltas)
+                colaboradores = arg1;
+                if (typeof arg2 === 'string') pautaNome = arg2;
+                if (Array.isArray(arg3)) colunas = arg3;
+            }
+
+            // Validação final antes de gerar
+            if (!colaboradores || colaboradores.length === 0) {
                 console.warn("Nenhum colaborador na lista para gerar PDF.");
                 return false;
             }
@@ -561,6 +580,10 @@ export const PDFService = {
                 'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
                 'equipe': { label: 'Equipe', getData: (c) => c.equipe ? `EQP ${c.equipe}` : 'N/A' },
                 'presenca': { label: 'Status / Horário', getData: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
+                'identificador': { label: 'Matrícula/ID', getData: (c) => c.identificador || 'N/A' },
+                'telefone': { label: 'Telefone', getData: (c) => c.telefone || 'N/A' },
+                'email': { label: 'E-mail', getData: (c) => c.email || 'N/A' },
+                'horario': { label: 'Chegada', getData: (c) => c.horario || '--:--' },
                 'transporte': { label: 'Deslocamento', getData: (c) => {
                     let desc = c.transporte || 'Não Informado';
                     if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
@@ -568,7 +591,7 @@ export const PDFService = {
                 }}
             };
 
-            // Ordenação (mantendo a sua lógica original de ordenação por Defensor/Servidor e Equipe)
+            // Ordenação
             const sortedColaboradores = [...colaboradores].sort((a, b) => {
                 const equipeA = a.equipe || 'Sem Equipe';
                 const equipeB = b.equipe || 'Sem Equipe';
@@ -588,7 +611,7 @@ export const PDFService = {
                 return (a.nome || '').localeCompare(b.nome || '');
             });
 
-            // Monta o cabeçalho baseando-se apenas no que você escolheu
+            // Monta o cabeçalho baseando-se apenas no que está ativo
             const header = [colunas.map(key => colMap[key] ? colMap[key].label : key)];
             const tableData = [];
             let currentEquipe = null;
@@ -596,23 +619,21 @@ export const PDFService = {
             sortedColaboradores.forEach(c => {
                 const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
                 
-                // Quebra de seção por equipe (como você tinha no original)
                 if (equipeAtual !== currentEquipe) {
                     currentEquipe = equipeAtual;
                     tableData.push([
                         {
                             content: equipeAtual.toUpperCase(),
-                            colSpan: colunas.length, // Ajusta a largura para bater com as colunas ativas
+                            colSpan: colunas.length, 
                             styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center' }
                         }
                     ]);
                 }
                 
-                // Insere os dados da linha dinamicamente
                 tableData.push(colunas.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
             });
 
-            // Textos do cabeçalho do PDF
+            // Títulos do PDF
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); 
             docPDF.text("Lista de Presença da Equipe", 14, 40);
@@ -620,7 +641,7 @@ export const PDFService = {
             docPDF.setFontSize(10);
             docPDF.text(`Pauta: ${pautaNome}`, 14, 55);
 
-            // Desenha a tabela com autoTable
+            // Tabela
             docPDF.autoTable({
                 head: header,
                 body: tableData,
@@ -880,5 +901,6 @@ export const generateChecklistPDF = (assistedName, actionTitle, checklistData, d
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
 export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
 
+window.PDFService = PDFService;
 // Export para window (uso global)
 window.PDFService = PDFService;
