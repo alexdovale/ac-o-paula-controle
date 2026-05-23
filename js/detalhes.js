@@ -1,4 +1,3 @@
-
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -273,6 +272,57 @@ function formatCurrency(v) {
 function parseCurrency(s) {
     if (!s) return 0;
     return parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+}
+
+/* ========================================================
+   3.1 FUNÇÃO DE GERAÇÃO DE LINK DE CAPTAÇÃO (CORRIGIDA)
+   ======================================================== */
+export async function gerarLinkCaptacao() {
+    const pautaId = currentPautaId;
+    const assistidoId = currentAssistedId;
+
+    if (!assistidoId || !pautaId || !db) {
+        showNotification("Erro: Selecione um assistido primeiro!", "error");
+        return;
+    }
+
+    const tokenSeguranca = crypto.randomUUID();
+
+    try {
+        const assistidoRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+        // Salva o token no banco para permitir a regra de segurança do Firebase
+        await updateDoc(assistidoRef, { delegationToken: tokenSeguranca });
+
+        let path = window.location.pathname; 
+        path = path.replace('index.html', '');
+        if (!path.endsWith('/')) path += '/';
+        
+        const link = `${window.location.origin}${path}captacao.html?pid=${pautaId}&aid=${assistidoId}&token=${tokenSeguranca}`;
+
+        const assisted = allAssisted.find(a => a.id === assistidoId);
+        const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
+        const mensagem = encodeURIComponent(`Olá, ${nome}! Clique aqui para preencher seus dados preliminares:\n\n🔗 ${link}`);
+
+        await navigator.clipboard.writeText(link);
+        showNotification("Link seguro gerado e copiado!", "success");
+
+        const modalQr = document.getElementById('modal-captacao-qr');
+        const qrContainer = document.getElementById('qrcode-display');
+        
+        if (modalQr && qrContainer) {
+            modalQr.classList.remove('hidden');
+            qrContainer.innerHTML = ""; 
+            new QRCode(qrContainer, { text: link, width: 220, height: 220, correctLevel : QRCode.CorrectLevel.H });
+
+            document.getElementById('btn-share-wa').onclick = () => {
+                const tel = assisted?.telefone?.replace(/\D/g, '') || '';
+                window.open(`https://wa.me/${tel.length >= 10 ? '55' + tel : ''}?text=${mensagem}`, '_blank');
+            };
+        }
+    } catch (error) {
+        console.error("Erro ao gerar link:", error);
+        showNotification("Erro ao preparar o link com segurança.", "error");
+    }
 }
 
 /* ========================================================
@@ -1047,11 +1097,11 @@ function renderExpenseTable() {
                         <td class="py-3">
                             <p class="text-[10px] font-bold text-green-800 uppercase">${c.label}</p>
                             <p class="text-[9px] text-green-600 italic">${c.desc}</p>
-                        </td>
+                        </tr>
                         <td class="py-3 pl-2">
                             <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
                         </td>
-                    <tr>
+                    </tr>
                 `).join('')}
             </table>
             <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
@@ -1451,81 +1501,6 @@ function closeAssistedDetailsModal() {
 }
 
 /* ========================================================
-   9. CAPTAÇÃO DIRETA (GERADOR DE LINK E QR CODE)
-   ======================================================== */
-export function gerarLinkCaptacao() {
-    if (!currentAssistedId || !currentPautaId) {
-        showNotification("Erro: Selecione um assistido primeiro!", "error");
-        return;
-    }
-
-    const assisted = allAssisted.find(a => a.id === currentAssistedId);
-    const telefoneRaw = assisted?.telefone || '';
-    const telefoneLimpo = telefoneRaw.replace(/\D/g, '');
-
-    let path = window.location.pathname; 
-    path = path.replace('index.html', '');
-    if (!path.endsWith('/')) path += '/';
-    
-    const link = `${window.location.origin}${path}captacao.html?pid=${currentPautaId}&aid=${currentAssistedId}`;
-
-    const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
-    const mensagem = encodeURIComponent(`Olá, ${nome}! Por favor, clique no link abaixo para preencher seus dados preliminares e adiantar seu atendimento na Defensoria Pública:\n\n🔗 ${link}`);
-
-    navigator.clipboard.writeText(link).then(() => {
-        showNotification("Link copiado para a área de transferência!", "success");
-    }).catch(err => console.error(err));
-
-    const modalQr = document.getElementById('modal-captacao-qr');
-    const qrContainer = document.getElementById('qrcode-display');
-    const btnWa = document.getElementById('btn-share-wa');
-    const btnSms = document.getElementById('btn-share-sms');
-    const btnCopy = document.getElementById('btn-copy-link');
-    const phoneInput = document.getElementById('captacao-phone-input');
-    
-    if (modalQr && qrContainer) {
-        modalQr.classList.remove('hidden');
-        qrContainer.innerHTML = ""; 
-        
-        new QRCode(qrContainer, {
-            text: link,
-            width: 220,
-            height: 220,
-            colorDark : "#0f172a", 
-            colorLight : "#ffffff",
-            correctLevel : QRCode.CorrectLevel.H
-        });
-
-        if (phoneInput) {
-            phoneInput.value = assisted?.telefone || '';
-            phoneInput.oninput = (e) => {
-                let v = e.target.value.replace(/\D/g, "");
-                if (v.length > 2) v = `(${v.substring(0,2)}) ${v.substring(2)}`;
-                if (v.length > 10) v = `${v.substring(0,10)}-${v.substring(10,14)}`;
-                e.target.value = v;
-            };
-        }
-
-        const handleShare = async (platform) => {
-            const telefoneLimpoFinal = (phoneInput ? phoneInput.value : '').replace(/\D/g, '');
-            if (telefoneLimpoFinal !== (assisted?.telefone || '').replace(/\D/g, '')) {
-                await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { telefone: phoneInput.value });
-                if (assisted) assisted.telefone = phoneInput.value;
-            }
-            if (platform === 'wa') {
-                window.open(`https://wa.me/${telefoneLimpoFinal.length >= 10 ? '55' + telefoneLimpoFinal : ''}?text=${mensagem}`, '_blank');
-            } else if (platform === 'sms') {
-                window.open(`sms:+55${telefoneLimpoFinal}?body=${mensagem}`, '_self');
-            }
-        };
-
-        if (btnWa) btnWa.onclick = () => handleShare('wa');
-        if (btnSms) btnSms.onclick = () => handleShare('sms');
-        if (btnCopy) btnCopy.onclick = () => { navigator.clipboard.writeText(link); showNotification("Link copiado!"); };
-    }
-}
-
-/* ========================================================
    10. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
 export function setupDetailsModal(config) {
@@ -1651,3 +1626,4 @@ window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
+window.gerarLinkCaptacao = gerarLinkCaptacao;
