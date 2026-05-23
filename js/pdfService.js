@@ -542,8 +542,7 @@ export const PDFService = {
         }
     },
 
-    // ⭐⭐⭐ FUNÇÃO HÍBRIDA - COMPATÍVEL COM AMBOS OS MODOS DE CHAMADA ⭐⭐⭐
-    async generateCollaboratorsPDF(arg1, arg2, arg3) {
+    async generateCollaboratorsPDF({ colaboradores, pautaNome = 'Geral', colunas = ['nome', 'cargo', 'equipe', 'transporte'] }) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -551,94 +550,96 @@ export const PDFService = {
 
             await addLogoHeader(docPDF, 15);
 
-            // ==============================================
-            // LÓGICA HÍBRIDA: Detecta o modo de chamada
-            // ==============================================
-            
-            let colaboradores = [];
-            let pautaNome = 'Geral';
-            let campos = null;
-            
-            // Modo 1: Nova versão - (colaboradores, pautaNome, campos)
-            if (Array.isArray(arg1) && typeof arg2 === 'string' && (Array.isArray(arg3) || arg3 === undefined)) {
-                colaboradores = arg1;
-                pautaNome = arg2;
-                campos = Array.isArray(arg3) ? arg3 : null;
-                console.log("[PDF] Modo NOVO: (colaboradores, pautaNome, campos)", { campos });
-            }
-            // Modo 2: Versão antiga - (pautaNome, colaboradores) ou (colaboradores, pautaNome)
-            else if ((typeof arg1 === 'string' && Array.isArray(arg2)) || (Array.isArray(arg1) && typeof arg2 === 'string')) {
-                if (typeof arg1 === 'string') {
-                    pautaNome = arg1;
-                    colaboradores = arg2;
-                } else {
-                    colaboradores = arg1;
-                    pautaNome = arg2;
-                }
-                campos = null;
-                console.log("[PDF] Modo ANTIGO: (pautaNome, colaboradores) ou (colaboradores, pautaNome)");
-            }
-            // Modo 3: Apenas colaboradores (usando pauta padrão)
-            else if (Array.isArray(arg1) && arg2 === undefined) {
-                colaboradores = arg1;
-                pautaNome = 'Geral';
-                campos = null;
-                console.log("[PDF] Modo SIMPLES: apenas colaboradores");
-            }
-            else {
-                console.error("[PDF] Parâmetros não reconhecidos:", { arg1, arg2, arg3 });
+            if (!colaboradores || !Array.isArray(colaboradores) || colaboradores.length === 0) {
+                console.warn("Nenhum colaborador na lista para gerar PDF.");
                 return false;
             }
-            
-            // Se não especificou campos, usa os campos padrão (compatibilidade total)
-            if (!campos) {
-                campos = ['nome', 'cargo', 'equipe', 'transporte'];
-                console.log("[PDF] Usando campos padrão (compatibilidade):", campos);
-            }
-            
-            // Valida se tem colaboradores
-            if (!colaboradores.length) {
-                console.warn("[PDF] Nenhum colaborador para gerar relatório");
-                // Ainda gera PDF com mensagem
-                docPDF.setFontSize(16);
-                docPDF.setTextColor(22, 163, 74);
-                docPDF.text("Relatório de Equipe - SIGEP", 14, 40);
-                docPDF.setFontSize(12);
-                docPDF.setTextColor(255, 0, 0);
-                docPDF.text("Nenhum colaborador encontrado nesta pauta.", 14, 80);
-                addFooter(docPDF, 1, 1);
-                docPDF.save(`Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
-                return true;
-            }
-            
-            // Cabeçalho do relatório
+
+            // Mapeamento dos campos disponíveis
+            const colMap = {
+                'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
+                'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
+                'equipe': { label: 'Equipe', getData: (c) => c.equipe ? `EQP ${c.equipe}` : 'N/A' },
+                'presenca': { label: 'Status / Horário', getData: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
+                'transporte': { label: 'Deslocamento', getData: (c) => {
+                    let desc = c.transporte || 'Não Informado';
+                    if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
+                    return desc;
+                }}
+            };
+
+            // Ordenação (mantendo a sua lógica original de ordenação por Defensor/Servidor e Equipe)
+            const sortedColaboradores = [...colaboradores].sort((a, b) => {
+                const equipeA = a.equipe || 'Sem Equipe';
+                const equipeB = b.equipe || 'Sem Equipe';
+                if (equipeA !== equipeB) return equipeA.localeCompare(equipeB);
+
+                const getCargoWeight = (cargo) => {
+                    const c = (cargo || '').toLowerCase();
+                    if (c.includes('defensor')) return 1;
+                    if (c.includes('servidor')) return 2;
+                    return 3;
+                };
+
+                const weightA = getCargoWeight(a.cargo);
+                const weightB = getCargoWeight(b.cargo);
+                
+                if (weightA !== weightB) return weightA - weightB;
+                return (a.nome || '').localeCompare(b.nome || '');
+            });
+
+            // Monta o cabeçalho baseando-se apenas no que você escolheu
+            const header = [colunas.map(key => colMap[key] ? colMap[key].label : key)];
+            const tableData = [];
+            let currentEquipe = null;
+
+            sortedColaboradores.forEach(c => {
+                const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
+                
+                // Quebra de seção por equipe (como você tinha no original)
+                if (equipeAtual !== currentEquipe) {
+                    currentEquipe = equipeAtual;
+                    tableData.push([
+                        {
+                            content: equipeAtual.toUpperCase(),
+                            colSpan: colunas.length, // Ajusta a largura para bater com as colunas ativas
+                            styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center' }
+                        }
+                    ]);
+                }
+                
+                // Insere os dados da linha dinamicamente
+                tableData.push(colunas.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
+            });
+
+            // Textos do cabeçalho do PDF
             docPDF.setFontSize(16);
-            docPDF.setTextColor(22, 163, 74);
+            docPDF.setTextColor(22, 163, 74); 
             docPDF.text("Lista de Presença da Equipe", 14, 40);
+            
             docPDF.setFontSize(10);
-            docPDF.setTextColor(100);
             docPDF.text(`Pauta: ${pautaNome}`, 14, 55);
-            docPDF.text(`Data: ${new Date().toLocaleDateString('pt-BR')}`, 14, 62);
-            docPDF.text(`Gerado por: SIGEP System`, 14, 69);
-            
-            // Gera a tabela dinâmica
-            generateCollaboratorsTable(docPDF, colaboradores, pautaNome, campos);
-            
-            // Adiciona rodapé
+
+            // Desenha a tabela com autoTable
+            docPDF.autoTable({
+                head: header,
+                body: tableData,
+                startY: 70,
+                theme: 'striped',
+                headStyles: { fillColor: [22, 163, 74] },
+                styles: { fontSize: 9, halign: 'center', valign: 'middle' }
+            });
+
             addFooter(docPDF, 1, 1);
-            
-            // Salva o PDF
-            const fileName = `Equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`;
-            docPDF.save(fileName);
-            console.log(`[PDF] Relatório gerado com sucesso: ${fileName} | Campos: ${campos.join(', ')}`);
+
+            docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
-            
         } catch (e) {
-            console.error("Erro PDF Equipe (generateCollaboratorsPDF):", e);
+            console.error("Erro PDF Equipe:", e);
             return false;
         }
     },
-
+    
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         try {
             await ensureJsPDF();
