@@ -117,7 +117,7 @@ const CollaboratorService = {
                 
                 modal.classList.add('hidden');
             };
-        },
+        }
 
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
