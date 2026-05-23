@@ -33,12 +33,12 @@ const CollaboratorService = {
             return;
         }
 
-        // 2. CHAMA O PDF COM A LISTA FILTRADA
-        await window.PDFService.generateCollaboratorsPDF(
-            app.colaboradores, 
-            app.currentPauta.name, 
-            camposEscolhidos
-        );
+        // 2. CHAMA O PDF COM A LISTA FILTRADA (USANDO O FORMATO DE OBJETO)
+        await window.PDFService.generateCollaboratorsPDF({
+            colaboradores: app.colaboradores, 
+            pautaNome: app.currentPauta.name, 
+            colunas: camposEscolhidos
+        });
     },
 
     // Abre modal de configuração do PDF
@@ -108,18 +108,16 @@ const CollaboratorService = {
                     return;
                 }
 
-                await window.PDFService.generateCollaboratorsPDF(
-                    app.colaboradores, 
-                    app.currentPauta.name, 
-                    camposEscolhidos
-                );
+                // -> MUDANÇA AQUI TAMBÉM: Enviando como um objeto {}
+                await window.PDFService.generateCollaboratorsPDF({
+                    colaboradores: app.colaboradores, 
+                    pautaNome: app.currentPauta.name, 
+                    colunas: camposEscolhidos
+                });
                 
                 modal.classList.add('hidden');
             };
-        }
-
-        modal.classList.remove('hidden');
-    },
+        },
 
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
