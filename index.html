@@ -1193,7 +1193,7 @@
     
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-3 pt-2">
                     <div class="flex w-full sm:w-auto gap-2">
-                        <button id="download-collaborators-pdf-modal" class="flex-1 sm:flex-none bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 text-[10px] sm:text-xs shadow-md uppercase">Emitir PDF</button>
+                        <button id="download-collaborators-pdf-modal" onclick="CollaboratorService.abrirModalExportacaoPDF(window.app)" type="button" class="flex-1 sm:flex-none bg-red-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-red-700 text-[10px] sm:text-xs shadow-md uppercase">Emitir PDF</button>
                         <button id="clear-collaborators-list-modal" class="flex-1 sm:flex-none text-gray-500 bg-gray-200 hover:bg-red-100 hover:text-red-600 py-2.5 px-4 rounded-lg text-[10px] sm:text-xs font-bold uppercase transition">Limpar Lista</button>
                     </div>
                     <button id="btn-gerar-ata-social" class="w-full sm:w-auto bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-green-800 text-[10px] sm:text-xs shadow-md uppercase"> Gerar Ata Social</button>
