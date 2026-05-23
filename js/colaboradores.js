@@ -35,10 +35,14 @@ const CollaboratorService = {
 
         // 2. CHAMA O PDF COM A LISTA FILTRADA (USANDO O FORMATO DE OBJETO)
         await window.PDFService.generateCollaboratorsPDF({
-            colaboradores: app.colaboradores, 
-            pautaNome: app.currentPauta.name, 
-            colunas: camposEscolhidos
-        });
+                    colaboradores: app.colaboradores, 
+                    pautaNome: app.currentPauta.name, 
+                    colunas: camposEscolhidos
+                });
+                
+                modal.classList.add('hidden');
+            };
+        }
     },
 
     // Abre modal de configuração do PDF
