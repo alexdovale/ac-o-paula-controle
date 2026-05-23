@@ -35,14 +35,10 @@ const CollaboratorService = {
 
         // 2. CHAMA O PDF COM A LISTA FILTRADA (USANDO O FORMATO DE OBJETO)
         await window.PDFService.generateCollaboratorsPDF({
-                    colaboradores: app.colaboradores, 
-                    pautaNome: app.currentPauta.name, 
-                    colunas: camposEscolhidos
-                });
-                
-                modal.classList.add('hidden');
-            };
-        }
+            colaboradores: app.colaboradores, 
+            pautaNome: app.currentPauta.name, 
+            colunas: camposEscolhidos
+        });
     },
 
     // Abre modal de configuração do PDF
@@ -122,6 +118,7 @@ const CollaboratorService = {
                 modal.classList.add('hidden');
             };
         }
+    }, // <-- AQUI ESTÁ A VÍRGULA QUE FALTAVA!
 
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
