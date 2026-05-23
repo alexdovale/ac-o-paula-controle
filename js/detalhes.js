@@ -1450,8 +1450,6 @@ function closeAssistedDetailsModal() {
     handleBack(); 
 }
 
-gerarLinkCaptacao
-
 /* ========================================================
    10. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
