@@ -4,10 +4,8 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mesa de Trabalho Judicial - SIGEP</title>
-    <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Bibliotecas de Suporte -->
     <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -16,7 +14,6 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
-    <!-- Fontes -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
     <style>
@@ -35,69 +32,152 @@
 </head>
 <body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
 
-    <!-- Container Principal do Aplicativo -->
-    <div class="w-full max-w-4xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         
-        <!-- Cabeçalho (JS vai injetar logo aqui) -->
         <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
             
+            <button id="btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
+                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            </button>
+
             <div class="flex flex-col overflow-hidden w-full relative z-10">
-                <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">CARREGANDO ATENDIMENTO...</h1>
-                <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Aguarde a sincronização de segurança...</p>
+                <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
             </div>
 
-            <!-- Badge de Status (O JS controla o show/hide e a classe) -->
             <div id="status-indicator" class="hidden absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20">
-                🟢 LIVRE
+                🟢 ONLINE
             </div>
         </div>
 
-        <!-- Abas de Navegação -->
-        <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider">
-            <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none">Encerramento / Fluxo</button>
-            <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none">Histórico Recepção</button>
-        </div>
+        <div id="view-dashboard" class="flex flex-col flex-1">
+            <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
+                    💻 Minha Mesa
+                </button>
+                <button id="btn-tab-sem-atribuicao" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                    📥 Sem Atribuição
+                </button>
+                <button id="btn-tab-pauta-dia" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                    📅 Pauta do Dia
+                </button>
+            </div>
 
-        <!-- Conteúdo Dinâmico -->
-        <div class="p-4 sm:p-6 bg-white flex-1">
-            
-            <!-- Área de Encerramento (Onde o JS constrói os fluxos) -->
-            <div id="aba-encerramento" class="space-y-6">
-                <div id="area-colaborador" class="hidden">
+            <div class="p-4 sm:p-6 bg-slate-50/50 flex-1">
+                <div id="painel-atendimento-container" class="w-full min-h-[300px]">
                     <div class="flex flex-col justify-center items-center py-20 gap-3">
-                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-                        <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa Judicial...</p>
+                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+                        <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Sincronizando pautas...</p>
                     </div>
                 </div>
             </div>
+        </div>
 
-            <!-- Área de Histórico -->
-            <div id="aba-historico" class="hidden animate-fade-in">
-                <div id="lista-historico" class="space-y-4">
-                    <div class="flex flex-col justify-center items-center py-20 gap-3">
-                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-                        <p class="text-[10px] font-black text-indigo-400 tracking-widest uppercase">Puxando documentos da recepção...</p>
+        <div id="view-atendimento" class="hidden flex-col flex-1">
+            <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
+                    Encerramento / Fluxo
+                </button>
+                <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">
+                    Histórico Recepção
+                </button>
+            </div>
+
+            <div class="p-4 sm:p-6 bg-white flex-1">
+                <div id="aba-encerramento" class="space-y-6">
+                    <div id="area-colaborador" class="hidden">
+                        <div class="flex flex-col justify-center items-center py-20 gap-3">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+                            <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa Judicial...</p>
+                        </div>
+                    </div>
+                </div>
+
+                <div id="aba-historico" class="hidden animate-fade-in">
+                    <div id="lista-historico" class="space-y-4">
+                        <div class="flex flex-col justify-center items-center py-20 gap-3">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                            <p class="text-[10px] font-black text-indigo-400 tracking-widest uppercase">Puxando documentos da recepção...</p>
+                        </div>
                     </div>
                 </div>
             </div>
         </div>
         
-        <!-- Rodapé -->
         <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
             <span>SIGEP • Mesa Unificada de Trabalho</span>
-            <span class="font-mono text-[9px]">v1.2.0-2026</span>
+            <span class="font-mono text-[9px]">v2.0-2026</span>
         </div>
     </div>
 
-    <!-- Inicialização do Módulo -->
     <script type="module">
         import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
         
-        // Garante que o serviço seja inicializado quando o DOM estiver pronto
+        // Mock do App Instance para injeção no serviço (Substitua pela sua lógica de Auth/App atual)
+        const mockAppInstance = {
+            db: window.db, // Certifique-se de que o firebase-firestore esteja exposto aqui ou injetado corretamente
+            auth: window.auth
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            AtendimentoExternoService.init();
+            // Inicialização precisa do ID e Nome do colaborador logado
+            // Exemplo estático para visualização (você preencherá isso dinamicamente no seu fluxo de auth)
+            const colaboradorNome = localStorage.getItem('sigep_colab_nome') || "Servidor Logado";
+            const colaboradorId = localStorage.getItem('sigep_colab_id') || "uid-servidor";
+            
+            // Atualiza o header inicial
+            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
+            document.getElementById('status-indicator').classList.remove('hidden');
+
+            AtendimentoExternoService.init(mockAppInstance, colaboradorNome, colaboradorId);
+
+            // Transição entre Modo Dashboard e Modo Atendimento
+            window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-atendimento').classList.remove('hidden');
+                document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
+                
+                document.getElementById('assistido-nome').textContent = nomeAssistido;
+                document.getElementById('assistido-assunto').textContent = `Em atendimento • Pauta ID: ${pautaId}`;
+                
+                // Dispare aqui a sua função antiga que gera os botões e formulários do "Encerramento/Fluxo"
+            };
+
+            // Voltar para o Dashboard
+            document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
+                document.getElementById('view-atendimento').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('btn-voltar-dashboard').classList.add('hidden');
+                
+                document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
+                document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
+            });
         });
+
+        // Intercepta a chamada original do botão "Atender" do serviço gerado
+        const originalSetupAcoes = AtendimentoExternoService.setupAcoesDosCards;
+        AtendimentoExternoService.setupAcoesDosCards = function() {
+            originalSetupAcoes.call(AtendimentoExternoService);
+            
+            document.querySelectorAll('.btn-atender-caso').forEach(btn => {
+                // Remove o click antigo
+                const novoBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(novoBtn, btn);
+                
+                novoBtn.addEventListener('click', (e) => {
+                    const pautaId = e.currentTarget.dataset.pautaId;
+                    const assistidoId = e.currentTarget.dataset.assistidoId;
+                    
+                    // Pega o nome do assistido pelo card mais próximo
+                    const card = e.currentTarget.closest('.bg-white');
+                    const nomeAssistido = card.querySelector('h4').textContent;
+
+                    // Aciona a transição visual
+                    window.abrirMesaDeAtendimento(nomeAssistido, pautaId, assistidoId);
+                });
+            });
+        };
     </script>
 </body>
 </html>
