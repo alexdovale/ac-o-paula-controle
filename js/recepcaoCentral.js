@@ -1,136 +1,757 @@
-import { showNotification } from './utils.js?v=20260313';
+// js/recepcaoCentral.js - RECEPÇÃO CENTRAL SIGEP
+// Permite que Apoio, Admin e Superadmin gerenciem múltiplas pautas simultaneamente.
+// Acesso restrito: roles 'apoio', 'admin', 'superadmin'.
 
-export const RecepcaoCentralService = {
-    app: null,
-    pautasAtivas: [],
+import {
+    collection, doc, onSnapshot, updateDoc, getDocs, query, where
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
+import { PautaService } from './pauta.js';
+import { PautaConfigService } from './pautaConfig.js';
+import { logAction } from './admin.js';
 
-    async abrir(appInstance) {
-        this.app = appInstance;
-        
-        // Esconde as outras telas e exibe a recepção central
-        const uiElements = ['login-container', 'pauta-selection-container', 'app-container', 'dashboard-container'];
-        uiElements.forEach(id => {
-            const el = document.getElementById(id);
-            if (el) el.classList.add('hidden');
-        });
-        
-        const recepcaoContainer = document.getElementById('recepcao-central-container');
-        if (recepcaoContainer) recepcaoContainer.classList.remove('hidden');
+// ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
 
-        await this.carregarDados();
+const estado = {
+    pautasHoje: [],          // [{id, name, type, ...pautaData}]
+    assistidosPorPauta: {},  // { [pautaId]: [assistidos] }
+    colaboradoresPorPauta: {}, // { [pautaId]: [colaboradores] }
+    unsubscribers: [],       // listeners ativos
+    pautaFocadaId: null,     // pauta selecionada no modo de navegação
+    modoVisao: 'grade',      // 'grade' | 'foco'
+    termoBusca: '',
+};
+
+// ─── HELPERS ───────────────────────────────────────────────────────────────────
+
+function statusLabel(status) {
+    const map = {
+        pauta: { txt: 'Na Pauta', cor: 'bg-slate-100 text-slate-600' },
+        aguardando: { txt: 'Aguardando', cor: 'bg-amber-100 text-amber-700' },
+        emAtendimento: { txt: 'Em Atendimento', cor: 'bg-blue-100 text-blue-700' },
+        aguardandoDistribuicao: { txt: 'Distribuição', cor: 'bg-cyan-100 text-cyan-700' },
+        atendido: { txt: 'Atendido', cor: 'bg-green-100 text-green-700' },
+        faltoso: { txt: 'Faltoso', cor: 'bg-red-100 text-red-700' },
+    };
+    return map[status] || { txt: status, cor: 'bg-gray-100 text-gray-600' };
+}
+
+function contadores(assistidos) {
+    return {
+        total: assistidos.length,
+        aguardando: assistidos.filter(a => a.status === 'aguardando').length,
+        emAtendimento: assistidos.filter(a => a.status === 'emAtendimento').length,
+        atendidos: assistidos.filter(a => a.status === 'atendido').length,
+        faltosos: assistidos.filter(a => a.status === 'faltoso').length,
+        distribuicao: assistidos.filter(a => a.status === 'aguardandoDistribuicao').length,
+    };
+}
+
+function colaboradoresStatus(colaboradores) {
+    const livres = colaboradores.filter(c => c.status === 'disponivel' || !c.status);
+    const ocupados = colaboradores.filter(c => c.status === 'ocupado');
+    return { livres, ocupados };
+}
+
+// ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
+
+export const RecepçãoCentralService = {
+
+    // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
+
+    async init(app) {
+        this._app = app;
+
+        // Verificar permissão
+        const role = app.currentUser?.role;
+        if (!['apoio', 'admin', 'superadmin'].includes(role)) {
+            showNotification("Acesso restrito à Recepção Central.", "warning");
+            return;
+        }
+
+        // Carregar pautas do dia
+        await this._carregarPautasHoje();
+
+        // Mostrar tela
+        this._renderTela();
     },
 
-    async carregarDados() {
+    // ── CARREGAR DADOS ─────────────────────────────────────────────────────────
+
+    async _carregarPautasHoje() {
+        const app = this._app;
+        estado.pautasHoje = await PautaConfigService.buscarPautasHoje(
+            app.db,
+            app.currentUser.uid,
+            app.currentUser.email,
+            app.currentUser.role
+        );
+
+        // Iniciar listeners de tempo real para cada pauta
+        this._cancelarListeners();
+
+        for (const pauta of estado.pautasHoje) {
+            // Listener de assistidos
+            const refAt = collection(app.db, "pautas", pauta.id, "attendances");
+            const unsubAt = onSnapshot(refAt, (snap) => {
+                estado.assistidosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this._atualizarCardPauta(pauta.id);
+                if (estado.pautaFocadaId === pauta.id) this._renderFoco(pauta.id);
+                this._atualizarPainelPublicoUltimoChamado(pauta.id);
+            });
+
+            // Listener de colaboradores
+            const refCo = collection(app.db, "pautas", pauta.id, "collaborators");
+            const unsubCo = onSnapshot(refCo, (snap) => {
+                estado.colaboradoresPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this._atualizarCardPauta(pauta.id);
+                if (estado.pautaFocadaId === pauta.id) this._renderFoco(pauta.id);
+            });
+
+            estado.unsubscribers.push(unsubAt, unsubCo);
+        }
+    },
+
+    _cancelarListeners() {
+        estado.unsubscribers.forEach(u => u && u());
+        estado.unsubscribers = [];
+    },
+
+    // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
+
+    _renderTela() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
 
-        container.innerHTML = `<div class="flex justify-center mt-10"><div class="animate-spin h-8 w-8 border-4 border-amber-600 border-t-transparent rounded-full"></div></div>`;
+        container.innerHTML = `
+            <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4">
 
-        try {
-            // Reutiliza a busca de pautas do PautaConfigService
-            const { PautaConfigService } = await import('./pautaConfig.js');
-            this.pautasAtivas = await PautaConfigService.buscarPautasHoje();
-            
-            // Filtra pautas que estão fechadas
-            this.pautasAtivas = this.pautasAtivas.filter(p => !p.isClosed);
-            this.renderizarGrade();
-        } catch (error) {
-            console.error("Erro ao carregar dados da recepção", error);
-            container.innerHTML = `<p class="text-red-500 text-center mt-10">Erro ao carregar os dados da recepção.</p>`;
-        }
-    },
+                <!-- CABEÇALHO -->
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Recepção Central</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Pautas ativas hoje — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
+                    </div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
+                            🔍 Busca Global
+                        </button>
+                        <button id="rc-btn-atualizar" class="flex items-center gap-2 bg-white border border-slate-300 text-slate-600 px-3 py-2 rounded-lg hover:bg-slate-50 transition shadow-sm" title="Recarregar pautas">
+                            🔄
+                        </button>
+                        <button id="rc-btn-fechar" class="flex items-center gap-2 bg-slate-800 text-white font-bold px-4 py-2 rounded-lg hover:bg-slate-900 transition text-sm shadow">
+                            ← Voltar
+                        </button>
+                    </div>
+                </div>
 
-    renderizarGrade() {
-        const container = document.getElementById('recepcao-central-container');
-        
-        let html = `
-            <div class="flex items-center justify-between mb-6">
-                <h1 class="text-2xl font-bold text-gray-800">🏛️ Recepção Central</h1>
-                <button id="btn-voltar-selecao" class="bg-gray-200 text-gray-700 px-4 py-2 rounded-lg font-bold hover:bg-gray-300 transition shadow">
-                    ⬅ Voltar
-                </button>
+                <!-- BUSCA GLOBAL (oculta por padrão) -->
+                <div id="rc-busca-global-wrap" class="hidden mb-4 animate-fade-in">
+                    <div class="relative">
+                        <input type="search" id="rc-input-busca" placeholder="Digite nome ou nº de agendamento para buscar em todas as pautas..."
+                            class="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
+                    </div>
+                    <div id="rc-resultados-busca" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
+                </div>
+
+                <!-- SUMÁRIO GERAL -->
+                <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+
+                <!-- GRADE DE PAUTAS -->
+                <div id="rc-grade-pautas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
+
+                <!-- PAINEL DE FOCO (oculto por padrão) -->
+                <div id="rc-painel-foco" class="hidden"></div>
+
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
         `;
 
-        if (this.pautasAtivas.length === 0) {
-            html += `<div class="col-span-full text-center text-gray-500 py-8 bg-white rounded-lg shadow border border-gray-100">Nenhuma pauta ativa registrada para hoje.</div>`;
-        } else {
-            this.pautasAtivas.forEach(pauta => {
-                const locaisStr = pauta.rooms ? pauta.rooms.join(', ') : 'Padrão';
-                const localBase = pauta.rooms ? pauta.rooms[0] : 'Recepção';
+        this._renderGrade();
+        this._renderSumario();
+        this._setupInteracoes();
+    },
 
-                html += `
-                    <div class="bg-white rounded-xl shadow border border-gray-200 p-5 flex flex-col hover:border-amber-400 transition">
-                        <div class="flex justify-between items-start mb-4">
-                            <h2 class="text-lg font-bold text-gray-800 truncate pr-2" title="${pauta.name}">${pauta.name}</h2>
-                            <span class="bg-blue-100 text-blue-800 text-[10px] font-black px-2 py-1 rounded uppercase tracking-wide">${pauta.type}</span>
-                        </div>
-                        <p class="text-xs text-gray-500 mb-6 flex-grow bg-gray-50 p-2 rounded border border-gray-100">Locais: ${locaisStr}</p>
-                        
-                        <div class="flex gap-2 mt-auto">
-                            <button class="btn-chamar-proximo flex-1 bg-amber-600 hover:bg-amber-700 text-white font-bold py-2.5 px-3 rounded-lg text-sm transition shadow-md" 
-                                data-pauta-id="${pauta.id}" 
-                                data-pauta-salas="${localBase}">
-                                📣 Chamar Próximo
-                            </button>
-                        </div>
-                    </div>
-                `;
-            });
+    // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
+
+    _renderGrade() {
+        const grade = document.getElementById('rc-grade-pautas');
+        if (!grade) return;
+
+        if (estado.pautasHoje.length === 0) {
+            grade.innerHTML = `
+                <div class="col-span-full text-center py-16 opacity-60">
+                    <span class="text-5xl block mb-4">📋</span>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa hoje.</p>
+                </div>
+            `;
+            return;
         }
 
-        html += `</div>`;
-        container.innerHTML = html;
+        grade.innerHTML = estado.pautasHoje.map(p => this._htmlCardPauta(p)).join('');
+    },
 
-        // Listener para voltar à seleção de pautas
-        document.getElementById('btn-voltar-selecao')?.addEventListener('click', () => {
-            document.getElementById('recepcao-central-container').classList.add('hidden');
-            this.app.showPautaSelectionScreen();
+    _htmlCardPauta(pauta) {
+        const assistidos = estado.assistidosPorPauta[pauta.id] || [];
+        const colaboradores = estado.colaboradoresPorPauta[pauta.id] || [];
+        const c = contadores(assistidos);
+        const { livres, ocupados } = colaboradoresStatus(colaboradores);
+
+        const porcentagem = c.total > 0 ? Math.round((c.atendidos / c.total) * 100) : 0;
+
+        return `
+            <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col" data-pauta-id="${pauta.id}">
+                
+                <!-- Cabeçalho do card -->
+                <div class="bg-slate-800 px-5 py-4 flex justify-between items-start gap-2">
+                    <div class="min-w-0">
+                        <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
+                        <p class="text-slate-400 text-xs mt-0.5 uppercase tracking-wider">${pauta.type || 'agendamento'}</p>
+                    </div>
+                    <span class="text-white/60 text-xs font-mono shrink-0">${porcentagem}%</span>
+                </div>
+
+                <!-- Barra de progresso -->
+                <div class="h-1.5 bg-slate-100">
+                    <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
+                </div>
+
+                <!-- Contadores -->
+                <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                    <div class="text-center py-3">
+                        <div class="text-xl font-black text-amber-600">${c.aguardando}</div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Aguardando</div>
+                    </div>
+                    <div class="text-center py-3">
+                        <div class="text-xl font-black text-blue-600">${c.emAtendimento}</div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendendo</div>
+                    </div>
+                    <div class="text-center py-3">
+                        <div class="text-xl font-black text-green-600">${c.atendidos}</div>
+                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendidos</div>
+                    </div>
+                </div>
+
+                <!-- Equipe -->
+                <div class="px-5 py-3 flex items-center gap-3 border-b border-slate-100">
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-green-500"></span>
+                        <span class="text-xs font-bold text-green-700">${livres.length} livres</span>
+                    </div>
+                    <div class="flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-red-500"></span>
+                        <span class="text-xs font-bold text-red-600">${ocupados.length} ocupados</span>
+                    </div>
+                    ${c.distribuicao > 0 ? `<div class="ml-auto"><span class="bg-cyan-100 text-cyan-700 text-[10px] font-black px-2 py-0.5 rounded border border-cyan-200">⚖️ ${c.distribuicao} dist.</span></div>` : ''}
+                </div>
+
+                <!-- Ações rápidas -->
+                <div class="px-5 py-3 flex gap-2 mt-auto">
+                    <button class="rc-btn-checkin flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
+                        ✅ Check-in
+                    </button>
+                    <button class="rc-btn-chamar flex-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
+                        📣 Chamar
+                    </button>
+                    <button class="rc-btn-abrir flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
+                        Abrir →
+                    </button>
+                </div>
+            </div>
+        `;
+    },
+
+    _atualizarCardPauta(pautaId) {
+        const card = document.getElementById(`rc-card-${pautaId}`);
+        if (!card) return;
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+        card.outerHTML = this._htmlCardPauta(pauta);
+        this._setupInteracoesCard(pautaId);
+        this._renderSumario();
+    },
+
+    // ── SUMÁRIO GERAL ──────────────────────────────────────────────────────────
+
+    _renderSumario() {
+        const el = document.getElementById('rc-sumario');
+        if (!el) return;
+
+        let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0;
+        for (const assistidos of Object.values(estado.assistidosPorPauta)) {
+            const c = contadores(assistidos);
+            totalAg += c.aguardando;
+            totalAt += c.atendidos;
+            totalEm += c.emAtendimento;
+            totalDist += c.distribuicao;
+        }
+
+        el.innerHTML = `
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-amber-600">${totalAg}</div>
+                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Aguardando</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-blue-600">${totalEm}</div>
+                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Em Atendimento</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-green-600">${totalAt}</div>
+                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Atendidos</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-cyan-600">${totalDist}</div>
+                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Distribuição</div>
+            </div>
+        `;
+    },
+
+    // ── PAINEL DE FOCO ─────────────────────────────────────────────────────────
+
+    _abrirFoco(pautaId) {
+        estado.pautaFocadaId = pautaId;
+        estado.modoVisao = 'foco';
+
+        document.getElementById('rc-grade-pautas').classList.add('hidden');
+        document.getElementById('rc-sumario').classList.add('hidden');
+        const foco = document.getElementById('rc-painel-foco');
+        foco.classList.remove('hidden');
+
+        this._renderFoco(pautaId);
+    },
+
+    _fecharFoco() {
+        estado.pautaFocadaId = null;
+        estado.modoVisao = 'grade';
+        document.getElementById('rc-grade-pautas').classList.remove('hidden');
+        document.getElementById('rc-sumario').classList.remove('hidden');
+        document.getElementById('rc-painel-foco').classList.add('hidden');
+    },
+
+    _renderFoco(pautaId) {
+        const foco = document.getElementById('rc-painel-foco');
+        if (!foco || estado.modoVisao !== 'foco') return;
+
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
+        const c = contadores(assistidos);
+        const { livres, ocupados } = colaboradoresStatus(colaboradores);
+
+        const aguardando = PautaService.sortAguardando(
+            assistidos.filter(a => a.status === 'aguardando'),
+            pauta.ordemAtendimento
+        );
+
+        foco.innerHTML = `
+            <div class="bg-white border border-slate-200 rounded-2xl shadow overflow-hidden">
+
+                <!-- Header do foco -->
+                <div class="bg-slate-800 px-6 py-5 flex justify-between items-center">
+                    <div>
+                        <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade</button>
+                        <h3 class="text-white font-black text-xl">${escapeHTML(pauta.name)}</h3>
+                        <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total</p>
+                    </div>
+                    <div class="flex gap-2">
+                        <button id="rc-foco-btn-chamar" class="bg-green-600 hover:bg-green-700 text-white font-black px-5 py-2.5 rounded-xl text-sm transition shadow">
+                            📣 Chamar Próximo
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+
+                    <!-- FILA DE ESPERA -->
+                    <div class="p-5">
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">⏳ Fila de Espera (${aguardando.length})</h4>
+                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                            ${aguardando.length === 0
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
+                                : aguardando.map((a, i) => `
+                                    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                        <span class="w-6 h-6 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
+                                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(a.subject || '')}</p>
+                                        </div>
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1 rounded-lg transition" 
+                                            data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- EM ATENDIMENTO -->
+                    <div class="p-5">
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
+                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                            ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
+                                : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
+                                    <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
+                                        <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
+                                        <p class="text-[10px] text-blue-600 font-bold mt-0.5">${escapeHTML(a.assignedCollaborator?.name || a.attendant || '—')}</p>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- EQUIPE -->
+                    <div class="p-5">
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
+                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                            ${colaboradores.length === 0
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador.</p>`
+                                : colaboradores.map(c => {
+                                    const livre = c.status === 'disponivel' || !c.status;
+                                    return `
+                                        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                            <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
+                                            <div class="min-w-0">
+                                                <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(c.nome)}</p>
+                                                <p class="text-[10px] text-slate-400">${escapeHTML(c.cargo || '')}</p>
+                                            </div>
+                                            <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
+                                        </div>
+                                    `;
+                                }).join('')
+                            }
+                        </div>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        // Botão voltar
+        document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
+
+        // Chamar próximo no foco
+        document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => {
+            await this._chamarProximo(pautaId);
         });
 
-        // Listeners dos botões de chamada
-        document.querySelectorAll('.btn-chamar-proximo').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const pautaId = e.currentTarget.dataset.pautaId;
-                const salaPadrao = e.currentTarget.dataset.pautaSalas;
-                await this.fluxoChamarProximo(pautaId, salaPadrao);
+        // Check-in direto na fila
+        foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._marcarChegada(pautaId, btn.dataset.id);
             });
         });
     },
 
-    async fluxoChamarProximo(pautaId, localSugerido) {
-        const nomeAssistido = prompt("Nome do assistido a ser chamado:") || "Assistido Não Identificado";
-        const localAtendimento = prompt("Local de atendimento:", localSugerido) || localSugerido;
+    // ── BUSCA GLOBAL ───────────────────────────────────────────────────────────
 
-        const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        
+    _setupBuscaGlobal() {
+        const input = document.getElementById('rc-input-busca');
+        if (!input) return;
+
+        input.addEventListener('input', () => {
+            const termo = normalizeText(input.value.trim());
+            const resultados = document.getElementById('rc-resultados-busca');
+            if (!resultados) return;
+
+            if (!termo) {
+                resultados.innerHTML = '';
+                return;
+            }
+
+            const encontrados = [];
+            for (const pauta of estado.pautasHoje) {
+                const assistidos = estado.assistidosPorPauta[pauta.id] || [];
+                for (const a of assistidos) {
+                    const matchNome = normalizeText(a.name || '').includes(termo);
+                    const matchNum  = (a.numAgendamento || '').includes(input.value.trim());
+                    if (matchNome || matchNum) {
+                        encontrados.push({ pauta, assistido: a });
+                    }
+                }
+            }
+
+            if (encontrados.length === 0) {
+                resultados.innerHTML = `<p class="text-xs text-slate-400 text-center py-4">Nenhum resultado encontrado.</p>`;
+                return;
+            }
+
+            resultados.innerHTML = encontrados.map(({ pauta, assistido: a }) => {
+                const sl = statusLabel(a.status);
+                const podeCheckin = a.status === 'pauta';
+                return `
+                    <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
+                        <div class="min-w-0 flex-1">
+                            <p class="font-black text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
+                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(pauta.name)} · ${escapeHTML(a.subject || '')}</p>
+                        </div>
+                        <span class="text-[10px] font-black px-2 py-0.5 rounded ${sl.cor}">${sl.txt}</span>
+                        ${podeCheckin ? `
+                            <button class="rc-busca-checkin bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg transition"
+                                data-pauta="${pauta.id}" data-id="${a.id}">
+                                Check-in
+                            </button>
+                        ` : ''}
+                    </div>
+                `;
+            }).join('');
+
+            resultados.querySelectorAll('.rc-busca-checkin').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    this._marcarChegada(btn.dataset.pauta, btn.dataset.id);
+                    input.value = '';
+                    resultados.innerHTML = '';
+                    document.getElementById('rc-busca-global-wrap').classList.add('hidden');
+                });
+            });
+        });
+    },
+
+    // ── AÇÕES ──────────────────────────────────────────────────────────────────
+
+    async _marcarChegada(pautaId, assistidoId) {
+        const app = this._app;
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            assistidoId,
+            {
+                status: 'aguardando',
+                arrivalTime: new Date().toISOString(),
+                checkInOrder: Date.now(),
+            },
+            app.currentUserName
+        );
+        showNotification("Chegada registrada!", "success");
+        playSound('notification');
+    },
+
+    async _chamarProximo(pautaId) {
+        const app = this._app;
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+
+        const aguardando = PautaService.sortAguardando(
+            (estado.assistidosPorPauta[pautaId] || []).filter(a => a.status === 'aguardando'),
+            pauta.ordemAtendimento
+        );
+
+        if (aguardando.length === 0) {
+            showNotification("Fila vazia nesta pauta.", "info");
+            return;
+        }
+
+        const proximo = aguardando[0];
+
+        // Guarda o chamado para o painel público
+        this._registrarUltimoChamado(pautaId, proximo, pauta.name);
+
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            proximo.id,
+            { status: 'emAtendimento', inAttendanceTime: new Date().toISOString() },
+            app.currentUserName
+        );
+
+        showNotification(`📣 Chamado: ${proximo.name}`, "success");
+        playSound('chime');
+    },
+
+    _registrarUltimoChamado(pautaId, assistido, pautaNome) {
+        // Salva no localStorage para o painel público ler
         const chamado = {
-            nome: nomeAssistido,
-            local: localAtendimento,
-            hora: horaAtual,
-            pautaId: pautaId
+            nome: assistido.name,
+            assunto: assistido.subject || '',
+            local: pautaNome,
+            pautaId,
+            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            timestamp: Date.now(),
         };
 
-        // Salva globalmente para as TVs/celulares lerem via localStorage
-        localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
-        
-        // Mantém um histórico das chamadas recentes por pauta
-        const chaveHistorico = `sigep_chamados_${pautaId}`;
+        // Histórico recente (últimos 5)
+        const chave = `sigep_chamados_${pautaId}`;
         let historico = [];
-        try {
-            historico = JSON.parse(localStorage.getItem(chaveHistorico)) || [];
-        } catch(e) {}
-        
+        try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
         historico.unshift(chamado);
-        if(historico.length > 10) historico.pop(); // Limita o histórico a 10 chamadas
-        localStorage.setItem(chaveHistorico, JSON.stringify(historico));
+        if (historico.length > 5) historico = historico.slice(0, 5);
+        localStorage.setItem(chave, JSON.stringify(historico));
 
-        // Dispara o evento de atualização local para sincronia imediata
-        window.dispatchEvent(new Event('sigep:chamado'));
+        // Último chamado global (para o painel público unificado)
+        localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
 
-        if (this.app) {
-            showNotification(`Chamado: ${nomeAssistido} para ${localAtendimento}`, 'success');
+        // Dispara evento para o painel público atualizar em tempo real
+        window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
+    },
+
+    _atualizarPainelPublicoUltimoChamado(pautaId) {
+        // Chamado pelo listener — verifica se houve mudança de status recente
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const recemChamados = assistidos.filter(a =>
+            a.status === 'emAtendimento' &&
+            a.inAttendanceTime &&
+            (Date.now() - new Date(a.inAttendanceTime).getTime()) < 10000 // menos de 10s
+        );
+
+        if (recemChamados.length > 0) {
+            const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+            if (pauta) {
+                this._registrarUltimoChamado(pautaId, recemChamados[0], pauta.name);
+            }
         }
+    },
+
+    // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
+
+    _setupInteracoes() {
+        // Botão fechar recepção central
+        document.getElementById('rc-btn-fechar')?.addEventListener('click', () => {
+            this.fechar();
+        });
+
+        // Botão atualizar
+        document.getElementById('rc-btn-atualizar')?.addEventListener('click', async () => {
+            this._cancelarListeners();
+            await this._carregarPautasHoje();
+            this._renderGrade();
+            this._renderSumario();
+            showNotification("Dados atualizados!", "info");
+        });
+
+        // Botão busca global
+        document.getElementById('rc-btn-busca-global')?.addEventListener('click', () => {
+            const wrap = document.getElementById('rc-busca-global-wrap');
+            wrap.classList.toggle('hidden');
+            if (!wrap.classList.contains('hidden')) {
+                document.getElementById('rc-input-busca')?.focus();
+                this._setupBuscaGlobal();
+            }
+        });
+
+        // Delegação de eventos para botões dos cards
+        document.getElementById('rc-grade-pautas')?.addEventListener('click', (e) => {
+            const btn = e.target.closest('button[data-pauta-id]');
+            if (!btn) return;
+            const pautaId = btn.dataset.pautaId;
+
+            if (btn.classList.contains('rc-btn-checkin')) {
+                this._abrirModalCheckin(pautaId);
+            } else if (btn.classList.contains('rc-btn-chamar')) {
+                this._chamarProximo(pautaId);
+            } else if (btn.classList.contains('rc-btn-abrir')) {
+                this._abrirFoco(pautaId);
+            }
+        });
+    },
+
+    _setupInteracoesCard(pautaId) {
+        // Após re-render de um card individual, re-liga os listeners
+        // (delegação via grade já cuida disso)
+    },
+
+    _abrirModalCheckin(pautaId) {
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const naPauta = assistidos.filter(a => a.status === 'pauta');
+
+        // Usa o modal de chegada existente no index.html, adaptando-o
+        window.assistedIdToHandle = null;
+        window._rcPautaIdParaCheckin = pautaId;
+
+        // Modal customizado simples
+        const existing = document.getElementById('rc-modal-checkin');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-checkin';
+        modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4';
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+                <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
+                    <h3 class="text-white font-black">Check-in — ${escapeHTML(pauta.name)}</h3>
+                    <button id="rc-modal-checkin-close" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">×</button>
+                </div>
+                <div class="p-5">
+                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..." 
+                        class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
+                    <div id="rc-modal-lista" class="space-y-2 max-h-72 overflow-y-auto">
+                        ${naPauta.length === 0
+                            ? `<p class="text-center text-slate-400 py-6 text-sm">Todos já fizeram check-in.</p>`
+                            : naPauta.map(a => `
+                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                    <div>
+                                        <p class="font-bold text-slate-800 text-sm">${escapeHTML(a.name)}</p>
+                                        <p class="text-[10px] text-slate-500">${a.scheduledTime || ''} · ${escapeHTML(a.subject || '')}</p>
+                                    </div>
+                                    <button class="rc-modal-checkin-btn bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
+                                        data-id="${a.id}" data-nome="${escapeHTML(a.name)}">
+                                        Registrar
+                                    </button>
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        document.getElementById('rc-modal-checkin-close').onclick = () => modal.remove();
+        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+
+        // Busca dentro do modal
+        document.getElementById('rc-modal-busca').addEventListener('input', (e) => {
+            const t = normalizeText(e.target.value);
+            modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
+                const linha = btn.closest('div.flex');
+                const nome = normalizeText(btn.dataset.nome);
+                linha.style.display = nome.includes(t) ? '' : 'none';
+            });
+        });
+
+        // Check-in
+        modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                btn.disabled = true;
+                btn.textContent = '...';
+                await this._marcarChegada(pautaId, btn.dataset.id);
+                btn.closest('div.flex').remove();
+            });
+        });
+    },
+
+    // ── FECHAR ─────────────────────────────────────────────────────────────────
+
+    fechar() {
+        this._cancelarListeners();
+        const container = document.getElementById('recepcao-central-container');
+        if (container) container.innerHTML = '';
+
+        const app = this._app;
+        if (typeof app.showPautaSelectionScreen === 'function') {
+            app.showPautaSelectionScreen();
+        }
+    },
+
+    // ── ABRIR (chamado pelo main.js) ───────────────────────────────────────────
+
+    async abrir(app) {
+        // Garante que o container existe no DOM (deve estar no index.html)
+        const container = document.getElementById('recepcao-central-container');
+        if (!container) {
+            console.error("Container #recepcao-central-container não encontrado no index.html");
+            return;
+        }
+
+        // Esconde outras telas
+        const { UIService } = await import('./ui.js');
+        UIService.showScreen('recepcaoCentral');
+
+        await this.init(app);
     }
 };
+
+export default RecepçãoCentralService;
