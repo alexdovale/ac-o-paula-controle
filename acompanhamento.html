@@ -11,6 +11,12 @@
         .scrollable-content::-webkit-scrollbar { width: 4px; }
         .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
     </style>
 </head>
 <body class="p-2 sm:p-4 md:p-8 min-h-screen flex flex-col">
@@ -60,6 +66,22 @@
                 <span id="total-atendidos-count" class="text-2xl font-black">0</span>
             </button>
         </header>
+
+        <div id="ultimo-chamado-container" class="hidden mb-6 animate-fade-in">
+            <div class="bg-slate-900 rounded-3xl p-6 md:p-8 text-center relative overflow-hidden shadow-xl border border-slate-700">
+                <div class="absolute inset-0 bg-amber-500 opacity-10 rounded-3xl animate-pulse-slow"></div>
+                
+                <p class="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-[0.3em] mb-4">📣 Chamando agora</p>
+                <h2 id="uc-nome" class="text-4xl sm:text-5xl md:text-6xl font-black text-white uppercase tracking-tight leading-none mb-6 drop-shadow-md">—</h2>
+                
+                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                    <span id="uc-local" class="bg-amber-600 text-white text-sm sm:text-base font-black px-6 py-2 rounded-xl shadow-lg border border-amber-500 uppercase tracking-wider">—</span>
+                    <span id="uc-hora" class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2 sm:mt-0">—</span>
+                </div>
+            </div>
+            
+            <div id="uc-recentes" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 hidden"></div>
+        </div>
 
         <div id="main-grid" class="grid grid-cols-1 gap-4 flex-1 min-h-0">
             
@@ -113,20 +135,14 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        function escapeHTML(str) {
-            if (!str) return '';
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
-            );
-        }
-
-        function formatName(name, mask) {
+        // ==========================================
+        // LÓGICA DO ÚLTIMO CHAMADO
+        // ==========================================
+        function formatNameMasked(name, mask) {
             if (!name) return "---";
             if (!mask) return escapeHTML(name);
-            
             const parts = name.trim().split(/\s+/);
             if (parts.length === 1) return escapeHTML(parts[0]);
-
             const connectors = ["de", "da", "do", "dos", "das"];
             return escapeHTML(parts.map((part, index) => {
                 if (index === 0) return part;
@@ -135,11 +151,72 @@
             }).join(' '));
         }
 
+        function renderUltimoChamado() {
+            if (!pId) return; // Só mostra se tiver o ID da pauta na URL
+            
+            const chave = `sigep_chamados_${pId}`;
+            let historico = [];
+            try { 
+                historico = JSON.parse(localStorage.getItem(chave)) || []; 
+            } catch {}
+
+            if (historico.length === 0) return;
+
+            const chamadoAtual = historico[0]; // O primeiro é o atual
+            
+            const container = document.getElementById('ultimo-chamado-container');
+            container.classList.remove('hidden');
+            
+            // Usamos a mesma máscara de segurança aplicada na pauta
+            const isMasked = window.currentPautaMaskNames || false;
+            
+            document.getElementById('uc-nome').textContent = formatNameMasked(chamadoAtual.nome, isMasked);
+            document.getElementById('uc-local').textContent = chamadoAtual.local || '—';
+            document.getElementById('uc-hora').textContent = chamadoAtual.hora || '';
+            
+            // Recentes (do 2º ao 4º item)
+            const anteriores = historico.slice(1, 4);
+            const recentesEl = document.getElementById('uc-recentes');
+            
+            if (anteriores.length > 0) {
+                recentesEl.classList.remove('hidden');
+                recentesEl.innerHTML = anteriores.map(c => `
+                    <div class="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm">
+                        <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">Chamado Anterior</p>
+                        <p class="text-slate-800 font-bold text-sm truncate uppercase">${formatNameMasked(c.nome, isMasked)}</p>
+                        <p class="text-slate-500 text-[10px] mt-0.5 font-semibold">${c.local} · ${c.hora}</p>
+                    </div>
+                `).join('');
+            } else {
+                recentesEl.classList.add('hidden');
+            }
+        }
+
+        // Event listener local (se disparar evento na mesma máquina)
+        window.addEventListener('sigep:chamado', renderUltimoChamado);
+        
+        // Polling para quando a tela for numa TV (máquina diferente) lendo o mesmo LocalStorage 
+        // (Nota: para multi-dispositivos ideais, isso lerá do Firebase. O LocalStorage sincroniza na mesma máquina).
+        setInterval(renderUltimoChamado, 3000);
+
+        // ==========================================
+        // HELPER FUNCTIONS EXISTENTES
+        // ==========================================
+        function escapeHTML(str) {
+            if (!str) return '';
+            return str.replace(/[&<>'"]/g, 
+                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[tag] || tag)
+            );
+        }
+
+        function formatName(name, mask) {
+            return formatNameMasked(name, mask);
+        }
+
         const createCardHTML = (a, i, color, type, data) => {
             const numAgendamento = a.numeroAgendamento || a.numAgendamento || '';
             const horaAgendada = a.scheduledTime || '';
             
-            // ⭐ CORREÇÃO AQUI: Mudado "horaMarcada" para "horaAgendada" para evitar erro de referência
             let blocosAgendamento = '';
             if (numAgendamento || horaAgendada) {
                 blocosAgendamento = `<div class="flex flex-wrap gap-1 mt-1.5">`;
@@ -172,6 +249,7 @@
             onSnapshot(doc(db, "pautas", pId), (snap) => {
                 if (snap.exists() && snap.data().isPublic) {
                     const data = snap.data();
+                    window.currentPautaMaskNames = data.maskNames; // Salva para o card de Último Chamado usar
                     document.getElementById('pauta-title').textContent = data.name;
                     
                     const grid = document.getElementById('main-grid');
@@ -187,6 +265,8 @@
 
                     document.getElementById('loading').classList.add('hidden');
                     document.getElementById('app-content').classList.remove('hidden');
+                    
+                    renderUltimoChamado(); // Tenta renderizar após carregar o nome e máscara da pauta
 
                     onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
                         const items = attSnap.docs.map(d => ({id: d.id, ...d.data()}));
