@@ -1,17 +1,11 @@
+import { collection, addDoc, updateDoc, doc, getDocs, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { showNotification, escapeHTML } from './utils.js?v=20260313';
+import { PautaService } from './pauta.js';
+
 export const PautaConfigService = {
     app: null,
-    customRooms: [],
+    customRoomsList: [],
     templates: [],
-    
-    // Estado temporário durante a criação da pauta
-    draftPauta: {
-        tipo: '',
-        salas: [],
-        ordenacao: '',
-        delegacao: '',
-        nome: '',
-        data: ''
-    },
 
     init(appInstance) {
         this.app = appInstance;
@@ -21,132 +15,270 @@ export const PautaConfigService = {
 
     _setupEventListeners() {
         // --- FLUXO DE CRIAÇÃO ---
-        
-        // 1. Abrir Modal de Criação
         document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
             this.iniciarFluxoCriacao();
+            document.getElementById('pauta-type-modal').classList.remove('hidden');
         });
 
-        // 2. Seleção de Tipo
+        document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
+            document.getElementById('pauta-type-modal').classList.add('hidden');
+        });
+
         document.querySelectorAll('.pauta-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                document.querySelectorAll('.pauta-type-btn').forEach(b => b.classList.remove('ring-4', 'ring-green-500'));
-                e.currentTarget.classList.add('ring-4', 'ring-green-500');
-                this.draftPauta.tipo = e.currentTarget.dataset.type;
+                const type = e.currentTarget.dataset.type;
+                document.getElementById('pauta-type-modal').classList.add('hidden');
                 
-                // Avança para tela de salas/config após selecionar o tipo
-                document.getElementById('pauta-type-step').classList.add('hidden');
-                document.getElementById('pauta-rooms-step').classList.remove('hidden');
+                const createModal = document.getElementById('create-pauta-modal');
+                createModal.dataset.pautaType = type;
+                
+                const roomConfig = document.getElementById('room-config-container');
+                if (type === 'multisala') {
+                    roomConfig.classList.remove('hidden');
+                    this.customRoomsList = [];
+                    this._renderCustomRooms();
+                } else {
+                    roomConfig.classList.add('hidden');
+                }
+                
+                createModal.classList.remove('hidden');
             });
         });
 
-        document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => this.fecharModais());
-
-        // 3. Salas Customizadas e Templates
-        document.getElementById('add-custom-room-btn')?.addEventListener('click', () => {
+        document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
             const input = document.getElementById('custom-room-input');
-            const roomName = input.value.trim();
-            if (roomName) {
-                this.customRooms.push(roomName);
-                input.value = '';
-                this._renderCustomRooms();
+            const name = input.value.trim();
+            if (name) {
+                if (!this.customRoomsList.includes(name)) {
+                    this.customRoomsList.push(name);
+                    this._renderCustomRooms();
+                    input.value = '';
+                    input.focus();
+                } else {
+                    showNotification("Este local já foi adicionado.", "error");
+                }
             }
         });
 
         document.getElementById('custom-rooms-list')?.addEventListener('click', (e) => {
-            if (e.target.tagName === 'BUTTON' || e.target.closest('button')) {
-                const index = e.target.closest('button').dataset.index;
-                this.customRooms.splice(index, 1);
+            if (e.target.classList.contains('remove-room-btn')) {
+                const index = e.target.dataset.index;
+                this.customRoomsList.splice(index, 1);
                 this._renderCustomRooms();
             }
         });
 
+        // --- TEMPLATES ---
         document.getElementById('btn-salvar-template')?.addEventListener('click', () => this.salvarTemplateAtual());
         
         document.getElementById('select-template-pauta')?.addEventListener('change', (e) => {
             if(e.target.value) this.aplicarTemplate(e.target.value);
         });
 
-        document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => this.fecharModais());
-        
+        // --- FLUXO DE ETAPAS ---
+        document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('create-pauta-modal').classList.add('hidden');
+        });
+
         document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
-            this.draftPauta.salas = this.customRooms;
-            document.getElementById('pauta-rooms-step').classList.add('hidden');
-            document.getElementById('pauta-ordem-step').classList.remove('hidden');
+            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+            if (!pautaName) {
+                showNotification("O nome da pauta não pode ser vazio.", "error");
+                return;
+            }
+            document.getElementById('create-pauta-modal').classList.add('hidden');
+            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
-        // 4. Ordenação
-        document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => this.fecharModais());
-        
+        document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
+            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+            document.getElementById('create-pauta-modal').classList.remove('hidden');
+        });
+
         document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
-            const ordemSelect = document.getElementById('ordem-select');
-            this.draftPauta.ordenacao = ordemSelect ? ordemSelect.value : 'chegada';
-            document.getElementById('pauta-ordem-step').classList.add('hidden');
-            document.getElementById('pauta-delegation-step').classList.remove('hidden');
+            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
+            document.getElementById('delegation-flow-modal').classList.remove('hidden');
         });
 
-        // 5. Delegação e Finalização
-        document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => this.fecharModais());
-        
-        document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
-            const delegacaoSelect = document.getElementById('delegation-select');
-            const nomeInput = document.getElementById('pauta-nome-input');
-            const dataInput = document.getElementById('create-pauta-date-input'); // Novo campo do HTML
-            
-            this.draftPauta.delegacao = delegacaoSelect ? delegacaoSelect.value : 'aberta';
-            this.draftPauta.nome = nomeInput ? nomeInput.value.trim() : `Pauta ${new Date().toLocaleDateString()}`;
-            this.draftPauta.data = dataInput ? dataInput.value : new Date().toISOString().split('T')[0];
+        document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
+            document.getElementById('delegation-flow-modal').classList.add('hidden');
+            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
+        });
 
-            await this.salvarNovaPauta();
+        // --- CONFIRMAÇÃO FINAL DE CRIAÇÃO ---
+        document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
+            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
+            const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
+            const orgaoId = document.getElementById('select-orgao-integracao').value; 
+            const dataInput = document.getElementById('create-pauta-date-input');
+            const user = this.app.auth.currentUser;
+            
+            if (!pautaName) {
+                showNotification("O nome da pauta não pode ser vazio.", "error");
+                return;
+            }
+        
+            try {
+                const novaPautaData = {
+                    name: pautaName,
+                    type: pautaType,
+                    owner: user.uid,
+                    members: [user.uid],
+                    memberEmails: [user.email],
+                    isClosed: false,
+                    createdAt: new Date().toISOString(),
+                    data: dataInput ? dataInput.value : new Date().toISOString().split('T')[0],
+                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
+                    useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
+                    useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false
+                };
+
+                if (pautaType === 'multisala') {
+                    novaPautaData.customRooms = this.customRoomsList;
+                    novaPautaData.rooms = this.customRoomsList; 
+                }
+
+                await addDoc(collection(this.app.db, "pautas"), novaPautaData);
+        
+                if (orgaoId) {
+                    showNotification("Sincronizando com base de dados Solar/Verde...", "info");
+                    const { ApiIntegration } = await import('./apiIntegration.js');
+                    const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
+                    
+                    for (const ast of assistidosOficiais) {
+                        await PautaService.addAssistedManual(this.app, {
+                            ...ast,
+                            status: 'pauta',
+                            externalId: `INT-${orgaoId}-${Date.now()}-${Math.random()}` 
+                        });
+                    }
+                    showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`, 'success');
+                } else {
+                    showNotification("Pauta criada com sucesso!", 'success');
+                }
+        
+                document.getElementById('create-pauta-name-input').value = '';
+                document.getElementById('select-orgao-integracao').value = '';
+                document.getElementById('delegation-flow-modal').classList.add('hidden');
+                
+                this.app.showPautaSelectionScreen();
+                
+            } catch (error) {
+                console.error("Erro ao criar pauta:", error);
+                showNotification("Erro ao criar pauta.", "error");
+            }
         });
 
         // --- FLUXO DE EDIÇÃO ---
         document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
-            // Lógica para abrir modal de edição rápida de nome
-            const pautaAtual = this.app.currentPauta;
-            if(!pautaAtual) return;
-            const novoNome = prompt("Digite o novo nome da pauta:", pautaAtual.nome);
-            if(novoNome) this.atualizarPropriedadePauta(pautaAtual.id, 'nome', novoNome);
+            document.getElementById('edit-pauta-name-input').value = this.app.currentPauta?.name || '';
+            document.getElementById('edit-pauta-modal').classList.remove('hidden');
         });
 
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
-            this.abrirModalEdicaoConfig();
+            if (!this.app.currentPautaData) return;
+            
+            const typeRadios = document.querySelectorAll('input[name="edit-pauta-type"]');
+            typeRadios.forEach(radio => {
+                if (radio.value === this.app.currentPautaData.type) {
+                    radio.checked = true;
+                }
+            });
+            
+            const ordemRadios = document.querySelectorAll('input[name="edit-ordem"]');
+            ordemRadios.forEach(radio => {
+                if (radio.value === this.app.currentPautaData.ordemAtendimento) {
+                    radio.checked = true;
+                }
+            });
+            
+            const delegationRadios = document.querySelectorAll('input[name="edit-delegation"]');
+            delegationRadios.forEach(radio => {
+                const value = radio.value === 'true';
+                if (value === this.app.currentPautaData.useDelegationFlow) {
+                    radio.checked = true;
+                }
+            });
+            
+            const distCheck = document.getElementById('edit-use-distribution');
+            if (distCheck) {
+                distCheck.checked = this.app.currentPautaData.useDistributionFlow || false;
+            }
+
+            const dataInput = document.getElementById('edit-pauta-date-input');
+            if (dataInput) {
+                dataInput.value = this.app.currentPautaData.data || new Date().toISOString().split('T')[0];
+            }
+            
+            document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
         });
 
         document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
-            await this.salvarEdicaoConfig();
+            const newType = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
+            const newOrdem = document.querySelector('input[name="edit-ordem"]:checked')?.value;
+            const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
+            const newDistribution = document.getElementById('edit-use-distribution')?.checked || false;
+            const novaData = document.getElementById('edit-pauta-date-input')?.value;
+            
+            if (!newType || !newOrdem) {
+                showNotification("Selecione todas as opções", "error");
+                return;
+            }
+            
+            try {
+                const pautaRef = doc(this.app.db, "pautas", this.app.currentPauta.id);
+                await updateDoc(pautaRef, {
+                    type: newType,
+                    ordemAtendimento: newOrdem,
+                    useDelegationFlow: newDelegation,
+                    useDistributionFlow: newDistribution,
+                    data: novaData
+                });
+                
+                this.app.currentPautaData.type = newType;
+                this.app.currentPautaData.ordemAtendimento = newOrdem;
+                this.app.currentPautaData.useDelegationFlow = newDelegation;
+                this.app.currentPautaData.useDistributionFlow = newDistribution;
+                this.app.currentPautaData.data = novaData;
+                
+                this.app.loadColumnPreferences();
+                
+                showNotification("Configurações atualizadas com sucesso!", "success");
+                document.getElementById('edit-pauta-config-modal').classList.add('hidden');
+                
+            } catch (error) {
+                console.error("Erro ao atualizar configurações:", error);
+                showNotification("Erro ao atualizar configurações", "error");
+            }
         });
     },
 
     iniciarFluxoCriacao() {
-        this.draftPauta = { tipo: '', salas: [], ordenacao: '', delegacao: '', nome: '', data: new Date().toISOString().split('T')[0] };
-        this.customRooms = [];
-        this._renderCustomRooms();
-        
         const dataInput = document.getElementById('create-pauta-date-input');
-        if(dataInput) dataInput.value = this.draftPauta.data;
-
-        // Reseta as views para o primeiro passo
-        document.querySelectorAll('.pauta-step').forEach(el => el.classList.add('hidden'));
-        document.getElementById('pauta-type-step').classList.remove('hidden');
-        document.getElementById('create-pauta-modal').classList.remove('hidden');
+        if(dataInput) dataInput.value = new Date().toISOString().split('T')[0];
     },
 
     _renderCustomRooms() {
         const list = document.getElementById('custom-rooms-list');
-        if (!list) return;
+        const noRoomsMsg = document.getElementById('no-rooms-msg');
+        if (!list || !noRoomsMsg) return;
         
-        list.innerHTML = this.customRooms.map((room, index) => `
-            <div class="flex items-center justify-between bg-gray-50 px-3 py-2 border rounded">
-                <span class="text-sm text-gray-700">${room}</span>
-                <button type="button" data-index="${index}" class="text-red-500 hover:text-red-700">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
-                </button>
-            </div>
-        `).join('');
+        list.innerHTML = '';
+
+        if (this.customRoomsList.length === 0) {
+            noRoomsMsg.classList.remove('hidden');
+        } else {
+            noRoomsMsg.classList.add('hidden');
+            this.customRoomsList.forEach((room, index) => {
+                const li = document.createElement('li');
+                li.className = "flex justify-between items-center bg-white border p-2 rounded";
+                li.innerHTML = `<span>🏢 ${escapeHTML(room)}</span><button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>`;
+                list.appendChild(li);
+            });
+        }
     },
 
-    // Lógica de Templates
     carregarTemplatesLocal() {
         try {
             const salvos = localStorage.getItem('sigep_pauta_templates');
@@ -174,7 +306,7 @@ export const PautaConfigService = {
         const novoTemplate = {
             id: Date.now().toString(),
             nome: nomeTemplate,
-            salas: [...this.customRooms]
+            salas: [...this.customRoomsList]
         };
 
         this.templates.push(novoTemplate);
@@ -182,89 +314,33 @@ export const PautaConfigService = {
         this.atualizarSelectTemplates();
         
         const btnSalvar = document.getElementById('btn-salvar-template');
-        const textoOriginal = btnSalvar.innerHTML;
-        btnSalvar.innerHTML = '💾 Salvo!';
-        setTimeout(() => btnSalvar.innerHTML = textoOriginal, 2000);
+        if (btnSalvar) {
+            const textoOriginal = btnSalvar.innerHTML;
+            btnSalvar.innerHTML = '💾 Salvo!';
+            setTimeout(() => btnSalvar.innerHTML = textoOriginal, 2000);
+        }
     },
 
     aplicarTemplate(templateId) {
         const template = this.templates.find(t => t.id === templateId);
         if (template) {
-            this.customRooms = [...template.salas];
+            this.customRoomsList = [...template.salas];
             this._renderCustomRooms();
         }
     },
 
-    async salvarNovaPauta() {
-        try {
-            // Chamada ao main app ou banco de dados
-            const novaPauta = await this.app.db.collection('pautas').add({
-                ...this.draftPauta,
-                criadoEm: new Date(),
-                status: 'ativa',
-                criadoPor: this.app.currentUser?.uid || 'sistema'
-            });
-            
-            this.fecharModais();
-            await this.buscarPautasHoje(); // Atualiza a lista
-            this.app.uiService.showToast('Pauta criada com sucesso!', 'success');
-        } catch (error) {
-            console.error("Erro ao criar pauta", error);
-            this.app.uiService.showToast('Erro ao criar pauta.', 'error');
-        }
-    },
-
-    abrirModalEdicaoConfig() {
-        const pautaAtual = this.app.currentPauta;
-        if(!pautaAtual) return;
-
-        const dataInput = document.getElementById('edit-pauta-date-input');
-        if(dataInput) dataInput.value = pautaAtual.data || new Date().toISOString().split('T')[0];
-
-        document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
-    },
-
-    async salvarEdicaoConfig() {
-        const pautaAtual = this.app.currentPauta;
-        if(!pautaAtual) return;
-
-        const dataInput = document.getElementById('edit-pauta-date-input');
-        const novaData = dataInput ? dataInput.value : pautaAtual.data;
-
-        await this.atualizarPropriedadePauta(pautaAtual.id, 'data', novaData);
-        document.getElementById('edit-pauta-config-modal').classList.add('hidden');
-    },
-
-    async atualizarPropriedadePauta(pautaId, campo, valor) {
-        try {
-            await this.app.db.collection('pautas').doc(pautaId).update({ [campo]: valor });
-            this.app.currentPauta[campo] = valor;
-            this.app.uiService.showToast('Configuração atualizada!', 'success');
-            // Re-renderizar o que for necessário na UI
-            if(this.app.renderPautaDetails) this.app.renderPautaDetails();
-        } catch (error) {
-            console.error("Erro ao atualizar", error);
-        }
-    },
-
     async buscarPautasHoje() {
-        // Exemplo genérico de busca por data, ajustável para seu esquema do Firestore/Supabase
         const dataHoje = new Date().toISOString().split('T')[0];
         try {
-            const snapshot = await this.app.db.collection('pautas')
-                .where('data', '==', dataHoje)
-                .where('status', '==', 'ativa')
-                .get();
-                
-            const pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            this.app.renderPautasSelection(pautas); // Chama método do main.js para renderizar os cards
+            const q = query(
+                collection(this.app.db, "pautas"),
+                where("data", "==", dataHoje)
+            );
+            const snapshot = await getDocs(q);
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         } catch (error) {
             console.error("Erro ao buscar pautas", error);
+            return [];
         }
-    },
-
-    fecharModais() {
-        document.getElementById('create-pauta-modal')?.classList.add('hidden');
-        document.getElementById('edit-pauta-config-modal')?.classList.add('hidden');
     }
 };
