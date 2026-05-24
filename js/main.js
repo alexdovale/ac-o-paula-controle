@@ -22,6 +22,10 @@ import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
+// NOVOS IMPORTS - GUIA DE INTEGRAÇÃO
+import { PautaConfigService } from './pautaConfig.js';
+import { RecepcaoCentralService } from './recepcaoCentral.js';
+
 class SIGEPApp { 
     constructor() {
         this.db = null;
@@ -57,6 +61,9 @@ class SIGEPApp {
             
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
+            
+            // INICIALIZAÇÃO PAUTACONFIG
+            PautaConfigService.init(this);
             
         } catch (error) {
             console.error("Erro na inicialização:", error);
@@ -181,6 +188,11 @@ class SIGEPApp {
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
             this.showPautaSelectionScreen();
         });        
+
+        // NOVO BOTÃO DA RECEPÇÃO CENTRAL
+        document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
+            await RecepcaoCentralService.abrir(this);
+        });
 
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
@@ -406,149 +418,6 @@ class SIGEPApp {
             document.getElementById('scheduled-time-wrapper').classList.add('hidden');
         });
 
-        document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('pauta-type-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
-            document.getElementById('pauta-type-modal').classList.add('hidden');
-        });
-
-        document.querySelectorAll('.pauta-type-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const type = e.currentTarget.dataset.type;
-                document.getElementById('pauta-type-modal').classList.add('hidden');
-                
-                const createModal = document.getElementById('create-pauta-modal');
-                createModal.dataset.pautaType = type;
-                
-                const roomConfig = document.getElementById('room-config-container');
-                if (type === 'multisala') {
-                    roomConfig.classList.remove('hidden');
-                    this.customRoomsList = [];
-                    this.renderCustomRooms();
-                } else {
-                    roomConfig.classList.add('hidden');
-                }
-                
-                createModal.classList.remove('hidden');
-            });
-        });
-
-        document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            const input = document.getElementById('custom-room-input');
-            const name = input.value.trim();
-            if (name) {
-                if (!this.customRoomsList.includes(name)) {
-                    this.customRoomsList.push(name);
-                    this.renderCustomRooms();
-                    input.value = '';
-                    input.focus();
-                } else {
-                    showNotification("Este local já foi adicionado.", "error");
-                }
-            }
-        });
-
-        document.getElementById('custom-rooms-list')?.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-room-btn')) {
-                const index = e.target.dataset.index;
-                this.customRoomsList.splice(index, 1);
-                this.renderCustomRooms();
-            }
-        });
-
-        document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('create-pauta-modal').classList.add('hidden');
-        });
-
-        document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
-            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-            if (!pautaName) {
-                showNotification("O nome da pauta não pode ser vazio.", "error");
-                return;
-            }
-            document.getElementById('create-pauta-modal').classList.add('hidden');
-            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
-            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-            document.getElementById('create-pauta-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
-            document.getElementById('ordem-atendimento-modal').classList.add('hidden');
-            document.getElementById('delegation-flow-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
-            document.getElementById('delegation-flow-modal').classList.add('hidden');
-            document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
-            const pautaName = document.getElementById('create-pauta-name-input').value.trim();
-            const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
-            const orgaoId = document.getElementById('select-orgao-integracao').value; 
-            const user = this.auth.currentUser;
-            
-            if (!pautaName) {
-                showNotification("O nome da pauta não pode ser vazio.", "error");
-                return;
-            }
-        
-            try {
-                const novaPautaData = {
-                    name: pautaName,
-                    type: pautaType,
-                    owner: user.uid,
-                    members: [user.uid],
-                    memberEmails: [user.email],
-                    isClosed: false,
-                    createdAt: new Date().toISOString(),
-                    ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || 'padrao',
-                    useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
-                    useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false
-                };
-
-                if (pautaType === 'multisala') {
-                    novaPautaData.customRooms = this.customRoomsList;
-                    novaPautaData.rooms = this.customRoomsList; 
-                }
-
-                const pautaRef = await addDoc(collection(this.db, "pautas"), novaPautaData);
-        
-                if (orgaoId) {
-                    showNotification("Sincronizando com base de dados Solar/Verde...", "info");
-                    const { ApiIntegration } = await import('./apiIntegration.js');
-                    const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
-                    
-                    for (const ast of assistidosOficiais) {
-                        await PautaService.addAssistedManual(this, {
-                            ...ast,
-                            status: 'pauta',
-                            externalId: `INT-${orgaoId}-${Date.now()}-${Math.random()}` 
-                        });
-                    }
-                    showNotification(`Integração concluída: ${assistidosOficiais.length} assistidos importados.`, 'success');
-                } else {
-                    showNotification("Pauta criada com sucesso!", 'success');
-                }
-        
-                document.getElementById('create-pauta-name-input').value = '';
-                document.getElementById('select-orgao-integracao').value = '';
-                document.getElementById('delegation-flow-modal').classList.add('hidden');
-                
-                this.showPautaSelectionScreen();
-                
-            } catch (error) {
-                console.error("Erro ao criar pauta:", error);
-                showNotification("Erro ao criar pauta.", "error");
-            }
-        });
-
         document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
             if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
             if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
@@ -561,7 +430,6 @@ class SIGEPApp {
             localStorage.removeItem('lastPautaName');
             localStorage.removeItem('lastPautaType');
 
-            // Limpa o monitor de colaboradores ao sair
             if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
             document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
@@ -685,84 +553,6 @@ class SIGEPApp {
             } else {
                 showNotification("Carregue uma pauta primeiro", "info");
             }
-        });
-
-        document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
-            document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
-            document.getElementById('edit-pauta-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
-            if (!this.currentPautaData) return;
-            
-            const typeRadios = document.querySelectorAll('input[name="edit-pauta-type"]');
-            typeRadios.forEach(radio => {
-                if (radio.value === this.currentPautaData.type) {
-                    radio.checked = true;
-                }
-            });
-            
-            const ordemRadios = document.querySelectorAll('input[name="edit-ordem"]');
-            ordemRadios.forEach(radio => {
-                if (radio.value === this.currentPautaData.ordemAtendimento) {
-                    radio.checked = true;
-                }
-            });
-            
-            const delegationRadios = document.querySelectorAll('input[name="edit-delegation"]');
-            delegationRadios.forEach(radio => {
-                const value = radio.value === 'true' ? true : false;
-                if (value === this.currentPautaData.useDelegationFlow) {
-                    radio.checked = true;
-                }
-            });
-            
-            const distCheck = document.getElementById('edit-use-distribution');
-            if (distCheck) {
-                distCheck.checked = this.currentPautaData.useDistributionFlow || false;
-            }
-            
-            document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
-            const newType = document.querySelector('input[name="edit-pauta-type"]:checked')?.value;
-            const newOrdem = document.querySelector('input[name="edit-ordem"]:checked')?.value;
-            const newDelegation = document.querySelector('input[name="edit-delegation"]:checked')?.value === 'true';
-            const newDistribution = document.getElementById('edit-use-distribution')?.checked || false;
-            
-            if (!newType || !newOrdem) {
-                showNotification("Selecione todas as opções", "error");
-                return;
-            }
-            
-            try {
-                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                await updateDoc(pautaRef, {
-                    type: newType,
-                    ordemAtendimento: newOrdem,
-                    useDelegationFlow: newDelegation,
-                    useDistributionFlow: newDistribution
-                });
-                
-                this.currentPautaData.type = newType;
-                this.currentPautaData.ordemAtendimento = newOrdem;
-                this.currentPautaData.useDelegationFlow = newDelegation;
-                this.currentPautaData.useDistributionFlow = newDistribution;
-                
-                this.loadColumnPreferences();
-                
-                showNotification("Configurações atualizadas com sucesso!", "success");
-                document.getElementById('edit-pauta-config-modal').classList.add('hidden');
-                
-            } catch (error) {
-                console.error("Erro ao atualizar configurações:", error);
-                showNotification("Erro ao atualizar configurações", "error");
-            }
-        });
-
-        document.getElementById('edit-pauta-config-modal')?.querySelector('#cancel-edit-pauta-config-btn')?.addEventListener('click', () => {
-            document.getElementById('edit-pauta-config-modal').classList.add('hidden');
         });
 
         document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
@@ -1720,26 +1510,6 @@ class SIGEPApp {
         }
     }
 
-    renderCustomRooms() {
-        const list = document.getElementById('custom-rooms-list');
-        const noRoomsMsg = document.getElementById('no-rooms-msg');
-        if (!list || !noRoomsMsg) return;
-        
-        list.innerHTML = '';
-
-        if (this.customRoomsList.length === 0) {
-            noRoomsMsg.classList.remove('hidden');
-        } else {
-            noRoomsMsg.classList.add('hidden');
-            this.customRoomsList.forEach((room, index) => {
-                const li = document.createElement('li');
-                li.className = "flex justify-between items-center bg-white border p-2 rounded";
-                li.innerHTML = `<span>🏢 ${escapeHTML(room)}</span><button class="remove-room-btn text-red-500" data-index="${index}">Remover</button>`;
-                list.appendChild(li);
-            });
-        }
-    }
-
     setupSubjectsAutocomplete() {
         const datalist = document.getElementById('subjects-list');
         if (!datalist) return;
@@ -1924,7 +1694,6 @@ class SIGEPApp {
         if (this.monitorInterval) clearInterval(this.monitorInterval);
         
         const verificarDisponibilidade = () => {
-            // REMOVIDA A RESTRIÇÃO: !this.currentPautaData?.useDelegationFlow
             if (!this.colaboradores || this.colaboradores.length === 0) return;
 
             const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
@@ -1941,10 +1710,8 @@ class SIGEPApp {
             const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
             if (!headerActions) return;
 
-            // ID ÚNICO POR PAUTA
             const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
             
-            // Remover botões órfãos de outras pautas
             document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
                 if (btn.id !== btnId) btn.remove();
             });
@@ -1976,7 +1743,6 @@ class SIGEPApp {
 
     async showPautaSelectionScreen() {
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
-        // Limpeza de botões órfãos ao sair
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         
         UIService.showScreen('pautaSelection');
@@ -2074,6 +1840,13 @@ class SIGEPApp {
         
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
+
+        // CONTROLE DO NOVO BOTÃO DA RECEPÇÃO CENTRAL
+        const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
+        if (btnRecepcaoCentral) {
+            const podeAcessarRecepcao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole);
+            btnRecepcaoCentral.classList.toggle('hidden', !podeAcessarRecepcao);
+        }
 
         const closePautaBtn = document.getElementById('close-pauta-btn');
         const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
