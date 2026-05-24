@@ -1,4 +1,12 @@
-// js/atendimentoExternoService.js - DASHBOARD JUDICIAL (PREMIUM: REAL-TIME, LOGIN SALVO, CORES E PWA)
+
+// js/atendimentoExternoService.js - DASHBOARD JUDICIAL UNIFICADO (SIGEP)
+// Responsabilidades: 
+// - Dashboard com abas: Minha Mesa, Sem Atribuição, Pauta do Dia
+// - Permitir "Puxar para mim" casos sem dono
+// - Visão global de toda a pauta
+// - Login persistente com email + matrícula
+// - Real-time com onSnapshot
+// - PWA e preferências de layout
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -7,19 +15,7 @@ import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js'; 
 import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js'; 
-
-const escapeHTML = (str) => {
-    if (!str) return '';
-    return str.replace(/[&<>'"]/g, 
-        tag => ({
-            '&': '&amp;',
-            '<': '&lt;',
-            '>': '&gt;',
-            "'": '&#39;',
-            '"': '&quot;'
-        }[tag] || tag)
-    );
-};
+import { showNotification, playSound, escapeHTML } from './utils.js';
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -35,17 +31,24 @@ export const AtendimentoExternoService = {
     pautaId: null,
     assistidoId: null,
     colaboradorNome: null,
+    colaboradorId: null,
     fluxoSelecionado: null,
-    assistidoData: null, 
+    assistidoData: null,
     todosColaboradores: [],
     colaboradorAtual: null,
-    isProcessing: false, 
-    todosAtendimentosPauta: [], 
-    demandasAdicionaisLocais: [], 
+    isProcessing: false,
+    todosAtendimentosPauta: [],      // Todos os atendimentos da pauta (real-time)
+    demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
+    
+    // Novas propriedades para o modo de abas
+    abaAtual: 'minha-mesa',          // 'minha-mesa' | 'sem-atribuicao' | 'pauta-dia'
+    modoVisualizacao: 'dashboard',   // 'dashboard' (mesa do colaborador) | 'abas' (visão completa)
+
+    // ─── INICIALIZAÇÃO PRINCIPAL ─────────────────────────────────────────────
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (Real-time Mode - SIGEP)");
+        console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
 
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
@@ -54,7 +57,11 @@ export const AtendimentoExternoService = {
         this.assistidoId = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId'); 
         const tokenRecebido = urlParams.get('token') || urlParams.get('amp;token');
         this.colaboradorNome = urlParams.get('colab') || urlParams.get('amp;colab');
+        this.colaboradorId = urlParams.get('colabId') || urlParams.get('amp;colabId') || '';
         const telaAtual = urlParams.get('view') || urlParams.get('amp;view'); 
+        const modo = urlParams.get('modo') || urlParams.get('amp;modo'); // 'dashboard' ou 'abas'
+
+        this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
         if (!this.pautaId || !this.colaboradorNome) {
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
@@ -73,74 +80,741 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            if (telaAtual === 'dashboard') {
-                const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-                if (!sessionStorage.getItem(sessionKey) && !localStorage.getItem(sessionKey)) {
-                    this.renderizarTelaLoginColaborador();
-                    return;
-                }
-                this.renderizarDashboardUnificado();
+            // Verifica sessão do colaborador
+            const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+            const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
+            
+            // Se for tela de atendimento individual (com assistidoId)
+            if (this.assistidoId && !telaAtual) {
+                await this.iniciarAtendimentoIndividual(tokenRecebido);
                 return;
             }
-
-            if (!this.assistidoId) {
-                this.showError("Link Inválido", "Nenhum processo foi especificado.");
+            
+            // Se não tem sessão e não é modo público, pede login
+            if (!temSessao && this.modoVisualizacao === 'dashboard') {
+                this.renderizarTelaLoginColaborador();
                 return;
             }
-
-            const pautaRef = doc(db, "pautas", this.pautaId);
-            const pautaDoc = await getDoc(pautaRef);
-            if (!pautaDoc.exists()) {
-                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-                return;
-            }
-
-            const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
-            const docSnap = await getDoc(docRef);
-
-            if (!docSnap.exists()) {
-                this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
-                return;
-            }
-
-            const assistido = docSnap.data();
-            this.assistidoData = assistido;
-
-            this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
-
-            if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-                this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
-                return;
-            }
-
-            this.renderizarInterface(assistido, pautaDoc.data());
-            this.setupListeners();
-
+            
+            // Inicia o dashboard unificado (com abas ou modo tradicional)
+            await this.iniciarDashboardUnificado();
+            
         } catch (error) {
             console.error("Erro geral na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados principal.");
         }
     },
 
-    atualizarIndicadorDeStatus(pautaData, statusAtual, colaboradorNome) {
-        const badge = document.getElementById('status-indicator');
-        if (!badge) return;
+    // ─── ATENDIMENTO INDIVIDUAL (MODO PEÇA) ───────────────────────────────────
 
-        const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
+    async iniciarAtendimentoIndividual(tokenRecebido) {
+        const pautaRef = doc(db, "pautas", this.pautaId);
+        const pautaDoc = await getDoc(pautaRef);
+        if (!pautaDoc.exists()) {
+            this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
+            return;
+        }
 
-        if (isDelegacaoAtiva) {
-            // Modo Delegação: Badge mostra nome fixo
-            badge.textContent = `👤 ${colaboradorNome}`;
-            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
-            badge.classList.remove('hidden', 'animate-pulse');
+        const docRef = doc(db, "pautas", this.pautaId, "attendances", this.assistidoId);
+        const docSnap = await getDoc(docRef);
+
+        if (!docSnap.exists()) {
+            this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
+            return;
+        }
+
+        const assistido = docSnap.data();
+        this.assistidoData = assistido;
+
+        this.demandasAdicionaisLocais = (assistido.demandas && assistido.demandas.descricoes) ? [...assistido.demandas.descricoes] : [];
+
+        if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
+            this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
+            return;
+        }
+
+        this.renderizarInterface(assistido, pautaDoc.data());
+        this.setupListeners();
+        this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
+    },
+
+    // ─── DASHBOARD UNIFICADO (COM ABAS OU MODO TRADICIONAL) ───────────────────
+
+    async iniciarDashboardUnificado() {
+        // Configura listener real-time para todos os atendimentos da pauta
+        this.setupRealtimeListenerPauta();
+        
+        // Renderiza o container principal
+        this.renderizarContainerDashboard();
+        
+        // Se for modo abas, configura a navegação
+        if (this.modoVisualizacao === 'abas') {
+            this.setupAbasNavegacao();
         } else {
-            // Modo Finalização Direta: Toggle Livre/Ocupado
-            const estaLivre = statusAtual === 'disponivel';
-            badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
-            badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
-            badge.classList.remove('hidden');
+            // Modo dashboard tradicional (do código anterior)
+            this.renderizarDashboardTradicional();
         }
     },
+
+    setupRealtimeListenerPauta() {
+        if (this.unsubscribeDashboard) this.unsubscribeDashboard();
+        
+        const q = query(collection(db, "pautas", this.pautaId, "attendances"));
+        this.unsubscribeDashboard = onSnapshot(q, (snap) => {
+            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            
+            if (this.modoVisualizacao === 'abas') {
+                this.renderizarAbaAtual();
+            } else {
+                this.atualizarListasDoDashboard();
+            }
+        }, (error) => {
+            console.error("Erro no realtime da pauta:", error);
+        });
+    },
+
+    renderizarContainerDashboard() {
+        let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
+        
+        const url = new URL(window.location.href);
+        url.searchParams.set('view', 'dashboard');
+        if (this.modoVisualizacao === 'abas') url.searchParams.set('modo', 'abas');
+        window.history.pushState({}, '', url);
+
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const tituloPainel = this.modoVisualizacao === 'abas' ? 'Painel SIGEP' : (isDefensor ? 'Mesa do Defensor' : 'Mesa de Trabalho');
+        const subtituloPainel = `${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
+
+        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
+        const colorMap = {
+            'slate': 'bg-slate-800', 'indigo': 'bg-indigo-700', 'emerald': 'bg-emerald-700', 'rose': 'bg-rose-700', 'blue': 'bg-blue-700'
+        };
+        const headerColorClass = colorMap[prefs.color] || colorMap['slate'];
+
+        corpo.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in"; 
+        
+        corpo.innerHTML = `
+            <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
+                
+                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full justify-between">
+                    <div class="flex items-center gap-4">
+                        <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
+                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
+                        </div>
+                        <div>
+                            <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
+                                ${tituloPainel}
+                            </h1>
+                            <p class="text-white/80 text-xs sm:text-sm font-bold mt-1 tracking-wide">${subtituloPainel}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end">
+                        <span id="badge-status-header" class="bg-white/20 text-white text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider">🟢 CARREGANDO...</span>
+                        <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2">
+                            <span>📱</span><span class="hidden sm:inline">Instalar App</span>
+                        </button>
+                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm" title="Configurações da Mesa">
+                            ⚙️
+                        </button>
+                        
+                        <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
+                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Layout da Tela</h4>
+                            <div class="flex gap-2 mb-5 bg-gray-50 p-1.5 rounded-lg border">
+                                <button data-mode="tabs" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'tabs' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Abas</button>
+                                <button data-mode="list" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'list' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Tudo na Tela</button>
+                            </div>
+                            
+                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Cor do Cabeçalho</h4>
+                            <div class="flex gap-2 justify-between px-1">
+                                <button data-color="slate" class="color-btn w-6 h-6 rounded-full bg-slate-800 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'slate' ? 'ring-2 ring-slate-800 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="blue" class="color-btn w-6 h-6 rounded-full bg-blue-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'blue' ? 'ring-2 ring-blue-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="indigo" class="color-btn w-6 h-6 rounded-full bg-indigo-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'indigo' ? 'ring-2 ring-indigo-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="emerald" class="color-btn w-6 h-6 rounded-full bg-emerald-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'emerald' ? 'ring-2 ring-emerald-700 scale-110 shadow-md' : ''}"></button>
+                                <button data-color="rose" class="color-btn w-6 h-6 rounded-full bg-rose-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'rose' ? 'ring-2 ring-rose-700 scale-110 shadow-md' : ''}"></button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
+                ${this.modoVisualizacao === 'abas' ? this.htmlAbasNavegacao() : this.htmlDashboardTradicional()}
+            </div>
+        `;
+
+        // PWA Install
+        if (deferredPrompt) {
+            const installBtn = document.getElementById('btn-install-pwa');
+            installBtn.classList.remove('hidden');
+            installBtn.addEventListener('click', async () => {
+                deferredPrompt.prompt();
+                const { outcome } = await deferredPrompt.userChoice;
+                if (outcome === 'accepted') installBtn.classList.add('hidden');
+                deferredPrompt = null;
+            });
+        }
+
+        // Configurações
+        const btnSettings = document.getElementById('btn-dash-settings');
+        const menuSettings = document.getElementById('dash-settings-menu');
+        btnSettings.addEventListener('click', (e) => {
+            e.stopPropagation();
+            menuSettings.classList.toggle('hidden');
+        });
+        document.addEventListener('click', (e) => {
+            if (!menuSettings.contains(e.target) && !btnSettings.contains(e.target)) {
+                menuSettings.classList.add('hidden');
+            }
+        });
+
+        document.querySelectorAll('.color-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const c = e.target.dataset.color;
+                prefs.color = c;
+                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
+                document.getElementById('header-bg').className = `${colorMap[c]} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500`;
+                document.querySelectorAll('.color-btn').forEach(b => {
+                    b.className = b.className.replace(/ring-2 ring-\w+-700 ring-\w+-800 scale-110 shadow-md/g, '').trim();
+                });
+                e.target.classList.add('ring-2', `ring-${c === 'slate' ? 'slate-800' : c+'-700'}`, 'scale-110', 'shadow-md');
+            });
+        });
+
+        document.querySelectorAll('.mode-btn').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const m = e.target.dataset.mode;
+                prefs.mode = m;
+                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
+                menuSettings.classList.add('hidden');
+                if (this.modoVisualizacao === 'abas') {
+                    this.renderizarAbaAtual();
+                } else {
+                    this.atualizarListasDoDashboard();
+                }
+            });
+        });
+
+        // Atualiza o badge de status
+        this.atualizarBadgeHeader();
+    },
+
+    htmlAbasNavegacao() {
+        return `
+            <div class="mb-6 border-b border-slate-200">
+                <div class="flex gap-1 sm:gap-2">
+                    <button id="btn-tab-minha-mesa" class="tab-principal-btn px-4 py-3 text-sm font-black uppercase tracking-widest rounded-t-lg transition-all bg-amber-600 text-white shadow-md">
+                        🖥️ Minha Mesa
+                    </button>
+                    <button id="btn-tab-sem-atribuicao" class="tab-principal-btn px-4 py-3 text-sm font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        👥 Sem Atribuição
+                    </button>
+                    <button id="btn-tab-pauta-dia" class="tab-principal-btn px-4 py-3 text-sm font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        📋 Pauta do Dia
+                    </button>
+                </div>
+            </div>
+            <div id="painel-atendimento-container" class="min-h-[400px]">
+                <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
+            </div>
+        `;
+    },
+
+    htmlDashboardTradicional() {
+        return `
+            <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
+                <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar...">
+            </div>
+
+            <div id="tabs-container-wrapper" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6">
+                <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
+            </div>
+            
+            <div id="lista-dashboard-conteudo" class="space-y-3 sm:space-y-4">
+                <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
+            </div>
+        `;
+    },
+
+    setupAbasNavegacao() {
+        const abas = [
+            { id: 'minha-mesa', btnId: 'btn-tab-minha-mesa' },
+            { id: 'sem-atribuicao', btnId: 'btn-tab-sem-atribuicao' },
+            { id: 'pauta-dia', btnId: 'btn-tab-pauta-dia' }
+        ];
+        
+        const ativarAba = (abaId) => {
+            this.abaAtual = abaId;
+            
+            abas.forEach(aba => {
+                const btn = document.getElementById(aba.btnId);
+                if (btn) {
+                    if (aba.id === abaId) {
+                        btn.classList.remove('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+                        btn.classList.add('bg-amber-600', 'text-white', 'shadow-md');
+                    } else {
+                        btn.classList.remove('bg-amber-600', 'text-white', 'shadow-md');
+                        btn.classList.add('bg-slate-100', 'text-slate-600', 'hover:bg-slate-200');
+                    }
+                }
+            });
+            
+            this.renderizarAbaAtual();
+        };
+        
+        document.getElementById('btn-tab-minha-mesa')?.addEventListener('click', () => ativarAba('minha-mesa'));
+        document.getElementById('btn-tab-sem-atribuicao')?.addEventListener('click', () => ativarAba('sem-atribuicao'));
+        document.getElementById('btn-tab-pauta-dia')?.addEventListener('click', () => ativarAba('pauta-dia'));
+        
+        // Renderiza a aba inicial
+        this.renderizarAbaAtual();
+    },
+
+    renderizarAbaAtual() {
+        const container = document.getElementById('painel-atendimento-container');
+        if (!container) return;
+
+        if (this.abaAtual === 'minha-mesa') {
+            this.renderMinhaMesa(container);
+        } else if (this.abaAtual === 'sem-atribuicao') {
+            this.renderSemAtribuicao(container);
+        } else if (this.abaAtual === 'pauta-dia') {
+            this.renderPautaDia(container);
+        }
+        
+        this.setupAcoesCardsAbas();
+    },
+
+    renderMinhaMesa(container) {
+        const meusCasos = this.todosAtendimentosPauta.filter(a => 
+            a.status === 'emAtendimento' && 
+            a.assignedCollaborator?.name === this.colaboradorNome
+        );
+
+        if (meusCasos.length === 0) {
+            container.innerHTML = `<div class="text-center py-16 text-slate-500 font-bold bg-white rounded-xl border border-slate-200">🖥️ Sua mesa está limpa. Nenhum atendimento em andamento atribuído a você.</div>`;
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${meusCasos.map(a => this.htmlCardAbas(a, 'mesa')).join('')}
+        </div>`;
+    },
+
+    renderSemAtribuicao(container) {
+        const semDono = this.todosAtendimentosPauta.filter(a => 
+            a.status === 'emAtendimento' && 
+            (!a.assignedCollaborator || !a.assignedCollaborator.name)
+        );
+
+        if (semDono.length === 0) {
+            container.innerHTML = `<div class="text-center py-16 text-slate-500 font-bold bg-white rounded-xl border border-slate-200">👥 Nenhum caso aguardando atribuição no momento.</div>`;
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${semDono.map(a => this.htmlCardAbas(a, 'puxar')).join('')}
+        </div>`;
+    },
+
+    renderPautaDia(container) {
+        // Agrupar por status ou apenas listar todos
+        const todos = this.todosAtendimentosPauta;
+        
+        if (todos.length === 0) {
+            container.innerHTML = `<div class="text-center py-16 text-slate-500 font-bold bg-white rounded-xl border border-slate-200">📋 Nenhum assistido registrado nesta pauta hoje.</div>`;
+            return;
+        }
+
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            ${todos.map(a => this.htmlCardAbas(a, 'geral')).join('')}
+        </div>`;
+    },
+
+    htmlCardAbas(assistido, modo) {
+        const statusMap = {
+            pauta: { cor: 'bg-slate-100 text-slate-600', txt: 'Na Pauta' },
+            aguardando: { cor: 'bg-amber-100 text-amber-700', txt: 'Aguardando' },
+            emAtendimento: { cor: 'bg-blue-100 text-blue-700', txt: 'Em Atendimento' },
+            aguardandoDistribuicao: { cor: 'bg-cyan-100 text-cyan-700', txt: 'Com Defensor' },
+            aguardandoCorrecao: { cor: 'bg-orange-100 text-orange-700', txt: 'Avaliação' },
+            atendido: { cor: 'bg-green-100 text-green-700', txt: 'Atendido' },
+            aguardandoNumero: { cor: 'bg-amber-100 text-amber-700', txt: 'Aguardando CNP' },
+            faltoso: { cor: 'bg-red-100 text-red-700', txt: 'Faltoso' }
+        };
+        const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600', txt: assistido.status };
+        const donoAtual = assistido.assignedCollaborator?.name ? `👤 ${escapeHTML(assistido.assignedCollaborator.name)}` : '⚠️ Sem dono';
+
+        let botoesHtml = '';
+        const baseUrl = window.location.href.split('?')[0];
+        const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${assistido.delegationToken || ''}`;
+        
+        if (modo === 'puxar') {
+            botoesHtml = `
+                <button class="btn-puxar-caso-abas w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-sm py-2 rounded-lg transition shadow-sm"
+                    data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">
+                    👇 Puxar para mim
+                </button>
+            `;
+        } else if (modo === 'mesa') {
+            botoesHtml = `
+                <div class="flex gap-2 mt-3">
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-sm py-2 rounded-lg transition shadow-sm text-center">
+                        📋 Atender
+                    </a>
+                    <button class="btn-devolver-caso-abas flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-sm py-2 rounded-lg transition"
+                        data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">
+                        Devolver
+                    </button>
+                </div>
+            `;
+        } else {
+            botoesHtml = `
+                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-600 hover:bg-slate-700 text-white font-black text-sm py-2 rounded-lg transition shadow-sm text-center">
+                    🔍 Ver Detalhes
+                </a>
+            `;
+        }
+
+        const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded border border-red-700 uppercase tracking-widest shadow-sm animate-pulse ml-2">🚨</span>` : '';
+
+        return `
+            <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col hover:border-amber-400 transition-colors">
+                <div class="flex justify-between items-start mb-3">
+                    <h4 class="font-bold text-slate-800 text-base truncate pr-2" title="${escapeHTML(assistido.name)}">
+                        ${escapeHTML(assistido.name)} ${badgeUrgencia}
+                    </h4>
+                    <span class="${st.cor} text-[10px] font-black uppercase px-2 py-1 rounded shrink-0">${st.txt}</span>
+                </div>
+                
+                <div class="bg-slate-50 p-2 rounded border border-slate-100 mb-3 flex-grow">
+                    <p class="text-xs text-slate-600 mb-1">📄 ${escapeHTML(assistido.subject || 'Assunto não informado')}</p>
+                    ${modo === 'geral' ? `<p class="text-xs ${assistido.assignedCollaborator ? 'text-blue-600' : 'text-red-500'} font-bold mt-2">${donoAtual}</p>` : ''}
+                    ${assistido.numeroProcesso ? `<p class="text-[10px] font-mono text-slate-400 mt-1">CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : ''}
+                </div>
+                
+                <div class="mt-auto">
+                    ${botoesHtml}
+                </div>
+            </div>
+        `;
+    },
+
+    setupAcoesCardsAbas() {
+        document.querySelectorAll('.btn-puxar-caso-abas').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const pautaId = e.currentTarget.dataset.pautaId;
+                const assistidoId = e.currentTarget.dataset.assistidoId;
+                e.currentTarget.disabled = true;
+                e.currentTarget.textContent = 'Puxando...';
+                await this.puxarParaMim(pautaId, assistidoId);
+            });
+        });
+
+        document.querySelectorAll('.btn-devolver-caso-abas').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const pautaId = e.currentTarget.dataset.pautaId;
+                const assistidoId = e.currentTarget.dataset.assistidoId;
+                await this.devolverParaFila(pautaId, assistidoId);
+            });
+        });
+    },
+
+    async puxarParaMim(pautaId, assistidoId) {
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            await updateDoc(docRef, {
+                assignedCollaborator: { 
+                    id: this.colaboradorId || this.colaboradorAtual?.id || '', 
+                    name: this.colaboradorNome 
+                },
+                inAttendanceTime: new Date().toISOString(),
+                history: arrayUnion({
+                    action: 'PUXADO_PARA_MESA',
+                    by: this.colaboradorNome,
+                    msg: `Caso assumido por ${this.colaboradorNome}`,
+                    at: new Date().toISOString()
+                })
+            });
+            
+            // Atualiza status do colaborador para ocupado
+            if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                const colabDocRef = doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id);
+                await updateDoc(colabDocRef, { status: 'ocupado', currentAttendance: assistidoId }).catch(e => console.warn(e));
+            }
+            
+            if (typeof playSound === 'function') playSound('success');
+            if (typeof showNotification === 'function') showNotification("Caso puxado para a sua mesa!", "success");
+        } catch (error) {
+            console.error("Erro ao puxar caso:", error);
+            if (typeof showNotification === 'function') showNotification("Erro ao atribuir caso.", "error");
+        }
+    },
+
+    async devolverParaFila(pautaId, assistidoId) {
+        if (!confirm("Tem certeza que deseja devolver este caso para a fila de Sem Atribuição? Ele ficará disponível para outros colaboradores.")) return;
+        
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
+            await updateDoc(docRef, {
+                assignedCollaborator: null,
+                inAttendanceTime: null,
+                history: arrayUnion({
+                    action: 'DEVOLVIDO_PARA_FILA',
+                    by: this.colaboradorNome,
+                    msg: `Caso devolvido para a fila por ${this.colaboradorNome}`,
+                    at: new Date().toISOString()
+                })
+            });
+            
+            // Atualiza status do colaborador para disponível
+            if (this.colaboradorAtual && this.colaboradorAtual.id) {
+                const colabDocRef = doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id);
+                await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => console.warn(e));
+            }
+            
+            if (typeof showNotification === 'function') showNotification("Caso devolvido para a fila.", "info");
+        } catch (error) {
+            console.error("Erro ao devolver caso:", error);
+            if (typeof showNotification === 'function') showNotification("Erro ao devolver caso.", "error");
+        }
+    },
+
+    // ─── MODO DASHBOARD TRADICIONAL (do código anterior) ──────────────────────
+
+    renderizarDashboardTradicional() {
+        if (!this.unsubscribeDashboard) {
+            this.setupRealtimeListenerPauta();
+        }
+        
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        
+        if (this.todosAtendimentosPauta && this.todosAtendimentosPauta.length >= 0) {
+            this.atualizarListasDoDashboard();
+        }
+    },
+
+    atualizarListasDoDashboard() {
+        const container = document.getElementById('lista-dashboard-conteudo');
+        const tabsDiv = document.getElementById('tabs-dashboard');
+        const wrapperBusca = document.getElementById('wrapper-busca-historico');
+        
+        if (!container) return;
+
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
+        const baseUrl = window.location.href.split('?')[0];
+
+        const desenharCard = (item, isCardAberto) => {
+            const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
+            const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
+            const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
+            
+            const temUrgencia = item.priority === 'URGENTE';
+            const motivoUrgencia = item.priorityReason ? `<div class="mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 w-max truncate">🚨 ${escapeHTML(item.priorityReason)}</div>` : '';
+            const badgeUrgencia = temUrgencia ? `<span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded border border-red-700 uppercase tracking-widest shadow-sm animate-pulse">🚨 PRIORIDADE</span>` : '';
+
+            let badgeTopo = '';
+            let borderClasseUrgencia = temUrgencia ? 'border-l-[6px] border-l-red-500' : '';
+            let bgColorCard = 'bg-white border-slate-200 hover:border-slate-400';
+            
+            if (item.status === 'aguardandoCorrecao') {
+                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Avaliação</span>`;
+                bgColorCard = 'bg-amber-50/30 border-amber-200 hover:border-amber-400';
+            }
+            else if (item.status === 'aguardandoDistribuicao') {
+                badgeTopo = `<span class="bg-cyan-100 text-cyan-800 text-[9px] font-black px-2 py-0.5 rounded border border-cyan-300 uppercase tracking-widest shadow-sm">Assinatura</span>`;
+                bgColorCard = 'bg-cyan-50/30 border-cyan-200 hover:border-cyan-400';
+            }
+            else if (item.status === 'emAtendimento') {
+                badgeTopo = `<span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-2 py-0.5 rounded border border-indigo-300 uppercase tracking-widest shadow-sm">Na Mesa</span>`;
+            }
+            else if (item.status === 'atendido') {
+                badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
+            }
+            else if (item.status === 'aguardandoNumero') {
+                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Aguardando CNP</span>`;
+                bgColorCard = 'bg-amber-50/20 border-amber-200';
+            }
+
+            if (isCardAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
+                const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
+                return `
+                    <div class="border-2 ${borderClasseUrgencia} ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
+                        <div class="flex-grow w-full sm:w-auto min-w-0">
+                            <div class="flex items-center gap-2 mb-2 flex-wrap">
+                                ${badgeTopo}
+                                ${badgeUrgencia}
+                                ${item.enviadoPor ? `<span class="text-[9px] text-slate-500 font-bold uppercase">Via: ${escapeHTML(item.enviadoPor)}</span>` : ''}
+                            </div>
+                            <h3 class="font-black text-slate-800 text-lg w-full truncate">${escapeHTML(item.name)}</h3>
+                            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide truncate">${escapeHTML(item.subject || 'Assunto não informado')}</p>
+                            ${motivoUrgencia}
+                            ${numProcessoHtml}
+                            ${notas}
+                            ${bannerTransf}
+                        </div>
+                        <div class="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
+                            <a href="${linkIndividual}" class="block text-center w-full sm:w-40 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-4 rounded-xl text-[10px] transition-colors shadow uppercase tracking-widest ring-offset-2 ring-slate-800 group-hover:ring-2">
+                                ABRIR PEÇA
+                            </a>
+                        </div>
+                    </div>
+                `;
+            } else {
+                const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
+                const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
+                const linkIndividualDetalhes = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
+                
+                const atalhoVerdeCard = isDefensor ? `
+                    <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
+                        <span>⚖️</span> Abrir Link no Verde
+                    </a>` : '';
+
+                const labelStatusFinal = item.status === 'aguardandoNumero' 
+                    ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-1 rounded border border-amber-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>⏳</span> Sem CNP</span>`
+                    : `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>`;
+
+                return `
+                    <div class="border ${borderClasseUrgencia} border-slate-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
+                        <div class="min-w-0 flex-1 w-full">
+                            <div class="mb-1 flex gap-1.5 flex-wrap">${badgeTopo} ${badgeUrgencia}</div>
+                            <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
+                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide truncate">${escapeHTML(item.subject)}</p>
+                            ${motivoUrgencia}
+                            ${numProcessoHtml}
+                            <div class="flex gap-2 flex-wrap">
+                                ${atalhoVerdeCard}
+                                <a href="${linkIndividualDetalhes}" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-slate-600 hover:text-slate-800 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
+                                    <span>👁️</span> Revisar Detalhes
+                                </a>
+                            </div>
+                        </div>
+                        <div class="shrink-0 text-right w-full sm:w-auto mt-2 sm:mt-0 flex sm:flex-col justify-between sm:justify-start items-center sm:items-end">
+                            ${labelStatusFinal}
+                            <p class="text-[9px] text-slate-400 font-bold mt-1.5">${horaStr}</p>
+                        </div>
+                    </div>
+                `;
+            }
+        };
+
+        if (isDefensor) {
+            const pendentes = this.todosAtendimentosPauta.filter(a => 
+                ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
+                (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome)
+            );
+            const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
+
+            if (prefs.mode === 'list') {
+                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, false)).join('');
+                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            } else {
+                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
+                
+                tabsDiv.innerHTML = `
+                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
+                    <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
+                `;
+
+                const renderDefensorList = (lista, isAberto) => {
+                    if (lista.length === 0) {
+                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA.</p></div>`;
+                        return;
+                    }
+                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
+                };
+
+                const limparEstilosAbas = () => {
+                    wrapperBusca.classList.add('hidden');
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
+                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
+                    });
+                };
+
+                document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(pendentes, true); };
+                document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(distribuidos, false); };
+                document.getElementById('tab-historico-busca').onclick = () => {
+                    limparEstilosAbas(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
+                    renderDefensorList(meuHistoricoCompleto, true);
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        renderDefensorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true);
+                    };
+                };
+
+                if (abaAtivaId === 'tab-assinados') renderDefensorList(distribuidos, false);
+                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderDefensorList(meuHistoricoCompleto, true); }
+                else renderDefensorList(pendentes, true);
+            }
+
+        } else {
+            const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+            const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
+            const finalizados = this.todosAtendimentosPauta.filter(a => 
+                (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
+                (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome) ||
+                (a.status === 'aguardandoNumero' && a.attendedBy === this.colaboradorNome) || 
+                (a.status === 'aguardandoNumero' && a.enviadoPor === this.colaboradorNome)
+            );
+            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
+
+            if (prefs.mode === 'list') {
+                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, false)).join('');
+                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
+            } else {
+                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
+
+                tabsDiv.innerHTML = `
+                    <button id="tab-em-mesa" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-em-mesa' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer/Corrigir <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
+                    <button id="tab-enviados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-enviados' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
+                    <button id="tab-finalizados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-finalizados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar</button>
+                `;
+
+                const renderServidorList = (lista, isAberto, isEmptyAviso) => {
+                    if (lista.length === 0) {
+                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
+                        return;
+                    }
+                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
+                };
+
+                const resetTabs = () => {
+                    wrapperBusca.classList.add('hidden');
+                    document.querySelectorAll('.tab-btn').forEach(btn => {
+                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
+                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
+                    });
+                };
+
+                document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
+                document.getElementById('tab-enviados').onclick = () => { resetTabs(); document.getElementById('tab-enviados').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
+                document.getElementById('tab-finalizados').onclick = () => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
+                document.getElementById('tab-historico-busca').onclick = () => {
+                    resetTabs(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
+                    renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
+                    document.getElementById('input-busca-local').oninput = (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        renderServidorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true, "Nada encontrado.");
+                    };
+                };
+
+                if (abaAtivaId === 'tab-enviados') renderServidorList(enviados, true, "Nenhum documento seu no Defensor.");
+                else if (abaAtivaId === 'tab-finalizados') renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
+                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado."); }
+                else renderServidorList(emAndamento, true, "Sua mesa está limpa.");
+            }
+        }
+    },
+
+    // ─── MÉTODOS AUXILIARES (Login, Status, etc) ──────────────────────────────
 
     async carregarColaboradoresGerais() {
         try {
@@ -152,24 +826,35 @@ export const AtendimentoExternoService = {
         }
     },
 
-    setupRealtimeListenerDashboard() {
-        if (this.unsubscribeDashboard) this.unsubscribeDashboard();
+    atualizarBadgeHeader() {
+        const badge = document.getElementById('badge-status-header');
+        if (!badge) return;
         
-        const q = query(collection(db, "pautas", this.pautaId, "attendances"));
-        this.unsubscribeDashboard = onSnapshot(q, (snap) => {
-            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            
-            if (document.getElementById('lista-dashboard-conteudo')) {
-                this.atualizarListasDoDashboard();
-            }
-        }, (error) => {
-            console.error("Erro no realtime dashboard:", error);
-        });
+        const estaLivre = this.colaboradorAtual?.status === 'disponivel';
+        badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
+        badge.className = `bg-white/20 ${estaLivre ? 'text-emerald-300' : 'text-red-300'} text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider`;
+    },
+
+    atualizarIndicadorDeStatus(pautaData, statusAtual, colaboradorNome) {
+        const badge = document.getElementById('status-indicator');
+        if (!badge) return;
+
+        const isDelegacaoAtiva = pautaData?.useDelegationFlow === true;
+
+        if (isDelegacaoAtiva) {
+            badge.textContent = `👤 ${colaboradorNome}`;
+            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
+            badge.classList.remove('hidden', 'animate-pulse');
+        } else {
+            const estaLivre = statusAtual === 'disponivel';
+            badge.textContent = estaLivre ? "🟢 LIVRE" : "🔴 OCUPADO";
+            badge.className = `absolute top-4 right-4 ${estaLivre ? 'bg-emerald-500' : 'bg-red-500'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border ${estaLivre ? 'border-emerald-400' : 'border-red-400'} uppercase tracking-widest z-20 ${estaLivre ? 'animate-pulse' : ''}`;
+            badge.classList.remove('hidden');
+        }
     },
 
     renderizarTelaLoginColaborador() {
-        let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
-        if (!corpo) corpo = document.body;
+        let corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
         
         corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
         
@@ -234,7 +919,7 @@ export const AtendimentoExternoService = {
                     sessionStorage.setItem(sessionKey, 'true'); 
                 }
                 
-                this.renderizarDashboardUnificado();
+                this.iniciarDashboardUnificado();
             } else {
                 errorMsg.textContent = "E-mail ou Matrícula incorretos. Tente novamente.";
                 errorMsg.classList.remove('hidden');
@@ -242,17 +927,20 @@ export const AtendimentoExternoService = {
         };
     },
 
+    // ─── MÉTODOS DE ATENDIMENTO INDIVIDUAL (Peça) ──────────────────────────────
+
     renderizarInterface(assistido, pautaData) {
+        // Remove listener do dashboard se existir
         if (this.unsubscribeDashboard) {
             this.unsubscribeDashboard();
             this.unsubscribeDashboard = null;
         }
 
-        // Renderiza o badge de status logo na inicialização
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
 
         const url = new URL(window.location.href);
         url.searchParams.delete('view');
+        url.searchParams.delete('modo');
         window.history.pushState({}, '', url);
 
         const headerBg = document.getElementById('header-bg');
@@ -320,7 +1008,7 @@ export const AtendimentoExternoService = {
                                 this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
                         } catch (e) { console.error(e); }
-                        this.renderizarDashboardUnificado();
+                        this.iniciarDashboardUnificado();
                     };
                 }, 100);
             }
@@ -654,7 +1342,6 @@ export const AtendimentoExternoService = {
                     })
                 });
                 
-                // Em fluxo direto (finalizando), tentamos já deixar o colaborador livre caso exista
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
                     const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
@@ -840,18 +1527,26 @@ export const AtendimentoExternoService = {
 
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
                 console.log(`✉️ Disparando e-mail para: ${colaboradorDestinoObj.email}`);
-                await EmailService.sendDelegationEmail(
-                    colaboradorDestinoObj.email,
-                    colaboradorDestinoObj.nome,
-                    this.assistidoData?.name || "Assistido",
-                    colabSeguro,
-                    pautaIdSeguro,
-                    assistidoIdSeguro,
-                    novoToken
-                );
+                if (typeof EmailService !== 'undefined' && EmailService.sendDelegationEmail) {
+                    await EmailService.sendDelegationEmail(
+                        colaboradorDestinoObj.email,
+                        colaboradorDestinoObj.nome,
+                        this.assistidoData?.name || "Assistido",
+                        colabSeguro,
+                        pautaIdSeguro,
+                        assistidoIdSeguro,
+                        novoToken
+                    );
+                }
             }
 
-            this.renderizarDashboardUnificado();
+            if (typeof showNotification === 'function') {
+                showNotification(tituloSucesso, "success");
+            } else {
+                alert(`${tituloSucesso}\n${subtituloSucesso}`);
+            }
+            
+            this.iniciarDashboardUnificado();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
@@ -1056,7 +1751,9 @@ export const AtendimentoExternoService = {
             const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
             if (btnBaixarPlanilha && this.assistidoData && this.assistidoData.documentChecklist?.expenseData) {
                 btnBaixarPlanilha.onclick = () => {
-                    PDFService.generatePlanilhaGastosPDF(this.assistidoData.name || 'Assistido', this.assistidoData.documentChecklist.expenseData);
+                    if (typeof PDFService !== 'undefined' && PDFService.generatePlanilhaGastosPDF) {
+                        PDFService.generatePlanilhaGastosPDF(this.assistidoData.name || 'Assistido', this.assistidoData.documentChecklist.expenseData);
+                    }
                 };
             }
         }, 300);
@@ -1081,370 +1778,8 @@ export const AtendimentoExternoService = {
         }
     },
 
-    renderizarDashboardUnificado() {
-        if (!this.unsubscribeDashboard) {
-            this.setupRealtimeListenerDashboard();
-        }
-
-        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
-        
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'dashboard');
-        url.searchParams.delete('assistidoId'); 
-        window.history.pushState({}, '', url);
-
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const tituloPainel = isDefensor ? 'Mesa do Defensor' : 'Mesa de Trabalho';
-        const subtituloPainel = `${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
-
-        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
-        const colorMap = {
-            'slate': 'bg-slate-800', 'indigo': 'bg-indigo-700', 'emerald': 'bg-emerald-700', 'rose': 'bg-rose-700', 'blue': 'bg-blue-700'
-        };
-        const headerColorClass = colorMap[prefs.color] || colorMap['slate'];
-
-        corpo.className = "w-full max-w-4xl mx-auto my-4 transition-all animate-fade-in"; 
-        
-        corpo.innerHTML = `
-            <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
-                
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full justify-between">
-                    <div class="flex items-center gap-4">
-                        <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
-                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
-                        </div>
-                        <div>
-                            <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
-                                ${tituloPainel}
-                            </h1>
-                            <p class="text-white/80 text-xs sm:text-sm font-bold mt-1 tracking-wide">${subtituloPainel}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end">
-                        <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2" title="Instalar no Celular/PC">
-                            <span>📱</span><span class="hidden sm:inline">Instalar App</span>
-                        </button>
-                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm" title="Configurações da Mesa">
-                            ⚙️
-                        </button>
-                        
-                        <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
-                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Layout da Tela</h4>
-                            <div class="flex gap-2 mb-5 bg-gray-50 p-1.5 rounded-lg border">
-                                <button data-mode="tabs" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'tabs' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Abas</button>
-                                <button data-mode="list" class="mode-btn flex-1 py-2 text-xs font-bold rounded shadow-sm transition-all ${prefs.mode === 'list' ? 'bg-white text-gray-800 border' : 'text-gray-400 hover:bg-gray-100'}">Tudo na Tela</button>
-                            </div>
-                            
-                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Cor do Cabeçalho</h4>
-                            <div class="flex gap-2 justify-between px-1">
-                                <button data-color="slate" class="color-btn w-6 h-6 rounded-full bg-slate-800 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'slate' ? 'ring-2 ring-slate-800 scale-110 shadow-md' : ''}"></button>
-                                <button data-color="blue" class="color-btn w-6 h-6 rounded-full bg-blue-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'blue' ? 'ring-2 ring-blue-700 scale-110 shadow-md' : ''}"></button>
-                                <button data-color="indigo" class="color-btn w-6 h-6 rounded-full bg-indigo-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'indigo' ? 'ring-2 ring-indigo-700 scale-110 shadow-md' : ''}"></button>
-                                <button data-color="emerald" class="color-btn w-6 h-6 rounded-full bg-emerald-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'emerald' ? 'ring-2 ring-emerald-700 scale-110 shadow-md' : ''}"></button>
-                                <button data-color="rose" class="color-btn w-6 h-6 rounded-full bg-rose-700 ring-offset-2 transition-transform hover:scale-110 ${prefs.color === 'rose' ? 'ring-2 ring-rose-700 scale-110 shadow-md' : ''}"></button>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
-                <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
-                    <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar no seu histórico...">
-                </div>
-
-                <div id="tabs-container-wrapper" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6 ${prefs.mode === 'list' ? 'hidden' : ''}">
-                    <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
-                </div>
-                
-                <div id="lista-dashboard-conteudo" class="${prefs.mode === 'list' ? 'space-y-8' : 'space-y-3 sm:space-y-4'}">
-                    <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
-                </div>
-            </div>
-        `;
-
-        if (deferredPrompt) {
-            const installBtn = document.getElementById('btn-install-pwa');
-            installBtn.classList.remove('hidden');
-            installBtn.addEventListener('click', async () => {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') {
-                    installBtn.classList.add('hidden');
-                }
-                deferredPrompt = null;
-            });
-        }
-
-        const btnSettings = document.getElementById('btn-dash-settings');
-        const menuSettings = document.getElementById('dash-settings-menu');
-        
-        btnSettings.addEventListener('click', (e) => {
-            e.stopPropagation();
-            menuSettings.classList.toggle('hidden');
-        });
-        document.addEventListener('click', (e) => {
-            if (!menuSettings.contains(e.target) && !btnSettings.contains(e.target)) {
-                menuSettings.classList.add('hidden');
-            }
-        });
-
-        document.querySelectorAll('.color-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const c = e.target.dataset.color;
-                prefs.color = c;
-                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
-                
-                document.getElementById('header-bg').className = `${colorMap[c]} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500`;
-                
-                document.querySelectorAll('.color-btn').forEach(b => {
-                    b.className = b.className.replace(/ring-2 ring-\w+-700 ring-\w+-800 scale-110 shadow-md/g, '').trim();
-                });
-                e.target.classList.add('ring-2', `ring-${c === 'slate' ? 'slate-800' : c+'-700'}`, 'scale-110', 'shadow-md');
-            });
-        });
-
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const m = e.target.dataset.mode;
-                prefs.mode = m;
-                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
-                menuSettings.classList.add('hidden');
-                this.atualizarListasDoDashboard(); 
-            });
-        });
-
-        if (this.todosAtendimentosPauta && this.todosAtendimentosPauta.length > 0) {
-            this.atualizarListasDoDashboard();
-        }
-    },
-
-    atualizarListasDoDashboard() {
-        const container = document.getElementById('lista-dashboard-conteudo');
-        const tabsDiv = document.getElementById('tabs-dashboard');
-        const wrapperBusca = document.getElementById('wrapper-busca-historico');
-        
-        if (!container) return;
-
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
-        const baseUrl = window.location.href.substring(0, window.location.href.indexOf('?'));
-
-        const desenharCard = (item, isCardAberto) => {
-            const notas = item.notasRevisao ? `<div class="mt-3 bg-yellow-50 p-3 rounded-lg text-xs text-yellow-900 border border-yellow-300 font-semibold shadow-sm leading-snug">⚠️ <b>Nota Anexada:</b> ${escapeHTML(item.notasRevisao)}</div>` : '';
-            const numProcessoHtml = item.numeroProcesso ? `<span class="inline-flex items-center px-2 py-1 rounded bg-slate-100 text-slate-700 font-mono text-[10px] font-bold border border-slate-300 mt-2">Nº CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
-            const bannerTransf = item.historicoTransferencia ? `<div class="mt-3 bg-orange-50 p-2.5 rounded-lg text-[11px] text-orange-900 border border-orange-300 font-bold flex items-start gap-1 shadow-sm leading-snug"><span class="text-sm">🔄</span> <span>${escapeHTML(item.historicoTransferencia)}</span></div>` : '';
-            
-            const temUrgencia = item.priority === 'URGENTE';
-            const motivoUrgencia = item.priorityReason ? `<div class="mt-1 text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200 w-max truncate">🚨 ${escapeHTML(item.priorityReason)}</div>` : '';
-            const badgeUrgencia = temUrgencia ? `<span class="bg-red-600 text-white text-[9px] font-black px-2 py-0.5 rounded border border-red-700 uppercase tracking-widest shadow-sm animate-pulse">🚨 PRIORIDADE</span>` : '';
-
-            let badgeTopo = '';
-            let borderClasseUrgencia = temUrgencia ? 'border-l-[6px] border-l-red-500' : '';
-            let bgColorCard = 'bg-white border-slate-200 hover:border-slate-400';
-            
-            if (item.status === 'aguardandoCorrecao') {
-                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Avaliação</span>`;
-                bgColorCard = 'bg-amber-50/30 border-amber-200 hover:border-amber-400';
-            }
-            else if (item.status === 'aguardandoDistribuicao') {
-                badgeTopo = `<span class="bg-cyan-100 text-cyan-800 text-[9px] font-black px-2 py-0.5 rounded border border-cyan-300 uppercase tracking-widest shadow-sm">Assinatura</span>`;
-                bgColorCard = 'bg-cyan-50/30 border-cyan-200 hover:border-cyan-400';
-            }
-            else if (item.status === 'emAtendimento') {
-                badgeTopo = `<span class="bg-indigo-100 text-indigo-800 text-[9px] font-black px-2 py-0.5 rounded border border-indigo-300 uppercase tracking-widest shadow-sm">Na Mesa</span>`;
-            }
-            else if (item.status === 'atendido') {
-                badgeTopo = `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-2 py-0.5 rounded border border-emerald-300 uppercase tracking-widest shadow-sm">Protocolado</span>`;
-            }
-            else if (item.status === 'aguardandoNumero') {
-                badgeTopo = `<span class="bg-amber-100 text-amber-800 text-[9px] font-black px-2 py-0.5 rounded border border-amber-300 uppercase tracking-widest shadow-sm">Aguardando CNP</span>`;
-                bgColorCard = 'bg-amber-50/20 border-amber-200';
-            }
-
-            if (isCardAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
-                const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
-                return `
-                    <div class="border-2 ${borderClasseUrgencia} ${bgColorCard} p-5 rounded-2xl shadow-sm hover:shadow-lg transition-all relative group flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-3">
-                        <div class="flex-grow w-full sm:w-auto min-w-0">
-                            <div class="flex items-center gap-2 mb-2 flex-wrap">
-                                ${badgeTopo}
-                                ${badgeUrgencia}
-                                ${item.enviadoPor ? `<span class="text-[9px] text-slate-500 font-bold uppercase">Via: ${escapeHTML(item.enviadoPor)}</span>` : ''}
-                            </div>
-                            <h3 class="font-black text-slate-800 text-lg w-full truncate">${escapeHTML(item.name)}</h3>
-                            <p class="text-xs font-semibold text-slate-500 mt-1 uppercase tracking-wide truncate">${escapeHTML(item.subject || 'Assunto não informado')}</p>
-                            ${motivoUrgencia}
-                            ${numProcessoHtml}
-                            ${notas}
-                            ${bannerTransf}
-                        </div>
-                        <div class="shrink-0 w-full sm:w-auto mt-2 sm:mt-0">
-                            <a href="${linkIndividual}" class="block text-center w-full sm:w-40 bg-slate-800 hover:bg-slate-900 text-white font-black py-3 px-4 rounded-xl text-[10px] transition-colors shadow uppercase tracking-widest ring-offset-2 ring-slate-800 group-hover:ring-2">
-                                ABRIR PEÇA
-                            </a>
-                        </div>
-                    </div>
-                `;
-            } else {
-                const horaStr = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
-                
-                const linkManualCard = item.linkVerdeManualmente || item.linkVerde || `https://verde.defensoria.rj.def.br/#/atendimento/pesquisa?termo=${encodeURIComponent(item.numeroProcesso || item.name)}`;
-                
-                const linkIndividualDetalhes = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
-                
-                const atalhoVerdeCard = isDefensor ? `
-                    <a href="${linkManualCard}" target="_blank" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-emerald-600 hover:text-emerald-700 bg-emerald-50 border border-emerald-200 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
-                        <span>⚖️</span> Abrir Link no Verde
-                    </a>` : '';
-
-                const labelStatusFinal = item.status === 'aguardandoNumero' 
-                    ? `<span class="bg-amber-100 text-amber-800 text-[10px] font-black px-2.5 py-1 rounded border border-amber-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>⏳</span> Sem CNP</span>`
-                    : `<span class="bg-emerald-100 text-emerald-800 text-[10px] font-black px-2.5 py-1 rounded border border-emerald-300 uppercase tracking-widest shadow-sm inline-flex items-center gap-1"><span>✅</span> Finalizado</span>`;
-
-                return `
-                    <div class="border ${borderClasseUrgencia} border-slate-200 bg-white p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
-                        <div class="min-w-0 flex-1 w-full">
-                            <div class="mb-1 flex gap-1.5 flex-wrap">${badgeTopo} ${badgeUrgencia}</div>
-                            <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
-                            <p class="text-[10px] font-bold text-slate-400 mt-0.5 uppercase tracking-wide truncate">${escapeHTML(item.subject)}</p>
-                            ${motivoUrgencia}
-                            ${numProcessoHtml}
-                            <div class="flex gap-2">
-                                ${atalhoVerdeCard}
-                                <a href="${linkIndividualDetalhes}" class="mt-2 inline-flex items-center gap-1 text-[10px] font-black text-slate-600 hover:text-slate-800 bg-slate-100 border border-slate-300 px-2 py-0.5 rounded shadow-sm uppercase tracking-wider transition active:scale-95">
-                                    <span>👁️</span> Revisar Detalhes
-                                </a>
-                            </div>
-                        </div>
-                        <div class="shrink-0 text-right w-full sm:w-auto mt-2 sm:mt-0 flex sm:flex-col justify-between sm:justify-start items-center sm:items-end">
-                            ${labelStatusFinal}
-                            <p class="text-[9px] text-slate-400 font-bold mt-1.5">${horaStr}</p>
-                        </div>
-                    </div>
-                `;
-            }
-        };
-
-        if (isDefensor) {
-            const pendentes = this.todosAtendimentosPauta.filter(a => 
-                ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) ||
-                (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome)
-            );
-            const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-            if (prefs.mode === 'list') {
-                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, false)).join('');
-                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            } else {
-                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
-                
-                tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-pendentes' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer / Assinar / Corrigir <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${pendentes.length}</span></button>
-                    <button id="tab-assinados" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-assinados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Distribuições (Equipe) <span class="bg-slate-200 text-slate-700 ml-2 px-2 py-0.5 rounded text-[10px]">${distribuidos.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-2 text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar Tudo</button>
-                `;
-
-                const renderDefensorList = (lista, isAberto) => {
-                    if (lista.length === 0) {
-                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">🙌</span><p class="text-base font-black uppercase tracking-widest text-slate-500">MESA LIMPA.</p></div>`;
-                        return;
-                    }
-                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                };
-
-                const limparEstilosAbas = () => {
-                    wrapperBusca.classList.add('hidden');
-                    document.querySelectorAll('.tab-btn').forEach(btn => {
-                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
-                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
-                    });
-                };
-
-                document.getElementById('tab-pendentes').onclick = () => { limparEstilosAbas(); document.getElementById('tab-pendentes').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(pendentes, true); };
-                document.getElementById('tab-assinados').onclick = () => { limparEstilosAbas(); document.getElementById('tab-assinados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderDefensorList(distribuidos, false); };
-                document.getElementById('tab-historico-busca').onclick = () => {
-                    limparEstilosAbas(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
-                    renderDefensorList(meuHistoricoCompleto, true);
-                    document.getElementById('input-busca-local').oninput = (e) => {
-                        const termo = e.target.value.toLowerCase().trim();
-                        renderDefensorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true);
-                    };
-                };
-
-                if (abaAtivaId === 'tab-assinados') renderDefensorList(distribuidos, false);
-                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderDefensorList(meuHistoricoCompleto, true); }
-                else renderDefensorList(pendentes, true);
-            }
-
-        } else {
-            const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-            const enviados = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
-            const finalizados = this.todosAtendimentosPauta.filter(a => 
-                (a.status === 'atendido' && a.attendedBy === this.colaboradorNome) || 
-                (a.status === 'atendido' && a.enviadoPor === this.colaboradorNome) ||
-                (a.status === 'aguardandoNumero' && a.attendedBy === this.colaboradorNome) || 
-                (a.status === 'aguardandoNumero' && a.enviadoPor === this.colaboradorNome)
-            );
-            const meuHistoricoCompleto = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-            if (prefs.mode === 'list') {
-                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, false)).join('');
-                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            } else {
-                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
-
-                tabsDiv.innerHTML = `
-                    <button id="tab-em-mesa" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-em-mesa' ? 'bg-slate-800 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Fazer/Corrigir <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
-                    <button id="tab-enviados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-enviados' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">No Defensor <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
-                    <button id="tab-finalizados" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-finalizados' ? 'bg-emerald-600 text-white shadow mode-btn-active' : 'bg-white text-slate-500 hover:text-slate-800 hover:bg-slate-100'}">Concluídos <span class="bg-slate-200 text-slate-700 ml-1 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-3 px-1 text-[10px] sm:text-xs font-black uppercase tracking-widest rounded-lg transition whitespace-nowrap ${abaAtivaId === 'tab-historico-busca' ? 'bg-indigo-600 text-white shadow mode-btn-active' : 'bg-white text-indigo-500 hover:bg-indigo-50'}">🔍 Buscar</button>
-                `;
-
-                const renderServidorList = (lista, isAberto, isEmptyAviso) => {
-                    if (lista.length === 0) {
-                        container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${isEmptyAviso}</p></div>`;
-                        return;
-                    }
-                    container.innerHTML = lista.map(item => desenharCard(item, isAberto)).join('');
-                };
-
-                const resetTabs = () => {
-                    wrapperBusca.classList.add('hidden');
-                    document.querySelectorAll('.tab-btn').forEach(btn => {
-                        btn.className = btn.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
-                        btn.classList.add('bg-white', 'text-slate-500', 'hover:text-slate-800', 'hover:bg-slate-100', 'tab-btn');
-                    });
-                };
-
-                document.getElementById('tab-em-mesa').onclick = () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(emAndamento, true, "Sua mesa está limpa."); };
-                document.getElementById('tab-enviados').onclick = () => { resetTabs(); document.getElementById('tab-enviados').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(enviados, true, "Nenhum documento seu no Defensor."); };
-                document.getElementById('tab-finalizados').onclick = () => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600', 'text-white', 'shadow', 'mode-btn-active'); renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje."); };
-                document.getElementById('tab-historico-busca').onclick = () => {
-                    resetTabs(); wrapperBusca.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600', 'text-white', 'shadow', 'mode-btn-active');
-                    renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado.");
-                    document.getElementById('input-busca-local').oninput = (e) => {
-                        const termo = e.target.value.toLowerCase().trim();
-                        renderServidorList(meuHistoricoCompleto.filter(i => (i.name && i.name.toLowerCase().includes(termo)) || (i.subject && i.subject.toLowerCase().includes(termo)) || (i.numeroProcesso && i.numeroProcesso.includes(termo))), true, "Nada encontrado.");
-                    };
-                };
-
-                if (abaAtivaId === 'tab-enviados') renderServidorList(enviados, true, "Nenhum documento seu no Defensor.");
-                else if (abaAtivaId === 'tab-finalizados') renderServidorList(finalizados, false, "Você ainda não finalizou nada hoje.");
-                else if (abaAtivaId === 'tab-historico-busca') { wrapperBusca.classList.remove('hidden'); renderServidorList(meuHistoricoCompleto, true, "Nenhum histórico encontrado."); }
-                else renderServidorList(emAndamento, true, "Sua mesa está limpa.");
-            }
-        }
-    },
-
     showError(titulo, message) {
-        let corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl');
-        if (!corpo) corpo = document.body;
+        let corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
 
         corpo.innerHTML = `
             <div class="w-full max-w-2xl mx-auto my-4">
