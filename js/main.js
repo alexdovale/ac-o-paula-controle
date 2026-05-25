@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -44,6 +43,7 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         this.monitorInterval = null; 
+        this.currentMode = 'normal'; // NOVO: Modo atual (normal ou evento)
         
         this.init();
     }
@@ -124,6 +124,32 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // NOVO MÉTODO: setupModoListeners
+    // Gerencia os cliques nos botões de Modo Normal e Modo Evento
+    // ============================================================
+    setupModoListeners() {
+        // Escuta o clique no Modo Normal
+        document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
+            this.currentMode = 'normal';
+            // Aqui chamamos a tela que já existia
+            this.showPautaSelectionScreen(); 
+        });
+
+        // Escuta o clique no Modo Evento
+        document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
+            this.currentMode = 'evento';
+            // Aqui você direciona para o seu novo serviço de Atendimento Externo
+            UIService.showScreen('atendimentoExterno');
+            // Se você tiver um serviço de atendimento externo, chame-o aqui
+            // Ex: AtendimentoExternoService.abrir(this);
+        });
+    }
+
+    // ============================================================
+    // setupAuthListener MODIFICADO
+    // Agora mostra a tela de seleção de modo em vez de pular direto para a pauta
+    // ============================================================
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
@@ -131,16 +157,10 @@ class SIGEPApp {
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
                 
-                const lastPautaId = localStorage.getItem('lastPautaId');
-                const lastPautaName = localStorage.getItem('lastPautaName');
-                const lastPautaType = localStorage.getItem('lastPautaType');
-
-                if (lastPautaId) {
-                    console.log("🔄 Restaurando sessão anterior SIGEP: ", lastPautaName);
-                    this.loadPauta(lastPautaId, lastPautaName || 'Pauta', lastPautaType || 'agendamento');
-                } else {
-                    this.showPautaSelectionScreen();
-                }
+                // --- NOVO FLUXO DE ENTRADA ---
+                // Em vez de carregar a última pauta automaticamente, mostramos o seletor:
+                UIService.showScreen('modoSelection');
+                this.setupModoListeners(); 
 
             } else {
                 UIService.showScreen('login');
@@ -1830,6 +1850,10 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // applyRoleBasedUI MODIFICADO
+    // Agora também esconde o botão da Recepção Central em modo evento
+    // ============================================================
     applyRoleBasedUI() {
         const currentUser = this.currentUser;
         const currentUserRole = currentUser?.role; 
