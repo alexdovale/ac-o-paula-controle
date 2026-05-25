@@ -1779,8 +1779,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
     
- 
-    
     <div id="modal-captacao-qr" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center relative" onclick="event.stopPropagation()">
             <button onclick="document.getElementById('modal-captacao-qr').classList.add('hidden')" class="absolute top-3 right-3 text-gray-400 hover:text-red-500">
@@ -1815,7 +1813,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
-    <!-- CÓDIGO INJETADO PARA TRATAR O LGPD E BLOQUEAR O ERRO -->
     <style>
         /* CSS Hack para esconder o erro específico de lista de usuários que vem do main.js na tela de login */
         body.is-logged-out .toast-error-userlist { display: none !important; }
@@ -1879,7 +1876,6 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             const appContainer = document.getElementById('app-container');
 
             // Verifica se o usuário já aceitou antes (salvo no LocalStorage do navegador)
-            // Dica: Para segurança total, idealmente grave essa flag no banco de dados do usuário ao invés do localStorage.
             const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
 
             // Função para checar se as duas caixas foram marcadas
@@ -1991,6 +1987,26 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                     toggleExclusiveTabs(tabAgendamento, tabAvulso);
                 }
             }
+
+            // ==========================================
+            // LOGICA DA SELEÇÃO DE MODO (NOVO)
+            // ==========================================
+            const btnModoNormal = document.getElementById('btn-modo-normal');
+            const btnModoEvento = document.getElementById('btn-modo-evento');
+            const modoSelectionScreen = document.getElementById('modo-selection-screen');
+            const btnVoltarLogin = document.getElementById('modo-back-to-login');
+            
+            // Essa lógica apenas cuida da interface, o orquestrador (ui.js ou main.js) deve escutar esses cliques para salvar a escolha real
+            if(btnVoltarLogin) {
+                btnVoltarLogin.addEventListener('click', () => {
+                    // Simular voltar pro login fechando modo
+                    modoSelectionScreen.classList.add('hidden');
+                    document.getElementById('login-container').classList.remove('hidden');
+                    // Chama a função global de logout se existir
+                    if(window.app && window.app.logout) window.app.logout();
+                });
+            }
+
         });
     </script>
 </body>
