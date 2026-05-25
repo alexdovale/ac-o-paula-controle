@@ -1,4 +1,15 @@
+Perfeito! Agora entendi. Você já tem a tela de seleção de modo, mas ela está DUPLICADA e em lugares diferentes no seu HTML. Vou organizar isso para você.
 
+🔧 PROBLEMA IDENTIFICADO:
+
+Você tem DUAS telas de seleção de modo:
+
+1. Uma dentro do main-wrapper (após o login-container)
+2. Outra que você adicionou (provavelmente duplicada)
+
+✅ SOLUÇÃO: Vou te dar o index.html CORRETO E ORGANIZADO:
+
+```html
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -103,6 +114,10 @@
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Estilo adicional para os cards */
+        .card-modo { transition: all 0.3s ease; }
+        .card-modo:hover { transform: translateY(-4px); }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -116,7 +131,7 @@
         <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
     </div>
 
-    <!-- TELA DE SELEÇÃO DE MODO (cards clicáveis) -->
+    <!-- TELA DE SELEÇÃO DE MODO (única, fora do main-wrapper) -->
     <div id="modo-selection-container" class="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-slate-50">
         <div class="max-w-4xl w-full">
             
@@ -136,7 +151,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
                 
                 <!-- CARD MODO NORMAL -->
-                <div id="card-modo-normal" class="relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between group cursor-pointer">
+                <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between group cursor-pointer">
                     <div class="absolute -top-3 left-6">
                         <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase flex items-center shadow-sm">
                             Rotina Diária
@@ -181,7 +196,7 @@
                 </div>
 
                 <!-- CARD MODO EVENTO -->
-                <div id="card-modo-evento" class="relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-300 transition-all flex flex-col justify-between group cursor-pointer">
+                <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-300 transition-all flex flex-col justify-between group cursor-pointer">
                     <div class="absolute -top-3 left-6">
                         <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase flex items-center shadow-sm">
                             Ações Externas
@@ -264,6 +279,197 @@
 
             </div>
         </div>
+
+        <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto px-2 sm:px-0">
+            <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                </button>
+            </div>
+            
+            <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
+                <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
+                <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
+                    Instalar App
+                </button>
+            </div>
+
+            <div class="flex flex-col sm:flex-row justify-center items-center w-full gap-3 mb-6">
+                <button id="btn-recepcao-central" class="bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
+                    🏛️ Recepção Central
+                </button>
+                <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
+                    Painel do Administrador
+                </button>
+                <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
+                    Ver Dashboard
+                </button>
+                <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
+                    Meu Perfil
+                </button>
+            </div>
+            
+            <div id="invitations-container" class="hidden mb-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
+                <div id="pending-invitations-list" class="space-y-4"></div>
+            </div>
+            
+            <div id="filters-container" class="mb-6"></div>
+            
+            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
+            <div class="mt-6">
+                <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
+            </div>
+        </div>
+
+        <div id="dashboard-container" class="hidden max-w-7xl mx-auto p-2 sm:p-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Seu Dashboard</h2>
+                <button id="dashboard-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar para Pautas</button>
+            </div>
+            <div id="dashboard-content">
+                <div class="loader-small mx-auto my-12"></div>
+                <p class="text-center text-gray-500 mt-4">Carregando dados do Dashboard...</p>
+            </div>
+        </div>
+
+        <!-- RECEPÇÃO CENTRAL - CONTAINER -->
+        <div id="recepcao-central-container" class="hidden max-w-7xl mx-auto px-2 sm:px-4 py-4">
+            <!-- O conteúdo será injetado dinamicamente pelo RecepcaoCentralService -->
+        </div>
+
+        <div id="app-container" class="max-w-full mx-auto hidden">
+            <header class="mb-4 sm:mb-6 space-y-4">
+                <div class="flex justify-center items-center w-full relative">
+                    <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                    <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                        </svg>
+                    </button>
+                </div>
+
+                <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-4">
+                    <div class="text-center border-b pb-3 sm:pb-4">
+                        <h2 id="pauta-title" class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 truncate px-2 sm:px-4"></h2>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-3 pt-2 sm:pt-4">
+                        <div class="flex-shrink-0 w-full sm:w-auto">
+                            <button id="back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-300 transition">&larr; Voltar</button>
+                        </div>
+
+                        <div class="relative flex items-center w-full sm:w-auto justify-end">
+                            <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-50 origin-top-right overflow-hidden">
+                                <div class="py-2">
+                                    <button id="btn-painel-geral-externo" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">📊</span>
+                                        Monitor da Equipe
+                                    </button>
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    <button id="share-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔗</span>
+                                        Compartilhamento Externo
+                                    </button>
+                                    <button id="view-stats-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm shrink-0">📈</span>
+                                        Ver Estatísticas
+                                    </button>
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    <button id="edit-pauta-name-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">✏️</span>
+                                        Editar Nome
+                                    </button>
+                                    <button id="edit-pauta-config-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
+                                        Editar Configurações
+                                    </button>
+                                    <button id="manage-members-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🤝</span>
+                                        Compartilhar Pauta
+                                    </button>
+                                    <button id="manage-collaborators-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
+                                        Colaboradores
+                                    </button>
+                                    <button id="notes-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📋</span>
+                                        Anotações
+                                    </button>
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    
+                                    <div class="px-4 py-2 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
+                                        <div class="flex items-center gap-3 pointer-events-none">
+                                            <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
+                                                🔕
+                                            </div>
+                                            <div>
+                                                <span class="text-sm font-bold text-gray-700 block">Modo Silencioso</span>
+                                                <span class="text-[9px] text-gray-500 block leading-tight mt-0.5">Bloquear e-mails</span>
+                                            </div>
+                                        </div>
+                                        <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
+                                            <input type="checkbox" id="toggle-silent-mode" class="sr-only peer">
+                                            <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
+                                        </label>
+                                    </div>
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                                    
+                                    <button id="close-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔒</span>
+                                        Fechar Pauta
+                                    </button>
+                                    <button id="reopen-pauta-btn" class="hidden w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔓</span>
+                                        Reabrir Pauta
+                                    </button>
+                                    <button id="reset-all-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm shrink-0">🗑️</span>
+                                        Zerar Pauta
+                                    </button>
+                                </div>
+                            </div>
+
+                            <button id="actions-toggle" class="z-10 w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
+                                <span>Ações</span>
+                                <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
+                            </button>
+                            
+                            <div class="relative ml-2 sm:ml-4 shrink-0"> 
+                                <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                </button>
+                                <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-30 space-y-2">
+                                    <p class="text-xs font-bold text-gray-500 uppercase mb-2">Mostrar Colunas:</p>
+                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                        <input type="checkbox" id="toggle-em-atendimento" class="h-4 w-4 text-blue-600 rounded">
+                                        <span class="ml-2">Em Atendimento</span>
+                                    </label>
+                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                        <input type="checkbox" id="toggle-distribuicao" class="h-4 w-4 text-cyan-600 rounded">
+                                        <span class="ml-2">Distribuição</span>
+                                    </label>
+                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                        <input type="checkbox" id="toggle-faltosos" class="h-4 w-4 text-purple-600 rounded">
+                                        <span class="ml-2">Faltosos</span>
+                                    </label>
+                                </div>
+                            </div>
+
+                        </div>
+                    </div>
+                </div>
+
+                <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 text-sm" role="alert">
+                    <p class="font-bold">Pauta Fechada</p>
+                    <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
+                </div>
+            </header>
 
           <!-- TIRAR AQUI. D -->
 
