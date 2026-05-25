@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -101,8 +100,8 @@
             100% { background-color: #e2e8f0; transform: scale(1); }
         }
         #main-wrapper { flex: 1 0 auto; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -116,9 +115,9 @@
         <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
     </div>
 
-    <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full">
+    <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
 
-        <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-2">
+        <div id="login-container" class="hidden w-full min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
                 <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta - SIGEP</h2>
@@ -143,18 +142,98 @@
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Criar Conta</button>
                 </form>
 
-                <!-- TEXTO DE POLÍTICA E PRIVACIDADE INSERIDO AQUI -->
                 <div class="mt-6 text-center text-xs text-gray-500">
                     Ao entrar ou se cadastrar, você concorda com nossos 
                     <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</button> 
                     e 
                     <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Política de Privacidade</button>.
                 </div>
-
             </div>
         </div>
 
-        <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto px-2 sm:px-0">
+
+        <div id="modo-selection-screen" class="hidden flex-col items-center justify-center p-4 max-w-4xl w-full mx-auto min-h-[80vh]">
+            <div class="text-center mb-10 animate-fade-in" style="opacity: 0;">
+                <h1 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">🏛️ Sistema SIGEP</h1>
+                <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">Escolha o modo de operação para iniciar</p>
+            </div>
+            
+            <div id="modo-selection-view" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
+                
+                <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards;">
+                    <div class="absolute -top-3 left-6">
+                        <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase shadow-sm">Rotina Diária</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-blue-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
+                            </div>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Normal</h2>
+                        </div>
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Fluxo com <strong>Recepção Central e Delegação</strong></span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Controle rigoroso de <strong>Agendamentos</strong></span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Gestão de <strong>Múltiplas Pautas e Salas</strong></span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-normal" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.2s; opacity: 0; animation-fill-mode: forwards;">
+                    <div class="absolute -top-3 left-6">
+                        <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase shadow-sm">Ações Externas</span>
+                    </div>
+                    <div>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-emerald-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
+                            </div>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Evento</h2>
+                        </div>
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span><strong>Fluxo Simplificado</strong> de triagem instantânea</span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Sem hierarquias complexas de prédios</span>
+                            </p>
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                <span>Ideal para <strong>Mutirão, Plantão e Ação Social</strong></span>
+                            </p>
+                        </div>
+                    </div>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-evento" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <button id="modo-back-to-login" class="mt-8 text-sm text-slate-400 hover:text-slate-600 font-semibold transition-colors">&larr; Sair e Voltar ao Login</button>
+        </div>
+
+
+        <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
                 <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
@@ -194,13 +273,14 @@
             
             <div id="filters-container" class="mb-6"></div>
             
-            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
-            <div class="mt-6">
+            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"></div>
+            <div class="mt-6 w-full">
                 <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
             </div>
         </div>
 
-        <div id="dashboard-container" class="hidden max-w-7xl mx-auto p-2 sm:p-4">
+
+        <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Seu Dashboard</h2>
                 <button id="dashboard-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar para Pautas</button>
@@ -211,12 +291,14 @@
             </div>
         </div>
 
-        <!-- RECEPÇÃO CENTRAL - CONTAINER -->
-        <div id="recepcao-central-container" class="hidden max-w-7xl mx-auto px-2 sm:px-4 py-4">
-            <!-- O conteúdo será injetado dinamicamente pelo RecepcaoCentralService -->
-        </div>
+        <div id="recepcao-central-container" class="hidden w-full max-w-7xl mx-auto px-2 sm:px-4 py-4">
+            </div>
 
-        <div id="app-container" class="max-w-full mx-auto hidden">
+        <div id="atendimento-externo-container" class="hidden w-full flex-1 bg-slate-100 p-2 sm:p-4">
+            </div>
+
+
+        <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
                     <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
@@ -334,7 +416,6 @@
                                     </label>
                                 </div>
                             </div>
-
                         </div>
                     </div>
                 </div>
@@ -612,7 +693,6 @@
         </div>
     </footer>
 
-    <!-- MODAL DE ACEITE LGPD (NOVO) -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
             <div class="text-center mb-6">
@@ -641,8 +721,6 @@
             </button>
         </div>
     </div>
-    <!-- FIM DO MODAL LGPD -->
-
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
@@ -1700,6 +1778,8 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             </div>
         </div>
     </div>
+    
+ 
     
     <div id="modal-captacao-qr" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center relative" onclick="event.stopPropagation()">
