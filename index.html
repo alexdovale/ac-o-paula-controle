@@ -1984,7 +1984,55 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             const isScheduledContainer = document.getElementById('is-scheduled-container');
             const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
             const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-
+            
+            // ==========================================
+            // SELETOR DE MODO (NORMAL x EVENTO)
+            // ==========================================
+            
+            // Verificar se já tem modo salvo e pular tela se já existir
+            const modoSalvo = localStorage.getItem('sigep_modo_operacao');
+            const modoSelectionContainer = document.getElementById('modo-selection-container');
+            const loginContainer = document.getElementById('login-container');
+            
+            // Se não tem modo salvo, mostra o seletor
+            if (!modoSalvo && modoSelectionContainer) {
+                modoSelectionContainer.classList.remove('hidden');
+                loginContainer.classList.add('hidden');
+            }
+            
+            // Botão Modo Normal
+            document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
+                localStorage.setItem('sigep_modo_operacao', 'normal');
+                if (modoSelectionContainer) modoSelectionContainer.classList.add('hidden');
+                loginContainer.classList.remove('hidden');
+                
+                if (window.app) {
+                    window.app.modoOperacao = 'normal';
+                    window.app.isModoEvento = false;
+                }
+            });
+            
+            // Botão Modo Evento
+            document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
+                localStorage.setItem('sigep_modo_operacao', 'evento');
+                if (modoSelectionContainer) modoSelectionContainer.classList.add('hidden');
+                loginContainer.classList.remove('hidden');
+                
+                if (window.app) {
+                    window.app.modoOperacao = 'evento';
+                    window.app.isModoEvento = true;
+                }
+            });
+            
+            // Clicar nos cards também funciona
+            document.getElementById('card-modo-normal')?.addEventListener('click', () => {
+                document.getElementById('btn-modo-normal')?.click();
+            });
+            
+            document.getElementById('card-modo-evento')?.addEventListener('click', () => {
+                document.getElementById('btn-modo-evento')?.click();
+            });
+            
             const toggleExclusiveTabs = (activeTab, inactiveTab) => {
                 if(!activeTab || !inactiveTab) return;
                 activeTab.classList.add('tab-active');
