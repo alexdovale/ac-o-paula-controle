@@ -24,7 +24,8 @@ import { PainelGeralService } from './painelGeralService.js';
 
 // NOVOS IMPORTS - GUIA DE INTEGRAÇÃO
 import { PautaConfigService } from './pautaConfig.js';
-import { RecepcaoCentralService } from './recepcaoCentral.js';
+import { RecepçãoCentralService } from './recepcaoCentral.js';
+
 
 class SIGEPApp { 
     constructor() {
