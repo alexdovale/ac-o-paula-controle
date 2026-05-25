@@ -1,18 +1,10 @@
-// js/importadorOrgaos.js - IMPORTADOR DE ÓRGÃOS E ESTRUTURA HIERÁRQUICA (SIGEP)
-// Acesso: apenas 'superadmin'
-// Responsabilidades:
-// - Importar estrutura de unidades/recepções via CSV ou JSON
-// - Criar documentos em recepcoes/ via RecepcaoConfigService
-// - Preview editável antes de confirmar
-// - Gerenciar estrutura pós-importação
-// - Download de modelos
+
 
 import {
-    collection, doc, getDoc, getDocs, setDoc,
-    writeBatch, deleteDoc, onSnapshot
+    collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+    writeBatch, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
-import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { logAction } from './admin.js';
 
 // ─── HELPER ───────────────────────────────────────────────────────────────────
@@ -32,18 +24,20 @@ const TIPO_VISUAL = {
     generalista:  { icone: '🗂️', cor: 'amber'  },
 };
 
-// ─── SERVIÇO ──────────────────────────────────────────────────────────────────
+// ─── SERVIÇO PRINCIPAL ───────────────────────────────────────────────────────
 
 export const ImportadorOrgaosService = {
 
     _app: null,
-    _dadosImportados: null,   // { unidades: [...] } após parse
-    _dadosEditados: null,     // cópia editável do preview
+    _dadosImportados: null,
+    _dadosEditados: null,
     _unsubEstrutura: null,
 
-    // ── 1. ABRIR MODAL ────────────────────────────────────────────────────────
+    // =========================================================================
+    // 1. ABRIR MODAL PRINCIPAL (com abas)
+    // =========================================================================
 
-    abrirModal(app) {
+    abrirModal(app, abaInicial = 'upload') {
         this._app = app;
 
         // Só superadmin
@@ -60,13 +54,111 @@ export const ImportadorOrgaosService = {
         modal.className = 'fixed inset-0 bg-black/70 flex items-center justify-center z-[400] p-4 overflow-y-auto';
         modal.innerHTML = this._htmlModal();
         document.body.appendChild(modal);
-        this._setupEventos(modal);
+        this._setupEventos(modal, abaInicial);
 
         // Carrega estrutura existente em background
         this._carregarEstruturaExistente();
     },
 
-    // ── 2. HTML DO MODAL ──────────────────────────────────────────────────────
+    // =========================================================================
+    // 2. ABRIR APENAS GERENCIADOR (sem abas, modo simplificado)
+    // =========================================================================
+
+    abrirGerenciador(app) {
+        this.abrirModal(app, 'estrutura');
+    },
+
+    // =========================================================================
+    // 3. ABRIR APENAS IMPORTADOR (sem abas, modo simplificado)
+    // =========================================================================
+
+    abrirImportador(app) {
+        this.abrirModal(app, 'upload');
+    },
+
+    // =========================================================================
+    // 4. ABRIR MODAL MASTER (com escolha entre Gerenciar e Importar)
+    // =========================================================================
+
+    abrirModalMaster(app) {
+        this._app = app;
+
+        // Só superadmin
+        if (app.currentUser?.role !== 'superadmin') {
+            showNotification("Acesso restrito a Superadmin.", "warning");
+            return;
+        }
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-unidades-master';
+        modal.className = 'fixed inset-0 bg-black/70 z-[500] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
+                <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center">
+                    <div>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2">🏢 Gestão de Unidades</h2>
+                        <p class="text-slate-300 text-xs mt-1">Escolha uma opção abaixo</p>
+                    </div>
+                    <button id="fechar-modal-unidades-master" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <!-- Opção 1: Gerenciar Unidades -->
+                    <button id="btn-opcao-gerenciar" 
+                        class="w-full flex items-center gap-4 p-4 border-2 border-slate-200 rounded-xl hover:border-blue-400 hover:bg-blue-50 transition-all group">
+                        <div class="w-12 h-12 bg-blue-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-blue-200 transition">📋</div>
+                        <div class="text-left flex-1">
+                            <p class="font-bold text-slate-800 text-base">Gerenciar Unidades</p>
+                            <p class="text-[10px] text-slate-500">Cadastrar, editar e excluir unidades/órgãos</p>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 group-hover:text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                    
+                    <!-- Opção 2: Importar Órgãos -->
+                    <button id="btn-opcao-importar" 
+                        class="w-full flex items-center gap-4 p-4 border-2 border-slate-200 rounded-xl hover:border-emerald-400 hover:bg-emerald-50 transition-all group">
+                        <div class="w-12 h-12 bg-emerald-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-emerald-200 transition">📁</div>
+                        <div class="text-left flex-1">
+                            <p class="font-bold text-slate-800 text-base">Importar Órgãos</p>
+                            <p class="text-[10px] text-slate-500">Importar estrutura hierárquica via CSV/JSON</p>
+                        </div>
+                        <svg class="w-5 h-5 text-slate-400 group-hover:text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5l7 7-7 7"></path>
+                        </svg>
+                    </button>
+                </div>
+                
+                <div class="bg-slate-50 px-6 py-4 flex justify-end border-t">
+                    <button id="fechar-modal-unidades-master-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg hover:bg-gray-400 transition">Fechar</button>
+                </div>
+            </div>
+        `;
+        
+        document.body.appendChild(modal);
+        
+        const fechar = () => modal.remove();
+        document.getElementById('fechar-modal-unidades-master')?.addEventListener('click', fechar);
+        document.getElementById('fechar-modal-unidades-master-footer')?.addEventListener('click', fechar);
+        modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+        
+        // Opção: Gerenciar Unidades
+        document.getElementById('btn-opcao-gerenciar')?.addEventListener('click', () => {
+            fechar();
+            this.abrirGerenciador(app);
+        });
+        
+        // Opção: Importar Órgãos
+        document.getElementById('btn-opcao-importar')?.addEventListener('click', () => {
+            fechar();
+            this.abrirImportador(app);
+        });
+    },
+
+    // =========================================================================
+    // 5. HTML DO MODAL PRINCIPAL (com abas)
+    // =========================================================================
 
     _htmlModal() {
         return `
@@ -75,8 +167,8 @@ export const ImportadorOrgaosService = {
             <!-- Cabeçalho -->
             <div class="bg-gradient-to-r from-purple-800 to-purple-900 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2">📁 Importador de Órgãos e Estrutura</h2>
-                    <p class="text-purple-200 text-xs mt-1">Importe a hierarquia completa da Defensoria via CSV ou JSON</p>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">📁 Importador e Gerenciador de Órgãos</h2>
+                    <p class="text-purple-200 text-xs mt-1">Gerencie ou importe a hierarquia completa da Defensoria</p>
                 </div>
                 <button id="fechar-importador" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
@@ -132,7 +224,7 @@ export const ImportadorOrgaosService = {
                     <div id="preview-estrutura" class="space-y-4"></div>
                 </div>
 
-                <!-- ABA: ESTRUTURA ATUAL -->
+                <!-- ABA: ESTRUTURA ATUAL (GERENCIAMENTO) -->
                 <div id="painel-estrutura" class="hidden p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-black text-slate-800 text-base">Estrutura importada no sistema</h3>
@@ -173,14 +265,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
           "salas": ["Recepção Principal", "Guichê 1"],
           "responsaveis": ["admin@dperj.br"],
           "assuntosPermitidos": []
-        },
-        {
-          "nome": "Núcleo de Família",
-          "andar": "2º Andar",
-          "tipo": "especializada",
-          "salas": ["1ª Vara Família", "2ª Vara Família", "CEJUSC"],
-          "responsaveis": ["familia@dperj.br"],
-          "assuntosPermitidos": ["Família", "Alimentos", "Guarda"]
         }
       ]
     }
@@ -197,7 +281,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                             <li>No CSV, sempre defina UNIDADE antes das RECEPCAO que pertencem a ela.</li>
                             <li>Use <code>;</code> (ponto e vírgula) para separar múltiplos valores em salas, responsáveis e assuntos.</li>
                             <li>Tipos válidos: <code>central</code>, <code>especializada</code>, <code>mista</code>, <code>generalista</code>.</li>
-                            <li>Os assuntos viram grupos automáticos no <code>grupoRecepcao</code> das pautas.</li>
                         </ul>
                     </div>
                 </div>
@@ -210,9 +293,11 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         </div>`;
     },
 
-    // ── 3. EVENTOS ────────────────────────────────────────────────────────────
+    // =========================================================================
+    // 6. EVENTOS DO MODAL PRINCIPAL
+    // =========================================================================
 
-    _setupEventos(modal) {
+    _setupEventos(modal, abaInicial = 'upload') {
         const fechar = () => {
             if (this._unsubEstrutura) { this._unsubEstrutura(); this._unsubEstrutura = null; }
             modal.remove();
@@ -239,6 +324,12 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             });
         });
 
+        // Ativar aba inicial
+        if (abaInicial) {
+            const tabInicial = document.querySelector(`.tab-imp[data-tab="${abaInicial}"]`);
+            if (tabInicial) tabInicial.click();
+        }
+
         // Drop zone
         const dropZone = document.getElementById('drop-zone');
         dropZone?.addEventListener('dragover', (e) => { e.preventDefault(); dropZone.classList.add('border-purple-600', 'bg-purple-50'); });
@@ -250,7 +341,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             if (file) await this._processarArquivo(file);
         });
 
-        // Selecionar arquivo
         document.getElementById('btn-selecionar-arquivo')?.addEventListener('click', () => {
             document.getElementById('arquivo-estrutura')?.click();
         });
@@ -260,33 +350,33 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             if (file) await this._processarArquivo(file);
         });
 
-        // Processar / ver prévia
         document.getElementById('btn-processar-arquivo')?.addEventListener('click', () => {
             this._gerarPreview();
             document.querySelector('.tab-imp[data-tab="preview"]')?.click();
         });
 
-        // Voltar
         document.getElementById('btn-voltar-upload')?.addEventListener('click', () => {
             document.querySelector('.tab-imp[data-tab="upload"]')?.click();
         });
 
-        // Importar
         document.getElementById('btn-importar-confirmar')?.addEventListener('click', async () => {
             await this._importarParaSistema();
         });
 
-        // Nova unidade manual
         document.getElementById('btn-nova-unidade-manual')?.addEventListener('click', () => {
             this._abrirFormUnidade(null);
         });
 
-        // Downloads
         document.getElementById('btn-baixar-modelo-csv')?.addEventListener('click', () => this._baixarModeloCSV());
         document.getElementById('btn-baixar-modelo-json')?.addEventListener('click', () => this._baixarModeloJSON());
+
+        // Carregar estrutura
+        this._carregarEstruturaExistente();
     },
 
-    // ── 4. PARSING ────────────────────────────────────────────────────────────
+    // =========================================================================
+    // 7. PARSING DE ARQUIVOS
+    // =========================================================================
 
     async _processarArquivo(file) {
         try {
@@ -298,7 +388,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             else { showNotification("Use CSV ou JSON.", "error"); return; }
 
             this._dadosImportados = dados;
-            this._dadosEditados = JSON.parse(JSON.stringify(dados)); // cópia editável
+            this._dadosEditados = JSON.parse(JSON.stringify(dados));
 
             const infoDiv = document.getElementById('info-arquivo');
             const infoDetalhes = document.getElementById('info-arquivo-detalhes');
@@ -387,7 +477,9 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         });
     },
 
-    // ── 5. PREVIEW EDITÁVEL ───────────────────────────────────────────────────
+    // =========================================================================
+    // 8. PREVIEW EDITÁVEL
+    // =========================================================================
 
     _gerarPreview() {
         const container = document.getElementById('preview-estrutura');
@@ -401,7 +493,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         container.innerHTML = this._dadosEditados.unidades.map((unidade, uIdx) => {
             return `
             <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <!-- Header unidade -->
                 <div class="bg-purple-50 border-b border-purple-100 px-5 py-4 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
                         <span class="text-2xl">🏢</span>
@@ -411,13 +502,10 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                         </div>
                     </div>
                     <div class="flex gap-2 shrink-0">
-                        <span class="text-xs bg-purple-200 text-purple-700 px-2 py-1 rounded-full font-bold">${unidade.recepcoes?.length || 0} recepções</span>
                         <button class="prev-btn-remover-unidade text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded transition"
                             data-u-idx="${uIdx}" title="Remover unidade">🗑️</button>
                     </div>
                 </div>
-
-                <!-- Recepções -->
                 <div class="p-4 space-y-3">
                     ${(unidade.recepcoes || []).map((rec, rIdx) => {
                         const visual = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
@@ -432,8 +520,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                             <span class="text-[9px] font-black px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 uppercase">${rec.tipo}</span>
                                             ${rec.andar ? `<span class="text-[9px] text-slate-400 font-bold">${escapeHTML(rec.andar)}</span>` : ''}
                                         </div>
-                                        ${rec.salas?.length ? `<p class="text-[10px] text-slate-500 mt-1">🏠 ${rec.salas.slice(0, 4).map(escapeHTML).join(', ')}${rec.salas.length > 4 ? ` +${rec.salas.length - 4}` : ''}</p>` : ''}
-                                        ${rec.assuntosPermitidos?.length ? `<p class="text-[10px] text-slate-500">📚 ${rec.assuntosPermitidos.slice(0, 3).map(escapeHTML).join(', ')}${rec.assuntosPermitidos.length > 3 ? ` +${rec.assuntosPermitidos.length - 3}` : ''}</p>` : ''}
                                     </div>
                                 </div>
                                 <div class="flex gap-1 shrink-0">
@@ -445,8 +531,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                             </div>
                         </div>`;
                     }).join('')}
-
-                    <!-- Adicionar recepção na prévia -->
                     <button class="prev-btn-add-rec w-full border-2 border-dashed border-slate-200 hover:border-purple-400 text-slate-400 hover:text-purple-600 text-xs font-bold py-2 rounded-xl transition"
                         data-u-idx="${uIdx}">+ Adicionar Recepção</button>
                 </div>
@@ -504,50 +588,24 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
                 <h4 class="font-black text-slate-800 text-lg">✏️ Editar Recepção</h4>
-
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome</label>
-                    <input id="frp-nome" type="text" value="${escapeHTML(rec.nome)}"
-                        class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Nome</label><input id="frp-nome" type="text" value="${escapeHTML(rec.nome)}" class="w-full p-2.5 border rounded-lg text-sm"></div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Andar</label>
-                        <input id="frp-andar" type="text" value="${escapeHTML(rec.andar || '')}"
-                            class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                            placeholder="Ex: 2º Andar">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Tipo</label>
-                        <select id="frp-tipo" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                            ${['central','especializada','mista','generalista'].map(t =>
-                                `<option value="${t}" ${rec.tipo === t ? 'selected' : ''}>${t}</option>`
-                            ).join('')}
-                        </select>
-                    </div>
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Andar</label><input id="frp-andar" type="text" value="${escapeHTML(rec.andar || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Tipo</label><select id="frp-tipo" class="w-full p-2.5 border rounded-lg text-sm">
+                        ${['central','especializada','mista','generalista'].map(t => `<option value="${t}" ${rec.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select></div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Salas (separadas por vírgula)</label>
-                    <input id="frp-salas" type="text" value="${(rec.salas || []).map(escapeHTML).join(', ')}"
-                        class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assuntos / Grupos (separados por vírgula)</label>
-                    <input id="frp-assuntos" type="text" value="${(rec.assuntosPermitidos || []).map(escapeHTML).join(', ')}"
-                        class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
-                        placeholder="Ex: familia, alimentos, guarda">
-                </div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Salas (separadas por vírgula)</label><input id="frp-salas" type="text" value="${(rec.salas || []).map(escapeHTML).join(', ')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Assuntos (separados por vírgula)</label><input id="frp-assuntos" type="text" value="${(rec.assuntosPermitidos || []).map(escapeHTML).join(', ')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
                 <div class="flex gap-3 pt-2">
-                    <button id="frp-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl hover:bg-slate-200 text-sm transition">Cancelar</button>
-                    <button id="frp-salvar" class="flex-1 bg-purple-600 text-white font-black py-2.5 rounded-xl hover:bg-purple-700 text-sm transition shadow">Salvar</button>
+                    <button id="frp-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button id="frp-salvar" class="flex-1 bg-purple-600 text-white font-black py-2.5 rounded-xl">Salvar</button>
                 </div>
             </div>
         `;
         document.body.appendChild(overlay);
 
         document.getElementById('frp-cancelar').onclick = () => overlay.remove();
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-
         document.getElementById('frp-salvar').onclick = () => {
             const recAtual = this._dadosEditados.unidades[uIdx].recepcoes[rIdx];
             recAtual.nome               = document.getElementById('frp-nome').value.trim();
@@ -561,8 +619,9 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         };
     },
 
-    // ── 6. IMPORTAÇÃO PARA O SISTEMA ──────────────────────────────────────────
-    // FIX: Cria documentos em estrutura_unidades/ E em recepcoes/ via RecepcaoConfigService
+    // =========================================================================
+    // 9. IMPORTAÇÃO PARA O SISTEMA
+    // =========================================================================
 
     async _importarParaSistema() {
         const db = this._app.db;
@@ -578,7 +637,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         btnImportar.textContent = 'Importando...';
 
         try {
-            // Buscar unidades existentes para evitar duplicatas
             const snap = await getDocs(collection(db, "estrutura_unidades"));
             const nomesExistentes = new Set(snap.docs.map(d => d.data().nome));
 
@@ -586,73 +644,48 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             let recepcoesCriadas = 0;
 
             for (const unidade of dados.unidades) {
-                if (nomesExistentes.has(unidade.nome)) {
-                    console.log(`Unidade "${unidade.nome}" já existe, pulando.`);
-                    continue;
-                }
+                if (nomesExistentes.has(unidade.nome)) continue;
 
-                // 1. Criar documento da unidade
-                const unidadeId = unidade.nome
-                    .toLowerCase()
-                    .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                    .replace(/\s+/g, '_')
-                    .replace(/[^a-z0-9_]/g, '');
+                const unidadeId = unidade.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
                 await setDoc(doc(db, "estrutura_unidades", unidadeId), {
                     id: unidadeId,
-                    nome:        unidade.nome,
-                    sigla:       unidade.sigla || '',
-                    endereco:    unidade.endereco || '',
-                    telefone:    unidade.telefone || '',
-                    email:       unidade.email || '',
-                    createdAt:   new Date().toISOString(),
+                    nome: unidade.nome,
+                    sigla: unidade.sigla || '',
+                    endereco: unidade.endereco || '',
+                    telefone: unidade.telefone || '',
+                    email: unidade.email || '',
+                    createdAt: new Date().toISOString(),
                     importadoPor: this._app.currentUser?.email || 'superadmin',
                 });
                 unidadesCriadas++;
 
-                // 2. Criar documentos em recepcoes/ via RecepcaoConfigService
                 for (const rec of (unidade.recepcoes || [])) {
                     const visual = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
-
-                    // Grupos = assuntosPermitidos convertidos para lowercase_sem_acento
                     const grupos = (rec.assuntosPermitidos || []).map(a =>
-                        a.toLowerCase()
-                         .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                         .replace(/\s+/g, '_')
-                         .replace(/[^a-z0-9_]/g, '')
+                        a.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
                     );
 
-                    await RecepcaoConfigService.criarRecepcao(db, {
-                        nome:        rec.nome,
-                        icone:       visual.icone,
-                        cor:         visual.cor,
+                    await this._criarRecepcao(db, {
+                        nome: rec.nome,
+                        icone: visual.icone,
+                        cor: visual.cor,
                         unidadeId,
                         unidadeNome: unidade.nome,
-                        andar:       rec.andar || '',
-                        tipo:        rec.tipo || 'especializada',
+                        andar: rec.andar || '',
+                        tipo: rec.tipo || 'especializada',
                         grupos,
-                        verTudo:     rec.verTudo || rec.tipo === 'central',
-                        membros:     [],  // admin adiciona membros depois
-                    }, this._app.currentUser?.uid);
-
+                        verTudo: rec.verTudo || rec.tipo === 'central',
+                        salas: rec.salas || [],
+                        responsaveis: rec.responsaveis || [],
+                    });
                     recepcoesCriadas++;
                 }
             }
 
-            await logAction(
-                db, this._app.auth,
-                this._app.currentUserName,
-                null,
-                'IMPORT_ESTRUTURA',
-                `Importou ${unidadesCriadas} unidades e ${recepcoesCriadas} recepções via arquivo`
-            );
+            await logAction(db, this._app.auth, this._app.currentUserName, null, 'IMPORT_ESTRUTURA', `Importou ${unidadesCriadas} unidades e ${recepcoesCriadas} recepções`);
+            showNotification(`✅ ${unidadesCriadas} unidade(s) e ${recepcoesCriadas} recepção(ões) criadas!`, "success");
 
-            showNotification(
-                `✅ ${unidadesCriadas} unidade(s) e ${recepcoesCriadas} recepção(ões) criadas!`,
-                "success"
-            );
-
-            // Atualizar aba de estrutura atual
             document.querySelector('.tab-imp[data-tab="estrutura"]')?.click();
             window.dispatchEvent(new CustomEvent('estrutura:importada'));
 
@@ -665,7 +698,40 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         }
     },
 
-    // ── 7. ESTRUTURA ATUAL (gerenciamento pós-importação) ─────────────────────
+    // =========================================================================
+    // 10. CRUD DE RECEPÇÕES
+    // =========================================================================
+
+    async _criarRecepcao(db, dados) {
+        const recepcaoId = `${dados.unidadeId}_${dados.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')}`;
+        
+        await setDoc(doc(db, "recepcoes", recepcaoId), {
+            id: recepcaoId,
+            ...dados,
+            ativo: true,
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+        });
+        
+        return { id: recepcaoId, ...dados };
+    },
+
+    async _atualizarRecepcao(db, id, dados) {
+        await updateDoc(doc(db, "recepcoes", id), {
+            ...dados,
+            updatedAt: new Date().toISOString()
+        });
+        return true;
+    },
+
+    async _excluirRecepcao(db, id) {
+        await updateDoc(doc(db, "recepcoes", id), { ativo: false, excluidoEm: new Date().toISOString() });
+        return true;
+    },
+
+    // =========================================================================
+    // 11. ESTRUTURA ATUAL (GERENCIAMENTO)
+    // =========================================================================
 
     async _carregarEstruturaExistente() {
         const db = this._app.db;
@@ -676,18 +742,11 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
 
         this._unsubEstrutura = onSnapshot(collection(db, "estrutura_unidades"), async (unSnap) => {
             if (unSnap.empty) {
-                lista.innerHTML = `
-                    <div class="text-center py-12 opacity-60">
-                        <span class="text-4xl block mb-3">🏢</span>
-                        <p class="text-slate-400 text-sm font-bold">Nenhuma unidade cadastrada ainda.</p>
-                        <p class="text-slate-400 text-xs mt-1">Importe um arquivo ou crie manualmente.</p>
-                    </div>`;
+                lista.innerHTML = `<div class="text-center py-12"><span class="text-4xl block mb-3">🏢</span><p class="text-slate-400 text-sm font-bold">Nenhuma unidade cadastrada ainda.</p><p class="text-slate-400 text-xs mt-1">Importe um arquivo ou clique em "+ Nova Unidade".</p></div>`;
                 return;
             }
 
             const unidades = unSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-
-            // Buscar recepções de cada unidade
             const todasRecepcoes = await getDocs(collection(db, "recepcoes"));
             const recepcoesPorUnidade = {};
             todasRecepcoes.docs.forEach(d => {
@@ -712,18 +771,13 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                         </div>
                         <div class="flex gap-2 shrink-0 items-center">
                             <span class="text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full font-bold">${recs.length} recepções</span>
-                            <button class="est-btn-add-rec bg-purple-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg hover:bg-purple-700 transition"
-                                data-unidade-id="${unidade.id}" data-unidade-nome="${escapeHTML(unidade.nome)}">
-                                + Recepção
-                            </button>
-                            <button class="est-btn-del-unidade text-red-300 hover:text-red-500 text-sm font-black px-2 py-1 rounded transition"
-                                data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">🗑️</button>
+                            <button class="est-btn-add-rec bg-purple-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg" data-unidade-id="${unidade.id}" data-unidade-nome="${escapeHTML(unidade.nome)}">+ Recepção</button>
+                            <button class="est-btn-editar-unidade text-blue-500 hover:text-blue-700 text-xs font-bold px-2 py-1 rounded" data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}">✏️</button>
+                            <button class="est-btn-del-unidade text-red-300 hover:text-red-500 text-sm font-black px-2 py-1 rounded" data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">🗑️</button>
                         </div>
                     </div>
-
                     <div class="p-4 space-y-2">
-                        ${recs.length === 0
-                            ? `<p class="text-xs text-slate-400 italic text-center py-4">Nenhuma recepção. Clique em "+ Recepção" para adicionar.</p>`
+                        ${recs.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Nenhuma recepção. Clique em "+ Recepção" para adicionar.</p>`
                             : recs.map(rec => {
                                 const visual = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
                                 return `
@@ -732,18 +786,12 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                         <span>${visual.icone}</span>
                                         <div class="min-w-0">
                                             <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</p>
-                                            <p class="text-[10px] text-slate-400">
-                                                ${rec.andar ? escapeHTML(rec.andar) + ' · ' : ''}
-                                                <span class="uppercase font-bold text-blue-500">${rec.tipo}</span>
-                                                ${rec.grupos?.length ? ' · ' + rec.grupos.slice(0, 3).join(', ') : ''}
-                                            </p>
+                                            <p class="text-[10px] text-slate-400">${rec.andar ? escapeHTML(rec.andar) + ' · ' : ''}<span class="uppercase font-bold text-blue-500">${rec.tipo}</span></p>
                                         </div>
                                     </div>
                                     <div class="flex gap-1 shrink-0">
-                                        <button class="est-btn-editar-rec text-slate-400 hover:text-blue-600 text-xs px-2 py-1 rounded transition font-bold"
-                                            data-recepcao-id="${rec.id}">✏️</button>
-                                        <button class="est-btn-del-rec text-slate-400 hover:text-red-500 text-xs px-2 py-1 rounded transition font-bold"
-                                            data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">🗑️</button>
+                                        <button class="est-btn-editar-rec text-slate-400 hover:text-blue-600 text-xs px-2 py-1 rounded font-bold" data-recepcao-id="${rec.id}">✏️</button>
+                                        <button class="est-btn-del-rec text-slate-400 hover:text-red-500 text-xs px-2 py-1 rounded font-bold" data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">🗑️</button>
                                     </div>
                                 </div>`;
                             }).join('')
@@ -752,89 +800,41 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                 </div>`;
             }).join('');
 
-            // Eventos da estrutura atual
+            // Eventos
             lista.querySelectorAll('.est-btn-add-rec').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    this._abrirFormRecepcaoNova(btn.dataset.unidadeId, btn.dataset.unidadeNome);
+                btn.addEventListener('click', () => this._abrirFormRecepcao({ unidadeId: btn.dataset.unidadeId, unidadeNome: btn.dataset.unidadeNome }, true));
+            });
+            lista.querySelectorAll('.est-btn-editar-unidade').forEach(btn => {
+                btn.addEventListener('click', () => this._abrirFormUnidade({ id: btn.dataset.unidadeId, nome: btn.dataset.nome, sigla: btn.dataset.sigla, endereco: btn.dataset.endereco }));
+            });
+            lista.querySelectorAll('.est-btn-del-unidade').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (!confirm(`Excluir a unidade "${btn.dataset.nome}" e todas as suas recepções?`)) return;
+                    await deleteDoc(doc(db, "estrutura_unidades", btn.dataset.unidadeId));
+                    const recs = recepcoesPorUnidade[btn.dataset.unidadeId] || [];
+                    for (const r of recs) await this._excluirRecepcao(db, r.id);
+                    showNotification("Unidade removida.", "info");
                 });
             });
-
             lista.querySelectorAll('.est-btn-editar-rec').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     const snap = await getDoc(doc(db, "recepcoes", btn.dataset.recepcaoId));
-                    if (snap.exists()) this._abrirFormRecepcaoEditar({ id: snap.id, ...snap.data() });
+                    if (snap.exists()) this._abrirFormRecepcao({ id: snap.id, ...snap.data() });
                 });
             });
-
             lista.querySelectorAll('.est-btn-del-rec').forEach(btn => {
                 btn.addEventListener('click', async () => {
                     if (!confirm(`Desativar a recepção "${btn.dataset.nome}"?`)) return;
-                    await RecepcaoConfigService.excluirRecepcao(db, btn.dataset.recepcaoId);
-                });
-            });
-
-            lista.querySelectorAll('.est-btn-del-unidade').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (!confirm(`Excluir a unidade "${btn.dataset.nome}" e todas as suas recepções? Esta ação não pode ser desfeita.`)) return;
-                    await deleteDoc(doc(db, "estrutura_unidades", btn.dataset.unidadeId));
-                    // Desativar recepções da unidade
-                    const recs = recepcoesPorUnidade[btn.dataset.unidadeId] || [];
-                    for (const r of recs) await RecepcaoConfigService.excluirRecepcao(db, r.id);
-                    showNotification("Unidade removida.", "info");
+                    await this._excluirRecepcao(db, btn.dataset.recepcaoId);
+                    showNotification("Recepção desativada.", "info");
                 });
             });
         });
     },
 
-    _abrirFormRecepcaoNova(unidadeId, unidadeNome) {
-        this._abrirFormRecepcaoEditar({
-            unidadeId,
-            unidadeNome,
-            nome: '',
-            andar: '',
-            tipo: 'especializada',
-            grupos: [],
-            salas: [],
-            verTudo: false,
-        }, true);
-    },
-
-    _abrirFormRecepcaoEditar(rec, isNova = false) {
-        const db = this._app.db;
-        const overlay = document.createElement('div');
-        overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
-
-        // Usa o renderFormRecepcao do RecepcaoConfigService
-        overlay.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg p-6 max-h-[90vh] overflow-y-auto">
-                ${RecepcaoConfigService.renderFormRecepcao(isNova ? null : rec, [])}
-            </div>`;
-        document.body.appendChild(overlay);
-
-        // Preenche unidade se nova
-        if (isNova) {
-            const nomeInput = document.getElementById('form-rec-unidade-nome');
-            if (nomeInput) nomeInput.value = rec.unidadeNome || '';
-            // Bloqueia edição da unidade
-            if (nomeInput) nomeInput.readOnly = true;
-        }
-
-        RecepcaoConfigService.initFormRecepcaoEventos(
-            async (dados, recepcaoId) => {
-                if (recepcaoId) {
-                    await RecepcaoConfigService.atualizarRecepcao(db, recepcaoId, dados);
-                } else {
-                    dados.unidadeId = rec.unidadeId;
-                    dados.unidadeNome = rec.unidadeNome;
-                    await RecepcaoConfigService.criarRecepcao(db, dados, this._app.currentUser?.uid);
-                }
-                overlay.remove();
-            },
-            () => overlay.remove()
-        );
-
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-    },
+    // =========================================================================
+    // 12. FORMULÁRIOS DE CRIAÇÃO/EDIÇÃO
+    // =========================================================================
 
     _abrirFormUnidade(unidade = null) {
         const db = this._app.db;
@@ -844,100 +844,131 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
                 <h4 class="font-black text-slate-800 text-lg">${isNova ? '+ Nova Unidade' : '✏️ Editar Unidade'}</h4>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome *</label>
-                    <input id="fu-nome" value="${escapeHTML(unidade?.nome || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Ex: Defensoria Pública - Duque de Caxias">
-                </div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Nome *</label><input id="fu-nome" value="${escapeHTML(unidade?.nome || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
                 <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Sigla</label>
-                        <input id="fu-sigla" value="${escapeHTML(unidade?.sigla || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="DP Caxias">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Telefone</label>
-                        <input id="fu-telefone" value="${escapeHTML(unidade?.telefone || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="(21) 0000-0000">
-                    </div>
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Sigla</label><input id="fu-sigla" value="${escapeHTML(unidade?.sigla || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Telefone</label><input id="fu-telefone" value="${escapeHTML(unidade?.telefone || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
                 </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Endereço</label>
-                    <input id="fu-endereco" value="${escapeHTML(unidade?.endereco || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="Rua, número - Bairro, Cidade - UF">
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">E-mail</label>
-                    <input id="fu-email" value="${escapeHTML(unidade?.email || '')}" type="email" class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-purple-500" placeholder="unidade@dperj.br">
-                </div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Endereço</label><input id="fu-endereco" value="${escapeHTML(unidade?.endereco || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">E-mail</label><input id="fu-email" value="${escapeHTML(unidade?.email || '')}" type="email" class="w-full p-2.5 border rounded-lg text-sm"></div>
                 <div class="flex gap-3 pt-2">
-                    <button id="fu-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl hover:bg-slate-200 text-sm">Cancelar</button>
-                    <button id="fu-salvar" class="flex-1 bg-purple-600 text-white font-black py-2.5 rounded-xl hover:bg-purple-700 text-sm shadow">Salvar</button>
+                    <button id="fu-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button id="fu-salvar" class="flex-1 bg-purple-600 text-white font-black py-2.5 rounded-xl">Salvar</button>
                 </div>
             </div>`;
         document.body.appendChild(overlay);
 
         document.getElementById('fu-cancelar').onclick = () => overlay.remove();
-        overlay.addEventListener('click', (e) => { if (e.target === overlay) overlay.remove(); });
-
         document.getElementById('fu-salvar').onclick = async () => {
             const nome = document.getElementById('fu-nome').value.trim();
             if (!nome) { showNotification("O nome é obrigatório.", "error"); return; }
 
-            const unidadeId = nome
-                .toLowerCase()
-                .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
-                .replace(/\s+/g, '_')
-                .replace(/[^a-z0-9_]/g, '');
-
-            await setDoc(doc(db, "estrutura_unidades", unidade?.id || unidadeId), {
-                id: unidade?.id || unidadeId,
+            const unidadeId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            
+            const dados = {
                 nome,
-                sigla:     document.getElementById('fu-sigla').value.trim(),
-                endereco:  document.getElementById('fu-endereco').value.trim(),
-                telefone:  document.getElementById('fu-telefone').value.trim(),
-                email:     document.getElementById('fu-email').value.trim(),
-                createdAt: unidade?.createdAt || new Date().toISOString(),
-                updatedAt: new Date().toISOString(),
-            });
+                sigla: document.getElementById('fu-sigla').value.trim(),
+                endereco: document.getElementById('fu-endereco').value.trim(),
+                telefone: document.getElementById('fu-telefone').value.trim(),
+                email: document.getElementById('fu-email').value.trim(),
+                updatedAt: new Date().toISOString()
+            };
 
-            showNotification(isNova ? "Unidade criada!" : "Unidade atualizada!", "success");
+            if (isNova) {
+                dados.id = unidadeId;
+                dados.createdAt = new Date().toISOString();
+                await setDoc(doc(db, "estrutura_unidades", unidadeId), dados);
+                showNotification("Unidade criada!", "success");
+            } else {
+                await updateDoc(doc(db, "estrutura_unidades", unidade.id), dados);
+                showNotification("Unidade atualizada!", "success");
+            }
             overlay.remove();
         };
     },
 
-    // ── 8. DOWNLOADS ──────────────────────────────────────────────────────────
+    _abrirFormRecepcao(rec, isNova = false) {
+        const db = this._app.db;
+        const overlay = document.createElement('div');
+        overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
+        overlay.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
+                <h4 class="font-black text-slate-800 text-lg">${isNova ? '+ Nova Recepção' : '✏️ Editar Recepção'}</h4>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Nome *</label><input id="fr-nome" value="${escapeHTML(rec?.nome || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Andar</label><input id="fr-andar" value="${escapeHTML(rec?.andar || '')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                    <div><label class="block text-[10px] font-black text-slate-500 uppercase">Tipo</label><select id="fr-tipo" class="w-full p-2.5 border rounded-lg text-sm">
+                        ${['central','especializada','mista','generalista'].map(t => `<option value="${t}" ${rec?.tipo === t ? 'selected' : ''}>${t}</option>`).join('')}
+                    </select></div>
+                </div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Salas (separadas por vírgula)</label><input id="fr-salas" value="${(rec?.salas || []).join(', ')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                <div><label class="block text-[10px] font-black text-slate-500 uppercase">Assuntos (separados por vírgula)</label><input id="fr-assuntos" value="${(rec?.grupos || []).join(', ')}" class="w-full p-2.5 border rounded-lg text-sm"></div>
+                <div class="flex gap-3 pt-2">
+                    <button id="fr-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl">Cancelar</button>
+                    <button id="fr-salvar" class="flex-1 bg-purple-600 text-white font-black py-2.5 rounded-xl">Salvar</button>
+                </div>
+            </div>`;
+        document.body.appendChild(overlay);
+
+        document.getElementById('fr-cancelar').onclick = () => overlay.remove();
+        document.getElementById('fr-salvar').onclick = async () => {
+            const nome = document.getElementById('fr-nome').value.trim();
+            if (!nome) { showNotification("O nome é obrigatório.", "error"); return; }
+
+            const visual = TIPO_VISUAL[document.getElementById('fr-tipo').value] || TIPO_VISUAL.especializada;
+            const dados = {
+                nome,
+                andar: document.getElementById('fr-andar').value.trim(),
+                tipo: document.getElementById('fr-tipo').value,
+                icone: visual.icone,
+                cor: visual.cor,
+                salas: document.getElementById('fr-salas').value.split(',').map(s => s.trim()).filter(Boolean),
+                grupos: document.getElementById('fr-assuntos').value.split(',').map(a => a.trim()).filter(Boolean),
+                verTudo: document.getElementById('fr-tipo').value === 'central',
+                updatedAt: new Date().toISOString()
+            };
+
+            if (isNova) {
+                dados.unidadeId = rec.unidadeId;
+                dados.unidadeNome = rec.unidadeNome;
+                dados.createdAt = new Date().toISOString();
+                dados.ativo = true;
+                const id = `${dados.unidadeId}_${nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')}`;
+                await setDoc(doc(db, "recepcoes", id), { ...dados, id });
+                showNotification("Recepção criada!", "success");
+            } else {
+                await updateDoc(doc(db, "recepcoes", rec.id), dados);
+                showNotification("Recepção atualizada!", "success");
+            }
+            overlay.remove();
+        };
+    },
+
+    // =========================================================================
+    // 13. DOWNLOADS
+    // =========================================================================
 
     _baixarModeloCSV() {
-        const csv = [
-            'tipo,nome,sigla,endereco,telefone,email,andar,recepcao_nome,recepcao_tipo,salas,responsaveis,assuntos',
-            'UNIDADE,Defensoria Pública - Duque de Caxias,DP Caxias,"Av. Presidente Kennedy s/n",(21) 2675-1234,caxias@dperj.br,,,,,,',
-            'RECEPCAO,,,,,,Térreo,Recepção Central,central,"Recepção Principal;Guichê 1;Guichê 2","admin@dperj.br",',
-            'RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª Vara Família;CEJUSC","familia@dperj.br","Família;Alimentos;Guarda"',
-            'RECEPCAO,,,,,,3º Andar,Núcleo Cível,especializada,"1ª Vara Cível;2ª Vara Cível","civel@dperj.br","Cível;Consumidor;Locação"',
-            'RECEPCAO,,,,,,4º Andar,Núcleo Criminal,especializada,"1ª Vara Criminal;2ª Vara Criminal;VEP","criminal@dperj.br","Criminal;Execução Penal"',
-            'UNIDADE,Defensoria Pública - Belford Roxo,DP Belford Roxo,"Rua Gerson Costa s/n",(21) 2661-4321,belfordroxo@dperj.br,,,,,,',
-            'RECEPCAO,,,,,,Térreo,Recepção Central,central,"Recepção Principal;Guichê Único","admin.br@dperj.br",',
-            'RECEPCAO,,,,,,1º Andar,Núcleo Geral,generalista,"1ª Vara Geral;2ª Vara Geral","geral@dperj.br","Família;Cível;Criminal"',
-        ].join('\n');
-
+        const csv = `tipo,nome,sigla,endereco,telefone,email,andar,recepcao_nome,recepcao_tipo,salas,responsaveis,assuntos
+UNIDADE,Defensoria Pública - Duque de Caxias,DP Caxias,"Av. Presidente Kennedy, s/n",(21) 2675-1234,caxias@dperj.br,,,,,,
+RECEPCAO,,,,,,Térreo,Recepção Central,central,"Recepção Principal;Guichê 1","admin@dperj.br",
+RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª Vara Família;CEJUSC","familia@dperj.br","Família;Alimentos;Guarda"`;
         this._download('modelo_estrutura_orgaos.csv', csv, 'text/csv;charset=utf-8;');
     },
 
     _baixarModeloJSON() {
         const json = JSON.stringify({
-            unidades: [
-                {
-                    nome: "Defensoria Pública - Duque de Caxias",
-                    sigla: "DP Caxias",
-                    endereco: "Av. Presidente Kennedy, s/n",
-                    telefone: "(21) 2675-1234",
-                    email: "caxias@dperj.br",
-                    recepcoes: [
-                        { nome: "Recepção Central", andar: "Térreo", tipo: "central", salas: ["Recepção Principal", "Guichê 1"], responsaveis: ["admin@dperj.br"], assuntosPermitidos: [] },
-                        { nome: "Núcleo de Família", andar: "2º Andar", tipo: "especializada", salas: ["1ª Vara Família", "2ª Vara Família", "CEJUSC"], responsaveis: ["familia@dperj.br"], assuntosPermitidos: ["Família", "Alimentos", "Guarda"] },
-                        { nome: "Núcleo Cível", andar: "3º Andar", tipo: "especializada", salas: ["1ª Vara Cível", "2ª Vara Cível"], responsaveis: ["civel@dperj.br"], assuntosPermitidos: ["Cível", "Consumidor", "Locação"] },
-                    ]
-                }
-            ]
+            unidades: [{
+                nome: "Defensoria Pública - Duque de Caxias",
+                sigla: "DP Caxias",
+                endereco: "Av. Presidente Kennedy, s/n",
+                telefone: "(21) 2675-1234",
+                email: "caxias@dperj.br",
+                recepcoes: [
+                    { nome: "Recepção Central", andar: "Térreo", tipo: "central", salas: ["Recepção Principal", "Guichê 1"], responsaveis: ["admin@dperj.br"], assuntosPermitidos: [] }
+                ]
+            }]
         }, null, 2);
-
         this._download('modelo_estrutura_orgaos.json', json, 'application/json');
     },
 
@@ -948,10 +979,29 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         link.download = nome;
         link.click();
         URL.revokeObjectURL(link.href);
-    },
+    }
 };
 
-export default ImportadorOrgaosService;
+// =========================================================================
+// FUNÇÕES GLOBAIS
+// =========================================================================
 
-// No final do arquivo importadorOrgaos.js
 window.abrirImportadorOrgaos = (app) => ImportadorOrgaosService.abrirModal(app);
+window.abrirGerenciadorUnidades = (app) => ImportadorOrgaosService.abrirGerenciador(app);
+window.abrirImportadorUnidades = (app) => ImportadorOrgaosService.abrirImportador(app);
+window.abrirUnidadesMaster = (app) => ImportadorOrgaosService.abrirModalMaster(app);
+
+export default ImportadorOrgaosService;
+```
+
+📋 No main.js, adicione o import e o listener:
+
+```javascript
+// No topo do main.js, adicione:
+import { ImportadorOrgaosService } from './importadorOrgaos.js';
+
+// Dentro do setupAdminPanel(), adicione:
+document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
+    if (adminModal) adminModal.classList.add('hidden');
+    ImportadorOrgaosService.abrirModalMaster(this);
+});
