@@ -21,6 +21,7 @@ const estado = {
     termoBusca: '',
     recepcaoAtual: null,     // recepção selecionada atual
     unidadeAtual: null,      // unidade selecionada atual
+    recepcoesDisponiveis: [], // cache das recepções do usuário
 };
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
@@ -70,29 +71,40 @@ export const RecepçãoCentralService = {
             return;
         }
 
+        // Carregar recepções disponíveis do usuário via Firestore
+        await this._carregarRecepcoesDoUsuario();
+
         // Mostrar seletor de recepções hierárquico
         await this._mostrarSelectorRecepcoes();
     },
 
-    // ── SELETOR DE RECEPÇÃO HIERÁRQUICA ─────────────────────────────────────────
+    async _carregarRecepcoesDoUsuario() {
+        const app = this._app;
+        estado.recepcoesDisponiveis = await RecepcaoConfigService.buscarRecepcoesDoUsuario(
+            app.db,
+            app.currentUser.uid,
+            app.currentUser.role
+        );
+        return estado.recepcoesDisponiveis;
+    },
+
+    // ─── SELETOR DE RECEPÇÃO HIERÁRQUICA ─────────────────────────────────────────
 
     async _mostrarSelectorRecepcoes() {
-        const recepcoes = RecepcaoConfigService.getRecepcoesDoUsuario(this._app.currentUser);
+        const recepcoes = estado.recepcoesDisponiveis;
         
         if (recepcoes.length === 0) {
             this._renderSemPermissao();
             return;
         }
         
-        if (recepcoes.length === 1 && recepcoes[0].tipo === 'central') {
-            // Única recepção central - carrega direto
+        if (recepcoes.length === 1) {
+            // Única recepção - carrega direto sem seletor
             this._recepcaoAtual = recepcoes[0];
-            this._unidadeAtual = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
-            await this._carregarPautasPorRecepcao();
-        } else if (recepcoes.length === 1) {
-            // Única recepção especializada - carrega direto com contexto
-            this._recepcaoAtual = recepcoes[0];
-            this._unidadeAtual = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
+            this._unidadeAtual = { 
+                id: recepcoes[0].unidadeId, 
+                nome: recepcoes[0].unidadeNome 
+            };
             await this._carregarPautasPorRecepcao();
         } else {
             // Múltiplas recepções - mostra seletor
@@ -141,12 +153,14 @@ export const RecepçãoCentralService = {
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const recepcaoId = btn.dataset.recepcaoId;
-                const unidadeId = btn.dataset.unidadeId;
+                const recepcaoEncontrada = estado.recepcoesDisponiveis.find(r => r.id === recepcaoId);
                 
-                const resultado = RecepcaoConfigService.getUnidadePorRecepcao(recepcaoId);
-                if (resultado) {
-                    this._recepcaoAtual = resultado.recepcao;
-                    this._unidadeAtual = { id: unidadeId, nome: resultado.unidade.nome };
+                if (recepcaoEncontrada) {
+                    this._recepcaoAtual = recepcaoEncontrada;
+                    this._unidadeAtual = { 
+                        id: recepcaoEncontrada.unidadeId, 
+                        nome: recepcaoEncontrada.unidadeNome 
+                    };
                     await this._carregarPautasPorRecepcao();
                 }
             });
@@ -165,7 +179,7 @@ export const RecepçãoCentralService = {
         // Mostrar loading
         this._mostrarLoading();
         
-        // Buscar pautas do dia
+        // Buscar pautas do dia via PautaConfigService
         let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
@@ -173,17 +187,17 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
         
-        // Filtrar pela recepção selecionada
-        if (this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
+        // Filtrar pela recepção selecionada usando o RecepcaoConfigService
+        if (this._recepcaoAtual && this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
         
         estado.pautasHoje = pautas;
         
-        // Iniciar listeners
+        // Iniciar listeners em tempo real
         await this._iniciarListeners();
         
-        // Renderizar tela com contexto
+        // Renderizar tela com contexto da recepção
         this._renderTelaComContexto();
     },
 
@@ -316,6 +330,7 @@ export const RecepçãoCentralService = {
         // Botão trocar recepção
         document.getElementById('rc-trocar-recepcao')?.addEventListener('click', async () => {
             this._cancelarListeners();
+            await this._carregarRecepcoesDoUsuario();
             await this._mostrarSelectorRecepcoes();
         });
     },
