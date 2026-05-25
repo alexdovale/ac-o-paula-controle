@@ -1,7 +1,6 @@
 
-
 import {
-    collection, doc, getDoc, getDocs, setDoc, addDoc, updateDoc, deleteDoc,
+    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc,
     writeBatch, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
@@ -88,6 +87,10 @@ export const ImportadorOrgaosService = {
             showNotification("Acesso restrito a Superadmin.", "warning");
             return;
         }
+
+        // Evita abrir múltiplos modais master
+        const existing = document.getElementById('modal-unidades-master');
+        if (existing) existing.remove();
 
         const modal = document.createElement('div');
         modal.id = 'modal-unidades-master';
@@ -581,9 +584,14 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     },
 
     _abrirFormRecPreview(uIdx, rIdx) {
+        // Prevenir duplicação
+        const existing = document.getElementById('modal-form-rec-preview');
+        if (existing) existing.remove();
+
         const rec = this._dadosEditados.unidades[uIdx].recepcoes[rIdx];
 
         const overlay = document.createElement('div');
+        overlay.id = 'modal-form-rec-preview';
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
@@ -620,7 +628,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     },
 
     // =========================================================================
-    // 9. IMPORTAÇÃO PARA O SISTEMA
+    // 9. IMPORTAÇÃO PARA O SISTEMA (OTIMIZADO COM BATCH)
     // =========================================================================
 
     async _importarParaSistema() {
@@ -643,12 +651,18 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             let unidadesCriadas = 0;
             let recepcoesCriadas = 0;
 
+            let batch = writeBatch(db);
+            let operacoesBatch = 0;
+
             for (const unidade of dados.unidades) {
+                // Prevenção de unidades duplicadas baseada no nome
                 if (nomesExistentes.has(unidade.nome)) continue;
 
+                // Criação do ID de forma determinística
                 const unidadeId = unidade.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
 
-                await setDoc(doc(db, "estrutura_unidades", unidadeId), {
+                const unidadeRef = doc(db, "estrutura_unidades", unidadeId);
+                batch.set(unidadeRef, {
                     id: unidadeId,
                     nome: unidade.nome,
                     sigla: unidade.sigla || '',
@@ -659,6 +673,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                     importadoPor: this._app.currentUser?.email || 'superadmin',
                 });
                 unidadesCriadas++;
+                operacoesBatch++;
 
                 for (const rec of (unidade.recepcoes || [])) {
                     const visual = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
@@ -666,21 +681,41 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                         a.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '')
                     );
 
-                    await this._criarRecepcao(db, {
+                    const recepcaoId = `${unidadeId}_${rec.nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_')}`;
+                    const recepcaoRef = doc(db, "recepcoes", recepcaoId);
+
+                    batch.set(recepcaoRef, {
+                        id: recepcaoId,
+                        unidadeId,
+                        unidadeNome: unidade.nome,
                         nome: rec.nome,
                         icone: visual.icone,
                         cor: visual.cor,
-                        unidadeId,
-                        unidadeNome: unidade.nome,
                         andar: rec.andar || '',
                         tipo: rec.tipo || 'especializada',
                         grupos,
                         verTudo: rec.verTudo || rec.tipo === 'central',
                         salas: rec.salas || [],
                         responsaveis: rec.responsaveis || [],
+                        ativo: true,
+                        createdAt: new Date().toISOString(),
+                        updatedAt: new Date().toISOString()
                     });
                     recepcoesCriadas++;
+                    operacoesBatch++;
+
+                    // Limite do Firestore de 500 operações por batch
+                    if (operacoesBatch >= 490) {
+                        await batch.commit();
+                        batch = writeBatch(db); // Inicia um novo batch
+                        operacoesBatch = 0;
+                    }
                 }
+            }
+
+            // Comita as operações restantes do último batch
+            if (operacoesBatch > 0) {
+                await batch.commit();
             }
 
             await logAction(db, this._app.auth, this._app.currentUserName, null, 'IMPORT_ESTRUTURA', `Importou ${unidadesCriadas} unidades e ${recepcoesCriadas} recepções`);
@@ -699,7 +734,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     },
 
     // =========================================================================
-    // 10. CRUD DE RECEPÇÕES
+    // 10. CRUD DE RECEPÇÕES (MÉTODOS AVULSOS)
     // =========================================================================
 
     async _criarRecepcao(db, dados) {
@@ -812,7 +847,8 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                     if (!confirm(`Excluir a unidade "${btn.dataset.nome}" e todas as suas recepções?`)) return;
                     await deleteDoc(doc(db, "estrutura_unidades", btn.dataset.unidadeId));
                     const recs = recepcoesPorUnidade[btn.dataset.unidadeId] || [];
-                    for (const r of recs) await this._excluirRecepcao(db, r.id);
+                    // Melhoria: Usando Promise.all para executar exclusões em paralelo
+                    await Promise.all(recs.map(r => this._excluirRecepcao(db, r.id)));
                     showNotification("Unidade removida.", "info");
                 });
             });
@@ -837,9 +873,14 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     // =========================================================================
 
     _abrirFormUnidade(unidade = null) {
+        // Prevenir duplicação do modal
+        const existing = document.getElementById('modal-form-unidade');
+        if (existing) existing.remove();
+
         const db = this._app.db;
         const isNova = !unidade;
         const overlay = document.createElement('div');
+        overlay.id = 'modal-form-unidade';
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
@@ -888,8 +929,13 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     },
 
     _abrirFormRecepcao(rec, isNova = false) {
+        // Prevenir duplicação do modal
+        const existing = document.getElementById('modal-form-recepcao');
+        if (existing) existing.remove();
+
         const db = this._app.db;
         const overlay = document.createElement('div');
+        overlay.id = 'modal-form-recepcao';
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
@@ -992,16 +1038,3 @@ window.abrirImportadorUnidades = (app) => ImportadorOrgaosService.abrirImportado
 window.abrirUnidadesMaster = (app) => ImportadorOrgaosService.abrirModalMaster(app);
 
 export default ImportadorOrgaosService;
-```
-
-📋 No main.js, adicione o import e o listener:
-
-```javascript
-// No topo do main.js, adicione:
-import { ImportadorOrgaosService } from './importadorOrgaos.js';
-
-// Dentro do setupAdminPanel(), adicione:
-document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
-    if (adminModal) adminModal.classList.add('hidden');
-    ImportadorOrgaosService.abrirModalMaster(this);
-});
