@@ -25,7 +25,7 @@ import { PainelGeralService } from './painelGeralService.js';
 
 // NOVOS IMPORTS - GUIA DE INTEGRAÇÃO
 import { PautaConfigService } from './pautaConfig.js';
-import { RecepçãoCentralService } from './recepcaoCentral.js'; // ← CORRIGIDO: com acento
+import { RecepçãoCentralService } from './recepcaoCentral.js';
 
 class SIGEPApp { 
     constructor() {
@@ -190,9 +190,9 @@ class SIGEPApp {
             this.showPautaSelectionScreen();
         });        
 
-        // NOVO BOTÃO DA RECEPÇÃO CENTRAL - CORRIGIDO
+        // NOVO BOTÃO DA RECEPÇÃO CENTRAL
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            await RecepçãoCentralService.abrir(this); // ← CORRIGIDO: com acento
+            await RecepçãoCentralService.abrir(this);
         });
 
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
@@ -1647,6 +1647,8 @@ class SIGEPApp {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
+                // GARANTIR QUE O CAMPO 'MODO' EXISTE (DEFAULT = 'normal')
+                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
                 
@@ -1842,10 +1844,18 @@ class SIGEPApp {
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // CONTROLE DO NOVO BOTÃO DA RECEPÇÃO CENTRAL
+        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - AGORA CONSIDERA O MODO DA PAUTA
         const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
         if (btnRecepcaoCentral) {
-            const podeAcessarRecepcao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole);
+            // Verifica se a pauta atual é do tipo EVENTO (Mutirão/Plantão/Ação Social)
+            const isModoEvento = this.currentPautaData?.modo === 'mutirao' || 
+                                 this.currentPautaData?.modo === 'plantao' || 
+                                 this.currentPautaData?.modo === 'acao_social';
+            
+            // Só mostra o botão se:
+            // 1. Usuário tem permissão (apoio/admin/superadmin)
+            // 2. NÃO é modo evento
+            const podeAcessarRecepcao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole) && !isModoEvento;
             btnRecepcaoCentral.classList.toggle('hidden', !podeAcessarRecepcao);
         }
 
