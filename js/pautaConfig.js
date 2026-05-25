@@ -1,3 +1,4 @@
+
 // js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
 // Extraído do main.js para manter o orquestrador enxuto.
 // Responsabilidades: criação, edição, templates, validação, vínculo de equipe e data de operação.
@@ -17,7 +18,8 @@ const DEFAULTS = {
     ordemAtendimento: 'padrao',
     useDelegationFlow: false,
     useDistributionFlow: false,
-    type: 'agendamento'
+    type: 'agendamento',
+    modo: 'normal'
 };
 
 // ─── HELPERS INTERNOS ──────────────────────────────────────────────────────────
@@ -204,6 +206,9 @@ export const PautaConfigService = {
             dateInput.value = new Date().toISOString().split('T')[0];
         }
 
+        // ADICIONAR SELETOR DE MODO
+        this._adicionarSelectorModo();
+
         createModal.classList.remove('hidden');
     },
 
@@ -223,6 +228,65 @@ export const PautaConfigService = {
                 <button class="remove-room-btn text-red-500 hover:text-red-700 text-xs font-bold" data-index="${i}">Remover</button>
             </div>
         `).join('');
+    },
+
+    // ⭐ NOVO MÉTODO: ADICIONAR SELETOR DE MODO ⭐
+    _adicionarSelectorModo() {
+        // Verificar se já existe o seletor de modo
+        let modoContainer = document.getElementById('pauta-modo-container');
+        
+        if (!modoContainer) {
+            // Encontrar onde inserir (após o campo de data)
+            const dateInput = document.getElementById('create-pauta-date-input');
+            const pai = dateInput?.parentNode || document.getElementById('create-pauta-name-input')?.parentNode;
+            
+            if (!pai) return;
+            
+            modoContainer = document.createElement('div');
+            modoContainer.id = 'pauta-modo-container';
+            modoContainer.className = 'mb-4 sm:mb-6';
+            modoContainer.innerHTML = `
+                <label class="block text-sm font-medium text-gray-700 mb-2">📋 Tipo de Atividade</label>
+                <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="pauta-modo" value="normal" class="w-4 h-4 text-green-600" checked>
+                        <div>
+                            <span class="text-sm font-bold">🏛️ Normal</span>
+                            <p class="text-[9px] text-gray-500">Atendimento regular do órgão</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="pauta-modo" value="mutirao" class="w-4 h-4 text-green-600">
+                        <div>
+                            <span class="text-sm font-bold">🤝 Mutirão</span>
+                            <p class="text-[9px] text-gray-500">Evento concentrado</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="pauta-modo" value="plantao" class="w-4 h-4 text-green-600">
+                        <div>
+                            <span class="text-sm font-bold">🚨 Plantão</span>
+                            <p class="text-[9px] text-gray-500">Atendimento emergencial</p>
+                        </div>
+                    </label>
+                    <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                        <input type="radio" name="pauta-modo" value="acao_social" class="w-4 h-4 text-green-600">
+                        <div>
+                            <span class="text-sm font-bold">❤️ Ação Social</span>
+                            <p class="text-[9px] text-gray-500">Atividade comunitária</p>
+                        </div>
+                    </label>
+                </div>
+                <p class="text-[10px] text-amber-600 mt-2">⚠️ Modos Mutirão, Plantão e Ação Social NÃO terão acesso à Recepção Central</p>
+            `;
+            
+            // Inserir após o campo de data
+            if (dateInput) {
+                dateInput.insertAdjacentElement('afterend', modoContainer);
+            } else {
+                pai.appendChild(modoContainer);
+            }
+        }
     },
 
     _preencherFormEdicao(pautaData) {
@@ -256,6 +320,9 @@ export const PautaConfigService = {
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value
                           || new Date().toISOString().split('T')[0];
+        
+        // CAPTURAR O MODO SELECIONADO
+        const modoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.modo;
 
         if (!pautaName) {
             showNotification("O nome da pauta não pode ser vazio.", "error");
@@ -273,6 +340,7 @@ export const PautaConfigService = {
             const novaPautaData = {
                 name: pautaName,
                 type: pautaType || DEFAULTS.type,
+                modo: modoSelecionado, // ⭐ CAMPO MODO ADICIONADO
                 owner: user.uid,
                 members: [user.uid],
                 memberEmails: [user.email],
@@ -296,7 +364,7 @@ export const PautaConfigService = {
                 app.currentUserName,
                 pautaRef.id,
                 'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) para ${dataOp}`
+                `Criou pauta "${pautaName}" (${pautaType}) para ${dataOp} - Modo: ${modoSelecionado}`
             );
 
             // Integração Verde/Solar
@@ -390,9 +458,13 @@ export const PautaConfigService = {
         const nome = prompt("Nome do template:");
         if (!nome || !nome.trim()) return;
 
+        // Capturar modo também no template
+        const modoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.modo;
+
         const template = {
             id: Date.now().toString(),
             nome: nome.trim(),
+            modo: modoSelecionado,
             type: document.getElementById('create-pauta-modal')?.dataset.pautaType || DEFAULTS.type,
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
@@ -414,6 +486,12 @@ export const PautaConfigService = {
         // Tipo
         const createModal = document.getElementById('create-pauta-modal');
         if (createModal) createModal.dataset.pautaType = t.type;
+
+        // MODO - selecionar o radio correspondente
+        const modoRadios = document.querySelectorAll('input[name="pauta-modo"]');
+        modoRadios.forEach(radio => {
+            radio.checked = radio.value === t.modo;
+        });
 
         // Ordem
         document.querySelectorAll('input[name="ordemAtendimento"]').forEach(r => {
@@ -441,7 +519,7 @@ export const PautaConfigService = {
         templates.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = t.nome;
+            opt.textContent = `${t.nome} (${t.modo === 'normal' ? '🏛️' : t.modo === 'mutirao' ? '🤝' : t.modo === 'plantao' ? '🚨' : '❤️'} ${t.modo || 'normal'})`;
             select.appendChild(opt);
         });
     },
@@ -450,7 +528,7 @@ export const PautaConfigService = {
 
     /**
      * Cria múltiplas pautas de uma vez.
-     * @param {Array<{name, type, dataOperacao, ordemAtendimento, useDelegationFlow, useDistributionFlow}>} lista
+     * @param {Array<{name, type, dataOperacao, ordemAtendimento, useDelegationFlow, useDistributionFlow, modo}>} lista
      */
     async criarPautasEmLote(lista) {
         const app = this._app;
@@ -467,6 +545,7 @@ export const PautaConfigService = {
                 const novaPauta = {
                     name: item.name,
                     type: item.type || DEFAULTS.type,
+                    modo: item.modo || DEFAULTS.modo,
                     owner: user.uid,
                     members: [user.uid],
                     memberEmails: [user.email],
@@ -484,7 +563,7 @@ export const PautaConfigService = {
                     app.currentUserName,
                     ref.id,
                     'CREATE_PAUTA_LOTE',
-                    `Criou pauta em lote: "${item.name}" para ${novaPauta.dataOperacao}`
+                    `Criou pauta em lote: "${item.name}" para ${novaPauta.dataOperacao} - Modo: ${novaPauta.modo}`
                 );
                 criadas++;
             } catch (err) {
@@ -511,6 +590,9 @@ export const PautaConfigService = {
             return snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
+                    // GARANTIR QUE O CAMPO MODO EXISTE
+                    if (!p.modo) p.modo = DEFAULTS.modo;
+                    
                     const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
                     const ehHoje = dataOp === hoje;
                     const isAdmin = role === 'admin' || role === 'superadmin';
@@ -537,6 +619,7 @@ export const PautaConfigService = {
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
+                    if (!p.modo) p.modo = DEFAULTS.modo;
                     const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
                     return dataOp === hoje && !p.isClosed;
                 });
