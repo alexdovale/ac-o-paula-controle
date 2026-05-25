@@ -1691,93 +1691,120 @@ class SIGEPApp {
     }
 
     setupAdminPanel() {
-        const adminModal = document.getElementById('admin-modal');
-        if (adminModal) {
-            loadUsersList(this.db);
-            populateUserFilter(this.db);
-        }
+    const adminModal = document.getElementById('admin-modal');
+    if (adminModal) {
+        loadUsersList(this.db);
+        populateUserFilter(this.db);
+    }
+
+    // ============================================================
+    // BOTÕES DO PAINEL ADMIN - GERENCIAMENTO DE UNIDADES
+    // ============================================================
     
-        // ============================================================
-        // BOTÕES DO PAINEL ADMIN - GERENCIAMENTO DE UNIDADES
-        // ============================================================
-        
-        // Botão: Gerenciar Unidades (usa o admin.js)
-        document.getElementById('btn-gerenciar-unidades')?.addEventListener('click', () => {
+    // Botão: Gerenciar Unidades (usa o admin.js)
+    const btnGerenciarUnidades = document.getElementById('btn-gerenciar-unidades');
+    if (btnGerenciarUnidades) {
+        btnGerenciarUnidades.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("🖱️ Clique em Gerenciar Unidades");
+            
+            // Fecha o modal de admin
+            if (adminModal) adminModal.classList.add('hidden');
+            
+            // Tenta usar a função global primeiro
             if (typeof window.abrirGerenciadorUnidades === 'function') {
                 window.abrirGerenciadorUnidades();
             } else {
-                // Fallback: importa a função e executa
+                // Fallback: importa e executa
                 import('./admin.js').then(module => {
                     module.abrirGerenciadorUnidades(this.db);
-                }).catch(() => {
+                }).catch(err => {
+                    console.error("Erro ao carregar admin.js:", err);
                     showNotification("Erro ao carregar gerenciador de unidades", "error");
                 });
             }
         });
-        
-        // Botão: Importar Órgãos (usa o importadorOrgaos.js)
-        document.getElementById('btn-importar-orgaos')?.addEventListener('click', () => {
-            if (typeof ImportadorOrgaosService !== 'undefined' && ImportadorOrgaosService.abrirModal) {
+    } else {
+        console.warn("⚠️ Botão #btn-gerenciar-unidades não encontrado no DOM");
+    }
+    
+    // Botão: Importar Órgãos (usa o importadorOrgaos.js)
+    const btnImportarOrgaos = document.getElementById('btn-importar-orgaos');
+    if (btnImportarOrgaos) {
+        btnImportarOrgaos.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            console.log("🖱️ Clique em Importar Órgãos");
+            
+            // Fecha o modal de admin
+            if (adminModal) adminModal.classList.add('hidden');
+            
+            // Usa o ImportadorOrgaosService já importado
+            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModal === 'function') {
                 ImportadorOrgaosService.abrirModal(this);
             } else {
                 // Fallback: importa dinamicamente
                 import('./importadorOrgaos.js').then(module => {
                     module.ImportadorOrgaosService.abrirModal(this);
                 }).catch((err) => {
-                    console.error("Erro ao carregar importador:", err);
+                    console.error("Erro ao carregar importadorOrgaos.js:", err);
                     showNotification("Erro ao carregar importador de órgãos", "error");
                 });
             }
         });
-    
-        // ============================================================
-        // BOTÕES EXISTENTES DO ADMIN
-        // ============================================================
-    
-        document.getElementById('max-admin-btn')?.addEventListener('click', () => {
-            const windowEl = document.getElementById('admin-window');
-            if (windowEl) {
-                windowEl.classList.toggle('max-w-4xl');
-                windowEl.classList.toggle('max-w-none');
-                windowEl.classList.toggle('rounded-lg');
-            }
-        });
-    
-        document.getElementById('min-admin-btn')?.addEventListener('click', () => {
-            document.getElementById('admin-content-area')?.classList.toggle('hidden');
-        });
-    
-        document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
-            if (adminModal) adminModal.classList.add('hidden');
-        });
-    
-        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-            cleanupOldData(this.db);
-        });
-    
-        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('view-audit-logs-btn');
-            const originalText = btn.textContent;
-            btn.textContent = "Carregando...";
-            btn.disabled = true;
-            try {
-                await loadAuditLogs(this.db);
-            } catch (error) {
-                showNotification("Erro ao carregar logs de auditoria", "error");
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        });
-    
-        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-            exportAuditLogsPDF(this.db);
-        });
-    
-        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-            loadDashboardData(this.db);
-        });
+    } else {
+        console.warn("⚠️ Botão #btn-importar-orgaos não encontrado no DOM");
     }
+
+    // ============================================================
+    // BOTÕES EXISTENTES DO ADMIN
+    // ============================================================
+
+    document.getElementById('max-admin-btn')?.addEventListener('click', () => {
+        const windowEl = document.getElementById('admin-window');
+        if (windowEl) {
+            windowEl.classList.toggle('max-w-4xl');
+            windowEl.classList.toggle('max-w-none');
+            windowEl.classList.toggle('rounded-lg');
+        }
+    });
+
+    document.getElementById('min-admin-btn')?.addEventListener('click', () => {
+        document.getElementById('admin-content-area')?.classList.toggle('hidden');
+    });
+
+    document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
+        if (adminModal) adminModal.classList.add('hidden');
+    });
+
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+        cleanupOldData(this.db);
+    });
+
+    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('view-audit-logs-btn');
+        const originalText = btn.textContent;
+        btn.textContent = "Carregando...";
+        btn.disabled = true;
+        try {
+            await loadAuditLogs(this.db);
+        } catch (error) {
+            showNotification("Erro ao carregar logs de auditoria", "error");
+        } finally {
+            btn.textContent = originalText;
+            btn.disabled = false;
+        }
+    });
+
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+        exportAuditLogsPDF(this.db);
+    });
+
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+        loadDashboardData(this.db);
+    });
+}
     
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
