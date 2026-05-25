@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -100,6 +101,8 @@
             100% { background-color: #e2e8f0; transform: scale(1); }
         }
         #main-wrapper { flex: 1 0 auto; }
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -170,6 +173,9 @@
             </div>
 
             <div class="flex flex-col sm:flex-row justify-center items-center w-full gap-3 mb-6">
+                <button id="btn-recepcao-central" class="bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
+                    🏛️ Recepção Central
+                </button>
                 <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
                     Painel do Administrador
                 </button>
@@ -203,7 +209,12 @@
                 <div class="loader-small mx-auto my-12"></div>
                 <p class="text-center text-gray-500 mt-4">Carregando dados do Dashboard...</p>
             </div>
-        </div>        
+        </div>
+
+        <!-- RECEPÇÃO CENTRAL - CONTAINER -->
+        <div id="recepcao-central-container" class="hidden max-w-7xl mx-auto px-2 sm:px-4 py-4">
+            <!-- O conteúdo será injetado dinamicamente pelo RecepcaoCentralService -->
+        </div>
 
         <div id="app-container" class="max-w-full mx-auto hidden">
             <header class="mb-4 sm:mb-6 space-y-4">
