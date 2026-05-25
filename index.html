@@ -4,7 +4,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Sistema de Gerenciamento de Pauta - SIGEP</title>
+    <title>SIGEP - Sistema de Gerenciamento de Pauta</title>
 
     <link class="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
@@ -40,9 +40,9 @@
     <script type="text/javascript" src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; }
         html, body {
             transform: none !important;
             filter: none !important;     
@@ -52,1032 +52,522 @@
             height: 100%;                
             width: 100%;                 
         }
-        .priority-urgente { border-left: 5px solid #ef4444; }
-        .priority-maxima { border-left: 5px solid #22c55e; }
-        .priority-media { border-left: 5px solid #f97316; }
-        .priority-minima { border-left: 5px solid #6b7280; }
-        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
-        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
+        
+        /* Custom Scrollbars para as colunas do Kanban */
+        .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar { width: 6px; height: 6px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track { background: transparent; }
+        .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .column-content:hover::-webkit-scrollbar-thumb, .scrollable-content:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
+        
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         
-        /* Garantir sobreposição de exclusividade da aba ativa */
-        .tab-active { border-color: #16a34a !important; background-color: #f0fdf4 !important; color: #16a34a !important; font-weight: 600 !important; }
+        .tab-active { border-color: #2563eb !important; background-color: #eff6ff !important; color: #1d4ed8 !important; font-weight: 700 !important; }
         
-        .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #16a34a; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
+        .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.95); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; backdrop-filter: blur(5px); }
+        .loader { border: 4px solid #f1f5f9; border-top: 4px solid #2563eb; border-radius: 50%; width: 48px; height: 48px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
 
-        .confirm-btn-style {
-            display: inline-flex;
-            align-items: center;
-            justify-content: center;
-            width: 28px; 
-            height: 28px; 
-            border-radius: 50%;
-            border: 1px solid currentColor;
-            transition: background-color 0.2s, color 0.2s, border-color 0.2s;
-            flex-shrink: 0; 
-            margin-left: 8px; 
-        }
-        .confirm-btn-icon { width: 18px; height: 18px; color: white; }
-        .grid.gap-2 > div { padding: 0.5rem; }
-        .space-y-2 > * + * { margin-top: 0.25rem; }
-        .p-chip.selected { background-color: #fee2e2; border-color: #ef4444; color: #b91c1c; transform: scale(1.05); }
-        .filter-btn-active { background-color: #16a34a; color: white; }
-        .loader-small {
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #8b5cf6;
-            border-radius: 50%;
-            width: 30px;
-            height: 30px;
-            animation: spin 1s linear infinite;
-            margin: 0 auto;
-        }
-        .count-pulse { animation: pulse-bg 1s forwards; }
-        @keyframes pulse-bg {
-            0% { background-color: #a7f3d0; transform: scale(1); }
-            50% { background-color: #34d399; transform: scale(1.1); }
-            100% { background-color: #e2e8f0; transform: scale(1); }
-        }
-        #main-wrapper { flex: 1 0 auto; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-10px); } to { opacity: 1; transform: translateY(0); } }
+        .loader-small { border: 3px solid #f1f5f9; border-top: 3px solid #6366f1; border-radius: 50%; width: 28px; height: 28px; animation: spin 1s linear infinite; margin: 0 auto; }
         
-        /* Estilo adicional para os cards */
+        #main-wrapper { flex: 1 0 auto; display: flex; flex-direction: column; }
+        .animate-fade-in { animation: fadeIn 0.4s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
         .card-modo { transition: all 0.3s ease; }
-        .card-modo:hover { transform: translateY(-4px); }
+        .card-modo:hover { transform: translateY(-4px); box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1); }
+        
+        /* Kanban Layout */
+        .kanban-container { display: flex; flex-wrap: nowrap; overflow-x: auto; gap: 1rem; padding-bottom: 1rem; height: calc(100vh - 220px); align-items: flex-start; }
+        .kanban-column { flex: 0 0 320px; max-width: 320px; display: flex; flex-direction: column; height: 100%; background: #f1f5f9; border-radius: 0.75rem; border: 1px solid #e2e8f0; }
+        .kanban-column-body { flex: 1; overflow-y: auto; padding: 0.75rem; }
     </style>
 </head>
-<body class="p-0 sm:p-0 md:p-0">
+<body class="text-slate-800">
 
-    <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
-        ⚠️ Sem conexão. Trabalhando em Modo Offline no SIGEP.
+    <!-- Indicador Offline -->
+    <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1.5 text-xs sm:text-sm font-bold hidden z-[100] transition-all shadow-md flex justify-center items-center gap-2">
+        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        Sem conexão. Trabalhando em Modo Offline no SIGEP.
     </div>
 
+    <!-- Loading Inicial -->
     <div id="loading-container" class="loading-container">
         <div class="loader"></div>
-        <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
+        <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm uppercase tracking-widest text-center">Conectando ao SIGEP...</p>
     </div>
 
-    <!-- TELA DE SELEÇÃO DE MODO -->
-    <div id="modo-selection-container" class="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-slate-50">
-        <div class="max-w-4xl w-full">
+    <!-- MAIN WRAPPER PARA TODAS AS TELAS -->
+    <div id="main-wrapper" class="w-full">
+
+        <!-- ========================================== -->
+        <!-- TELA 1: LOGIN E SELEÇÃO DE MODO UNIFICADOS -->
+        <!-- ========================================== -->
+        <div id="login-container" class="hidden flex-col items-center justify-center p-4 sm:p-6 w-full min-h-[90vh]">
             
-            <!-- Cabeçalho com a LOGO do sistema -->
-            <div class="text-center mb-10">
-                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-4">
-                <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight uppercase">
-                    SIGEP
-                </h1>
-                <p class="text-slate-500 font-bold tracking-widest text-xs sm:text-sm uppercase mt-2">
-                    Sistema de Gerenciamento de Pauta
-                </p>
-                <p class="text-slate-400 text-sm mt-1">Escolha o modo de operação para continuar</p>
+            <div class="text-center mb-8 animate-fade-in w-full max-w-4xl">
+                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-4 drop-shadow-sm">
+                <h1 class="text-3xl sm:text-4xl font-black text-slate-800 tracking-tight leading-tight uppercase">SIGEP</h1>
+                <p class="text-slate-500 font-bold tracking-widest text-[10px] sm:text-xs uppercase mt-1">Sistema de Gerenciamento de Pauta</p>
             </div>
 
-            <!-- Grid dos cards -->
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+            <!-- PASSO 1: SELEÇÃO -->
+            <div id="modo-selection-view" class="max-w-4xl w-full grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
                 
                 <!-- CARD MODO NORMAL -->
-                <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between group cursor-pointer">
+                <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-400 flex flex-col justify-between group cursor-pointer animate-fade-in">
                     <div class="absolute -top-3 left-6">
-                        <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase flex items-center shadow-sm">
-                            Rotina Diária
-                        </span>
+                        <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase shadow-sm">Rotina Diária</span>
                     </div>
-                    <div class="mt-2">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="bg-gray-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-100 group-hover:bg-blue-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
-                                </svg>
+                    <div>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-blue-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
                             </div>
-                            <h2 class="font-bold text-2xl text-gray-800 leading-tight uppercase">Modo Normal</h2>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Normal</h2>
                         </div>
-                        <div class="space-y-3 mb-8">
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span>Fluxo com <strong>Recepção Central e Delegação</strong></span>
                             </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span>Controle rigoroso de <strong>Agendamentos</strong></span>
                             </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span>Gestão de <strong>Múltiplas Pautas e Salas</strong></span>
                             </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                                <span>Acompanhamento de <strong>Faltosos e Histórico</strong></span>
-                            </p>
                         </div>
                     </div>
-                    <div class="pt-4 border-t border-gray-100 mt-auto">
-                        <button id="btn-modo-normal" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
-                            <span>▶️ Entrar no Modo Normal</span>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-normal" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                         </button>
-                        <div class="mt-3 text-center">
-                            <p class="text-[9px] text-gray-400 uppercase italic">Recomendado para o dia a dia da unidade</p>
-                        </div>
                     </div>
                 </div>
 
                 <!-- CARD MODO EVENTO -->
-                <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-300 transition-all flex flex-col justify-between group cursor-pointer">
+                <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.1s;">
                     <div class="absolute -top-3 left-6">
-                        <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase flex items-center shadow-sm">
-                            Ações Externas
-                        </span>
+                        <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase shadow-sm">Ações Externas</span>
                     </div>
-                    <div class="mt-2">
-                        <div class="flex items-center gap-3 mb-6">
-                            <div class="bg-gray-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-100 group-hover:bg-emerald-50 transition-colors">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
-                                </svg>
+                    <div>
+                        <div class="flex items-center gap-4 mb-6">
+                            <div class="bg-slate-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-emerald-50 transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                             </div>
-                            <h2 class="font-bold text-2xl text-gray-800 leading-tight uppercase">Modo Evento</h2>
+                            <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Evento</h2>
                         </div>
-                        <div class="space-y-3 mb-8">
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                        <div class="space-y-4 mb-8">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span><strong>Fluxo Simplificado</strong> de triagem</span>
                             </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
                                 <span>Sem hierarquia complexa</span>
                             </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
+                            <p class="text-sm text-slate-600 flex items-start gap-2">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                                <span>Uma pauta ativa por vez</span>
-                            </p>
-                            <p class="text-sm text-gray-600 flex items-start gap-2">
-                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
-                                <span>Ideal p/ <strong>Mutirão, Plantão e Ação Social</strong></span>
+                                <span>Ideal p/ <strong>Mutirão e Ação Social</strong></span>
                             </p>
                         </div>
                     </div>
-                    <div class="pt-4 border-t border-gray-100 mt-auto">
-                        <button id="btn-modo-evento" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
-                            <span>▶️ Entrar no Modo Evento</span>
+                    <div class="pt-5 border-t border-slate-100 mt-auto">
+                        <button id="btn-modo-evento" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                            <span>Avançar neste modo</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 4.5L21 12m0 0l-7.5 7.5M21 12H3" /></svg>
                         </button>
-                        <div class="mt-3 text-center">
-                            <p class="text-[9px] text-gray-400 uppercase italic">Fluxo rápido para atendimentos em massa</p>
-                        </div>
                     </div>
                 </div>
             </div>
-        </div>
-    </div>
 
-    <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full">
+            <!-- PASSO 2: FORMULÁRIO DE LOGIN -->
+            <div id="login-form-view" class="hidden w-full max-w-md bg-white p-6 sm:p-8 rounded-2xl shadow-[0_8px_30px_rgb(0,0,0,0.04)] border border-slate-100 relative">
+                <button id="btn-change-mode" class="absolute top-5 right-5 text-[10px] uppercase font-bold text-slate-500 hover:text-slate-800 bg-slate-100 hover:bg-slate-200 px-3 py-1.5 rounded-md flex items-center gap-1 transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="M9 15L3 9m0 0l6-6M3 9h12a6 6 0 010 12h-3" /></svg>
+                    Trocar Modo
+                </button>
 
-        <div id="login-container" class="hidden min-h-screen flex items-center justify-center p-2">
-            <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
-                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta - SIGEP</h2>
-                <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden text-sm" role="alert"></div>
-                <div class="flex border-b mb-6">
-                    <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600 text-sm sm:text-base">Login</button>
-                    <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500 text-sm sm:text-base">Cadastrar</button>
+                <h2 class="text-xl sm:text-2xl font-black text-slate-800 mb-6 border-b pb-4 pr-24">Acesso <span id="modo-label-badge" class="text-blue-600"></span></h2>
+                
+                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden text-sm shadow-sm" role="alert"></div>
+                
+                <div class="flex border-b mb-6 bg-slate-50 rounded-t-lg">
+                    <button id="login-tab-btn" class="flex-1 py-3 text-center font-bold text-blue-600 border-b-2 border-blue-600 text-sm transition-colors">Login</button>
+                    <button id="register-tab-btn" class="flex-1 py-3 text-center font-bold text-slate-400 border-b-2 border-transparent hover:text-slate-600 text-sm transition-colors">Cadastrar</button>
                 </div>
                 
                 <form id="login-form" class="space-y-4">
-                    <div><label for="login-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="login-password" class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div class="text-right">
-                        <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
+                    <div>
+                        <label for="login-email" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">E-mail</label>
+                        <input type="email" id="login-email" required class="block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-slate-50 focus:bg-white transition-colors">
                     </div>
-                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
+                    <div>
+                        <div class="flex justify-between items-center mb-1.5">
+                            <label for="login-password" class="block text-xs font-bold text-slate-500 uppercase tracking-wider">Senha</label>
+                            <a href="#" id="forgot-password-link" class="text-[10px] font-bold text-blue-600 hover:underline uppercase">Esqueceu?</a>
+                        </div>
+                        <input type="password" id="login-password" required class="block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-4 px-4 rounded-xl shadow-md text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-95 uppercase tracking-widest mt-6">
+                        Acessar Sistema
+                    </button>
                 </form>
+
                 <form id="register-form" class="hidden space-y-4">
-                    <div><label for="register-name" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Criar Conta</button>
+                    <div>
+                        <label for="register-name" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Nome Completo</label>
+                        <input type="text" id="register-name" required class="block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="register-email" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">E-mail Corporativo</label>
+                        <input type="email" id="register-email" required class="block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="register-password" class="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Crie sua Senha (Mín. 6)</label>
+                        <input type="password" id="register-password" required class="block w-full px-4 py-3 border border-slate-200 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <button type="submit" class="w-full flex justify-center py-4 px-4 rounded-xl shadow-md text-xs font-bold text-white bg-blue-600 hover:bg-blue-700 transition-all active:scale-95 uppercase tracking-widest mt-6">
+                        Criar Conta
+                    </button>
                 </form>
-
-                <div class="mt-6 text-center text-xs text-gray-500">
-                    Ao entrar ou se cadastrar, você concorda com nossos 
-                    <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</button> 
-                    e 
-                    <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Política de Privacidade</button>.
-                </div>
-
             </div>
         </div>
 
-        <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto px-2 sm:px-0">
-            <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
-                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                    </svg>
+        <!-- ========================================== -->
+        <!-- TELA 2: LISTAGEM DE PAUTAS (LOBBY)         -->
+        <!-- ========================================== -->
+        <div id="pauta-selection-container" class="hidden max-w-6xl mx-auto px-4 sm:px-6 py-6 w-full">
+            <div class="flex flex-col md:flex-row justify-between items-center w-full mb-8 gap-4 bg-white p-4 rounded-2xl shadow-sm border border-slate-100">
+                <div class="flex items-center gap-3">
+                    <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-12 w-auto">
+                    <div>
+                        <h1 class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight">Gerenciamento de Pautas</h1>
+                        <p class="text-xs font-bold text-slate-500 uppercase">Selecione ou crie uma nova sessão</p>
+                    </div>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="open-user-preferences-btn" class="bg-slate-100 text-slate-600 hover:bg-slate-200 font-bold p-3 rounded-xl transition shadow-sm" title="Meu Perfil">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                    </button>
+                    <button id="logout-btn-pautas" class="bg-red-50 text-red-600 hover:bg-red-100 font-bold p-3 rounded-xl transition shadow-sm" title="Sair do Sistema" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 9V5.25A2.25 2.25 0 0013.5 3h-6a2.25 2.25 0 00-2.25 2.25v13.5A2.25 2.25 0 007.5 21h6a2.25 2.25 0 002.25-2.25V15M12 9l-3 3m0 0l3 3m-3-3h12.75" /></svg>
+                    </button>
+                </div>
+            </div>
+            
+            <div class="flex flex-wrap items-center gap-3 mb-8">
+                <button id="btn-recepcao-central" class="bg-blue-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-blue-700 transition shadow-sm flex items-center gap-2 text-xs uppercase tracking-wide flex-1 sm:flex-none justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3.75 21h16.5M4.5 3h15M5.25 3v18m13.5-18v18M9 6.75h1.5m-1.5 3h1.5m-1.5 3h1.5m3-6H15m-1.5 3H15m-1.5 3H15M9 21v-3.375c0-.621.504-1.125 1.125-1.125h3.75c.621 0 1.125.504 1.125 1.125V21" /></svg>
+                    Recepção Central
+                </button>
+                <button id="view-dashboard-btn" class="bg-indigo-600 text-white font-bold py-3 px-6 rounded-xl hover:bg-indigo-700 transition shadow-sm flex items-center gap-2 text-xs uppercase tracking-wide flex-1 sm:flex-none justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 6a7.5 7.5 0 107.5 7.5h-7.5V6z" /><path stroke-linecap="round" stroke-linejoin="round" d="M13.5 10.5H21A7.5 7.5 0 0013.5 3v7.5z" /></svg>
+                    Dashboard
+                </button>
+                <button id="admin-panel-btn" class="hidden bg-slate-800 text-white font-bold py-3 px-6 rounded-xl hover:bg-slate-900 transition shadow-sm flex items-center gap-2 text-xs uppercase tracking-wide flex-1 sm:flex-none justify-center">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M10.343 3.94c.09-.542.56-.94 1.11-.94h1.093c.55 0 1.02.398 1.11.94l.149.894c.07.424.384.764.78.93.398.164.855.142 1.205-.108l.737-.527a1.125 1.125 0 011.45.12l.773.774c.39.389.44 1.002.12 1.45l-.527.737c-.25.35-.272.806-.107 1.204.165.397.505.71.93.78l.893.15c.543.09.94.56.94 1.109v1.094c0 .55-.397 1.02-.94 1.11l-.893.149c-.425.07-.765.383-.93.78-.165.398-.143.854.107 1.204l.527.738a1.125 1.125 0 01-.12 1.45l-.774.773a1.125 1.125 0 01-1.449.12l-.738-.527c-.35-.25-.806-.272-1.203-.107-.397.165-.71.505-.781.929l-.149.894c-.09.542-.56.94-1.11.94h-1.094c-.55 0-1.019-.398-1.11-.94l-.148-.894c-.071-.424-.384-.764-.781-.93-.398-.164-.854-.142-1.204.108l-.738.527c-.447.32-1.06.269-1.45-.12l-.773-.774a1.125 1.125 0 01-.12-1.45l.527-.737c.25-.35.273-.806.108-1.204-.165-.397-.505-.71-.93-.78l-.894-.15c-.542-.09-.94-.56-.94-1.109v-1.094c0-.55.398-1.02.94-1.11l.894-.149c.424-.07.765-.383.93-.78.165-.398.143-.854-.107-1.204l-.527-.738a1.125 1.125 0 01.12-1.45l.773-.773a1.125 1.125 0 011.45-.12l.737.527c.35.25.807.272 1.204.107.397-.165.71-.505.78-.929l.15-.894z" /><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" /></svg>
+                    Painel Admin
                 </button>
             </div>
             
-            <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
-                <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
-                <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
-                    Instalar App
-                </button>
-            </div>
-
-            <div class="flex flex-col sm:flex-row justify-center items-center w-full gap-3 mb-6">
-                <button id="btn-recepcao-central" class="bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
-                    🏛️ Recepção Central
-                </button>
-                <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
-                    Painel do Administrador
-                </button>
-                <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
-                    Ver Dashboard
-                </button>
-                <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
-                    Meu Perfil
-                </button>
-            </div>
-            
-            <div id="invitations-container" class="hidden mb-8">
-                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
-                <div id="pending-invitations-list" class="space-y-4"></div>
+            <div id="invitations-container" class="hidden mb-8 bg-amber-50 p-4 rounded-xl border border-amber-200">
+                <h2 class="text-sm font-black text-amber-800 uppercase tracking-wide mb-3 flex items-center gap-2"><svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M21.75 6.75v10.5a2.25 2.25 0 01-2.25 2.25h-15a2.25 2.25 0 01-2.25-2.25V6.75m19.5 0A2.25 2.25 0 0019.5 4.5h-15a2.25 2.25 0 00-2.25 2.25m19.5 0v.243a2.25 2.25 0 01-1.07 1.916l-7.5 4.615a2.25 2.25 0 01-2.36 0L3.32 8.91a2.25 2.25 0 01-1.07-1.916V6.75" /></svg> Convites Pendentes</h2>
+                <div id="pending-invitations-list" class="space-y-2"></div>
             </div>
             
             <div id="filters-container" class="mb-6"></div>
+            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6"></div>
             
-            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6"></div>
-            <div class="mt-6">
-                <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
+            <div class="mt-8 pt-6 border-t border-slate-200">
+                <button id="create-pauta-btn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black py-4 px-4 rounded-2xl shadow-md transition-all active:scale-[0.98] uppercase tracking-widest flex items-center justify-center gap-2 text-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg>
+                    Criar Nova Pauta
+                </button>
             </div>
         </div>
 
-        <div id="dashboard-container" class="hidden max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Seu Dashboard</h2>
-                <button id="dashboard-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar para Pautas</button>
-            </div>
-            <div id="dashboard-content">
-                <div class="loader-small mx-auto my-12"></div>
-                <p class="text-center text-gray-500 mt-4">Carregando dados do Dashboard...</p>
-            </div>
-        </div>
-
-        <!-- RECEPÇÃO CENTRAL - CONTAINER -->
-        <div id="recepcao-central-container" class="hidden max-w-7xl mx-auto px-2 sm:px-4 py-4">
-            <!-- O conteúdo será injetado dinamicamente pelo RecepcaoCentralService -->
-        </div>
-
-        <div id="app-container" class="max-w-full mx-auto hidden">
-            <header class="mb-4 sm:mb-6 space-y-4">
-                <div class="flex justify-center items-center w-full relative">
-                    <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
-                    <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                        </svg>
-                    </button>
-                </div>
-
-                <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-4">
-                    <div class="text-center border-b pb-3 sm:pb-4">
-                        <h2 id="pauta-title" class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 truncate px-2 sm:px-4"></h2>
-                    </div>
-
-                    <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-3 pt-2 sm:pt-4">
-                        <div class="flex-shrink-0 w-full sm:w-auto">
-                            <button id="back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-300 transition">&larr; Voltar</button>
-                        </div>
-
-                        <div class="relative flex items-center w-full sm:w-auto justify-end">
-                            <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-50 origin-top-right overflow-hidden">
-                                <div class="py-2">
-                                    <button id="btn-painel-geral-externo" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">📊</span>
-                                        Monitor da Equipe
-                                    </button>
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    <button id="share-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔗</span>
-                                        Compartilhamento Externo
-                                    </button>
-                                    <button id="view-stats-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm shrink-0">📈</span>
-                                        Ver Estatísticas
-                                    </button>
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    <button id="edit-pauta-name-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">✏️</span>
-                                        Editar Nome
-                                    </button>
-                                    <button id="edit-pauta-config-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
-                                        Editar Configurações
-                                    </button>
-                                    <button id="manage-members-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🤝</span>
-                                        Compartilhar Pauta
-                                    </button>
-                                    <button id="manage-collaborators-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
-                                        Colaboradores
-                                    </button>
-                                    <button id="notes-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📋</span>
-                                        Anotações
-                                    </button>
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    
-                                    <div class="px-4 py-2 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
-                                        <div class="flex items-center gap-3 pointer-events-none">
-                                            <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
-                                                🔕
-                                            </div>
-                                            <div>
-                                                <span class="text-sm font-bold text-gray-700 block">Modo Silencioso</span>
-                                                <span class="text-[9px] text-gray-500 block leading-tight mt-0.5">Bloquear e-mails</span>
-                                            </div>
-                                        </div>
-                                        <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
-                                            <input type="checkbox" id="toggle-silent-mode" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
-                                        </label>
-                                    </div>
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    
-                                    <button id="close-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-amber-700 hover:bg-amber-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔒</span>
-                                        Fechar Pauta
-                                    </button>
-                                    <button id="reopen-pauta-btn" class="hidden w-full text-left px-4 py-2.5 text-sm font-semibold text-emerald-700 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔓</span>
-                                        Reabrir Pauta
-                                    </button>
-                                    <button id="reset-all-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-red-700 hover:bg-red-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm shrink-0">🗑️</span>
-                                        Zerar Pauta
-                                    </button>
-                                </div>
-                            </div>
-
-                            <button id="actions-toggle" class="z-10 w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
-                                <span>Ações</span>
-                                <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
-                            </button>
-                            
-                            <div class="relative ml-2 sm:ml-4 shrink-0"> 
-                                <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
-                                </button>
-                                <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-30 space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase mb-2">Mostrar Colunas:</p>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                        <input type="checkbox" id="toggle-em-atendimento" class="h-4 w-4 text-blue-600 rounded">
-                                        <span class="ml-2">Em Atendimento</span>
-                                    </label>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                        <input type="checkbox" id="toggle-distribuicao" class="h-4 w-4 text-cyan-600 rounded">
-                                        <span class="ml-2">Distribuição</span>
-                                    </label>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
-                                        <input type="checkbox" id="toggle-faltosos" class="h-4 w-4 text-purple-600 rounded">
-                                        <span class="ml-2">Faltosos</span>
-                                    </label>
-                                </div>
-                            </div>
-
-                        </div>
-                    </div>
-                </div>
-
-                <div id="closed-pauta-alert" class="hidden bg-yellow-100 border-l-4 border-yellow-500 text-yellow-700 p-4 mt-4 text-sm" role="alert">
-                    <p class="font-bold">Pauta Fechada</p>
-                    <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
-                </div>
-            </header>
-
-            <div id="app-content" class="w-full">
-                <div class="mb-4 sm:mb-6">
-                    <div class="border-b border-gray-200 overflow-x-auto scrollable-content">
-                        <nav class="-mb-px flex space-x-2 sm:space-x-6 min-w-max" aria-label="Tabs">
-                            <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm rounded-t-lg transition">Atendimento Agendado</button>
-                            <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm rounded-t-lg transition">Atendimento Avulso</button>
-                        </nav>
-                    </div>
-                </div>
+        <!-- ========================================== -->
+        <!-- TELA 3: PAINEL PRINCIPAL (APP CONTENT)     -->
+        <!-- ========================================== -->
+        <div id="app-container" class="hidden w-full h-full flex-1 flex flex-col px-2 sm:px-4 pb-4">
+            <div id="app-content" class="w-full flex-1 flex flex-col h-full">
                 
-                <form id="form-agendamento" class="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 sm:mb-8">
-                    <div id="agendamento-actions" class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
-                        <button type="button" 
-                                id="btn-sync-verde"
-                                onclick="ApiIntegration.simularSincronizacaoVerde(window.app)" 
-                                class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md transition-all flex items-center text-sm">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                            </svg>
-                            Sincronizar Verde
+                <!-- Header da Pauta -->
+                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-4 mb-4 flex flex-col md:flex-row justify-between items-center gap-4 sticky top-0 z-40">
+                    <div class="flex items-center gap-4 w-full md:w-auto">
+                        <button id="back-to-pautas-btn" class="bg-slate-100 hover:bg-slate-200 text-slate-600 p-2.5 rounded-lg transition-colors" title="Voltar ao Lobby">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M10.5 19.5L3 12m0 0l7.5-7.5M3 12h18" /></svg>
                         </button>
-                    
-                        <label for="file-upload" class="cursor-pointer w-full sm:w-auto justify-center bg-teal-500 text-white font-semibold py-2.5 px-4 rounded-lg hover:bg-teal-600 transition text-sm inline-flex items-center shadow-md">
-                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-8l-4-4m0 0L8 8m4-4v12" /></svg>
-                            Carregar CSV
-                        </label>
-                        <input type="file" id="file-upload" class="hidden" accept=".csv">
-
-                        <a href="#" id="format-help-link" class="w-full sm:w-auto text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center justify-center sm:justify-start gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
-                            <span>Como formatar pauta?</span>
-                        </a>
+                        <div>
+                            <h2 id="pauta-title" class="text-xl sm:text-2xl font-black text-slate-800 uppercase tracking-tight truncate max-w-[200px] sm:max-w-md">Nome da Pauta</h2>
+                            <p id="pauta-status-badge" class="text-[10px] font-bold text-slate-500 uppercase">Carregando...</p>
+                        </div>
                     </div>
 
-                    <div class="space-y-4 mt-6">
-                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
-                            <div class="flex flex-col lg:col-span-2">
-                                <label for="assisted-name" class="mb-1 font-medium text-gray-600 text-sm">Nome do Assistido</label>
-                                <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
-                            </div>
-                            
-                            <div class="flex flex-col">
-                                <label for="assisted-cpf" class="mb-1 font-medium text-gray-600 text-sm">CPF (Opcional)</label>
-                                <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
-                            </div>
-                            
-                            <div class="flex flex-col">
-                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-gray-600 text-sm">Nº Agendamento / Código</label>
-                                <input type="text" id="assisted-num-agendamento" placeholder="Ex: 12345" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
-                            </div>
-                            
-                            <div class="flex flex-col lg:col-span-4">
-                                <div class="flex items-center gap-2 mb-1">
-                                    <label for="assisted-subject" class="font-medium text-gray-600 text-sm">Matéria - Assunto</label>
-                                    <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
-                                </div>
-                                <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full text-sm sm:text-base">
-                                <datalist id="subjects-list"></datalist>
-                                <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-xs sm:text-sm transition-all duration-300"></div>
-                            </div>
-                        </div>
-
-                        <div id="form-options-container" class="border-t mt-4 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-x-8">
-                            <div id="is-scheduled-container">
-                                <label class="font-medium text-gray-700 text-sm">Possui horário agendado?</label>
-                                <div class="flex items-center gap-x-4 mt-1 text-sm">
-                                    <label class="flex items-center"><input type="radio" name="is-scheduled" value="yes" class="mr-1 h-4 w-4 text-green-600"> Sim</label>
-                                    <label class="flex items-center"><input type="radio" name="is-scheduled" value="no" class="mr-1 h-4 w-4 text-green-600" checked> Não</label>
-                                </div>
-                                <div id="scheduled-time-wrapper" class="hidden mt-2">
-                                    <label for="scheduled-time" class="block mb-1 font-medium text-gray-600 text-sm">Horário Agendado</label>
-                                    <input type="time" id="scheduled-time" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
-                                </div>
-                            </div>
-                            <div>
-                                <label class="font-medium text-gray-700 text-sm">Assistido já chegou?</label>
-                                <div class="flex items-center gap-x-4 mt-1 text-sm">
-                                    <label class="flex items-center"><input type="radio" name="has-arrived" value="yes" class="mr-1 h-4 w-4 text-green-600"> Sim</label>
-                                    <label class="flex items-center"><input type="radio" name="has-arrived" value="no" class="mr-1 h-4 w-4 text-green-600" checked> Não</label>
-                                </div>
-                                <div id="arrival-time-wrapper" class="hidden mt-2">
-                                    <label for="arrival-time" class="block mb-1 font-medium text-gray-600 text-sm">Horário de Chegada</label>
-                                    <input type="time" id="arrival-time" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
-                                </div>
-                                <div id="manual-room-wrapper" class="hidden mt-2">
-                                    <label for="manual-room-select" class="block mb-1 font-medium text-gray-600 text-sm">Sala de Destino</label>
-                                    <select id="manual-room-select" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base"></select>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="pt-2">
-                            <button type="button" id="add-assisted-btn" class="bg-green-600 text-white font-bold py-3 sm:py-3 px-6 rounded-lg hover:bg-green-700 transition shadow-md w-full sm:w-auto">Adicionar Assistido</button>
-                        </div>
+                    <div class="flex flex-wrap items-center justify-end gap-2 w-full md:w-auto">
+                        <button id="actions-panel-toggle" class="bg-blue-50 text-blue-700 hover:bg-blue-100 font-bold py-2 px-4 rounded-lg text-xs uppercase shadow-sm transition-colors flex items-center gap-2 border border-blue-200" onclick="document.getElementById('actions-panel').classList.toggle('hidden')">
+                            Ações / Arquivos <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3 h-3"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 8.25l-7.5 7.5-7.5-7.5" /></svg>
+                        </button>
+                        <button id="close-pauta-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg text-xs uppercase shadow-sm transition-colors hidden">Encerrar Pauta</button>
+                        <button id="reopen-pauta-btn" class="bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-4 rounded-lg text-xs uppercase shadow-sm transition-colors hidden">Reabrir Pauta</button>
                     </div>
-                </form>
-                
-                <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 w-full">
-                    <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
-                                <span>📋 Pauta</span>
-                                <span id="pauta-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                            </h3>
-                            <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-                    
-                    <div class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <div class="flex justify-between items-center w-full mb-1">
-                                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
-                                   <span>⏳ Aguardando</span>
-                                   <button id="btn-manage-rooms" class="hidden text-blue-500 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 p-1.5 rounded-lg transition-colors" title="Gerenciar Salas/Varas">
-                                       <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                                           <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
-                                       </svg>
-                                   </button>
-                                </h3>
-                                <span id="aguardando-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                            </div>
-                             <button id="call-next-assisted-btn" class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition shadow-md text-sm sm:text-base">
-                                Chamar Próximo
-                            </button>
-                            <input type="search" id="aguardando-search" placeholder="Pesquisar em todos..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-                    
-                    <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
-                                <span>👩‍💻 Em Atend.</span>
-                                <span id="em-atendimento-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                            </h3>
-                            <input type="search" id="em-atendimento-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-
-                    <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-cyan-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
-                                <span>⚖️ Distribuição</span>
-                                <span id="distribuicao-count" class="text-sm font-normal bg-white text-gray-700 px-2 rounded-full border">0</span>
-                            </h3>
-                            <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
-                        </div>
-                        <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-
-                    <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <div class="flex justify-between items-center mb-2">
-                                 <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
-                                     <span>✅ Atendidos</span>
-                                     <span id="atendidos-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                                 </h3>
-                                <button id="download-pdf-btn" class="ml-2 flex-shrink-0 bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-blue-700 text-xs sm:text-sm">PDF</button>
-                            </div>
-                            <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-                    
-                    <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
-                                    🚫 Faltosos
-                                    <span id="faltosos-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
-                                </h3>
-                                <button id="download-faltosos-pdf-btn" class="bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-red-700 text-xs sm:text-sm">PDF</button>
-                            </div>
-                            <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
-                        </div>
-                        <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
-                    </div>
-                </main>
-                
-                <div class="mt-6 sm:mt-8 flex justify-center">
-                    <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 shadow-md">Ver Faltosos</button>
                 </div>
-                
-                <footer class="mt-8 sm:mt-12 bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8">
-                    <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
-                    <div id="order-explanation-content">
-                        <div id="logic-explanation-padrao">
-                            <div class="text-center mb-4">
-                                <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que esta ordem é a mais justa? (Clique para expandir)</button>
-                            </div>
-                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-gray-200 shadow-inner space-y-4">
-                                <div class="border-l-4 border-green-500 pl-3 sm:pl-4">
-                                    <h4 class="font-bold text-gray-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro</h4>
-                                    <p class="text-[10px] sm:text-xs text-gray-600">Priorizamos a <b>Pontualidade</b>. Em caso de empate (mesmo horário agendado), o critério de desempate é a <b>Hora da Chegada Real</b> na recepção.</p>
-                                </div>
-                                <div class="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                                    <h4 class="font-bold text-gray-700 text-[9px] sm:text-[10px] uppercase mb-2 sm:mb-3 tracking-widest text-center">Exemplo Prático (Desempate)</h4>
-                                    <div class="space-y-2 text-[10px] sm:text-[11px]">
-                                        <div class="flex justify-between border-b pb-1">
-                                            <span><b>João:</b> Agendado 09:00 | Chegou 08:08</span>
-                                            <span class="text-green-600 font-bold">1º na Fila</span>
-                                        </div>
-                                        <div class="flex justify-between border-b pb-1">
-                                            <span><b>Maria:</b> Agendado 09:00 | Chegou 08:30</span>
-                                            <span class="text-blue-600 font-bold">2º na Fila</span>
-                                        </div>
-                                        <p class="text-[8px] sm:text-[9px] text-gray-500 mt-2 italic">* João fica na frente porque, embora ambos sejam das 09h, ele chegou fisicamente antes na unidade.</p>
-                                    </div>
-                                </div>
-                                <ul class="list-disc list-inside space-y-1 sm:space-y-2 text-gray-700 text-[10px] sm:text-[11px]">
-                                    <li><b>Hierarquia Legal:</b> Idoso 80+ e Urgência Médica têm prioridade sobre todos os outros.</li>
-                                    <li><b>Atrasos:</b> Quem atrasa muito perde a vez para os pontuais do próximo horário, mas não vai para o "fim da fila" de quem agendou horas depois.</li>
-                                </ul>
-                            </div>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
-                                <div class="bg-red-50 p-3 sm:p-4 rounded-lg border-l-4 border-red-500">
-                                    <p class="font-bold text-red-700 text-[10px] sm:text-xs">Lei Brasileira 🚨</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Preferência absoluta para 80+, Urgências, PCD, Gestantes e 60+ (nesta ordem).</p>
-                                </div>
-                                <div class="bg-green-50 p-3 sm:p-4 rounded-lg border-l-4 border-green-500">
-                                    <p class="font-bold text-green-700 text-[10px] sm:text-xs">Pontuais ✅</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Quem chegou no horário ou antes. O desempate é por quem fez o check-in primeiro.</p>
-                                </div>
-                                <div class="bg-orange-50 p-3 sm:p-4 rounded-lg border-l-4 border-orange-500">
-                                    <p class="font-bold text-orange-700 text-[10px] sm:text-xs">Atraso Leve / Avulso ⏳</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Atrasos de até 30 min ou atendimentos sem agendamento (ordem de chegada).</p>
-                                </div>
-                                <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border-l-4 border-gray-400">
-                                    <p class="font-bold text-gray-700 text-[10px] sm:text-xs">Atraso Grave ⚠️</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-500 mt-1">Atraso superior a 30 min. O assistido aguarda uma brecha entre os pontuais.</p>
-                                </div>
-                            </div>
+
+                <!-- Painel de Ações Oculto -->
+                <div id="actions-panel" class="hidden bg-white p-4 rounded-xl shadow-md border border-slate-200 mb-4 transition-all">
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                        <button id="add-assisted-btn" class="bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M12 4.5v15m7.5-7.5h-15" /></svg> Adicionar Manual
+                        </button>
+                        <div id="file-upload" class="relative bg-slate-50 border-2 border-dashed border-slate-300 rounded-lg hover:bg-slate-100 transition-colors flex items-center justify-center cursor-pointer">
+                            <input type="file" id="csv-file" accept=".csv" class="absolute inset-0 w-full h-full opacity-0 cursor-pointer">
+                            <span class="text-xs font-bold text-slate-500 uppercase flex items-center gap-2 pointer-events-none p-2.5">
+                                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5m-13.5-9L12 3m0 0l4.5 4.5M12 3v13.5" /></svg>
+                                Importar CSV
+                            </span>
                         </div>
+                        <button id="download-pdf-btn" class="bg-slate-800 hover:bg-slate-900 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" /></svg> Gerar PDF
+                        </button>
+                        <button id="toggle-faltosos-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-4 h-4"><path stroke-linecap="round" stroke-linejoin="round" d="M18.364 18.364A9 9 0 005.636 5.636m12.728 12.728A9 9 0 015.636 5.636m12.728 12.728L5.636 5.636" /></svg> Ver Faltosos
+                        </button>
                     </div>
-                </footer>
+                </div>
+
+                <!-- Formulário de Adição Rápida (Oculto por Padrão) -->
+                <div id="form-agendamento" class="hidden bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4">
+                    <div class="flex border-b border-slate-200 mb-4">
+                        <button id="tab-agendamento" class="flex-1 py-2 text-center text-xs font-bold uppercase text-slate-500 border-b-2 border-transparent transition-colors tab-active">Agendamento</button>
+                        <button id="tab-avulso" class="flex-1 py-2 text-center text-xs font-bold uppercase text-slate-500 border-b-2 border-transparent transition-colors">Atendimento Avulso</button>
+                    </div>
+                    <form id="add-form" class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Nome Completo</label>
+                            <input type="text" id="assisted-name" required class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Assunto / Matéria</label>
+                            <input type="text" id="assisted-subject" required class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 focus:bg-white outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="scheduled-time-wrapper">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hora Agendada (HH:MM)</label>
+                            <input type="time" id="scheduled-time" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="arrival-time-wrapper" class="hidden">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Hora Chegada</label>
+                            <input type="time" id="arrival-time" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500">
+                        </div>
+                        <div id="manual-room-wrapper" class="hidden">
+                            <label class="block text-[10px] font-bold text-slate-500 uppercase mb-1">Direcionar para Sala</label>
+                            <select id="manual-room-select" class="w-full p-2.5 text-sm border border-slate-300 rounded-lg bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500"></select>
+                        </div>
+                        <!-- Campos Ocultos para UI.js -->
+                        <div class="hidden">
+                            <input type="radio" name="is-scheduled" value="yes">
+                            <input type="radio" name="is-scheduled" value="no" checked>
+                            <input type="radio" name="has-arrived" value="yes">
+                            <input type="radio" name="has-arrived" value="no" checked>
+                        </div>
+                        <div class="md:col-span-3 flex justify-end gap-2 mt-2">
+                            <button type="button" onclick="document.getElementById('form-agendamento').classList.add('hidden')" class="bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-2.5 px-4 rounded-lg text-xs uppercase transition-colors">Cancelar</button>
+                            <button type="submit" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-6 rounded-lg text-xs uppercase shadow-sm transition-colors">Salvar Cadastro</button>
+                        </div>
+                    </form>
+                </div>
+
+                <!-- ALERTAS -->
+                <div id="closed-pauta-alert" class="hidden bg-red-100 border border-red-300 text-red-800 px-4 py-3 rounded-lg mb-4 text-xs font-bold uppercase text-center shadow-sm flex items-center justify-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="2.5" stroke="currentColor" class="w-5 h-5"><path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" /></svg>
+                    Pauta Fechada. Somente Leitura.
+                </div>
+
+                <!-- ========================================== -->
+                <!-- KANBAN BOARD PRINCIPAL                     -->
+                <!-- ========================================== -->
+                <div class="kanban-container flex-1 mt-2">
+                    
+                    <!-- COLUNA 1: PAUTA (OU FALTOSOS) -->
+                    <div id="pauta-column" class="kanban-column shadow-sm">
+                        <div class="bg-slate-200 border-b border-slate-300 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-slate-700 uppercase flex items-center gap-1.5"><span class="text-sm">📋</span> Na Pauta</h2>
+                                <span id="pauta-count" class="bg-white text-slate-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-slate-300">0</span>
+                            </div>
+                            <input type="search" id="pauta-search" placeholder="Buscar agendado..." class="w-full p-2 text-xs border border-slate-300 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        </div>
+                        <div id="pauta-list" class="kanban-column-body column-content"></div>
+                    </div>
+
+                    <!-- COLUNA 1B: FALTOSOS (Oculta por padrão) -->
+                    <div id="faltosos-column" class="kanban-column shadow-sm hidden opacity-95">
+                        <div class="bg-purple-100 border-b border-purple-200 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-purple-800 uppercase flex items-center gap-1.5"><span class="text-sm">🚫</span> Faltosos</h2>
+                                <span id="faltosos-count" class="bg-white text-purple-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-purple-200">0</span>
+                            </div>
+                            <input type="search" id="faltosos-search" placeholder="Buscar faltoso..." class="w-full p-2 text-xs border border-purple-200 rounded-lg outline-none focus:ring-2 focus:ring-purple-500 bg-white">
+                        </div>
+                        <div id="faltosos-list" class="kanban-column-body column-content bg-purple-50 rounded-b-0.75rem"></div>
+                    </div>
+
+                    <!-- COLUNA 2: AGUARDANDO -->
+                    <div id="aguardando-column" class="kanban-column shadow-sm border-amber-200">
+                        <div class="bg-amber-100 border-b border-amber-200 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-amber-800 uppercase flex items-center gap-1.5"><span class="text-sm">⏳</span> Aguardando</h2>
+                                <span id="aguardando-count" class="bg-white text-amber-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-amber-200">0</span>
+                            </div>
+                            <input type="search" id="aguardando-search" placeholder="Buscar na fila..." class="w-full p-2 text-xs border border-amber-200 rounded-lg outline-none focus:ring-2 focus:ring-amber-500 bg-white">
+                        </div>
+                        <div id="aguardando-list" class="kanban-column-body column-content bg-amber-50 rounded-b-0.75rem"></div>
+                    </div>
+
+                    <!-- COLUNA 3: EM ATENDIMENTO -->
+                    <div id="em-atendimento-column" class="kanban-column shadow-sm border-blue-200 hidden">
+                        <div class="bg-blue-100 border-b border-blue-200 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-blue-800 uppercase flex items-center gap-1.5"><span class="text-sm">🗣️</span> Em Atendimento</h2>
+                                <span id="em-atendimento-count" class="bg-white text-blue-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-blue-200">0</span>
+                            </div>
+                            <input type="search" id="em-atendimento-search" placeholder="Buscar atendendo..." class="w-full p-2 text-xs border border-blue-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        </div>
+                        <div id="em-atendimento-list" class="kanban-column-body column-content bg-blue-50 rounded-b-0.75rem"></div>
+                    </div>
+
+                    <!-- COLUNA 4: DISTRIBUIÇÃO / ASSINATURA -->
+                    <div id="distribuicao-column" class="kanban-column shadow-sm border-cyan-200">
+                        <div class="bg-cyan-100 border-b border-cyan-200 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-cyan-800 uppercase flex items-center gap-1.5"><span class="text-sm">👨‍⚖️</span> Distribuição / Assinatura</h2>
+                                <span id="distribuicao-count" class="bg-white text-cyan-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-cyan-200">0</span>
+                            </div>
+                            <input type="search" id="distribuicao-search" placeholder="Buscar avaliação..." class="w-full p-2 text-xs border border-cyan-200 rounded-lg outline-none focus:ring-2 focus:ring-cyan-500 bg-white">
+                        </div>
+                        <div id="distribuicao-list" class="kanban-column-body column-content bg-cyan-50 rounded-b-0.75rem"></div>
+                    </div>
+
+                    <!-- COLUNA 5: FINALIZADOS -->
+                    <div id="atendidos-column" class="kanban-column shadow-sm border-emerald-200">
+                        <div class="bg-emerald-100 border-b border-emerald-200 p-3 rounded-t-0.75rem">
+                            <div class="flex justify-between items-center mb-2">
+                                <h2 class="text-[11px] font-black text-emerald-800 uppercase flex items-center gap-1.5"><span class="text-sm">✅</span> Finalizados</h2>
+                                <span id="atendidos-count" class="bg-white text-emerald-800 text-xs font-bold px-2 py-0.5 rounded-full shadow-sm border border-emerald-200">0</span>
+                            </div>
+                            <input type="search" id="atendidos-search" placeholder="Buscar concluído..." class="w-full p-2 text-xs border border-emerald-200 rounded-lg outline-none focus:ring-2 focus:ring-emerald-500 bg-white">
+                        </div>
+                        <div id="atendidos-list" class="kanban-column-body column-content bg-emerald-50 rounded-b-0.75rem"></div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
     </div> 
     
-    <footer id="main-footer" class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
-        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-6">
-            
-            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-600 font-semibold w-full md:w-auto">
-                <button id="btn-footer-manual" class="hover:text-green-600 transition-colors">Manual do Utilizador</button>
-                <button id="btn-footer-termos" class="hover:text-green-600 transition-colors">Termos de Uso</button>
-                <button id="btn-footer-politica" class="hover:text-green-600 transition-colors">Política de Privacidade</button>
+    <!-- ========================================== -->
+    <!-- RODAPÉ DO SISTEMA                          -->
+    <!-- ========================================== -->
+    <footer id="main-footer" class="w-full py-4 bg-white border-t border-slate-200 mt-auto shadow-[0_-4px_6px_-1px_rgba(0,0,0,0.02)] z-50">
+        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-4">
+            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-3 text-xs text-slate-600 font-bold w-full md:w-auto">
+                <button id="btn-footer-manual" class="hover:text-blue-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 uppercase tracking-wide">Manual do Usuário</button>
+                <button id="btn-footer-termos" class="hover:text-blue-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 uppercase tracking-wide">Termos</button>
+                <button id="btn-footer-politica" class="hover:text-blue-600 transition-colors bg-slate-50 px-3 py-1.5 rounded-md border border-slate-100 uppercase tracking-wide">Privacidade</button>
             </div>
-
-            <div class="flex flex-wrap items-center justify-center gap-3">
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm" title="Monitoramento ativo de estabilidade">
-                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
-                    <span>Ambiente Monitorado</span>
+            <div class="flex flex-wrap items-center justify-center gap-2">
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 shadow-sm uppercase tracking-wide font-bold">
+                    <svg class="w-3 h-3 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
+                    <span>Monitorado</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <span>Conexão Criptografada</span>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 shadow-sm uppercase tracking-wide font-bold">
+                    <svg class="w-3 h-3 text-emerald-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <span>Criptografado</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm">
-                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    <span>Conformidade LGPD</span>
+                <div class="flex items-center gap-1.5 text-[10px] text-slate-500 bg-slate-50 px-2 py-1 rounded-md border border-slate-200 shadow-sm uppercase tracking-wide font-bold">
+                    <svg class="w-3 h-3 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <span>LGPD</span>
                 </div>
             </div>
         </div>
     </footer>
 
+    <!-- ========================================== -->
+    <!-- MODAIS DO SISTEMA                          -->
+    <!-- ========================================== -->
+
     <!-- MODAL DE ACEITE LGPD -->
-    <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
-        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
+    <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-90 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col border border-slate-100">
             <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Bem-vindo(a) ao SIGEP!</h2>
-                <p class="text-sm text-gray-600">Para continuar e utilizar o sistema, é necessário ler e aceitar nossos Termos de Uso e a Política de Privacidade (LGPD).</p>
+                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-16 w-auto mx-auto mb-4 drop-shadow-sm">
+                <h2 class="text-2xl font-black text-slate-800 mb-2 uppercase tracking-tight">Bem-vindo ao SIGEP</h2>
+                <p class="text-sm text-slate-600 font-medium">Para garantir sua segurança jurídica, precisamos que você concorde com nossas diretrizes institucionais.</p>
             </div>
-            
-            <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div class="space-y-4 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <label class="flex items-start cursor-pointer group">
-                    <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <span class="ml-3 text-sm text-gray-700">
-                        Eu li e aceito os <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Termos de Uso</button> do sistema.
-                    </span>
+                    <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 transition-colors">
+                    <span class="ml-3 text-sm text-slate-700 font-medium">Eu li e aceito os <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Termos de Uso</button> da plataforma.</span>
                 </label>
-                
                 <label class="flex items-start cursor-pointer group">
-                    <input type="checkbox" id="lgpd-check-privacidade" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <span class="ml-3 text-sm text-gray-700">
-                        Eu concordo com a <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Política de Privacidade (LGPD)</button> e com o tratamento dos dados inseridos.
-                    </span>
+                    <input type="checkbox" id="lgpd-check-privacidade" class="mt-1 h-5 w-5 text-blue-600 border-slate-300 rounded focus:ring-blue-500 transition-colors">
+                    <span class="ml-3 text-sm text-slate-700 font-medium">Eu concordo com a <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Política de Privacidade (LGPD)</button>.</span>
                 </label>
             </div>
-            
-            <button id="btn-confirm-lgpd" disabled class="w-full bg-gray-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed">
-                Confirmar e Entrar
-            </button>
+            <button id="btn-confirm-lgpd" disabled class="w-full bg-slate-300 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed uppercase tracking-wider">Confirmar e Entrar</button>
         </div>
     </div>
 
-    <!-- MODAL DE TIPO DE PAUTA -->
-    <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Selecione o tipo de atendimento para sua nova pauta no SIGEP:</p>
-            <div class="space-y-3 sm:space-y-4">
-                <button data-type="agendado" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-3 sm:p-4 bg-green-100 text-green-700 font-semibold rounded-lg hover:bg-green-200 transition text-sm sm:text-base">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M8 7V3m8 4V3m-9 8h8m-11 0h11a2 2 0 012 2v10a2 2 0 01-2 2H5a2 2 0 01-2-2V7a2 2 0 012-2z" />
-                    </svg>
-                    Atendimento Agendado
-                </button>
-                <button data-type="avulso" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-3 sm:p-4 bg-gray-100 text-gray-700 font-semibold rounded-lg hover:bg-gray-200 transition text-sm sm:text-base">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 4v16m8-8H4" />
-                    </svg>
-                    Atendimento Avulso
-                </button>
-                <button data-type="multisala" class="pauta-type-btn w-full flex items-center justify-center gap-2 p-3 sm:p-4 bg-blue-100 text-blue-700 font-semibold rounded-lg hover:bg-blue-200 transition text-sm sm:text-base">
-                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 sm:h-6 sm:w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-                        <path stroke-linecap="round" stroke-linejoin="round" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
-                    </svg>
-                    Multi-Salas
-                </button>
+    <!-- FORMAT HELP MODAL (Mencionado no ui.js) -->
+    <div id="format-help-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm"></div>
+
+    <!-- TERMS MODAL (Placeholder estrutural para você preencher o texto) -->
+    <div id="terms-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col relative">
+            <button id="close-terms-modal-x" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-black text-slate-800 uppercase border-b pb-3 mb-4">Termos de Uso</h2>
+            <div class="overflow-y-auto flex-1 text-sm text-slate-600 p-2 scrollable-content">
+                <p>Insira seus termos de uso institucionais aqui.</p>
             </div>
-            <div class="flex justify-end mt-6">
-                <button id="cancel-pauta-type-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-            </div>
+            <button id="close-terms-modal-btn" class="mt-4 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl uppercase text-xs">Fechar</button>
         </div>
     </div>
 
-    <!-- MODAL DE CRIAR PAUTA -->
-    <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <h2 class="text-xl sm:text-2xl font-bold mb-4">Criar Nova Pauta</h2>
-            <label for="create-pauta-name-input" class="block text-sm font-medium text-gray-700 mb-2">Nome da Pauta</label>
-            <input type="text" id="create-pauta-name-input" class="w-full p-3 border border-gray-300 rounded-lg mb-4 sm:mb-6 text-sm sm:text-base">
-            
-            <div id="room-config-container" class="hidden mb-4 sm:mb-6">
-                <label class="block text-sm font-medium text-gray-700 mb-2">Defina as Salas ou Locais</label>
-                <div class="flex flex-col sm:flex-row gap-2 mb-3">
-                    <input type="text" id="custom-room-input" placeholder="Ex: Vara de Família..." class="w-full sm:flex-1 p-3 border border-gray-300 rounded-lg text-sm sm:text-base" />
-                    <button id="add-custom-room-btn" class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-4 rounded-lg hover:bg-blue-700 transition">Adicionar</button>
-                </div>
-                <div class="bg-gray-50 border border-gray-200 rounded-lg p-3" style="min-height: 100px;">
-                    <p id="no-rooms-msg" class="text-gray-400 text-xs sm:text-sm text-center mt-4">Nenhum local adicionado ainda.</p>
-                    <ul id="custom-rooms-list" class="space-y-2 text-sm"></ul>
-                </div>
+    <!-- PRIVACY POLICY MODAL (Placeholder estrutural para você preencher o texto) -->
+    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col relative">
+            <button id="close-policy-modal-btn-x" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-black text-slate-800 uppercase border-b pb-3 mb-4">Política de Privacidade (LGPD)</h2>
+            <div id="policy-content" class="overflow-y-auto flex-1 text-sm text-slate-600 p-2 scrollable-content">
+                <p>Insira sua política de LGPD aqui.</p>
             </div>
-
-            <div id="orgao-integration-wrapper" class="mb-4 sm:mb-6">
-                <label for="select-orgao-integracao" class="block text-sm font-medium text-gray-700 mb-2">
-                    Sincronizar com Órgão (Solar/Verde)
-                </label>
-                <select id="select-orgao-integracao" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-50 focus:ring-2 focus:ring-blue-500 text-sm sm:text-base">
-                    <option value="">-- Criar pauta vazia (Manual) --</option>
-                    <option value="123">DP Duque de Caxias - 1ª Vara Cível</option>
-                    <option value="456">DP Duque de Caxias - Família / Mutirão</option>
-                    <option value="789">DP Belford Roxo - Núcleo Geral</option>
-                </select>
-                <p class="text-[9px] sm:text-[10px] text-blue-600 mt-1 italic">Ao selecionar, os nomes agendados serão puxados automaticamente no ato da criação.</p>
-            </div>
-            
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 mt-6">
-                <button id="cancel-create-pauta-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="next-to-ordem-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Avançar</button>
-            </div>
+            <button id="close-policy-modal-btn" class="mt-4 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl uppercase text-xs">Fechar</button>
         </div>
     </div>
 
-    <!-- MODAL DE ADMIN -->
-    <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4" onclick="this.classList.add('hidden')">
-        <div id="admin-window" class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl transition-all duration-300 animate-scale-up" style="max-height: 100vh;" onclick="event.stopPropagation()">
-            <div class="flex justify-between items-center bg-slate-50 px-4 py-3 border-b select-none shrink-0 sm:rounded-t-xl">
-                <div class="flex items-center gap-2">
-                    <span class="text-blue-600 text-base">🛡️</span>
-                    <h2 class="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Painel do Administrador SIGEP</h2>
-                </div>
-                <div class="flex items-center gap-1 sm:gap-2">
-                    <button id="min-admin-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-gray-200 text-gray-600">_</button>
-                    <button id="max-admin-btn" class="hidden sm:flex w-8 h-8 items-center justify-center rounded hover:bg-gray-200 text-gray-600">▢</button>
-                    <button id="close-admin-modal-btn" class="w-8 h-8 flex items-center justify-center rounded hover:bg-red-500 hover:text-white text-gray-600 font-bold text-xl">×</button>
-                </div>
+    <!-- MANUAL MODAL (Placeholder estrutural) -->
+    <div id="manual-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+        <div class="bg-white p-6 rounded-2xl w-full max-w-2xl max-h-[80vh] flex flex-col relative">
+            <button id="close-manual-modal-x" class="absolute top-4 right-4 text-slate-400 hover:text-slate-800 text-2xl font-bold">&times;</button>
+            <h2 class="text-xl font-black text-slate-800 uppercase border-b pb-3 mb-4">Manual do Usuário</h2>
+            <div class="overflow-y-auto flex-1 text-sm text-slate-600 p-2 scrollable-content">
+                <p>Insira o manual do SIGEP aqui.</p>
             </div>
-
-            <div id="admin-content-area" class="flex-grow overflow-y-auto p-4 md:p-6 space-y-6 sm:space-y-8 text-left scrollable-content bg-white">
-                <div class="border-t pt-4">
-                    <h3 class="font-bold text-red-600 mb-2 uppercase text-xs sm:text-sm tracking-wide">Manutenção do Sistema e Proteção de Dados (LGPD)</h3>
-                    <p class="text-xs text-gray-500 mb-4">Apaga permanentemente os registros e atendimentos concluídos com mais de 7 dias de todas as pautas ativas.</p>
-                    <button id="cleanup-old-data-btn" class="w-full bg-red-50 text-red-700 font-black py-3 rounded-lg hover:bg-red-100 transition border border-red-200 text-xs uppercase tracking-wider">
-                        Executar Limpeza Manual de 7 Dias
-                    </button>
-                </div>
-
-                <div>
-                    <h3 class="text-sm sm:text-base font-black text-slate-700 mb-2 border-l-4 border-purple-500 pl-2 uppercase tracking-wide">Auditoria, Segurança e Logs</h3>
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-4">
-                            <div>
-                                <h4 class="font-bold text-slate-800 text-sm">Logs de Atividade em Tempo Real</h4>
-                                <p class="text-[11px] text-gray-500">Mapeamento e rastro total de ações e erros de conexão dos colaboradores.</p>
-                            </div>
-                            <div class="flex w-full sm:w-auto gap-2">
-                                <button id="view-audit-logs-btn" class="flex-1 sm:flex-none bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 text-xs font-bold uppercase tracking-wider shadow-sm">Carregar Logs</button>
-                                <button id="export-audit-pdf-btn" class="hidden flex-1 sm:flex-none bg-red-600 text-white px-4 py-2 rounded-lg hover:bg-red-700 text-xs font-bold uppercase tracking-wider shadow-sm">Gerar PDF</button>
-                            </div>
-                        </div>
-
-                        <div id="audit-filters-section" class="hidden bg-white p-3 border rounded-xl mb-4 grid grid-cols-1 md:grid-cols-4 gap-3 shadow-sm">
-                            <div>
-                                <label class="block text-[9px] font-black text-gray-400 uppercase">Usuário</label>
-                                <select id="filter-log-user" class="w-full border rounded-lg text-xs p-2.5 bg-gray-50"><option value="all">Todos</option></select>
-                            </div>
-                            <div>
-                                <label class="block text-[9px] font-black text-gray-400 uppercase">Ação / Erro</label>
-                                <select id="filter-log-action" class="w-full border rounded-lg text-xs p-2.5 bg-gray-50"><option value="all">Todas as Ações</option></select>
-                            </div>
-                            <div>
-                                <label class="block text-[9px] font-black text-gray-400 uppercase">Início</label>
-                                <input type="date" id="filter-log-start" class="w-full border rounded-lg text-xs p-2">
-                            </div>
-                            <div>
-                                <label class="block text-[9px] font-black text-gray-400 uppercase">Fim</label>
-                                <input type="date" id="filter-log-end" class="w-full border rounded-lg text-xs p-2">
-                            </div>
-                        </div>
-
-                        <div id="audit-logs-container" class="hidden mt-4 animate-fade-in">
-                            <div class="overflow-x-auto border rounded-xl bg-white max-h-60 overflow-y-auto custom-scrollbar">
-                                <table class="w-full text-[11px] text-left text-gray-500 min-w-max border-collapse">
-                                    <thead class="text-slate-700 uppercase bg-slate-50 border-b font-black text-[9px] tracking-wider sticky top-0 shadow-sm">
-                                        <tr>
-                                            <th class="px-3 py-2.5">Data / Hora</th>
-                                            <th class="px-3 py-2.5">Usuário</th>
-                                            <th class="px-3 py-2.5 text-center">Ação</th>
-                                            <th class="px-3 py-2.5">Detalhes</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody id="audit-logs-table-body" class="divide-y divide-gray-100"></tbody>
-                                </table>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div>
-                    <h3 class="text-sm sm:text-base font-black text-slate-700 mb-4 border-l-4 border-green-500 pl-2 uppercase tracking-wide">Análise Estatística de Dados (BI / Dashboard)</h3>
-                    <div class="bg-white p-4 sm:p-5 rounded-xl border border-slate-200 shadow-sm">
-                        <div class="flex flex-col md:flex-row items-end gap-3 mb-6">
-                            <div class="w-full md:w-auto flex gap-2">
-                                <div class="flex-1">
-                                    <label class="block text-[9px] font-black text-gray-400 uppercase">Início</label>
-                                    <input type="date" id="stats-filter-start" class="w-full border rounded-lg p-2 text-xs">
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-[9px] font-black text-gray-400 uppercase">Fim</label>
-                                    <input type="date" id="stats-filter-end" class="w-full border rounded-lg p-2 text-xs">
-                                </div>
-                            </div>
-                            <div class="w-full md:flex-grow flex gap-2 flex-col sm:flex-row">
-                                <div class="flex-1">
-                                    <label class="block text-[9px] font-black text-gray-400 uppercase">Criador da Pauta</label>
-                                    <select id="stats-filter-user" class="w-full border rounded-lg p-2 text-xs bg-white"><option value="all">Todos</option></select>
-                                </div>
-                                <div class="flex-1">
-                                    <label class="block text-[9px] font-black text-gray-400 uppercase">Atendente</label>
-                                    <select id="stats-filter-attendant" class="w-full border rounded-lg p-2 text-xs bg-white"><option value="all">Todos</option></select>
-                                </div>
-                            </div>
-                            <button id="btn-load-dashboard" class="w-full md:w-auto bg-green-600 text-white px-5 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-sm text-xs uppercase tracking-wider">
-                                Gerar Métricas
-                            </button>
-                        </div>
-                
-                        <div id="dashboard-results" class="hidden space-y-6 animate-fade-in">
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                                <div class="p-3 bg-blue-50 border border-blue-100 rounded-xl text-center shadow-sm">
-                                    <p class="text-[9px] text-blue-600 font-black uppercase tracking-wider">Total de Assistidos</p>
-                                    <h4 id="dash-total-geral" class="text-2xl font-black text-blue-900 mt-1">0</h4>
-                                </div>
-                                <div class="p-3 bg-emerald-50 border border-emerald-100 rounded-xl text-center shadow-sm">
-                                    <p class="text-[9px] text-emerald-600 font-black uppercase tracking-wider">Concluídos</p>
-                                    <h4 id="dash-total-atendidos" class="text-2xl font-black text-emerald-900 mt-1">0</h4>
-                                </div>
-                                <div class="p-3 bg-orange-50 border border-orange-100 rounded-xl text-center shadow-sm">
-                                    <p class="text-[9px] text-orange-600 font-black uppercase tracking-wider">Taxa Absenteísmo</p>
-                                    <h4 id="dash-taxa-falta" class="text-2xl font-black text-orange-900 mt-1">0%</h4>
-                                </div>
-                            </div>
-                            
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                <div class="border border-gray-100 rounded-xl p-4 bg-slate-50/50 shadow-inner">
-                                    <h5 class="text-[10px] font-black mb-3 uppercase text-slate-400 tracking-widest">Top Assuntos</h5>
-                                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
-                                </div>
-                                <div class="border border-gray-100 rounded-xl p-4 bg-slate-50/50 shadow-inner">
-                                    <h5 class="text-[10px] font-black mb-3 uppercase text-slate-400 tracking-widest">Atividade / Criador</h5>
-                                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 pt-4 border-t">
-                    <div>
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-xs uppercase tracking-wider flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-amber-500 rounded-full"></span> Usuários Aguardando Aprovação</h3>
-                        <div id="pending-users-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar"></div>
-                    </div>
-                    <div>
-                        <h3 class="font-bold text-slate-700 mb-2 border-b pb-1 text-xs uppercase tracking-wider flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-green-500 rounded-full"></span> Usuários Ativos / Cadastrados</h3>
-                        <div id="approved-users-list" class="space-y-2 max-h-48 overflow-y-auto custom-scrollbar"></div>
-                    </div>
-                </div>
-            </div>
+            <button id="close-manual-modal-btn" class="mt-4 bg-slate-200 hover:bg-slate-300 text-slate-800 font-bold py-3 rounded-xl uppercase text-xs">Fechar</button>
         </div>
     </div>
 
-    <!-- MODAL DE EDITAR CONFIGURAÇÃO -->
-    <div id="edit-pauta-config-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-            <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Editar Configurações</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-4">Edite as configurações da pauta no SIGEP</p>
-            
-            <div class="mb-4 sm:mb-6">
-                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Tipo de Pauta</h3>
-                <div class="space-y-2">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-pauta-type" value="agendado" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Agendado</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atendimentos com hora marcada</span>
-                        </span>
-                    </label>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-pauta-type" value="avulso" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Avulso</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atendimentos por ordem de chegada</span>
-                        </span>
-                    </label>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-pauta-type" value="multisala" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Multi-Salas</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atendimentos distribuídos em salas</span>
-                        </span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="mb-4 sm:mb-6">
-                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Ordem de Atendimento</h3>
-                <div class="space-y-2">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="padrao" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Padrão do Sistema</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Prioriza por pontualidade e urgência</span>
-                        </span>
-                    </label>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="chegada" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Ordem de Chegada</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atende na ordem em que chegaram</span>
-                        </span>
-                    </label>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="manual" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Ordem Manual</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Permite arrastar e reordenar</span>
-                        </span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="mb-6">
-                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Fluxo de Atendimento</h3>
-                <div class="space-y-2">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-delegation" value="true" class="h-4 w-4 text-green-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Usar fluxo de delegação</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Permite delegar finalização para colaborador</span>
-                        </span>
-                    </label>
-                    <div class="ml-5 sm:ml-7 p-3 bg-gray-50 rounded-lg border">
-                        <label class="flex items-start cursor-pointer">
-                            <input type="checkbox" id="edit-use-distribution" class="h-4 w-4 text-cyan-600 rounded mt-1">
-                            <span class="ml-2 sm:ml-3">
-                                <span class="font-semibold text-xs sm:text-sm">Habilitar Fila de Distribuição</span>
-                                <span class="block text-[9px] sm:text-[10px] text-gray-500">Para processos que precisam de assinatura/protocolo</span>
-                            </span>
-                        </label>
-                    </div>
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-delegation" value="false" class="h-4 w-4 text-red-600">
-                        <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Não, finalizar diretamente</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Pula a coluna "Em Atendimento"</span>
-                        </span>
-                    </label>
-                </div>
-            </div>
-
-            <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4 mt-6">
-                <button id="cancel-edit-pauta-config-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-edit-pauta-config-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700">Salvar Alterações</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- OS DEMAIS MODAIS (ordem-atendimento, delegation-flow, share, distribution, members, collaborators, arrival, attendant, select-collaborator, edit-attendant, delegate-email, reset-confirm, edit-pauta, close-pauta, format-help, demands, edit-assisted, priority-reason, privacy-policy, manual, terms, assisted-details, user-preferences, notes, confirm, statistics, ata-social, manage-rooms, modal-captacao-qr) PERMANECEM IGUAIS AO SEU ORIGINAL -->
-
+    <!-- Scripts de Integração do Sistema -->
     <script src="./js/api_integration.js" type="module"></script>
     <script type="module" src="./js/main.js"></script>
 
     <script>
         document.addEventListener('DOMContentLoaded', () => {
+            // Lógica do Footer e Modais Legais
             const btnManual = document.getElementById('btn-footer-manual');
             const btnTermos = document.getElementById('btn-footer-termos');
             const btnPolitica = document.getElementById('btn-footer-politica');
@@ -1092,8 +582,9 @@
             document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
             document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
             document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
+            document.getElementById('close-policy-modal-btn')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
             
-            // Controle de visibilidade dos Links do Footer
+            // Controle de visibilidade do Footer baseado no Login
             const loginContainer = document.getElementById('login-container');
             const footerLinks = document.getElementById('footer-links');
             const footerInner = document.getElementById('footer-inner-container');
@@ -1119,52 +610,84 @@
             }
 
             // ==========================================
-            // SELETOR DE MODO (NORMAL x EVENTO)
+            // LÓGICA: SELEÇÃO DE MODO DENTRO DO LOGIN
             // ==========================================
+            const modoSelectionView = document.getElementById('modo-selection-view');
+            const loginFormView = document.getElementById('login-form-view');
+            const btnChangeMode = document.getElementById('btn-change-mode');
+            const modoLabelBadge = document.getElementById('modo-label-badge');
+            
+            const setModo = (modo) => {
+                localStorage.setItem('sigep_modo_operacao', modo);
+                if (window.app) {
+                    window.app.modoOperacao = modo;
+                    window.app.isModoEvento = (modo === 'evento');
+                }
+                if (modoSelectionView && loginFormView) {
+                    modoSelectionView.classList.add('hidden');
+                    loginFormView.classList.remove('hidden');
+                    loginFormView.classList.add('animate-fade-in');
+                }
+                if(modoLabelBadge) {
+                    modoLabelBadge.textContent = modo === 'normal' ? 'Institucional' : 'Eventos/Ações';
+                    modoLabelBadge.className = modo === 'normal' ? 'text-blue-600' : 'text-emerald-600';
+                }
+            };
 
             const modoSalvo = localStorage.getItem('sigep_modo_operacao');
-            const modoSelectionContainer = document.getElementById('modo-selection-container');
-            
-            // Se não tem modo salvo, mostra o seletor
-            if (!modoSalvo && modoSelectionContainer) {
-                modoSelectionContainer.classList.remove('hidden');
-                loginContainer.classList.add('hidden');
+            if (modoSalvo) {
+                setModo(modoSalvo);
+            } else if (modoSelectionView && loginFormView) {
+                modoSelectionView.classList.remove('hidden');
+                loginFormView.classList.add('hidden');
             }
 
-            // Botão Modo Normal
-            document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
-                localStorage.setItem('sigep_modo_operacao', 'normal');
-                if (modoSelectionContainer) modoSelectionContainer.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
-                
-                if (window.app) {
-                    window.app.modoOperacao = 'normal';
-                    window.app.isModoEvento = false;
+            document.getElementById('card-modo-normal')?.addEventListener('click', () => setModo('normal'));
+            document.getElementById('card-modo-evento')?.addEventListener('click', () => setModo('evento'));
+            document.getElementById('btn-modo-normal')?.addEventListener('click', (e) => { e.stopPropagation(); setModo('normal'); });
+            document.getElementById('btn-modo-evento')?.addEventListener('click', (e) => { e.stopPropagation(); setModo('evento'); });
+
+            btnChangeMode?.addEventListener('click', () => {
+                localStorage.removeItem('sigep_modo_operacao');
+                if (loginFormView && modoSelectionView) {
+                    loginFormView.classList.add('hidden');
+                    modoSelectionView.classList.remove('hidden');
+                    modoSelectionView.classList.add('animate-fade-in');
                 }
             });
 
-            // Botão Modo Evento
-            document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
-                localStorage.setItem('sigep_modo_operacao', 'evento');
-                if (modoSelectionContainer) modoSelectionContainer.classList.add('hidden');
-                loginContainer.classList.remove('hidden');
-                
-                if (window.app) {
-                    window.app.modoOperacao = 'evento';
-                    window.app.isModoEvento = true;
+            // ==========================================
+            // LÓGICA DE ABAS (LOGIN / CADASTRO)
+            // ==========================================
+            const loginTab = document.getElementById('login-tab-btn');
+            const registerTab = document.getElementById('register-tab-btn');
+            const loginForm = document.getElementById('login-form');
+            const registerForm = document.getElementById('register-form');
+
+            const switchAuthTab = (isLogin) => {
+                if(isLogin) {
+                    loginTab.classList.add('border-blue-600', 'text-blue-600');
+                    loginTab.classList.remove('border-transparent', 'text-slate-400');
+                    registerTab.classList.remove('border-blue-600', 'text-blue-600');
+                    registerTab.classList.add('border-transparent', 'text-slate-400');
+                    loginForm.classList.remove('hidden');
+                    registerForm.classList.add('hidden');
+                } else {
+                    registerTab.classList.add('border-blue-600', 'text-blue-600');
+                    registerTab.classList.remove('border-transparent', 'text-slate-400');
+                    loginTab.classList.remove('border-blue-600', 'text-blue-600');
+                    loginTab.classList.add('border-transparent', 'text-slate-400');
+                    registerForm.classList.remove('hidden');
+                    loginForm.classList.add('hidden');
                 }
-            });
+            };
 
-            // Clicar nos cards também funciona
-            document.getElementById('card-modo-normal')?.addEventListener('click', () => {
-                document.getElementById('btn-modo-normal')?.click();
-            });
+            loginTab?.addEventListener('click', (e) => { e.preventDefault(); switchAuthTab(true); });
+            registerTab?.addEventListener('click', (e) => { e.preventDefault(); switchAuthTab(false); });
 
-            document.getElementById('card-modo-evento')?.addEventListener('click', () => {
-                document.getElementById('btn-modo-evento')?.click();
-            });
-
+            // ==========================================
             // LGPD
+            // ==========================================
             const lgpdModal = document.getElementById('lgpd-acceptance-modal');
             const chkTermos = document.getElementById('lgpd-check-termos');
             const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
@@ -1173,31 +696,31 @@
 
             const validateLgpdChecks = () => {
                 if (chkTermos.checked && chkPrivacidade.checked) {
-                    btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
+                    btnConfirmLgpd.classList.remove('bg-slate-300', 'cursor-not-allowed');
+                    btnConfirmLgpd.classList.add('bg-blue-600', 'hover:bg-blue-700');
                     btnConfirmLgpd.disabled = false;
                 } else {
-                    btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
+                    btnConfirmLgpd.classList.add('bg-slate-300', 'cursor-not-allowed');
+                    btnConfirmLgpd.classList.remove('bg-blue-600', 'hover:bg-blue-700');
                     btnConfirmLgpd.disabled = true;
                 }
             };
 
-            chkTermos.addEventListener('change', validateLgpdChecks);
-            chkPrivacidade.addEventListener('change', validateLgpdChecks);
+            chkTermos?.addEventListener('change', validateLgpdChecks);
+            chkPrivacidade?.addEventListener('change', validateLgpdChecks);
 
-            btnConfirmLgpd.addEventListener('click', () => {
+            btnConfirmLgpd?.addEventListener('click', () => {
                 localStorage.setItem('sigep_lgpd_accepted', 'true');
                 lgpdModal.classList.add('hidden');
             });
 
             new MutationObserver(() => {
-                if (loginContainer?.classList.contains('hidden') && !hasAcceptedLGPD) {
+                if (loginContainer && !loginContainer.classList.contains('hidden') && !hasAcceptedLGPD) {
                     lgpdModal.classList.remove('hidden');
                 }
             }).observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
 
-            // Bloqueador de erro
+            // Trata Erro do Console silenciosamente para a lista de usuários sem autenticação
             const originalConsoleError = console.error;
             console.error = function() {
                 if (arguments[0]?.includes('Erro ao carregar lista de usuários') && document.body.classList.contains('is-logged-out')) {
@@ -1205,40 +728,10 @@
                 }
                 originalConsoleError.apply(console, arguments);
             };
-
-            // Exclusividade das Abas
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
-            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-
-            const toggleExclusiveTabs = (activeTab, inactiveTab) => {
-                if(!activeTab || !inactiveTab) return;
-                activeTab.classList.add('tab-active');
-                activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                inactiveTab.classList.remove('tab-active');
-                inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-            };
-
-            if (tabAgendamento && tabAvulso) {
-                tabAgendamento.addEventListener('click', () => {
-                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
-                    if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
-                });
-                
-                tabAvulso.addEventListener('click', () => {
-                    toggleExclusiveTabs(tabAvulso, tabAgendamento);
-                    if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
-                    if(radioScheduledNo) radioScheduledNo.checked = true;
-                    if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
-                });
-
-                if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
-                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
-                }
-            }
         });
     </script>
 </body>
 </html>
+
+
+
