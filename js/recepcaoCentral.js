@@ -1,6 +1,4 @@
-// js/recepcaoCentral.js - RECEPÇÃO CENTRAL SIGEP
-// Permite que Apoio, Admin e Superadmin gerenciem múltiplas pautas simultaneamente.
-// Acesso restrito: roles 'apoio', 'admin', 'superadmin'.
+
 
 import {
     collection, doc, onSnapshot, updateDoc, getDocs, query, where
@@ -8,6 +6,7 @@ import {
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PautaConfigService } from './pautaConfig.js';
+import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { logAction } from './admin.js';
 
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
@@ -20,6 +19,8 @@ const estado = {
     pautaFocadaId: null,     // pauta selecionada no modo de navegação
     modoVisao: 'grade',      // 'grade' | 'foco'
     termoBusca: '',
+    recepcaoAtual: null,     // recepção selecionada atual
+    unidadeAtual: null,      // unidade selecionada atual
 };
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
@@ -69,45 +70,167 @@ export const RecepçãoCentralService = {
             return;
         }
 
-        // Carregar pautas do dia
-        await this._carregarPautasHoje();
-
-        // Mostrar tela
-        this._renderTela();
+        // Mostrar seletor de recepções hierárquico
+        await this._mostrarSelectorRecepcoes();
     },
 
-    // ── CARREGAR DADOS ─────────────────────────────────────────────────────────
+    // ── SELETOR DE RECEPÇÃO HIERÁRQUICA ─────────────────────────────────────────
 
-    async _carregarPautasHoje() {
+    async _mostrarSelectorRecepcoes() {
+        const recepcoes = RecepcaoConfigService.getRecepcoesDoUsuario(this._app.currentUser);
+        
+        if (recepcoes.length === 0) {
+            this._renderSemPermissao();
+            return;
+        }
+        
+        if (recepcoes.length === 1 && recepcoes[0].tipo === 'central') {
+            // Única recepção central - carrega direto
+            this._recepcaoAtual = recepcoes[0];
+            this._unidadeAtual = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
+            await this._carregarPautasPorRecepcao();
+        } else if (recepcoes.length === 1) {
+            // Única recepção especializada - carrega direto com contexto
+            this._recepcaoAtual = recepcoes[0];
+            this._unidadeAtual = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
+            await this._carregarPautasPorRecepcao();
+        } else {
+            // Múltiplas recepções - mostra seletor
+            this._renderSelectorRecepcoes(recepcoes);
+        }
+    },
+
+    _renderSemPermissao() {
+        const container = document.getElementById('recepcao-central-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 py-12 text-center">
+                <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8">
+                    <span class="text-6xl block mb-4">🔒</span>
+                    <h3 class="text-xl font-bold text-amber-800 mb-2">Acesso Restrito</h3>
+                    <p class="text-amber-600">Você não tem permissão para acessar nenhuma recepção.</p>
+                    <button id="rc-voltar-sem-permissao" class="mt-6 bg-slate-700 text-white px-6 py-2 rounded-lg hover:bg-slate-800 transition">
+                        Voltar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        document.getElementById('rc-voltar-sem-permissao')?.addEventListener('click', () => {
+            this.fechar();
+        });
+    },
+
+    _renderSelectorRecepcoes(recepcoes) {
+        const container = document.getElementById('recepcao-central-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="max-w-7xl mx-auto px-4 py-6">
+                ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
+                <div class="mt-6 flex justify-center">
+                    <button id="rc-voltar-selector" class="bg-slate-600 text-white px-6 py-2 rounded-lg hover:bg-slate-700 transition">
+                        ← Voltar
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Adicionar eventos aos botões de recepção
+        document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const recepcaoId = btn.dataset.recepcaoId;
+                const unidadeId = btn.dataset.unidadeId;
+                
+                const resultado = RecepcaoConfigService.getUnidadePorRecepcao(recepcaoId);
+                if (resultado) {
+                    this._recepcaoAtual = resultado.recepcao;
+                    this._unidadeAtual = { id: unidadeId, nome: resultado.unidade.nome };
+                    await this._carregarPautasPorRecepcao();
+                }
+            });
+        });
+        
+        document.getElementById('rc-voltar-selector')?.addEventListener('click', () => {
+            this.fechar();
+        });
+    },
+
+    // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
+
+    async _carregarPautasPorRecepcao() {
         const app = this._app;
-        estado.pautasHoje = await PautaConfigService.buscarPautasHoje(
+        
+        // Mostrar loading
+        this._mostrarLoading();
+        
+        // Buscar pautas do dia
+        let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
             app.currentUser.email,
             app.currentUser.role
         );
+        
+        // Filtrar pela recepção selecionada
+        if (this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
+            pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
+        }
+        
+        estado.pautasHoje = pautas;
+        
+        // Iniciar listeners
+        await this._iniciarListeners();
+        
+        // Renderizar tela com contexto
+        this._renderTelaComContexto();
+    },
 
-        // Iniciar listeners de tempo real para cada pauta
+    _mostrarLoading() {
+        const container = document.getElementById('recepcao-central-container');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="flex justify-center items-center h-64">
+                <div class="text-center">
+                    <div class="loader-small mx-auto mb-4"></div>
+                    <p class="text-slate-500">Carregando pautas da recepção...</p>
+                </div>
+            </div>
+        `;
+    },
+
+    async _iniciarListeners() {
+        const app = this._app;
+        
+        // Cancelar listeners anteriores
         this._cancelarListeners();
-
+        
         for (const pauta of estado.pautasHoje) {
             // Listener de assistidos
             const refAt = collection(app.db, "pautas", pauta.id, "attendances");
             const unsubAt = onSnapshot(refAt, (snap) => {
                 estado.assistidosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this._atualizarCardPauta(pauta.id);
-                if (estado.pautaFocadaId === pauta.id) this._renderFoco(pauta.id);
+                if (estado.modoVisao === 'grade') {
+                    this._atualizarCardPauta(pauta.id);
+                } else if (estado.pautaFocadaId === pauta.id) {
+                    this._renderFoco(pauta.id);
+                }
                 this._atualizarPainelPublicoUltimoChamado(pauta.id);
             });
-
+            
             // Listener de colaboradores
             const refCo = collection(app.db, "pautas", pauta.id, "collaborators");
             const unsubCo = onSnapshot(refCo, (snap) => {
                 estado.colaboradoresPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this._atualizarCardPauta(pauta.id);
-                if (estado.pautaFocadaId === pauta.id) this._renderFoco(pauta.id);
+                if (estado.modoVisao === 'grade') {
+                    this._atualizarCardPauta(pauta.id);
+                } else if (estado.pautaFocadaId === pauta.id) {
+                    this._renderFoco(pauta.id);
+                }
             });
-
+            
             estado.unsubscribers.push(unsubAt, unsubCo);
         }
     },
@@ -117,20 +240,39 @@ export const RecepçãoCentralService = {
         estado.unsubscribers = [];
     },
 
-    // ── RENDER PRINCIPAL ───────────────────────────────────────────────────────
+    // ── RENDER TELA COM CONTEXTO DA RECEPÇÃO ───────────────────────────────────
 
-    _renderTela() {
+    _renderTelaComContexto() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-
+        
+        const contexto = RecepcaoConfigService.getContextoRecepcao(this._recepcaoAtual);
+        
         container.innerHTML = `
             <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4">
+                
+                <!-- CONTEXTO DA RECEPÇÃO ATUAL -->
+                <div class="mb-4 ${contexto.cor} rounded-2xl p-4 shadow-lg">
+                    <div class="flex items-center justify-between flex-wrap gap-3">
+                        <div class="flex items-center gap-3">
+                            <span class="text-3xl">${contexto.icone}</span>
+                            <div>
+                                <p class="text-xs text-white/60 font-bold uppercase tracking-wider">Recepção Atual</p>
+                                <p class="font-black text-white text-lg">${contexto.titulo}</p>
+                                <p class="text-sm text-white/70">${contexto.subtitulo}</p>
+                            </div>
+                        </div>
+                        <button id="rc-trocar-recepcao" class="bg-white/20 hover:bg-white/30 text-white text-sm font-bold px-4 py-2 rounded-xl transition flex items-center gap-2">
+                            <span>🔄</span> Trocar Recepção
+                        </button>
+                    </div>
+                </div>
 
-                <!-- CABEÇALHO -->
+                <!-- CABEÇALHO PRINCIPAL -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
-                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Recepção Central</h2>
-                        <p class="text-sm text-slate-500 mt-0.5">Pautas ativas hoje — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto">
                         <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
@@ -166,10 +308,16 @@ export const RecepçãoCentralService = {
 
             </div>
         `;
-
+        
         this._renderGrade();
         this._renderSumario();
         this._setupInteracoes();
+        
+        // Botão trocar recepção
+        document.getElementById('rc-trocar-recepcao')?.addEventListener('click', async () => {
+            this._cancelarListeners();
+            await this._mostrarSelectorRecepcoes();
+        });
     },
 
     // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
@@ -182,7 +330,8 @@ export const RecepçãoCentralService = {
             grade.innerHTML = `
                 <div class="col-span-full text-center py-16 opacity-60">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa hoje.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa para esta recepção.</p>
+                    <p class="text-xs text-slate-400 mt-2">Selecione outra recepção ou crie uma nova pauta.</p>
                 </div>
             `;
             return;
@@ -198,6 +347,9 @@ export const RecepçãoCentralService = {
         const { livres, ocupados } = colaboradoresStatus(colaboradores);
 
         const porcentagem = c.total > 0 ? Math.round((c.atendidos / c.total) * 100) : 0;
+        
+        // Badge de sala/local se tiver
+        const salaBadge = pauta.sala ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>` : '';
 
         return `
             <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col" data-pauta-id="${pauta.id}">
@@ -206,7 +358,10 @@ export const RecepçãoCentralService = {
                 <div class="bg-slate-800 px-5 py-4 flex justify-between items-start gap-2">
                     <div class="min-w-0">
                         <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
-                        <p class="text-slate-400 text-xs mt-0.5 uppercase tracking-wider">${pauta.type || 'agendamento'}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            <p class="text-slate-400 text-[10px] uppercase tracking-wider">${pauta.type || 'agendamento'}</p>
+                            ${salaBadge}
+                        </div>
                     </div>
                     <span class="text-white/60 text-xs font-mono shrink-0">${porcentagem}%</span>
                 </div>
@@ -267,7 +422,6 @@ export const RecepçãoCentralService = {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
         card.outerHTML = this._htmlCardPauta(pauta);
-        this._setupInteracoesCard(pautaId);
         this._renderSumario();
     },
 
@@ -427,15 +581,11 @@ export const RecepçãoCentralService = {
             </div>
         `;
 
-        // Botão voltar
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
-
-        // Chamar próximo no foco
         document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => {
             await this._chamarProximo(pautaId);
         });
 
-        // Check-in direto na fila
         foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
             btn.addEventListener('click', () => {
                 this._marcarChegada(pautaId, btn.dataset.id);
@@ -542,8 +692,6 @@ export const RecepçãoCentralService = {
         }
 
         const proximo = aguardando[0];
-
-        // Guarda o chamado para o painel público
         this._registrarUltimoChamado(pautaId, proximo, pauta.name);
 
         await PautaService.updateStatus(
@@ -559,7 +707,6 @@ export const RecepçãoCentralService = {
     },
 
     _registrarUltimoChamado(pautaId, assistido, pautaNome) {
-        // Salva no localStorage para o painel público ler
         const chamado = {
             nome: assistido.name,
             assunto: assistido.subject || '',
@@ -569,28 +716,22 @@ export const RecepçãoCentralService = {
             timestamp: Date.now(),
         };
 
-        // Histórico recente (últimos 5)
         const chave = `sigep_chamados_${pautaId}`;
         let historico = [];
         try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
         historico.unshift(chamado);
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
-
-        // Último chamado global (para o painel público unificado)
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
-
-        // Dispara evento para o painel público atualizar em tempo real
         window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
     },
 
     _atualizarPainelPublicoUltimoChamado(pautaId) {
-        // Chamado pelo listener — verifica se houve mudança de status recente
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const recemChamados = assistidos.filter(a =>
             a.status === 'emAtendimento' &&
             a.inAttendanceTime &&
-            (Date.now() - new Date(a.inAttendanceTime).getTime()) < 10000 // menos de 10s
+            (Date.now() - new Date(a.inAttendanceTime).getTime()) < 10000
         );
 
         if (recemChamados.length > 0) {
@@ -604,21 +745,16 @@ export const RecepçãoCentralService = {
     // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
 
     _setupInteracoes() {
-        // Botão fechar recepção central
         document.getElementById('rc-btn-fechar')?.addEventListener('click', () => {
             this.fechar();
         });
 
-        // Botão atualizar
         document.getElementById('rc-btn-atualizar')?.addEventListener('click', async () => {
             this._cancelarListeners();
-            await this._carregarPautasHoje();
-            this._renderGrade();
-            this._renderSumario();
+            await this._carregarPautasPorRecepcao();
             showNotification("Dados atualizados!", "info");
         });
 
-        // Botão busca global
         document.getElementById('rc-btn-busca-global')?.addEventListener('click', () => {
             const wrap = document.getElementById('rc-busca-global-wrap');
             wrap.classList.toggle('hidden');
@@ -628,7 +764,6 @@ export const RecepçãoCentralService = {
             }
         });
 
-        // Delegação de eventos para botões dos cards
         document.getElementById('rc-grade-pautas')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-pauta-id]');
             if (!btn) return;
@@ -644,11 +779,6 @@ export const RecepçãoCentralService = {
         });
     },
 
-    _setupInteracoesCard(pautaId) {
-        // Após re-render de um card individual, re-liga os listeners
-        // (delegação via grade já cuida disso)
-    },
-
     _abrirModalCheckin(pautaId) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
@@ -656,11 +786,6 @@ export const RecepçãoCentralService = {
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const naPauta = assistidos.filter(a => a.status === 'pauta');
 
-        // Usa o modal de chegada existente no index.html, adaptando-o
-        window.assistedIdToHandle = null;
-        window._rcPautaIdParaCheckin = pautaId;
-
-        // Modal customizado simples
         const existing = document.getElementById('rc-modal-checkin');
         if (existing) existing.remove();
 
@@ -702,7 +827,6 @@ export const RecepçãoCentralService = {
         document.getElementById('rc-modal-checkin-close').onclick = () => modal.remove();
         modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
 
-        // Busca dentro do modal
         document.getElementById('rc-modal-busca').addEventListener('input', (e) => {
             const t = normalizeText(e.target.value);
             modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
@@ -712,7 +836,6 @@ export const RecepçãoCentralService = {
             });
         });
 
-        // Check-in
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
                 btn.disabled = true;
@@ -739,14 +862,12 @@ export const RecepçãoCentralService = {
     // ── ABRIR (chamado pelo main.js) ───────────────────────────────────────────
 
     async abrir(app) {
-        // Garante que o container existe no DOM (deve estar no index.html)
         const container = document.getElementById('recepcao-central-container');
         if (!container) {
             console.error("Container #recepcao-central-container não encontrado no index.html");
             return;
         }
 
-        // Esconde outras telas
         const { UIService } = await import('./ui.js');
         UIService.showScreen('recepcaoCentral');
 
