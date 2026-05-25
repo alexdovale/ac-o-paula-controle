@@ -6,17 +6,25 @@ import { PainelGeralService } from './painelGeralService.js';
 
 export const UIService = {
     showScreen(screenName) {
-    document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
-    document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
-    document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
-    document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
-    document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
-    document.getElementById('recepcao-central-container').classList.toggle('hidden', screenName !== 'recepcaoCentral');
+        // Telas de entrada
+        document.getElementById('loading-container')?.classList.toggle('hidden', screenName !== 'loading');
+        document.getElementById('login-container')?.classList.toggle('hidden', screenName !== 'login');
+        
+        // 🚀 NOVAS TELAS ADICIONADAS: Seleção de Modo e Atendimento Externo
+        document.getElementById('modo-selection-screen')?.classList.toggle('hidden', screenName !== 'modoSelection');
+        document.getElementById('atendimento-externo-container')?.classList.toggle('hidden', screenName !== 'atendimentoExterno');
+        
+        // Telas principais do sistema
+        document.getElementById('pauta-selection-container')?.classList.toggle('hidden', screenName !== 'pautaSelection');
+        document.getElementById('app-container')?.classList.toggle('hidden', screenName !== 'app');
+        document.getElementById('dashboard-container')?.classList.toggle('hidden', screenName !== 'dashboard');
+        document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
 
-    if (screenName !== 'loading' && screenName !== 'login') {
-        localStorage.setItem('lastScreen', screenName);
-    }
-},
+        // Só grava o último acesso se não for tela de carregamento ou login
+        if (screenName !== 'loading' && screenName !== 'login') {
+            localStorage.setItem('lastScreen', screenName);
+        }
+    },
 
     isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
@@ -1320,7 +1328,7 @@ export const UIService = {
                     </div>
 
                     <div class="mt-2 space-y-1">
-                        ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                        ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                         <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
                         ${item.numeroProcesso ? `<p class="text-xs text-blue-700 font-bold">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
                     </div>
