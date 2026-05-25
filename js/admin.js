@@ -1,4 +1,5 @@
-// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA E REGISTROS DO BI (SIGEP)
+
+// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
 
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
@@ -27,6 +28,119 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
         console.error("❌ Erro ao registrar log:", error); 
     }
 };
+
+// =========================================================================
+// MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS
+// =========================================================================
+
+/**
+ * Carrega lista de unidades disponíveis
+ */
+export const carregarUnidades = async (db) => {
+    try {
+        // Tenta buscar unidades do Firestore
+        const snapshot = await getDocs(collection(db, "unidades"));
+        if (!snapshot.empty) {
+            return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        }
+        
+        // Se não houver unidades, retorna lista padrão
+        return [
+            { id: "dp_caxias", nome: "Defensoria Pública - Duque de Caxias", sigla: "DP Caxias", ativo: true },
+            { id: "dp_belford_roxo", nome: "Defensoria Pública - Belford Roxo", sigla: "DP Belford Roxo", ativo: true },
+            { id: "dp_nova_iguacu", nome: "Defensoria Pública - Nova Iguaçu", sigla: "DP Nova Iguaçu", ativo: true }
+        ];
+    } catch (error) {
+        console.error("Erro ao carregar unidades:", error);
+        return [];
+    }
+};
+
+/**
+ * Salva as unidades permitidas para um usuário
+ */
+export const salvarUnidadesUsuario = async (db, userId, unidadesSelecionadas) => {
+    try {
+        await updateDoc(doc(db, "users", userId), {
+            unidadesPermitidas: unidadesSelecionadas,
+            updatedAt: new Date().toISOString()
+        });
+        showNotification("Unidades do usuário atualizadas!", "success");
+        return true;
+    } catch (error) {
+        showNotification("Erro ao salvar unidades: " + error.message, "error");
+        return false;
+    }
+};
+
+/**
+ * Abre modal para gerenciar unidades de um usuário
+ */
+export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, unidadesAtuais = []) => {
+    const unidades = await carregarUnidades(db);
+    
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/60 z-[600] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-white font-black text-lg">Gerenciar Unidades</h3>
+                    <p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p>
+                </div>
+                <button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p>
+                <div id="lista-unidades-checkbox" class="space-y-2">
+                    ${unidades.map(unidade => `
+                        <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+                            <input type="checkbox" name="unidade" value="${unidade.id}" 
+                                ${unidadesAtuais.includes(unidade.id) ? 'checked' : ''}
+                                class="h-4 w-4 text-green-600 rounded">
+                            <div>
+                                <span class="font-bold text-gray-800">${escapeHTML(unidade.nome)}</span>
+                                <p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p>
+                            </div>
+                        </label>
+                    `).join('')}
+                </div>
+                <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
+                    <p class="text-[10px] text-amber-700 font-bold">⚠️ Atenção:</p>
+                    <p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p>
+                    <p class="text-[9px] text-amber-600">Deixe em branco para não permitir acesso a nenhuma unidade.</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t">
+                <button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="btn-salvar-unidades-usuario" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">
+                    Salvar Alterações
+                </button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+    
+    const fechar = () => modal.remove();
+    modal.querySelectorAll('.fechar-modal-unidades').forEach(btn => btn.addEventListener('click', fechar));
+    modal.addEventListener('click', (e) => { if (e.target === modal) fechar(); });
+    
+    document.getElementById('btn-salvar-unidades-usuario')?.addEventListener('click', async () => {
+        const checkboxes = modal.querySelectorAll('input[name="unidade"]:checked');
+        const unidadesSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+        
+        await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
+        fechar();
+        
+        // Recarregar lista de usuários para mostrar atualização
+        setTimeout(() => loadUsersList(db), 500);
+    });
+};
+
+// =========================================================================
+// MÓDULO DE GERENCIAMENTO DE USUÁRIOS
+// =========================================================================
 
 /**
  * Carrega Usuários Pendentes e Aprovados com Seletor de Cargos
@@ -87,12 +201,23 @@ export const loadUsersList = async (db) => {
                         </div>`;
                     pendingList.appendChild(row);
                 } else {
+                    // Mostrar quantas unidades o usuário tem acesso
+                    const unidadesCount = user.unidadesPermitidas?.length || 0;
+                    const unidadesText = unidadesCount > 0 
+                        ? `<p class="text-[9px] text-blue-500 mt-1">🏢 ${unidadesCount} unidade(s) permitida(s)</p>` 
+                        : `<p class="text-[9px] text-gray-400 mt-1">🏢 Nenhuma unidade vinculada</p>`;
+                    
                     row.innerHTML = `
                         <div class="text-xs flex-1">
                             <p class="font-bold text-gray-800 flex items-center">${escapeHTML(user.name || 'Sem nome')} ${statusBadge}</p>
                             <p class="text-gray-500">${escapeHTML(user.email)}</p>
+                            ${unidadesText}
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
+                            <button onclick="window.gerenciarUnidades('${userId}', '${escapeHTML(user.name || 'Sem nome')}', '${escapeHTML(user.email)}', ${JSON.stringify(user.unidadesPermitidas || [])})" 
+                                class="bg-purple-500 text-white px-2 py-1 rounded text-[10px] hover:bg-purple-600 transition">
+                                🏢 UNIDADES
+                            </button>
                             ${roleSelector}
                             <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition">SALVAR</button>
                             <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition">EXCLUIR</button>
@@ -130,10 +255,10 @@ export const deleteUser = async (db, userId) => {
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
+// Funções globais para admin
 window.approveUser = (userId) => approveUser(window.app?.db, userId);
 window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
 window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
-
 
 // =========================================================================
 // MÓDULO DE AUDITORIA, FILTROS E ERROS
@@ -223,7 +348,7 @@ export const loadAuditLogs = async (db) => {
         });
 
         if (filteredLogs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado para estes filtros.</td></tr>';
+            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado para estes filtros. </td></tr>';
             return;
         }
 
@@ -243,7 +368,7 @@ export const loadAuditLogs = async (db) => {
             } catch (e) {}
             
             const row = document.createElement('tr');
-            card.className = "border-b hover:bg-gray-50 transition-colors";
+            row.className = "border-b hover:bg-gray-50 transition-colors";
             
             let actionColor = 'bg-purple-100 text-purple-700 border border-purple-200';
             const action = (log.action || '').toLowerCase();
@@ -616,7 +741,7 @@ export const populateUserFilter = async (db) => {
     } catch (e) {}
 };
 
-// 🟢 NOVO: Alimenta o seletor de atendentes com base nos registros armazenados no histórico 🟢
+// 🟢 Alimenta o seletor de atendentes com base nos registros armazenados no histórico
 const populateAttendantFilter = (rawData) => {
     const select = document.getElementById('stats-filter-attendant');
     if (!select) return;
@@ -638,6 +763,20 @@ const populateAttendantFilter = (rawData) => {
     });
 };
 
+// =========================================================================
+// FUNÇÕES GLOBAIS PARA UNIDADES
+// =========================================================================
+
+window.gerenciarUnidades = async (userId, userNome, userEmail, unidadesAtuais) => {
+    gerenciarUnidadesUsuario(window.app?.db, userId, userNome, userEmail, unidadesAtuais);
+};
+
+window.carregarUnidades = () => carregarUnidades(window.app?.db);
+
+// =========================================================================
+// LISTENERS E EXPORTS GLOBAIS
+// =========================================================================
+
 // Listeners dinâmicos
 document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
@@ -651,4 +790,5 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
-console.log("✅ Módulo admin.js carregado com sucesso (Auditoria e BI Otimizados)");
+
+console.log("✅ Módulo admin.js carregado com sucesso (Auditoria, BI e Gerenciamento de Unidades Otimizados)");
