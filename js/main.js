@@ -1698,67 +1698,38 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // BOTÕES DO PAINEL ADMIN - GERENCIAMENTO DE UNIDADES
+    // BOTÃO MASTER: UNIDADES / ÓRGÃOS (UNIFICADO)
     // ============================================================
     
-    // Botão: Gerenciar Unidades (usa o admin.js)
-    const btnGerenciarUnidades = document.getElementById('btn-gerenciar-unidades');
-    if (btnGerenciarUnidades) {
-        btnGerenciarUnidades.addEventListener('click', (e) => {
+    const btnUnidadesMaster = document.getElementById('btn-unidades-master');
+    if (btnUnidadesMaster) {
+        btnUnidadesMaster.addEventListener('click', (e) => {
             e.preventDefault();
             e.stopPropagation();
-            console.log("🖱️ Clique em Gerenciar Unidades");
+            console.log("🖱️ Clique no botão Unidades Master");
             
             // Fecha o modal de admin
             if (adminModal) adminModal.classList.add('hidden');
             
-            // Tenta usar a função global primeiro
-            if (typeof window.abrirGerenciadorUnidades === 'function') {
-                window.abrirGerenciadorUnidades();
+            // Abre o modal master do importador
+            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
+                ImportadorOrgaosService.abrirModalMaster(this);
             } else {
-                // Fallback: importa e executa
-                import('./admin.js').then(module => {
-                    module.abrirGerenciadorUnidades(this.db);
-                }).catch(err => {
-                    console.error("Erro ao carregar admin.js:", err);
+                // Fallback: importa dinamicamente
+                import('./importadorOrgaos.js').then(module => {
+                    module.ImportadorOrgaosService.abrirModalMaster(this);
+                }).catch((err) => {
+                    console.error("Erro ao carregar importadorOrgaos.js:", err);
                     showNotification("Erro ao carregar gerenciador de unidades", "error");
                 });
             }
         });
     } else {
-        console.warn("⚠️ Botão #btn-gerenciar-unidades não encontrado no DOM");
-    }
-    
-    // Botão: Importar Órgãos (usa o importadorOrgaos.js)
-    const btnImportarOrgaos = document.getElementById('btn-importar-orgaos');
-    if (btnImportarOrgaos) {
-        btnImportarOrgaos.addEventListener('click', (e) => {
-            e.preventDefault();
-            e.stopPropagation();
-            console.log("🖱️ Clique em Importar Órgãos");
-            
-            // Fecha o modal de admin
-            if (adminModal) adminModal.classList.add('hidden');
-            
-            // Usa o ImportadorOrgaosService já importado
-            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModal === 'function') {
-                ImportadorOrgaosService.abrirModal(this);
-            } else {
-                // Fallback: importa dinamicamente
-                import('./importadorOrgaos.js').then(module => {
-                    module.ImportadorOrgaosService.abrirModal(this);
-                }).catch((err) => {
-                    console.error("Erro ao carregar importadorOrgaos.js:", err);
-                    showNotification("Erro ao carregar importador de órgãos", "error");
-                });
-            }
-        });
-    } else {
-        console.warn("⚠️ Botão #btn-importar-orgaos não encontrado no DOM");
+        console.warn("⚠️ Botão #btn-unidades-master não encontrado no DOM. Verifique se o HTML foi atualizado.");
     }
 
     // ============================================================
-    // BOTÕES EXISTENTES DO ADMIN
+    // BOTÕES EXISTENTES DO ADMIN (mantidos)
     // ============================================================
 
     document.getElementById('max-admin-btn')?.addEventListener('click', () => {
