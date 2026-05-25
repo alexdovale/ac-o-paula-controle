@@ -1212,5 +1212,7 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
+window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 
 console.log("✅ Módulo admin.js carregado com sucesso (CRUD Unidades + Pesquisa + Importação em Massa)");
