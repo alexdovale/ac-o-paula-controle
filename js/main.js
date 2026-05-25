@@ -1694,7 +1694,44 @@ class SIGEPApp {
             loadUsersList(this.db);
             populateUserFilter(this.db);
         }
-
+    
+        // ============================================================
+        // BOTÕES DO PAINEL ADMIN - GERENCIAMENTO DE UNIDADES
+        // ============================================================
+        
+        // Botão: Gerenciar Unidades (usa o admin.js)
+        document.getElementById('btn-gerenciar-unidades')?.addEventListener('click', () => {
+            if (typeof window.abrirGerenciadorUnidades === 'function') {
+                window.abrirGerenciadorUnidades();
+            } else {
+                // Fallback: importa a função e executa
+                import('./admin.js').then(module => {
+                    module.abrirGerenciadorUnidades(this.db);
+                }).catch(() => {
+                    showNotification("Erro ao carregar gerenciador de unidades", "error");
+                });
+            }
+        });
+        
+        // Botão: Importar Órgãos (usa o importadorOrgaos.js)
+        document.getElementById('btn-importar-orgaos')?.addEventListener('click', () => {
+            if (typeof ImportadorOrgaosService !== 'undefined' && ImportadorOrgaosService.abrirModal) {
+                ImportadorOrgaosService.abrirModal(this);
+            } else {
+                // Fallback: importa dinamicamente
+                import('./importadorOrgaos.js').then(module => {
+                    module.ImportadorOrgaosService.abrirModal(this);
+                }).catch((err) => {
+                    console.error("Erro ao carregar importador:", err);
+                    showNotification("Erro ao carregar importador de órgãos", "error");
+                });
+            }
+        });
+    
+        // ============================================================
+        // BOTÕES EXISTENTES DO ADMIN
+        // ============================================================
+    
         document.getElementById('max-admin-btn')?.addEventListener('click', () => {
             const windowEl = document.getElementById('admin-window');
             if (windowEl) {
@@ -1703,19 +1740,19 @@ class SIGEPApp {
                 windowEl.classList.toggle('rounded-lg');
             }
         });
-
+    
         document.getElementById('min-admin-btn')?.addEventListener('click', () => {
             document.getElementById('admin-content-area')?.classList.toggle('hidden');
         });
-
+    
         document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
             if (adminModal) adminModal.classList.add('hidden');
         });
-
+    
         document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
             cleanupOldData(this.db);
         });
-
+    
         document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
             const btn = document.getElementById('view-audit-logs-btn');
             const originalText = btn.textContent;
@@ -1730,16 +1767,16 @@ class SIGEPApp {
                 btn.disabled = false;
             }
         });
-
+    
         document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
             exportAuditLogsPDF(this.db);
         });
-
+    
         document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
             loadDashboardData(this.db);
         });
     }
-
+    
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
