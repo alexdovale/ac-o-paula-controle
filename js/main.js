@@ -1,3 +1,4 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -43,7 +44,9 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         this.monitorInterval = null; 
-        this.currentMode = 'normal'; // Modo atual (normal ou evento)
+        
+        // CARREGA O MODO SALVO DO LOCALSTORAGE
+        this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         
         this.init();
     }
@@ -130,21 +133,106 @@ class SIGEPApp {
     // ============================================================
     // MÉTODO: setupModoListeners
     // Gerencia os cliques nos botões de Modo Normal e Modo Evento
+    // COM PERSISTÊNCIA NO LOCALSTORAGE
     // ============================================================
     setupModoListeners() {
         // Escuta o clique no Modo Normal
         document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
+            localStorage.setItem('sigep_current_mode', 'normal');
             this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
+            showNotification('📋 Modo Normal ativado - Atendimento regular', 'info', 3000);
         });
 
         // Escuta o clique no Modo Evento
         document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
             this.currentMode = 'evento';
+            localStorage.setItem('sigep_current_mode', 'evento');
             this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
+            showNotification('🎪 Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
         });
+    }
+
+    // ============================================================
+    // MÉTODO: mostrarSeletorTipoEvento
+    // Mostra opções de tipo de evento quando criar pauta no Modo Evento
+    // ============================================================
+    mostrarSeletorTipoEvento() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-bold mb-2">🎪 Tipo de Evento</h3>
+                    <p class="text-sm text-gray-600 mb-4">Selecione o tipo da pauta:</p>
+                    <div class="space-y-3">
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
+                            <div class="font-bold">🤝 Mutirão</div>
+                            <div class="text-xs text-gray-500">Evento concentrado com múltiplos atendimentos</div>
+                        </button>
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="plantao">
+                            <div class="font-bold">🚨 Plantão</div>
+                            <div class="text-xs text-gray-500">Atendimento emergencial contínuo</div>
+                        </button>
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="acao_social">
+                            <div class="font-bold">❤️ Ação Social</div>
+                            <div class="text-xs text-gray-500">Atividade comunitária externa</div>
+                        </button>
+                    </div>
+                    <button id="cancel-tipo-evento" class="mt-4 w-full p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const handleSelect = (tipo) => {
+                modal.remove();
+                resolve(tipo);
+            };
+            
+            modal.querySelectorAll('.tipo-evento-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleSelect(btn.dataset.tipo));
+            });
+            
+            modal.querySelector('#cancel-tipo-evento').addEventListener('click', () => {
+                modal.remove();
+                resolve(null);
+            });
+        });
+    }
+
+    // ============================================================
+    // MÉTODO: mostrarIndicadorModo
+    // Mostra um badge flutuante indicando o modo atual
+    // ============================================================
+    mostrarIndicadorModo() {
+        let indicador = document.getElementById('modo-indicador');
+        
+        if (!indicador) {
+            indicador = document.createElement('div');
+            indicador.id = 'modo-indicador';
+            document.body.appendChild(indicador);
+        }
+        
+        if (this.currentMode === 'normal') {
+            indicador.textContent = '📋 Modo Normal';
+            indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-blue-600 transition-all duration-300';
+        } else {
+            indicador.textContent = '🎪 Modo Evento';
+            indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-purple-600 transition-all duration-300';
+        }
+        
+        indicador.style.display = 'block';
+        indicador.style.opacity = '1';
+        
+        setTimeout(() => {
+            indicador.style.opacity = '0';
+            setTimeout(() => {
+                if (indicador) indicador.style.display = 'none';
+            }, 500);
+        }, 3000);
     }
 
     // ============================================================
@@ -211,6 +299,23 @@ class SIGEPApp {
         // NOVO BOTÃO DA RECEPÇÃO CENTRAL
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
             await RecepçãoCentralService.abrir(this);
+        });
+
+        // ============================================================
+        // BOTÃO DE CRIAR PAUTA - MODIFICADO PARA RESPEITAR O MODO
+        // ============================================================
+        document.getElementById('add-pauta-btn')?.addEventListener('click', async () => {
+            const modoAtual = this.currentMode;
+            
+            if (modoAtual === 'evento') {
+                const tipoEvento = await this.mostrarSeletorTipoEvento();
+                if (!tipoEvento) return;
+                this.tipoPautaSelecionado = tipoEvento;
+                this.abrirModalCriarPauta();
+            } else {
+                this.tipoPautaSelecionado = 'normal';
+                this.abrirModalCriarPauta();
+            }
         });
 
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
@@ -1805,25 +1910,23 @@ class SIGEPApp {
             // ============================================================
             // FILTRO POR MODO (NORMAL vs EVENTO)
             // ============================================================
-            // Modo Normal: mostra apenas pautas do tipo 'normal' ou 'agendamento'
-            // Modo Evento: mostra apenas pautas do tipo 'mutirao', 'plantao', 'acao_social'
-            
             const tiposNormais = ['normal', 'agendamento', undefined, null];
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão'];
             
             if (this.currentMode === 'normal') {
-                // Filtra apenas pautas de tipos normais
                 pautas = pautas.filter(p => {
                     const tipoPauta = (p.tipo || p.type || 'normal').toLowerCase();
                     return tiposNormais.includes(tipoPauta) || tipoPauta === 'normal' || tipoPauta === 'agendamento';
                 });
             } else if (this.currentMode === 'evento') {
-                // Filtra apenas pautas de tipos evento
                 pautas = pautas.filter(p => {
                     const tipoPauta = (p.tipo || p.type || '').toLowerCase();
                     return tiposEvento.includes(tipoPauta);
                 });
             }
+            
+            // Mostra indicador visual do modo atual
+            this.mostrarIndicadorModo();
             
             // Aplica filtros adicionais (período, etc.)
             const filtrosAdicionais = {};
@@ -1848,6 +1951,28 @@ class SIGEPApp {
             console.error("Erro ao carregar pautas:", error);
             if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         }
+    }
+
+    // ============================================================
+    // abrirModalCriarPauta - FUNÇÃO AUXILIAR PARA CRIAR PAUTA
+    // ============================================================
+    async abrirModalCriarPauta() {
+        // Aqui você deve ter a lógica existente para abrir o modal de criação de pauta
+        // E ao salvar, usar this.tipoPautaSelecionado no campo 'tipo'
+        
+        // Exemplo de como deve ser ao salvar a pauta:
+        // const pautaData = {
+        //     name: nomePauta,
+        //     owner: this.auth.currentUser.uid,
+        //     members: [this.auth.currentUser.uid],
+        //     memberEmails: [this.auth.currentUser.email],
+        //     createdAt: new Date().toISOString(),
+        //     tipo: this.tipoPautaSelecionado || 'normal',  // <-- IMPORTANTE!
+        //     isClosed: false,
+        //     isPublic: false
+        // };
+        
+        showNotification("Função abrirModalCriarPauta - Implemente sua lógica existente aqui", "info");
     }
 
     async deletePauta(pautaId, pautaName) {
@@ -2061,3 +2186,63 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+```
+
+📋 RESUMO DAS ALTERAÇÕES REALIZADAS:
+
+# Alteração Local
+1 Persistência do modo - localStorage.setItem/getItem Constructor e setupModoListeners
+2 Método mostrarSeletorTipoEvento - Pergunta o tipo ao criar pauta no Modo Evento Novo método
+3 Método mostrarIndicadorModo - Badge flutuante indicando o modo atual Novo método
+4 Botão de criar pauta - Verifica o modo e chama seletor se for Evento setupEventListeners
+5 Chamada do indicador - this.mostrarIndicadorModo() no loadPautasWithFilter loadPautasWithFilter
+6 Método abrirModalCriarPauta - Modelo para salvar pauta com campo tipo Novo método
+7 Notificações - Feedback visual ao trocar de modo setupModoListeners
+
+⚠️ IMPORTANTE: Você precisa implementar:
+
+1. Sua lógica existente de criação de pauta no método abrirModalCriarPauta()
+2. Ao salvar a pauta, incluir o campo tipo com o valor de this.tipoPautaSelecionado
+
+🚀 Script para atualizar pautas existentes:
+
+Execute no Console (F12) após atualizar o código:
+
+```javascript
+(async function() {
+    console.log("🚀 Atualizando tipos das pautas existentes...");
+    const db = window.app.db;
+    
+    const pautasRef = collection(db, "pautas");
+    const snapshot = await getDocs(pautasRef);
+    
+    let atualizadas = 0;
+    
+    for (const docSnap of snapshot.docs) {
+        const pauta = docSnap.data();
+        const pautaId = docSnap.id;
+        const nome = pauta.name || pauta.nome || 'Sem nome';
+        
+        let tipo = 'normal';
+        const nomeLower = nome.toLowerCase();
+        
+        if (nomeLower.includes('mutirão') || nomeLower.includes('mutirao')) {
+            tipo = 'mutirao';
+        } else if (nomeLower.includes('plantão') || nomeLower.includes('plantao')) {
+            tipo = 'plantao';
+        } else if (nomeLower.includes('ação social') || nomeLower.includes('acao social')) {
+            tipo = 'acao_social';
+        } else if (nomeLower.includes('evento')) {
+            tipo = 'mutirao';
+        }
+        
+        if (!pauta.tipo || pauta.tipo !== tipo) {
+            await updateDoc(doc(db, "pautas", pautaId), { tipo: tipo });
+            console.log(`✅ "${nome}" → ${tipo}`);
+            atualizadas++;
+        }
+    }
+    
+    console.log(`🎉 Concluído! ${atualizadas} pautas atualizadas.`);
+    location.reload();
+})();
