@@ -6,16 +6,17 @@ import { PainelGeralService } from './painelGeralService.js';
 
 export const UIService = {
     showScreen(screenName) {
-        document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
-        document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
-        document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
-        document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
-        document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
+    document.getElementById('loading-container').classList.toggle('hidden', screenName !== 'loading');
+    document.getElementById('login-container').classList.toggle('hidden', screenName !== 'login');
+    document.getElementById('pauta-selection-container').classList.toggle('hidden', screenName !== 'pautaSelection');
+    document.getElementById('app-container').classList.toggle('hidden', screenName !== 'app');
+    document.getElementById('dashboard-container').classList.toggle('hidden', screenName !== 'dashboard');
+    document.getElementById('recepcao-central-container').classList.toggle('hidden', screenName !== 'recepcaoCentral');
 
-        if (screenName !== 'loading' && screenName !== 'login') {
-            localStorage.setItem('lastScreen', screenName);
-        }
-    },
+    if (screenName !== 'loading' && screenName !== 'login') {
+        localStorage.setItem('lastScreen', screenName);
+    }
+},
 
     isMobileDevice() {
         return /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
