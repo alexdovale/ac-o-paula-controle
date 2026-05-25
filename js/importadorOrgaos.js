@@ -952,3 +952,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
 };
 
 export default ImportadorOrgaosService;
+
+// No final do arquivo importadorOrgaos.js
+window.abrirImportadorOrgaos = (app) => ImportadorOrgaosService.abrirModal(app);
