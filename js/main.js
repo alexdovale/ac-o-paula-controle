@@ -66,6 +66,9 @@ class SIGEPApp {
             // INICIALIZAÇÃO PAUTACONFIG
             PautaConfigService.init(this);
             
+            // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
+            this.setupModoListeners();
+            
         } catch (error) {
             console.error("Erro na inicialização:", error);
             showNotification("Erro ao iniciar o sistema SIGEP", "error");
@@ -125,30 +128,29 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // NOVO MÉTODO: setupModoListeners
+    // MÉTODO: setupModoListeners
     // Gerencia os cliques nos botões de Modo Normal e Modo Evento
+    // CORRIGIDO: Agora chama applyRoleBasedUI para atualizar a interface
     // ============================================================
     setupModoListeners() {
         // Escuta o clique no Modo Normal
         document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
-            // Aqui chamamos a tela que já existia
-            this.showPautaSelectionScreen(); 
+            this.showPautaSelectionScreen();
+            this.applyRoleBasedUI(); // Reaplica as regras de interface
         });
 
         // Escuta o clique no Modo Evento
         document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
             this.currentMode = 'evento';
-            // Aqui você direciona para o seu novo serviço de Atendimento Externo
-            UIService.showScreen('atendimentoExterno');
-            // Se você tiver um serviço de atendimento externo, chame-o aqui
-            // Ex: AtendimentoExternoService.abrir(this);
+            this.showPautaSelectionScreen();
+            this.applyRoleBasedUI(); // Reaplica as regras de interface (esconde botões)
         });
     }
 
     // ============================================================
-    // setupAuthListener MODIFICADO
-    // Agora mostra a tela de seleção de modo em vez de pular direto para a pauta
+    // setupAuthListener CORRIGIDO
+    // Removeu a lógica antiga do lastPautaId que "atropelava" o menu
     // ============================================================
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
@@ -157,10 +159,9 @@ class SIGEPApp {
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
                 
-                // --- NOVO FLUXO DE ENTRADA ---
-                // Em vez de carregar a última pauta automaticamente, mostramos o seletor:
+                // --- CORREÇÃO: Forçar a tela de seleção ---
+                // Removemos a verificação do lastPautaId para garantir que o menu apareça
                 UIService.showScreen('modoSelection');
-                this.setupModoListeners(); 
 
             } else {
                 UIService.showScreen('login');
@@ -1667,7 +1668,6 @@ class SIGEPApp {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
-                // GARANTIR QUE O CAMPO 'MODO' EXISTE (DEFAULT = 'normal')
                 if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
@@ -1851,8 +1851,8 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // applyRoleBasedUI MODIFICADO
-    // Agora também esconde o botão da Recepção Central em modo evento
+    // applyRoleBasedUI CORRIGIDO
+    // Agora esconde o botão da Recepção Central baseado no modo atual
     // ============================================================
     applyRoleBasedUI() {
         const currentUser = this.currentUser;
@@ -1868,19 +1868,20 @@ class SIGEPApp {
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - AGORA CONSIDERA O MODO DA PAUTA
+        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - CORRIGIDO
         const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
         if (btnRecepcaoCentral) {
-            // Verifica se a pauta atual é do tipo EVENTO (Mutirão/Plantão/Ação Social)
-            const isModoEvento = this.currentPautaData?.modo === 'mutirao' || 
-                                 this.currentPautaData?.modo === 'plantao' || 
-                                 this.currentPautaData?.modo === 'acao_social';
+            // CORREÇÃO: Verifica o modo atual (this.currentMode) em vez do modo da pauta
+            const isModoEvento = (this.currentMode === 'evento');
             
-            // Só mostra o botão se:
-            // 1. Usuário tem permissão (apoio/admin/superadmin)
-            // 2. NÃO é modo evento
-            const podeAcessarRecepcao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole) && !isModoEvento;
-            btnRecepcaoCentral.classList.toggle('hidden', !podeAcessarRecepcao);
+            // Permissão para acesso: apoio, admin ou superadmin
+            const temPermissao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole) && isAuthenticated && isUserApproved;
+            
+            // Só mostra o botão se tiver permissão E NÃO for modo evento
+            const deveMostrar = temPermissao && !isModoEvento;
+            
+            console.log(`[applyRoleBasedUI] Modo: ${this.currentMode}, Permissão: ${temPermissao}, Mostrar: ${deveMostrar}`);
+            btnRecepcaoCentral.classList.toggle('hidden', !deveMostrar);
         }
 
         const closePautaBtn = document.getElementById('close-pauta-btn');
