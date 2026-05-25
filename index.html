@@ -152,6 +152,121 @@
 
             </div>
         </div>
+        
+        <!-- TELA DE SELEÇÃO DE MODO (cards clicáveis) -->
+        <div id="modo-selection-container" class="min-h-screen flex items-center justify-center p-4 sm:p-8 bg-slate-50">
+            <div class="max-w-4xl w-full">
+                
+                <!-- Cabeçalho SIGEP -->
+                <div class="text-center mb-10">
+                    <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 text-blue-600 rounded-full mb-4 shadow-sm border border-blue-200">
+                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+                        </svg>
+                    </div>
+                    <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-800 tracking-tight leading-tight uppercase">
+                        Sistema SIGEP
+                    </h1>
+                    <p class="text-slate-500 font-bold tracking-widest text-xs sm:text-sm uppercase mt-2">
+                        Escolha o modo de operação
+                    </p>
+                </div>
+        
+                <!-- Grid dos cards -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 lg:gap-8">
+                    
+                    <!-- CARD MODO NORMAL -->
+                    <div id="card-modo-normal" class="relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-blue-300 transition-all flex flex-col justify-between group cursor-pointer">
+                        <div class="absolute -top-3 left-6">
+                            <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase flex items-center shadow-sm">
+                                Rotina Diária
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="bg-gray-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-100 group-hover:bg-blue-50 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" />
+                                    </svg>
+                                </div>
+                                <h2 class="font-bold text-2xl text-gray-800 leading-tight uppercase">Modo Normal</h2>
+                            </div>
+                            <div class="space-y-3 mb-8">
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Fluxo com <strong>Recepção Central e Delegação</strong></span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Controle rigoroso de <strong>Agendamentos</strong></span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Gestão de <strong>Múltiplas Pautas e Salas</strong></span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-blue-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Acompanhamento de <strong>Faltosos e Histórico</strong></span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-gray-100 mt-auto">
+                            <button id="btn-modo-normal" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-lg text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                                <span>▶️ Entrar no Modo Normal</span>
+                            </button>
+                            <div class="mt-3 text-center">
+                                <p class="text-[9px] text-gray-400 uppercase italic">Recomendado para o dia a dia da unidade</p>
+                            </div>
+                        </div>
+                    </div>
+        
+                    <!-- CARD MODO EVENTO -->
+                    <div id="card-modo-evento" class="relative bg-white p-6 sm:p-8 rounded-xl shadow-sm border border-gray-200 hover:shadow-md hover:border-emerald-300 transition-all flex flex-col justify-between group cursor-pointer">
+                        <div class="absolute -top-3 left-6">
+                            <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase flex items-center shadow-sm">
+                                Ações Externas
+                            </span>
+                        </div>
+                        <div class="mt-2">
+                            <div class="flex items-center gap-3 mb-6">
+                                <div class="bg-gray-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-lg border border-gray-100 group-hover:bg-emerald-50 transition-colors">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" />
+                                    </svg>
+                                </div>
+                                <h2 class="font-bold text-2xl text-gray-800 leading-tight uppercase">Modo Evento</h2>
+                            </div>
+                            <div class="space-y-3 mb-8">
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span><strong>Fluxo Simplificado</strong> de triagem</span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Sem hierarquia complexa</span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Uma pauta ativa por vez</span>
+                                </p>
+                                <p class="text-sm text-gray-600 flex items-start gap-2">
+                                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="3" stroke="currentColor" class="w-4 h-4 text-emerald-500 mt-0.5 shrink-0"><path stroke-linecap="round" stroke-linejoin="round" d="M4.5 12.75l6 6 9-13.5" /></svg>
+                                    <span>Ideal p/ <strong>Mutirão, Plantão e Ação Social</strong></span>
+                                </p>
+                            </div>
+                        </div>
+                        <div class="pt-4 border-t border-gray-100 mt-auto">
+                            <button id="btn-modo-evento" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-lg text-xs shadow-sm transition-all active:scale-95 uppercase tracking-wide flex items-center justify-center gap-2">
+                                <span>▶️ Entrar no Modo Evento</span>
+                            </button>
+                            <div class="mt-3 text-center">
+                                <p class="text-[9px] text-gray-400 uppercase italic">Fluxo rápido para atendimentos em massa</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <div id="pauta-selection-container" class="hidden max-w-4xl mx-auto px-2 sm:px-0">
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
