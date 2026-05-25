@@ -43,7 +43,7 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         this.monitorInterval = null; 
-        this.currentMode = 'normal'; // NOVO: Modo atual (normal ou evento)
+        this.currentMode = 'normal'; // Modo atual (normal ou evento)
         
         this.init();
     }
@@ -130,27 +130,25 @@ class SIGEPApp {
     // ============================================================
     // MÉTODO: setupModoListeners
     // Gerencia os cliques nos botões de Modo Normal e Modo Evento
-    // CORRIGIDO: Agora chama applyRoleBasedUI para atualizar a interface
     // ============================================================
     setupModoListeners() {
         // Escuta o clique no Modo Normal
         document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
             this.showPautaSelectionScreen();
-            this.applyRoleBasedUI(); // Reaplica as regras de interface
+            this.applyRoleBasedUI();
         });
 
         // Escuta o clique no Modo Evento
         document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
             this.currentMode = 'evento';
             this.showPautaSelectionScreen();
-            this.applyRoleBasedUI(); // Reaplica as regras de interface (esconde botões)
+            this.applyRoleBasedUI();
         });
     }
 
     // ============================================================
-    // setupAuthListener CORRIGIDO
-    // Removeu a lógica antiga do lastPautaId que "atropelava" o menu
+    // setupAuthListener - Mostra a tela de seleção de modo
     // ============================================================
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
@@ -159,8 +157,7 @@ class SIGEPApp {
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
                 
-                // --- CORREÇÃO: Forçar a tela de seleção ---
-                // Removemos a verificação do lastPautaId para garantir que o menu apareça
+                // Forçar a tela de seleção de modo
                 UIService.showScreen('modoSelection');
 
             } else {
@@ -1764,12 +1761,18 @@ class SIGEPApp {
         this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
     }
 
+    // ============================================================
+    // showPautaSelectionScreen - Atualizado para resetar o filtro
+    // ============================================================
     async showPautaSelectionScreen() {
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         
         UIService.showScreen('pautaSelection');
-        this.currentPautaFilter = this.currentPautaFilter || 'all';
+        
+        // Reset do filtro ao trocar de modo para evitar conflitos
+        this.currentPautaFilter = 'all';
+        
         UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
             this.currentPautaFilter = filter;
             await this.loadPautasWithFilter();
@@ -1778,14 +1781,20 @@ class SIGEPApp {
         this.loadColumnPreferences();
     }
 
+    // ============================================================
+    // loadPautasWithFilter - CORRIGIDO para filtrar por modo
+    // Modo Normal: mostra apenas pautas tipo 'normal' ou 'agendamento'
+    // Modo Evento: mostra apenas pautas tipo 'mutirao', 'plantao', 'acao_social'
+    // ============================================================
     async loadPautasWithFilter() {
         const user = this.auth.currentUser;
         if (!user) return;
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
-    
+
         try {
+            // Query base: pautas que o usuário é membro
             const q = query(
                 collection(this.db, "pautas"),
                 where("members", "array-contains", user.uid)
@@ -1793,6 +1802,30 @@ class SIGEPApp {
             const snapshot = await getDocs(q);
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
+            // ============================================================
+            // FILTRO POR MODO (NORMAL vs EVENTO)
+            // ============================================================
+            // Modo Normal: mostra apenas pautas do tipo 'normal' ou 'agendamento'
+            // Modo Evento: mostra apenas pautas do tipo 'mutirao', 'plantao', 'acao_social'
+            
+            const tiposNormais = ['normal', 'agendamento', undefined, null];
+            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão'];
+            
+            if (this.currentMode === 'normal') {
+                // Filtra apenas pautas de tipos normais
+                pautas = pautas.filter(p => {
+                    const tipoPauta = (p.tipo || p.type || 'normal').toLowerCase();
+                    return tiposNormais.includes(tipoPauta) || tipoPauta === 'normal' || tipoPauta === 'agendamento';
+                });
+            } else if (this.currentMode === 'evento') {
+                // Filtra apenas pautas de tipos evento
+                pautas = pautas.filter(p => {
+                    const tipoPauta = (p.tipo || p.type || '').toLowerCase();
+                    return tiposEvento.includes(tipoPauta);
+                });
+            }
+            
+            // Aplica filtros adicionais (período, etc.)
             const filtrosAdicionais = {};
             if (this.currentPautaFilter === 'periodo') {
                 filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
@@ -1801,6 +1834,13 @@ class SIGEPApp {
             }
             
             const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+            
+            // Se não houver pautas do tipo selecionado, mostra mensagem
+            if (filteredPautas.length === 0) {
+                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
+                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
+                return;
+            }
             
             UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
             
@@ -1851,8 +1891,8 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // applyRoleBasedUI CORRIGIDO
-    // Agora esconde o botão da Recepção Central baseado no modo atual
+    // applyRoleBasedUI - CORRIGIDO
+    // Esconde o botão da Recepção Central baseado no modo atual
     // ============================================================
     applyRoleBasedUI() {
         const currentUser = this.currentUser;
@@ -1868,10 +1908,10 @@ class SIGEPApp {
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - CORRIGIDO
+        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - Baseado no modo atual
         const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
         if (btnRecepcaoCentral) {
-            // CORREÇÃO: Verifica o modo atual (this.currentMode) em vez do modo da pauta
+            // Modo Evento NUNCA deve ter acesso à Recepção Central
             const isModoEvento = (this.currentMode === 'evento');
             
             // Permissão para acesso: apoio, admin ou superadmin
