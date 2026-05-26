@@ -41,7 +41,6 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     
-    <!-- CSS IMPORTADO AQUI -->
     <link rel="stylesheet" href="./css/style.css">
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -84,9 +83,9 @@
 
                 <div class="mt-6 text-center text-xs text-gray-500">
                     Ao entrar ou se cadastrar, você concorda com nossos 
-                    <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</button> 
+                    <button type="button" onclick="document.getElementById('terms-modal')?.classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</button> 
                     e 
-                    <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Política de Privacidade</button>.
+                    <button type="button" onclick="document.getElementById('privacy-policy-modal')?.classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Política de Privacidade</button>.
                 </div>
             </div>
         </div>
@@ -101,7 +100,6 @@
             </div>
             
             <div id="modo-selection-view" class="w-full grid grid-cols-1 md:grid-cols-2 gap-6 transition-all">
-                <!-- Modo Normal Card -->
                 <div id="card-modo-normal" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-blue-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.1s; opacity: 0; animation-fill-mode: forwards;">
                     <div class="absolute -top-3 left-6">
                         <span class="bg-blue-50 text-blue-700 text-[10px] font-black px-3 py-1 rounded border border-blue-200 uppercase shadow-sm">Rotina Diária</span>
@@ -136,7 +134,6 @@
                     </div>
                 </div>
 
-                <!-- Modo Evento Card -->
                 <div id="card-modo-evento" class="card-modo relative bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 hover:border-emerald-400 flex flex-col justify-between group cursor-pointer animate-fade-in" style="animation-delay: 0.2s; opacity: 0; animation-fill-mode: forwards;">
                     <div class="absolute -top-3 left-6">
                         <span class="bg-emerald-50 text-emerald-700 text-[10px] font-black px-3 py-1 rounded border border-emerald-200 uppercase shadow-sm">Ações Externas</span>
@@ -176,7 +173,6 @@
         </div>
 
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
-            <!-- Pauta Selection Header & Buttons -->
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
                 <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
@@ -209,7 +205,6 @@
         </div>
 
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <!-- Dashboard Content -->
             <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
                 <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Seu Dashboard</h2>
                 <button id="dashboard-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar para Pautas</button>
@@ -224,7 +219,6 @@
         <div id="atendimento-externo-container" class="hidden w-full flex-1 bg-slate-100 p-2 sm:p-4"></div>
 
         <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
-            <!-- App Content Area (Pautas) -->
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
                     <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
@@ -258,7 +252,7 @@
                     <p class="font-bold">Pauta Fechada</p>
                     <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
                 </div>
-                <!-- Botões de controle da pauta (ocultos por padrão, mostrados quando necessário) -->
+                
                 <div class="flex gap-3 mt-2">
                     <button id="close-pauta-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md text-sm">
                         🔒 Fechar Pauta
@@ -266,12 +260,10 @@
                     <button id="reopen-pauta-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md text-sm">
                         🔓 Reabrir Pauta
                     </button>
-</div>
+                </div>
             </header>
 
             <div id="app-content" class="w-full">
-                <!-- Tabs, Forms and Main Kanban Columns -->
-                <!-- Resumido por brevidade no index principal -->
                 <div class="mb-4 sm:mb-6">
                     <div class="border-b border-gray-200 overflow-x-auto scrollable-content">
                         <nav class="-mb-px flex space-x-2 sm:space-x-6 min-w-max" aria-label="Tabs">
@@ -282,7 +274,6 @@
                 </div>
                 
                 <form id="form-agendamento" class="bg-white p-4 sm:p-6 rounded-lg shadow-md mb-6 sm:mb-8">
-                    <!-- Todos os inputs originais estão aqui -->
                     <div id="agendamento-actions" class="flex flex-col sm:flex-row items-start sm:items-center gap-3 sm:gap-4">
                         <button type="button" id="btn-sync-verde" onclick="ApiIntegration.simularSincronizacaoVerde(window.app)" class="w-full sm:w-auto justify-center bg-blue-600 hover:bg-blue-700 text-white font-semibold py-2.5 px-4 rounded-lg shadow-md transition-all flex items-center text-sm">
                             Sincronizar Verde
@@ -392,31 +383,33 @@
         </div>
     </footer>
 
-    <!-- CONTAINER QUE RECEBERÁ TODOS OS MODAIS DINAMICAMENTE -->
     <div id="modals-container"></div>
 
-    <!-- SCRIPTS MÓDULOS -->
     <script type="module" src="./js/modais.js"></script>
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
 
-    <!-- O SEU SCRIPT DE INICIALIZAÇÃO INLINE PERMANECE AQUI, MAS IDEALMENTE DEVE IR PARA O MAIN.JS DEPOIS -->
     <script>
         document.addEventListener('DOMContentLoaded', () => {
             const btnManual = document.getElementById('btn-footer-manual');
             const btnTermos = document.getElementById('btn-footer-termos');
             const btnPolitica = document.getElementById('btn-footer-politica');
             
+            // Note que estes eventos dependem de os modais já estarem injetados no DOM. 
+            // Como agora estão dinâmicos, eles são ativados ao clicar ou podem falhar se clicados rápido demais.
             if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
             if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
             if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
 
+            // Delegação de eventos de fechamento (é mais seguro deixar via main.js ou injetar nos modais)
             const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
-            document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
-            document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-            document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
-            document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-            document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
+            
+            // Usar delegação de eventos para os botões de fechar, já que eles são injetados dinamicamente
+            document.addEventListener('click', (e) => {
+                if(e.target.id === 'close-manual-modal-btn' || e.target.id === 'close-manual-modal-x') fecharModal('manual-modal');
+                if(e.target.id === 'close-terms-modal-btn' || e.target.id === 'close-terms-modal-x') fecharModal('terms-modal');
+                if(e.target.id === 'close-policy-modal-btn-x') fecharModal('privacy-policy-modal');
+            });
             
             // Controle de visibilidade dos Links do Footer baseado no Container de Login
             const loginContainer = document.getElementById('login-container');
@@ -430,13 +423,13 @@
                         footerLinks.classList.add('flex');
                         footerInner.classList.remove('justify-center');
                         footerInner.classList.add('justify-between');
-                        document.body.classList.remove('is-logged-out'); // Remove a tag de bloqueio de erro
+                        document.body.classList.remove('is-logged-out');
                     } else {
                         footerLinks.classList.add('hidden');
                         footerLinks.classList.remove('flex');
                         footerInner.classList.remove('justify-between');
                         footerInner.classList.add('justify-center');
-                        document.body.classList.add('is-logged-out'); // Adiciona tag para bloquear erro prematuro
+                        document.body.classList.add('is-logged-out');
                     }
                 };
                 
@@ -445,54 +438,50 @@
                 observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
             }
 
-            // ==========================================
-            // LÓGICA DO MODAL LGPD (NOVO)
-            // ==========================================
-            const lgpdModal = document.getElementById('lgpd-acceptance-modal');
-            const chkTermos = document.getElementById('lgpd-check-termos');
-            const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
-            const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
-            const pautaContainer = document.getElementById('pauta-selection-container');
-            const appContainer = document.getElementById('app-container');
-
-            // Verifica se o usuário já aceitou antes (salvo no LocalStorage do navegador)
-            const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
-
-            // Função para checar se as duas caixas foram marcadas
+            // Lógica do Modal LGPD
             const validateLgpdChecks = () => {
-                if (chkTermos.checked && chkPrivacidade.checked) {
-                    btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
-                    btnConfirmLgpd.disabled = false;
-                } else {
-                    btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
-                    btnConfirmLgpd.disabled = true;
+                const chkTermos = document.getElementById('lgpd-check-termos');
+                const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
+                const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
+                
+                if (chkTermos && chkPrivacidade && btnConfirmLgpd) {
+                    if (chkTermos.checked && chkPrivacidade.checked) {
+                        btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
+                        btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
+                        btnConfirmLgpd.disabled = false;
+                    } else {
+                        btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
+                        btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
+                        btnConfirmLgpd.disabled = true;
+                    }
                 }
             };
 
-            if (chkTermos) chkTermos.addEventListener('change', validateLgpdChecks);
-            if (chkPrivacidade) chkPrivacidade.addEventListener('change', validateLgpdChecks);
+            // Usando delegação porque esses elementos vêm do modais.js
+            document.addEventListener('change', (e) => {
+                if (e.target.id === 'lgpd-check-termos' || e.target.id === 'lgpd-check-privacidade') {
+                    validateLgpdChecks();
+                }
+            });
 
-            // Quando o botão for clicado, salva o aceite e esconde o modal
-            if (btnConfirmLgpd) {
-                btnConfirmLgpd.addEventListener('click', () => {
+            document.addEventListener('click', (e) => {
+                if (e.target.id === 'btn-confirm-lgpd') {
                     localStorage.setItem('sigep_lgpd_accepted', 'true');
-                    lgpdModal.classList.add('hidden');
+                    const lgpdModal = document.getElementById('lgpd-acceptance-modal');
+                    if(lgpdModal) lgpdModal.classList.add('hidden');
                     
-                    // Exibe uma notificação amigável (se tiver a função showToast no seu main.js)
                     if(window.showToast) {
                         window.showToast("Termos e Política aceitos com sucesso!", "success");
                     }
-                });
-            }
+                }
+            });
 
-            // Observador para detectar quando o usuário FAZ O LOGIN (sai da tela de login)
+            const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
+            
             const authObserver = new MutationObserver(() => {
-                const isLoginHidden = loginContainer.classList.contains('hidden');
-                // Se ele logou e ainda NÃO aceitou o LGPD
+                const isLoginHidden = loginContainer?.classList.contains('hidden');
+                const lgpdModal = document.getElementById('lgpd-acceptance-modal');
                 if (isLoginHidden && !hasAcceptedLGPD && lgpdModal) {
-                    // Mostra o modal travando a tela
                     lgpdModal.classList.remove('hidden');
                 }
             });
@@ -501,27 +490,18 @@
                 authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
             }
 
-            // ==========================================
-            // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
-            // ==========================================
+            // Bloqueador de Erro
             const originalConsoleError = console.error;
             console.error = function() {
                 if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
-                    if (document.body.classList.contains('is-logged-out')) {
-                        return;
-                    }
+                    if (document.body.classList.contains('is-logged-out')) return;
                 }
                 originalConsoleError.apply(console, arguments);
             };
 
-            // ==========================================
-            // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
-            // ==========================================
+            // Exclusividade das Abas
             const tabAgendamento = document.getElementById('tab-agendamento');
             const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
-            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
 
             const toggleExclusiveTabs = (activeTab, inactiveTab) => {
                 if(!activeTab || !inactiveTab) return;
@@ -534,13 +514,17 @@
             if (tabAgendamento && tabAvulso) {
                 tabAgendamento.addEventListener('click', () => {
                     toggleExclusiveTabs(tabAgendamento, tabAvulso);
+                    const isScheduledContainer = document.getElementById('is-scheduled-container');
                     if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
                 });
                 
                 tabAvulso.addEventListener('click', () => {
                     toggleExclusiveTabs(tabAvulso, tabAgendamento);
+                    const isScheduledContainer = document.getElementById('is-scheduled-container');
                     if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
+                    const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
                     if(radioScheduledNo) radioScheduledNo.checked = true;
+                    const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
                     if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
                 });
 
@@ -568,9 +552,6 @@
                 }
             }
 
-            // ==========================================
-            // LOGICA DA SELEÇÃO DE MODO
-            // ==========================================
             const btnVoltarLogin = document.getElementById('modo-back-to-login');
             const modoSelectionScreen = document.getElementById('modo-selection-screen');
             
