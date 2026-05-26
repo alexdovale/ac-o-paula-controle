@@ -141,25 +141,24 @@ class SIGEPApp {
     // COM PERSISTÊNCIA NO LOCALSTORAGE
     // ============================================================
     setupModoListeners() {
-        // Escuta o clique no Modo Normal
-        document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
+        document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            this.showPautaSelectionScreen();
+            localStorage.setItem('sigep_active_screen', 'pauta-selection'); // ← adicione
+            await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
             showNotification('📋 Modo Normal ativado - Atendimento regular', 'info', 3000);
         });
-
-        // Escuta o clique no Modo Evento
-        document.getElementById('btn-modo-evento')?.addEventListener('click', () => {
+    
+        document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
             this.currentMode = 'evento';
             localStorage.setItem('sigep_current_mode', 'evento');
-            this.showPautaSelectionScreen();
+            localStorage.setItem('sigep_active_screen', 'pauta-selection'); // ← adicione
+            await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
             showNotification('🎪 Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
         });
     }
-
     // ============================================================
     // MÉTODO: voltarParaSelecaoModo
     // Volta para a tela de seleção de modo (Trocar Modo)
