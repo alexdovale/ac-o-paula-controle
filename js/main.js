@@ -1975,9 +1975,8 @@ class SIGEPApp {
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
-
+    
         try {
-            // Query base: pautas que o usuário é membro
             const q = query(
                 collection(this.db, "pautas"),
                 where("members", "array-contains", user.uid)
@@ -1986,17 +1985,23 @@ class SIGEPApp {
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             // ============================================================
-            // FILTRO POR MODO (NORMAL vs EVENTO)
+            // FILTRO POR MODO (NORMAL vs EVENTO) - CORRIGIDO
             // ============================================================
-            const tiposNormais = ['normal', 'agendamento', undefined, null];
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão'];
+            const modoAtual = this.currentMode;
             
-            if (this.currentMode === 'normal') {
+            // Definição clara dos tipos de cada modo
+            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
+            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
+            
+            if (modoAtual === 'normal') {
+                // Modo Normal: APENAS pautas que NÃO são de evento
                 pautas = pautas.filter(p => {
                     const tipoPauta = (p.tipo || p.type || 'normal').toLowerCase();
-                    return tiposNormais.includes(tipoPauta) || tipoPauta === 'normal' || tipoPauta === 'agendamento';
+                    // Não é evento -> mostra
+                    return !tiposEvento.includes(tipoPauta);
                 });
-            } else if (this.currentMode === 'evento') {
+            } else if (modoAtual === 'evento') {
+                // Modo Evento: APENAS pautas que SÃO de evento
                 pautas = pautas.filter(p => {
                     const tipoPauta = (p.tipo || p.type || '').toLowerCase();
                     return tiposEvento.includes(tipoPauta);
@@ -2016,7 +2021,6 @@ class SIGEPApp {
             
             const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
             
-            // Se não houver pautas do tipo selecionado, mostra mensagem
             if (filteredPautas.length === 0) {
                 const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
                 pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
