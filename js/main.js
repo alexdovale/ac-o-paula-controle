@@ -1860,7 +1860,10 @@ class SIGEPApp {
                     this.customRoomsList = [];
                 }
 
-                UIService.togglePautaLock(this);
+                // Aguarda o DOM estar pronto
+                setTimeout(() => {
+                    UIService.togglePautaLock(this);
+                }, 100);
                 this.loadColumnPreferences();
                 this.applyRoleBasedUI();
                 
