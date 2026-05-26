@@ -92,7 +92,6 @@ export const PautaService = {
         return;
     }
 
-    // Captura todos os campos do formulário
     const name = document.getElementById('assisted-name')?.value.trim();
     if (!name) {
         showNotification("Nome do assistido é obrigatório", "error");
@@ -104,7 +103,6 @@ export const PautaService = {
     const numAgendamento = document.getElementById('assisted-num-agendamento')?.value.trim() || '';
     const subject = document.getElementById('assisted-subject')?.value.trim() || '';
 
-    // Verifica o radio "Possui horário agendado?"
     const isScheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
     const isScheduled = isScheduledRadio && isScheduledRadio.value === 'yes';
     let scheduledTime = null;
@@ -112,7 +110,6 @@ export const PautaService = {
         scheduledTime = document.getElementById('scheduled-time')?.value || null;
     }
 
-    // Verifica o radio "Assistido já chegou?" (o mais importante)
     const hasArrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
     const hasArrived = hasArrivedRadio ? hasArrivedRadio.value : 'no';
 
@@ -121,7 +118,6 @@ export const PautaService = {
     let status = 'pauta';  // padrão: vai para a coluna "Pauta"
 
     if (hasArrived === 'yes') {
-        // Se já chegou, captura horário e sala (se houver)
         const timeStr = document.getElementById('arrival-time')?.value;
         if (timeStr) {
             const [hours, minutes] = timeStr.split(':');
@@ -133,18 +129,16 @@ export const PautaService = {
         if (roomSelect && !roomSelect.classList.contains('hidden')) {
             room = roomSelect.value || null;
         }
-        // Se chegou, vai direto para a fila de aguardando
         status = 'aguardando';
     }
 
-    // Monta o objeto do assistido com todos os campos
     const assistedData = {
         name: name,
         cpf: cpf,
         numAgendamento: numAgendamento,
         subject: subject,
         status: status,
-        type: 'agendamento',  // ou 'avulso' conforme a aba ativa – você pode pegar da tab ativa se quiser
+        type: 'agendamento',
         createdAt: new Date().toISOString(),
         createdBy: app.currentUserName || app.auth.currentUser?.email,
         scheduledTime: scheduledTime,
@@ -157,13 +151,9 @@ export const PautaService = {
         lastActionTimestamp: new Date().toISOString()
     };
 
-    // Se quiser diferenciar entre atendimento agendado e avulso, pode verificar qual aba está ativa
     const tabAgendamento = document.getElementById('tab-agendamento');
     if (tabAgendamento && !tabAgendamento.classList.contains('tab-active')) {
-        // Está na aba Avulso – pode definir type = 'avulso' e forçar chegada?
         assistedData.type = 'avulso';
-        // Opcional: se for avulso, talvez já considerar como chegou? Depende da regra de negócio.
-        // Vou manter o status baseado no radio, mas você pode ajustar.
     }
 
     try {
@@ -176,20 +166,64 @@ export const PautaService = {
         showNotification(mensagem, 'success');
         playSound('notification');
 
-        // Limpa os campos do formulário (opcional, mas melhora a UX)
+        // Limpa os campos do formulário
         document.getElementById('assisted-name').value = '';
         document.getElementById('assisted-cpf').value = '';
         document.getElementById('assisted-num-agendamento').value = '';
         document.getElementById('assisted-subject').value = '';
         document.getElementById('scheduled-time').value = '';
         document.getElementById('arrival-time').value = '';
-        if (room && roomSelect) roomSelect.value = '';
+        const roomSelect = document.getElementById('manual-room-select');
+        if (roomSelect) roomSelect.value = '';
     } catch (error) {
         console.error(error);
         showNotification("Erro ao adicionar assistido", "error");
         playSound('error');
     }
+}, // <-- VÍRGULA OBRIGATÓRIA AQUI
+
+async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
+    if (!pautaId || !assistedData || !userName) {
+        showNotification("Dados incompletos para adicionar assistido.", "error");
+        return false;
     }
+
+    try {
+        const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
+
+        const newAssisted = {
+            ...assistedData,
+            room: isMultisala ? (assistedData.room || null) : null,
+            status: assistedData.status || 'pauta', 
+            createdAt: new Date().toISOString(),
+            lastActionBy: userName,
+            lastActionTimestamp: new Date().toISOString(),
+            distributionHistory: assistedData.distributionHistory || []
+        };
+
+        const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+        const docRef = await addDoc(attendanceRef, newAssisted);
+
+        await logAction(
+            db,
+            window.app && window.app.auth,
+            userName,
+            pautaId,
+            'ADD_ASSISTED',
+            `Adicionou assistido: ${assistedData.name || 'Novo Assistido'}`,
+            docRef.id
+        );
+
+        showNotification(`Assistido "${assistedData.name || 'Novo Assistido'}" adicionado com sucesso!`, "success");
+        return true;
+
+    } catch (error) {
+        console.error("Erro ao adicionar assistido:", error);
+        showNotification("Erro ao adicionar assistido: " + error.message, "error");
+        return false;
+    }
+}, // <-- VÍRGULA OBRIGATÓRIA AQUI
+
 
     async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
         if (!pautaId || !assistedData || !userName) {
