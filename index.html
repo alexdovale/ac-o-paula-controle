@@ -154,7 +154,10 @@
 
         <div id="modo-selection-screen" class="hidden flex-col items-center justify-center p-4 max-w-4xl w-full mx-auto min-h-[80vh]">
             <div class="text-center mb-10 animate-fade-in" style="opacity: 0;">
-                <h1 class="text-3xl font-black text-slate-800 tracking-tighter uppercase">🏛️ Sistema SIGEP</h1>
+                <div class="flex justify-center mb-4">
+                    <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
+                </div>
+                <h1 class="text-2xl font-black text-slate-800 tracking-tighter uppercase">Bem-vindo ao SIGEP</h1>
                 <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">Escolha o modo de operação para iniciar</p>
             </div>
             
@@ -263,6 +266,13 @@
                 </button>
                 <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
                     Meu Perfil
+                </button>
+                <button id="btn-trocar-modo" class="bg-amber-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-amber-700 transition shadow-md flex items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
+                        <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
+                        <path fill-rule="evenodd" d="M8 3c-1.552 0-2.94.707-3.857 1.818a.5.5 0 1 1-.771-.636A6.002 6.002 0 0 1 13.917 7H12.9A5.002 5.002 0 0 0 8 3zM3.1 9a5.002 5.002 0 0 0 8.757 2.182.5.5 0 1 1 .771.636A6.002 6.002 0 0 1 2.083 9H3.1z"/>
+                    </svg>
+                    Trocar Modo
                 </button>
             </div>
             
@@ -692,14 +702,6 @@
             </div>
         </div>
     </footer>
-
-    <div class="text-center mb-10 animate-fade-in" style="opacity: 0;">
-        <div class="flex justify-center mb-4">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
-        </div>
-        <h1 class="text-2xl font-black text-slate-800 tracking-tighter uppercase">Bem-vindo ao SIGEP</h1>
-        <p class="text-slate-500 font-bold uppercase tracking-widest text-xs mt-2">Escolha o modo de operação para iniciar</p>
-    </div>
             
             <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label class="flex items-start cursor-pointer group">
@@ -813,27 +815,13 @@
                     </button>
                 </div>
                 
-                <!-- Adicione ESTES BOTÕES dentro do #admin-content-area, antes ou depois do bloco de Auditoria -->
-
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
-                    <!-- Botão: Gerenciar Unidades -->
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-                        <button id="btn-gerenciar-unidades" class="w-full text-left flex items-start gap-3">
+                        <button id="btn-unidades-master" class="w-full text-left flex items-start gap-3">
                             <span class="text-2xl">🏢</span>
                             <div>
-                                <h3 class="font-bold text-slate-800 text-sm">Gerenciar Unidades</h3>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Cadastrar, editar e excluir unidades/órgãos de atendimento</p>
-                            </div>
-                        </button>
-                    </div>
-                    
-                    <!-- Botão: Importar Órgãos -->
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
-                        <button id="btn-importar-orgaos" class="w-full text-left flex items-start gap-3">
-                            <span class="text-2xl">📁</span>
-                            <div>
-                                <h3 class="font-bold text-slate-800 text-sm">Importar Órgãos</h3>
-                                <p class="text-[10px] text-slate-500 mt-0.5">Importar estrutura hierárquica de unidades e recepções via CSV/JSON</p>
+                                <h3 class="font-bold text-slate-800 text-sm">Unidades / Órgãos</h3>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Gerenciar ou importar estrutura hierárquica</p>
                             </div>
                         </button>
                     </div>
