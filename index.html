@@ -838,6 +838,48 @@
                 if(window.showToast) {
                     window.showToast("Termos e Política aceitos com sucesso!", "success");
                 }
+
+                // ✅ COLE AQUI — antes do }); final
+                const SCREEN_KEY = 'sigep_active_screen';
+                const PAUTA_KEY  = 'sigep_active_pauta_id';
+            
+                const SCREENS = {
+                    'pauta-selection'  : 'pauta-selection-container',
+                    'app'              : 'app-container',
+                    'dashboard'        : 'dashboard-container',
+                    'recepcao-central' : 'recepcao-central-container',
+                    'atendimento-ext'  : 'atendimento-externo-container',
+                    'modo-selection'   : 'modo-selection-screen',
+                };
+            
+                function watchScreenChanges() {
+                    Object.entries(SCREENS).forEach(([key, id]) => {
+                        const el = document.getElementById(id);
+                        if (!el) return;
+                        new MutationObserver(() => {
+                            if (!el.classList.contains('hidden')) {
+                                localStorage.setItem(SCREEN_KEY, key);
+                            }
+                        }).observe(el, { attributes: true, attributeFilter: ['class'] });
+                    });
+                }
+            
+                const pautaTitleEl = document.getElementById('pauta-title');
+                if (pautaTitleEl) {
+                    new MutationObserver(() => {
+                        if (window.app?.currentPautaId) {
+                            localStorage.setItem(PAUTA_KEY, window.app.currentPautaId);
+                        }
+                    }).observe(pautaTitleEl, { childList: true, subtree: true });
+                }
+            
+                document.querySelectorAll('#logout-btn-app, #logout-btn-pautas')
+                    .forEach(btn => btn?.addEventListener('click', () => {
+                        localStorage.removeItem(SCREEN_KEY);
+                        localStorage.removeItem(PAUTA_KEY);
+                    }));
+            
+                watchScreenChanges();
             });
 
             // Observador para detectar quando o usuário FAZ O LOGIN (sai da tela de login)
