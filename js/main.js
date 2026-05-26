@@ -1985,7 +1985,7 @@ class SIGEPApp {
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             // ============================================================
-            // FILTRO POR MODO (NORMAL vs EVENTO) - CORRIGIDO
+            // FILTRO POR MODO (NORMAL vs EVENTO) - CORRIGIDO VERSÃO FINAL
             // ============================================================
             const modoAtual = this.currentMode;
             
@@ -1993,48 +1993,42 @@ class SIGEPApp {
             const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
             
+            // MOSTRA NO CONSOLE PARA DEBUG
+            console.log("🔍 Modo atual:", modoAtual);
+            console.log("📋 Total de pautas antes do filtro:", pautas.length);
+            
             if (modoAtual === 'normal') {
                 // Modo Normal: APENAS pautas que NÃO são de evento
                 pautas = pautas.filter(p => {
-                    const tipoPauta = (p.tipo || p.type || 'normal').toLowerCase();
+                    // PRIORIDADE para o campo 'tipo' que você está salvando
+                    let tipoPauta = p.tipo || p.type || 'normal';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    
+                    const isEvento = tiposEvento.includes(tipoPauta);
+                    
+                    // Log para debug
+                    console.log(`   Pauta: "${p.name}" | tipo: "${tipoPauta}" | isEvento: ${isEvento} | ${isEvento ? '❌ REMOVER' : '✅ MANTER'}`);
+                    
                     // Não é evento -> mostra
-                    return !tiposEvento.includes(tipoPauta);
+                    return !isEvento;
                 });
             } else if (modoAtual === 'evento') {
                 // Modo Evento: APENAS pautas que SÃO de evento
                 pautas = pautas.filter(p => {
-                    const tipoPauta = (p.tipo || p.type || '').toLowerCase();
-                    return tiposEvento.includes(tipoPauta);
+                    let tipoPauta = p.tipo || p.type || '';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    
+                    const isEvento = tiposEvento.includes(tipoPauta);
+                    
+                    // Log para debug
+                    console.log(`   Pauta: "${p.name}" | tipo: "${tipoPauta}" | isEvento: ${isEvento} | ${isEvento ? '✅ MANTER' : '❌ REMOVER'}`);
+                    
+                    return isEvento;
                 });
             }
             
-            // Mostra indicador visual do modo atual
-            this.mostrarIndicadorModo();
+            console.log("📋 Total de pautas após o filtro:", pautas.length);
             
-            // Aplica filtros adicionais (período, etc.)
-            const filtrosAdicionais = {};
-            if (this.currentPautaFilter === 'periodo') {
-                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
-                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
-                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
-            }
-            
-            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
-            
-            if (filteredPautas.length === 0) {
-                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
-                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
-                return;
-            }
-            
-            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
-            
-        } catch (error) {
-            console.error("Erro ao carregar pautas:", error);
-            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
-        }
-    }
-
     // ============================================================
     // abrirModalCriarPauta - FUNÇÃO AUXILIAR PARA CRIAR PAUTA
     // ============================================================
