@@ -258,6 +258,15 @@
                     <p class="font-bold">Pauta Fechada</p>
                     <p>Esta pauta está fechada para novas edições. Apenas o criador pode reabri-la.</p>
                 </div>
+                <!-- Botões de controle da pauta (ocultos por padrão, mostrados quando necessário) -->
+                <div class="flex gap-3 mt-2">
+                    <button id="close-pauta-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md text-sm">
+                        🔒 Fechar Pauta
+                    </button>
+                    <button id="reopen-pauta-btn" class="hidden bg-green-600 hover:bg-green-700 text-white font-bold py-2 px-4 rounded-lg transition shadow-md text-sm">
+                        🔓 Reabrir Pauta
+                    </button>
+</div>
             </header>
 
             <div id="app-content" class="w-full">
