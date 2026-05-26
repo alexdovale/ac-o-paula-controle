@@ -2028,7 +2028,7 @@ class SIGEPApp {
             }
             
             console.log("📋 Total de pautas após o filtro:", pautas.length);
-            
+            }
     // ============================================================
     // abrirModalCriarPauta - FUNÇÃO AUXILIAR PARA CRIAR PAUTA
     // ============================================================
