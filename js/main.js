@@ -28,6 +28,10 @@ import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
 
+// 1. IMPORTAR E INJETAR OS MODAIS ANTES DE TUDO!
+import { injetarModais } from './modais.js';
+injetarModais();
+
 class SIGEPApp { 
     constructor() {
         this.db = null;
@@ -2257,6 +2261,165 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
             }
+        });
+    }
+
+    // =========================================================================
+    // SCRIPT MOVIDO DO INDEX.HTML PARA CÁ (Limpeza do HTML)
+    // =========================================================================
+    const btnManual = document.getElementById('btn-footer-manual');
+    const btnTermos = document.getElementById('btn-footer-termos');
+    const btnPolitica = document.getElementById('btn-footer-politica');
+    
+    if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
+    if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
+    if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
+
+    const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
+    document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
+    document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
+    document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
+    document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
+    document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
+    
+    // Controle de visibilidade dos Links do Footer
+    const loginContainer = document.getElementById('login-container');
+    const footerLinks = document.getElementById('footer-links');
+    const footerInner = document.getElementById('footer-inner-container');
+    
+    if (loginContainer && footerLinks && footerInner) {
+        const updateFooterVisibility = () => {
+            if (loginContainer.classList.contains('hidden')) {
+                footerLinks.classList.remove('hidden');
+                footerLinks.classList.add('flex');
+                footerInner.classList.remove('justify-center');
+                footerInner.classList.add('justify-between');
+                document.body.classList.remove('is-logged-out');
+            } else {
+                footerLinks.classList.add('hidden');
+                footerLinks.classList.remove('flex');
+                footerInner.classList.remove('justify-between');
+                footerInner.classList.add('justify-center');
+                document.body.classList.add('is-logged-out');
+            }
+        };
+        
+        updateFooterVisibility();
+        const observer = new MutationObserver(updateFooterVisibility);
+        observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // LÓGICA DO MODAL LGPD
+    const lgpdModal = document.getElementById('lgpd-acceptance-modal');
+    const chkTermos = document.getElementById('lgpd-check-termos');
+    const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
+    const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
+    const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
+
+    const validateLgpdChecks = () => {
+        if (chkTermos.checked && chkPrivacidade.checked) {
+            btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
+            btnConfirmLgpd.disabled = false;
+        } else {
+            btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
+            btnConfirmLgpd.disabled = true;
+        }
+    };
+
+    if (chkTermos) chkTermos.addEventListener('change', validateLgpdChecks);
+    if (chkPrivacidade) chkPrivacidade.addEventListener('change', validateLgpdChecks);
+
+    if (btnConfirmLgpd) {
+        btnConfirmLgpd.addEventListener('click', () => {
+            localStorage.setItem('sigep_lgpd_accepted', 'true');
+            if (lgpdModal) lgpdModal.classList.add('hidden');
+            if(window.showToast) window.showToast("Termos e Política aceitos com sucesso!", "success");
+        });
+    }
+
+    const authObserver = new MutationObserver(() => {
+        const isLoginHidden = loginContainer?.classList.contains('hidden');
+        if (isLoginHidden && !hasAcceptedLGPD && lgpdModal) {
+            lgpdModal.classList.remove('hidden');
+        }
+    });
+
+    if (loginContainer) {
+        authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
+    const originalConsoleError = console.error;
+    console.error = function() {
+        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
+            if (document.body.classList.contains('is-logged-out')) return;
+        }
+        originalConsoleError.apply(console, arguments);
+    };
+
+    // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
+    const tabAgendamento = document.getElementById('tab-agendamento');
+    const tabAvulso = document.getElementById('tab-avulso');
+    const isScheduledContainer = document.getElementById('is-scheduled-container');
+    const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
+    const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
+
+    const toggleExclusiveTabs = (activeTab, inactiveTab) => {
+        if(!activeTab || !inactiveTab) return;
+        activeTab.classList.add('tab-active');
+        activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+        inactiveTab.classList.remove('tab-active');
+        inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+    };
+
+    if (tabAgendamento && tabAvulso) {
+        tabAgendamento.addEventListener('click', () => {
+            toggleExclusiveTabs(tabAgendamento, tabAvulso);
+            if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
+        });
+        
+        tabAvulso.addEventListener('click', () => {
+            toggleExclusiveTabs(tabAvulso, tabAgendamento);
+            if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
+            if(radioScheduledNo) radioScheduledNo.checked = true;
+            if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
+        });
+
+        const observerTabs = new MutationObserver((mutations) => {
+            mutations.forEach((mutation) => {
+                if (mutation.target === tabAgendamento && tabAgendamento.classList.contains('tab-active')) {
+                    if (tabAvulso.classList.contains('tab-active')) {
+                        tabAvulso.classList.remove('tab-active');
+                        tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                    }
+                } else if (mutation.target === tabAvulso && tabAvulso.classList.contains('tab-active')) {
+                    if (tabAgendamento.classList.contains('tab-active')) {
+                        tabAgendamento.classList.remove('tab-active');
+                        tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+                    }
+                }
+            });
+        });
+
+        observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
+        observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
+        
+        if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
+            toggleExclusiveTabs(tabAgendamento, tabAvulso);
+        }
+    }
+
+    // LOGICA DA SELEÇÃO DE MODO
+    const btnVoltarLogin = document.getElementById('modo-back-to-login');
+    const modoSelectionScreen = document.getElementById('modo-selection-screen');
+    
+    if(btnVoltarLogin) {
+        btnVoltarLogin.addEventListener('click', () => {
+            if (modoSelectionScreen) modoSelectionScreen.classList.add('hidden');
+            document.getElementById('login-container')?.classList.remove('hidden');
+            if(window.app && window.app.logout) window.app.logout();
         });
     }
 });
