@@ -2028,7 +2028,6 @@ class SIGEPApp {
             }
             
             console.log("📋 Total de pautas após o filtro:", pautas.length);
-            / ⭐ AQUI CONTINUA O CÓDIGO QUE FALTAVA!
             // Mostra indicador visual do modo atual
             this.mostrarIndicadorModo();
             
