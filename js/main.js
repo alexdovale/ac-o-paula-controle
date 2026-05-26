@@ -2038,64 +2038,121 @@ class SIGEPApp {
     // ============================================================
     // abrirModalCriarPauta - FUNÇÃO AUXILIAR PARA CRIAR PAUTA
     // ============================================================
+    // ============================================================
+    // abrirModalCriarPauta - IMPLEMENTAÇÃO COMPLETA
     async abrirModalCriarPauta() {
-        // Aqui você deve ter a lógica existente para abrir o modal de criação de pauta
-        // E ao salvar, usar this.tipoPautaSelecionado no campo 'tipo'
+        // Verifica se já existe um modal, se não, cria um
+        let modal = document.getElementById('create-pauta-modal');
         
-        // Exemplo de como deve ser ao salvar a pauta:
-        // const pautaData = {
-        //     name: nomePauta,
-        //     owner: this.auth.currentUser.uid,
-        //     members: [this.auth.currentUser.uid],
-        //     memberEmails: [this.auth.currentUser.email],
-        //     createdAt: new Date().toISOString(),
-        //     tipo: this.tipoPautaSelecionado || 'normal',  // <-- IMPORTANTE!
-        //     isClosed: false,
-        //     isPublic: false
-        // };
-        
-        showNotification("Função abrirModalCriarPauta - Implemente sua lógica existente aqui", "info");
-    }
-
-    async deletePauta(pautaId, pautaName) {
-        if (!this.db || !this.auth) return;
-        try {
-            const success = await PautaService.deletePauta(this.db, this.auth, pautaId, pautaName, this.currentUserName || 'Sistema');
-            if (success) {
-                playSound('success');
-                await this.loadPautasWithFilter();
-            }
-        } catch (error) {
-            showNotification("Erro ao deletar pauta: " + error.message, "error");
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'create-pauta-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-bold mb-4">Criar Nova Pauta</h3>
+                    <input type="text" id="new-pauta-name" placeholder="Digite o nome da pauta" class="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 focus:border-green-500">
+                    <div class="flex gap-2">
+                        <button id="confirm-create-pauta-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">Criar</button>
+                        <button id="cancel-create-pauta-btn" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+            
+            // Evento do botão Cancelar
+            document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
+                modal.classList.add('hidden');
+                document.getElementById('new-pauta-name').value = '';
+            });
+            
+            // Evento do botão Confirmar (ONDE A PAUTA É CRIADA DE FATO)
+            document.getElementById('confirm-create-pauta-btn')?.addEventListener('click', async () => {
+                const nomePauta = document.getElementById('new-pauta-name')?.value.trim();
+                
+                if (!nomePauta) {
+                    showNotification("Digite um nome para a pauta", "error");
+                    return;
+                }
+                
+                const user = this.auth.currentUser;
+                if (!user) {
+                    showNotification("Você precisa estar logado", "error");
+                    return;
+                }
+                
+                const modoAtual = this.currentMode;
+                
+                // ⭐ DEFINE O TIPO CORRETO BASEADO NO MODO SELECIONADO
+                let tipoPauta = 'normal';
+                if (modoAtual === 'evento') {
+                    // Usa o tipo de evento selecionado (mutirao, plantao, acao_social)
+                    tipoPauta = this.tipoPautaSelecionado || 'mutirao';
+                }
+                
+                // ⭐ DADOS DA PAUTA COM O TIPO CORRETO
+                const pautaData = {
+                    name: nomePauta,
+                    owner: user.uid,
+                    members: [user.uid],
+                    memberEmails: [user.email],
+                    createdAt: new Date().toISOString(),
+                    tipo: tipoPauta,        // ← CAMPO CRUCIAL PARA O FILTRO
+                    type: 'agendamento',
+                    isClosed: false,
+                    isPublic: false,
+                    modo: modoAtual,        // Salva o modo original também
+                    createdBy: user.email,
+                    useDelegationFlow: false,
+                    useDistributionFlow: false
+                };
+                
+                // Mostra loading no botão
+                const confirmBtn = document.getElementById('confirm-create-pauta-btn');
+                const originalText = confirmBtn.textContent;
+                confirmBtn.textContent = 'Criando...';
+                confirmBtn.disabled = true;
+                
+                try {
+                    // Salva no Firestore
+                    const docRef = await addDoc(collection(this.db, "pautas"), pautaData);
+                    console.log("Pauta criada com ID:", docRef.id, "Tipo:", tipoPauta);
+                    
+                    // Fecha o modal
+                    modal.classList.add('hidden');
+                    
+                    // Limpa o input
+                    document.getElementById('new-pauta-name').value = '';
+                    
+                    showNotification(`Pauta "${nomePauta}" criada com sucesso!`, "success");
+                    
+                    // Recarrega a lista de pautas
+                    await this.loadPautasWithFilter();
+                    
+                } catch (error) {
+                    console.error("Erro ao criar pauta:", error);
+                    showNotification("Erro ao criar pauta: " + error.message, "error");
+                } finally {
+                    // Restaura o botão
+                    confirmBtn.textContent = originalText;
+                    confirmBtn.disabled = false;
+                }
+            });
         }
-    }
+        
+        // Mostra o modal
+        modal.classList.remove('hidden');
+        
+        // Foca no input após mostrar o modal
+        setTimeout(() => {
+            const input = document.getElementById('new-pauta-name');
+            if (input) {
+                input.value = '';
+                input.focus();
+            }
+        }, 100);
+    }// ============================================================
 
-    refreshAssistedList() {
-        if (!this.unsubscribeFromAttendances) this.loadAssistedList();
-    }
-    
-    async loadAssistedList() {
-        if (!this.currentPauta?.id) return;
-        try {
-            const attendanceRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-            const snapshot = await getDocs(attendanceRef);
-            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(this);
-            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
-        } catch (error) {}
-    }
-
-    setupRealtimeListener(pautaId) {
-        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(this);
-            setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
-        }, (error) => {
-            showNotification("Erro ao carregar dados", "error");
-        });
-    }
 
     // ============================================================
     // applyRoleBasedUI - CORRIGIDO
