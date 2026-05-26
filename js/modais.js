@@ -1163,9 +1163,14 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
 `;
 
 export function injetarModais() {
-    // Insere todos os modais no final do container de modais
     const container = document.getElementById('modals-container');
     if (container) {
         container.innerHTML = todosOsModaisHTML;
+        console.log("Modais injetados com sucesso!");
+    } else {
+        console.error("Container de modais não encontrado!");
     }
 }
+
+// Injeção imediata
+injetarModais();
