@@ -2028,7 +2028,33 @@ class SIGEPApp {
             }
             
             console.log("📋 Total de pautas após o filtro:", pautas.length);
+            / ⭐ AQUI CONTINUA O CÓDIGO QUE FALTAVA!
+            // Mostra indicador visual do modo atual
+            this.mostrarIndicadorModo();
+            
+            // Aplica filtros adicionais (período, etc.)
+            const filtrosAdicionais = {};
+            if (this.currentPautaFilter === 'periodo') {
+                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
             }
+            
+            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+            
+            if (filteredPautas.length === 0) {
+                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
+                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
+                return;
+            }
+            
+            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+            
+        } catch (error) {
+            console.error("Erro ao carregar pautas:", error);
+            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+        }
+    } 
     // ============================================================
     // abrirModalCriarPauta - FUNÇÃO AUXILIAR PARA CRIAR PAUTA
     // ============================================================
