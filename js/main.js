@@ -140,11 +140,12 @@ class SIGEPApp {
     // Gerencia os cliques nos botões de Modo Normal e Modo Evento
     // COM PERSISTÊNCIA NO LOCALSTORAGE
     // ============================================================
-    setupModoListeners() {
+   setupModoListeners() {
         document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            localStorage.setItem('sigep_active_screen', 'pauta-selection'); // ← adicione
+            localStorage.setItem('sigep_active_screen', 'pauta-selection');
+            localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
             showNotification('📋 Modo Normal ativado - Atendimento regular', 'info', 3000);
@@ -153,7 +154,8 @@ class SIGEPApp {
         document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
             this.currentMode = 'evento';
             localStorage.setItem('sigep_current_mode', 'evento');
-            localStorage.setItem('sigep_active_screen', 'pauta-selection'); // ← adicione
+            localStorage.setItem('sigep_active_screen', 'pauta-selection');
+            localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
             showNotification('🎪 Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
@@ -2548,7 +2550,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Verifica o estado salvo ao carregar
     const savedState = localStorage.getItem('sigep_app_state');
-    if (savedState) {
+    const telaAtiva = localStorage.getItem('sigep_active_screen');
+    
+    // Só vai para seleção de modo se não houver tela ativa salva
+    if (savedState === 'selection' && !telaAtiva) {
         setAppState(savedState);
     }
 
