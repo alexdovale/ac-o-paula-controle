@@ -272,16 +272,34 @@ class SIGEPApp {
     // setupAuthListener - Mostra a tela de seleção de modo
     // ============================================================
     setupAuthListener() {
-        onAuthStateChanged(this.auth, async (user) => {
-            if (user) {
-                await AuthService.handleAuthState(this, user);
-                await this.loadUserPreferences(); 
-                this.applyRoleBasedUI(); 
-                
-                // Forçar a tela de seleção de modo
-                UIService.showScreen('modoSelection');
+    onAuthStateChanged(this.auth, async (user) => {
+        if (user) {
+            await AuthService.handleAuthState(this, user);
+            await this.loadUserPreferences(); 
+            this.applyRoleBasedUI(); 
+            
+            // ✅ RESTAURA A TELA QUE ESTAVA ABERTA ANTES DO REFRESH
+            const telaAtiva = localStorage.getItem('sigep_active_screen');
+            const pautaId   = localStorage.getItem('lastPautaId');
+            const pautaNome = localStorage.getItem('lastPautaName');
+            const pautaTipo = localStorage.getItem('lastPautaType');
 
+            if (telaAtiva === 'app' && pautaId && pautaNome) {
+                // Estava dentro de uma pauta
+                await this.loadPauta(pautaId, pautaNome, pautaTipo);
+            } else if (telaAtiva === 'pauta-selection') {
+                // Estava na lista de pautas
+                await this.showPautaSelectionScreen();
+            } else if (telaAtiva === 'dashboard') {
+                DashboardService.showDashboardScreen();
+            } else if (telaAtiva === 'recepcao-central') {
+                await RecepçãoCentralService.abrir(this);
             } else {
+                // Primeira vez ou sem estado salvo → vai para seleção de modo
+                UIService.showScreen('modoSelection');
+            }
+
+        } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
                 document.getElementById('admin-btn-main')?.classList.add('hidden');
@@ -1889,6 +1907,8 @@ class SIGEPApp {
             
             this.iniciarMonitorEnvelopes();
 
+            localStorage.setItem('sigep_active_screen', 'app');
+            UIService.showScreen('app')
             UIService.showScreen('app');
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
@@ -1951,6 +1971,7 @@ class SIGEPApp {
     // showPautaSelectionScreen - Atualizado para resetar o filtro
     // ============================================================
     async showPautaSelectionScreen() {
+        localStorage.setItem('sigep_active_screen', 'pauta-selection');
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         
