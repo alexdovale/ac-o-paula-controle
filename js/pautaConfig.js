@@ -1,4 +1,3 @@
-
 // js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
 // Extraído do main.js para manter o orquestrador enxuto.
 // Responsabilidades: criação, edição, templates, validação, vínculo de equipe e data de operação.
@@ -19,7 +18,7 @@ const DEFAULTS = {
     useDelegationFlow: false,
     useDistributionFlow: false,
     type: 'agendamento',
-    modo: 'normal'
+    tipo: 'normal'  // ⭐ CORRIGIDO: 'tipo' em vez de 'modo'
 };
 
 // ─── HELPERS INTERNOS ──────────────────────────────────────────────────────────
@@ -230,7 +229,7 @@ export const PautaConfigService = {
         `).join('');
     },
 
-    // ⭐ NOVO MÉTODO: ADICIONAR SELETOR DE MODO ⭐
+    // ⭐ MÉTODO: ADICIONAR SELETOR DE MODO ⭐
     _adicionarSelectorModo() {
         // Verificar se já existe o seletor de modo
         let modoContainer = document.getElementById('pauta-modo-container');
@@ -322,7 +321,7 @@ export const PautaConfigService = {
                           || new Date().toISOString().split('T')[0];
         
         // CAPTURAR O MODO SELECIONADO
-        const modoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.modo;
+        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.tipo;
 
         if (!pautaName) {
             showNotification("O nome da pauta não pode ser vazio.", "error");
@@ -337,10 +336,11 @@ export const PautaConfigService = {
         }
 
         try {
+            // ⭐ CORRIGIDO: usando 'tipo' em vez de 'modo' para compatibilidade com o filtro
             const novaPautaData = {
                 name: pautaName,
                 type: pautaType || DEFAULTS.type,
-                modo: modoSelecionado, // ⭐ CAMPO MODO ADICIONADO
+                tipo: tipoSelecionado,  // ← CORRIGIDO: agora é 'tipo'
                 owner: user.uid,
                 members: [user.uid],
                 memberEmails: [user.email],
@@ -364,7 +364,7 @@ export const PautaConfigService = {
                 app.currentUserName,
                 pautaRef.id,
                 'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) para ${dataOp} - Modo: ${modoSelecionado}`
+                `Criou pauta "${pautaName}" (${pautaType}) para ${dataOp} - Tipo: ${tipoSelecionado}`
             );
 
             // Integração Verde/Solar
@@ -458,13 +458,14 @@ export const PautaConfigService = {
         const nome = prompt("Nome do template:");
         if (!nome || !nome.trim()) return;
 
-        // Capturar modo também no template
-        const modoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.modo;
+        // Capturar tipo também no template
+        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.tipo;
 
+        // ⭐ CORRIGIDO: usando 'tipo' em vez de 'modo'
         const template = {
             id: Date.now().toString(),
             nome: nome.trim(),
-            modo: modoSelecionado,
+            tipo: tipoSelecionado,  // ← CORRIGIDO: agora é 'tipo'
             type: document.getElementById('create-pauta-modal')?.dataset.pautaType || DEFAULTS.type,
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
@@ -487,10 +488,10 @@ export const PautaConfigService = {
         const createModal = document.getElementById('create-pauta-modal');
         if (createModal) createModal.dataset.pautaType = t.type;
 
-        // MODO - selecionar o radio correspondente
+        // ⭐ CORRIGIDO: usando 't.tipo' em vez de 't.modo'
         const modoRadios = document.querySelectorAll('input[name="pauta-modo"]');
         modoRadios.forEach(radio => {
-            radio.checked = radio.value === t.modo;
+            radio.checked = radio.value === t.tipo;  // ← CORRIGIDO
         });
 
         // Ordem
@@ -519,7 +520,8 @@ export const PautaConfigService = {
         templates.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = `${t.nome} (${t.modo === 'normal' ? '🏛️' : t.modo === 'mutirao' ? '🤝' : t.modo === 'plantao' ? '🚨' : '❤️'} ${t.modo || 'normal'})`;
+            // ⭐ CORRIGIDO: usando 't.tipo' em vez de 't.modo'
+            opt.textContent = `${t.nome} (${t.tipo === 'normal' ? '🏛️' : t.tipo === 'mutirao' ? '🤝' : t.tipo === 'plantao' ? '🚨' : '❤️'} ${t.tipo || 'normal'})`;
             select.appendChild(opt);
         });
     },
@@ -528,7 +530,7 @@ export const PautaConfigService = {
 
     /**
      * Cria múltiplas pautas de uma vez.
-     * @param {Array<{name, type, dataOperacao, ordemAtendimento, useDelegationFlow, useDistributionFlow, modo}>} lista
+     * @param {Array<{name, type, dataOperacao, ordemAtendimento, useDelegationFlow, useDistributionFlow, tipo}>} lista
      */
     async criarPautasEmLote(lista) {
         const app = this._app;
@@ -542,10 +544,11 @@ export const PautaConfigService = {
         let criadas = 0;
         for (const item of lista) {
             try {
+                // ⭐ CORRIGIDO: usando 'tipo' em vez de 'modo'
                 const novaPauta = {
                     name: item.name,
                     type: item.type || DEFAULTS.type,
-                    modo: item.modo || DEFAULTS.modo,
+                    tipo: item.tipo || DEFAULTS.tipo,  // ← CORRIGIDO
                     owner: user.uid,
                     members: [user.uid],
                     memberEmails: [user.email],
@@ -563,7 +566,7 @@ export const PautaConfigService = {
                     app.currentUserName,
                     ref.id,
                     'CREATE_PAUTA_LOTE',
-                    `Criou pauta em lote: "${item.name}" para ${novaPauta.dataOperacao} - Modo: ${novaPauta.modo}`
+                    `Criou pauta em lote: "${item.name}" para ${novaPauta.dataOperacao} - Tipo: ${novaPauta.tipo}`
                 );
                 criadas++;
             } catch (err) {
@@ -590,8 +593,8 @@ export const PautaConfigService = {
             return snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
-                    // GARANTIR QUE O CAMPO MODO EXISTE
-                    if (!p.modo) p.modo = DEFAULTS.modo;
+                    // GARANTIR QUE O CAMPO TIPO EXISTE
+                    if (!p.tipo) p.tipo = DEFAULTS.tipo;
                     
                     const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
                     const ehHoje = dataOp === hoje;
@@ -619,7 +622,7 @@ export const PautaConfigService = {
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
-                    if (!p.modo) p.modo = DEFAULTS.modo;
+                    if (!p.tipo) p.tipo = DEFAULTS.tipo;
                     const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
                     return dataOp === hoje && !p.isClosed;
                 });
