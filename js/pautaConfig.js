@@ -313,7 +313,7 @@ export const PautaConfigService = {
     async criarPauta() {
         const app = this._app;
         const user = app.auth.currentUser;
-
+    
         const pautaName = document.getElementById('create-pauta-name-input').value.trim();
         const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
@@ -321,26 +321,26 @@ export const PautaConfigService = {
                           || new Date().toISOString().split('T')[0];
         
         // CAPTURAR O MODO SELECIONADO
-        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || DEFAULTS.tipo;
-
+        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value || 'normal';
+    
         if (!pautaName) {
             showNotification("O nome da pauta não pode ser vazio.", "error");
             return;
         }
-
+    
         // Validação: nome duplicado hoje
         const duplicado = await verificarNomeDuplicadoHoje(app.db, pautaName, user.uid);
         if (duplicado) {
             const continuar = confirm(`Já existe uma pauta chamada "${pautaName}" criada hoje. Deseja criar mesmo assim?`);
             if (!continuar) return;
         }
-
+    
         try {
-            // ⭐ CORRIGIDO: usando 'tipo' em vez de 'modo' para compatibilidade com o filtro
+            // ⭐ CORRIGIDO: usando 'tipo' em vez de 'modo'
             const novaPautaData = {
                 name: pautaName,
                 type: pautaType || DEFAULTS.type,
-                tipo: tipoSelecionado,  // ← CORRIGIDO: agora é 'tipo'
+                tipo: tipoSelecionado,  // ← CAMPO CORRETO
                 owner: user.uid,
                 members: [user.uid],
                 memberEmails: [user.email],
@@ -351,14 +351,14 @@ export const PautaConfigService = {
                 useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                 useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
             };
-
+    
             if (pautaType === 'multisala') {
                 novaPautaData.customRooms = app.customRoomsList;
                 novaPautaData.rooms = app.customRoomsList;
             }
-
+    
             const pautaRef = await addDoc(collection(app.db, "pautas"), novaPautaData);
-
+    
             await logAction(
                 app.db, app.auth,
                 app.currentUserName,
@@ -366,8 +366,7 @@ export const PautaConfigService = {
                 'CREATE_PAUTA',
                 `Criou pauta "${pautaName}" (${pautaType}) para ${dataOp} - Tipo: ${tipoSelecionado}`
             );
-
-            // Integração Verde/Solar
+    
             if (orgaoId) {
                 showNotification("Sincronizando com base de dados Solar/Verde...", "info");
                 const { ApiIntegration } = await import('./api_integration.js');
@@ -384,10 +383,10 @@ export const PautaConfigService = {
                 showNotification("Pauta criada com sucesso!", 'success');
                 playSound('success');
             }
-
+    
             this._limparFormCriacao();
             app.showPautaSelectionScreen();
-
+    
         } catch (error) {
             console.error("Erro ao criar pauta:", error);
             showNotification("Erro ao criar pauta: " + error.message, "error");
