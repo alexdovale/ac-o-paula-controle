@@ -86,39 +86,110 @@ export const PautaService = {
     },
 
     async addAssisted(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) {
-            showNotification("Selecione uma pauta primeiro", "error");
-            playSound('error');
-            return;
+    if (!app || !app.currentPauta || !app.currentPauta.id) {
+        showNotification("Selecione uma pauta primeiro", "error");
+        playSound('error');
+        return;
+    }
+
+    // Captura todos os campos do formulário
+    const name = document.getElementById('assisted-name')?.value.trim();
+    if (!name) {
+        showNotification("Nome do assistido é obrigatório", "error");
+        playSound('error');
+        return;
+    }
+
+    const cpf = document.getElementById('assisted-cpf')?.value.trim() || '';
+    const numAgendamento = document.getElementById('assisted-num-agendamento')?.value.trim() || '';
+    const subject = document.getElementById('assisted-subject')?.value.trim() || '';
+
+    // Verifica o radio "Possui horário agendado?"
+    const isScheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
+    const isScheduled = isScheduledRadio && isScheduledRadio.value === 'yes';
+    let scheduledTime = null;
+    if (isScheduled) {
+        scheduledTime = document.getElementById('scheduled-time')?.value || null;
+    }
+
+    // Verifica o radio "Assistido já chegou?" (o mais importante)
+    const hasArrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+    const hasArrived = hasArrivedRadio ? hasArrivedRadio.value : 'no';
+
+    let arrivalTime = null;
+    let room = null;
+    let status = 'pauta';  // padrão: vai para a coluna "Pauta"
+
+    if (hasArrived === 'yes') {
+        // Se já chegou, captura horário e sala (se houver)
+        const timeStr = document.getElementById('arrival-time')?.value;
+        if (timeStr) {
+            const [hours, minutes] = timeStr.split(':');
+            const arrivalDate = new Date();
+            arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+            arrivalTime = arrivalDate.toISOString();
         }
-
-        const nameInput = document.getElementById('assisted-name');
-        const name = nameInput ? nameInput.value.trim() : '';
-
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const currentMode = (tabAgendamento && tabAgendamento.classList.contains('tab-active')) ? 'agendamento' : 'avulso';
-        
-        // Montagem simplificada do objeto newAssisted
-        const newAssisted = {
-            name: name || 'Assistido sem nome',
-            type: currentMode,
-            status: 'aguardando',
-            createdAt: new Date().toISOString(),
-            lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        };
-
-        try {
-            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            await addDoc(attendanceRef, newAssisted);
-            showNotification(`Assistido "${newAssisted.name}" adicionado!`, 'success');
-            playSound('notification');
-            if (nameInput) nameInput.value = '';
-        } catch (error) {
-            showNotification("Erro ao adicionar", "error");
-            playSound('error');
+        const roomSelect = document.getElementById('manual-room-select');
+        if (roomSelect && !roomSelect.classList.contains('hidden')) {
+            room = roomSelect.value || null;
         }
-    },
+        // Se chegou, vai direto para a fila de aguardando
+        status = 'aguardando';
+    }
+
+    // Monta o objeto do assistido com todos os campos
+    const assistedData = {
+        name: name,
+        cpf: cpf,
+        numAgendamento: numAgendamento,
+        subject: subject,
+        status: status,
+        type: 'agendamento',  // ou 'avulso' conforme a aba ativa – você pode pegar da tab ativa se quiser
+        createdAt: new Date().toISOString(),
+        createdBy: app.currentUserName || app.auth.currentUser?.email,
+        scheduledTime: scheduledTime,
+        arrivalTime: arrivalTime,
+        room: room,
+        checkInOrder: hasArrived === 'yes' ? Date.now() : null,
+        priority: null,
+        priorityReason: null,
+        lastActionBy: app.currentUserName || 'Sistema',
+        lastActionTimestamp: new Date().toISOString()
+    };
+
+    // Se quiser diferenciar entre atendimento agendado e avulso, pode verificar qual aba está ativa
+    const tabAgendamento = document.getElementById('tab-agendamento');
+    if (tabAgendamento && !tabAgendamento.classList.contains('tab-active')) {
+        // Está na aba Avulso – pode definir type = 'avulso' e forçar chegada?
+        assistedData.type = 'avulso';
+        // Opcional: se for avulso, talvez já considerar como chegou? Depende da regra de negócio.
+        // Vou manter o status baseado no radio, mas você pode ajustar.
+    }
+
+    try {
+        const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+        await addDoc(attendanceRef, assistedData);
+
+        const mensagem = status === 'aguardando' 
+            ? `"${name}" adicionado à fila de aguardando!` 
+            : `"${name}" adicionado à pauta. Registre a chegada quando o assistido chegar.`;
+        showNotification(mensagem, 'success');
+        playSound('notification');
+
+        // Limpa os campos do formulário (opcional, mas melhora a UX)
+        document.getElementById('assisted-name').value = '';
+        document.getElementById('assisted-cpf').value = '';
+        document.getElementById('assisted-num-agendamento').value = '';
+        document.getElementById('assisted-subject').value = '';
+        document.getElementById('scheduled-time').value = '';
+        document.getElementById('arrival-time').value = '';
+        if (room && roomSelect) roomSelect.value = '';
+    } catch (error) {
+        console.error(error);
+        showNotification("Erro ao adicionar assistido", "error");
+        playSound('error');
+    }
+    }
 
     async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
         if (!pautaId || !assistedData || !userName) {
