@@ -49,17 +49,42 @@ export const DashboardService = {
             showNotification("Erro interno de conexão. Tente recarregar a página.", "error");
             return;
         }
-
+    
         const db = this.appInstance.db;
         const currentUser = this.appInstance.auth.currentUser;
+        const modoAtual = this.appInstance.currentMode; // ⭐ PEGA O MODO ATUAL
+        
         const pautasRef = collection(db, "pautas");
-
         const q = query(pautasRef, where("members", "array-contains", currentUser.uid));
-
+    
         try {
             const snapshot = await getDocs(q);
-            const pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            // ============================================================
+            // ⭐ FILTRO POR MODO (NORMAL vs EVENTO) - MESMA LÓGICA DO MAIN.JS
+            // ============================================================
+            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
+            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
+            
+            if (modoAtual === 'normal') {
+                // Modo Normal: APENAS pautas que NÃO são de evento
+                pautas = pautas.filter(p => {
+                    let tipoPauta = p.tipo || p.type || 'normal';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    return !tiposEvento.includes(tipoPauta);
+                });
+            } else if (modoAtual === 'evento') {
+                // Modo Evento: APENAS pautas que SÃO de evento
+                pautas = pautas.filter(p => {
+                    let tipoPauta = p.tipo || p.type || '';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    return tiposEvento.includes(tipoPauta);
+                });
+            }
+            
+            console.log(`📊 Dashboard - Modo: ${modoAtual}, Pautas filtradas: ${pautas.length}`);
+    
             let metricas = {
                 ativas: 0,
                 total: 0,
@@ -68,34 +93,34 @@ export const DashboardService = {
                 concluidos: 0,
                 faltosos: 0
             };
-
+    
             const pautasProcessadas = [];
             const now = new Date();
-
+    
             // Processa todas as pautas ativas (menos de 7 dias)
             for (const pauta of pautas) {
                 const creationDate = new Date(pauta.createdAt);
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
-
+    
                 if (now <= expirationDate) {
                     metricas.ativas++;
                     
                     const attendancesRef = collection(db, "pautas", pauta.id, "attendances");
                     const attSnapshot = await getDocs(attendancesRef);
                     const attendances = attSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-
+    
                     const aguardando = attendances.filter(a => a.status === 'aguardando').length;
                     const emMesa = attendances.filter(a => a.status === 'emAtendimento' || a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao').length;
                     const atendidos = attendances.filter(a => a.status === 'atendido').length;
                     const faltosos = attendances.filter(a => a.status === 'faltoso').length;
-
+    
                     metricas.total += attendances.length;
                     metricas.aguardando += aguardando;
                     metricas.emMesa += emMesa;
                     metricas.concluidos += atendidos;
                     metricas.faltosos += faltosos;
-
+    
                     pautasProcessadas.push({
                         id: pauta.id,
                         name: pauta.name,
@@ -109,9 +134,9 @@ export const DashboardService = {
                     });
                 }
             }
-
+    
             this.renderDashboard({ metricas, pautas: pautasProcessadas.sort((a,b) => a.name.localeCompare(b.name)) });
-
+    
         } catch (error) {
             console.error("Erro ao carregar Dashboard:", error);
             showNotification("Falha ao montar o Dashboard geral.", "error");
