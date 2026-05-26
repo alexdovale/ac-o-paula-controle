@@ -192,12 +192,12 @@ export const UIService = {
 
     togglePautaLock(app) {
         const isClosed = app.isPautaClosed;
-
+    
         const buttonsToDisable = [
             'form-agendamento', 'file-upload', 'add-assisted-btn',
             'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
         ];
-
+    
         buttonsToDisable.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -210,7 +210,7 @@ export const UIService = {
                 }
             }
         });
-
+    
         const actionPanelButtons = document.querySelectorAll('#actions-panel button');
         actionPanelButtons.forEach(btn => {
             if (btn.id === 'reopen-pauta-btn') {
@@ -224,26 +224,40 @@ export const UIService = {
         cardActionButtons.forEach(btn => {
             btn.disabled = isClosed;
         });
-
-        // ⭐ ADICIONAR VERIFICAÇÃO DE EXISTÊNCIA DOS ELEMENTOS
+    
+        // ⭐ CORREÇÃO: Verificar se os elementos existem antes de manipular classList
         const closedAlert = document.getElementById('closed-pauta-alert');
         const closeBtn = document.getElementById('close-pauta-btn');
         const reopenBtn = document.getElementById('reopen-pauta-btn');
-
-        if (isClosed) {
-            document.getElementById('closed-pauta-alert').classList.remove('hidden');
-            document.getElementById('close-pauta-btn').classList.add('hidden');
-            document.getElementById('reopen-pauta-btn').classList.remove('hidden');
-        } else {
-            document.getElementById('closed-pauta-alert').classList.add('hidden');
-            document.getElementById('close-pauta-btn').classList.remove('hidden');
-            document.getElementById('reopen-pauta-btn').classList.add('hidden');
+        
+        if (closedAlert) {
+            if (isClosed) {
+                closedAlert.classList.remove('hidden');
+            } else {
+                closedAlert.classList.add('hidden');
+            }
         }
-
+        
+        if (closeBtn) {
+            if (isClosed) {
+                closeBtn.classList.add('hidden');
+            } else {
+                closeBtn.classList.remove('hidden');
+            }
+        }
+        
+        if (reopenBtn) {
+            if (isClosed) {
+                reopenBtn.classList.remove('hidden');
+            } else {
+                reopenBtn.classList.add('hidden');
+            }
+        }
+    
         const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
         if (!isOwner) {
-            document.getElementById('close-pauta-btn')?.classList.add('hidden');
-            document.getElementById('reopen-pauta-btn')?.classList.add('hidden');
+            if (closeBtn) closeBtn.classList.add('hidden');
+            if (reopenBtn) reopenBtn.classList.add('hidden');
         }
     },
 
