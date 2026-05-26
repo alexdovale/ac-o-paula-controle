@@ -225,6 +225,11 @@ export const UIService = {
             btn.disabled = isClosed;
         });
 
+        // ⭐ ADICIONAR VERIFICAÇÃO DE EXISTÊNCIA DOS ELEMENTOS
+        const closedAlert = document.getElementById('closed-pauta-alert');
+        const closeBtn = document.getElementById('close-pauta-btn');
+        const reopenBtn = document.getElementById('reopen-pauta-btn');
+
         if (isClosed) {
             document.getElementById('closed-pauta-alert').classList.remove('hidden');
             document.getElementById('close-pauta-btn').classList.add('hidden');
