@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -732,262 +733,134 @@
         </div>
     </div>
 
-    <!-- TODOS OS OUTROS MODAIS (pauta-type-modal, create-pauta-modal, admin-modal, etc.) PERMANECEM EXATAMENTE COMO NO SEU CÓDIGO ORIGINAL -->
-    <!-- (Devido ao limite de caracteres, eles não foram repetidos aqui, mas você deve mantê-los intactos) -->
-
     <div id="modals-container"></div>
 
     <script src="./js/api_integration.js" type="module"></script>
     <script type="module" src="./js/main.js"></script>
 
+    <!-- ===================================================== -->
+    <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
+    <!-- ===================================================== -->
     <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // ==========================================
-            // PERSISTÊNCIA DO MODO (badge flutuante)
-            // ==========================================
-            const modoSalvo = localStorage.getItem('sigep_current_mode');
-            if (modoSalvo && modoSalvo !== 'undefined') {
-                const modoBadge = document.createElement('div');
-                modoBadge.id = 'modo-persistente-badge';
-                modoBadge.className = 'fixed bottom-4 left-4 z-40 px-3 py-1.5 rounded-full text-white text-[10px] font-bold shadow-lg transition-all duration-300';
-                modoBadge.style.backgroundColor = modoSalvo === 'normal' ? '#2563eb' : '#059669';
-                modoBadge.innerHTML = modoSalvo === 'normal' ? '📋 Modo Normal' : '🎪 Modo Evento';
-                document.body.appendChild(modoBadge);
-                setTimeout(() => {
-                    modoBadge.style.opacity = '0';
-                    setTimeout(() => { if (modoBadge) modoBadge.remove(); }, 500);
-                }, 5000);
-            }
-
-            // (todo o resto do seu DOMContentLoaded permanece igual)
-            const btnManual = document.getElementById('btn-footer-manual');
-            const btnTermos = document.getElementById('btn-footer-termos');
-            const btnPolitica = document.getElementById('btn-footer-politica');
-            
-            if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
-            if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
-            if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
-
-            const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
-            document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
-            document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-            document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
-            document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-            document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
-            
-            // Controle de visibilidade dos Links do Footer baseado no Container de Login
-            const loginContainer = document.getElementById('login-container');
-            const footerLinks = document.getElementById('footer-links');
-            const footerInner = document.getElementById('footer-inner-container');
-            
-            if (loginContainer && footerLinks && footerInner) {
-                const updateFooterVisibility = () => {
-                    if (loginContainer.classList.contains('hidden')) {
-                        footerLinks.classList.remove('hidden');
-                        footerLinks.classList.add('flex');
-                        footerInner.classList.remove('justify-center');
-                        footerInner.classList.add('justify-between');
-                        document.body.classList.remove('is-logged-out'); // Remove a tag de bloqueio de erro
-                    } else {
-                        footerLinks.classList.add('hidden');
-                        footerLinks.classList.remove('flex');
-                        footerInner.classList.remove('justify-between');
-                        footerInner.classList.add('justify-center');
-                        document.body.classList.add('is-logged-out'); // Adiciona tag para bloquear erro prematuro
-                    }
-                };
-                
-                updateFooterVisibility();
-                const observer = new MutationObserver(updateFooterVisibility);
-                observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
-            }
-
-            // ==========================================
-            // LÓGICA DO MODAL LGPD (NOVO)
-            // ==========================================
-            const lgpdModal = document.getElementById('lgpd-acceptance-modal');
-            const chkTermos = document.getElementById('lgpd-check-termos');
-            const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
-            const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
-            const pautaContainer = document.getElementById('pauta-selection-container');
-            const appContainer = document.getElementById('app-container');
-
-            // Verifica se o usuário já aceitou antes (salvo no LocalStorage do navegador)
-            const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
-
-            // Função para checar se as duas caixas foram marcadas
-            const validateLgpdChecks = () => {
-                if (chkTermos.checked && chkPrivacidade.checked) {
-                    btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
-                    btnConfirmLgpd.disabled = false;
-                } else {
-                    btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
-                    btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
-                    btnConfirmLgpd.disabled = true;
-                }
-            };
-
-            chkTermos.addEventListener('change', validateLgpdChecks);
-            chkPrivacidade.addEventListener('change', validateLgpdChecks);
-
-            // Quando o botão for clicado, salva o aceite e esconde o modal
-            btnConfirmLgpd.addEventListener('click', () => {
-                localStorage.setItem('sigep_lgpd_accepted', 'true');
-                lgpdModal.classList.add('hidden');
-                
-                // Exibe uma notificação amigável (se tiver a função showToast no seu main.js)
-                if(window.showToast) {
-                    window.showToast("Termos e Política aceitos com sucesso!", "success");
-                }
-
-                // ✅ COLE AQUI — antes do }); final
-                const SCREEN_KEY = 'sigep_active_screen';
-                const PAUTA_KEY  = 'sigep_active_pauta_id';
-            
-                const SCREENS = {
-                    'pauta-selection'  : 'pauta-selection-container',
-                    'app'              : 'app-container',
-                    'dashboard'        : 'dashboard-container',
-                    'recepcao-central' : 'recepcao-central-container',
-                    'atendimento-ext'  : 'atendimento-externo-container',
-                    'modo-selection'   : 'modo-selection-screen',
-                };
-            
-                function watchScreenChanges() {
-                    Object.entries(SCREENS).forEach(([key, id]) => {
-                        const el = document.getElementById(id);
-                        if (!el) return;
-                        new MutationObserver(() => {
-                            if (!el.classList.contains('hidden')) {
-                                localStorage.setItem(SCREEN_KEY, key);
-                            }
-                        }).observe(el, { attributes: true, attributeFilter: ['class'] });
+        (function() {
+            // 1. Input para CSV (Carregar CSV)
+            function garantirInputCSV() {
+                let input = document.getElementById('file-upload');
+                if (!input) {
+                    input = document.createElement('input');
+                    input.type = 'file';
+                    input.id = 'file-upload';
+                    input.accept = '.csv';
+                    input.style.display = 'none';
+                    document.body.appendChild(input);
+                    
+                    input.addEventListener('change', function(e) {
+                        if (window.app && typeof PautaService !== 'undefined' && PautaService.handleCSVUpload) {
+                            PautaService.handleCSVUpload(e, window.app);
+                        } else {
+                            console.log('[Upload CSV] Arquivo selecionado:', e.target.files[0]?.name);
+                            const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
+                            document.dispatchEvent(evt);
+                        }
                     });
                 }
-            
-                const pautaTitleEl = document.getElementById('pauta-title');
-                if (pautaTitleEl) {
-                    new MutationObserver(() => {
-                        if (window.app?.currentPautaId) {
-                            localStorage.setItem(PAUTA_KEY, window.app.currentPautaId);
-                        }
-                    }).observe(pautaTitleEl, { childList: true, subtree: true });
-                }
-            
-                document.querySelectorAll('#logout-btn-app, #logout-btn-pautas')
-                    .forEach(btn => btn?.addEventListener('click', () => {
-                        localStorage.removeItem(SCREEN_KEY);
-                        localStorage.removeItem(PAUTA_KEY);
-                    }));
-            
-                watchScreenChanges();
-            });
-
-            // Observador para detectar quando o usuário FAZ O LOGIN (sai da tela de login)
-            const authObserver = new MutationObserver(() => {
-                const isLoginHidden = loginContainer.classList.contains('hidden');
-                // Se ele logou e ainda NÃO aceitou o LGPD
-                if (isLoginHidden && !hasAcceptedLGPD) {
-                    // Mostra o modal travando a tela
-                    lgpdModal.classList.remove('hidden');
-                }
-            });
-
-            if (loginContainer) {
-                authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+                return input;
             }
 
-            // ==========================================
-            // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
-            // ==========================================
-            // Isso intercepta os erros gerados na tela se o usuário não estiver logado
-            const originalConsoleError = console.error;
-            console.error = function() {
-                if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
-                    if (document.body.classList.contains('is-logged-out')) {
-                        // Ignora o erro silenciosamente se estiver na tela de login
+            // 2. Input para importação de órgãos (CSV/JSON)
+            let inputOrgaos = null;
+            function garantirInputOrgaos() {
+                if (!inputOrgaos) {
+                    inputOrgaos = document.createElement('input');
+                    inputOrgaos.type = 'file';
+                    inputOrgaos.id = 'import-orgao-file-input';
+                    inputOrgaos.accept = '.csv,.json';
+                    inputOrgaos.style.display = 'none';
+                    document.body.appendChild(inputOrgaos);
+                    
+                    inputOrgaos.addEventListener('change', function(e) {
+                        if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
+                            window.ImportadorOrgaosService.handleFileSelect(e);
+                        } else {
+                            console.log('[Importador] Arquivo de órgãos selecionado:', e.target.files[0]?.name);
+                            const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
+                            document.dispatchEvent(evt);
+                        }
+                    });
+                }
+                return inputOrgaos;
+            }
+
+            // 3. Intercepta cliques em labels/botões
+            document.body.addEventListener('click', function(e) {
+                // Carregar CSV (label com for="file-upload")
+                const labelCSV = e.target.closest('label[for="file-upload"]');
+                if (labelCSV) {
+                    e.preventDefault();
+                    garantirInputCSV().click();
+                    return;
+                }
+
+                // Botão "Selecionar Arquivo" dentro do modal de administrador (Importador de Órgãos)
+                // Detecta se o clique está dentro do modal de órgãos ou se o botão tem texto/ID específico
+                const btn = e.target.closest('button');
+                if (btn) {
+                    const texto = btn.textContent.trim();
+                    const isDentroModalOrgaos = !!btn.closest('#importador-orgaos-modal');
+                    const isSelecionarArquivo = (texto === 'Selecionar Arquivo' || texto === 'Selecionar arquivo' || btn.id === 'select-orgao-file-btn');
+                    
+                    if (isDentroModalOrgaos && isSelecionarArquivo) {
+                        e.preventDefault();
+                        garantirInputOrgaos().click();
                         return;
                     }
                 }
-                originalConsoleError.apply(console, arguments);
-            };
+            });
 
-            // ==========================================
-            // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
-            // ==========================================
-            const tabAgendamento = document.getElementById('tab-agendamento');
-            const tabAvulso = document.getElementById('tab-avulso');
-            const isScheduledContainer = document.getElementById('is-scheduled-container');
-            const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
-            const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-
-            const toggleExclusiveTabs = (activeTab, inactiveTab) => {
-                if(!activeTab || !inactiveTab) return;
-                activeTab.classList.add('tab-active');
-                activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                inactiveTab.classList.remove('tab-active');
-                inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-            };
-
-            if (tabAgendamento && tabAvulso) {
-                tabAgendamento.addEventListener('click', () => {
-                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
-                    if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
-                });
-                
-                tabAvulso.addEventListener('click', () => {
-                    toggleExclusiveTabs(tabAvulso, tabAgendamento);
-                    if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
-                    if(radioScheduledNo) radioScheduledNo.checked = true;
-                    if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
-                });
-
-                const observerTabs = new MutationObserver((mutations) => {
-                    mutations.forEach((mutation) => {
-                        if (mutation.target === tabAgendamento && tabAgendamento.classList.contains('tab-active')) {
-                            if (tabAvulso.classList.contains('tab-active')) {
-                                tabAvulso.classList.remove('tab-active');
-                                tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                            }
-                        } else if (mutation.target === tabAvulso && tabAvulso.classList.contains('tab-active')) {
-                            if (tabAgendamento.classList.contains('tab-active')) {
-                                tabAgendamento.classList.remove('tab-active');
-                                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
+            // 4. Drag & drop na área "Arraste e solte aqui"
+            function setupDragAndDrop() {
+                const dropZones = document.querySelectorAll('#importador-orgaos-modal .drop-zone, .drop-area, [data-dropzone="orgaos"]');
+                dropZones.forEach(zone => {
+                    if (zone.hasAttribute('data-drag-ready')) return;
+                    zone.setAttribute('data-drag-ready', 'true');
+                    
+                    zone.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        zone.classList.add('border-green-500', 'bg-green-50');
+                    });
+                    zone.addEventListener('dragleave', () => {
+                        zone.classList.remove('border-green-500', 'bg-green-50');
+                    });
+                    zone.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        zone.classList.remove('border-green-500', 'bg-green-50');
+                        const files = e.dataTransfer.files;
+                        if (files.length) {
+                            const fakeEvent = { target: { files: [files[0]] } };
+                            if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
+                                window.ImportadorOrgaosService.handleFileSelect(fakeEvent);
+                            } else {
+                                console.log('[Drag&Drop] Arquivo recebido:', files[0].name);
+                                alert(`Arquivo "${files[0].name}" recebido via drag-and-drop.`);
                             }
                         }
                     });
                 });
+            }
 
-                observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
-                observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
-                
-                if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
-                    toggleExclusiveTabs(tabAgendamento, tabAvulso);
+            // Observa quando o modal de órgãos for aberto para configurar o drag-and-drop
+            const observer = new MutationObserver(() => {
+                const modal = document.getElementById('importador-orgaos-modal');
+                if (modal && !modal.classList.contains('hidden')) {
+                    setupDragAndDrop();
                 }
-            }
+            });
+            observer.observe(document.body, { childList: true, subtree: true });
 
-            // ==========================================
-            // LOGICA DA SELEÇÃO DE MODO (NOVO)
-            // ==========================================
-            const btnModoNormal = document.getElementById('btn-modo-normal');
-            const btnModoEvento = document.getElementById('btn-modo-evento');
-            const modoSelectionScreen = document.getElementById('modo-selection-screen');
-            const btnVoltarLogin = document.getElementById('modo-back-to-login');
-            
-            // Essa lógica apenas cuida da interface, o orquestrador (ui.js ou main.js) deve escutar esses cliques para salvar a escolha real
-            if(btnVoltarLogin) {
-                btnVoltarLogin.addEventListener('click', () => {
-                    // Simular voltar pro login fechando modo
-                    modoSelectionScreen.classList.add('hidden');
-                    document.getElementById('login-container').classList.remove('hidden');
-                    // Chama a função global de logout se existir
-                    if(window.app && window.app.logout) window.app.logout();
-                });
-            }
-
-        });
+            // Garante que os inputs existam desde o início
+            garantirInputCSV();
+            garantirInputOrgaos();
+        })();
     </script>
 </body>
-</html>
 </html>
