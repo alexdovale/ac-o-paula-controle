@@ -2537,25 +2537,11 @@ document.addEventListener('DOMContentLoaded', function() {
 
      // Função para definir a tela atual e salvar
     const setAppState = (state) => {
-        if (state === 'selection') {
-            loginContainer?.classList.add('hidden');
-            modoSelectionScreen?.classList.remove('hidden');
-            localStorage.setItem('sigep_app_state', 'selection');
-        } else {
-            loginContainer?.classList.remove('hidden');
-            modoSelectionScreen?.classList.add('hidden');
-            localStorage.setItem('sigep_app_state', 'login');
+        if (state === 'login') {
+            localStorage.removeItem('sigep_active_screen');
+            localStorage.removeItem('sigep_app_state');
         }
     };
-
-    // Verifica o estado salvo ao carregar
-    const savedState = localStorage.getItem('sigep_app_state');
-    const telaAtiva = localStorage.getItem('sigep_active_screen');
-    
-    // Só vai para seleção de modo se não houver tela ativa salva
-    if (savedState === 'selection' && !telaAtiva) {
-        setAppState(savedState);
-    }
 
        // Eventos de navegação que devem disparar a mudança de estado
     // Aqui incluímos o botão que retorna ao login e limpa a sessão
