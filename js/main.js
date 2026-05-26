@@ -2414,6 +2414,32 @@ document.addEventListener('DOMContentLoaded', function() {
     // LOGICA DA SELEÇÃO DE MODO
     const btnVoltarLogin = document.getElementById('modo-back-to-login');
     const modoSelectionScreen = document.getElementById('modo-selection-screen');
+
+     // Função para definir a tela atual e salvar
+    const setAppState = (state) => {
+        if (state === 'selection') {
+            loginContainer?.classList.add('hidden');
+            modoSelectionScreen?.classList.remove('hidden');
+            localStorage.setItem('sigep_app_state', 'selection');
+        } else {
+            loginContainer?.classList.remove('hidden');
+            modoSelectionScreen?.classList.add('hidden');
+            localStorage.setItem('sigep_app_state', 'login');
+        }
+    };
+
+    // Verifica o estado salvo ao carregar
+    const savedState = localStorage.getItem('sigep_app_state');
+    if (savedState) {
+        setAppState(savedState);
+    }
+
+       // Eventos de navegação que devem disparar a mudança de estado
+    // Aqui incluímos o botão que retorna ao login e limpa a sessão
+    document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
+        setAppState('login');
+        if (window.app && window.app.logout) window.app.logout();
+    });
     
     if(btnVoltarLogin) {
         btnVoltarLogin.addEventListener('click', () => {
