@@ -102,13 +102,11 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
     
     try {
-        // 1. Desativa a unidade
         await updateDoc(doc(db, "estrutura_unidades", unidadeId), { 
             ativo: false, 
             excluidoEm: new Date().toISOString() 
         });
         
-        // 2. Remove a unidade de todos os usuários que a tinham vinculada
         const usersSnap = await getDocs(collection(db, "users"));
         const batch = writeBatch(db);
         let usuariosAfetados = 0;
@@ -461,7 +459,7 @@ export const abrirImportadorUnidades = async (db) => {
 };
 
 /**
- * Abre modal para gerenciar todas as unidades (CRUD com pesquisa)
+ * Abre modal para gerenciar unidades (CRUD com pesquisa)
  */
 export const abrirGerenciadorUnidades = async (db) => {
     let unidades = await carregarUnidades(db);
@@ -895,7 +893,10 @@ export const loadAuditLogs = async (db) => {
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        if (document.getElementById('filter-log-user')?.options.length <= 1) await loadLogFilters(db);
+        // Carrega os filtros se estiverem vazios
+        if (document.getElementById('filter-log-user')?.options.length <= 1) {
+            await loadLogFilters(db);
+        }
 
         const logsRef = collection(db, "audit_logs");
         const userFilter = document.getElementById('filter-log-user')?.value;
@@ -1255,4 +1256,4 @@ window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 
-console.log("✅ Módulo admin.js carregado com sucesso (coleção unificada estrutura_unidades, cores profissionalizadas)");
+console.log("✅ Módulo admin.js carregado com sucesso");
