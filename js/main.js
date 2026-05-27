@@ -2085,6 +2085,78 @@ class SIGEPApp {
         }
     } 
 
+    // Adicione este método à classe SIGEPApp
+    async deletePauta(pautaId, pautaName) {
+        // Verificar se o usuário tem permissão
+        const pautaRef = doc(this.db, "pautas", pautaId);
+        const pautaSnap = await getDoc(pautaRef);
+        
+        if (!pautaSnap.exists()) {
+            showNotification("Pauta não encontrada!", "error");
+            return;
+        }
+        
+        const pautaData = pautaSnap.data();
+        const currentUserId = this.auth.currentUser?.uid;
+        
+        // Verificar se o usuário atual é o owner OU tem permissão de admin/superadmin
+        if (pautaData.owner !== currentUserId && 
+            this.currentUser?.role !== 'admin' && 
+            this.currentUser?.role !== 'superadmin') {
+            showNotification("Você não tem permissão para excluir esta pauta!", "error");
+            return;
+        }
+        
+        // Confirmar exclusão
+        const confirmDelete = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação irá deletar TODOS os dados da pauta, incluindo:\n- Todos os assistidos\n- Todos os atendimentos\n- Todas as configurações\n\nEsta ação NÃO pode ser desfeita!`);
+        
+        if (!confirmDelete) return;
+        
+        // Mostrar loading
+        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
+        
+        try {
+            // Buscar todos os subdocumentos (assistidos/atendimentos) da pauta
+            const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
+            const attendancesSnap = await getDocs(attendancesRef);
+            
+            // Deletar cada subdocumento em lote (batch de 500 operações)
+            const batch = writeBatch(this.db);
+            let operationCount = 0;
+            
+            for (const doc of attendancesSnap.docs) {
+                batch.delete(doc.ref);
+                operationCount++;
+                
+                // Firebase batch tem limite de 500 operações
+                if (operationCount >= 490) {
+                    await batch.commit();
+                    // Criar novo batch para continuar
+                    const newBatch = writeBatch(this.db);
+                    operationCount = 0;
+                }
+            }
+            
+            // Commit do último batch se houver operações pendentes
+            if (operationCount > 0) {
+                await batch.commit();
+            }
+            
+            // Deletar a pauta principal
+            await deleteDoc(pautaRef);
+            
+            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
+            
+            // Recarregar lista de pautas
+            await this.loadPautasWithFilter();
+            
+        } catch (error) {
+            console.error("Erro ao excluir pauta:", error);
+            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
+        }
+    }    
+
+    
     // ============================================================
     // abrirModalCriarPauta - POPULA DADOS SEM DESTRUIR AS ABAS DO ASSISTENTE
     // ============================================================
