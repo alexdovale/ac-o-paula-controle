@@ -2377,7 +2377,9 @@ renderAdminContent() {
             <div id="dashboard-results" class="hidden mt-6"></div>
         </div>
     `;
-    
+    setTimeout(() => {
+        loadUsersList(this.db);
+    }, 100);
     this.setupAdminEvents();
 }
 
