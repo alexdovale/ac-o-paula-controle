@@ -1494,21 +1494,19 @@ class SIGEPApp {
             await this.saveUserPreferences();
         });
 
-        const adminModal = document.getElementById('admin-modal');
-        const adminPanelBtnMain = document.getElementById('admin-btn-main'); 
-        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn'); 
-
-        if (adminPanelBtnPautaSelection && adminModal) {
+        // Botão do Administrador - Agora abre em TELA CHEIA (igual Dashboard)
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
+        if (adminPanelBtnPautaSelection) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                adminModal.classList.remove('hidden');
-                this.setupAdminPanel(); 
+                this.showAdminScreen();  // Chama o método que abre o admin em tela cheia
             });
         }
         
-        if (adminPanelBtnMain && adminModal) {
-            adminPanelBtnMain.addEventListener('click', () => {
-                adminModal.classList.remove('hidden');
-                this.setupAdminPanel();
+        // Botão de voltar do Admin (se existir no container)
+        const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
+        if (adminBackBtn) {
+            adminBackBtn.addEventListener('click', () => {
+                this.showPautaSelectionScreen();
             });
         }
 
@@ -2306,7 +2304,115 @@ class SIGEPApp {
 }
 
 
+    // ============================================================
+// ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
+// ============================================================
+async showAdminScreen() {
+    localStorage.setItem('sigep_active_screen', 'admin');
+    UIService.showScreen('admin');
+    
+    const adminContent = document.getElementById('admin-content');
+    if (!adminContent) return;
+    
+    adminContent.innerHTML = `
+        <div class="loader-small mx-auto my-12"></div>
+        <p class="text-center text-gray-500 mt-4">Carregando painel administrativo...</p>
+    `;
+    
+    // Carrega os dados do admin
+    await loadUsersList(this.db);
+    await populateUserFilter(this.db);
+    
+    this.renderAdminContent();
+}
 
+renderAdminContent() {
+    const container = document.getElementById('admin-content');
+    if (!container) return;
+    
+    container.innerHTML = `
+        <div class="mb-6">
+            <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                <span>🏢</span> Gerenciar Unidades / Órgãos
+            </button>
+        </div>
+        
+        <div class="mb-8">
+            <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
+            <div id="pending-users-list" class="space-y-2"></div>
+        </div>
+        
+        <div>
+            <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
+            <div class="overflow-x-auto">
+                <table class="w-full text-sm border-collapse">
+                    <thead class="bg-slate-100">
+                        <tr><th class="p-3 text-left">Usuário</th><th class="p-3 text-left">E-mail</th><th class="p-3 text-center">Unidades</th><th class="p-3 text-center">Perfil</th><th class="p-3 text-center">Ações</th></tr></thead>
+                        <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
+                    </table>
+            </div>
+        </div>
+        
+        <div class="mt-8 pt-4 border-t">
+            <div class="flex flex-wrap gap-3 mb-4">
+                <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
+                <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
+                <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
+                <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
+            </div>
+            <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                <select id="filter-log-user"><option value="all">Todos usuários</option></select>
+                <select id="filter-log-action"><option value="all">Todas ações</option></select>
+                <input type="date" id="filter-log-start">
+                <input type="date" id="filter-log-end">
+            </div>
+            <div id="audit-logs-container" class="hidden overflow-x-auto">
+                <div class="border rounded-xl overflow-hidden">
+                    <table class="w-full text-sm">
+                        <thead class="bg-slate-100"><tr><th class="p-3">Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead>
+                        <tbody id="audit-logs-table-body"></tbody>
+                    </table>
+                </div>
+            </div>
+            <div id="dashboard-results" class="hidden mt-6"></div>
+        </div>
+    `;
+    
+    this.setupAdminEvents();
+}
+
+setupAdminEvents() {
+    document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
+        if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
+            ImportadorOrgaosService.abrirModalMaster(this);
+        }
+    });
+    
+    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('view-audit-logs-btn');
+        if (btn) {
+            btn.textContent = "Carregando...";
+            btn.disabled = true;
+        }
+        await loadAuditLogs(this.db);
+        if (btn) {
+            btn.textContent = "🔍 Carregar Logs";
+            btn.disabled = false;
+        }
+    });
+    
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+        cleanupOldData(this.db);
+    });
+    
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+        loadDashboardData(this.db);
+    });
+    
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+        exportAuditLogsPDF(this.db);
+    });
+}
     
     // ============================================================
     // applyRoleBasedUI - CORRIGIDO
