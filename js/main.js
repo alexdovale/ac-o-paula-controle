@@ -148,7 +148,7 @@ class SIGEPApp {
             localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
-            showNotification('📋 Modo Normal ativado - Atendimento regular', 'info', 3000);
+            showNotification('Modo Normal ativado - Atendimento regular', 'info', 3000);
         });
     
         document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
@@ -158,7 +158,7 @@ class SIGEPApp {
             localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
-            showNotification('🎪 Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
+            showNotification('Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
         });
     }
     // ============================================================
@@ -251,10 +251,10 @@ class SIGEPApp {
         }
         
         if (this.currentMode === 'normal') {
-            indicador.textContent = '📋 Modo Normal';
+            indicador.textContent = 'Modo Normal';
             indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-blue-600 transition-all duration-300';
         } else {
-            indicador.textContent = '🎪 Modo Evento';
+            indicador.textContent = 'Modo Evento';
             indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-purple-600 transition-all duration-300';
         }
         
