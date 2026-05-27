@@ -96,16 +96,47 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
 };
 
 /**
- * Exclui (desativa) uma unidade
+ * Exclui (desativa) uma unidade e a remove de todos os usuários que a tinham vinculada
  */
 export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
     
     try {
-        await updateDoc(doc(db, "estrutura_unidades", unidadeId), { ativo: false, excluidoEm: new Date().toISOString() });
-        showNotification(`Unidade "${unidadeNome}" desativada!`, "info");
+        // 1. Desativa a unidade
+        await updateDoc(doc(db, "estrutura_unidades", unidadeId), { 
+            ativo: false, 
+            excluidoEm: new Date().toISOString() 
+        });
+        
+        // 2. Remove a unidade de todos os usuários que a tinham vinculada
+        const usersSnap = await getDocs(collection(db, "users"));
+        const batch = writeBatch(db);
+        let usuariosAfetados = 0;
+        
+        for (const userDoc of usersSnap.docs) {
+            const userData = userDoc.data();
+            const unidades = userData.unidadesPermitidas || [];
+            
+            if (unidades.includes(unidadeId)) {
+                const novasUnidades = unidades.filter(id => id !== unidadeId);
+                batch.update(userDoc.ref, { 
+                    unidadesPermitidas: novasUnidades,
+                    updatedAt: new Date().toISOString()
+                });
+                usuariosAfetados++;
+            }
+        }
+        
+        if (usuariosAfetados > 0) {
+            await batch.commit();
+            showNotification(`Unidade "${unidadeNome}" desativada e removida de ${usuariosAfetados} usuário(s)!`, "info");
+        } else {
+            showNotification(`Unidade "${unidadeNome}" desativada!`, "info");
+        }
+        
         return true;
     } catch (error) {
+        console.error("Erro ao excluir unidade:", error);
         showNotification("Erro ao excluir unidade: " + error.message, "error");
         return false;
     }
@@ -129,7 +160,7 @@ export const salvarUnidadesUsuario = async (db, userId, unidadesSelecionadas) =>
 };
 
 // =========================================================================
-// MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES (ADAPTADO PARA ESTRUTURA_UNIDADES)
+// MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES
 // =========================================================================
 
 const parseCSVLinha = (linha) => {
