@@ -3,7 +3,7 @@
 
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, Timestamp 
+    query, orderBy, limit, where, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -34,11 +34,11 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 // =========================================================================
 
 /**
- * Carrega lista de unidades disponíveis
+ * Carrega lista de unidades disponíveis (coleção unificada: estrutura_unidades)
  */
 export const carregarUnidades = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "unidades"));
+        const snapshot = await getDocs(collection(db, "estrutura_unidades"));
         if (!snapshot.empty) {
             return snapshot.docs.filter(d => d.data().ativo !== false).map(doc => ({ id: doc.id, ...doc.data() }));
         }
@@ -50,18 +50,28 @@ export const carregarUnidades = async (db) => {
 };
 
 /**
- * Cria uma nova unidade
+ * Cria uma nova unidade (com ID gerado a partir do nome, igual ao importador)
  */
 export const criarUnidade = async (db, dados) => {
     try {
-        const unidadeRef = await addDoc(collection(db, "unidades"), {
-            ...dados,
+        const nomeNormalizado = dados.nome.toLowerCase()
+            .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+            .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+        const unidadeId = nomeNormalizado;
+        const unidadeRef = doc(db, "estrutura_unidades", unidadeId);
+        await setDoc(unidadeRef, {
+            id: unidadeId,
+            nome: dados.nome,
+            sigla: dados.sigla || '',
+            endereco: dados.endereco || '',
+            telefone: dados.telefone || '',
+            email: dados.email || '',
             criadoEm: new Date().toISOString(),
             atualizadoEm: new Date().toISOString(),
             ativo: true
         });
         showNotification(`Unidade "${dados.nome}" criada com sucesso!`, "success");
-        return { id: unidadeRef.id, ...dados };
+        return { id: unidadeId, ...dados };
     } catch (error) {
         showNotification("Erro ao criar unidade: " + error.message, "error");
         return null;
@@ -73,7 +83,7 @@ export const criarUnidade = async (db, dados) => {
  */
 export const atualizarUnidade = async (db, unidadeId, dados) => {
     try {
-        await updateDoc(doc(db, "unidades", unidadeId), {
+        await updateDoc(doc(db, "estrutura_unidades", unidadeId), {
             ...dados,
             atualizadoEm: new Date().toISOString()
         });
@@ -92,7 +102,7 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
     
     try {
-        await updateDoc(doc(db, "unidades", unidadeId), { ativo: false, excluidoEm: new Date().toISOString() });
+        await updateDoc(doc(db, "estrutura_unidades", unidadeId), { ativo: false, excluidoEm: new Date().toISOString() });
         showNotification(`Unidade "${unidadeNome}" desativada!`, "info");
         return true;
     } catch (error) {
@@ -119,7 +129,7 @@ export const salvarUnidadesUsuario = async (db, userId, unidadesSelecionadas) =>
 };
 
 // =========================================================================
-// MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES
+// MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES (ADAPTADO PARA ESTRUTURA_UNIDADES)
 // =========================================================================
 
 const parseCSVLinha = (linha) => {
@@ -271,34 +281,34 @@ export const abrirImportadorUnidades = async (db) => {
     modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-amber-700 to-amber-800 px-6 py-4 flex justify-between items-center shrink-0">
+            <div class="bg-gradient-to-r from-blue-800 to-blue-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-white flex items-center gap-2">
                         <span>📁</span> Importar Unidades em Massa
                     </h2>
-                    <p class="text-amber-100 text-sm mt-1">Importe múltiplas unidades de uma só vez via CSV ou JSON</p>
+                    <p class="text-blue-100 text-sm mt-1">Importe múltiplas unidades de uma só vez via CSV ou JSON</p>
                 </div>
                 <button id="fechar-importador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
                 <div class="flex border-b">
-                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-amber-600 border-b-2 border-amber-600" data-tab="upload">📤 Upload</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-blue-600 border-b-2 border-blue-600" data-tab="upload">📤 Upload</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="modelo">📄 Modelo</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="manual">✏️ Manual</button>
                 </div>
                 
                 <div id="painel-upload-unidades" class="space-y-4">
-                    <div class="border-2 border-dashed border-amber-300 rounded-2xl p-8 text-center">
+                    <div class="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
                         <input type="file" id="arquivo-unidades" accept=".csv,.json" class="hidden">
-                        <button id="btn-selecionar-arquivo-unidades" class="bg-amber-600 hover:bg-amber-700 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg">📂 Selecionar Arquivo</button>
+                        <button id="btn-selecionar-arquivo-unidades" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg">📂 Selecionar Arquivo</button>
                         <p class="text-sm text-gray-500 mt-3">Suporta CSV ou JSON</p>
                     </div>
                     <div id="info-arquivo-unidades" class="hidden p-4 bg-green-50 rounded-xl border border-green-200">
                         <p class="text-green-700 font-bold">✅ Arquivo carregado!</p>
                         <p id="info-arquivo-unidades-detalhes" class="text-sm text-green-600 mt-1"></p>
                         <div class="mt-3 flex gap-3">
-                            <button id="btn-previsualizar-unidades" class="bg-blue-600 text-white px-4 py-2 rounded-lg">👁️ Pré-visualizar</button>
+                            <button id="btn-previsualizar-unidades" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">👁️ Pré-visualizar</button>
                             <button id="btn-importar-unidades" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">🚀 Importar</button>
                         </div>
                     </div>
@@ -350,10 +360,10 @@ export const abrirImportadorUnidades = async (db) => {
         tab.addEventListener('click', () => {
             const aba = tab.dataset.tab;
             document.querySelectorAll('.tab-importador-unidades').forEach(t => {
-                t.classList.remove('text-amber-600', 'border-b-2', 'border-amber-600');
+                t.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
                 t.classList.add('text-gray-500');
             });
-            tab.classList.add('text-amber-600', 'border-b-2', 'border-amber-600');
+            tab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
             document.getElementById('painel-upload-unidades').classList.add('hidden');
             document.getElementById('painel-modelo-unidades').classList.add('hidden');
             document.getElementById('painel-manual-unidades').classList.add('hidden');
@@ -460,7 +470,6 @@ export const abrirGerenciadorUnidades = async (db) => {
             </div>
         `).join('');
         
-        // Reconectar eventos
         document.querySelectorAll('.btn-editar-unidade').forEach(btn => {
             btn.addEventListener('click', () => abrirModalFormUnidade(db, {
                 id: btn.dataset.id,
@@ -504,7 +513,7 @@ export const abrirGerenciadorUnidades = async (db) => {
                         <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                     </div>
                     <div class="flex gap-3">
-                        <button id="btn-importar-unidades-massa" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
+                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
                             <span>📁</span> Importar em Massa
                         </button>
                         <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
@@ -749,11 +758,11 @@ export const loadUsersList = async (db) => {
                         </div>
                         <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
                             <button onclick="window.gerenciarUnidades('${userId}', '${escapeHTML(user.name || 'Sem nome')}', '${escapeHTML(user.email)}', ${JSON.stringify(user.unidadesPermitidas || [])})" 
-                                class="bg-purple-500 text-white px-2 py-1 rounded text-[10px] hover:bg-purple-600 transition">
+                                class="bg-indigo-600 text-white px-2 py-1 rounded text-[10px] hover:bg-indigo-700 transition">
                                 🏢 UNIDADES
                             </button>
                             ${roleSelector}
-                            <button onclick="window.updateUserRole('${userId}')" class="bg-blue-500 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-600 transition">SALVAR</button>
+                            <button onclick="window.updateUserRole('${userId}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-700 transition">SALVAR</button>
                             <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition">EXCLUIR</button>
                         </div>`;
                     approvedList.appendChild(row);
@@ -900,7 +909,7 @@ export const loadAuditLogs = async (db) => {
             const row = document.createElement('tr');
             row.className = "border-b hover:bg-gray-50 transition-colors";
             
-            let actionColor = 'bg-purple-100 text-purple-700 border border-purple-200';
+            let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
             const action = (log.action || '').toLowerCase();
             if (action.includes('erro') || action.includes('error') || action.includes('falha')) actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
             else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) actionColor = 'bg-red-100 text-red-700 border border-red-200';
@@ -952,8 +961,8 @@ export const exportAuditLogsPDF = async (db) => {
             return;
         }
 
-        docPDF.setFontSize(18); docPDF.setTextColor(126, 34, 206);
-        docPDF.text("Relatorio de Auditoria - SIGAP", 14, 20);
+        docPDF.setFontSize(18); docPDF.setTextColor(55, 65, 81);
+        docPDF.text("Relatorio de Auditoria - SIGEP", 14, 20);
         docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
         docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
         docPDF.text(`Total: ${filteredLogs.length} registros`, 14, 34);
@@ -968,11 +977,11 @@ export const exportAuditLogsPDF = async (db) => {
         docPDF.autoTable({
             head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']],
             body: body, startY: 45, theme: 'striped',
-            headStyles: { fillColor: [126, 34, 206], fontSize: 8, halign: 'center' },
+            headStyles: { fillColor: [55, 65, 81], fontSize: 8, halign: 'center' },
             styles: { fontSize: 7, cellPadding: 2 },
         });
 
-        docPDF.save(`Auditoria_SIGAP_${new Date().toISOString().slice(0,10)}.pdf`);
+        docPDF.save(`Auditoria_SIGEP_${new Date().toISOString().slice(0,10)}.pdf`);
         showNotification("PDF gerado!");
     } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
 };
@@ -1175,7 +1184,7 @@ const exportCSV = (totalGeral, totalAtendidos, taxa, mapAssuntos) => {
 export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, mapAssuntos) => {
     try {
         const docPDF = new window.jspdf.jsPDF();
-        docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGAP", 14, 20);
+        docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGEP", 14, 20);
         docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100); docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
         docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Resumo Geral", 14, 45);
         docPDF.setFontSize(11); docPDF.setTextColor(50, 50, 50);
@@ -1215,4 +1224,4 @@ window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 
-console.log("✅ Módulo admin.js carregado com sucesso (CRUD Unidades + Pesquisa + Importação em Massa)");
+console.log("✅ Módulo admin.js carregado com sucesso (coleção unificada estrutura_unidades, cores profissionalizadas)");
