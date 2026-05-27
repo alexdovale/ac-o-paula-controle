@@ -44,8 +44,17 @@ async function buscarUsuario(db, uid) {
 }
 
 async function buscarTodasUnidades(db) {
-    const snap = await getDocs(collection(db, 'unidades'));
-    return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    console.log("🔍 Buscando unidades...");
+    console.log("Usuário autenticado?", window.app.auth.currentUser?.uid);
+    
+    try {
+        const snap = await getDocs(collection(db, 'unidades'));
+        console.log("✅ Unidades encontradas:", snap.docs.length);
+        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch (error) {
+        console.error("❌ Erro ao buscar unidades:", error.code, error.message);
+        throw error;
+    }
 }
 
 // ─── PERSISTÊNCIA ─────────────────────────────────────────────────────────────
