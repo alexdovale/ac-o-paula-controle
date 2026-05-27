@@ -1,0 +1,607 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Painel da Recepção — SIGEP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        * { font-family: 'DM Sans', sans-serif; }
+        code, .mono { font-family: 'DM Mono', monospace; }
+
+        body { background: #0d1117; min-height: 100vh; }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar { width: 3px; }
+        ::-webkit-scrollbar-thumb { background: #334155; border-radius: 10px; }
+
+        /* Tick animado — indicador ao vivo */
+        @keyframes ping-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.4; transform: scale(1.6); }
+        }
+        .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
+
+        /* Entrada do chamado */
+        @keyframes chamado-enter {
+            from { opacity: 0; transform: translateY(-20px) scale(0.96); }
+            to   { opacity: 1; transform: translateY(0) scale(1); }
+        }
+        @keyframes flash-glow {
+            0%   { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+            30%  { box-shadow: 0 0 0 18px rgba(251,191,36,0.25); }
+            100% { box-shadow: 0 0 0 0 rgba(251,191,36,0); }
+        }
+        @keyframes card-in {
+            from { opacity: 0; transform: translateX(-10px); }
+            to   { opacity: 1; transform: translateX(0); }
+        }
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(12px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
+
+        .anim-chamado  { animation: chamado-enter 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
+        .anim-glow     { animation: flash-glow 1.1s ease-out forwards; }
+        .anim-card     { animation: card-in 0.3s ease-out forwards; }
+        .anim-fade-up  { animation: fade-up 0.4s ease-out forwards; }
+
+        /* Card de pessoa na fila */
+        .pessoa-card {
+            background: #1e293b;
+            border: 1px solid #334155;
+            border-left: 4px solid #f59e0b;
+            border-radius: 12px;
+            padding: 10px 14px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin-bottom: 8px;
+            transition: background 0.2s;
+        }
+        .pessoa-card.em-atendimento {
+            border-left-color: #6366f1;
+            background: #1a1f3a;
+        }
+        .pessoa-card.distribuicao {
+            border-left-color: #06b6d4;
+            background: #0f2a32;
+        }
+
+        /* Badge de sala */
+        .sala-badge {
+            background: #1e293b;
+            border: 1px solid #475569;
+            color: #94a3b8;
+            font-size: 10px;
+            font-weight: 700;
+            padding: 2px 8px;
+            border-radius: 6px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            white-space: nowrap;
+        }
+
+        /* Coluna de pauta */
+        .pauta-col {
+            background: #161d2a;
+            border: 1px solid #1e293b;
+            border-radius: 20px;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+        .pauta-col-header {
+            padding: 14px 18px;
+            background: #1e293b;
+            border-bottom: 1px solid #334155;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 8px;
+        }
+
+        /* Gradiente de texto para o nome chamado */
+        .nome-chamado {
+            background: linear-gradient(90deg, #fbbf24, #f97316);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Pill contador */
+        .pill {
+            padding: 2px 10px;
+            border-radius: 999px;
+            font-size: 11px;
+            font-weight: 800;
+            letter-spacing: 0.02em;
+        }
+    </style>
+</head>
+<body class="p-3 sm:p-5 md:p-8 flex flex-col min-h-screen">
+
+    <!-- LOADING -->
+    <div id="loading" class="fixed inset-0 bg-[#0d1117] flex flex-col items-center justify-center z-50 gap-4">
+        <div class="w-12 h-12 rounded-full border-2 border-transparent border-t-amber-500 animate-spin"></div>
+        <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Conectando ao SIGEP...</p>
+    </div>
+
+    <!-- ERRO -->
+    <div id="error-screen" class="hidden fixed inset-0 bg-[#0d1117] flex flex-col items-center justify-center p-4 z-50">
+        <div class="bg-[#161d2a] border border-red-900 p-10 rounded-3xl max-w-md w-full text-center">
+            <p class="text-4xl mb-4">🔒</p>
+            <h1 class="text-xl font-black text-white mb-2">Recepção não encontrada</h1>
+            <p class="text-slate-400 text-sm mb-6">O link da recepção é inválido ou expirou.</p>
+            <button onclick="location.reload()" class="bg-amber-500 text-black font-black px-8 py-3 rounded-xl text-sm uppercase tracking-widest">
+                Tentar Novamente
+            </button>
+        </div>
+    </div>
+
+    <!-- APP -->
+    <div id="app" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex flex-col gap-5">
+
+        <!-- HEADER -->
+        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 
+                        bg-[#161d2a] border border-[#1e293b] rounded-2xl px-6 py-4">
+            <div class="flex items-center gap-4">
+                <!-- Logo / marca -->
+                <div class="bg-[#0d1117] border border-[#334155] rounded-xl p-2 shrink-0">
+                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png"
+                         alt="SIGEP" class="h-9 w-auto object-contain">
+                </div>
+                <div>
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-white font-black text-xl tracking-tight leading-none">SIGEP</h1>
+                        <span class="text-slate-600 text-xs font-bold">·</span>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Painel da Recepção</span>
+                    </div>
+                    <h2 id="recepcao-nome" class="text-amber-400 font-black text-lg leading-tight mt-0.5 tracking-tight">—</h2>
+                </div>
+            </div>
+
+            <!-- Status ao vivo + contadores globais -->
+            <div class="flex items-center gap-4 flex-wrap justify-center sm:justify-end">
+                <div class="flex items-center gap-2">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="ping-slow absolute h-full w-full rounded-full bg-green-400 opacity-60"></span>
+                        <span class="relative rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                    </span>
+                    <span class="text-green-400 text-[10px] font-black uppercase tracking-widest">Ao Vivo</span>
+                </div>
+                <div class="h-5 w-px bg-[#334155]"></div>
+                <div class="text-center">
+                    <p class="text-amber-400 font-black text-2xl leading-none" id="g-aguardando">0</p>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Aguardando</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-indigo-400 font-black text-2xl leading-none" id="g-atendendo">0</p>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Atendendo</p>
+                </div>
+                <div class="text-center">
+                    <p class="text-emerald-400 font-black text-2xl leading-none" id="g-atendidos">0</p>
+                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Concluídos</p>
+                </div>
+                <div id="data-hora" class="mono text-slate-500 text-xs font-bold bg-[#0d1117] border border-[#1e293b] px-3 py-1.5 rounded-lg"></div>
+            </div>
+        </header>
+
+        <!-- BLOCO ÚLTIMO CHAMADO -->
+        <div id="ultimo-chamado-wrap" class="hidden">
+            <div id="ultimo-chamado-card"
+                 class="bg-[#161d2a] border border-[#334155] rounded-2xl p-6 md:p-8 
+                        flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
+                <!-- Glow decorativo -->
+                <div class="absolute inset-0 pointer-events-none"
+                     style="background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 70%)"></div>
+
+                <div class="text-center md:text-left flex-1">
+                    <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.35em] mb-3">📣 Chamando Agora</p>
+                    <h2 id="uc-nome" class="nome-chamado text-5xl sm:text-6xl font-black uppercase tracking-tight leading-none mb-4">—</h2>
+                    <div class="flex flex-wrap gap-2 justify-center md:justify-start">
+                        <span id="uc-pauta" class="bg-[#1e293b] border border-[#334155] text-slate-300 text-sm font-bold px-4 py-1.5 rounded-xl">—</span>
+                        <span id="uc-local" class="bg-amber-500/20 border border-amber-500/40 text-amber-300 text-sm font-bold px-4 py-1.5 rounded-xl">—</span>
+                        <span id="uc-hora"  class="mono text-slate-500 text-xs font-bold self-center">—</span>
+                    </div>
+                </div>
+
+                <!-- Chamados recentes -->
+                <div id="uc-recentes" class="hidden w-full md:w-64 shrink-0 space-y-2"></div>
+            </div>
+        </div>
+
+        <!-- GRADE DE PAUTAS -->
+        <div id="grade-pautas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1"></div>
+
+        <!-- RODAPÉ -->
+        <footer class="text-center text-slate-700 text-[10px] font-bold uppercase tracking-widest pb-2">
+            SIGEP · Painel Público da Recepção · Dados em tempo real
+        </footer>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection, getDocs, query, where }
+            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider }
+            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+
+        // ── Firebase ──────────────────────────────────────────────────────────
+        const firebaseConfig = {
+            apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
+            authDomain: "pauta-ce162.firebaseapp.com",
+            projectId: "pauta-ce162",
+            storageBucket: "pauta-ce162.appspot.com",
+            messagingSenderId: "87113750208",
+            appId: "1:87113750208:web:4abba0024f4d4af699bf25"
+        };
+        const firebaseApp = initializeApp(firebaseConfig);
+        const db = getFirestore(firebaseApp);
+
+        try {
+            initializeAppCheck(firebaseApp, {
+                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                isTokenAutoRefreshEnabled: true
+            });
+        } catch(e) {}
+
+        // ── Params da URL ─────────────────────────────────────────────────────
+        const params  = new URLSearchParams(window.location.search);
+        // Aceita lista de IDs de pautas: ?pautas=id1,id2,id3
+        // OU um ID de recepção para buscar pautas: ?recepcao=recepcaoId (requer pautas públicas)
+        const pautasParam  = params.get('pautas');   // ex: "abc123,def456"
+        const recepcaoNome = params.get('nome') || 'Recepção';
+
+        // ── Estado global ─────────────────────────────────────────────────────
+        const estado = {
+            pautas: {},        // { [pautaId]: { id, name, sala, type, ... } }
+            assistidos: {},    // { [pautaId]: [assistidos] }
+            ultimoChamado: null,
+            ultimoChamadoNome: null,
+        };
+
+        // ── Helpers ───────────────────────────────────────────────────────────
+        function esc(str) {
+            if (!str) return '';
+            return String(str).replace(/[&<>'"]/g,
+                t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
+        }
+
+        function maskName(name) {
+            if (!name) return '—';
+            const conn = ['de','da','do','dos','das','e'];
+            return esc(name.trim().split(/\s+/).map((p,i) => {
+                if (i === 0) return p;
+                if (conn.includes(p.toLowerCase())) return p;
+                return p[0].toUpperCase() + '.';
+            }).join(' '));
+        }
+
+        function horaAgora() {
+            return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        }
+
+        // ── Relógio ───────────────────────────────────────────────────────────
+        function tickRelogio() {
+            const el = document.getElementById('data-hora');
+            if (!el) return;
+            const agora = new Date();
+            el.textContent = agora.toLocaleString('pt-BR', {
+                weekday: 'short', day: '2-digit', month: '2-digit',
+                hour: '2-digit', minute: '2-digit', second: '2-digit'
+            }).replace(',', ' ·');
+        }
+        tickRelogio();
+        setInterval(tickRelogio, 1000);
+
+        // ── Som (Web Audio) ───────────────────────────────────────────────────
+        function tocarSom() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const notas = [[523,0,0.22],[659,0.22,0.22],[784,0.44,0.35]];
+                notas.forEach(([freq, inicio, dur]) => {
+                    const o = ctx.createOscillator();
+                    const g = ctx.createGain();
+                    o.connect(g); g.connect(ctx.destination);
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
+                    g.gain.setValueAtTime(0.35, ctx.currentTime + inicio);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + dur);
+                    o.start(ctx.currentTime + inicio);
+                    o.stop(ctx.currentTime + inicio + dur);
+                });
+                setTimeout(() => ctx.close(), 1400);
+            } catch(e) {}
+        }
+
+        // ── Último chamado ─────────────────────────────────────────────────────
+        function renderUltimoChamado(chamado, historico) {
+            if (!chamado) return;
+
+            const wrap    = document.getElementById('ultimo-chamado-wrap');
+            const card    = document.getElementById('ultimo-chamado-card');
+            const nomeEl  = document.getElementById('uc-nome');
+            const pautaEl = document.getElementById('uc-pauta');
+            const localEl = document.getElementById('uc-local');
+            const horaEl  = document.getElementById('uc-hora');
+            const recentesEl = document.getElementById('uc-recentes');
+
+            const novoNome = chamado.nome ? chamado.nome.toUpperCase() : '—';
+            const nomeMudou = nomeEl.textContent !== novoNome && novoNome !== '—';
+
+            wrap.classList.remove('hidden');
+            nomeEl.textContent  = novoNome;
+            pautaEl.textContent = esc(chamado.pautaNome || chamado.local || '—');
+            localEl.textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
+            horaEl.textContent  = chamado.hora || horaAgora();
+
+            if (nomeMudou) {
+                nomeEl.classList.remove('anim-chamado');
+                card.classList.remove('anim-glow');
+                void nomeEl.offsetWidth; void card.offsetWidth;
+                nomeEl.classList.add('anim-chamado');
+                card.classList.add('anim-glow');
+                tocarSom();
+            }
+
+            // Recentes
+            const anteriores = (historico || []).filter((c,i) => i > 0 && i < 4);
+            if (anteriores.length > 0) {
+                recentesEl.classList.remove('hidden');
+                recentesEl.innerHTML = anteriores.map((c, i) => `
+                    <div class="bg-[#0d1117] border border-[#1e293b] rounded-xl px-4 py-2.5 anim-card"
+                         style="animation-delay:${i*0.07}s">
+                        <p class="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-0.5">Chamado Anterior</p>
+                        <p class="text-slate-300 font-bold text-sm uppercase truncate">${esc(c.nome||'')}</p>
+                        <p class="text-slate-600 text-[10px] mt-0.5">${esc(c.pautaNome||c.local||'')} · ${esc(c.hora||'')}</p>
+                    </div>
+                `).join('');
+            } else {
+                recentesEl.classList.add('hidden');
+            }
+        }
+
+        // ── Atualizar contadores globais ───────────────────────────────────────
+        function atualizarContadores() {
+            let ag = 0, at = 0, done = 0;
+            for (const lista of Object.values(estado.assistidos)) {
+                ag   += lista.filter(a => a.status === 'aguardando').length;
+                at   += lista.filter(a => a.status === 'emAtendimento').length;
+                done += lista.filter(a => a.status === 'atendido').length;
+            }
+            document.getElementById('g-aguardando').textContent = ag;
+            document.getElementById('g-atendendo').textContent  = at;
+            document.getElementById('g-atendidos').textContent  = done;
+        }
+
+        // ── Renderizar coluna de uma pauta ────────────────────────────────────
+        function renderColunaPauta(pautaId) {
+            const pauta     = estado.pautas[pautaId];
+            const assistidos = estado.assistidos[pautaId] || [];
+            if (!pauta) return;
+
+            const aguardando = assistidos
+                .filter(a => a.status === 'aguardando')
+                .sort((a, b) => {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+                });
+
+            const emAtendimento = assistidos
+                .filter(a => a.status === 'emAtendimento')
+                .sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
+
+            const distribuicao = assistidos.filter(a =>
+                a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao'
+            );
+
+            const porcentagem = assistidos.length > 0
+                ? Math.round((assistidos.filter(a => a.status === 'atendido').length / assistidos.length) * 100)
+                : 0;
+
+            const col = document.getElementById(`col-pauta-${pautaId}`);
+            if (!col) return;
+
+            col.innerHTML = `
+                <!-- Header da coluna/pauta -->
+                <div class="pauta-col-header">
+                    <div class="min-w-0">
+                        <p class="text-white font-black text-sm truncate">${esc(pauta.name)}</p>
+                        <div class="flex items-center gap-2 mt-1">
+                            ${pauta.sala ? `<span class="text-[9px] text-purple-400 font-bold bg-purple-900/30 border border-purple-800/40 px-2 py-0.5 rounded-md">🏠 ${esc(pauta.sala)}</span>` : ''}
+                            <span class="text-[9px] text-slate-500 font-bold uppercase">${pauta.type || 'agendamento'}</span>
+                        </div>
+                    </div>
+                    <!-- Barra de progresso + % -->
+                    <div class="flex items-center gap-2 shrink-0">
+                        <div class="w-16 h-1.5 bg-[#0d1117] rounded-full overflow-hidden">
+                            <div class="h-full bg-emerald-500 transition-all duration-700 rounded-full" style="width:${porcentagem}%"></div>
+                        </div>
+                        <span class="mono text-slate-500 text-[10px] font-bold">${porcentagem}%</span>
+                    </div>
+                </div>
+
+                <!-- Contadores rápidos -->
+                <div class="grid grid-cols-3 border-b border-[#1e293b] text-center">
+                    <div class="py-3 border-r border-[#1e293b]">
+                        <p class="text-amber-400 font-black text-xl leading-none">${aguardando.length}</p>
+                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">Fila</p>
+                    </div>
+                    <div class="py-3 border-r border-[#1e293b]">
+                        <p class="text-indigo-400 font-black text-xl leading-none">${emAtendimento.length}</p>
+                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">Atendendo</p>
+                    </div>
+                    <div class="py-3">
+                        <p class="text-emerald-400 font-black text-xl leading-none">${assistidos.filter(a=>a.status==='atendido').length}</p>
+                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">OK</p>
+                    </div>
+                </div>
+
+                <!-- Corpo rolável -->
+                <div class="flex-1 overflow-y-auto p-3 space-y-4" style="max-height: 420px;">
+
+                    <!-- Em atendimento agora -->
+                    ${emAtendimento.length > 0 ? `
+                        <div>
+                            <p class="text-indigo-400 text-[9px] font-black uppercase tracking-widest mb-2">🧑‍💻 Em Atendimento</p>
+                            ${emAtendimento.map(a => `
+                                <div class="pessoa-card em-atendimento anim-fade-up">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
+                                        ${a.assignedCollaborator?.name
+                                            ? `<p class="text-indigo-400 text-[10px] font-bold mt-0.5">com ${esc(a.assignedCollaborator.name)}</p>`
+                                            : ''}
+                                    </div>
+                                    ${a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Distribuição -->
+                    ${distribuicao.length > 0 ? `
+                        <div>
+                            <p class="text-cyan-400 text-[9px] font-black uppercase tracking-widest mb-2">⚖️ Distribuição</p>
+                            ${distribuicao.map(a => `
+                                <div class="pessoa-card distribuicao">
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
+                                    </div>
+                                    ${a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : ''}
+                                </div>
+                            `).join('')}
+                        </div>
+                    ` : ''}
+
+                    <!-- Fila de espera -->
+                    <div>
+                        <p class="text-amber-500 text-[9px] font-black uppercase tracking-widest mb-2">⏳ Fila de Espera${aguardando.length > 0 ? ' ('+aguardando.length+')' : ''}</p>
+                        ${aguardando.length === 0
+                            ? `<div class="text-center py-8">
+                                <p class="text-slate-700 text-[10px] font-black uppercase tracking-widest">Fila vazia</p>
+                               </div>`
+                            : aguardando.map((a, i) => `
+                                <div class="pessoa-card anim-card" style="animation-delay:${i*0.04}s">
+                                    <span class="text-amber-500 font-black text-xs mono w-5 shrink-0 text-center">${i+1}</span>
+                                    <div class="min-w-0 flex-1">
+                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
+                                        <div class="flex items-center gap-1.5 mt-0.5">
+                                            ${a.scheduledTime ? `<span class="mono text-slate-500 text-[9px]">⏰ ${esc(a.scheduledTime)}</span>` : ''}
+                                            ${a.subject ? `<span class="text-slate-600 text-[9px] truncate">· ${esc(a.subject)}</span>` : ''}
+                                        </div>
+                                    </div>
+                                    ${a.priority === 'URGENTE'
+                                        ? `<span class="pill bg-red-900/60 text-red-400 border border-red-800/50">URGENTE</span>`
+                                        : (a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : '')
+                                    }
+                                </div>
+                            `).join('')
+                        }
+                    </div>
+
+                </div>
+            `;
+        }
+
+        // ── Iniciar listener de assistidos de uma pauta ───────────────────────
+        function iniciarListenerAssistidos(pautaId) {
+            onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snap) => {
+                estado.assistidos[pautaId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                renderColunaPauta(pautaId);
+                atualizarContadores();
+            });
+        }
+
+        // ── Iniciar listener do último chamado de uma pauta ───────────────────
+        function iniciarListenerChamado(pautaId) {
+            onSnapshot(doc(db, "pautas", pautaId, "painel", "ultimoChamado"), (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                if (!data.atual) return;
+
+                // Adiciona contexto da pauta ao chamado
+                const pauta = estado.pautas[pautaId];
+                const chamado = {
+                    ...data.atual,
+                    pautaNome: pauta?.name || data.atual.local || '',
+                    sala: pauta?.sala || data.atual.sala || '',
+                };
+
+                // Exibe apenas se for o mais recente entre todas as pautas
+                const tsAtual = data.atual.timestamp || 0;
+                const tsUlt   = estado.ultimoChamado?.timestamp || 0;
+
+                if (tsAtual >= tsUlt) {
+                    estado.ultimoChamado = chamado;
+                    renderUltimoChamado(chamado, data.historico || []);
+                }
+            });
+        }
+
+        // ── BOOTSTRAP ─────────────────────────────────────────────────────────
+        async function init() {
+            if (!pautasParam) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-screen').classList.remove('hidden');
+                return;
+            }
+
+            const pautaIds = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
+
+            if (pautaIds.length === 0) {
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-screen').classList.remove('hidden');
+                return;
+            }
+
+            // Define nome da recepção
+            document.getElementById('recepcao-nome').textContent = decodeURIComponent(recepcaoNome);
+
+            // Cria colunas placeholder na grade
+            const grade = document.getElementById('grade-pautas');
+            pautaIds.forEach(id => {
+                const col = document.createElement('div');
+                col.id = `col-pauta-${id}`;
+                col.className = 'pauta-col';
+                col.innerHTML = `
+                    <div class="pauta-col-header">
+                        <div class="w-32 h-4 bg-[#1e293b] rounded animate-pulse"></div>
+                    </div>
+                    <div class="flex-1 flex items-center justify-center py-16">
+                        <div class="w-8 h-8 rounded-full border-2 border-transparent border-t-slate-600 animate-spin"></div>
+                    </div>
+                `;
+                grade.appendChild(col);
+            });
+
+            // Esconde loading, mostra app
+            document.getElementById('loading').classList.add('hidden');
+            document.getElementById('app').classList.remove('hidden');
+
+            // Para cada pauta: listener de config + dados
+            pautaIds.forEach(pautaId => {
+                // Config da pauta (nome, sala, etc.)
+                onSnapshot(doc(db, "pautas", pautaId), (snap) => {
+                    if (!snap.exists()) return;
+                    const d = snap.data();
+                    estado.pautas[pautaId] = { id: pautaId, ...d };
+                    renderColunaPauta(pautaId);
+                });
+
+                iniciarListenerAssistidos(pautaId);
+                iniciarListenerChamado(pautaId);
+            });
+        }
+
+        init();
+
+        // Escuta chamados locais (mesma aba) para resposta imediata
+        window.addEventListener('sigep:chamado', (e) => {
+            if (e.detail) renderUltimoChamado(e.detail, []);
+        });
+    </script>
+</body>
+</html>
