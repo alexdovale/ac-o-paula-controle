@@ -203,15 +203,15 @@ class SIGEPApp {
                     <p class="text-sm text-gray-600 mb-4">Selecione o tipo da pauta:</p>
                     <div class="space-y-3">
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
-                            <div class="font-bold">🤝 Mutirão</div>
+                            <div class="font-bold"> Mutirão</div>
                             <div class="text-xs text-gray-500">Evento concentrado com múltiplos atendimentos</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="plantao">
-                            <div class="font-bold">🚨 Plantão</div>
+                            <div class="font-bold"> Plantão</div>
                             <div class="text-xs text-gray-500">Atendimento emergencial contínuo</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="acao_social">
-                            <div class="font-bold">❤️ Ação Social</div>
+                            <div class="font-bold"> Ação Social</div>
                             <div class="text-xs text-gray-500">Atividade comunitária externa</div>
                         </button>
                     </div>
