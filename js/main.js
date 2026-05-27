@@ -1,3 +1,5 @@
+// main.js - SIGEP APP PRINCIPAL (COMPLETO)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -17,18 +19,23 @@ import { setupDetailsModal, openDetailsModal } from './detalhes.js';
 import { DashboardService } from './dashboardService.js';
 import { subjectTree, flatSubjects } from './assuntos.js';
 import { showConfirmModal } from './confirmModal.js';
-import { logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, populateUserFilter } from './admin.js';
+import { 
+    logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, 
+    deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, 
+    populateUserFilter, setupAdminSearch, abrirGerenciadorUnidades,
+    abrirImportadorUnidades, abrirModalUsuariosPorUnidade, AdminService
+} from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
-// NOVOS IMPORTS - GUIA DE INTEGRAÇÃO
+// IMPORTS DOS NOVOS MÓDULOS
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
-
 import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 
 // 1. IMPORTAR E INJETAR OS MODAIS ANTES DE TUDO!
 import { injetarModais } from './modais.js';
@@ -79,87 +86,162 @@ class SIGEPApp {
             // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
             this.setupModoListeners();
             
+            // EXPÕE O APP GLOBALMENTE PARA OS MÓDULOS ADMIN
+            window.app = this;
+            
+            // REGISTRA O AdminService COM O APP
+            if (AdminService && AdminService.setupAdminEvents) {
+                AdminService.setupAdminEvents(this);
+            }
+            
         } catch (error) {
             console.error("Erro na inicialização:", error);
             showNotification("Erro ao iniciar o sistema SIGEP", "error");
         }
     }
 
-    // Adicione este método dentro da classe SIGEPApp
+    // ============================================================
+    // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
+    // ============================================================
+    
     showAdminScreen() {
-        // 1. Marca no localStorage que a tela atual é a de admin
         localStorage.setItem('sigep_active_screen', 'admin');
-    
-        // 2. Muda a visualização para a tela de admin (assume que 'admin' é um ID de tela válido no UIService)
-        if (typeof UIService !== 'undefined') {
-            UIService.showScreen('admin');
-        }
-    
-        // 3. Renderiza o conteúdo (tabelas, buscas, logs)
+        UIService.showScreen('admin');
         this.renderAdminContent();
-    
-        // 4. Garante que os eventos do painel estejam ativos
-        this.setupAdminPanel();
+        this.setupAdminPanelEvents();
     }
 
-    async loadExternalModalsContent() {
-        const modalsToLoad = [
-            { selector: '#policy-content', url: './politica.html' },
-            { selector: '#manual-modal .scrollable-content', url: './manual.html' },
-            { selector: '#terms-modal .scrollable-content', url: './termos.html' }
-        ];
+    renderAdminContent() {
+        const container = document.getElementById('admin-content');
+        if (!container) return;
+        
+        container.innerHTML = `
+            <div class="mb-6">
+                <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>🏢</span> Gerenciar Unidades / Órgãos
+                </button>
+            </div>
+            
+            <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+                <div id="search-pendentes" class="w-full sm:w-80"></div>
+                <div id="page-size-pendentes"></div>
+            </div>
+            <div class="mb-8">
+                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
+                <div id="pending-users-list" class="space-y-2"></div>
+                <div id="pagination-pendentes" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8 mb-4 flex flex-wrap gap-4 items-center justify-between">
+                <div id="search-usuarios" class="w-full sm:w-80"></div>
+                <div id="page-size-usuarios"></div>
+            </div>
+            <div>
+                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-slate-100">
+                            <tr><th class="p-3 text-left">Usuário</th><th class="p-3 text-left">E-mail</th><th class="p-3 text-center">Unidades</th><th class="p-3 text-center">Perfil</th><th class="p-3 text-center">Ações</th></tr></thead>
+                            <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
+                        </table>
+                </div>
+                <div id="pagination-usuarios" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t">
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
+                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
+                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
+                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
+                </div>
+                
+                <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+                    <div id="search-logs" class="w-full sm:w-80"></div>
+                    <div id="page-size-logs"></div>
+                </div>
+                
+                <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                    <select id="filter-log-user"><option value="all">Todos usuários</option></select>
+                    <select id="filter-log-action"><option value="all">Todas ações</option></select>
+                    <input type="date" id="filter-log-start">
+                    <input type="date" id="filter-log-end">
+                </div>
+                <div id="audit-logs-container" class="hidden overflow-x-auto">
+                    <div class="border rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-100"><tr><th class="p-3">Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead>
+                            <tbody id="audit-logs-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="pagination-logs" class="mt-4"></div>
+                <div id="dashboard-results" class="hidden mt-6"></div>
+            </div>
+        `;
+        
+        if (typeof setupAdminSearch === 'function') {
+            setupAdminSearch();
+        }
+        
+        if (typeof loadUsersList === 'function') {
+            loadUsersList(this.db);
+        }
+        if (typeof populateUserFilter === 'function') {
+            populateUserFilter(this.db);
+        }
+        
+        this.setupAdminPanelEvents();
+    }
 
-        for (const item of modalsToLoad) {
-            try {
-                const response = await fetch(item.url);
-                if (response.ok) {
-                    const html = await response.text();
-                    const container = document.querySelector(item.selector);
-                    if (container) {
-                        container.innerHTML = html; 
-                    }
-                } else {
-                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
-                }
-            } catch (error) {
-                console.error(`Erro ao tentar buscar ${item.url}:`, error);
+    setupAdminPanelEvents() {
+        document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
+            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
+                ImportadorOrgaosService.abrirModalMaster(this);
+            } else if (typeof abrirGerenciadorUnidades === 'function') {
+                abrirGerenciadorUnidades(this.db);
             }
-        }
-    }
-
-    setupOfflinePersistence() {
-        try {
-            enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
-                    showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('⚠️ Navegador não suporta persistência offline.');
-                } else {
-                    console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
-                }
-            });
-        } catch (e) {
-            console.log("Erro ao ativar persistência:", e);
-        }
-    
-        window.addEventListener('offline', () => {
-            document.getElementById('offline-indicator').classList.remove('hidden');
         });
-    
-        window.addEventListener('online', () => {
-            document.getElementById('offline-indicator').classList.add('hidden');
-            showNotification("Conexão restabelecida!", "success");
-            playSound('notification');
+        
+        document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
+            this.showPautaSelectionScreen();
         });
+        
+        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+            const btn = document.getElementById('view-audit-logs-btn');
+            if (btn) {
+                btn.textContent = "Carregando...";
+                btn.disabled = true;
+            }
+            await loadAuditLogs(this.db);
+            if (btn) {
+                btn.textContent = "🔍 Carregar Logs";
+                btn.disabled = false;
+            }
+        });
+        
+        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+            cleanupOldData(this.db);
+        });
+        
+        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+            loadDashboardData(this.db);
+        });
+        
+        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+            exportAuditLogsPDF(this.db);
+        });
+        
+        document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(this.db));
+        document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(this.db));
+        document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(this.db));
+        document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(this.db));
     }
 
     // ============================================================
     // MÉTODO: setupModoListeners
-    // Gerencia os cliques nos botões de Modo Normal e Modo Evento
-    // COM PERSISTÊNCIA NO LOCALSTORAGE
     // ============================================================
-   setupModoListeners() {
+    setupModoListeners() {
         document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
@@ -180,12 +262,11 @@ class SIGEPApp {
             showNotification('Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
         });
     }
+
     // ============================================================
     // MÉTODO: voltarParaSelecaoModo
-    // Volta para a tela de seleção de modo (Trocar Modo)
     // ============================================================
     voltarParaSelecaoModo() {
-        // Limpa dados da pauta atual
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
         
@@ -199,18 +280,13 @@ class SIGEPApp {
         }
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
-        // Volta para a tela de seleção de modo
         UIService.showScreen('modoSelection');
-        
-        // Reaplica a interface baseada no modo (para o botão da Recepção Central)
         this.applyRoleBasedUI();
-        
         showNotification('Modo alterado com sucesso!', 'info', 2000);
     }
 
     // ============================================================
-    // MÉTODO: mostrarSeletorTipoEvento
-    // Mostra opções de tipo de evento quando criar pauta no Modo Evento
+    // mostrarSeletorTipoEvento
     // ============================================================
     mostrarSeletorTipoEvento() {
         return new Promise((resolve) => {
@@ -257,8 +333,7 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // MÉTODO: mostrarIndicadorModo
-    // Mostra um badge flutuante indicando o modo atual
+    // mostrarIndicadorModo
     // ============================================================
     mostrarIndicadorModo() {
         let indicador = document.getElementById('modo-indicador');
@@ -289,37 +364,35 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // setupAuthListener - Mostra a tela de seleção de modo
+    // setupAuthListener
     // ============================================================
     setupAuthListener() {
-    onAuthStateChanged(this.auth, async (user) => {
-        if (user) {
-            await AuthService.handleAuthState(this, user);
-            await this.loadUserPreferences(); 
-            this.applyRoleBasedUI(); 
-            
-            // ✅ RESTAURA A TELA QUE ESTAVA ABERTA ANTES DO REFRESH
-            const telaAtiva = localStorage.getItem('sigep_active_screen');
-            const pautaId   = localStorage.getItem('lastPautaId');
-            const pautaNome = localStorage.getItem('lastPautaName');
-            const pautaTipo = localStorage.getItem('lastPautaType');
+        onAuthStateChanged(this.auth, async (user) => {
+            if (user) {
+                await AuthService.handleAuthState(this, user);
+                await this.loadUserPreferences(); 
+                this.applyRoleBasedUI(); 
+                
+                const telaAtiva = localStorage.getItem('sigep_active_screen');
+                const pautaId   = localStorage.getItem('lastPautaId');
+                const pautaNome = localStorage.getItem('lastPautaName');
+                const pautaTipo = localStorage.getItem('lastPautaType');
 
-            if (telaAtiva === 'app' && pautaId && pautaNome) {
-                // Estava dentro de uma pauta
-                await this.loadPauta(pautaId, pautaNome, pautaTipo);
-            } else if (telaAtiva === 'pauta-selection') {
-                // Estava na lista de pautas
-                await this.showPautaSelectionScreen();
-            } else if (telaAtiva === 'dashboard') {
-                DashboardService.showDashboardScreen();
-            } else if (telaAtiva === 'recepcao-central') {
-                await RecepçãoCentralService.abrir(this);
+                if (telaAtiva === 'app' && pautaId && pautaNome) {
+                    await this.loadPauta(pautaId, pautaNome, pautaTipo);
+                } else if (telaAtiva === 'pauta-selection') {
+                    await this.showPautaSelectionScreen();
+                } else if (telaAtiva === 'dashboard') {
+                    DashboardService.showDashboardScreen();
+                } else if (telaAtiva === 'recepcao-central') {
+                    await RecepçãoCentralService.abrir(this);
+                } else if (telaAtiva === 'admin') {
+                    this.showAdminScreen();
+                } else {
+                    UIService.showScreen('modoSelection');
+                }
+
             } else {
-                // Primeira vez ou sem estado salvo → vai para seleção de modo
-                UIService.showScreen('modoSelection');
-            }
-
-        } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
                 document.getElementById('admin-btn-main')?.classList.add('hidden');
@@ -327,6 +400,67 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // setupOfflinePersistence
+    // ============================================================
+    setupOfflinePersistence() {
+        try {
+            enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
+                if (err.code == 'failed-precondition') {
+                    console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
+                    showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
+                } else if (err.code == 'unimplemented') {
+                    console.warn('⚠️ Navegador não suporta persistência offline.');
+                } else {
+                    console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
+                }
+            });
+        } catch (e) {
+            console.log("Erro ao ativar persistência:", e);
+        }
+    
+        window.addEventListener('offline', () => {
+            document.getElementById('offline-indicator')?.classList.remove('hidden');
+        });
+    
+        window.addEventListener('online', () => {
+            document.getElementById('offline-indicator')?.classList.add('hidden');
+            showNotification("Conexão restabelecida!", "success");
+            playSound('notification');
+        });
+    }
+
+    // ============================================================
+    // loadExternalModalsContent
+    // ============================================================
+    async loadExternalModalsContent() {
+        const modalsToLoad = [
+            { selector: '#policy-content', url: './politica.html' },
+            { selector: '#manual-modal .scrollable-content', url: './manual.html' },
+            { selector: '#terms-modal .scrollable-content', url: './termos.html' }
+        ];
+
+        for (const item of modalsToLoad) {
+            try {
+                const response = await fetch(item.url);
+                if (response.ok) {
+                    const html = await response.text();
+                    const container = document.querySelector(item.selector);
+                    if (container) {
+                        container.innerHTML = html; 
+                    }
+                } else {
+                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
+                }
+            } catch (error) {
+                console.error(`Erro ao tentar buscar ${item.url}:`, error);
+            }
+        }
+    }
+
+    // ============================================================
+    // setupEventListeners - COMPLETO
+    // ============================================================
     setupEventListeners() {
         document.getElementById('login-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -367,14 +501,10 @@ class SIGEPApp {
             this.showPautaSelectionScreen();
         });        
 
-        // NOVO BOTÃO DA RECEPÇÃO CENTRAL
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
             await RecepçãoCentralService.abrir(this);
         });
 
-        // ============================================================
-        // BOTÕES PARA TROCAR DE MODO (Trocar Modo)
-        // ============================================================
         document.getElementById('btn-trocar-modo')?.addEventListener('click', () => {
             this.voltarParaSelecaoModo();
         });
@@ -383,9 +513,6 @@ class SIGEPApp {
             this.voltarParaSelecaoModo();
         });
 
-        // ============================================================
-        // BOTÃO DE CRIAR PAUTA - MODIFICADO PARA RESPEITAR O MODO E O ASSISTENTE
-        // ============================================================
         document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
             const modoAtual = this.currentMode;
             
@@ -397,7 +524,6 @@ class SIGEPApp {
                 this.tipoPautaSelecionado = 'normal';
             }
             
-            // EM VEZ DE RECRIAR O MODAL AQUI, DELEGA PARA O PAUTACONFIG ABRIR O SELETOR DE TIPO
             const typeModal = document.getElementById('pauta-type-modal');
             if (typeModal) {
                 typeModal.classList.remove('hidden');
@@ -1043,43 +1169,6 @@ class SIGEPApp {
                 }
             }
         });
-        
-        function getReuDataFromForm() {
-            return {
-                checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
-                nome: document.getElementById('nome-reu')?.value || '',
-                cpf: document.getElementById('cpf-reu')?.value || '',
-                telefone: document.getElementById('telefone-reu')?.value || '',
-                cep: document.getElementById('cep-reu')?.value || '',
-                rua: document.getElementById('rua-reu')?.value || '',
-                numero: document.getElementById('numero-reu')?.value || '',
-                complemento: document.getElementById('complemento-reu')?.value || '',
-                bairro: document.getElementById('bairro-reu')?.value || '',
-                cidade: document.getElementById('cidade-reu')?.value || '',
-                uf: document.getElementById('estado-reu')?.value || '',
-                referencia: document.getElementById('referencia-reu')?.value || '',
-                empresa: document.getElementById('empresa-reu')?.value || '',
-                rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
-                numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
-                bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
-                cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
-                uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
-                cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
-            };
-        }
-
-        function getExpenseDataFromForm() {
-            return {
-                checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
-                moradia: document.getElementById('expense-moradia')?.value || '',
-                alimentacao: document.getElementById('expense-alimentacao')?.value || '',
-                educacao: document.getElementById('expense-educacao')?.value || '',
-                saude: document.getElementById('expense-saude')?.value || '',
-                vestuario: document.getElementById('expense-vestuario')?.value || '',
-                lazer: document.getElementById('expense-lazer')?.value || '',
-                outras: document.getElementById('expense-outras')?.value || ''
-            };
-        }
 
         document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
             const select = document.getElementById('attendant-select');
@@ -1514,15 +1603,13 @@ class SIGEPApp {
             await this.saveUserPreferences();
         });
 
-        // Botão do Administrador - Agora abre em TELA CHEIA (igual Dashboard)
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
         if (adminPanelBtnPautaSelection) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                this.showAdminScreen();  // Chama o método que abre o admin em tela cheia
+                this.showAdminScreen();
             });
         }
         
-        // Botão de voltar do Admin (se existir no container)
         const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
         if (adminBackBtn) {
             adminBackBtn.addEventListener('click', () => {
@@ -1565,9 +1652,69 @@ class SIGEPApp {
             }
         });
 
-        this.setupAdminPanel();
+        this.setupAdminPanelEvents();
     }
 
+    // ============================================================
+    // setupSubjectsAutocomplete
+    // ============================================================
+    setupSubjectsAutocomplete() {
+        const datalist = document.getElementById('subjects-list');
+        if (!datalist) return;
+        flatSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.value;
+            datalist.appendChild(option);
+        });
+
+        const subjectInput = document.getElementById('assisted-subject');
+        const descriptionBox = document.getElementById('subject-description');
+        
+        if (subjectInput) {
+            subjectInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = flatSubjects.filter(item =>
+                    item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
+                );
+                datalist.innerHTML = '';
+                filtered.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.value;
+                    datalist.appendChild(option);
+                });
+            });
+
+            subjectInput.addEventListener('change', () => {
+                const value = subjectInput.value;
+                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
+                subjectInput.value = selectedText;
+
+                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
+                if (found?.description && descriptionBox) {
+                    descriptionBox.textContent = found.description;
+                    descriptionBox.classList.remove('hidden');
+                } else if (descriptionBox) {
+                    descriptionBox.classList.add('hidden');
+                }
+            });
+        }
+
+        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
+            const value = subjectInput?.value || '';
+            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
+            if (found?.description && descriptionBox) {
+                descriptionBox.textContent = found.description;
+                descriptionBox.classList.toggle('hidden');
+            } else if (descriptionBox) {
+                descriptionBox.textContent = 'Selecione um assunto válido.';
+                descriptionBox.classList.remove('hidden');
+            }
+        });
+    }
+
+    // ============================================================
+    // loadUserPreferences / saveUserPreferences / applyUserPreferences
+    // ============================================================
     async loadUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
             this.userPreferences = this.getDefaultNotificationPreferences(); 
@@ -1665,11 +1812,14 @@ class SIGEPApp {
         };
     }
 
+    // ============================================================
+    // saveColumnPreferences / loadColumnPreferences / applyColumnPreferences
+    // ============================================================
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
             showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
         };
         localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
         this.applyColumnPreferences(preferences);
@@ -1720,193 +1870,130 @@ class SIGEPApp {
         }
     }
 
-    setupSubjectsAutocomplete() {
-        const datalist = document.getElementById('subjects-list');
-        if (!datalist) return;
-        flatSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.value;
-            datalist.appendChild(option);
-        });
-
-        const subjectInput = document.getElementById('assisted-subject');
-        const descriptionBox = document.getElementById('subject-description');
+    // ============================================================
+    // showPautaSelectionScreen
+    // ============================================================
+    async showPautaSelectionScreen() {
+        localStorage.setItem('sigep_active_screen', 'pauta-selection');
+        if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
         
-        if (subjectInput) {
-            subjectInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                const filtered = flatSubjects.filter(item =>
-                    item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
-                );
-                datalist.innerHTML = '';
-                filtered.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject.value;
-                    datalist.appendChild(option);
+        UIService.showScreen('pautaSelection');
+        
+        this.currentPautaFilter = 'all';
+        
+        UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
+            this.currentPautaFilter = filter;
+            await this.loadPautasWithFilter();
+        }, this);
+        await this.loadPautasWithFilter();
+        this.loadColumnPreferences();
+    }
+
+    // ============================================================
+    // loadPautasWithFilter - COM FILTRO POR MODO
+    // ============================================================
+    async loadPautasWithFilter() {
+        const user = this.auth.currentUser;
+        if (!user) return;
+        const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
+    
+        try {
+            const q = query(
+                collection(this.db, "pautas"),
+                where("members", "array-contains", user.uid)
+            );
+            const snapshot = await getDocs(q);
+            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            
+            const modoAtual = this.currentMode;
+            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
+            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
+            
+            if (modoAtual === 'normal') {
+                pautas = pautas.filter(p => {
+                    let tipoPauta = p.tipo || p.type || 'normal';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    return !tiposEvento.includes(tipoPauta);
                 });
-            });
-
-            subjectInput.addEventListener('change', () => {
-                const value = subjectInput.value;
-                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
-                subjectInput.value = selectedText;
-
-                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
-                if (found?.description && descriptionBox) {
-                    descriptionBox.textContent = found.description;
-                    descriptionBox.classList.remove('hidden');
-                } else if (descriptionBox) {
-                    descriptionBox.classList.add('hidden');
-                }
-            });
-        }
-
-        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
-            const value = subjectInput?.value || '';
-            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
-            if (found?.description && descriptionBox) {
-                descriptionBox.textContent = found.description;
-                descriptionBox.classList.toggle('hidden');
-            } else if (descriptionBox) {
-                descriptionBox.textContent = 'Selecione um assunto válido.';
-                descriptionBox.classList.remove('hidden');
+            } else if (modoAtual === 'evento') {
+                pautas = pautas.filter(p => {
+                    let tipoPauta = p.tipo || p.type || '';
+                    tipoPauta = String(tipoPauta).toLowerCase();
+                    return tiposEvento.includes(tipoPauta);
+                });
             }
-        });
-    }
-
-    setupAdminPanel() {
-        const adminModal = document.getElementById('admin-modal');
-        if (adminModal) {
-            // Agora usamos o AdminService que acabamos de registrar no window
-            if (window.AdminService) {
-                window.AdminService.loadUsersList(this.db); // Se não existir, use loadUsersList(this.db) direto
-                window.AdminService.populateUserFilter(this.db);
-                window.AdminService.setupAdminEvents(this); 
+            
+            this.mostrarIndicadorModo();
+            
+            const filtrosAdicionais = {};
+            if (this.currentPautaFilter === 'periodo') {
+                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
+                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
+                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
             }
-          }
-        }
-        // ============================================================
-        // BOTÃO MASTER: UNIDADES / ÓRGÃOS (UNIFICADO)
-        // ============================================================
-        
-        const btnUnidadesMaster = document.getElementById('btn-unidades-master');
-        if (btnUnidadesMaster) {
-            btnUnidadesMaster.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                console.log("🖱️ Clique no botão Unidades Master");
-                
-                // Fecha o modal de admin
-                if (adminModal) adminModal.classList.add('hidden');
-                
-                // Abre o modal master do importador
-                if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
-                    ImportadorOrgaosService.abrirModalMaster(this);
-                } else {
-                    import('./importadorOrgaos.js').then(module => {
-                        module.ImportadorOrgaosService.abrirModalMaster(this);
-                    }).catch((err) => {
-                        console.error("Erro ao carregar importadorOrgaos.js:", err);
-                        showNotification("Erro ao carregar gerenciador de unidades", "error");
-                    });
-                }
-            });
-        } else {
-            console.warn("⚠️ Botão #btn-unidades-master não encontrado no DOM. Verifique se o HTML foi atualizado.");
-        }
-
-        // ============================================================
-        // BOTÕES EXISTENTES DO ADMIN (mantidos)
-        // ============================================================
-    
-        document.getElementById('max-admin-btn')?.addEventListener('click', () => {
-            const windowEl = document.getElementById('admin-window');
-            if (windowEl) {
-                windowEl.classList.toggle('max-w-4xl');
-                windowEl.classList.toggle('max-w-none');
-                windowEl.classList.toggle('rounded-lg');
-            }
-        });
-    
-        document.getElementById('min-admin-btn')?.addEventListener('click', () => {
-            document.getElementById('admin-content-area')?.classList.toggle('hidden');
-        });
-    
-        document.getElementById('close-admin-modal-btn')?.addEventListener('click', () => {
-            if (adminModal) adminModal.classList.add('hidden');
-        });
-    
-        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-            cleanupOldData(this.db);
-        });
-    
-        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('view-audit-logs-btn');
-            const originalText = btn.textContent;
-            btn.textContent = "Carregando...";
-            btn.disabled = true;
-            try {
-                await loadAuditLogs(this.db);
-            } catch (error) {
-                showNotification("Erro ao carregar logs de auditoria", "error");
-            } finally {
-                btn.textContent = originalText;
-                btn.disabled = false;
-            }
-        });
-    
-        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-            exportAuditLogsPDF(this.db);
-        });
-    
-        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-            loadDashboardData(this.db);
-        });
-    }
-    
-    async loadPauta(pautaId, pautaName, pautaType) {
-    try {
-        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-        if (pautaDoc.exists()) {
-            const pautaData = pautaDoc.data();
-            // ALTERADO: verificação de expiração com dataAtuacao
-            let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
-            const expirationDate = new Date(dataBase);
-            expirationDate.setDate(dataBase.getDate() + 7);
-            if (new Date() > expirationDate) {
-                showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
+            
+            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+            
+            if (filteredPautas.length === 0) {
+                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
+                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
                 return;
             }
+            
+            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+            
+        } catch (error) {
+            console.error("Erro ao carregar pautas:", error);
+            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         }
-    } catch (error) {
-        console.error("Erro ao verificar expiração:", error);
     }
 
-    this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-    document.getElementById('pauta-title').textContent = pautaName;
-
-    localStorage.setItem('lastPautaId', pautaId);
-    localStorage.setItem('lastPautaName', pautaName);
-    localStorage.setItem('lastPautaType', pautaType);
-
-    try {
-        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-        if (pautaDoc.exists()) {
-            this.currentPautaData = pautaDoc.data();
-            if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
-            this.currentPautaOwnerId = this.currentPautaData.owner;
-            this.isPautaClosed = this.currentPautaData.isClosed || false;
-            
-            if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
-                this.customRoomsList = this.currentPautaData.customRooms;
-            } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
-                this.customRoomsList = this.currentPautaData.rooms;
-            } else {
-                this.customRoomsList = [];
+    // ============================================================
+    // loadPauta
+    // ============================================================
+    async loadPauta(pautaId, pautaName, pautaType) {
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                const pautaData = pautaDoc.data();
+                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
+                const expirationDate = new Date(dataBase);
+                expirationDate.setDate(dataBase.getDate() + 7);
+                if (new Date() > expirationDate) {
+                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
+                    return;
+                }
             }
+        } catch (error) {
+            console.error("Erro ao verificar expiração:", error);
+        }
 
+        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+        document.getElementById('pauta-title').textContent = pautaName;
 
-                // Aguarda o DOM estar pronto
+        localStorage.setItem('lastPautaId', pautaId);
+        localStorage.setItem('lastPautaName', pautaName);
+        localStorage.setItem('lastPautaType', pautaType);
+
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                this.currentPautaData = pautaDoc.data();
+                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
+                this.currentPautaOwnerId = this.currentPautaData.owner;
+                this.isPautaClosed = this.currentPautaData.isClosed || false;
+                
+                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                    this.customRoomsList = this.currentPautaData.customRooms;
+                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                    this.customRoomsList = this.currentPautaData.rooms;
+                } else {
+                    this.customRoomsList = [];
+                }
+
                 setTimeout(() => {
                     UIService.togglePautaLock(this);
                 }, 100);
@@ -1936,7 +2023,6 @@ class SIGEPApp {
             this.iniciarMonitorEnvelopes();
 
             localStorage.setItem('sigep_active_screen', 'app');
-            UIService.showScreen('app')
             UIService.showScreen('app');
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
@@ -1944,6 +2030,29 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // setupRealtimeListener
+    // ============================================================
+    setupRealtimeListener(pautaId) {
+        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(this);
+            setTimeout(() => { 
+                if (typeof PautaService.injectRoomSearches === 'function') {
+                    PautaService.injectRoomSearches(this); 
+                }
+            }, 150);
+        }, (error) => {
+            console.error("Erro no snapshot:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
+        });
+    }
+
+    // ============================================================
+    // iniciarMonitorEnvelopes
+    // ============================================================
     iniciarMonitorEnvelopes() {
         if (this.monitorInterval) clearInterval(this.monitorInterval);
         
@@ -1996,457 +2105,7 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // showPautaSelectionScreen - Atualizado para resetar o filtro
-    // ============================================================
-    async showPautaSelectionScreen() {
-        localStorage.setItem('sigep_active_screen', 'pauta-selection');
-        if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-        
-        UIService.showScreen('pautaSelection');
-        
-        // Reset do filtro ao trocar de modo para evitar conflitos
-        this.currentPautaFilter = 'all';
-        
-        UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
-            this.currentPautaFilter = filter;
-            await this.loadPautasWithFilter();
-        }, this);
-        await this.loadPautasWithFilter();
-        this.loadColumnPreferences();
-    }
-
-    // ============================================================
-    // loadPautasWithFilter - CORRIGIDO para filtrar por modo
-    // Modo Normal: mostra apenas pautas tipo 'normal' ou 'agendamento'
-    // Modo Evento: mostra apenas pautas tipo 'mutirao', 'plantao', 'acao_social'
-    // ============================================================
-    async loadPautasWithFilter() {
-        const user = this.auth.currentUser;
-        if (!user) return;
-        const pautasList = document.getElementById('pautas-list');
-        if (!pautasList) return;
-        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
-    
-        try {
-            const q = query(
-                collection(this.db, "pautas"),
-                where("members", "array-contains", user.uid)
-            );
-            const snapshot = await getDocs(q);
-            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            
-            // ============================================================
-            // FILTRO POR MODO (NORMAL vs EVENTO) - CORRIGIDO VERSÃO FINAL
-            // ============================================================
-            const modoAtual = this.currentMode;
-            
-            // Definição clara dos tipos de cada modo
-            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
-            
-            // MOSTRA NO CONSOLE PARA DEBUG
-            console.log("🔍 Modo atual:", modoAtual);
-            console.log("📋 Total de pautas antes do filtro:", pautas.length);
-            
-            if (modoAtual === 'normal') {
-                // Modo Normal: APENAS pautas que NÃO são de evento
-                pautas = pautas.filter(p => {
-                    // PRIORIDADE para o campo 'tipo' que você está salvando
-                    let tipoPauta = p.tipo || p.type || 'normal';
-                    tipoPauta = String(tipoPauta).toLowerCase();
-                    
-                    const isEvento = tiposEvento.includes(tipoPauta);
-                    
-                    // Log para debug
-                    console.log(`   Pauta: "${p.name}" | tipo: "${tipoPauta}" | isEvento: ${isEvento} | ${isEvento ? '❌ REMOVER' : '✅ MANTER'}`);
-                    
-                    // Não é evento -> mostra
-                    return !isEvento;
-                });
-            } else if (modoAtual === 'evento') {
-                // Modo Evento: APENAS pautas que SÃO de evento
-                pautas = pautas.filter(p => {
-                    let tipoPauta = p.tipo || p.type || '';
-                    tipoPauta = String(tipoPauta).toLowerCase();
-                    
-                    const isEvento = tiposEvento.includes(tipoPauta);
-                    
-                    // Log para debug
-                    console.log(`   Pauta: "${p.name}" | tipo: "${tipoPauta}" | isEvento: ${isEvento} | ${isEvento ? '✅ MANTER' : '❌ REMOVER'}`);
-                    
-                    return isEvento;
-                });
-            }
-            
-            console.log("📋 Total de pautas após o filtro:", pautas.length);
-            // Mostra indicador visual do modo atual
-            this.mostrarIndicadorModo();
-            
-            // Aplica filtros adicionais (período, etc.)
-            const filtrosAdicionais = {};
-            if (this.currentPautaFilter === 'periodo') {
-                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
-                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
-                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
-            }
-            
-            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
-            
-            if (filteredPautas.length === 0) {
-                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
-                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
-                return;
-            }
-            
-            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
-            
-        } catch (error) {
-            console.error("Erro ao carregar pautas:", error);
-            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
-        }
-    } 
-
-    // Adicione este método à classe SIGEPApp
-    async deletePauta(pautaId, pautaName) {
-        // Verificar se o usuário tem permissão
-        const pautaRef = doc(this.db, "pautas", pautaId);
-        const pautaSnap = await getDoc(pautaRef);
-        
-        if (!pautaSnap.exists()) {
-            showNotification("Pauta não encontrada!", "error");
-            return;
-        }
-        
-        const pautaData = pautaSnap.data();
-        const currentUserId = this.auth.currentUser?.uid;
-        
-        // Verificar se o usuário atual é o owner OU tem permissão de admin/superadmin
-        if (pautaData.owner !== currentUserId && 
-            this.currentUser?.role !== 'admin' && 
-            this.currentUser?.role !== 'superadmin') {
-            showNotification("Você não tem permissão para excluir esta pauta!", "error");
-            return;
-        }
-        
-        // Confirmar exclusão
-        const confirmDelete = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação irá deletar TODOS os dados da pauta, incluindo:\n- Todos os assistidos\n- Todos os atendimentos\n- Todas as configurações\n\nEsta ação NÃO pode ser desfeita!`);
-        
-        if (!confirmDelete) return;
-        
-        // Mostrar loading
-        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
-        
-        try {
-            // Buscar todos os subdocumentos (assistidos/atendimentos) da pauta
-            const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
-            const attendancesSnap = await getDocs(attendancesRef);
-            
-            // Deletar cada subdocumento em lote (batch de 500 operações)
-            const batch = writeBatch(this.db);
-            let operationCount = 0;
-            
-            for (const doc of attendancesSnap.docs) {
-                batch.delete(doc.ref);
-                operationCount++;
-                
-                // Firebase batch tem limite de 500 operações
-                if (operationCount >= 490) {
-                    await batch.commit();
-                    // Criar novo batch para continuar
-                    const newBatch = writeBatch(this.db);
-                    operationCount = 0;
-                }
-            }
-            
-            // Commit do último batch se houver operações pendentes
-            if (operationCount > 0) {
-                await batch.commit();
-            }
-            
-            // Deletar a pauta principal
-            await deleteDoc(pautaRef);
-            
-            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
-            
-            // Recarregar lista de pautas
-            await this.loadPautasWithFilter();
-            
-        } catch (error) {
-            console.error("Erro ao excluir pauta:", error);
-            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
-        }
-    }    
-
-    
-    // ============================================================
-    // abrirModalCriarPauta - POPULA DADOS SEM DESTRUIR AS ABAS DO ASSISTENTE
-    // ============================================================
-    async abrirModalCriarPauta() {
-        const modoAtual = this.currentMode;
-        const isModoNormal = (modoAtual === 'normal');
-        
-        // 1. APENAS POPULA O SELECT DE ÓRGÃOS, SEM DESTRUIR O MODAL HTML (Que contém as abas do assistente)
-        if (isModoNormal) {
-            try {
-                const userDoc = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
-                const unidadesPermitidasDoUsuario = userDoc.data()?.unidadesPermitidas || [];
-                
-                if (unidadesPermitidasDoUsuario.length === 0) {
-                    showNotification("Você não está vinculado a nenhum órgão.", "error");
-                    return;
-                }
-                
-                const unidadesSnap = await getDocs(collection(this.db, "estrutura_unidades"));
-                const todasUnidades = unidadesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-                
-                const unidadesPermitidas = todasUnidades.filter(u => 
-                    unidadesPermitidasDoUsuario.includes(u.id) && u.ativo !== false
-                );
-                
-                const orgaoSelect = document.getElementById('new-pauta-orgao') || document.getElementById('config-orgao-select');
-                if (orgaoSelect) {
-                    orgaoSelect.innerHTML = unidadesPermitidas.map(u => 
-                        `<option value="${u.id}" data-nome="${escapeHTML(u.nome)}">${escapeHTML(u.nome)} (${escapeHTML(u.sigla || '')})</option>`
-                    ).join('');
-                }
-            } catch (err) {
-                console.error("Erro ao carregar órgãos:", err);
-            }
-        }
-        
-        // 2. PREPARA O BOTÃO DE SALVAR FINAL DO WIZARD (EVITA DUPLICAÇÃO DE EVENTOS)
-        const confirmBtn = document.getElementById('confirm-create-pauta-btn') || document.getElementById('btn-finalizar-criacao');
-        if (confirmBtn && !confirmBtn.dataset.listenerAttached) {
-            confirmBtn.dataset.listenerAttached = 'true';
-            confirmBtn.addEventListener('click', async () => {
-                await this.salvarNovaPauta();
-            });
-        }
-    }
-
-    // ============================================================
-    // SALVA A NOVA PAUTA LENDO OS DADOS DAS ABAS DO PAUTACONFIG
-    // ============================================================
-    async salvarNovaPauta() {
-        const nomePauta = document.getElementById('new-pauta-name')?.value.trim() || document.getElementById('create-pauta-name-input')?.value.trim();
-        if (!nomePauta) {
-            showNotification("Digite um nome para a pauta", "error");
-            return;
-        }
-        
-        let orgaoId = null;
-        let orgaoNome = null;
-        const isModoNormal = (this.currentMode === 'normal');
-
-        if (isModoNormal) {
-            const orgaoSelect = document.getElementById('new-pauta-orgao') || document.getElementById('config-orgao-select');
-            if (orgaoSelect) {
-                orgaoId = orgaoSelect.value;
-                orgaoNome = orgaoSelect.options[orgaoSelect.selectedIndex]?.dataset.nome || '';
-            }
-            if (!orgaoId) {
-                showNotification("Selecione um órgão", "error");
-                return;
-            }
-        }
-        
-        const dataAtuacao = document.getElementById('new-pauta-data-atuacao')?.value || document.getElementById('create-pauta-date-input')?.value;
-        if (isModoNormal && !dataAtuacao) {
-            showNotification("Informe a data de atuação", "error");
-            return;
-        }
-        
-        const user = this.auth.currentUser;
-        if (!user) return;
-        
-        const modalDOM = document.getElementById('create-pauta-modal');
-        const tipoDefinitivo = modalDOM?.dataset?.pautaType || 'agendamento';
-        
-        // LÊ AS CONFIGURAÇÕES DAS ABAS DE FLUXO E ORDEM DO PAUTACONFIG
-        const checkDistribuicao = document.getElementById('config-fluxo-distribuicao')?.checked || false;
-        const checkAtendimento = document.getElementById('config-fluxo-atendimento')?.checked || false;
-        const ordemAtendimento = document.querySelector('input[name="ordem-atendimento"]:checked')?.value || 'chegada';
-        
-        const pautaData = {
-            name: nomePauta,
-            owner: user.uid,
-            members: [user.uid],
-            memberEmails: [user.email],
-            createdAt: new Date().toISOString(),
-            tipo: this.currentMode === 'evento' ? (this.tipoPautaSelecionado || 'mutirao') : 'normal',
-            type: tipoDefinitivo,
-            isClosed: false,
-            isPublic: false,
-            modo: this.currentMode,
-            createdBy: user.email,
-            useDistributionFlow: checkDistribuicao,
-            useDelegationFlow: checkAtendimento,
-            ordemAtendimento: ordemAtendimento
-        };
-        
-        if (isModoNormal) {
-            pautaData.orgaoId = orgaoId;
-            pautaData.orgaoNome = orgaoNome;
-            pautaData.dataAtuacao = dataAtuacao;
-        } else if (dataAtuacao) {
-            pautaData.dataAtuacao = dataAtuacao;
-        }
-        
-        const confirmBtn = document.getElementById('confirm-create-pauta-btn') || document.getElementById('btn-finalizar-criacao');
-        const originalText = confirmBtn ? confirmBtn.textContent : 'Criar';
-        if (confirmBtn) { confirmBtn.textContent = 'Criando...'; confirmBtn.disabled = true; }
-        
-        try {
-            const docRef = await addDoc(collection(this.db, "pautas"), pautaData);
-            if (modalDOM) modalDOM.classList.add('hidden');
-            showNotification(`Pauta "${nomePauta}" criada com sucesso!`, "success");
-            await this.loadPautasWithFilter();
-        } catch (error) {
-            console.error("Erro ao criar pauta:", error);
-            showNotification("Erro ao criar pauta.", "error");
-        } finally {
-            if (confirmBtn) { confirmBtn.textContent = originalText; confirmBtn.disabled = false; }
-        }
-    }
-
-    setupRealtimeListener(pautaId) {
-    if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-    const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-    this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-        this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        UIService.renderAssistedLists(this);
-        setTimeout(() => { 
-            if (typeof PautaService.injectRoomSearches === 'function') {
-                PautaService.injectRoomSearches(this); 
-            }
-        }, 150);
-    }, (error) => {
-        console.error("Erro no snapshot:", error);
-        showNotification("Erro ao carregar dados em tempo real", "error");
-    });
-}
-
-
-    // ============================================================
-// ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
-// ============================================================
-renderAdminContent() {
-    const container = document.getElementById('admin-content');
-    if (!container) return;
-    
-    container.innerHTML = `
-        <div class="mb-6">
-            <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                <span>🏢</span> Gerenciar Unidades / Órgãos
-            </button>
-        </div>
-        
-        <!-- 🔍 BUSCA E PAGINAÇÃO - PENDENTES -->
-        <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-            <div id="search-pendentes" class="w-full sm:w-80"></div>
-            <div id="page-size-pendentes"></div>
-        </div>
-        <div class="mb-8">
-            <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
-            <div id="pending-users-list" class="space-y-2"></div>
-            <div id="pagination-pendentes" class="mt-4"></div>
-        </div>
-        
-        <!-- 🔍 BUSCA E PAGINAÇÃO - USUÁRIOS -->
-        <div class="mt-8 mb-4 flex flex-wrap gap-4 items-center justify-between">
-            <div id="search-usuarios" class="w-full sm:w-80"></div>
-            <div id="page-size-usuarios"></div>
-        </div>
-        <div>
-            <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
-            <div class="overflow-x-auto">
-                <table class="w-full text-sm border-collapse">
-                    <thead class="bg-slate-100">
-                        <tr><th class="p-3 text-left">Usuário</th><th class="p-3 text-left">E-mail</th><th class="p-3 text-center">Unidades</th><th class="p-3 text-center">Perfil</th><th class="p-3 text-center">Ações</th></tr></thead>
-                        <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
-                    </table>
-            </div>
-            <div id="pagination-usuarios" class="mt-4"></div>
-        </div>
-        
-        <!-- 🔍 BUSCA E PAGINAÇÃO - LOGS -->
-        <div class="mt-8 pt-4 border-t">
-            <div class="flex flex-wrap gap-3 mb-4">
-                <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
-                <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
-                <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
-                <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
-            </div>
-            
-            <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-                <div id="search-logs" class="w-full sm:w-80"></div>
-                <div id="page-size-logs"></div>
-            </div>
-            
-            <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                <select id="filter-log-user"><option value="all">Todos usuários</option></select>
-                <select id="filter-log-action"><option value="all">Todas ações</option></select>
-                <input type="date" id="filter-log-start">
-                <input type="date" id="filter-log-end">
-            </div>
-            <div id="audit-logs-container" class="hidden overflow-x-auto">
-                <div class="border rounded-xl overflow-hidden">
-                    <table class="w-full text-sm">
-                        <thead class="bg-slate-100"><tr><th class="p-3">Data/Hora</th><th>Usuário</th><th>Ação</th><th>Detalhes</th></tr></thead>
-                        <tbody id="audit-logs-table-body"></tbody>
-                    </table>
-                </div>
-            </div>
-            <div id="pagination-logs" class="mt-4"></div>
-            <div id="dashboard-results" class="hidden mt-6"></div>
-        </div>
-    `;
-    
-    // Inicializa as buscas (função do admin.js)
-    if (typeof setupAdminSearch === 'function') {
-        setupAdminSearch();
-    }
-    
-    this.setupAdminEvents();
-}
-
-setupAdminEvents() {
-    document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
-        if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
-            ImportadorOrgaosService.abrirModalMaster(this);
-        }
-    });
-    
-    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('view-audit-logs-btn');
-        if (btn) {
-            btn.textContent = "Carregando...";
-            btn.disabled = true;
-        }
-        await loadAuditLogs(this.db);
-        if (btn) {
-            btn.textContent = "🔍 Carregar Logs";
-            btn.disabled = false;
-        }
-    });
-    
-    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-        cleanupOldData(this.db);
-    });
-    
-    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-        loadDashboardData(this.db);
-    });
-    
-    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-        exportAuditLogsPDF(this.db);
-    });
-}
-    
-    // ============================================================
-    // applyRoleBasedUI - CORRIGIDO
-    // Esconde o botão da Recepção Central baseado no modo atual
+    // applyRoleBasedUI
     // ============================================================
     applyRoleBasedUI() {
         const currentUser = this.currentUser;
@@ -2462,19 +2121,11 @@ setupAdminEvents() {
         if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
         if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
 
-        // CONTROLE DO BOTÃO DA RECEPÇÃO CENTRAL - Baseado no modo atual
         const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
         if (btnRecepcaoCentral) {
-            // Modo Evento NUNCA deve ter acesso à Recepção Central
             const isModoEvento = (this.currentMode === 'evento');
-            
-            // Permissão para acesso: apoio, admin ou superadmin
             const temPermissao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole) && isAuthenticated && isUserApproved;
-            
-            // Só mostra o botão se tiver permissão E NÃO for modo evento
             const deveMostrar = temPermissao && !isModoEvento;
-            
-            console.log(`[applyRoleBasedUI] Modo: ${this.currentMode}, Permissão: ${temPermissao}, Mostrar: ${deveMostrar}`);
             btnRecepcaoCentral.classList.toggle('hidden', !deveMostrar);
         }
 
@@ -2525,11 +2176,95 @@ setupAdminEvents() {
             UIService.renderAssistedLists(this); 
         }
     }
+
+    // ============================================================
+    // deletePauta
+    // ============================================================
+    async deletePauta(pautaId, pautaName) {
+        const pautaRef = doc(this.db, "pautas", pautaId);
+        const pautaSnap = await getDoc(pautaRef);
+        
+        if (!pautaSnap.exists()) {
+            showNotification("Pauta não encontrada!", "error");
+            return;
+        }
+        
+        const pautaData = pautaSnap.data();
+        const currentUserId = this.auth.currentUser?.uid;
+        
+        if (pautaData.owner !== currentUserId && 
+            this.currentUser?.role !== 'admin' && 
+            this.currentUser?.role !== 'superadmin') {
+            showNotification("Você não tem permissão para excluir esta pauta!", "error");
+            return;
+        }
+        
+        const confirmDelete = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação irá deletar TODOS os dados da pauta, incluindo:\n- Todos os assistidos\n- Todos os atendimentos\n- Todas as configurações\n\nEsta ação NÃO pode ser desfeita!`);
+        
+        if (!confirmDelete) return;
+        
+        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
+        
+        try {
+            const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
+            const attendancesSnap = await getDocs(attendancesRef);
+            
+            const batch = writeBatch(this.db);
+            let operationCount = 0;
+            
+            for (const doc of attendancesSnap.docs) {
+                batch.delete(doc.ref);
+                operationCount++;
+                
+                if (operationCount >= 490) {
+                    await batch.commit();
+                    operationCount = 0;
+                }
+            }
+            
+            if (operationCount > 0) {
+                await batch.commit();
+            }
+            
+            await deleteDoc(pautaRef);
+            
+            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
+            await this.loadPautasWithFilter();
+            
+        } catch (error) {
+            console.error("Erro ao excluir pauta:", error);
+            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
+        }
+    }
 }
+
+// ============================================================
+// INICIALIZAÇÃO GLOBAL
+// ============================================================
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
+window.app = new SIGEPApp();
 
+window.renderEstruturaAtual = renderEstruturaAtual;
+window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
+window.abrirGerenciarUnidades = abrirGerenciarUnidadesUsuario;
+
+window.loadUsersList = loadUsersList;
+window.cleanupOldData = cleanupOldData;
+window.approveUser = approveUser;
+window.updateUserRole = updateUserRole;
+window.deleteUser = deleteUser;
+window.loadAuditLogs = loadAuditLogs;
+window.exportAuditLogsPDF = exportAuditLogsPDF;
+window.loadDashboardData = loadDashboardData;
+window.populateUserFilter = populateUserFilter;
+window.setupAdminSearch = setupAdminSearch;
+window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
+window.abrirImportadorUnidades = abrirImportadorUnidades;
+window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
+
+// SWITCH DE VIEWS PARA CHECKLIST
 window.switchToChecklistView = function() {
     document.getElementById('document-action-selection')?.classList.add('hidden');
     document.getElementById('document-checklist-view')?.classList.remove('hidden');
@@ -2544,6 +2279,45 @@ window.switchToActionSelectionView = function() {
     document.getElementById('checklist-search-container')?.classList.add('hidden');
 };
 
+// FUNÇÕES AUXILIARES PARA CHECKLIST
+window.getReuDataFromForm = function() {
+    return {
+        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+        nome: document.getElementById('nome-reu')?.value || '',
+        cpf: document.getElementById('cpf-reu')?.value || '',
+        telefone: document.getElementById('telefone-reu')?.value || '',
+        cep: document.getElementById('cep-reu')?.value || '',
+        rua: document.getElementById('rua-reu')?.value || '',
+        numero: document.getElementById('numero-reu')?.value || '',
+        complemento: document.getElementById('complemento-reu')?.value || '',
+        bairro: document.getElementById('bairro-reu')?.value || '',
+        cidade: document.getElementById('cidade-reu')?.value || '',
+        uf: document.getElementById('estado-reu')?.value || '',
+        referencia: document.getElementById('referencia-reu')?.value || '',
+        empresa: document.getElementById('empresa-reu')?.value || '',
+        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+    };
+};
+
+window.getExpenseDataFromForm = function() {
+    return {
+        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+        moradia: document.getElementById('expense-moradia')?.value || '',
+        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+        educacao: document.getElementById('expense-educacao')?.value || '',
+        saude: document.getElementById('expense-saude')?.value || '',
+        vestuario: document.getElementById('expense-vestuario')?.value || '',
+        lazer: document.getElementById('expense-lazer')?.value || '',
+        outras: document.getElementById('expense-outras')?.value || ''
+    };
+};
+
+// SORT COLABORADORES
 window.sortColaboradores = function(criterio) {
     if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
         CollaboratorService.sortColaboradores(window.app, criterio);
@@ -2569,38 +2343,9 @@ window.sortColaboradores = function(criterio) {
     }
 };
 
-window.app = new SIGEPApp();
-window.renderEstruturaAtual = renderEstruturaAtual;
-window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
-
-setTimeout(() => {
-    if (window.app && typeof window.app.deletePauta === 'function') {
-        window.app.deletePauta = window.app.deletePauta.bind(window.app);
-    }
-}, 500);
-
-document.addEventListener('blur', async (e) => {
-    if (e.target.id === 'cep-reu') {
-        const cep = e.target.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                if (!data.erro) {
-                    document.getElementById('rua-reu').value = data.logradouro || '';
-                    document.getElementById('bairro-reu').value = data.bairro || '';
-                    document.getElementById('cidade-reu').value = data.localidade || '';
-                    document.getElementById('estado-reu').value = data.uf || '';
-                } else {
-                    showNotification("CEP não encontrado", "error");
-                }
-            } catch (error) {
-                showNotification("Erro ao buscar CEP", "error");
-            }
-        }
-    }
-}, true);
-
+// ============================================================
+// EVENTOS DOMContentLoaded
+// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
     const content = document.getElementById('logic-explanation-padrao-content');
@@ -2609,17 +2354,12 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleBtn.addEventListener('click', function(e) {
             e.preventDefault();
             content.classList.toggle('hidden');
-            if (content.classList.contains('hidden')) {
-                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para expandir)';
-            } else {
-                toggleBtn.textContent = 'Por que esta ordem é a mais justa? (Clique para recolher)';
-            }
+            toggleBtn.textContent = content.classList.contains('hidden') 
+                ? 'Por que esta ordem é a mais justa? (Clique para expandir)'
+                : 'Por que esta ordem é a mais justa? (Clique para recolher)';
         });
     }
 
-    // =========================================================================
-    // SCRIPT MOVIDO DO INDEX.HTML PARA CÁ (Limpeza do HTML)
-    // =========================================================================
     const btnManual = document.getElementById('btn-footer-manual');
     const btnTermos = document.getElementById('btn-footer-termos');
     const btnPolitica = document.getElementById('btn-footer-politica');
@@ -2635,7 +2375,6 @@ document.addEventListener('DOMContentLoaded', function() {
     document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
     document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
     
-    // Controle de visibilidade dos Links do Footer
     const loginContainer = document.getElementById('login-container');
     const footerLinks = document.getElementById('footer-links');
     const footerInner = document.getElementById('footer-inner-container');
@@ -2662,7 +2401,6 @@ document.addEventListener('DOMContentLoaded', function() {
         observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // LÓGICA DO MODAL LGPD
     const lgpdModal = document.getElementById('lgpd-acceptance-modal');
     const chkTermos = document.getElementById('lgpd-check-termos');
     const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
@@ -2670,14 +2408,14 @@ document.addEventListener('DOMContentLoaded', function() {
     const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
 
     const validateLgpdChecks = () => {
-        if (chkTermos.checked && chkPrivacidade.checked) {
-            btnConfirmLgpd.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            btnConfirmLgpd.classList.add('bg-green-600', 'hover:bg-green-700');
-            btnConfirmLgpd.disabled = false;
+        if (chkTermos?.checked && chkPrivacidade?.checked) {
+            btnConfirmLgpd?.classList.remove('bg-gray-400', 'cursor-not-allowed');
+            btnConfirmLgpd?.classList.add('bg-green-600', 'hover:bg-green-700');
+            if (btnConfirmLgpd) btnConfirmLgpd.disabled = false;
         } else {
-            btnConfirmLgpd.classList.add('bg-gray-400', 'cursor-not-allowed');
-            btnConfirmLgpd.classList.remove('bg-green-600', 'hover:bg-green-700');
-            btnConfirmLgpd.disabled = true;
+            btnConfirmLgpd?.classList.add('bg-gray-400', 'cursor-not-allowed');
+            btnConfirmLgpd?.classList.remove('bg-green-600', 'hover:bg-green-700');
+            if (btnConfirmLgpd) btnConfirmLgpd.disabled = true;
         }
     };
 
@@ -2703,7 +2441,6 @@ document.addEventListener('DOMContentLoaded', function() {
         authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
     }
 
-    // BLOQUEADOR DO "ERRO DE LISTA DE USUÁRIOS" PREMATURO
     const originalConsoleError = console.error;
     console.error = function() {
         if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
@@ -2712,7 +2449,6 @@ document.addEventListener('DOMContentLoaded', function() {
         originalConsoleError.apply(console, arguments);
     };
 
-    // CORREÇÃO: Exclusividade das Abas (Agendado x Avulso)
     const tabAgendamento = document.getElementById('tab-agendamento');
     const tabAvulso = document.getElementById('tab-avulso');
     const isScheduledContainer = document.getElementById('is-scheduled-container');
@@ -2764,11 +2500,6 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    // LOGICA DA SELEÇÃO DE MODO
-    const btnVoltarLogin = document.getElementById('modo-back-to-login');
-    const modoSelectionScreen = document.getElementById('modo-selection-screen');
-
-     // Função para definir a tela atual e salvar
     const setAppState = (state) => {
         if (state === 'login') {
             localStorage.removeItem('sigep_active_screen');
@@ -2776,12 +2507,13 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-       // Eventos de navegação que devem disparar a mudança de estado
-    // Aqui incluímos o botão que retorna ao login e limpa a sessão
     document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
         setAppState('login');
         if (window.app && window.app.logout) window.app.logout();
     });
+    
+    const btnVoltarLogin = document.getElementById('modo-back-to-login');
+    const modoSelectionScreen = document.getElementById('modo-selection-screen');
     
     if(btnVoltarLogin) {
         btnVoltarLogin.addEventListener('click', () => {
@@ -2791,3 +2523,28 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 });
+
+// ============================================================
+// EVENTO blur para CEP
+// ============================================================
+document.addEventListener('blur', async (e) => {
+    if (e.target.id === 'cep-reu') {
+        const cep = e.target.value.replace(/\D/g, '');
+        if (cep.length === 8) {
+            try {
+                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
+                const data = await response.json();
+                if (!data.erro) {
+                    document.getElementById('rua-reu').value = data.logradouro || '';
+                    document.getElementById('bairro-reu').value = data.bairro || '';
+                    document.getElementById('cidade-reu').value = data.localidade || '';
+                    document.getElementById('estado-reu').value = data.uf || '';
+                } else {
+                    showNotification("CEP não encontrado", "error");
+                }
+            } catch (error) {
+                showNotification("Erro ao buscar CEP", "error");
+            }
+        }
+    }
+}, true);
