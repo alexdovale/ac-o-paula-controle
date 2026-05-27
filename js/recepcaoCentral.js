@@ -152,7 +152,7 @@ export const RecepçãoCentralService = {
     _renderSelectorRecepcoes(recepcoes) {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-
+    
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-8">
                 
@@ -162,7 +162,7 @@ export const RecepçãoCentralService = {
                         <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
                     </div>
                 </div>
-
+    
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
                 
                 <!-- GUIA DE TIPOS DE RECEPÇÃO -->
@@ -199,7 +199,7 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
                 </div>
-
+    
                 <div class="mt-8 flex justify-center">
                     <button id="rc-voltar-selector" class="bg-slate-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-slate-700 transition shadow-sm">
                         ← Voltar para o Início
@@ -207,23 +207,22 @@ export const RecepçãoCentralService = {
                 </div>
             </div>
         `;
-
+    
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const recepcaoId      = btn.dataset.recepcaoId;
-                const recepcaoEncontrada = estado.recepcoesDisponiveis.find(r => r.id === recepcaoId);
-
+                const recepcaoId = btn.dataset.recepcaoId;
+                const recepcaoEncontrada = recepcoes.find(r => r.id === recepcaoId);
+    
                 if (recepcaoEncontrada) {
                     this._recepcaoAtual = recepcaoEncontrada;
-                    this._unidadeAtual  = { id: recepcaoEncontrada.unidadeId, nome: recepcaoEncontrada.unidadeNome };
+                    this._unidadeAtual = { id: recepcaoEncontrada.unidadeId, nome: recepcaoEncontrada.unidadeNome };
                     await this._carregarPautasPorRecepcao();
                 }
             });
         });
-
+    
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
-
     // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
 
     async _carregarPautasPorRecepcao() {
