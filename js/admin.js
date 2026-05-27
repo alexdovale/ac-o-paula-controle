@@ -267,6 +267,7 @@ export const abrirImportadorUnidades = async (db) => {
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-blue-600 border-b-2 border-blue-600" data-tab="upload">📤 Upload</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="modelo">📄 Modelo</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="manual">✏️ Manual</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="estrutura">🏛️ Estrutura Atual</button>
                 </div>
                 <div id="painel-upload-unidades" class="space-y-4">
                     <div class="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
@@ -301,6 +302,10 @@ export const abrirImportadorUnidades = async (db) => {
                         <textarea id="manual-unidades-text" rows="6" class="w-full p-3 border rounded-lg font-mono text-sm" placeholder="sigla|nome|endereco|telefone|email"></textarea>
                         <button id="btn-importar-manual-unidades" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Importar</button>
                     </div>
+                    // ... dentro do código do modal, logo abaixo do painel-manual ...
+                    <div id="painel-estrutura-unidades" class="hidden space-y-4 h-[600px]">
+                        <div id="meu-container-estrutura" class="w-full h-full"></div>
+                    </div>
                 </div>
             </div>
             <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0">
@@ -326,6 +331,12 @@ export const abrirImportadorUnidades = async (db) => {
             document.getElementById('painel-modelo-unidades').classList.add('hidden');
             document.getElementById('painel-manual-unidades').classList.add('hidden');
             document.getElementById(`painel-${aba}-unidades`).classList.remove('hidden');
+            
+            if (aba === 'estrutura') {
+                const container = document.getElementById('meu-container-estrutura');
+                container.innerHTML = '<div class="loader-small mx-auto mt-8"></div><p class="text-center text-gray-500 mt-2">Carregando estrutura...</p>';
+                if (window.renderEstruturaAtual) window.renderEstruturaAtual(window.app, container);
+            }
         });
     });
     
@@ -485,6 +496,10 @@ export const abrirGerenciadorUnidades = async (db) => {
                         </button>
                         <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        </button>
+                        <button class="btn-nova-recepcao text-purple-500 hover:text-purple-700 p-1.5 rounded-full hover:bg-purple-50 transition-all" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Nova Recepção">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
                         </button>
                     </div>
                 </div>
