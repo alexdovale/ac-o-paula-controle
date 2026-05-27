@@ -1838,46 +1838,46 @@ class SIGEPApp {
     }
     
     async loadPauta(pautaId, pautaName, pautaType) {
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
-                if (pautaData.createdAt) {
-                    const creationDate = new Date(pautaData.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    if (new Date() > expirationDate) {
-                        showNotification("Esta pauta expirou e não pode mais ser acessada.", "error");
-                        return;
-                    }
-                }
+    try {
+        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+        if (pautaDoc.exists()) {
+            const pautaData = pautaDoc.data();
+            // ALTERADO: verificação de expiração com dataAtuacao
+            let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
+            const expirationDate = new Date(dataBase);
+            expirationDate.setDate(dataBase.getDate() + 7);
+            if (new Date() > expirationDate) {
+                showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
+                return;
             }
-        } catch (error) {
-            console.error("Erro ao verificar expiração:", error);
         }
+    } catch (error) {
+        console.error("Erro ao verificar expiração:", error);
+    }
 
-        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-        document.getElementById('pauta-title').textContent = pautaName;
+    this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+    document.getElementById('pauta-title').textContent = pautaName;
 
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastPautaName', pautaName);
-        localStorage.setItem('lastPautaType', pautaType);
+    localStorage.setItem('lastPautaId', pautaId);
+    localStorage.setItem('lastPautaName', pautaName);
+    localStorage.setItem('lastPautaType', pautaType);
 
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                this.currentPautaData = pautaDoc.data();
-                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
-                this.currentPautaOwnerId = this.currentPautaData.owner;
-                this.isPautaClosed = this.currentPautaData.isClosed || false;
-                
-                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
-                    this.customRoomsList = this.currentPautaData.customRooms;
-                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
-                    this.customRoomsList = this.currentPautaData.rooms;
-                } else {
-                    this.customRoomsList = [];
-                }
+    try {
+        const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+        if (pautaDoc.exists()) {
+            this.currentPautaData = pautaDoc.data();
+            if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
+            this.currentPautaOwnerId = this.currentPautaData.owner;
+            this.isPautaClosed = this.currentPautaData.isClosed || false;
+            
+            if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                this.customRoomsList = this.currentPautaData.customRooms;
+            } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                this.customRoomsList = this.currentPautaData.rooms;
+            } else {
+                this.customRoomsList = [];
+            }
+
 
                 // Aguarda o DOM estar pronto
                 setTimeout(() => {
