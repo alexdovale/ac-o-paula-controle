@@ -72,7 +72,7 @@ class SIGEPApp {
             this.loadExternalModalsContent();
             
             // INICIALIZAÇÃO PAUTACONFIG
-            PautaConfigService.init(this);
+            ///PautaConfigService.init(this); 
             
             // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
             this.setupModoListeners();
