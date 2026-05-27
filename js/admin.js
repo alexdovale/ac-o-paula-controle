@@ -854,8 +854,7 @@ export const deleteUser = async (db, userId) => {
 };
 
 
-setupAdminEvents() {
-    // ESTA É A MUDANÇA QUE FAZ O BOTÃO ABRIR O NOVO GERENCIADOR
+export const setupAdminEvents = (db) => {
     document.getElementById('btn-unidades-master')?.addEventListener('click', (e) => {
         e.preventDefault();
         e.stopPropagation();
