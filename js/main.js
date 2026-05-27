@@ -199,7 +199,7 @@ class SIGEPApp {
             modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
             modal.innerHTML = `
                 <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                    <h3 class="text-lg font-bold mb-2">🎪 Tipo de Evento</h3>
+                    <h3 class="text-lg font-bold mb-2"> Tipo de Evento</h3>
                     <p class="text-sm text-gray-600 mb-4">Selecione o tipo da pauta:</p>
                     <div class="space-y-3">
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
