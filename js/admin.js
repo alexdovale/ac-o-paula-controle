@@ -712,7 +712,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 
 export const loadUsersList = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "usuarios"));
+        const snapshot = await getDocs(collection(db, "users"));
         const allUsers = [];
         snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         
@@ -1132,7 +1132,7 @@ export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
-        const snapshot = await getDocs(collection(db, "usuarios"));
+        const snapshot = await getDocs(collection(db, "users"));
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
