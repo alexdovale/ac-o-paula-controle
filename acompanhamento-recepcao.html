@@ -230,9 +230,24 @@
         </footer>
     </div>
 
+    <!-- Controles de Zoom Ocultos (Aparecem ao passar o mouse no canto inferior direito) -->
+    <div class="fixed bottom-4 right-4 flex items-center gap-2 opacity-0 hover:opacity-100 transition-opacity duration-300 z-[100] bg-white border border-slate-200 p-2 rounded-xl shadow-xl">
+        <button onclick="mudarZoom(-0.1)" class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 text-lg leading-none" title="Diminuir Zoom">-</button>
+        <span id="zoom-level" class="text-xs font-bold text-slate-600 min-w-[3rem] text-center">100%</span>
+        <button onclick="mudarZoom(0.1)" class="w-8 h-8 flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 text-lg leading-none" title="Aumentar Zoom">+</button>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // ── Zoom Control ──
+        window.zoomAtual = 1;
+        window.mudarZoom = function(delta) {
+            window.zoomAtual = Math.max(0.4, Math.min(2.5, window.zoomAtual + delta)); // Limite de 40% a 250%
+            document.body.style.zoom = window.zoomAtual;
+            document.getElementById('zoom-level').textContent = Math.round(window.zoomAtual * 100) + '%';
+        };
 
         // ── Firebase Config ──
         const firebaseConfig = {
