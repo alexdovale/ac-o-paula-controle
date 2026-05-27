@@ -2307,25 +2307,6 @@ class SIGEPApp {
     // ============================================================
 // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
 // ============================================================
-async showAdminScreen() {
-    localStorage.setItem('sigep_active_screen', 'admin');
-    UIService.showScreen('admin');
-    
-    const adminContent = document.getElementById('admin-content');
-    if (!adminContent) return;
-    
-    adminContent.innerHTML = `
-        <div class="loader-small mx-auto my-12"></div>
-        <p class="text-center text-gray-500 mt-4">Carregando painel administrativo...</p>
-    `;
-    
-    // Carrega os dados do admin
-    await loadUsersList(this.db);
-    await populateUserFilter(this.db);
-    
-    this.renderAdminContent();
-}
-
 renderAdminContent() {
     const container = document.getElementById('admin-content');
     if (!container) return;
@@ -2337,11 +2318,22 @@ renderAdminContent() {
             </button>
         </div>
         
+        <!-- 🔍 BUSCA E PAGINAÇÃO - PENDENTES -->
+        <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+            <div id="search-pendentes" class="w-full sm:w-80"></div>
+            <div id="page-size-pendentes"></div>
+        </div>
         <div class="mb-8">
             <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
             <div id="pending-users-list" class="space-y-2"></div>
+            <div id="pagination-pendentes" class="mt-4"></div>
         </div>
         
+        <!-- 🔍 BUSCA E PAGINAÇÃO - USUÁRIOS -->
+        <div class="mt-8 mb-4 flex flex-wrap gap-4 items-center justify-between">
+            <div id="search-usuarios" class="w-full sm:w-80"></div>
+            <div id="page-size-usuarios"></div>
+        </div>
         <div>
             <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
             <div class="overflow-x-auto">
@@ -2351,8 +2343,10 @@ renderAdminContent() {
                         <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
                     </table>
             </div>
+            <div id="pagination-usuarios" class="mt-4"></div>
         </div>
         
+        <!-- 🔍 BUSCA E PAGINAÇÃO - LOGS -->
         <div class="mt-8 pt-4 border-t">
             <div class="flex flex-wrap gap-3 mb-4">
                 <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
@@ -2360,6 +2354,12 @@ renderAdminContent() {
                 <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
                 <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
             </div>
+            
+            <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+                <div id="search-logs" class="w-full sm:w-80"></div>
+                <div id="page-size-logs"></div>
+            </div>
+            
             <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
                 <select id="filter-log-user"><option value="all">Todos usuários</option></select>
                 <select id="filter-log-action"><option value="all">Todas ações</option></select>
@@ -2374,12 +2374,16 @@ renderAdminContent() {
                     </table>
                 </div>
             </div>
+            <div id="pagination-logs" class="mt-4"></div>
             <div id="dashboard-results" class="hidden mt-6"></div>
         </div>
     `;
-    setTimeout(() => {
-        loadUsersList(this.db);
-    }, 100);
+    
+    // Inicializa as buscas (função do admin.js)
+    if (typeof setupAdminSearch === 'function') {
+        setupAdminSearch();
+    }
+    
     this.setupAdminEvents();
 }
 
