@@ -6,11 +6,13 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
+// Importação do novo componente homologado
+import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
+
 // ============================================================
 // CONTROLE DE PAGINAÇÃO E FILTROS
 // ============================================================
 
-// Estado global dos filtros e paginação
 let adminFilters = {
     usuarios: { page: 1, pageSize: 10, search: '' },
     pendentes: { page: 1, pageSize: 5, search: '' },
@@ -49,7 +51,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 
 export const carregarUnidades = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "estrutura_unidades"));
+        const snapshot = await getDocs(collection(db, "unidades"));
         if (!snapshot.empty) {
             return snapshot.docs.filter(d => d.data().ativo !== false).map(doc => ({ id: doc.id, ...doc.data() }));
         }
@@ -66,7 +68,7 @@ export const criarUnidade = async (db, dados) => {
             .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
             .replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
         const unidadeId = nomeNormalizado;
-        const unidadeRef = doc(db, "estrutura_unidades", unidadeId);
+        const unidadeRef = doc(db, "unidades", unidadeId);
         await setDoc(unidadeRef, {
             id: unidadeId,
             nome: dados.nome,
@@ -88,11 +90,11 @@ export const criarUnidade = async (db, dados) => {
 
 export const atualizarUnidade = async (db, unidadeId, dados) => {
     try {
-        await updateDoc(doc(db, "estrutura_unidades", unidadeId), {
+        await updateDoc(doc(db, "unidades", unidadeId), {
             ...dados,
             atualizadoEm: new Date().toISOString()
         });
-        showNotification(`Unidade "${dados.nome}" atualizada!`, "success");
+        showNotification(`Unidade "${dados.nome}" updated!`, "success");
         return true;
     } catch (error) {
         showNotification("Erro ao atualizar unidade: " + error.message, "error");
@@ -104,23 +106,24 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
     
     try {
-        await updateDoc(doc(db, "estrutura_unidades", unidadeId), { 
+        await updateDoc(doc(db, "unidades", unidadeId), { 
             ativo: false, 
             excluidoEm: new Date().toISOString() 
         });
         
-        const usersSnap = await getDocs(collection(db, "users"));
+        const usersSnap = await getDocs(collection(db, "usuarios"));
         const batch = writeBatch(db);
         let usuariosAfetados = 0;
         
         for (const userDoc of usersSnap.docs) {
             const userData = userDoc.data();
-            const unidades = userData.unidadesPermitidas || [];
+            const unidades = userData.unidades || [];
             
-            if (unidades.includes(unidadeId)) {
-                const novasUnidades = unidades.filter(id => id !== unidadeId);
+            // Verifica o vínculo dentro do novo padrão de array de objetos
+            if (unidades.some(u => u.unidadeId === unidadeId)) {
+                const novasUnidades = unidades.filter(u => u.unidadeId !== unidadeId);
                 batch.update(userDoc.ref, { 
-                    unidadesPermitidas: novasUnidades,
+                    unidades: novasUnidades,
                     updatedAt: new Date().toISOString()
                 });
                 usuariosAfetados++;
@@ -138,20 +141,6 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     } catch (error) {
         console.error("Erro ao excluir unidade:", error);
         showNotification("Erro ao excluir unidade: " + error.message, "error");
-        return false;
-    }
-};
-
-export const salvarUnidadesUsuario = async (db, userId, unidadesSelecionadas) => {
-    try {
-        await updateDoc(doc(db, "users", userId), {
-            unidadesPermitidas: unidadesSelecionadas,
-            updatedAt: new Date().toISOString()
-        });
-        showNotification("Unidades do usuário atualizadas!", "success");
-        return true;
-    } catch (error) {
-        showNotification("Erro ao salvar unidades: " + error.message, "error");
         return false;
     }
 };
@@ -261,45 +250,7 @@ const importarUnidadesEmMassa = async (db, unidades) => {
     showNotification(`✅ ${criadas} unidade(s) importada(s)! ${duplicadas} duplicada(s) ignorada(s).`, criadas > 0 ? 'success' : 'warning');
 };
 
-const baixarModeloCSVUnidades = () => {
-    const csvContent = `nome,sigla,endereco,telefone,email\n"Defensoria Pública - Duque de Caxias","DP Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"\n"Defensoria Pública - Belford Roxo","DP Belford Roxo","Rua Gerson Costa, s/n - Centro, Belford Roxo - RJ","(21) 2661-4321","belfordroxo@dperj.br"\n"Defensoria Pública - Nova Iguaçu","DP Nova Iguaçu","Rua Getúlio Vargas, s/n - Centro, Nova Iguaçu - RJ","(21) 2665-9876","ni@dperj.br"`;
-    
-    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'modelo_unidades.csv';
-    link.click();
-    URL.revokeObjectURL(link.href);
-};
-
-const baixarModeloJSONUnidades = () => {
-    const jsonContent = [
-        {
-            nome: "Defensoria Pública - Duque de Caxias",
-            sigla: "DP Caxias",
-            endereco: "Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ",
-            telefone: "(21) 2675-1234",
-            email: "caxias@dperj.br"
-        },
-        {
-            nome: "Defensoria Pública - Belford Roxo",
-            sigla: "DP Belford Roxo",
-            endereco: "Rua Gerson Costa, s/n - Centro, Belford Roxo - RJ",
-            telefone: "(21) 2661-4321",
-            email: "belfordroxo@dperj.br"
-        }
-    ];
-    
-    const blob = new Blob([JSON.stringify(jsonContent, null, 2)], { type: 'application/json' });
-    const link = document.createElement('a');
-    link.href = URL.createObjectURL(blob);
-    link.download = 'modelo_unidades.json';
-    link.click();
-    URL.revokeObjectURL(link.href);
-};
-
 export const abrirImportadorUnidades = async (db) => {
-    // ... (mantenha o código existente do importador)
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
@@ -342,10 +293,6 @@ export const abrirImportadorUnidades = async (db) => {
                     <div class="bg-slate-50 rounded-xl p-6">
                         <h3 class="font-bold text-lg mb-4">📄 Formato Esperado</h3>
                         <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email\n"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"</code></pre>
-                        <div class="mt-4 flex gap-3">
-                            <button id="btn-baixar-modelo-csv-unidades" class="bg-blue-600 text-white px-4 py-2 rounded-lg">📥 CSV</button>
-                            <button id="btn-baixar-modelo-json-unidades" class="bg-blue-600 text-white px-4 py-2 rounded-lg">📥 JSON</button>
-                        </div>
                     </div>
                 </div>
                 <div id="painel-manual-unidades" class="hidden space-y-4">
@@ -432,17 +379,13 @@ export const abrirImportadorUnidades = async (db) => {
         fechar();
         if (window.abrirGerenciadorUnidades) window.abrirGerenciadorUnidades();
     });
-    
-    document.getElementById('btn-baixar-modelo-csv-unidades')?.addEventListener('click', baixarModeloCSVUnidades);
-    document.getElementById('btn-baixar-modelo-json-unidades')?.addEventListener('click', baixarModeloJSONUnidades);
 };
 
 // -------------------------------------------------------------------------
-// 2. FUNÇÃO PARA VISUALIZAR USUÁRIOS VINCULADOS À UNIDADE (NOVO MÓDULO)
+// FUNÇÃO PARA VISUALIZAR USUÁRIOS VINCULADOS À UNIDADE
 // -------------------------------------------------------------------------
 
 export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) => {
-    // Validação inicial
     if (!db || !unidadeId) {
         showNotification("Erro ao abrir: dados da unidade não encontrados.", "error");
         return;
@@ -450,25 +393,20 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4';
-    
-    // Adiciona loading
     modal.innerHTML = `<div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl text-center"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600">Carregando usuários vinculados a ${escapeHTML(unidadeNome)}...</p></div>`;
     document.body.appendChild(modal);
 
     try {
-        const usersSnap = await getDocs(collection(db, "users"));
+        const usersSnap = await getDocs(collection(db, "usuarios"));
         const usuariosVinculados = usersSnap.docs
             .map(d => ({ id: d.id, ...d.data() }))
-            .filter(u => u.unidadesPermitidas?.includes(unidadeId) && u.status !== 'pending' && u.role !== 'suspended'); // Filtra apenas aprovados e não suspensos
+            .filter(u => u.unidades?.some(un => un.unidadeId === unidadeId) && u.status !== 'pending' && u.role !== 'suspended');
 
         modal.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh] animate-fadeIn">
                 <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-black text-lg flex items-center gap-2">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                            Usuários Vinculados
-                        </h3>
+                        <h3 class="font-black text-lg flex items-center gap-2">Usuários Vinculados</h3>
                         <p class="text-emerald-100 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
                     </div>
                     <button id="fechar-usuarios-unidade" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
@@ -478,7 +416,7 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
                         ? `<div class="space-y-2">
                             <div class="text-xs text-gray-500 mb-2 px-1">Total: <span class="font-bold text-emerald-600">${usuariosVinculados.length}</span> usuário(s)</div>
                             ${usuariosVinculados.map(u => `
-                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm transition-all">
+                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
                                 <div class="flex justify-between items-start">
                                     <div class="flex-1">
                                         <p class="font-bold text-gray-800 text-sm flex items-center gap-2">
@@ -490,7 +428,7 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
                                 </div>
                             </div>`).join('')}
                           </div>`
-                        : '<div class="text-center py-12 text-gray-400"><svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><p>Nenhum usuário ativo vinculado a esta unidade.</p></div>'
+                        : '<div class="text-center py-12 text-gray-400"><p>Nenhum usuário ativo vinculado a esta unidade.</p></div>'
                     }
                 </div>
                 <div class="p-4 border-t bg-gray-50 flex justify-end shrink-0">
@@ -502,8 +440,6 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
         const closeModal = () => modal.remove();
         document.getElementById('fechar-usuarios-unidade')?.addEventListener('click', closeModal);
         document.getElementById('fechar-usuarios-unidade-footer')?.addEventListener('click', closeModal);
-        
-        // Fecha ao clicar fora do modal (opcional)
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
         
     } catch (error) {
@@ -555,11 +491,11 @@ export const abrirGerenciadorUnidades = async (db) => {
             </div>
         `).join('');
         
-        document.querySelectorAll('.btn-ver-usuarios').forEach(btn => {
+        container.querySelectorAll('.btn-ver-usuarios').forEach(btn => {
             btn.addEventListener('click', () => abrirModalUsuariosPorUnidade(db, btn.dataset.id, btn.dataset.nome));
         });
         
-        document.querySelectorAll('.btn-editar-unidade').forEach(btn => {
+        container.querySelectorAll('.btn-editar-unidade').forEach(btn => {
             btn.addEventListener('click', () => abrirModalFormUnidade(db, {
                 id: btn.dataset.id,
                 nome: btn.dataset.nome,
@@ -573,7 +509,7 @@ export const abrirGerenciadorUnidades = async (db) => {
             }));
         });
         
-        document.querySelectorAll('.btn-excluir-unidade').forEach(btn => {
+        container.querySelectorAll('.btn-excluir-unidade').forEach(btn => {
             btn.addEventListener('click', async () => {
                 await excluirUnidade(db, btn.dataset.id, btn.dataset.nome);
                 document.getElementById('gerenciador-unidades-modal')?.remove();
@@ -588,21 +524,18 @@ export const abrirGerenciadorUnidades = async (db) => {
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div class="flex items-center gap-4">
-                    <img src="/assets/logo-sigep-branca.png" alt="Logo SIGEP" class="h-12 w-12 object-contain drop-shadow-md" onerror="this.style.display='none'">
-                    <div>
-                        <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
-                        <p class="text-slate-300 text-sm mt-0.5">SIGEP - Defensoria Pública</p>
-                    </div>
+                <div>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
+                    <p class="text-slate-300 text-sm mt-0.5">SIGEP - Defensoria Pública</p>
                 </div>
                 <button id="fechar-gerenciador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <div class="flex-1 overflow-y-auto p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span></div>
+                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"></div>
                     <div class="flex gap-3">
-                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2"><span>📁</span> Importar em Massa</button>
-                        <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2"><span>➕</span> Nova Unidade</button>
+                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2"><span>📁</span> Importar em Massa</button>
+                        <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2"><span>➕</span> Nova Unidade</button>
                     </div>
                 </div>
                 <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
@@ -651,148 +584,8 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     });
 };
 
-// -------------------------------------------------------------------------
-// 3. REFINAMENTO DE UNIDADE-USUÁRIO (COM CONTADOR E MELHORIA NA LISTA)
-// -------------------------------------------------------------------------
-
-export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, unidadesAtuais = []) => {
-    let todasUnidades = await carregarUnidades(db);
-    let filtroTexto = '';
-    let unidadesSelecionadas = [...unidadesAtuais];
-    
-    const renderUnidades = () => {
-        const filtradas = todasUnidades.filter(u => 
-            u.nome.toLowerCase().includes(filtroTexto.toLowerCase()) || 
-            (u.sigla || '').toLowerCase().includes(filtroTexto.toLowerCase())
-        );
-        const container = document.getElementById('lista-unidades-checkbox');
-        if (!container) return;
-        
-        if (filtradas.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
-            return;
-        }
-        
-        container.innerHTML = filtradas.map(unidade => `
-            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-all ${unidadesSelecionadas.includes(unidade.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm' : ''}" data-id="${unidade.id}">
-                <input type="checkbox" name="unidade" value="${unidade.id}" ${unidadesSelecionadas.includes(unidade.id) ? 'checked' : ''} class="h-4 w-4 text-emerald-600 rounded focus:ring-emerald-500">
-                <div class="flex-1">
-                    <span class="font-bold text-gray-800 text-sm">${escapeHTML(unidade.nome)}</span>
-                    <p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p>
-                </div>
-                <button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
-                    ✕ Remover
-                </button>
-            </label>
-        `).join('');
-        
-        // Atualiza o contador de selecionados
-        const contadorSpan = document.getElementById('contador-selecionadas-valor');
-        if (contadorSpan) contadorSpan.innerText = unidadesSelecionadas.length;
-        
-        // Adiciona eventos aos checkboxes
-        container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
-            cb.addEventListener('change', (e) => {
-                e.stopPropagation();
-                const id = cb.value;
-                if (cb.checked) { 
-                    if (!unidadesSelecionadas.includes(id)) unidadesSelecionadas.push(id); 
-                } else { 
-                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); 
-                }
-                const label = cb.closest('label');
-                if (label) {
-                    if (cb.checked) {
-                        label.classList.add('bg-emerald-50', 'border-emerald-300', 'shadow-sm');
-                    } else {
-                        label.classList.remove('bg-emerald-50', 'border-emerald-300', 'shadow-sm');
-                    }
-                }
-                // Re-renderiza para atualizar o contador e o estado dos botões "remover"
-                renderUnidades();
-            });
-        });
-        
-        // Adiciona eventos aos botões de remoção individual
-        container.querySelectorAll('.btn-remover-unidade-item').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.preventDefault(); 
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                const nome = btn.dataset.nome;
-                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) { 
-                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); 
-                    renderUnidades(); 
-                    showNotification(`Unidade "${nome}" removida.`, "info"); 
-                }
-            });
-        });
-    };
-    
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/60 z-[600] flex items-center justify-center p-4';
-    modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="text-white font-black text-lg flex items-center gap-2">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                        Gerenciar Unidades
-                    </h3>
-                    <p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p>
-                </div>
-                <button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="relative mb-4">
-                    <input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                </div>
-                <div class="mb-4 flex justify-between items-center bg-slate-100 p-3 rounded-xl">
-                    <span class="text-xs font-bold text-slate-600">Unidades selecionadas:</span>
-                    <span id="contador-selecionadas-valor" class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">${unidadesSelecionadas.length}</span>
-                </div>
-                <p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p>
-                <div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
-                <div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
-                    <p class="text-[10px] text-amber-700 font-bold flex items-center gap-1">⚠️ Atenção:</p>
-                    <p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p>
-                </div>
-            </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t">
-                <button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                <button id="btn-salvar-unidades-usuario" class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition font-bold shadow-md">Salvar</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-    renderUnidades();
-    
-    const searchInput = document.getElementById('pesquisa-unidades-usuario');
-    if (searchInput) {
-        searchInput.addEventListener('input', (e) => { 
-            filtroTexto = e.target.value; 
-            renderUnidades(); 
-        });
-    }
-    
-    const fechar = () => modal.remove();
-    modal.querySelectorAll('.fechar-modal-unidades').forEach(btn => btn.addEventListener('click', fechar));
-    
-    const btnSalvar = document.getElementById('btn-salvar-unidades-usuario');
-    if (btnSalvar) {
-        btnSalvar.addEventListener('click', async () => {
-            await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
-            showNotification(`Unidades do usuário ${userNome} atualizadas!`, "success");
-            fechar();
-            // Recarrega a lista de usuários se a função estiver disponível
-            if (typeof loadUsersList === 'function') setTimeout(() => loadUsersList(db), 500);
-        });
-    }
-};
-
 // =========================================================================
-// MÓDULO DE GERENCIAMENTO DE USUÁRIOS (COM PAGINAÇÃO, BUSCA E TAMANHO DE PÁGINA)
+// MÓDULO DE GERENCIAMENTO DE USUÁRIOS (PAGINAÇÃO, BUSCA E FILTROS)
 // =========================================================================
 
 function renderPagination(containerId, currentPage, totalPages, onPageChange) {
@@ -818,13 +611,11 @@ function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
     container.innerHTML = `
         <div class="flex items-center gap-2">
             <span class="text-xs text-gray-500">Mostrar:</span>
-            <select id="page-size-select-${containerId}" class="text-xs border rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500">
+            <select id="page-size-select-${containerId}" class="text-xs border rounded-lg px-2 py-1 bg-white">
                 <option value="5" ${currentSize === 5 ? 'selected' : ''}>5</option>
                 <option value="10" ${currentSize === 10 ? 'selected' : ''}>10</option>
                 <option value="15" ${currentSize === 15 ? 'selected' : ''}>15</option>
                 <option value="20" ${currentSize === 20 ? 'selected' : ''}>20</option>
-                <option value="50" ${currentSize === 50 ? 'selected' : ''}>50</option>
-                <option value="100" ${currentSize === 100 ? 'selected' : ''}>100</option>
             </select>
             <span class="text-xs text-gray-500">itens</span>
         </div>
@@ -837,15 +628,13 @@ function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
 
 export const loadUsersList = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const snapshot = await getDocs(collection(db, "usuarios"));
         const allUsers = [];
         snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         
-        // Separa pendentes e aprovados
         let pendentes = allUsers.filter(u => u.status === 'pending');
         let aprovados = allUsers.filter(u => u.status !== 'pending');
         
-        // Aplica busca
         if (adminFilters.pendentes.search) {
             const search = adminFilters.pendentes.search.toLowerCase();
             pendentes = pendentes.filter(u => (u.name || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search));
@@ -855,19 +644,14 @@ export const loadUsersList = async (db) => {
             aprovados = aprovados.filter(u => (u.name || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search));
         }
         
-        // Cache para paginação
         cachedPendentes = pendentes;
         cachedUsuarios = aprovados;
         
-        // Renderiza pendentes
         renderPendentesList(db);
-        
-        // Renderiza aprovados
         renderAprovadosTable(db);
         
     } catch (error) {
         console.error("Erro ao carregar lista de usuários:", error);
-        showNotification("Erro ao carregar lista de usuários", "error");
     }
 };
 
@@ -901,7 +685,7 @@ function renderPendentesList(db) {
                     <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
                     <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
                 </select>
-                <button onclick="window.approveUser('${user.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded text-[10px] font-bold hover:bg-green-700 transition">APROVAR</button>
+                <button onclick="window.approveUser('${user.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded text-[10px] font-bold">APROVAR</button>
                 <button onclick="window.deleteUser('${user.id}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
             </div>
         </div>
@@ -935,7 +719,8 @@ function renderAprovadosTable(db) {
     }
     
     tableBody.innerHTML = paginated.map(user => {
-        const unidadesCount = user.unidadesPermitidas?.length || 0;
+        // Mapeia o tamanho com base no novo array de objetos configurado
+        const unidadesCount = user.unidades?.length || 0;
         const statusBadge = user.role === 'suspended' ? '<span class="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>' : '<span class="bg-green-100 text-green-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
         
         return `
@@ -943,11 +728,8 @@ function renderAprovadosTable(db) {
                 <td class="px-3 py-3"><p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>${statusBadge}</td>
                 <td class="px-3 py-3 text-xs text-gray-500">${escapeHTML(user.email)}</td>
                 <td class="px-3 py-3 text-center">
-                    <button class="btn-gerenciar-unidades bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 transition flex items-center gap-1 mx-auto"
-                        data-userid="${user.id}" 
-                        data-nome="${escapeHTML(user.name || 'Sem nome')}" 
-                        data-email="${escapeHTML(user.email)}"
-                        data-unidades='${JSON.stringify(user.unidadesPermitidas || [])}'>
+                    <button class="btn-gerenciar-unidades bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 flex items-center gap-1 mx-auto"
+                        data-userid="${user.id}">
                         🏢 ${unidadesCount}
                     </button>
                 </td>
@@ -962,22 +744,19 @@ function renderAprovadosTable(db) {
                 </td>
                 <td class="px-3 py-3 text-center">
                     <div class="flex items-center justify-center gap-2">
-                        <button onclick="window.updateUserRole('${user.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[9px] hover:bg-blue-700 transition font-bold">SALVAR</button>
-                        <button onclick="window.deleteUser('${user.id}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[9px] hover:bg-red-50 transition font-bold">EXCLUIR</button>
+                        <button onclick="window.updateUserRole('${user.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[9px] font-bold">SALVAR</button>
+                        <button onclick="window.deleteUser('${user.id}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[9px] font-bold">EXCLUIR</button>
                     </div>
                 </td>
             </tr>
         `;
     }).join('');
     
-    // Adiciona evento de clique para os botões de gerenciar unidades de forma segura (dataset)
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             const userId = btn.dataset.userid;
-            const nome = btn.dataset.nome;
-            const email = btn.dataset.email;
-            const unidades = JSON.parse(btn.dataset.unidades);
-            window.gerenciarUnidades(userId, nome, email, unidades);
+            // Executa o acoplamento do novo componente entregue na arquitetura
+            window.gerenciarUnidades(userId);
         });
     });
     
@@ -1021,7 +800,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 export const approveUser = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
+        await updateDoc(doc(db, "usuarios", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
         showNotification("Usuário aprovado!");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao aprovar.", "error"); }
@@ -1030,7 +809,7 @@ export const approveUser = async (db, userId) => {
 export const updateUserRole = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
+        await updateDoc(doc(db, "usuarios", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
         showNotification(`Cargo atualizado!`);
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
@@ -1039,17 +818,17 @@ export const updateUserRole = async (db, userId) => {
 export const deleteUser = async (db, userId) => {
     if (!confirm("Excluir este usuário?")) return;
     try {
-        await deleteDoc(doc(db, "users", userId));
+        await deleteDoc(doc(db, "usuarios", userId));
         showNotification("Usuário removido.");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
-// Funções globais
+// Vinculações globais do escopo Window
 window.approveUser = (userId) => approveUser(window.app?.db, userId);
 window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
 window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
-window.gerenciarUnidades = (userId, userNome, userEmail, unidadesAtuais) => gerenciarUnidadesUsuario(window.app?.db, userId, userNome, userEmail, unidadesAtuais);
+window.gerenciarUnidades = (userId) => abrirGerenciarUnidades(window.app, userId);
 window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => abrirModalUsuariosPorUnidade(window.app?.db, unidadeId, unidadeNome);
@@ -1063,7 +842,7 @@ export const loadLogFilters = async (db) => {
         const userSelect = document.getElementById('filter-log-user');
         const actionSelect = document.getElementById('filter-log-action');
         if (userSelect) {
-            const usersSnap = await getDocs(collection(db, "users"));
+            const usersSnap = await getDocs(collection(db, "usuarios"));
             userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
             usersSnap.forEach(doc => { const user = doc.data(); if (user.email) userSelect.appendChild(new Option(user.name || user.email, user.email)); });
         }
@@ -1086,7 +865,7 @@ export const loadAuditLogs = async (db) => {
     if (!logsContainer || !tableBody) return;
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
@@ -1127,7 +906,6 @@ function renderLogsTable(db) {
     const tableBody = document.getElementById('audit-logs-table-body');
     if (!tableBody) return;
     
-    // Aplica busca nos logs
     let logs = [...cachedLogs];
     if (adminFilters.logs.search) {
         const search = adminFilters.logs.search.toLowerCase();
@@ -1153,7 +931,7 @@ function renderLogsTable(db) {
         let formattedDate = 'Data inválida';
         try {
             const date = new Date(log.timestamp);
-            if (!isNaN(date.getTime())) formattedDate = date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            if (!isNaN(date.getTime())) formattedDate = date.toLocaleString('pt-BR');
         } catch (e) {}
         
         let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
@@ -1184,7 +962,6 @@ function renderLogsTable(db) {
     });
 }
 
-// Funções de busca
 export const setupAdminSearch = () => {
     renderSearchInput('search-pendentes', 'Buscar usuário pendente...', (val) => {
         adminFilters.pendentes.search = val;
@@ -1212,16 +989,14 @@ export const exportAuditLogsPDF = async (db) => {
         if (logs.length === 0) { showNotification("Nenhum log para exportar.", "warning"); return; }
         docPDF.setFontSize(18); docPDF.setTextColor(55, 65, 81);
         docPDF.text("Relatorio de Auditoria - SIGEP", 14, 20);
-        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
-        docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        docPDF.text(`Total: ${logs.length} registros`, 14, 34);
+        
         const body = logs.slice(0, 500).map(log => [
             log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida',
             `${log.userName || log.userEmail || 'Desconhecido'}`,
             log.action || '-',
             (log.details || '-').substring(0, 100)
         ]);
-        docPDF.autoTable({ head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']], body: body, startY: 45, theme: 'striped', headStyles: { fillColor: [55, 65, 81], fontSize: 8, halign: 'center' }, styles: { fontSize: 7, cellPadding: 2 } });
+        docPDF.autoTable({ head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']], body: body, startY: 45, theme: 'striped' });
         docPDF.save(`Auditoria_SIGEP_${new Date().toISOString().slice(0,10)}.pdf`);
         showNotification("PDF gerado!");
     } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
@@ -1247,8 +1022,6 @@ export const cleanupOldData = async (db) => {
                     stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
                     let profissionalNome = 'Não atribuído';
                     if (data.attendedBy) profissionalNome = typeof data.attendedBy === 'object' ? (data.attendedBy.nome || data.attendedBy.name) : data.attendedBy;
-                    else if (data.attendant) profissionalNome = typeof data.attendant === 'object' ? (data.attendant.nome || data.attendant.name) : data.attendant;
-                    else if (data.assignedCollaborator?.name) profissionalNome = data.assignedCollaborator.name;
                     if (profissionalNome) stats.atendentes[profissionalNome] = (stats.atendentes[profissionalNome] || 0) + 1;
                 });
                 await addDoc(collection(db, "estatisticas_permanentes"), stats);
@@ -1264,30 +1037,6 @@ export const cleanupOldData = async (db) => {
     } catch (error) { showNotification("Erro: " + error.message, "error"); }
 };
 
-export const generateTestData = async (db) => {
-    if (!confirm("Gerar dados de teste?")) return;
-    try {
-        const testData = [];
-        const assuntosPool = ["ALIMENTOS", "DIVÓRCIO", "CURATELA", "URGÊNCIA"];
-        const atendentesPool = ["Dra. Roberta", "Dr. Marcos", "Dra. Clarice"];
-        for(let i=0; i<6; i++) {
-            let totalCasos = Math.floor(Math.random() * 40) + 30;
-            let atendidos = Math.floor(totalCasos * 0.85);
-            const localAssuntos = {}, localAtendentes = {};
-            for(let j=0; j<totalCasos; j++) {
-                const ass = assuntosPool[Math.floor(Math.random() * assuntosPool.length)];
-                localAssuntos[ass] = (localAssuntos[ass] || 0) + 1;
-                const atb = atendentesPool[Math.floor(Math.random() * atendentesPool.length)];
-                localAtendentes[atb] = (localAtendentes[atb] || 0) + 1;
-            }
-            testData.push({ pautaName: `Pauta Simulada ${i+1}`, creatorEmail: i % 2 === 0 ? "admin@teste.com" : "user@teste.com", dataReferencia: new Date(Date.now() - (i*3)*24*60*60*1000).toISOString(), diaSemana: i + 1, total: totalCasos, atendidos: atendidos, faltosos: totalCasos - atendidos, assuntos: localAssuntos, atendentes: localAtendentes });
-        }
-        for (const data of testData) { await addDoc(collection(db, "estatisticas_permanentes"), data); }
-        showNotification("✅ Dados de teste criados!");
-        await loadDashboardData(db);
-    } catch (error) { showNotification("Erro ao gerar dados", "error"); }
-};
-
 export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
     const end = document.getElementById('stats-filter-end')?.value;
@@ -1295,37 +1044,28 @@ export const loadDashboardData = async (db) => {
     const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
     const resultsArea = document.getElementById('dashboard-results');
     if (!resultsArea) return;
-    resultsArea.classList.remove('hidden');
-    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
+    resultsArea.innerHTML = '<div class="text-center py-8"><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
         if (snapshot.empty) {
-            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><div class="text-5xl mb-4">📊</div><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3><p class="text-gray-500 mb-6 text-sm">Execute a Limpeza Manual para gerar estatísticas.</p><button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold">Inserir Dados de Teste</button></div>`;
-            document.getElementById('generate-test-data-btn')?.addEventListener('click', () => generateTestData(db));
+            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3></div>`;
             return;
         }
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        if (document.getElementById('stats-filter-attendant')?.options.length <= 1) {
-            const atendentesUnicos = new Set();
-            rawData.forEach(d => { if (d.atendentes) Object.keys(d.atendentes).forEach(n => atendentesUnicos.add(n)); });
-            const select = document.getElementById('stats-filter-attendant');
-            if (select) { select.innerHTML = '<option value="all">Todos os Atendentes</option>'; Array.from(atendentesUnicos).sort().forEach(n => select.appendChild(new Option(n, n))); }
-        }
         let filteredData = [...rawData];
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
-        if (attendantFilter && attendantFilter !== 'all') filteredData = filteredData.filter(d => d.atendentes && d.atendentes[attendantFilter] !== undefined);
-        if (filteredData.length === 0) { resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado.</div>'; return; }
+        
         let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0, mapAssuntos = {}, mapUsers = {};
         filteredData.forEach(d => {
-            if (attendantFilter && attendantFilter !== 'all') { const prodAtendente = d.atendentes[attendantFilter] || 0; totalGeral += prodAtendente; totalAtendidos += prodAtendente; }
-            else { totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0; }
+            totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0;
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             if (d.atendentes) for (let [k, v] of Object.entries(d.atendentes)) mapUsers[k] = (mapUsers[k] || 0) + v;
         });
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
-        resultsArea.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6"><div class="p-4 bg-blue-50 rounded-lg text-center"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl font-black text-blue-800">${totalGeral}</h4></div><div class="p-4 bg-green-50 rounded-lg text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl font-black text-green-800">${totalAtendidos}</h4></div><div class="p-4 bg-orange-50 rounded-lg text-center"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl font-black text-orange-800">${attendantFilter && attendantFilter !== 'all' ? '0.0' : taxa}%</h4></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div></div><div class="flex justify-end gap-3 mt-6 border-t pt-4"><button id="export-csv-btn" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold">CSV</button><button id="export-bi-pdf-btn" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold">PDF</button></div>`;
+        resultsArea.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6"><div class="p-4 bg-blue-50 rounded-lg text-center"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl font-black text-blue-800">${totalGeral}</h4></div><div class="p-4 bg-green-50 rounded-lg text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl font-black text-green-800">${totalAtendidos}</h4></div><div class="p-4 bg-orange-50 rounded-lg text-center"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl font-black text-orange-800">${taxa}%</h4></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div></div>`;
+        
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
@@ -1334,64 +1074,30 @@ export const loadDashboardData = async (db) => {
         };
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
-        document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, mapAssuntos));
-        document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, mapAssuntos));
-        showNotification("Dashboard atualizado!", "success");
     } catch (error) { resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro: ${error.message}</div>`; }
-};
-
-const exportCSV = (totalGeral, totalAtendidos, taxa, mapAssuntos) => {
-    let csvContent = "data:text/csv;charset=utf-8,RELATORIO EXECUTIVO\n\nMETRICA;VALOR\n";
-    csvContent += `Total Demandado;${totalGeral}\nTotal Atendido;${totalAtendidos}\nTaxa Absenteismo;${taxa}%\n\nASSUNTO;QUANTIDADE\n`;
-    Object.entries(mapAssuntos).sort((a,b)=>b[1]-a[1]).forEach(([k,v]) => { csvContent += `${k};${v}\n`; });
-    const link = document.createElement("a");
-    link.setAttribute("href", encodeURI(csvContent));
-    link.setAttribute("download", `Relatorio_BI_${new Date().toISOString().slice(0,10)}.csv`);
-    document.body.appendChild(link); link.click(); document.body.removeChild(link);
-};
-
-export const exportBIDashboardPDF = (totalGeral, totalAtendidos, taxaFalta, mapAssuntos) => {
-    try {
-        const docPDF = new window.jspdf.jsPDF();
-        docPDF.setFontSize(18); docPDF.setTextColor(22, 163, 74); docPDF.text("Relatorio Executivo de BI - SIGEP", 14, 20);
-        docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100); docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Resumo Geral", 14, 45);
-        docPDF.setFontSize(11); docPDF.setTextColor(50, 50, 50);
-        docPDF.text(`Total Demandado: ${totalGeral}`, 14, 55);
-        docPDF.text(`Atendimentos Efetivos: ${totalAtendidos}`, 14, 62);
-        docPDF.text(`Taxa de Faltas: ${taxaFalta}%`, 14, 69);
-        docPDF.setFontSize(14); docPDF.setTextColor(0, 0, 0); docPDF.text("Principais Demandas", 14, 85);
-        let y = 95;
-        Object.entries(mapAssuntos).sort((a,b) => b[1] - a[1]).slice(0,10).forEach(([k,v]) => { docPDF.text(`${k}: ${v} atendimentos`, 14, y); y += 7; });
-        docPDF.save(`Relatorio_BI_${new Date().toISOString().slice(0,10)}.pdf`);
-    } catch(e) { showNotification("Erro ao gerar PDF", "error"); }
 };
 
 export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const snapshot = await getDocs(collection(db, "usuarios"));
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
 };
 
-// Listeners
+// Listeners auxiliares de gatilho
 document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
 
-// Globais
 window.cleanupOldData = () => cleanupOldData(window.app?.db);
 window.loadDashboardData = () => loadDashboardData(window.app?.db);
 window.populateUserFilter = () => populateUserFilter(window.app?.db);
-window.generateTestData = () => generateTestData(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
-window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
-window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 window.setupAdminSearch = () => setupAdminSearch();
 
-console.log("✅ Módulo admin.js carregado com sucesso (com logo, visualização de usuários e refinamento de UI)");
+console.log("✅ Módulo admin.js atualizado e acoplado com os novos componentes.");
