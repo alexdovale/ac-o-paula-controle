@@ -2092,7 +2092,7 @@ class SIGEPApp {
         let orgaoHtml = '';
         
         if (isModoNormal) {
-            // 🔥 CORREÇÃO: Busca o documento do usuário diretamente do Firestore
+            // Busca o documento do usuário diretamente do Firestore
             const userDoc = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
             const unidadesPermitidasDoUsuario = userDoc.data()?.unidadesPermitidas || [];
             
@@ -2131,15 +2131,45 @@ class SIGEPApp {
             ? '<p class="text-[10px] text-gray-500 mt-1">Data do evento/atendimento. O prazo LGPD de 7 dias começa a partir desta data.</p>'
             : '<p class="text-[10px] text-gray-500 mt-1">(Opcional) Data do evento. Se não informada, será usada a data de criação.</p>';
         
-        // Remove modal antigo se existir (evita duplicação)
+        // ============================================================
+        // CONFIGURAÇÕES ADICIONAIS (Delegação, Distribuição, Multi-sala)
+        // ============================================================
+        const configHtml = `
+            <div class="border-t pt-4 mt-4">
+                <p class="text-sm font-bold text-gray-700 mb-3">⚙️ Configurações da Pauta</p>
+                <div class="space-y-3">
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="config-use-delegation" class="h-4 w-4 text-blue-600 rounded">
+                        <span class="text-sm text-gray-700">Usar fluxo de <strong>Delegação</strong> (colaboradores atendem)</span>
+                    </label>
+                    <label class="flex items-center gap-3 cursor-pointer">
+                        <input type="checkbox" id="config-use-distribution" class="h-4 w-4 text-blue-600 rounded">
+                        <span class="text-sm text-gray-700">Usar fluxo de <strong>Distribuição</strong> (envio para análise)</span>
+                    </label>
+                    <div>
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Tipo de Sala</label>
+                        <select id="config-pauta-type" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                            <option value="agendamento">Padrão (Agendamento)</option>
+                            <option value="multisala">Multi-salas</option>
+                        </select>
+                    </div>
+                    <div id="config-custom-rooms-container" class="hidden">
+                        <label class="block text-sm font-bold text-gray-700 mb-1">Salas (separadas por vírgula)</label>
+                        <input type="text" id="config-custom-rooms" placeholder="Ex: Sala 1, Sala 2, Vara A" class="w-full p-2 border border-gray-300 rounded-lg">
+                    </div>
+                </div>
+            </div>
+        `;
+        
+        // Remove modal antigo se existir
         let modal = document.getElementById('create-pauta-modal');
         if (modal) modal.remove();
         
         modal = document.createElement('div');
         modal.id = 'create-pauta-modal';
-        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+        modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4 overflow-y-auto';
         modal.innerHTML = `
-            <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 max-h-[90vh] overflow-y-auto">
                 <h3 class="text-lg font-bold mb-4">Criar Nova Pauta ${isModoNormal ? '(Modo Normal)' : '(Modo Evento)'}</h3>
                 <div class="space-y-4">
                     <div>
@@ -2152,6 +2182,7 @@ class SIGEPApp {
                         <input type="date" id="new-pauta-data-atuacao" value="${new Date().toISOString().slice(0,10)}" class="w-full p-2 border border-gray-300 rounded-lg" ${dataAtuacaoObrigatoria}>
                         ${dataAtuacaoTexto}
                     </div>
+                    ${isModoNormal ? configHtml : ''}
                 </div>
                 <div class="flex gap-2 mt-6">
                     <button id="confirm-create-pauta-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">Criar Pauta</button>
@@ -2160,6 +2191,18 @@ class SIGEPApp {
             </div>
         `;
         document.body.appendChild(modal);
+        
+        // Evento para mostrar/ocultar campo de salas quando selecionar Multi-salas
+        const pautaTypeSelect = document.getElementById('config-pauta-type');
+        const customRoomsContainer = document.getElementById('config-custom-rooms-container');
+        
+        pautaTypeSelect?.addEventListener('change', () => {
+            if (pautaTypeSelect.value === 'multisala') {
+                customRoomsContainer.classList.remove('hidden');
+            } else {
+                customRoomsContainer.classList.add('hidden');
+            }
+        });
         
         // Evento do botão Cancelar
         document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
@@ -2202,10 +2245,27 @@ class SIGEPApp {
                 return;
             }
             
-            // Define o tipo da pauta
+            // Define o tipo da pauta (normal ou evento)
             let tipoPauta = 'normal';
             if (modoAtual === 'evento') {
                 tipoPauta = this.tipoPautaSelecionado || 'mutirao';
+            }
+            
+            // Captura as configurações adicionais (apenas no Modo Normal)
+            let useDelegationFlow = false;
+            let useDistributionFlow = false;
+            let pautaType = 'agendamento';
+            let customRooms = [];
+            
+            if (isModoNormal) {
+                useDelegationFlow = document.getElementById('config-use-delegation')?.checked || false;
+                useDistributionFlow = document.getElementById('config-use-distribution')?.checked || false;
+                pautaType = document.getElementById('config-pauta-type')?.value || 'agendamento';
+                
+                if (pautaType === 'multisala') {
+                    const roomsInput = document.getElementById('config-custom-rooms')?.value;
+                    customRooms = roomsInput ? roomsInput.split(',').map(r => r.trim()).filter(r => r) : [];
+                }
             }
             
             // Monta os dados da pauta
@@ -2216,13 +2276,15 @@ class SIGEPApp {
                 memberEmails: [user.email],
                 createdAt: new Date().toISOString(),
                 tipo: tipoPauta,
-                type: 'agendamento',
+                type: pautaType,
                 isClosed: false,
                 isPublic: false,
                 modo: modoAtual,
                 createdBy: user.email,
-                useDelegationFlow: false,
-                useDistributionFlow: false
+                useDelegationFlow: useDelegationFlow,
+                useDistributionFlow: useDistributionFlow,
+                customRooms: customRooms,
+                rooms: customRooms
             };
             
             if (isModoNormal) {
@@ -2230,7 +2292,6 @@ class SIGEPApp {
                 pautaData.orgaoNome = orgaoNome;
                 pautaData.dataAtuacao = dataAtuacao;
             } else if (dataAtuacao) {
-                // Modo Evento: se o usuário informou uma data, salva também
                 pautaData.dataAtuacao = dataAtuacao;
             }
             
@@ -2241,7 +2302,7 @@ class SIGEPApp {
             
             try {
                 const docRef = await addDoc(collection(this.db, "pautas"), pautaData);
-                console.log("Pauta criada com ID:", docRef.id, "Tipo:", tipoPauta);
+                console.log("Pauta criada com ID:", docRef.id);
                 modal.remove();
                 showNotification(`Pauta "${nomePauta}" criada com sucesso!`, "success");
                 await this.loadPautasWithFilter();
