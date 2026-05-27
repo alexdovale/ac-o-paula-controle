@@ -6,8 +6,12 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// Importação do novo componente homologado
+// ============================================================
+// IMPORTAÇÃO DOS COMPONENTES HOMOLOGADOS
+// ============================================================
 import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
+import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { renderEstruturaAtual } from './estruturaAtual.js';
 
 // ============================================================
 // CONTROLE DE PAGINAÇÃO E FILTROS
@@ -23,9 +27,15 @@ let cachedUsuarios = [];
 let cachedPendentes = [];
 let cachedLogs = [];
 
-/**
- * Grava uma ação no log de auditoria
- */
+// ============================================================
+// VARIÁVEL GLOBAL DO APP
+// ============================================================
+let globalApp = null;
+
+// ============================================================
+// FUNÇÃO PARA GRAVAR LOG DE AUDITORIA
+// ============================================================
+
 export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
     try {
         if (!auth?.currentUser) return;
@@ -45,9 +55,9 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
     }
 };
 
-// =========================================================================
+// ============================================================
 // MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS (CRUD + IMPORTAÇÃO + PESQUISA)
-// =========================================================================
+// ============================================================
 
 export const carregarUnidades = async (db) => {
     try {
@@ -94,7 +104,7 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
             ...dados,
             atualizadoEm: new Date().toISOString()
         });
-        showNotification(`Unidade "${dados.nome}" updated!`, "success");
+        showNotification(`Unidade "${dados.nome}" atualizada!`, "success");
         return true;
     } catch (error) {
         showNotification("Erro ao atualizar unidade: " + error.message, "error");
@@ -119,7 +129,6 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
             const userData = userDoc.data();
             const unidades = userData.unidades || [];
             
-            // Verifica o vínculo dentro do novo padrão de array de objetos
             if (unidades.some(u => u.unidadeId === unidadeId)) {
                 const novasUnidades = unidades.filter(u => u.unidadeId !== unidadeId);
                 batch.update(userDoc.ref, { 
@@ -145,9 +154,9 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     }
 };
 
-// =========================================================================
+// ============================================================
 // MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES
-// =========================================================================
+// ============================================================
 
 const parseCSVLinha = (linha) => {
     const resultado = [];
@@ -302,10 +311,9 @@ export const abrirImportadorUnidades = async (db) => {
                         <textarea id="manual-unidades-text" rows="6" class="w-full p-3 border rounded-lg font-mono text-sm" placeholder="sigla|nome|endereco|telefone|email"></textarea>
                         <button id="btn-importar-manual-unidades" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Importar</button>
                     </div>
-                    // ... dentro do código do modal, logo abaixo do painel-manual ...
-                    <div id="painel-estrutura-unidades" class="hidden space-y-4 h-[600px]">
-                        <div id="meu-container-estrutura" class="w-full h-full"></div>
-                    </div>
+                </div>
+                <div id="painel-estrutura-unidades" class="hidden space-y-4" style="min-height: 500px;">
+                    <div id="meu-container-estrutura" class="w-full"></div>
                 </div>
             </div>
             <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0">
@@ -330,12 +338,20 @@ export const abrirImportadorUnidades = async (db) => {
             document.getElementById('painel-upload-unidades').classList.add('hidden');
             document.getElementById('painel-modelo-unidades').classList.add('hidden');
             document.getElementById('painel-manual-unidades').classList.add('hidden');
+            document.getElementById('painel-estrutura-unidades').classList.add('hidden');
             document.getElementById(`painel-${aba}-unidades`).classList.remove('hidden');
             
             if (aba === 'estrutura') {
                 const container = document.getElementById('meu-container-estrutura');
-                container.innerHTML = '<div class="loader-small mx-auto mt-8"></div><p class="text-center text-gray-500 mt-2">Carregando estrutura...</p>';
-                if (window.renderEstruturaAtual) window.renderEstruturaAtual(window.app, container);
+                if (container && globalApp) {
+                    container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loader-small mx-auto"></div><p class="text-gray-500 mt-2">Carregando estrutura...</p></div>';
+                    renderEstruturaAtual(globalApp, container).catch(err => {
+                        console.error("Erro ao renderizar estrutura:", err);
+                        container.innerHTML = `<p class="text-red-500 text-center p-8">Erro ao carregar estrutura: ${err.message}</p>`;
+                    });
+                } else if (!globalApp) {
+                    console.warn("App não inicializado para renderEstruturaAtual");
+                }
             }
         });
     });
@@ -392,9 +408,9 @@ export const abrirImportadorUnidades = async (db) => {
     });
 };
 
-// -------------------------------------------------------------------------
+// ============================================================
 // FUNÇÃO PARA VISUALIZAR USUÁRIOS VINCULADOS À UNIDADE
-// -------------------------------------------------------------------------
+// ============================================================
 
 export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) => {
     if (!db || !unidadeId) {
@@ -460,6 +476,10 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
     }
 };
 
+// ============================================================
+// GERENCIADOR PRINCIPAL DE UNIDADES
+// ============================================================
+
 export const abrirGerenciadorUnidades = async (db) => {
     let unidades = await carregarUnidades(db);
     let filtroTexto = '';
@@ -491,10 +511,13 @@ export const abrirGerenciadorUnidades = async (db) => {
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Ver usuários vinculados">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         </button>
-                        <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1.5 rounded-full hover:bg-blue-50 transition-all" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
+                        <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1.5 rounded-full hover:bg-blue-50 transition-all" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" 
+                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
-                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
+                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                         <button class="btn-nova-recepcao text-purple-500 hover:text-purple-700 p-1.5 rounded-full hover:bg-purple-50 transition-all" 
@@ -534,11 +557,11 @@ export const abrirGerenciadorUnidades = async (db) => {
 
         container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
             btn.addEventListener('click', () => {
-                if (window.abrirModalNovaRecepcao) {
-                    window.abrirModalNovaRecepcao(window.app, {
+                if (globalApp) {
+                    abrirModalNovaRecepcao(globalApp, {
                         unidadeId: btn.dataset.id,
                         unidadeNome: btn.dataset.nome,
-                        orgaoId: btn.dataset.id // Se precisar de outro campo, ajuste aqui
+                        orgaoId: btn.dataset.id
                     });
                 } else {
                     showNotification("Módulo de Nova Recepção não carregado.", "error");
@@ -588,7 +611,10 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     modal.className = 'fixed inset-0 bg-black/60 z-[800] flex items-center justify-center p-4';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="bg-slate-800 px-6 py-4 sticky top-0 flex justify-between items-center"><h3 class="text-white font-black text-lg">${isEdicao ? 'Editar Unidade' : 'Nova Unidade'}</h3><button class="fechar-form-unidade text-white/60 hover:text-white text-3xl leading-none">&times;</button></div>
+            <div class="bg-slate-800 px-6 py-4 sticky top-0 flex justify-between items-center">
+                <h3 class="text-white font-black text-lg">${isEdicao ? 'Editar Unidade' : 'Nova Unidade'}</h3>
+                <button class="fechar-form-unidade text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
             <div class="p-6 space-y-4">
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Nome da Unidade *</label><input type="text" id="unidade-nome" value="${unidade?.nome || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: Defensoria Pública - Duque de Caxias"></div>
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${unidade?.sigla || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: DP Caxias"></div>
@@ -596,7 +622,10 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${unidade?.telefone || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="(21) 1234-5678"></div>
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${unidade?.email || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="contato@dperj.br"></div>
             </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0"><button class="fechar-form-unidade bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button><button id="btn-salvar-unidade" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">${isEdicao ? 'Salvar' : 'Criar'}</button></div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0">
+                <button class="fechar-form-unidade bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button>
+                <button id="btn-salvar-unidade" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">${isEdicao ? 'Salvar' : 'Criar'}</button>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -613,9 +642,9 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     });
 };
 
-// =========================================================================
+// ============================================================
 // MÓDULO DE GERENCIAMENTO DE USUÁRIOS (PAGINAÇÃO, BUSCA E FILTROS)
-// =========================================================================
+// ============================================================
 
 function renderPagination(containerId, currentPage, totalPages, onPageChange) {
     const container = document.getElementById(containerId);
@@ -652,6 +681,32 @@ function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
     const select = document.getElementById(`page-size-select-${containerId}`);
     if (select) {
         select.addEventListener('change', (e) => { if (onSizeChange) onSizeChange(parseInt(e.target.value)); });
+    }
+}
+
+function renderSearchInput(containerId, placeholder, onSearch) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <div class="relative">
+            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 border rounded-lg text-sm">
+            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">✕</button>
+        </div>
+    `;
+    const input = document.getElementById(`search-input-${containerId}`);
+    const clearBtn = document.getElementById(`clear-search-${containerId}`);
+    if (input) {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (clearBtn) clearBtn.classList.toggle('hidden', !val);
+            if (onSearch) onSearch(val);
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
+        });
     }
 }
 
@@ -748,7 +803,6 @@ function renderAprovadosTable(db) {
     }
     
     tableBody.innerHTML = paginated.map(user => {
-        // Mapeia o tamanho com base no novo array de objetos configurado
         const unidadesCount = user.unidades?.length || 0;
         const statusBadge = user.role === 'suspended' ? '<span class="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>' : '<span class="bg-green-100 text-green-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
         
@@ -784,8 +838,11 @@ function renderAprovadosTable(db) {
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             const userId = btn.dataset.userid;
-            // Executa o acoplamento do novo componente entregue na arquitetura
-            window.gerenciarUnidades(userId);
+            if (globalApp) {
+                abrirGerenciarUnidades(globalApp, userId);
+            } else {
+                showNotification("Erro: app não inicializado", "error");
+            }
         });
     });
     
@@ -798,32 +855,6 @@ function renderAprovadosTable(db) {
         adminFilters.usuarios.page = newPage;
         renderAprovadosTable(db);
     });
-}
-
-function renderSearchInput(containerId, placeholder, onSearch) {
-    const container = document.getElementById(containerId);
-    if (!container) return;
-    container.innerHTML = `
-        <div class="relative">
-            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 border rounded-lg text-sm">
-            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">✕</button>
-        </div>
-    `;
-    const input = document.getElementById(`search-input-${containerId}`);
-    const clearBtn = document.getElementById(`clear-search-${containerId}`);
-    if (input) {
-        input.addEventListener('input', (e) => {
-            const val = e.target.value;
-            if (clearBtn) clearBtn.classList.toggle('hidden', !val);
-            if (onSearch) onSearch(val);
-        });
-    }
-    if (clearBtn) {
-        clearBtn.addEventListener('click', () => {
-            if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
-        });
-    }
 }
 
 export const approveUser = async (db, userId) => {
@@ -853,51 +884,9 @@ export const deleteUser = async (db, userId) => {
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
-
-export const setupAdminEvents = (db) => {
-    document.getElementById('btn-unidades-master')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        abrirGerenciadorUnidades(this.db);
-    });
-    
-    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('view-audit-logs-btn');
-        if (btn) {
-            btn.textContent = "Carregando...";
-            btn.disabled = true;
-        }
-        await loadAuditLogs(this.db);
-        if (btn) {
-            btn.textContent = "🔍 Carregar Logs";
-            btn.disabled = false;
-        }
-    });
-    
-    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-        cleanupOldData(this.db);
-    });
-    
-    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-        loadDashboardData(this.db);
-    });
-    
-    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-        exportAuditLogsPDF(this.db);
-    });
-}
-// Vinculações globais do escopo Window
-window.approveUser = (userId) => approveUser(window.app?.db, userId);
-window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
-window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
-window.gerenciarUnidades = (userId) => abrirGerenciarUnidades(window.app, userId);
-window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
-window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
-window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => abrirModalUsuariosPorUnidade(window.app?.db, unidadeId, unidadeNome);
-
-// =========================================================================
+// ============================================================
 // MÓDULO DE AUDITORIA (COM PAGINAÇÃO E BUSCA)
-// =========================================================================
+// ============================================================
 
 export const loadLogFilters = async (db) => {
     try {
@@ -927,7 +916,7 @@ export const loadAuditLogs = async (db) => {
     if (!logsContainer || !tableBody) return;
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></table>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
@@ -1009,7 +998,7 @@ function renderLogsTable(db) {
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-             </tr>
+              </tr>
         `;
     }).join('');
     
@@ -1028,17 +1017,17 @@ export const setupAdminSearch = () => {
     renderSearchInput('search-pendentes', 'Buscar usuário pendente...', (val) => {
         adminFilters.pendentes.search = val;
         adminFilters.pendentes.page = 1;
-        loadUsersList(window.app?.db);
+        if (globalApp) loadUsersList(globalApp.db);
     });
     renderSearchInput('search-usuarios', 'Buscar usuário...', (val) => {
         adminFilters.usuarios.search = val;
         adminFilters.usuarios.page = 1;
-        loadUsersList(window.app?.db);
+        if (globalApp) loadUsersList(globalApp.db);
     });
     renderSearchInput('search-logs', 'Buscar logs...', (val) => {
         adminFilters.logs.search = val;
         adminFilters.logs.page = 1;
-        renderLogsTable(window.app?.db);
+        if (globalApp) renderLogsTable(globalApp.db);
     });
 };
 
@@ -1095,7 +1084,7 @@ export const cleanupOldData = async (db) => {
             }
         }
         showNotification(`Sucesso! ${count} registros limpos.`);
-        loadDashboardData(db);
+        if (window.loadDashboardData) window.loadDashboardData();
     } catch (error) { showNotification("Erro: " + error.message, "error"); }
 };
 
@@ -1149,20 +1138,132 @@ export const populateUserFilter = async (db) => {
     } catch (e) {}
 };
 
-// Listeners auxiliares de gatilho
-document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
-document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
-document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
-document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(window.app?.db));
+// ============================================================
+// SETUP DOS EVENTOS DO ADMIN
+// ============================================================
 
-window.cleanupOldData = () => cleanupOldData(window.app?.db);
-window.loadDashboardData = () => loadDashboardData(window.app?.db);
-window.populateUserFilter = () => populateUserFilter(window.app?.db);
-window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
-window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
+export const setupAdminEvents = (app) => {
+    globalApp = app;
+    const { db } = app;
+    
+    document.getElementById('btn-unidades-master')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirGerenciadorUnidades(db);
+    });
+    
+    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('view-audit-logs-btn');
+        if (btn) {
+            btn.textContent = "Carregando...";
+            btn.disabled = true;
+        }
+        await loadAuditLogs(db);
+        if (btn) {
+            btn.textContent = "🔍 Carregar Logs";
+            btn.disabled = false;
+        }
+    });
+    
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+        cleanupOldData(db);
+    });
+    
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+        loadDashboardData(db);
+    });
+    
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+        exportAuditLogsPDF(db);
+    });
+    
+    document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(db));
+    document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(db));
+    document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(db));
+    document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(db));
+};
+
+// ============================================================
+// VINCULAÇÕES GLOBAIS DO ESCOPO WINDOW
+// ============================================================
+
+window.approveUser = (userId) => {
+    if (globalApp) approveUser(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.updateUserRole = (userId) => {
+    if (globalApp) updateUserRole(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.deleteUser = (userId) => {
+    if (globalApp) deleteUser(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.gerenciarUnidades = (userId) => {
+    if (globalApp) abrirGerenciarUnidades(globalApp, userId);
+    else console.error("App não inicializado");
+};
+
+window.abrirGerenciadorUnidades = () => {
+    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.abrirImportadorUnidades = () => {
+    if (globalApp) abrirImportadorUnidades(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
+    if (globalApp) abrirModalUsuariosPorUnidade(globalApp.db, unidadeId, unidadeNome);
+    else console.error("App não inicializado");
+};
+
+window.abrirModalNovaRecepcao = (options) => {
+    if (globalApp) abrirModalNovaRecepcao(globalApp, options);
+    else console.error("App não inicializado");
+};
+
+window.renderEstruturaAtual = (container) => {
+    if (globalApp) renderEstruturaAtual(globalApp, container);
+    else console.error("App não inicializado");
+};
+
+window.cleanupOldData = () => {
+    if (globalApp) cleanupOldData(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.loadDashboardData = () => {
+    if (globalApp) loadDashboardData(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.populateUserFilter = () => {
+    if (globalApp) populateUserFilter(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.loadAuditLogs = () => {
+    if (globalApp) loadAuditLogs(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.exportAuditLogsPDF = () => {
+    if (globalApp) exportAuditLogsPDF(globalApp.db);
+    else console.error("App não inicializado");
+};
+
 window.setupAdminSearch = () => setupAdminSearch();
-// EXPORTE TUDO PARA O WINDOW CORRETAMENTE
-window.AdminService = {
+
+// ============================================================
+// EXPORTAÇÃO DO SERVIÇO ADMIN
+// ============================================================
+
+export const AdminService = {
     carregarUnidades,
     criarUnidade,
     atualizarUnidade,
@@ -1179,9 +1280,10 @@ window.AdminService = {
     approveUser,
     updateUserRole,
     deleteUser,
-    setupAdminEvents // Adicionamos aqui!
+    setupAdminEvents,
+    abrirModalNovaRecepcao,
+    renderEstruturaAtual
 };
 
 console.log("✅ AdminService registrado no window com sucesso.");
-
-console.log("✅ Módulo admin.js atualizado e acoplado com os novos componentes.");
+console.log("✅ Módulo admin.js atualizado e acoplado com todos os componentes (novaRecepcao, estruturaAtual, gerenciarUnidadesUsuario).");
