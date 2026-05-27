@@ -1777,10 +1777,14 @@ class SIGEPApp {
     setupAdminPanel() {
         const adminModal = document.getElementById('admin-modal');
         if (adminModal) {
-            loadUsersList(this.db);
-            populateUserFilter(this.db);
+            // Agora usamos o AdminService que acabamos de registrar no window
+            if (window.AdminService) {
+                window.AdminService.loadUsersList(this.db); // Se não existir, use loadUsersList(this.db) direto
+                window.AdminService.populateUserFilter(this.db);
+                window.AdminService.setupAdminEvents(this); 
+            }
+          }
         }
-    
         // ============================================================
         // BOTÃO MASTER: UNIDADES / ÓRGÃOS (UNIFICADO)
         // ============================================================
