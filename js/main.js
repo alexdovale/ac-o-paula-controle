@@ -82,6 +82,23 @@ class SIGEPApp {
         }
     }
 
+    // Adicione este método dentro da classe SIGEPApp
+    showAdminScreen() {
+        // 1. Marca no localStorage que a tela atual é a de admin
+        localStorage.setItem('sigep_active_screen', 'admin');
+    
+        // 2. Muda a visualização para a tela de admin (assume que 'admin' é um ID de tela válido no UIService)
+        if (typeof UIService !== 'undefined') {
+            UIService.showScreen('admin');
+        }
+    
+        // 3. Renderiza o conteúdo (tabelas, buscas, logs)
+        this.renderAdminContent();
+    
+        // 4. Garante que os eventos do painel estejam ativos
+        this.setupAdminPanel();
+    }
+
     async loadExternalModalsContent() {
         const modalsToLoad = [
             { selector: '#policy-content', url: './politica.html' },
