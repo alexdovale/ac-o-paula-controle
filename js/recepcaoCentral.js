@@ -1,5 +1,3 @@
-
-
 import {
     collection, doc, onSnapshot, updateDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -12,45 +10,45 @@ import { logAction } from './admin.js';
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
 
 const estado = {
-    pautasHoje: [],          // [{id, name, type, ...pautaData}]
-    assistidosPorPauta: {},  // { [pautaId]: [assistidos] }
-    colaboradoresPorPauta: {}, // { [pautaId]: [colaboradores] }
-    unsubscribers: [],       // listeners ativos
-    pautaFocadaId: null,     // pauta selecionada no modo de navegação
-    modoVisao: 'grade',      // 'grade' | 'foco'
+    pautasHoje: [],              // [{id, name, type, ...pautaData}]
+    assistidosPorPauta: {},      // { [pautaId]: [assistidos] }
+    colaboradoresPorPauta: {},   // { [pautaId]: [colaboradores] }
+    unsubscribers: [],           // listeners ativos
+    pautaFocadaId: null,         // pauta selecionada no modo de navegação
+    modoVisao: 'grade',          // 'grade' | 'foco'
     termoBusca: '',
-    recepcaoAtual: null,     // recepção selecionada atual
-    unidadeAtual: null,      // unidade selecionada atual
-    recepcoesDisponiveis: [], // cache das recepções do usuário
+    recepcaoAtual: null,
+    unidadeAtual: null,
+    recepcoesDisponiveis: [],
 };
 
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
 function statusLabel(status) {
     const map = {
-        pauta: { txt: 'Na Pauta', cor: 'bg-slate-100 text-slate-600' },
-        aguardando: { txt: 'Aguardando', cor: 'bg-amber-100 text-amber-700' },
-        emAtendimento: { txt: 'Em Atendimento', cor: 'bg-blue-100 text-blue-700' },
+        pauta:                  { txt: 'Na Pauta',     cor: 'bg-slate-100 text-slate-600' },
+        aguardando:             { txt: 'Aguardando',   cor: 'bg-amber-100 text-amber-700' },
+        emAtendimento:          { txt: 'Em Atendimento', cor: 'bg-blue-100 text-blue-700' },
         aguardandoDistribuicao: { txt: 'Distribuição', cor: 'bg-cyan-100 text-cyan-700' },
-        atendido: { txt: 'Atendido', cor: 'bg-green-100 text-green-700' },
-        faltoso: { txt: 'Faltoso', cor: 'bg-red-100 text-red-700' },
+        atendido:               { txt: 'Atendido',     cor: 'bg-green-100 text-green-700' },
+        faltoso:                { txt: 'Faltoso',      cor: 'bg-red-100 text-red-700' },
     };
     return map[status] || { txt: status, cor: 'bg-gray-100 text-gray-600' };
 }
 
 function contadores(assistidos) {
     return {
-        total: assistidos.length,
-        aguardando: assistidos.filter(a => a.status === 'aguardando').length,
-        emAtendimento: assistidos.filter(a => a.status === 'emAtendimento').length,
-        atendidos: assistidos.filter(a => a.status === 'atendido').length,
-        faltosos: assistidos.filter(a => a.status === 'faltoso').length,
+        total:        assistidos.length,
+        aguardando:   assistidos.filter(a => a.status === 'aguardando').length,
+        emAtendimento:assistidos.filter(a => a.status === 'emAtendimento').length,
+        atendidos:    assistidos.filter(a => a.status === 'atendido').length,
+        faltosos:     assistidos.filter(a => a.status === 'faltoso').length,
         distribuicao: assistidos.filter(a => a.status === 'aguardandoDistribuicao').length,
     };
 }
 
 function colaboradoresStatus(colaboradores) {
-    const livres = colaboradores.filter(c => c.status === 'disponivel' || !c.status);
+    const livres  = colaboradores.filter(c => c.status === 'disponivel' || !c.status);
     const ocupados = colaboradores.filter(c => c.status === 'ocupado');
     return { livres, ocupados };
 }
@@ -64,17 +62,13 @@ export const RecepçãoCentralService = {
     async init(app) {
         this._app = app;
 
-        // Verificar permissão
         const role = app.currentUser?.role;
         if (!['apoio', 'admin', 'superadmin'].includes(role)) {
             showNotification("Acesso restrito à Recepção Central.", "warning");
             return;
         }
 
-        // Carregar recepções disponíveis do usuário via Firestore
         await this._carregarRecepcoesDoUsuario();
-
-        // Mostrar seletor de recepções hierárquico
         await this._mostrarSelectorRecepcoes();
     },
 
@@ -88,26 +82,21 @@ export const RecepçãoCentralService = {
         return estado.recepcoesDisponiveis;
     },
 
-    // ─── SELETOR DE RECEPÇÃO HIERÁRQUICA ─────────────────────────────────────────
+    // ─── SELETOR DE RECEPÇÃO ──────────────────────────────────────────────────
 
     async _mostrarSelectorRecepcoes() {
         const recepcoes = estado.recepcoesDisponiveis;
-        
+
         if (recepcoes.length === 0) {
             this._renderSemPermissao();
             return;
         }
-        
+
         if (recepcoes.length === 1) {
-            // Única recepção - carrega direto sem seletor
             this._recepcaoAtual = recepcoes[0];
-            this._unidadeAtual = { 
-                id: recepcoes[0].unidadeId, 
-                nome: recepcoes[0].unidadeNome 
-            };
+            this._unidadeAtual  = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
             await this._carregarPautasPorRecepcao();
         } else {
-            // Múltiplas recepções - mostra seletor
             this._renderSelectorRecepcoes(recepcoes);
         }
     },
@@ -115,7 +104,7 @@ export const RecepçãoCentralService = {
     _renderSemPermissao() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-        
+
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-12 text-center">
                 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8">
@@ -128,16 +117,14 @@ export const RecepçãoCentralService = {
                 </div>
             </div>
         `;
-        
-        document.getElementById('rc-voltar-sem-permissao')?.addEventListener('click', () => {
-            this.fechar();
-        });
+
+        document.getElementById('rc-voltar-sem-permissao')?.addEventListener('click', () => this.fechar());
     },
 
     _renderSelectorRecepcoes(recepcoes) {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-        
+
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-6">
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
@@ -148,63 +135,51 @@ export const RecepçãoCentralService = {
                 </div>
             </div>
         `;
-        
-        // Adicionar eventos aos botões de recepção
+
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
-                const recepcaoId = btn.dataset.recepcaoId;
+                const recepcaoId      = btn.dataset.recepcaoId;
                 const recepcaoEncontrada = estado.recepcoesDisponiveis.find(r => r.id === recepcaoId);
-                
+
                 if (recepcaoEncontrada) {
                     this._recepcaoAtual = recepcaoEncontrada;
-                    this._unidadeAtual = { 
-                        id: recepcaoEncontrada.unidadeId, 
-                        nome: recepcaoEncontrada.unidadeNome 
-                    };
+                    this._unidadeAtual  = { id: recepcaoEncontrada.unidadeId, nome: recepcaoEncontrada.unidadeNome };
                     await this._carregarPautasPorRecepcao();
                 }
             });
         });
-        
-        document.getElementById('rc-voltar-selector')?.addEventListener('click', () => {
-            this.fechar();
-        });
+
+        document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
 
     // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
 
     async _carregarPautasPorRecepcao() {
         const app = this._app;
-        
-        // Mostrar loading
+
         this._mostrarLoading();
-        
-        // Buscar pautas do dia via PautaConfigService
+
         let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
             app.currentUser.email,
             app.currentUser.role
         );
-        
-        // Filtrar pela recepção selecionada usando o RecepcaoConfigService
+
         if (this._recepcaoAtual && this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
-        
+
         estado.pautasHoje = pautas;
-        
-        // Iniciar listeners em tempo real
+
         await this._iniciarListeners();
-        
-        // Renderizar tela com contexto da recepção
         this._renderTelaComContexto();
     },
 
     _mostrarLoading() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-        
+
         container.innerHTML = `
             <div class="flex justify-center items-center h-64">
                 <div class="text-center">
@@ -217,13 +192,12 @@ export const RecepçãoCentralService = {
 
     async _iniciarListeners() {
         const app = this._app;
-        
-        // Cancelar listeners anteriores
+
         this._cancelarListeners();
-        
+
         for (const pauta of estado.pautasHoje) {
             // Listener de assistidos
-            const refAt = collection(app.db, "pautas", pauta.id, "attendances");
+            const refAt  = collection(app.db, "pautas", pauta.id, "attendances");
             const unsubAt = onSnapshot(refAt, (snap) => {
                 estado.assistidosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 if (estado.modoVisao === 'grade') {
@@ -233,9 +207,9 @@ export const RecepçãoCentralService = {
                 }
                 this._atualizarPainelPublicoUltimoChamado(pauta.id);
             });
-            
+
             // Listener de colaboradores
-            const refCo = collection(app.db, "pautas", pauta.id, "collaborators");
+            const refCo  = collection(app.db, "pautas", pauta.id, "collaborators");
             const unsubCo = onSnapshot(refCo, (snap) => {
                 estado.colaboradoresPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 if (estado.modoVisao === 'grade') {
@@ -244,7 +218,7 @@ export const RecepçãoCentralService = {
                     this._renderFoco(pauta.id);
                 }
             });
-            
+
             estado.unsubscribers.push(unsubAt, unsubCo);
         }
     },
@@ -254,17 +228,17 @@ export const RecepçãoCentralService = {
         estado.unsubscribers = [];
     },
 
-    // ── RENDER TELA COM CONTEXTO DA RECEPÇÃO ───────────────────────────────────
+    // ── RENDER TELA PRINCIPAL ─────────────────────────────────────────────────
 
     _renderTelaComContexto() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-        
+
         const contexto = RecepcaoConfigService.getContextoRecepcao(this._recepcaoAtual);
-        
+
         container.innerHTML = `
             <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4">
-                
+
                 <!-- CONTEXTO DA RECEPÇÃO ATUAL -->
                 <div class="mb-4 ${contexto.cor} rounded-2xl p-4 shadow-lg">
                     <div class="flex items-center justify-between flex-wrap gap-3">
@@ -288,7 +262,10 @@ export const RecepçãoCentralService = {
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
                         <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
                     </div>
-                    <div class="flex gap-2 w-full sm:w-auto">
+                    <div class="flex gap-2 w-full sm:w-auto flex-wrap">
+                        <button id="rc-btn-painel-geral" class="flex-1 sm:flex-none flex items-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow" title="Abrir painel público da recepção em nova aba">
+                            📺 Painel Geral
+                        </button>
                         <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
                             🔍 Busca Global
                         </button>
@@ -301,7 +278,7 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <!-- BUSCA GLOBAL (oculta por padrão) -->
+                <!-- BUSCA GLOBAL -->
                 <div id="rc-busca-global-wrap" class="hidden mb-4 animate-fade-in">
                     <div class="relative">
                         <input type="search" id="rc-input-busca" placeholder="Digite nome ou nº de agendamento para buscar em todas as pautas..."
@@ -317,17 +294,16 @@ export const RecepçãoCentralService = {
                 <!-- GRADE DE PAUTAS -->
                 <div id="rc-grade-pautas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
-                <!-- PAINEL DE FOCO (oculto por padrão) -->
+                <!-- PAINEL DE FOCO -->
                 <div id="rc-painel-foco" class="hidden"></div>
 
             </div>
         `;
-        
+
         this._renderGrade();
         this._renderSumario();
         this._setupInteracoes();
-        
-        // Botão trocar recepção
+
         document.getElementById('rc-trocar-recepcao')?.addEventListener('click', async () => {
             this._cancelarListeners();
             await this._carregarRecepcoesDoUsuario();
@@ -356,19 +332,39 @@ export const RecepçãoCentralService = {
     },
 
     _htmlCardPauta(pauta) {
-        const assistidos = estado.assistidosPorPauta[pauta.id] || [];
+        const assistidos    = estado.assistidosPorPauta[pauta.id] || [];
         const colaboradores = estado.colaboradoresPorPauta[pauta.id] || [];
         const c = contadores(assistidos);
         const { livres, ocupados } = colaboradoresStatus(colaboradores);
 
         const porcentagem = c.total > 0 ? Math.round((c.atendidos / c.total) * 100) : 0;
-        
-        // Badge de sala/local se tiver
-        const salaBadge = pauta.sala ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>` : '';
+
+        const salaBadge = pauta.sala
+            ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>`
+            : '';
+
+        // Lista de pessoas aguardando (máx 5)
+        const aguardando = PautaService.sortAguardando(
+            assistidos.filter(a => a.status === 'aguardando'),
+            pauta.ordemAtendimento
+        );
+
+        const listaNomes = aguardando.length === 0
+            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila agora.</p>`
+            : aguardando.slice(0, 5).map((a, i) => `
+                <div class="flex items-center gap-2 py-1 border-b border-slate-100 last:border-0">
+                    <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
+                    <span class="text-xs font-semibold text-slate-700 truncate flex-1">${escapeHTML(a.name)}</span>
+                    <span class="text-[9px] text-slate-400 shrink-0">${a.scheduledTime || ''}</span>
+                </div>
+            `).join('')
+            + (aguardando.length > 5
+                ? `<p class="text-[10px] text-slate-400 text-center pt-1">+${aguardando.length - 5} mais na fila</p>`
+                : '');
 
         return `
             <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col" data-pauta-id="${pauta.id}">
-                
+
                 <!-- Cabeçalho do card -->
                 <div class="bg-slate-800 px-5 py-4 flex justify-between items-start gap-2">
                     <div class="min-w-0">
@@ -402,6 +398,14 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
+                <!-- Fila de espera com nomes -->
+                <div class="px-5 pt-3 pb-2 border-b border-slate-100">
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">📋 Fila de Espera</p>
+                    <div class="space-y-0">
+                        ${listaNomes}
+                    </div>
+                </div>
+
                 <!-- Equipe -->
                 <div class="px-5 py-3 flex items-center gap-3 border-b border-slate-100">
                     <div class="flex items-center gap-1.5">
@@ -412,7 +416,9 @@ export const RecepçãoCentralService = {
                         <span class="w-2 h-2 rounded-full bg-red-500"></span>
                         <span class="text-xs font-bold text-red-600">${ocupados.length} ocupados</span>
                     </div>
-                    ${c.distribuicao > 0 ? `<div class="ml-auto"><span class="bg-cyan-100 text-cyan-700 text-[10px] font-black px-2 py-0.5 rounded border border-cyan-200">⚖️ ${c.distribuicao} dist.</span></div>` : ''}
+                    ${c.distribuicao > 0
+                        ? `<div class="ml-auto"><span class="bg-cyan-100 text-cyan-700 text-[10px] font-black px-2 py-0.5 rounded border border-cyan-200">⚖️ ${c.distribuicao} dist.</span></div>`
+                        : ''}
                 </div>
 
                 <!-- Ações rápidas -->
@@ -422,6 +428,9 @@ export const RecepçãoCentralService = {
                     </button>
                     <button class="rc-btn-chamar flex-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
                         📣 Chamar
+                    </button>
+                    <button class="rc-btn-acomp bg-slate-600 hover:bg-slate-700 text-white font-bold text-xs px-3 py-2 rounded-lg transition" data-pauta-id="${pauta.id}" title="Acompanhamento público desta pauta">
+                        🔗
                     </button>
                     <button class="rc-btn-abrir flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
                         Abrir →
@@ -449,9 +458,9 @@ export const RecepçãoCentralService = {
         let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0;
         for (const assistidos of Object.values(estado.assistidosPorPauta)) {
             const c = contadores(assistidos);
-            totalAg += c.aguardando;
-            totalAt += c.atendidos;
-            totalEm += c.emAtendimento;
+            totalAg   += c.aguardando;
+            totalAt   += c.atendidos;
+            totalEm   += c.emAtendimento;
             totalDist += c.distribuicao;
         }
 
@@ -479,7 +488,7 @@ export const RecepçãoCentralService = {
 
     _abrirFoco(pautaId) {
         estado.pautaFocadaId = pautaId;
-        estado.modoVisao = 'foco';
+        estado.modoVisao     = 'foco';
 
         document.getElementById('rc-grade-pautas').classList.add('hidden');
         document.getElementById('rc-sumario').classList.add('hidden');
@@ -491,7 +500,7 @@ export const RecepçãoCentralService = {
 
     _fecharFoco() {
         estado.pautaFocadaId = null;
-        estado.modoVisao = 'grade';
+        estado.modoVisao     = 'grade';
         document.getElementById('rc-grade-pautas').classList.remove('hidden');
         document.getElementById('rc-sumario').classList.remove('hidden');
         document.getElementById('rc-painel-foco').classList.add('hidden');
@@ -504,7 +513,7 @@ export const RecepçãoCentralService = {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
 
-        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const assistidos    = estado.assistidosPorPauta[pautaId] || [];
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         const c = contadores(assistidos);
         const { livres, ocupados } = colaboradoresStatus(colaboradores);
@@ -525,6 +534,9 @@ export const RecepçãoCentralService = {
                         <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total</p>
                     </div>
                     <div class="flex gap-2">
+                        <button id="rc-foco-btn-acomp" class="bg-slate-600 hover:bg-slate-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition" title="Acompanhamento público desta pauta">
+                            🔗 Externo
+                        </button>
                         <button id="rc-foco-btn-chamar" class="bg-green-600 hover:bg-green-700 text-white font-black px-5 py-2.5 rounded-xl text-sm transition shadow">
                             📣 Chamar Próximo
                         </button>
@@ -546,7 +558,7 @@ export const RecepçãoCentralService = {
                                             <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
                                             <p class="text-[10px] text-slate-500 truncate">${escapeHTML(a.subject || '')}</p>
                                         </div>
-                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1 rounded-lg transition" 
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1 rounded-lg transition"
                                             data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
                                     </div>
                                 `).join('')
@@ -576,14 +588,14 @@ export const RecepçãoCentralService = {
                         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
                             ${colaboradores.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador.</p>`
-                                : colaboradores.map(c => {
-                                    const livre = c.status === 'disponivel' || !c.status;
+                                : colaboradores.map(col => {
+                                    const livre = col.status === 'disponivel' || !col.status;
                                     return `
                                         <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
                                             <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
                                             <div class="min-w-0">
-                                                <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(c.nome)}</p>
-                                                <p class="text-[10px] text-slate-400">${escapeHTML(c.cargo || '')}</p>
+                                                <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
+                                                <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
                                             </div>
                                             <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
                                         </div>
@@ -597,8 +609,13 @@ export const RecepçãoCentralService = {
         `;
 
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
+
         document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => {
             await this._chamarProximo(pautaId);
+        });
+
+        document.getElementById('rc-foco-btn-acomp')?.addEventListener('click', () => {
+            window.open(`acompanhamento.html?id=${pautaId}`, '_blank');
         });
 
         foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
@@ -615,7 +632,7 @@ export const RecepçãoCentralService = {
         if (!input) return;
 
         input.addEventListener('input', () => {
-            const termo = normalizeText(input.value.trim());
+            const termo     = normalizeText(input.value.trim());
             const resultados = document.getElementById('rc-resultados-busca');
             if (!resultados) return;
 
@@ -642,7 +659,7 @@ export const RecepçãoCentralService = {
             }
 
             resultados.innerHTML = encontrados.map(({ pauta, assistido: a }) => {
-                const sl = statusLabel(a.status);
+                const sl          = statusLabel(a.status);
                 const podeCheckin = a.status === 'pauta';
                 return `
                     <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
@@ -664,7 +681,7 @@ export const RecepçãoCentralService = {
             resultados.querySelectorAll('.rc-busca-checkin').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this._marcarChegada(btn.dataset.pauta, btn.dataset.id);
-                    input.value = '';
+                    input.value        = '';
                     resultados.innerHTML = '';
                     document.getElementById('rc-busca-global-wrap').classList.add('hidden');
                 });
@@ -681,8 +698,8 @@ export const RecepçãoCentralService = {
             pautaId,
             assistidoId,
             {
-                status: 'aguardando',
-                arrivalTime: new Date().toISOString(),
+                status:       'aguardando',
+                arrivalTime:  new Date().toISOString(),
                 checkInOrder: Date.now(),
             },
             app.currentUserName
@@ -692,7 +709,7 @@ export const RecepçãoCentralService = {
     },
 
     async _chamarProximo(pautaId) {
-        const app = this._app;
+        const app   = this._app;
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
 
@@ -722,22 +739,31 @@ export const RecepçãoCentralService = {
     },
 
     _registrarUltimoChamado(pautaId, assistido, pautaNome) {
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+
         const chamado = {
-            nome: assistido.name,
-            assunto: assistido.subject || '',
-            local: pautaNome,
+            nome:      assistido.name,
+            assunto:   assistido.subject || '',
+            local:     pautaNome,
+            pautaNome: pautaNome,
+            sala:      pauta?.sala || assistido.room || '',
             pautaId,
-            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            hora:      new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             timestamp: Date.now(),
         };
 
+        // Salva no localStorage por pauta (para acompanhamento.html individual)
         const chave = `sigep_chamados_${pautaId}`;
         let historico = [];
         try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
         historico.unshift(chamado);
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
+
+        // Salva global (para acompanhamento-recepcao.html)
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
+
+        // Dispara evento (capturado pelo acompanhamento aberto na mesma aba)
         window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
     },
 
@@ -760,16 +786,17 @@ export const RecepçãoCentralService = {
     // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
 
     _setupInteracoes() {
-        document.getElementById('rc-btn-fechar')?.addEventListener('click', () => {
-            this.fechar();
-        });
+        // Fechar
+        document.getElementById('rc-btn-fechar')?.addEventListener('click', () => this.fechar());
 
+        // Atualizar
         document.getElementById('rc-btn-atualizar')?.addEventListener('click', async () => {
             this._cancelarListeners();
             await this._carregarPautasPorRecepcao();
             showNotification("Dados atualizados!", "info");
         });
 
+        // Busca global
         document.getElementById('rc-btn-busca-global')?.addEventListener('click', () => {
             const wrap = document.getElementById('rc-busca-global-wrap');
             wrap.classList.toggle('hidden');
@@ -779,6 +806,24 @@ export const RecepçãoCentralService = {
             }
         });
 
+        // Painel Geral — abre acompanhamento-recepcao.html com todas as pautas
+        document.getElementById('rc-btn-painel-geral')?.addEventListener('click', () => {
+            const ids  = estado.pautasHoje.map(p => p.id).join(',');
+            const nome = encodeURIComponent(
+                this._recepcaoAtual?.nome ||
+                this._recepcaoAtual?.name ||
+                'Recepção'
+            );
+
+            if (!ids) {
+                showNotification("Nenhuma pauta ativa para exibir.", "info");
+                return;
+            }
+
+            window.open(`acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}`, '_blank');
+        });
+
+        // Cliques na grade de cards
         document.getElementById('rc-grade-pautas')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-pauta-id]');
             if (!btn) return;
@@ -788,24 +833,29 @@ export const RecepçãoCentralService = {
                 this._abrirModalCheckin(pautaId);
             } else if (btn.classList.contains('rc-btn-chamar')) {
                 this._chamarProximo(pautaId);
+            } else if (btn.classList.contains('rc-btn-acomp')) {
+                // Acompanhamento público individual da pauta (acompanhamento.html existente)
+                window.open(`acompanhamento.html?id=${pautaId}`, '_blank');
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
             }
         });
     },
 
+    // ── MODAL CHECK-IN ─────────────────────────────────────────────────────────
+
     _abrirModalCheckin(pautaId) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
 
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
-        const naPauta = assistidos.filter(a => a.status === 'pauta');
+        const naPauta    = assistidos.filter(a => a.status === 'pauta');
 
         const existing = document.getElementById('rc-modal-checkin');
         if (existing) existing.remove();
 
         const modal = document.createElement('div');
-        modal.id = 'rc-modal-checkin';
+        modal.id        = 'rc-modal-checkin';
         modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4';
         modal.innerHTML = `
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
@@ -814,7 +864,7 @@ export const RecepçãoCentralService = {
                     <button id="rc-modal-checkin-close" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">×</button>
                 </div>
                 <div class="p-5">
-                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..." 
+                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..."
                         class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     <div id="rc-modal-lista" class="space-y-2 max-h-72 overflow-y-auto">
                         ${naPauta.length === 0
@@ -846,14 +896,14 @@ export const RecepçãoCentralService = {
             const t = normalizeText(e.target.value);
             modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
                 const linha = btn.closest('div.flex');
-                const nome = normalizeText(btn.dataset.nome);
+                const nome  = normalizeText(btn.dataset.nome);
                 linha.style.display = nome.includes(t) ? '' : 'none';
             });
         });
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                btn.disabled = true;
+                btn.disabled    = true;
                 btn.textContent = '...';
                 await this._marcarChegada(pautaId, btn.dataset.id);
                 btn.closest('div.flex').remove();
