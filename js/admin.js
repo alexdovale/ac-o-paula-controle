@@ -337,7 +337,7 @@ export const abrirImportadorUnidades = async (db) => {
                     <div id="preview-unidades" class="hidden">
                         <h4 class="font-bold text-slate-700 mb-3">📋 Prévia</h4>
                         <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto">
-                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
+                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody>可能有
                         </div>
                     </div>
                 </div>
@@ -441,6 +441,82 @@ export const abrirImportadorUnidades = async (db) => {
     document.getElementById('btn-baixar-modelo-json-unidades')?.addEventListener('click', baixarModeloJSONUnidades);
 };
 
+// -------------------------------------------------------------------------
+// 2. FUNÇÃO PARA VISUALIZAR USUÁRIOS VINCULADOS À UNIDADE (NOVO MÓDULO)
+// -------------------------------------------------------------------------
+
+export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) => {
+    // Validação inicial
+    if (!db || !unidadeId) {
+        showNotification("Erro ao abrir: dados da unidade não encontrados.", "error");
+        return;
+    }
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4';
+    
+    // Adiciona loading
+    modal.innerHTML = `<div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl text-center"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600">Carregando usuários vinculados a ${escapeHTML(unidadeNome)}...</p></div>`;
+    document.body.appendChild(modal);
+
+    try {
+        const usersSnap = await getDocs(collection(db, "users"));
+        const usuariosVinculados = usersSnap.docs
+            .map(d => ({ id: d.id, ...d.data() }))
+            .filter(u => u.unidadesPermitidas?.includes(unidadeId) && u.status !== 'pending' && u.role !== 'suspended'); // Filtra apenas aprovados e não suspensos
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh] animate-fadeIn">
+                <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="font-black text-lg flex items-center gap-2">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                            Usuários Vinculados
+                        </h3>
+                        <p class="text-emerald-100 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
+                    </div>
+                    <button id="fechar-usuarios-unidade" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+                <div class="p-4 overflow-y-auto flex-1">
+                    ${usuariosVinculados.length > 0 
+                        ? `<div class="space-y-2">
+                            <div class="text-xs text-gray-500 mb-2 px-1">Total: <span class="font-bold text-emerald-600">${usuariosVinculados.length}</span> usuário(s)</div>
+                            ${usuariosVinculados.map(u => `
+                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 hover:shadow-sm transition-all">
+                                <div class="flex justify-between items-start">
+                                    <div class="flex-1">
+                                        <p class="font-bold text-gray-800 text-sm flex items-center gap-2">
+                                            ${escapeHTML(u.name || 'Sem nome')}
+                                            <span class="text-[9px] ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} px-2 py-0.5 rounded-full uppercase font-mono">${u.role || 'user'}</span>
+                                        </p>
+                                        <p class="text-xs text-gray-500 mt-0.5 break-all">${escapeHTML(u.email || '')}</p>
+                                    </div>
+                                </div>
+                            </div>`).join('')}
+                          </div>`
+                        : '<div class="text-center py-12 text-gray-400"><svg class="w-12 h-12 mx-auto mb-3 text-gray-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"></path></svg><p>Nenhum usuário ativo vinculado a esta unidade.</p></div>'
+                    }
+                </div>
+                <div class="p-4 border-t bg-gray-50 flex justify-end shrink-0">
+                    <button id="fechar-usuarios-unidade-footer" class="bg-gray-200 hover:bg-gray-300 px-5 py-2 rounded-xl text-sm font-bold transition-colors">Fechar</button>
+                </div>
+            </div>
+        `;
+
+        const closeModal = () => modal.remove();
+        document.getElementById('fechar-usuarios-unidade')?.addEventListener('click', closeModal);
+        document.getElementById('fechar-usuarios-unidade-footer')?.addEventListener('click', closeModal);
+        
+        // Fecha ao clicar fora do modal (opcional)
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        
+    } catch (error) {
+        console.error("Erro ao carregar usuários da unidade:", error);
+        showNotification("Erro ao carregar usuários da unidade.", "error");
+        modal.remove();
+    }
+};
+
 export const abrirGerenciadorUnidades = async (db) => {
     let unidades = await carregarUnidades(db);
     let filtroTexto = '';
@@ -460,24 +536,32 @@ export const abrirGerenciadorUnidades = async (db) => {
         }
         
         container.innerHTML = filtradas.map(unidade => `
-            <div class="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition">
+            <div class="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-all duration-200">
                 <div class="flex justify-between items-start">
-                    <div>
+                    <div class="flex-1">
                         <h4 class="font-bold text-slate-800 text-base">${escapeHTML(unidade.nome)}</h4>
                         <p class="text-xs text-slate-500">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
                         ${unidade.endereco ? `<p class="text-[10px] text-slate-400 mt-1">📍 ${escapeHTML(unidade.endereco)}</p>` : ''}
                     </div>
-                    <div class="flex gap-2">
-                        <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
+                    <div class="flex gap-1">
+                        <button class="btn-ver-usuarios text-emerald-600 hover:text-emerald-800 p-1.5 rounded-full hover:bg-emerald-50 transition-all" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Ver usuários vinculados">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                        </button>
+                        <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1.5 rounded-full hover:bg-blue-50 transition-all" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
-                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
+                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                     </div>
                 </div>
             </div>
         `).join('');
+        
+        document.querySelectorAll('.btn-ver-usuarios').forEach(btn => {
+            btn.addEventListener('click', () => abrirModalUsuariosPorUnidade(db, btn.dataset.id, btn.dataset.nome));
+        });
         
         document.querySelectorAll('.btn-editar-unidade').forEach(btn => {
             btn.addEventListener('click', () => abrirModalFormUnidade(db, {
@@ -507,8 +591,16 @@ export const abrirGerenciadorUnidades = async (db) => {
     modal.className = 'fixed inset-0 bg-black/70 z-[700] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <!-- 1. INCLUSÃO DA LOGO (IDENTIDADE VISUAL) - HEADER ATUALIZADO -->
             <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div><h2 class="text-xl font-black text-white flex items-center gap-2"><span>🏢</span> Gerenciar Unidades / Órgãos</h2><p class="text-slate-300 text-sm mt-1">Cadastre e gerencie as unidades que aparecerão no sistema</p></div>
+                <div class="flex items-center gap-4">
+                    <!-- Substitua o src pelo caminho correto da sua logo -->
+                    <img src="/assets/logo-sigep-branca.png" alt="Logo SIGEP" class="h-12 w-12 object-contain drop-shadow-md" onerror="this.style.display='none'">
+                    <div>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
+                        <p class="text-slate-300 text-sm mt-0.5">SIGEP - Defensoria Pública</p>
+                    </div>
+                </div>
                 <button id="fechar-gerenciador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
             <div class="flex-1 overflow-y-auto p-6">
@@ -565,32 +657,80 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     });
 };
 
+// -------------------------------------------------------------------------
+// 3. REFINAMENTO DE UNIDADE-USUÁRIO (COM CONTADOR E MELHORIA NA LISTA)
+// -------------------------------------------------------------------------
+
 export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, unidadesAtuais = []) => {
     let todasUnidades = await carregarUnidades(db);
     let filtroTexto = '';
     let unidadesSelecionadas = [...unidadesAtuais];
     
     const renderUnidades = () => {
-        const filtradas = todasUnidades.filter(u => u.nome.toLowerCase().includes(filtroTexto.toLowerCase()) || (u.sigla || '').toLowerCase().includes(filtroTexto.toLowerCase()));
+        const filtradas = todasUnidades.filter(u => 
+            u.nome.toLowerCase().includes(filtroTexto.toLowerCase()) || 
+            (u.sigla || '').toLowerCase().includes(filtroTexto.toLowerCase())
+        );
         const container = document.getElementById('lista-unidades-checkbox');
         if (!container) return;
-        container.innerHTML = filtradas.map(unidade => `<label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition ${unidadesSelecionadas.includes(unidade.id) ? 'bg-blue-50 border-blue-300' : ''}" data-id="${unidade.id}"><input type="checkbox" name="unidade" value="${unidade.id}" ${unidadesSelecionadas.includes(unidade.id) ? 'checked' : ''} class="h-4 w-4 text-green-600 rounded"><div class="flex-1"><span class="font-bold text-gray-800">${escapeHTML(unidade.nome)}</span><p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p></div><button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">✕ Remover</button></label>`).join('');
-        if (filtradas.length === 0) container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
+        
+        if (filtradas.length === 0) {
+            container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
+            return;
+        }
+        
+        container.innerHTML = filtradas.map(unidade => `
+            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-gray-50 transition-all ${unidadesSelecionadas.includes(unidade.id) ? 'bg-emerald-50 border-emerald-300 shadow-sm' : ''}" data-id="${unidade.id}">
+                <input type="checkbox" name="unidade" value="${unidade.id}" ${unidadesSelecionadas.includes(unidade.id) ? 'checked' : ''} class="h-4 w-4 text-emerald-600 rounded focus:ring-emerald-500">
+                <div class="flex-1">
+                    <span class="font-bold text-gray-800 text-sm">${escapeHTML(unidade.nome)}</span>
+                    <p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p>
+                </div>
+                <button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
+                    ✕ Remover
+                </button>
+            </label>
+        `).join('');
+        
+        // Atualiza o contador de selecionados
+        const contadorSpan = document.getElementById('contador-selecionadas-valor');
+        if (contadorSpan) contadorSpan.innerText = unidadesSelecionadas.length;
+        
+        // Adiciona eventos aos checkboxes
         container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 e.stopPropagation();
                 const id = cb.value;
-                if (cb.checked) { if (!unidadesSelecionadas.includes(id)) unidadesSelecionadas.push(id); }
-                else { unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); }
+                if (cb.checked) { 
+                    if (!unidadesSelecionadas.includes(id)) unidadesSelecionadas.push(id); 
+                } else { 
+                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); 
+                }
                 const label = cb.closest('label');
-                if (label) cb.checked ? label.classList.add('bg-blue-50', 'border-blue-300') : label.classList.remove('bg-blue-50', 'border-blue-300');
+                if (label) {
+                    if (cb.checked) {
+                        label.classList.add('bg-emerald-50', 'border-emerald-300', 'shadow-sm');
+                    } else {
+                        label.classList.remove('bg-emerald-50', 'border-emerald-300', 'shadow-sm');
+                    }
+                }
+                // Re-renderiza para atualizar o contador e o estado dos botões "remover"
+                renderUnidades();
             });
         });
+        
+        // Adiciona eventos aos botões de remoção individual
         container.querySelectorAll('.btn-remover-unidade-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.preventDefault(); e.stopPropagation();
-                const id = btn.dataset.id, nome = btn.dataset.nome;
-                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) { unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); renderUnidades(); showNotification(`Unidade "${nome}" removida.`, "info"); }
+                e.preventDefault(); 
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const nome = btn.dataset.nome;
+                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) { 
+                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); 
+                    renderUnidades(); 
+                    showNotification(`Unidade "${nome}" removida.`, "info"); 
+                }
             });
         });
     };
@@ -598,23 +738,64 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/60 z-[600] flex items-center justify-center p-4';
     modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center shrink-0"><div><h3 class="text-white font-black text-lg">Gerenciar Unidades</h3><p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p></div><button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button></div>
-            <div class="flex-1 overflow-y-auto p-6"><div class="relative mb-4"><input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span></div><p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p><div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto"></div><div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200"><p class="text-[10px] text-amber-700 font-bold">⚠️ Atenção:</p><p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p></div></div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t"><button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button><button id="btn-salvar-unidades-usuario" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">Salvar</button></div>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg max-h-[85vh] overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-white font-black text-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
+                        Gerenciar Unidades
+                    </h3>
+                    <p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p>
+                </div>
+                <button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            <div class="flex-1 overflow-y-auto p-6">
+                <div class="relative mb-4">
+                    <input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
+                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+                </div>
+                <!-- 3. CONTADOR DE UNIDADES SELECIONADAS (NOVO) -->
+                <div class="mb-4 flex justify-between items-center bg-slate-100 p-3 rounded-xl">
+                    <span class="text-xs font-bold text-slate-600">Unidades selecionadas:</span>
+                    <span id="contador-selecionadas-valor" class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">${unidadesSelecionadas.length}</span>
+                </div>
+                <p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p>
+                <div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto pr-1"></div>
+                <div class="mt-4 p-3 bg-amber-50 rounded-xl border border-amber-200">
+                    <p class="text-[10px] text-amber-700 font-bold flex items-center gap-1">⚠️ Atenção:</p>
+                    <p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p>
+                </div>
+            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t">
+                <button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                <button id="btn-salvar-unidades-usuario" class="bg-emerald-600 text-white px-6 py-2 rounded-lg hover:bg-emerald-700 transition font-bold shadow-md">Salvar</button>
+            </div>
         </div>
     `;
     document.body.appendChild(modal);
     renderUnidades();
-    document.getElementById('pesquisa-unidades-usuario')?.addEventListener('input', (e) => { filtroTexto = e.target.value; renderUnidades(); });
+    
+    const searchInput = document.getElementById('pesquisa-unidades-usuario');
+    if (searchInput) {
+        searchInput.addEventListener('input', (e) => { 
+            filtroTexto = e.target.value; 
+            renderUnidades(); 
+        });
+    }
+    
     const fechar = () => modal.remove();
     modal.querySelectorAll('.fechar-modal-unidades').forEach(btn => btn.addEventListener('click', fechar));
-    document.getElementById('btn-salvar-unidades-usuario')?.addEventListener('click', async () => {
-        await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
-        showNotification(`Unidades do usuário ${userNome} atualizadas!`, "success");
-        fechar();
-        setTimeout(() => loadUsersList(db), 500);
-    });
+    
+    const btnSalvar = document.getElementById('btn-salvar-unidades-usuario');
+    if (btnSalvar) {
+        btnSalvar.addEventListener('click', async () => {
+            await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
+            showNotification(`Unidades do usuário ${userNome} atualizadas!`, "success");
+            fechar();
+            // Recarrega a lista de usuários se a função estiver disponível
+            if (typeof loadUsersList === 'function') setTimeout(() => loadUsersList(db), 500);
+        });
+    }
 };
 
 // =========================================================================
@@ -862,6 +1043,7 @@ window.deleteUser = (userId) => deleteUser(window.app?.db, userId);
 window.gerenciarUnidades = (userId, userNome, userEmail, unidadesAtuais) => gerenciarUnidadesUsuario(window.app?.db, userId, userNome, userEmail, unidadesAtuais);
 window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
+window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => abrirModalUsuariosPorUnidade(window.app?.db, unidadeId, unidadeNome);
 
 // =========================================================================
 // MÓDULO DE AUDITORIA (COM PAGINAÇÃO E BUSCA)
@@ -928,7 +1110,7 @@ export const loadAuditLogs = async (db) => {
         
     } catch (error) {
         console.error("Erro ao carregar logs:", error);
-        tableBody.innerHTML = ` hilab<td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td></tr>`;
     }
 };
 
@@ -978,7 +1160,7 @@ function renderLogsTable(db) {
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-            </tr>
+             </tr>
         `;
     }).join('');
     
@@ -1203,4 +1385,4 @@ window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db)
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 window.setupAdminSearch = () => setupAdminSearch();
 
-console.log("✅ Módulo admin.js carregado com sucesso (com paginação, busca e seleção de itens por página)");
+console.log("✅ Módulo admin.js carregado com sucesso (com logo, visualização de usuários e refinamento de UI)");
