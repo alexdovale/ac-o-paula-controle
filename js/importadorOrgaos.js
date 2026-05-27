@@ -228,17 +228,64 @@ export const ImportadorOrgaosService = {
                 </div>
 
                 <!-- ABA: ESTRUTURA ATUAL (GERENCIAMENTO) -->
-                <div id="painel-estrutura" class="hidden p-6">
-                    <div class="flex justify-between items-center mb-4">
-                        <h3 class="font-black text-slate-800 text-base">Estrutura importada no sistema</h3>
-                        <button id="btn-nova-unidade-manual" class="bg-purple-600 text-white px-4 py-2 rounded-lg hover:bg-purple-700 font-bold text-sm">
-                            + Nova Unidade
-                        </button>
-                    </div>
-                    <div id="lista-estrutura-atual" class="space-y-3">
-                        <div class="flex justify-center py-12"><div class="animate-spin rounded-full h-8 w-8 border-b-2 border-purple-600"></div></div>
-                    </div>
-                </div>
+<div id="painel-estrutura" class="hidden flex flex-col h-full">
+
+    <!-- Toolbar de busca e filtros -->
+    <div class="px-6 pt-5 pb-4 border-b border-zinc-200 bg-zinc-50 space-y-3">
+        <div class="flex items-center justify-between gap-3">
+            <h3 class="font-black text-zinc-800 text-sm tracking-tight">Unidades Cadastradas</h3>
+            <button id="btn-nova-unidade-manual"
+                class="bg-zinc-800 hover:bg-zinc-700 text-white text-xs font-bold px-4 py-2 rounded-lg transition flex items-center gap-1.5 shrink-0">
+                <span class="text-base leading-none">+</span> Nova Unidade
+            </button>
+        </div>
+
+        <!-- Barra de pesquisa -->
+        <div class="relative">
+            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm">🔍</span>
+            <input id="est-busca" type="text" placeholder="Buscar por nome, sigla ou endereço..."
+                class="w-full pl-9 pr-4 py-2.5 bg-white border border-zinc-200 rounded-xl text-sm text-zinc-800 placeholder-zinc-400 focus:outline-none focus:ring-2 focus:ring-zinc-400 transition" />
+            <button id="est-busca-limpar" class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-600 text-xs font-black">✕</button>
+        </div>
+
+        <!-- Filtros -->
+        <div class="flex items-center gap-2 flex-wrap">
+            <span class="text-[10px] font-black text-zinc-400 uppercase tracking-wider">Filtrar:</span>
+            <button class="est-filtro-tipo active-filtro" data-tipo="todos"
+                class="text-[11px] font-bold px-3 py-1 rounded-full border transition">
+                Todos
+            </button>
+            <button class="est-filtro-tipo" data-tipo="central"
+                class="text-[11px] font-bold px-3 py-1 rounded-full border transition">
+                🏛️ Central
+            </button>
+            <button class="est-filtro-tipo" data-tipo="especializada"
+                class="text-[11px] font-bold px-3 py-1 rounded-full border transition">
+                ⚖️ Especializada
+            </button>
+            <button class="est-filtro-tipo" data-tipo="mista"
+                class="text-[11px] font-bold px-3 py-1 rounded-full border transition">
+                📋 Mista
+            </button>
+            <button class="est-filtro-tipo" data-tipo="generalista"
+                class="text-[11px] font-bold px-3 py-1 rounded-full border transition">
+                🗂️ Generalista
+            </button>
+
+            <!-- Contador de resultados -->
+            <span id="est-contador" class="ml-auto text-[11px] text-zinc-400 font-bold"></span>
+        </div>
+    </div>
+
+    <!-- Tabela -->
+    <div class="flex-1 overflow-y-auto">
+        <div id="lista-estrutura-atual">
+            <div class="flex justify-center py-12">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-zinc-600"></div>
+            </div>
+        </div>
+    </div>
+</div>
 
                 <!-- ABA: MODELO -->
                 <div id="painel-modelo" class="hidden p-6 space-y-5">
@@ -769,104 +816,327 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
     // =========================================================================
 
     async _carregarEstruturaExistente() {
-        const db = this._app.db;
-        const lista = document.getElementById('lista-estrutura-atual');
-        if (!lista) return;
+    const db = this._app.db;
+    const lista = document.getElementById('lista-estrutura-atual');
+    if (!lista) return;
 
-        if (this._unsubEstrutura) this._unsubEstrutura();
+    if (this._unsubEstrutura) this._unsubEstrutura();
 
-        this._unsubEstrutura = onSnapshot(collection(db, "estrutura_unidades"), async (unSnap) => {
-            if (unSnap.empty) {
-                lista.innerHTML = `<div class="text-center py-12"><span class="text-4xl block mb-3">🏢</span><p class="text-slate-400 text-sm font-bold">Nenhuma unidade cadastrada ainda.</p><p class="text-slate-400 text-xs mt-1">Importe um arquivo ou clique em "+ Nova Unidade".</p></div>`;
-                return;
-            }
+    // Estado de filtros
+    let termoBusca = '';
+    let filtroTipo  = 'todos';
+    let todasUnidades = [];
+    let recepcoesPorUnidade = {};
 
-            const unidades = unSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-            const todasRecepcoes = await getDocs(collection(db, "recepcoes"));
-            const recepcoesPorUnidade = {};
-            todasRecepcoes.docs.forEach(d => {
-                const rec = { id: d.id, ...d.data() };
-                if (rec.ativo !== false) {
-                    if (!recepcoesPorUnidade[rec.unidadeId]) recepcoesPorUnidade[rec.unidadeId] = [];
-                    recepcoesPorUnidade[rec.unidadeId].push(rec);
-                }
-            });
+    // ── Renderizador da tabela ──────────────────────────────────────────────
+    const renderTabela = () => {
+        // Filtra unidades pelo termo de busca
+        const termo = termoBusca.toLowerCase();
+        const unidadesFiltradas = todasUnidades.filter(u => {
+            const matchBusca = !termo
+                || u.nome?.toLowerCase().includes(termo)
+                || u.sigla?.toLowerCase().includes(termo)
+                || u.endereco?.toLowerCase().includes(termo);
 
-            lista.innerHTML = unidades.map(unidade => {
-                const recs = recepcoesPorUnidade[unidade.id] || [];
-                return `
-                <div class="border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                    <div class="bg-purple-50 border-b border-purple-100 px-5 py-4 flex items-center justify-between gap-3">
-                        <div class="flex items-center gap-3 min-w-0">
-                            <span class="text-xl">🏢</span>
-                            <div class="min-w-0">
-                                <p class="font-black text-purple-800 truncate">${escapeHTML(unidade.nome)}</p>
-                                <p class="text-[10px] text-purple-500">${escapeHTML(unidade.sigla || '')} ${unidade.endereco ? '· ' + escapeHTML(unidade.endereco) : ''}</p>
-                            </div>
-                        </div>
-                        <div class="flex gap-2 shrink-0 items-center">
-                            <span class="text-xs bg-purple-200 text-purple-700 px-2 py-0.5 rounded-full font-bold">${recs.length} recepções</span>
-                            <button class="est-btn-add-rec bg-purple-600 text-white text-[10px] font-bold px-3 py-1.5 rounded-lg" data-unidade-id="${unidade.id}" data-unidade-nome="${escapeHTML(unidade.nome)}">+ Recepção</button>
-                            <button class="est-btn-editar-unidade text-blue-500 hover:text-blue-700 text-xs font-bold px-2 py-1 rounded" data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}">✏️</button>
-                            <button class="est-btn-del-unidade text-red-300 hover:text-red-500 text-sm font-black px-2 py-1 rounded" data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">🗑️</button>
-                        </div>
-                    </div>
-                    <div class="p-4 space-y-2">
-                        ${recs.length === 0 ? `<p class="text-xs text-slate-400 italic text-center py-4">Nenhuma recepção. Clique em "+ Recepção" para adicionar.</p>`
-                            : recs.map(rec => {
-                                const visual = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
-                                return `
-                                <div class="border border-slate-200 rounded-xl px-4 py-3 bg-white flex items-center justify-between gap-3">
-                                    <div class="flex items-center gap-2 min-w-0">
-                                        <span>${visual.icone}</span>
-                                        <div class="min-w-0">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</p>
-                                            <p class="text-[10px] text-slate-400">${rec.andar ? escapeHTML(rec.andar) + ' · ' : ''}<span class="uppercase font-bold text-blue-500">${rec.tipo}</span></p>
-                                        </div>
-                                    </div>
-                                    <div class="flex gap-1 shrink-0">
-                                        <button class="est-btn-editar-rec text-slate-400 hover:text-blue-600 text-xs px-2 py-1 rounded font-bold" data-recepcao-id="${rec.id}">✏️</button>
-                                        <button class="est-btn-del-rec text-slate-400 hover:text-red-500 text-xs px-2 py-1 rounded font-bold" data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">🗑️</button>
-                                    </div>
-                                </div>`;
-                            }).join('')
-                        }
-                    </div>
+            const recs = recepcoesPorUnidade[u.id] || [];
+            const matchTipo = filtroTipo === 'todos'
+                || recs.some(r => r.tipo === filtroTipo);
+
+            return matchBusca && matchTipo;
+        });
+
+        // Contador
+        const contador = document.getElementById('est-contador');
+        if (contador) {
+            const total = todasUnidades.length;
+            const filtrado = unidadesFiltradas.length;
+            contador.textContent = filtrado === total
+                ? `${total} unidade${total !== 1 ? 's' : ''}`
+                : `${filtrado} de ${total} unidade${total !== 1 ? 's' : ''}`;
+        }
+
+        if (unidadesFiltradas.length === 0) {
+            lista.innerHTML = `
+                <div class="text-center py-16">
+                    <span class="text-4xl block mb-3">🔍</span>
+                    <p class="text-zinc-500 text-sm font-bold">Nenhum resultado encontrado</p>
+                    <p class="text-zinc-400 text-xs mt-1">Tente outro termo ou remova os filtros</p>
                 </div>`;
-            }).join('');
+            return;
+        }
 
-            // Eventos
-            lista.querySelectorAll('.est-btn-add-rec').forEach(btn => {
-                btn.addEventListener('click', () => this._abrirFormRecepcao({ unidadeId: btn.dataset.unidadeId, unidadeNome: btn.dataset.unidadeNome }, true));
+        // Tabela
+        lista.innerHTML = `
+            <table class="w-full text-sm border-collapse">
+                <thead>
+                    <tr class="bg-zinc-100 border-b border-zinc-200 sticky top-0 z-10">
+                        <th class="text-left text-[10px] font-black text-zinc-500 uppercase tracking-wider px-5 py-3 w-8"></th>
+                        <th class="text-left text-[10px] font-black text-zinc-500 uppercase tracking-wider px-4 py-3">Unidade</th>
+                        <th class="text-left text-[10px] font-black text-zinc-500 uppercase tracking-wider px-4 py-3 hidden md:table-cell">Sigla</th>
+                        <th class="text-left text-[10px] font-black text-zinc-500 uppercase tracking-wider px-4 py-3 hidden lg:table-cell">Endereço</th>
+                        <th class="text-center text-[10px] font-black text-zinc-500 uppercase tracking-wider px-4 py-3">Recepções</th>
+                        <th class="text-right text-[10px] font-black text-zinc-500 uppercase tracking-wider px-5 py-3">Ações</th>
+                    </tr>
+                </thead>
+                <tbody id="tabela-body">
+                    ${unidadesFiltradas.map(unidade => {
+                        const recs = recepcoesPorUnidade[unidade.id] || [];
+                        const tiposUnicos = [...new Set(recs.map(r => r.tipo))];
+                        return `
+                        <!-- Linha principal da unidade -->
+                        <tr class="est-linha-unidade border-b border-zinc-100 hover:bg-zinc-50 transition cursor-pointer group"
+                            data-unidade-id="${unidade.id}">
+                            <td class="px-5 py-3.5 text-center">
+                                <span class="est-toggle text-zinc-300 group-hover:text-zinc-500 font-black text-xs transition select-none">▶</span>
+                            </td>
+                            <td class="px-4 py-3.5">
+                                <p class="font-bold text-zinc-800 leading-tight">${escapeHTML(unidade.nome)}</p>
+                                ${unidade.email ? `<p class="text-[10px] text-zinc-400 mt-0.5">${escapeHTML(unidade.email)}</p>` : ''}
+                            </td>
+                            <td class="px-4 py-3.5 hidden md:table-cell">
+                                ${unidade.sigla
+                                    ? `<span class="text-xs font-black text-zinc-600 bg-zinc-100 px-2 py-0.5 rounded">${escapeHTML(unidade.sigla)}</span>`
+                                    : `<span class="text-zinc-300 text-xs">—</span>`}
+                            </td>
+                            <td class="px-4 py-3.5 hidden lg:table-cell">
+                                <span class="text-xs text-zinc-500 truncate max-w-[200px] block">${escapeHTML(unidade.endereco || '—')}</span>
+                            </td>
+                            <td class="px-4 py-3.5 text-center">
+                                <div class="flex items-center justify-center gap-1.5 flex-wrap">
+                                    <span class="text-xs font-black text-zinc-700">${recs.length}</span>
+                                    ${tiposUnicos.map(t => {
+                                        const v = TIPO_VISUAL[t] || TIPO_VISUAL.especializada;
+                                        return `<span class="text-[10px]" title="${t}">${v.icone}</span>`;
+                                    }).join('')}
+                                </div>
+                            </td>
+                            <td class="px-5 py-3.5 text-right">
+                                <div class="flex items-center justify-end gap-1">
+                                    <button class="est-btn-add-rec text-[10px] font-black bg-zinc-800 hover:bg-zinc-700 text-white px-2.5 py-1.5 rounded-lg transition"
+                                        data-unidade-id="${unidade.id}" data-unidade-nome="${escapeHTML(unidade.nome)}" title="Adicionar recepção">
+                                        + Rec.
+                                    </button>
+                                    <button class="est-btn-editar-unidade text-zinc-400 hover:text-blue-600 px-2 py-1.5 rounded-lg hover:bg-blue-50 transition text-sm"
+                                        data-unidade-id="${unidade.id}"
+                                        data-nome="${escapeHTML(unidade.nome)}"
+                                        data-sigla="${escapeHTML(unidade.sigla || '')}"
+                                        data-endereco="${escapeHTML(unidade.endereco || '')}"
+                                        data-telefone="${escapeHTML(unidade.telefone || '')}"
+                                        data-email="${escapeHTML(unidade.email || '')}"
+                                        title="Editar unidade">✏️</button>
+                                    <button class="est-btn-del-unidade text-zinc-300 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition text-sm"
+                                        data-unidade-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir unidade">🗑️</button>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Linha expandida com recepções -->
+                        <tr class="est-linha-detalhe hidden" data-unidade-id="${unidade.id}">
+                            <td colspan="6" class="bg-zinc-50 border-b border-zinc-200 px-8 py-4">
+                                ${recs.length === 0
+                                    ? `<p class="text-xs text-zinc-400 italic py-2 text-center">Nenhuma recepção cadastrada para esta unidade.</p>`
+                                    : `<table class="w-full text-xs">
+                                        <thead>
+                                            <tr class="text-zinc-400">
+                                                <th class="text-left font-black uppercase tracking-wider pb-2 pr-4">Recepção</th>
+                                                <th class="text-left font-black uppercase tracking-wider pb-2 pr-4">Tipo</th>
+                                                <th class="text-left font-black uppercase tracking-wider pb-2 pr-4 hidden sm:table-cell">Andar</th>
+                                                <th class="text-left font-black uppercase tracking-wider pb-2 hidden md:table-cell">Salas</th>
+                                                <th class="text-right font-black uppercase tracking-wider pb-2">Ações</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            ${recs.map(rec => {
+                                                const v = TIPO_VISUAL[rec.tipo] || TIPO_VISUAL.especializada;
+                                                return `
+                                                <tr class="border-t border-zinc-200 hover:bg-zinc-100 transition">
+                                                    <td class="py-2.5 pr-4">
+                                                        <div class="flex items-center gap-2">
+                                                            <span>${v.icone}</span>
+                                                            <span class="font-bold text-zinc-700">${escapeHTML(rec.nome)}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td class="py-2.5 pr-4">
+                                                        <span class="font-black uppercase text-[9px] px-2 py-0.5 rounded-full
+                                                            ${rec.tipo === 'central'       ? 'bg-slate-200 text-slate-700'   : ''}
+                                                            ${rec.tipo === 'especializada' ? 'bg-blue-100 text-blue-700'     : ''}
+                                                            ${rec.tipo === 'mista'         ? 'bg-emerald-100 text-emerald-700' : ''}
+                                                            ${rec.tipo === 'generalista'   ? 'bg-amber-100 text-amber-700'   : ''}
+                                                        ">${rec.tipo}</span>
+                                                    </td>
+                                                    <td class="py-2.5 pr-4 text-zinc-500 hidden sm:table-cell">${escapeHTML(rec.andar || '—')}</td>
+                                                    <td class="py-2.5 text-zinc-400 hidden md:table-cell">
+                                                        ${rec.salas?.length
+                                                            ? rec.salas.slice(0,3).map(s => `<span class="inline-block bg-white border border-zinc-200 rounded px-1.5 py-0.5 mr-1 mb-0.5">${escapeHTML(s)}</span>`).join('')
+                                                              + (rec.salas.length > 3 ? `<span class="text-zinc-400">+${rec.salas.length - 3}</span>` : '')
+                                                            : '<span class="text-zinc-300">—</span>'}
+                                                    </td>
+                                                    <td class="py-2.5 text-right">
+                                                        <div class="flex items-center justify-end gap-1">
+                                                            <button class="est-btn-editar-rec text-zinc-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition font-bold"
+                                                                data-recepcao-id="${rec.id}">✏️</button>
+                                                            <button class="est-btn-del-rec text-zinc-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg transition font-bold"
+                                                                data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">🗑️</button>
+                                                        </div>
+                                                    </td>
+                                                </tr>`;
+                                            }).join('')}
+                                        </tbody>
+                                    </table>`
+                                }
+                            </td>
+                        </tr>`;
+                    }).join('')}
+                </tbody>
+            </table>`;
+
+        _bindEventosTabela();
+    };
+
+    // ── Eventos internos da tabela ──────────────────────────────────────────
+    const _bindEventosTabela = () => {
+
+        // Expand/Collapse ao clicar na linha
+        lista.querySelectorAll('.est-linha-unidade').forEach(row => {
+            row.addEventListener('click', (e) => {
+                // Não expande se clicar em botões
+                if (e.target.closest('button')) return;
+
+                const id = row.dataset.unidadeId;
+                const detalhe = lista.querySelector(`.est-linha-detalhe[data-unidade-id="${id}"]`);
+                const toggle  = row.querySelector('.est-toggle');
+                const aberto  = !detalhe.classList.contains('hidden');
+
+                detalhe.classList.toggle('hidden', aberto);
+                toggle.textContent = aberto ? '▶' : '▼';
+                toggle.classList.toggle('text-zinc-600', !aberto);
             });
-            lista.querySelectorAll('.est-btn-editar-unidade').forEach(btn => {
-                btn.addEventListener('click', () => this._abrirFormUnidade({ id: btn.dataset.unidadeId, nome: btn.dataset.nome, sigla: btn.dataset.sigla, endereco: btn.dataset.endereco }));
+        });
+
+        // + Recepção
+        lista.querySelectorAll('.est-btn-add-rec').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._abrirFormRecepcao({ unidadeId: btn.dataset.unidadeId, unidadeNome: btn.dataset.unidadeNome }, true);
             });
-            lista.querySelectorAll('.est-btn-del-unidade').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (!confirm(`Excluir a unidade "${btn.dataset.nome}" e todas as suas recepções?`)) return;
-                    await deleteDoc(doc(db, "estrutura_unidades", btn.dataset.unidadeId));
-                    const recs = recepcoesPorUnidade[btn.dataset.unidadeId] || [];
-                    // Melhoria: Usando Promise.all para executar exclusões em paralelo
-                    await Promise.all(recs.map(r => this._excluirRecepcao(db, r.id)));
-                    showNotification("Unidade removida.", "info");
-                });
-            });
-            lista.querySelectorAll('.est-btn-editar-rec').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    const snap = await getDoc(doc(db, "recepcoes", btn.dataset.recepcaoId));
-                    if (snap.exists()) this._abrirFormRecepcao({ id: snap.id, ...snap.data() });
-                });
-            });
-            lista.querySelectorAll('.est-btn-del-rec').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (!confirm(`Desativar a recepção "${btn.dataset.nome}"?`)) return;
-                    await this._excluirRecepcao(db, btn.dataset.recepcaoId);
-                    showNotification("Recepção desativada.", "info");
+        });
+
+        // Editar unidade
+        lista.querySelectorAll('.est-btn-editar-unidade').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                this._abrirFormUnidade({
+                    id:       btn.dataset.unidadeId,
+                    nome:     btn.dataset.nome,
+                    sigla:    btn.dataset.sigla,
+                    endereco: btn.dataset.endereco,
+                    telefone: btn.dataset.telefone,
+                    email:    btn.dataset.email,
                 });
             });
         });
-    },
+
+        // Excluir unidade
+        lista.querySelectorAll('.est-btn-del-unidade').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm(`Excluir a unidade "${btn.dataset.nome}" e todas as suas recepções?`)) return;
+                await deleteDoc(doc(db, "estrutura_unidades", btn.dataset.unidadeId));
+                const recs = recepcoesPorUnidade[btn.dataset.unidadeId] || [];
+                await Promise.all(recs.map(r => this._excluirRecepcao(db, r.id)));
+                showNotification("Unidade removida.", "info");
+            });
+        });
+
+        // Editar recepção
+        lista.querySelectorAll('.est-btn-editar-rec').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                const snap = await getDoc(doc(db, "recepcoes", btn.dataset.recepcaoId));
+                if (snap.exists()) this._abrirFormRecepcao({ id: snap.id, ...snap.data() });
+            });
+        });
+
+        // Excluir recepção
+        lista.querySelectorAll('.est-btn-del-rec').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                e.stopPropagation();
+                if (!confirm(`Desativar a recepção "${btn.dataset.nome}"?`)) return;
+                await this._excluirRecepcao(db, btn.dataset.recepcaoId);
+                showNotification("Recepção desativada.", "info");
+            });
+        });
+    };
+
+    // ── Eventos de busca e filtro (bind único, fora do onSnapshot) ──────────
+    const _bindControles = () => {
+
+        const inputBusca = document.getElementById('est-busca');
+        const btnLimpar  = document.getElementById('est-busca-limpar');
+
+        inputBusca?.addEventListener('input', () => {
+            termoBusca = inputBusca.value;
+            btnLimpar?.classList.toggle('hidden', !termoBusca);
+            renderTabela();
+        });
+
+        btnLimpar?.addEventListener('click', () => {
+            inputBusca.value = '';
+            termoBusca = '';
+            btnLimpar.classList.add('hidden');
+            inputBusca.focus();
+            renderTabela();
+        });
+
+        document.querySelectorAll('.est-filtro-tipo').forEach(btn => {
+            // Estilos base
+            btn.className = `est-filtro-tipo text-[11px] font-bold px-3 py-1 rounded-full border transition
+                ${btn.dataset.tipo === filtroTipo
+                    ? 'bg-zinc-800 text-white border-zinc-800'
+                    : 'bg-white text-zinc-500 border-zinc-300 hover:border-zinc-500'}`;
+
+            btn.addEventListener('click', () => {
+                filtroTipo = btn.dataset.tipo;
+                // Atualiza visual dos filtros
+                document.querySelectorAll('.est-filtro-tipo').forEach(b => {
+                    b.className = `est-filtro-tipo text-[11px] font-bold px-3 py-1 rounded-full border transition
+                        ${b.dataset.tipo === filtroTipo
+                            ? 'bg-zinc-800 text-white border-zinc-800'
+                            : 'bg-white text-zinc-500 border-zinc-300 hover:border-zinc-500'}`;
+                });
+                renderTabela();
+            });
+        });
+    };
+
+    // ── onSnapshot: atualiza dados e re-renderiza ───────────────────────────
+    this._unsubEstrutura = onSnapshot(collection(db, "estrutura_unidades"), async (unSnap) => {
+        if (unSnap.empty) {
+            lista.innerHTML = `
+                <div class="text-center py-16">
+                    <span class="text-4xl block mb-3">🏢</span>
+                    <p class="text-zinc-500 text-sm font-bold">Nenhuma unidade cadastrada ainda.</p>
+                    <p class="text-zinc-400 text-xs mt-1">Importe um arquivo ou clique em "+ Nova Unidade".</p>
+                </div>`;
+            return;
+        }
+
+        todasUnidades = unSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+        const todasRecepcoes = await getDocs(collection(db, "recepcoes"));
+        recepcoesPorUnidade = {};
+        todasRecepcoes.docs.forEach(d => {
+            const rec = { id: d.id, ...d.data() };
+            if (rec.ativo !== false) {
+                if (!recepcoesPorUnidade[rec.unidadeId]) recepcoesPorUnidade[rec.unidadeId] = [];
+                recepcoesPorUnidade[rec.unidadeId].push(rec);
+            }
+        });
+
+        renderTabela();
+        _bindControles(); // Re-bind só quando o DOM da toolbar já existir
+    });
+},
+
 
     // =========================================================================
     // 12. FORMULÁRIOS DE CRIAÇÃO/EDIÇÃO
