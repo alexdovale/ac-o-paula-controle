@@ -6,6 +6,21 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
+// ============================================================
+// CONTROLE DE PAGINAÇÃO E FILTROS
+// ============================================================
+
+// Estado global dos filtros e paginação
+let adminFilters = {
+    usuarios: { page: 1, pageSize: 10, search: '' },
+    pendentes: { page: 1, pageSize: 5, search: '' },
+    logs: { page: 1, pageSize: 10, search: '' }
+};
+
+let cachedUsuarios = [];
+let cachedPendentes = [];
+let cachedLogs = [];
+
 /**
  * Grava uma ação no log de auditoria
  */
@@ -32,9 +47,6 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 // MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS (CRUD + IMPORTAÇÃO + PESQUISA)
 // =========================================================================
 
-/**
- * Carrega lista de unidades disponíveis (coleção unificada: estrutura_unidades)
- */
 export const carregarUnidades = async (db) => {
     try {
         const snapshot = await getDocs(collection(db, "estrutura_unidades"));
@@ -48,9 +60,6 @@ export const carregarUnidades = async (db) => {
     }
 };
 
-/**
- * Cria uma nova unidade (com ID gerado a partir do nome, igual ao importador)
- */
 export const criarUnidade = async (db, dados) => {
     try {
         const nomeNormalizado = dados.nome.toLowerCase()
@@ -77,9 +86,6 @@ export const criarUnidade = async (db, dados) => {
     }
 };
 
-/**
- * Atualiza uma unidade existente
- */
 export const atualizarUnidade = async (db, unidadeId, dados) => {
     try {
         await updateDoc(doc(db, "estrutura_unidades", unidadeId), {
@@ -94,9 +100,6 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
     }
 };
 
-/**
- * Exclui (desativa) uma unidade e a remove de todos os usuários que a tinham vinculada
- */
 export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
     
@@ -139,9 +142,6 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     }
 };
 
-/**
- * Salva as unidades permitidas para um usuário
- */
 export const salvarUnidadesUsuario = async (db, userId, unidadesSelecionadas) => {
     try {
         await updateDoc(doc(db, "users", userId), {
@@ -301,31 +301,25 @@ const baixarModeloJSONUnidades = () => {
     URL.revokeObjectURL(link.href);
 };
 
-/**
- * Abre modal para importar unidades em massa
- */
 export const abrirImportadorUnidades = async (db) => {
+    // ... (mantenha o código existente do importador)
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-gradient-to-r from-blue-800 to-blue-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2">
-                        <span>📁</span> Importar Unidades em Massa
-                    </h2>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2"><span>📁</span> Importar Unidades em Massa</h2>
                     <p class="text-blue-100 text-sm mt-1">Importe múltiplas unidades de uma só vez via CSV ou JSON</p>
                 </div>
                 <button id="fechar-importador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
-            
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
                 <div class="flex border-b">
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-blue-600 border-b-2 border-blue-600" data-tab="upload">📤 Upload</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="modelo">📄 Modelo</button>
                     <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="manual">✏️ Manual</button>
                 </div>
-                
                 <div id="painel-upload-unidades" class="space-y-4">
                     <div class="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
                         <input type="file" id="arquivo-unidades" accept=".csv,.json" class="hidden">
@@ -343,14 +337,10 @@ export const abrirImportadorUnidades = async (db) => {
                     <div id="preview-unidades" class="hidden">
                         <h4 class="font-bold text-slate-700 mb-3">📋 Prévia</h4>
                         <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto">
-                            <table class="w-full text-sm">
-                                <thead class="bg-slate-200 sticky top-0"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead>
-                                <tbody id="preview-unidades-tbody"></tbody>
-                            </table>
+                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
                         </div>
                     </div>
                 </div>
-                
                 <div id="painel-modelo-unidades" class="hidden space-y-4">
                     <div class="bg-slate-50 rounded-xl p-6">
                         <h3 class="font-bold text-lg mb-4">📄 Formato Esperado</h3>
@@ -362,7 +352,6 @@ export const abrirImportadorUnidades = async (db) => {
                         </div>
                     </div>
                 </div>
-                
                 <div id="painel-manual-unidades" class="hidden space-y-4">
                     <div class="bg-slate-50 rounded-xl p-6">
                         <h3 class="font-bold text-lg mb-4">✏️ Inserção Manual</h3>
@@ -371,13 +360,11 @@ export const abrirImportadorUnidades = async (db) => {
                     </div>
                 </div>
             </div>
-            
             <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0">
                 <button id="fechar-importador-unidades-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Fechar</button>
             </div>
         </div>
     `;
-    
     document.body.appendChild(modal);
     
     const fechar = () => modal.remove();
@@ -407,17 +394,14 @@ export const abrirImportadorUnidades = async (db) => {
     fileInput?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        
         const infoDiv = document.getElementById('info-arquivo-unidades');
         const infoDetalhes = document.getElementById('info-arquivo-unidades-detalhes');
-        
         try {
             const extensao = file.name.split('.').pop().toLowerCase();
             let unidades = [];
             if (extensao === 'csv') unidades = await parseCSVUnidades(file);
             else if (extensao === 'json') unidades = await parseJSONUnidades(file);
             else { showNotification("Formato não suportado", "error"); return; }
-            
             dadosImportados = unidades;
             infoDetalhes.textContent = `Arquivo: ${file.name} | ${unidades.length} unidade(s)`;
             infoDiv.classList.remove('hidden');
@@ -457,9 +441,6 @@ export const abrirImportadorUnidades = async (db) => {
     document.getElementById('btn-baixar-modelo-json-unidades')?.addEventListener('click', baixarModeloJSONUnidades);
 };
 
-/**
- * Abre modal para gerenciar unidades (CRUD com pesquisa)
- */
 export const abrirGerenciadorUnidades = async (db) => {
     let unidades = await carregarUnidades(db);
     let filtroTexto = '';
@@ -488,10 +469,10 @@ export const abrirGerenciadorUnidades = async (db) => {
                     </div>
                     <div class="flex gap-2">
                         <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
                         <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                     </div>
                 </div>
@@ -527,62 +508,30 @@ export const abrirGerenciadorUnidades = async (db) => {
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2"><span>🏢</span> Gerenciar Unidades / Órgãos</h2>
-                    <p class="text-slate-300 text-sm mt-1">Cadastre e gerencie as unidades que aparecerão no sistema</p>
-                </div>
+                <div><h2 class="text-xl font-black text-white flex items-center gap-2"><span>🏢</span> Gerenciar Unidades / Órgãos</h2><p class="text-slate-300 text-sm mt-1">Cadastre e gerencie as unidades que aparecerão no sistema</p></div>
                 <button id="fechar-gerenciador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
-            
             <div class="flex-1 overflow-y-auto p-6">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="relative w-full sm:w-80">
-                        <input type="text" id="pesquisa-unidades" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
-                        <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                    </div>
+                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span></div>
                     <div class="flex gap-3">
-                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
-                            <span>📁</span> Importar em Massa
-                        </button>
-                        <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
-                            <span>➕</span> Nova Unidade
-                        </button>
+                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2"><span>📁</span> Importar em Massa</button>
+                        <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2"><span>➕</span> Nova Unidade</button>
                     </div>
                 </div>
-                
                 <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
             </div>
-            
-            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0">
-                <button id="fechar-gerenciador-unidades-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Fechar</button>
-            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0"><button id="fechar-gerenciador-unidades-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Fechar</button></div>
         </div>
     `;
-    
     document.body.appendChild(modal);
-    
     renderLista();
-    
     const fechar = () => modal.remove();
     document.getElementById('fechar-gerenciador-unidades')?.addEventListener('click', fechar);
     document.getElementById('fechar-gerenciador-unidades-footer')?.addEventListener('click', fechar);
-    
-    document.getElementById('pesquisa-unidades')?.addEventListener('input', (e) => {
-        filtroTexto = e.target.value;
-        renderLista();
-    });
-    
-    document.getElementById('btn-nova-unidade')?.addEventListener('click', () => {
-        abrirModalFormUnidade(db, null, () => {
-            fechar();
-            abrirGerenciadorUnidades(db);
-        });
-    });
-    
-    document.getElementById('btn-importar-unidades-massa')?.addEventListener('click', () => {
-        fechar();
-        abrirImportadorUnidades(db);
-    });
+    document.getElementById('pesquisa-unidades')?.addEventListener('input', (e) => { filtroTexto = e.target.value; renderLista(); });
+    document.getElementById('btn-nova-unidade')?.addEventListener('click', () => { abrirModalFormUnidade(db, null, () => { fechar(); abrirGerenciadorUnidades(db); }); });
+    document.getElementById('btn-importar-unidades-massa')?.addEventListener('click', () => { fechar(); abrirImportadorUnidades(db); });
 };
 
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
@@ -591,10 +540,7 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     modal.className = 'fixed inset-0 bg-black/60 z-[800] flex items-center justify-center p-4';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="bg-slate-800 px-6 py-4 sticky top-0 flex justify-between items-center">
-                <h3 class="text-white font-black text-lg">${isEdicao ? 'Editar Unidade' : 'Nova Unidade'}</h3>
-                <button class="fechar-form-unidade text-white/60 hover:text-white text-3xl leading-none">&times;</button>
-            </div>
+            <div class="bg-slate-800 px-6 py-4 sticky top-0 flex justify-between items-center"><h3 class="text-white font-black text-lg">${isEdicao ? 'Editar Unidade' : 'Nova Unidade'}</h3><button class="fechar-form-unidade text-white/60 hover:text-white text-3xl leading-none">&times;</button></div>
             <div class="p-6 space-y-4">
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Nome da Unidade *</label><input type="text" id="unidade-nome" value="${unidade?.nome || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: Defensoria Pública - Duque de Caxias"></div>
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${unidade?.sigla || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: DP Caxias"></div>
@@ -602,27 +548,16 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${unidade?.telefone || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="(21) 1234-5678"></div>
                 <div><label class="block text-sm font-bold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${unidade?.email || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="contato@dperj.br"></div>
             </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0">
-                <button class="fechar-form-unidade bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button>
-                <button id="btn-salvar-unidade" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">${isEdicao ? 'Salvar' : 'Criar'}</button>
-            </div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0"><button class="fechar-form-unidade bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button><button id="btn-salvar-unidade" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">${isEdicao ? 'Salvar' : 'Criar'}</button></div>
         </div>
     `;
-    
     document.body.appendChild(modal);
-    
     const fechar = () => modal.remove();
     modal.querySelectorAll('.fechar-form-unidade').forEach(btn => btn.addEventListener('click', fechar));
-    
     document.getElementById('btn-salvar-unidade')?.addEventListener('click', async () => {
         const nome = document.getElementById('unidade-nome').value.trim();
         if (!nome) { showNotification("Nome da unidade é obrigatório", "error"); return; }
-        const dados = {
-            nome, sigla: document.getElementById('unidade-sigla').value.trim(),
-            endereco: document.getElementById('unidade-endereco').value.trim(),
-            telefone: document.getElementById('unidade-telefone').value.trim(),
-            email: document.getElementById('unidade-email').value.trim()
-        };
+        const dados = { nome, sigla: document.getElementById('unidade-sigla').value.trim(), endereco: document.getElementById('unidade-endereco').value.trim(), telefone: document.getElementById('unidade-telefone').value.trim(), email: document.getElementById('unidade-email').value.trim() };
         if (isEdicao) await atualizarUnidade(db, unidade.id, dados);
         else await criarUnidade(db, dados);
         fechar();
@@ -630,83 +565,32 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     });
 };
 
-/**
- * Abre modal para gerenciar unidades de um usuário (com pesquisa)
- */
-/**
- * Abre modal para gerenciar unidades de um usuário (com pesquisa e remoção)
- */
 export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, unidadesAtuais = []) => {
     let todasUnidades = await carregarUnidades(db);
     let filtroTexto = '';
-    let unidadesSelecionadas = [...unidadesAtuais]; // Cópia local para edição
+    let unidadesSelecionadas = [...unidadesAtuais];
     
     const renderUnidades = () => {
-        const filtradas = todasUnidades.filter(u => 
-            u.nome.toLowerCase().includes(filtroTexto.toLowerCase()) ||
-            (u.sigla || '').toLowerCase().includes(filtroTexto.toLowerCase())
-        );
-        
+        const filtradas = todasUnidades.filter(u => u.nome.toLowerCase().includes(filtroTexto.toLowerCase()) || (u.sigla || '').toLowerCase().includes(filtroTexto.toLowerCase()));
         const container = document.getElementById('lista-unidades-checkbox');
         if (!container) return;
-        
-        container.innerHTML = filtradas.map(unidade => {
-            const isChecked = unidadesSelecionadas.includes(unidade.id);
-            return `
-            <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition ${isChecked ? 'bg-blue-50 border-blue-300' : ''}" data-id="${unidade.id}">
-                <input type="checkbox" name="unidade" value="${unidade.id}" 
-                    ${isChecked ? 'checked' : ''}
-                    class="h-4 w-4 text-green-600 rounded">
-                <div class="flex-1">
-                    <span class="font-bold text-gray-800">${escapeHTML(unidade.nome)}</span>
-                    <p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p>
-                </div>
-                <button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
-                    ✕ Remover
-                </button>
-            </label>`;
-        }).join('');
-        
-        if (filtradas.length === 0) {
-            container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
-        }
-        
-        // Eventos para os checkboxes
+        container.innerHTML = filtradas.map(unidade => `<label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition ${unidadesSelecionadas.includes(unidade.id) ? 'bg-blue-50 border-blue-300' : ''}" data-id="${unidade.id}"><input type="checkbox" name="unidade" value="${unidade.id}" ${unidadesSelecionadas.includes(unidade.id) ? 'checked' : ''} class="h-4 w-4 text-green-600 rounded"><div class="flex-1"><span class="font-bold text-gray-800">${escapeHTML(unidade.nome)}</span><p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p></div><button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">✕ Remover</button></label>`).join('');
+        if (filtradas.length === 0) container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
         container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
             cb.addEventListener('change', (e) => {
                 e.stopPropagation();
                 const id = cb.value;
-                if (cb.checked) {
-                    if (!unidadesSelecionadas.includes(id)) {
-                        unidadesSelecionadas.push(id);
-                    }
-                } else {
-                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id);
-                }
-                // Atualiza o estilo do label
+                if (cb.checked) { if (!unidadesSelecionadas.includes(id)) unidadesSelecionadas.push(id); }
+                else { unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); }
                 const label = cb.closest('label');
-                if (label) {
-                    if (cb.checked) {
-                        label.classList.add('bg-blue-50', 'border-blue-300');
-                    } else {
-                        label.classList.remove('bg-blue-50', 'border-blue-300');
-                    }
-                }
+                if (label) cb.checked ? label.classList.add('bg-blue-50', 'border-blue-300') : label.classList.remove('bg-blue-50', 'border-blue-300');
             });
         });
-        
-        // Eventos para os botões de remover
         container.querySelectorAll('.btn-remover-unidade-item').forEach(btn => {
             btn.addEventListener('click', (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                const id = btn.dataset.id;
-                const nome = btn.dataset.nome;
-                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) {
-                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id);
-                    renderUnidades(); // Re-renderiza a lista
-                    showNotification(`Unidade "${nome}" removida da lista.`, "info");
-                }
+                e.preventDefault(); e.stopPropagation();
+                const id = btn.dataset.id, nome = btn.dataset.nome;
+                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) { unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id); renderUnidades(); showNotification(`Unidade "${nome}" removida.`, "info"); }
             });
         });
     };
@@ -715,45 +599,16 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
     modal.className = 'fixed inset-0 bg-black/60 z-[600] flex items-center justify-center p-4';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[80vh] overflow-hidden flex flex-col">
-            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="text-white font-black text-lg">Gerenciar Unidades</h3>
-                    <p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p>
-                </div>
-                <button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button>
-            </div>
-            <div class="flex-1 overflow-y-auto p-6">
-                <div class="relative mb-4">
-                    <input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
-                    <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-                </div>
-                <p class="text-sm font-bold text-gray-700 mb-3">Selecione ou remova as unidades que este usuário pode acessar:</p>
-                <div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto"></div>
-                <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
-                    <p class="text-[10px] text-amber-700 font-bold">⚠️ Atenção:</p>
-                    <p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p>
-                </div>
-            </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t">
-                <button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button>
-                <button id="btn-salvar-unidades-usuario" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">Salvar</button>
-            </div>
+            <div class="bg-slate-800 px-6 py-4 flex justify-between items-center shrink-0"><div><h3 class="text-white font-black text-lg">Gerenciar Unidades</h3><p class="text-slate-300 text-xs mt-1">${escapeHTML(userNome)} (${escapeHTML(userEmail)})</p></div><button class="fechar-modal-unidades text-white/60 hover:text-white text-3xl leading-none">&times;</button></div>
+            <div class="flex-1 overflow-y-auto p-6"><div class="relative mb-4"><input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"><span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span></div><p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p><div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto"></div><div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200"><p class="text-[10px] text-amber-700 font-bold">⚠️ Atenção:</p><p class="text-[9px] text-amber-600">Usuários só verão pautas das unidades selecionadas acima.</p></div></div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 shrink-0 border-t"><button class="fechar-modal-unidades bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button><button id="btn-salvar-unidades-usuario" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">Salvar</button></div>
         </div>
     `;
-    
     document.body.appendChild(modal);
-    
     renderUnidades();
-    
-    // Filtro de pesquisa
-    document.getElementById('pesquisa-unidades-usuario')?.addEventListener('input', (e) => {
-        filtroTexto = e.target.value;
-        renderUnidades();
-    });
-    
+    document.getElementById('pesquisa-unidades-usuario')?.addEventListener('input', (e) => { filtroTexto = e.target.value; renderUnidades(); });
     const fechar = () => modal.remove();
     modal.querySelectorAll('.fechar-modal-unidades').forEach(btn => btn.addEventListener('click', fechar));
-    
     document.getElementById('btn-salvar-unidades-usuario')?.addEventListener('click', async () => {
         await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
         showNotification(`Unidades do usuário ${userNome} atualizadas!`, "success");
@@ -763,98 +618,222 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
 };
 
 // =========================================================================
-// MÓDULO DE GERENCIAMENTO DE USUÁRIOS
+// MÓDULO DE GERENCIAMENTO DE USUÁRIOS (COM PAGINAÇÃO, BUSCA E TAMANHO DE PÁGINA)
 // =========================================================================
+
+function renderPagination(containerId, currentPage, totalPages, onPageChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    let html = '<div class="flex items-center justify-center gap-2 mt-4">';
+    html += `<button class="pag-btn px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold transition" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:50%;cursor:not-allowed"' : ''}>◀ Anterior</button>`;
+    html += `<span class="px-3 py-1 text-xs font-bold text-gray-600">Página ${currentPage} de ${totalPages}</span>`;
+    html += `<button class="pag-btn px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold transition" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:50%;cursor:not-allowed"' : ''}>Próxima ▶</button>`;
+    html += '</div>';
+    container.innerHTML = html;
+    container.querySelectorAll('.pag-btn').forEach(btn => {
+        if (!btn.disabled) {
+            btn.addEventListener('click', () => { if (onPageChange) onPageChange(parseInt(btn.dataset.page)); });
+        }
+    });
+}
+
+function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-gray-500">Mostrar:</span>
+            <select id="page-size-select-${containerId}" class="text-xs border rounded-lg px-2 py-1 bg-white focus:ring-2 focus:ring-blue-500">
+                <option value="5" ${currentSize === 5 ? 'selected' : ''}>5</option>
+                <option value="10" ${currentSize === 10 ? 'selected' : ''}>10</option>
+                <option value="15" ${currentSize === 15 ? 'selected' : ''}>15</option>
+                <option value="20" ${currentSize === 20 ? 'selected' : ''}>20</option>
+                <option value="50" ${currentSize === 50 ? 'selected' : ''}>50</option>
+                <option value="100" ${currentSize === 100 ? 'selected' : ''}>100</option>
+            </select>
+            <span class="text-xs text-gray-500">itens</span>
+        </div>
+    `;
+    const select = document.getElementById(`page-size-select-${containerId}`);
+    if (select) {
+        select.addEventListener('change', (e) => { if (onSizeChange) onSizeChange(parseInt(e.target.value)); });
+    }
+}
 
 export const loadUsersList = async (db) => {
     try {
         const snapshot = await getDocs(collection(db, "users"));
-        const pendingList = document.getElementById('pending-users-list');
-        const approvedList = document.getElementById('approved-users-list');
+        const allUsers = [];
+        snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         
-        if(!pendingList || !approvedList) return;
-
-        pendingList.innerHTML = ''; 
-        approvedList.innerHTML = '';
-
-        if (snapshot.empty) {
-            pendingList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
-            approvedList.innerHTML = '<p class="text-gray-400 text-xs text-center py-4">Nenhum usuário encontrado</p>';
-            return;
+        // Separa pendentes e aprovados
+        let pendentes = allUsers.filter(u => u.status === 'pending');
+        let aprovados = allUsers.filter(u => u.status !== 'pending');
+        
+        // Aplica busca
+        if (adminFilters.pendentes.search) {
+            const search = adminFilters.pendentes.search.toLowerCase();
+            pendentes = pendentes.filter(u => (u.name || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search));
         }
+        if (adminFilters.usuarios.search) {
+            const search = adminFilters.usuarios.search.toLowerCase();
+            aprovados = aprovados.filter(u => (u.name || '').toLowerCase().includes(search) || (u.email || '').toLowerCase().includes(search));
+        }
+        
+        // Cache para paginação
+        cachedPendentes = pendentes;
+        cachedUsuarios = aprovados;
+        
+        // Renderiza pendentes
+        renderPendentesList(db);
+        
+        // Renderiza aprovados
+        renderAprovadosTable(db);
+        
+    } catch (error) {
+        console.error("Erro ao carregar lista de usuários:", error);
+        showNotification("Erro ao carregar lista de usuários", "error");
+    }
+};
 
-        snapshot.forEach((docSnap) => {
-            try {
-                const user = docSnap.data();
-                const userId = docSnap.id;
-                if (!user.email) return; 
-                
-                const row = document.createElement('div');
-                row.className = "flex flex-col sm:flex-row justify-between items-start sm:items-center p-3 bg-white rounded border mb-2 shadow-sm gap-3";
-                
-                const statusBadge = user.status === 'pending' 
-                    ? '<span class="bg-yellow-100 text-yellow-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Pendente</span>'
-                    : user.role === 'suspended'
-                    ? '<span class="bg-red-100 text-red-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>'
-                    : '<span class="bg-green-100 text-green-800 text-[8px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
-                
-                const roleSelector = `
-                    <select id="role-select-${userId}" class="text-[10px] border rounded p-1 bg-gray-50 focus:ring-1 focus:ring-blue-500 outline-none">
+function renderPendentesList(db) {
+    const pendingList = document.getElementById('pending-users-list');
+    if (!pendingList) return;
+    
+    const pendentes = cachedPendentes;
+    const { page, pageSize } = adminFilters.pendentes;
+    const start = (page - 1) * pageSize;
+    const paginated = pendentes.slice(start, start + pageSize);
+    const totalPages = Math.ceil(pendentes.length / pageSize);
+    
+    if (pendentes.length === 0) {
+        pendingList.innerHTML = '<div class="text-center py-8 text-gray-400 bg-gray-50 rounded-xl">✅ Nenhum usuário pendente</div>';
+        document.getElementById('pagination-pendentes')?.classList.add('hidden');
+        return;
+    }
+    
+    pendingList.innerHTML = paginated.map(user => `
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-white rounded-xl border mb-3 shadow-sm gap-3">
+            <div class="flex-1">
+                <p class="font-bold text-orange-600 flex items-center gap-2">⏳ ${escapeHTML(user.name || 'Sem nome')} <span class="bg-yellow-100 text-yellow-800 text-[9px] px-2 py-0.5 rounded-full">Pendente</span></p>
+                <p class="text-xs text-gray-500 mt-0.5">${escapeHTML(user.email)}</p>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+                <select id="role-select-${user.id}" class="text-[10px] border rounded p-1 bg-gray-50">
+                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
+                    <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
+                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
+                    <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                    <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
+                </select>
+                <button onclick="window.approveUser('${user.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded text-[10px] font-bold hover:bg-green-700 transition">APROVAR</button>
+                <button onclick="window.deleteUser('${user.id}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
+            </div>
+        </div>
+    `).join('');
+    
+    renderPageSizeSelector('page-size-pendentes', pageSize, (newSize) => {
+        adminFilters.pendentes.pageSize = newSize;
+        adminFilters.pendentes.page = 1;
+        renderPendentesList(db);
+    });
+    renderPagination('pagination-pendentes', page, totalPages, (newPage) => {
+        adminFilters.pendentes.page = newPage;
+        renderPendentesList(db);
+    });
+}
+
+function renderAprovadosTable(db) {
+    const tableBody = document.getElementById('approved-users-list');
+    if (!tableBody) return;
+    
+    const aprovados = cachedUsuarios;
+    const { page, pageSize } = adminFilters.usuarios;
+    const start = (page - 1) * pageSize;
+    const paginated = aprovados.slice(start, start + pageSize);
+    const totalPages = Math.ceil(aprovados.length / pageSize);
+    
+    if (aprovados.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
+        document.getElementById('pagination-usuarios')?.classList.add('hidden');
+        return;
+    }
+    
+    tableBody.innerHTML = paginated.map(user => {
+        const unidadesCount = user.unidadesPermitidas?.length || 0;
+        const statusBadge = user.role === 'suspended' ? '<span class="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>' : '<span class="bg-green-100 text-green-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
+        return `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="px-3 py-3"><p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>${statusBadge}</td>
+                <td class="px-3 py-3 text-xs text-gray-500">${escapeHTML(user.email)}</td>
+                <td class="px-3 py-3 text-center">
+                    <button onclick="window.gerenciarUnidades('${user.id}', '${escapeHTML(user.name || 'Sem nome')}', '${escapeHTML(user.email)}', ${JSON.stringify(user.unidadesPermitidas || [])})" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 transition flex items-center gap-1 mx-auto">
+                        🏢 ${unidadesCount}
+                    </button>
+                </td>
+                <td class="px-3 py-3 text-center">
+                    <select id="role-select-${user.id}" class="text-[10px] border rounded p-1 bg-gray-50">
                         <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
                         <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
                         <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
                         <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
                     </select>
-                `;
+                </td>
+                <td class="px-3 py-3 text-center">
+                    <div class="flex items-center justify-center gap-2">
+                        <button onclick="window.updateUserRole('${user.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[9px] hover:bg-blue-700 transition font-bold">SALVAR</button>
+                        <button onclick="window.deleteUser('${user.id}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[9px] hover:bg-red-50 transition font-bold">EXCLUIR</button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+    
+    renderPageSizeSelector('page-size-usuarios', pageSize, (newSize) => {
+        adminFilters.usuarios.pageSize = newSize;
+        adminFilters.usuarios.page = 1;
+        renderAprovadosTable(db);
+    });
+    renderPagination('pagination-usuarios', page, totalPages, (newPage) => {
+        adminFilters.usuarios.page = newPage;
+        renderAprovadosTable(db);
+    });
+}
 
-                if (user.status === 'pending') {
-                    row.innerHTML = `
-                        <div class="text-xs flex-1">
-                            <p class="font-bold text-orange-600 flex items-center">PENDENTE: ${escapeHTML(user.name || 'Sem nome')} ${statusBadge}</p>
-                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
-                        </div>
-                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                            ${roleSelector}
-                            <button onclick="window.approveUser('${userId}')" class="bg-green-600 text-white px-3 py-1 rounded text-[10px] font-bold hover:bg-green-700 transition">APROVAR</button>
-                            <button onclick="window.deleteUser('${userId}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
-                        </div>`;
-                    pendingList.appendChild(row);
-                } else {
-                    const unidadesCount = user.unidadesPermitidas?.length || 0;
-                    const unidadesText = unidadesCount > 0 
-                        ? `<p class="text-[9px] text-blue-500 mt-1">🏢 ${unidadesCount} unidade(s) permitida(s)</p>` 
-                        : `<p class="text-[9px] text-gray-400 mt-1">🏢 Nenhuma unidade vinculada</p>`;
-                    
-                    row.innerHTML = `
-                        <div class="text-xs flex-1">
-                            <p class="font-bold text-gray-800 flex items-center">${escapeHTML(user.name || 'Sem nome')} ${statusBadge}</p>
-                            <p class="text-gray-500">${escapeHTML(user.email)}</p>
-                            ${unidadesText}
-                        </div>
-                        <div class="flex items-center gap-2 w-full sm:w-auto justify-end flex-wrap">
-                            <button onclick="window.gerenciarUnidades('${userId}', '${escapeHTML(user.name || 'Sem nome')}', '${escapeHTML(user.email)}', ${JSON.stringify(user.unidadesPermitidas || [])})" 
-                                class="bg-indigo-600 text-white px-2 py-1 rounded text-[10px] hover:bg-indigo-700 transition">
-                                🏢 UNIDADES
-                            </button>
-                            ${roleSelector}
-                            <button onclick="window.updateUserRole('${userId}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[10px] hover:bg-blue-700 transition">SALVAR</button>
-                            <button onclick="window.deleteUser('${userId}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[10px] hover:bg-red-50 transition">EXCLUIR</button>
-                        </div>`;
-                    approvedList.appendChild(row);
-                }
-            } catch (rowError) { console.error(rowError); }
+function renderSearchInput(containerId, placeholder, onSearch) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <div class="relative">
+            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 border rounded-lg text-sm">
+            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
+            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">✕</button>
+        </div>
+    `;
+    const input = document.getElementById(`search-input-${containerId}`);
+    const clearBtn = document.getElementById(`clear-search-${containerId}`);
+    if (input) {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (clearBtn) clearBtn.classList.toggle('hidden', !val);
+            if (onSearch) onSearch(val);
         });
-    } catch (error) {
-        showNotification("Erro ao carregar lista de usuários", "error");
     }
-};
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
+        });
+    }
+}
 
 export const approveUser = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
         await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
-        showNotification("Usuário aprovado!"); loadUsersList(db);
+        showNotification("Usuário aprovado!");
+        await loadUsersList(db);
     } catch (e) { showNotification("Erro ao aprovar.", "error"); }
 };
 
@@ -862,7 +841,8 @@ export const updateUserRole = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
         await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
-        showNotification(`Cargo atualizado!`); loadUsersList(db);
+        showNotification(`Cargo atualizado!`);
+        await loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
 
@@ -870,7 +850,8 @@ export const deleteUser = async (db, userId) => {
     if (!confirm("Excluir este usuário?")) return;
     try {
         await deleteDoc(doc(db, "users", userId));
-        showNotification("Usuário removido."); loadUsersList(db);
+        showNotification("Usuário removido.");
+        await loadUsersList(db);
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
@@ -883,47 +864,26 @@ window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db)
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
 
 // =========================================================================
-// MÓDULO DE AUDITORIA, FILTROS E ERROS
+// MÓDULO DE AUDITORIA (COM PAGINAÇÃO E BUSCA)
 // =========================================================================
 
 export const loadLogFilters = async (db) => {
     try {
         const userSelect = document.getElementById('filter-log-user');
         const actionSelect = document.getElementById('filter-log-action');
-        
         if (userSelect) {
             const usersSnap = await getDocs(collection(db, "users"));
             userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
-            usersSnap.forEach(doc => {
-                const user = doc.data();
-                if (user.email) {
-                    const option = document.createElement('option');
-                    option.value = user.email;
-                    option.textContent = user.name || user.email;
-                    userSelect.appendChild(option);
-                }
-            });
+            usersSnap.forEach(doc => { const user = doc.data(); if (user.email) userSelect.appendChild(new Option(user.name || user.email, user.email)); });
         }
-        
         if (actionSelect) {
             const logsSnap = await getDocs(collection(db, "audit_logs"));
             const actions = new Set();
-            logsSnap.forEach(doc => {
-                const action = doc.data().action;
-                if (action) actions.add(action);
-            });
-            
+            logsSnap.forEach(doc => { const action = doc.data().action; if (action) actions.add(action); });
             actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
-            Array.from(actions).sort().forEach(action => {
-                const option = document.createElement('option');
-                option.value = action;
-                option.textContent = action;
-                actionSelect.appendChild(option);
-            });
+            Array.from(actions).sort().forEach(action => actionSelect.appendChild(new Option(action, action)));
         }
-    } catch (error) {
-        console.error("Erro ao carregar filtros de log:", error);
-    }
+    } catch (error) { console.error("Erro ao carregar filtros de log:", error); }
 };
 
 export const loadAuditLogs = async (db) => {
@@ -933,16 +893,13 @@ export const loadAuditLogs = async (db) => {
     const filterSection = document.getElementById('audit-filters-section');
     
     if (!logsContainer || !tableBody) return;
-
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td><tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        if (document.getElementById('filter-log-user')?.options.length <= 1) {
-            await loadLogFilters(db);
-        }
+        if (document.getElementById('filter-log-user')?.options.length <= 1) await loadLogFilters(db);
 
         const logsRef = collection(db, "audit_logs");
         const userFilter = document.getElementById('filter-log-user')?.value;
@@ -950,7 +907,7 @@ export const loadAuditLogs = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(5000));
         const snapshot = await getDocs(q);
 
         let filteredLogs = [];
@@ -963,49 +920,96 @@ export const loadAuditLogs = async (db) => {
             if (endDate && log.timestamp > endDate + "T23:59:59") return;
             filteredLogs.push(log);
         });
+        
+        cachedLogs = filteredLogs;
+        renderLogsTable(db);
+        
+        if (pdfBtn && filteredLogs.length > 0) pdfBtn.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error("Erro ao carregar logs:", error);
+        tableBody.innerHTML = ` hilab<td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td></tr>`;
+    }
+};
 
-        if (filteredLogs.length === 0) {
-            tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado.</td></tr>';
-            return;
-        }
-
-        tableBody.innerHTML = '';
-        if (pdfBtn) pdfBtn.classList.remove('hidden');
-
-        filteredLogs.slice(0, 200).forEach((log) => {
-            let formattedDate = 'Data inválida';
-            try {
-                const date = new Date(log.timestamp);
-                if (!isNaN(date.getTime())) {
-                    formattedDate = date.toLocaleString('pt-BR', {
-                        day: '2-digit', month: '2-digit', year: 'numeric',
-                        hour: '2-digit', minute: '2-digit', second: '2-digit'
-                    });
-                }
-            } catch (e) {}
-            
-            const row = document.createElement('tr');
-            row.className = "border-b hover:bg-gray-50 transition-colors";
-            
-            let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
-            const action = (log.action || '').toLowerCase();
-            if (action.includes('erro') || action.includes('error') || action.includes('falha')) actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
-            else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) actionColor = 'bg-red-100 text-red-700 border border-red-200';
-            else if (action.includes('create') || action.includes('criou') || action.includes('add')) actionColor = 'bg-green-100 text-green-700 border border-green-200';
-            else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) actionColor = 'bg-blue-100 text-blue-700 border border-blue-200';
-            
-            row.innerHTML = `
+function renderLogsTable(db) {
+    const tableBody = document.getElementById('audit-logs-table-body');
+    if (!tableBody) return;
+    
+    // Aplica busca nos logs
+    let logs = [...cachedLogs];
+    if (adminFilters.logs.search) {
+        const search = adminFilters.logs.search.toLowerCase();
+        logs = logs.filter(log => 
+            (log.userName || '').toLowerCase().includes(search) ||
+            (log.action || '').toLowerCase().includes(search) ||
+            (log.details || '').toLowerCase().includes(search)
+        );
+    }
+    
+    const { page, pageSize } = adminFilters.logs;
+    const start = (page - 1) * pageSize;
+    const paginated = logs.slice(start, start + pageSize);
+    const totalPages = Math.ceil(logs.length / pageSize);
+    
+    if (logs.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado</td></tr>';
+        document.getElementById('pagination-logs')?.classList.add('hidden');
+        return;
+    }
+    
+    tableBody.innerHTML = paginated.map(log => {
+        let formattedDate = 'Data inválida';
+        try {
+            const date = new Date(log.timestamp);
+            if (!isNaN(date.getTime())) formattedDate = date.toLocaleString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit', second: '2-digit' });
+        } catch (e) {}
+        
+        let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
+        const action = (log.action || '').toLowerCase();
+        if (action.includes('erro') || action.includes('error') || action.includes('falha')) actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
+        else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) actionColor = 'bg-red-100 text-red-700 border border-red-200';
+        else if (action.includes('create') || action.includes('criou') || action.includes('add')) actionColor = 'bg-green-100 text-green-700 border border-green-200';
+        else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) actionColor = 'bg-blue-100 text-blue-700 border border-blue-200';
+        
+        return `
+            <tr class="border-b hover:bg-gray-50 transition">
                 <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-            `;
-            tableBody.appendChild(row);
-        });
-    } catch (error) {
-        console.error("Erro ao carregar logs:", error);
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500 text-xs font-bold border border-red-200 bg-red-50">❌ Erro ao carregar registros</td></tr>`;
-    }
+            </tr>
+        `;
+    }).join('');
+    
+    renderPageSizeSelector('page-size-logs', pageSize, (newSize) => {
+        adminFilters.logs.pageSize = newSize;
+        adminFilters.logs.page = 1;
+        renderLogsTable(db);
+    });
+    renderPagination('pagination-logs', page, totalPages, (newPage) => {
+        adminFilters.logs.page = newPage;
+        renderLogsTable(db);
+    });
+}
+
+// Funções de busca
+export const setupAdminSearch = () => {
+    renderSearchInput('search-pendentes', 'Buscar usuário pendente...', (val) => {
+        adminFilters.pendentes.search = val;
+        adminFilters.pendentes.page = 1;
+        loadUsersList(window.app?.db);
+    });
+    renderSearchInput('search-usuarios', 'Buscar usuário...', (val) => {
+        adminFilters.usuarios.search = val;
+        adminFilters.usuarios.page = 1;
+        loadUsersList(window.app?.db);
+    });
+    renderSearchInput('search-logs', 'Buscar logs...', (val) => {
+        adminFilters.logs.search = val;
+        adminFilters.logs.page = 1;
+        renderLogsTable(window.app?.db);
+    });
 };
 
 export const exportAuditLogsPDF = async (db) => {
@@ -1013,60 +1017,24 @@ export const exportAuditLogsPDF = async (db) => {
     try {
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
-        const logsRef = collection(db, "audit_logs");
-        
-        const userFilter = document.getElementById('filter-log-user')?.value;
-        const actionFilter = document.getElementById('filter-log-action')?.value;
-        const startDate = document.getElementById('filter-log-start')?.value;
-        const endDate = document.getElementById('filter-log-end')?.value;
-
-        const q = query(logsRef, orderBy("timestamp", "desc"), limit(1500));
-        const snapshot = await getDocs(q);
-
-        let filteredLogs = [];
-        snapshot.forEach((docSnap) => {
-            const log = docSnap.data();
-            if (!log.timestamp) return;
-            if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
-            if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
-            if (startDate && log.timestamp < startDate) return;
-            if (endDate && log.timestamp > endDate + "T23:59:59") return;
-            filteredLogs.push(log);
-        });
-
-        if (filteredLogs.length === 0) {
-            showNotification("Nenhum log para exportar.", "warning");
-            return;
-        }
-
+        const logs = cachedLogs;
+        if (logs.length === 0) { showNotification("Nenhum log para exportar.", "warning"); return; }
         docPDF.setFontSize(18); docPDF.setTextColor(55, 65, 81);
         docPDF.text("Relatorio de Auditoria - SIGEP", 14, 20);
         docPDF.setFontSize(10); docPDF.setTextColor(100, 100, 100);
         docPDF.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, 14, 28);
-        docPDF.text(`Total: ${filteredLogs.length} registros`, 14, 34);
-        
-        const body = filteredLogs.map(log => [
+        docPDF.text(`Total: ${logs.length} registros`, 14, 34);
+        const body = logs.slice(0, 500).map(log => [
             log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida',
             `${log.userName || log.userEmail || 'Desconhecido'}`,
             log.action || '-',
             (log.details || '-').substring(0, 100)
         ]);
-
-        docPDF.autoTable({
-            head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']],
-            body: body, startY: 45, theme: 'striped',
-            headStyles: { fillColor: [55, 65, 81], fontSize: 8, halign: 'center' },
-            styles: { fontSize: 7, cellPadding: 2 },
-        });
-
+        docPDF.autoTable({ head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']], body: body, startY: 45, theme: 'striped', headStyles: { fillColor: [55, 65, 81], fontSize: 8, halign: 'center' }, styles: { fontSize: 7, cellPadding: 2 } });
         docPDF.save(`Auditoria_SIGEP_${new Date().toISOString().slice(0,10)}.pdf`);
         showNotification("PDF gerado!");
     } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
 };
-
-// =========================================================================
-// MÓDULO DE LIMPEZA E BI
-// =========================================================================
 
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados com mais de 7 dias. Confirmar?")) return;
@@ -1075,24 +1043,13 @@ export const cleanupOldData = async (db) => {
         limitDate.setDate(limitDate.getDate() - 7);
         const pautas = await getDocs(collection(db, "pautas"));
         let count = 0; let statsCount = 0;
-
         for (const pautaDoc of pautas.docs) {
             const pautaData = pautaDoc.data();
             const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
             const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
             const snapshot = await getDocs(q);
-
             if (!snapshot.empty) {
-                const stats = {
-                    pautaName: pautaData.name || 'Sem nome',
-                    creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido',
-                    dataReferencia: limitDate.toISOString(),
-                    diaSemana: limitDate.getDay(),
-                    total: snapshot.size,
-                    atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length,
-                    faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length,
-                    assuntos: {}, atendentes: {}
-                };
+                const stats = { pautaName: pautaData.name || 'Sem nome', creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido', dataReferencia: limitDate.toISOString(), diaSemana: limitDate.getDay(), total: snapshot.size, atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length, faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length, assuntos: {}, atendentes: {} };
                 snapshot.docs.forEach(d => {
                     const data = d.data();
                     const sub = data.subject || 'Não informado';
@@ -1132,17 +1089,7 @@ export const generateTestData = async (db) => {
                 const atb = atendentesPool[Math.floor(Math.random() * atendentesPool.length)];
                 localAtendentes[atb] = (localAtendentes[atb] || 0) + 1;
             }
-            testData.push({
-                pautaName: `Pauta Simulada ${i+1}`,
-                creatorEmail: i % 2 === 0 ? "admin@teste.com" : "user@teste.com",
-                dataReferencia: new Date(Date.now() - (i*3)*24*60*60*1000).toISOString(),
-                diaSemana: i + 1,
-                total: totalCasos,
-                atendidos: atendidos,
-                faltosos: totalCasos - atendidos,
-                assuntos: localAssuntos,
-                atendentes: localAtendentes
-            });
+            testData.push({ pautaName: `Pauta Simulada ${i+1}`, creatorEmail: i % 2 === 0 ? "admin@teste.com" : "user@teste.com", dataReferencia: new Date(Date.now() - (i*3)*24*60*60*1000).toISOString(), diaSemana: i + 1, total: totalCasos, atendidos: atendidos, faltosos: totalCasos - atendidos, assuntos: localAssuntos, atendentes: localAtendentes });
         }
         for (const data of testData) { await addDoc(collection(db, "estatisticas_permanentes"), data); }
         showNotification("✅ Dados de teste criados!");
@@ -1157,81 +1104,37 @@ export const loadDashboardData = async (db) => {
     const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
     const resultsArea = document.getElementById('dashboard-results');
     if (!resultsArea) return;
-    
     resultsArea.classList.remove('hidden');
     resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
-
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
         if (snapshot.empty) {
-            resultsArea.innerHTML = `
-                <div class="text-center py-12 bg-white rounded-lg border shadow-sm">
-                    <div class="text-5xl mb-4">📊</div>
-                    <h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3>
-                    <p class="text-gray-500 mb-6 text-sm">Execute a Limpeza Manual para gerar estatísticas.</p>
-                    <button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold">Inserir Dados de Teste</button>
-                </div>`;
+            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><div class="text-5xl mb-4">📊</div><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3><p class="text-gray-500 mb-6 text-sm">Execute a Limpeza Manual para gerar estatísticas.</p><button id="generate-test-data-btn" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg text-sm font-bold">Inserir Dados de Teste</button></div>`;
             document.getElementById('generate-test-data-btn')?.addEventListener('click', () => generateTestData(db));
             return;
         }
-        
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         if (document.getElementById('stats-filter-attendant')?.options.length <= 1) {
             const atendentesUnicos = new Set();
             rawData.forEach(d => { if (d.atendentes) Object.keys(d.atendentes).forEach(n => atendentesUnicos.add(n)); });
             const select = document.getElementById('stats-filter-attendant');
-            if (select) {
-                select.innerHTML = '<option value="all">Todos os Atendentes</option>';
-                Array.from(atendentesUnicos).sort().forEach(n => select.appendChild(new Option(n, n)));
-            }
+            if (select) { select.innerHTML = '<option value="all">Todos os Atendentes</option>'; Array.from(atendentesUnicos).sort().forEach(n => select.appendChild(new Option(n, n))); }
         }
-
         let filteredData = [...rawData];
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
         if (attendantFilter && attendantFilter !== 'all') filteredData = filteredData.filter(d => d.atendentes && d.atendentes[attendantFilter] !== undefined);
-
-        if (filteredData.length === 0) {
-            resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado.</div>';
-            return;
-        }
-
-        let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0;
-        let mapAssuntos = {}, mapUsers = {};
-
+        if (filteredData.length === 0) { resultsArea.innerHTML = '<div class="text-center py-8 text-gray-500 font-semibold bg-white rounded-lg border">Nenhum dado encontrado.</div>'; return; }
+        let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0, mapAssuntos = {}, mapUsers = {};
         filteredData.forEach(d => {
-            if (attendantFilter && attendantFilter !== 'all') {
-                const prodAtendente = d.atendentes[attendantFilter] || 0;
-                totalGeral += prodAtendente;
-                totalAtendidos += prodAtendente;
-            } else {
-                totalGeral += d.total || 0; 
-                totalAtendidos += d.atendidos || 0; 
-                totalFaltosos += d.faltosos || 0;
-            }
+            if (attendantFilter && attendantFilter !== 'all') { const prodAtendente = d.atendentes[attendantFilter] || 0; totalGeral += prodAtendente; totalAtendidos += prodAtendente; }
+            else { totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0; }
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             if (d.atendentes) for (let [k, v] of Object.entries(d.atendentes)) mapUsers[k] = (mapUsers[k] || 0) + v;
         });
-
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
-
-        resultsArea.innerHTML = `
-            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                <div class="p-4 bg-blue-50 rounded-lg text-center"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl font-black text-blue-800">${totalGeral}</h4></div>
-                <div class="p-4 bg-green-50 rounded-lg text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl font-black text-green-800">${totalAtendidos}</h4></div>
-                <div class="p-4 bg-orange-50 rounded-lg text-center"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl font-black text-orange-800">${attendantFilter && attendantFilter !== 'all' ? '0.0' : taxa}%</h4></div>
-            </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                <div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div>
-                <div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div>
-            </div>
-            <div class="flex justify-end gap-3 mt-6 border-t pt-4">
-                 <button id="export-csv-btn" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold">CSV</button>
-                 <button id="export-bi-pdf-btn" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold">PDF</button>
-            </div>
-        `;
-
+        resultsArea.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6"><div class="p-4 bg-blue-50 rounded-lg text-center"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl font-black text-blue-800">${totalGeral}</h4></div><div class="p-4 bg-green-50 rounded-lg text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl font-black text-green-800">${totalAtendidos}</h4></div><div class="p-4 bg-orange-50 rounded-lg text-center"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl font-black text-orange-800">${attendantFilter && attendantFilter !== 'all' ? '0.0' : taxa}%</h4></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div></div><div class="flex justify-end gap-3 mt-6 border-t pt-4"><button id="export-csv-btn" class="bg-emerald-600 text-white px-5 py-2.5 rounded-lg font-bold">CSV</button><button id="export-bi-pdf-btn" class="bg-red-600 text-white px-5 py-2.5 rounded-lg font-bold">PDF</button></div>`;
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
@@ -1240,13 +1143,10 @@ export const loadDashboardData = async (db) => {
         };
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
-
         document.getElementById('export-bi-pdf-btn')?.addEventListener('click', () => exportBIDashboardPDF(totalGeral, totalAtendidos, taxa, mapAssuntos));
         document.getElementById('export-csv-btn')?.addEventListener('click', () => exportCSV(totalGeral, totalAtendidos, taxa, mapAssuntos));
         showNotification("Dashboard atualizado!", "success");
-    } catch (error) {
-        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro: ${error.message}</div>`;
-    }
+    } catch (error) { resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro: ${error.message}</div>`; }
 };
 
 const exportCSV = (totalGeral, totalAtendidos, taxa, mapAssuntos) => {
@@ -1301,5 +1201,6 @@ window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 window.abrirGerenciadorUnidades = () => abrirGerenciadorUnidades(window.app?.db);
 window.abrirImportadorUnidades = () => abrirImportadorUnidades(window.app?.db);
+window.setupAdminSearch = () => setupAdminSearch();
 
-console.log("✅ Módulo admin.js carregado com sucesso");
+console.log("✅ Módulo admin.js carregado com sucesso (com paginação, busca e seleção de itens por página)");
