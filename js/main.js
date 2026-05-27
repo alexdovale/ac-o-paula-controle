@@ -2092,9 +2092,9 @@ class SIGEPApp {
     let orgaoHtml = '';
     
     if (isModoNormal) {
-        // Carrega as unidades que o usuário pode acessar
+        // Carrega as unidades que o usuário pode acessar (coleção unificada 'estrutura_unidades')
         if (this.currentUser && this.currentUser.unidadesPermitidas && this.currentUser.unidadesPermitidas.length > 0) {
-            const unidadesSnap = await getDocs(collection(this.db, "unidades"));
+            const unidadesSnap = await getDocs(collection(this.db, "estrutura_unidades"));
             const todasUnidades = unidadesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
             unidadesPermitidas = todasUnidades.filter(u => 
                 this.currentUser.unidadesPermitidas.includes(u.id) && u.ativo !== false
