@@ -262,10 +262,7 @@ const importarUnidadesEmMassa = async (db, unidades) => {
 };
 
 const baixarModeloCSVUnidades = () => {
-    const csvContent = `nome,sigla,endereco,telefone,email
-"Defensoria Pública - Duque de Caxias","DP Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"
-"Defensoria Pública - Belford Roxo","DP Belford Roxo","Rua Gerson Costa, s/n - Centro, Belford Roxo - RJ","(21) 2661-4321","belfordroxo@dperj.br"
-"Defensoria Pública - Nova Iguaçu","DP Nova Iguaçu","Rua Getúlio Vargas, s/n - Centro, Nova Iguaçu - RJ","(21) 2665-9876","ni@dperj.br"`;
+    const csvContent = `nome,sigla,endereco,telefone,email\n"Defensoria Pública - Duque de Caxias","DP Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"\n"Defensoria Pública - Belford Roxo","DP Belford Roxo","Rua Gerson Costa, s/n - Centro, Belford Roxo - RJ","(21) 2661-4321","belfordroxo@dperj.br"\n"Defensoria Pública - Nova Iguaçu","DP Nova Iguaçu","Rua Getúlio Vargas, s/n - Centro, Nova Iguaçu - RJ","(21) 2665-9876","ni@dperj.br"`;
     
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
     const link = document.createElement('a');
@@ -337,15 +334,14 @@ export const abrirImportadorUnidades = async (db) => {
                     <div id="preview-unidades" class="hidden">
                         <h4 class="font-bold text-slate-700 mb-3">📋 Prévia</h4>
                         <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto">
-                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody>可能有
+                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
                         </div>
                     </div>
                 </div>
                 <div id="painel-modelo-unidades" class="hidden space-y-4">
                     <div class="bg-slate-50 rounded-xl p-6">
                         <h3 class="font-bold text-lg mb-4">📄 Formato Esperado</h3>
-                        <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email
-"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"</code></pre>
+                        <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email\n"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"</code></pre>
                         <div class="mt-4 flex gap-3">
                             <button id="btn-baixar-modelo-csv-unidades" class="bg-blue-600 text-white px-4 py-2 rounded-lg">📥 CSV</button>
                             <button id="btn-baixar-modelo-json-unidades" class="bg-blue-600 text-white px-4 py-2 rounded-lg">📥 JSON</button>
@@ -591,10 +587,8 @@ export const abrirGerenciadorUnidades = async (db) => {
     modal.className = 'fixed inset-0 bg-black/70 z-[700] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <!-- 1. INCLUSÃO DA LOGO (IDENTIDADE VISUAL) - HEADER ATUALIZADO -->
             <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div class="flex items-center gap-4">
-                    <!-- Substitua o src pelo caminho correto da sua logo -->
                     <img src="/assets/logo-sigep-branca.png" alt="Logo SIGEP" class="h-12 w-12 object-contain drop-shadow-md" onerror="this.style.display='none'">
                     <div>
                         <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
@@ -754,7 +748,6 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
                     <input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
                     <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 </div>
-                <!-- 3. CONTADOR DE UNIDADES SELECIONADAS (NOVO) -->
                 <div class="mb-4 flex justify-between items-center bg-slate-100 p-3 rounded-xl">
                     <span class="text-xs font-bold text-slate-600">Unidades selecionadas:</span>
                     <span id="contador-selecionadas-valor" class="bg-emerald-600 text-white text-xs font-bold px-2.5 py-1 rounded-full shadow-sm">${unidadesSelecionadas.length}</span>
@@ -944,12 +937,17 @@ function renderAprovadosTable(db) {
     tableBody.innerHTML = paginated.map(user => {
         const unidadesCount = user.unidadesPermitidas?.length || 0;
         const statusBadge = user.role === 'suspended' ? '<span class="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>' : '<span class="bg-green-100 text-green-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
+        
         return `
             <tr class="border-b hover:bg-gray-50 transition">
                 <td class="px-3 py-3"><p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>${statusBadge}</td>
                 <td class="px-3 py-3 text-xs text-gray-500">${escapeHTML(user.email)}</td>
                 <td class="px-3 py-3 text-center">
-                    <button onclick="window.gerenciarUnidades('${user.id}', '${escapeHTML(user.name || 'Sem nome')}', '${escapeHTML(user.email)}', ${JSON.stringify(user.unidadesPermitidas || [])})" class="bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 transition flex items-center gap-1 mx-auto">
+                    <button class="btn-gerenciar-unidades bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 transition flex items-center gap-1 mx-auto"
+                        data-userid="${user.id}" 
+                        data-nome="${escapeHTML(user.name || 'Sem nome')}" 
+                        data-email="${escapeHTML(user.email)}"
+                        data-unidades='${JSON.stringify(user.unidadesPermitidas || [])}'>
                         🏢 ${unidadesCount}
                     </button>
                 </td>
@@ -971,6 +969,17 @@ function renderAprovadosTable(db) {
             </tr>
         `;
     }).join('');
+    
+    // Adiciona evento de clique para os botões de gerenciar unidades de forma segura (dataset)
+    tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const userId = btn.dataset.userid;
+            const nome = btn.dataset.nome;
+            const email = btn.dataset.email;
+            const unidades = JSON.parse(btn.dataset.unidades);
+            window.gerenciarUnidades(userId, nome, email, unidades);
+        });
+    });
     
     renderPageSizeSelector('page-size-usuarios', pageSize, (newSize) => {
         adminFilters.usuarios.pageSize = newSize;
