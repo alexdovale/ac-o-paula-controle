@@ -1161,5 +1161,27 @@ window.populateUserFilter = () => populateUserFilter(window.app?.db);
 window.loadAuditLogs = () => loadAuditLogs(window.app?.db);
 window.exportAuditLogsPDF = () => exportAuditLogsPDF(window.app?.db);
 window.setupAdminSearch = () => setupAdminSearch();
+// EXPORTE TUDO PARA O WINDOW CORRETAMENTE
+window.AdminService = {
+    carregarUnidades,
+    criarUnidade,
+    atualizarUnidade,
+    excluirUnidade,
+    abrirImportadorUnidades,
+    abrirModalUsuariosPorUnidade,
+    abrirGerenciadorUnidades,
+    setupAdminSearch,
+    loadAuditLogs,
+    exportAuditLogsPDF,
+    cleanupOldData,
+    loadDashboardData,
+    populateUserFilter,
+    approveUser,
+    updateUserRole,
+    deleteUser,
+    setupAdminEvents // Adicionamos aqui!
+};
+
+console.log("✅ AdminService registrado no window com sucesso.");
 
 console.log("✅ Módulo admin.js atualizado e acoplado com os novos componentes.");
