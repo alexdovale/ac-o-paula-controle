@@ -633,9 +633,13 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
 /**
  * Abre modal para gerenciar unidades de um usuário (com pesquisa)
  */
+/**
+ * Abre modal para gerenciar unidades de um usuário (com pesquisa e remoção)
+ */
 export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, unidadesAtuais = []) => {
     let todasUnidades = await carregarUnidades(db);
     let filtroTexto = '';
+    let unidadesSelecionadas = [...unidadesAtuais]; // Cópia local para edição
     
     const renderUnidades = () => {
         const filtradas = todasUnidades.filter(u => 
@@ -646,21 +650,65 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
         const container = document.getElementById('lista-unidades-checkbox');
         if (!container) return;
         
-        container.innerHTML = filtradas.map(unidade => `
-            <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
+        container.innerHTML = filtradas.map(unidade => {
+            const isChecked = unidadesSelecionadas.includes(unidade.id);
+            return `
+            <label class="flex items-center gap-3 p-3 border rounded-lg cursor-pointer hover:bg-gray-50 transition ${isChecked ? 'bg-blue-50 border-blue-300' : ''}" data-id="${unidade.id}">
                 <input type="checkbox" name="unidade" value="${unidade.id}" 
-                    ${unidadesAtuais.includes(unidade.id) ? 'checked' : ''}
+                    ${isChecked ? 'checked' : ''}
                     class="h-4 w-4 text-green-600 rounded">
-                <div>
+                <div class="flex-1">
                     <span class="font-bold text-gray-800">${escapeHTML(unidade.nome)}</span>
                     <p class="text-[10px] text-gray-400">${escapeHTML(unidade.sigla || '')}</p>
                 </div>
-            </label>
-        `).join('');
+                <button type="button" class="btn-remover-unidade-item text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1 rounded hover:bg-red-50 transition" data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
+                    ✕ Remover
+                </button>
+            </label>`;
+        }).join('');
         
         if (filtradas.length === 0) {
             container.innerHTML = '<p class="text-center text-gray-400 py-4">Nenhuma unidade encontrada.</p>';
         }
+        
+        // Eventos para os checkboxes
+        container.querySelectorAll('input[type="checkbox"]').forEach(cb => {
+            cb.addEventListener('change', (e) => {
+                e.stopPropagation();
+                const id = cb.value;
+                if (cb.checked) {
+                    if (!unidadesSelecionadas.includes(id)) {
+                        unidadesSelecionadas.push(id);
+                    }
+                } else {
+                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id);
+                }
+                // Atualiza o estilo do label
+                const label = cb.closest('label');
+                if (label) {
+                    if (cb.checked) {
+                        label.classList.add('bg-blue-50', 'border-blue-300');
+                    } else {
+                        label.classList.remove('bg-blue-50', 'border-blue-300');
+                    }
+                }
+            });
+        });
+        
+        // Eventos para os botões de remover
+        container.querySelectorAll('.btn-remover-unidade-item').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const id = btn.dataset.id;
+                const nome = btn.dataset.nome;
+                if (confirm(`Remover a unidade "${nome}" deste usuário?`)) {
+                    unidadesSelecionadas = unidadesSelecionadas.filter(i => i !== id);
+                    renderUnidades(); // Re-renderiza a lista
+                    showNotification(`Unidade "${nome}" removida da lista.`, "info");
+                }
+            });
+        });
     };
     
     const modal = document.createElement('div');
@@ -679,7 +727,7 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
                     <input type="text" id="pesquisa-unidades-usuario" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm">
                     <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
                 </div>
-                <p class="text-sm font-bold text-gray-700 mb-3">Selecione as unidades que este usuário pode acessar:</p>
+                <p class="text-sm font-bold text-gray-700 mb-3">Selecione ou remova as unidades que este usuário pode acessar:</p>
                 <div id="lista-unidades-checkbox" class="space-y-2 max-h-64 overflow-y-auto"></div>
                 <div class="mt-4 p-3 bg-amber-50 rounded-lg border border-amber-200">
                     <p class="text-[10px] text-amber-700 font-bold">⚠️ Atenção:</p>
@@ -697,6 +745,7 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
     
     renderUnidades();
     
+    // Filtro de pesquisa
     document.getElementById('pesquisa-unidades-usuario')?.addEventListener('input', (e) => {
         filtroTexto = e.target.value;
         renderUnidades();
@@ -706,9 +755,8 @@ export const gerenciarUnidadesUsuario = async (db, userId, userNome, userEmail, 
     modal.querySelectorAll('.fechar-modal-unidades').forEach(btn => btn.addEventListener('click', fechar));
     
     document.getElementById('btn-salvar-unidades-usuario')?.addEventListener('click', async () => {
-        const checkboxes = modal.querySelectorAll('input[name="unidade"]:checked');
-        const unidadesSelecionadas = Array.from(checkboxes).map(cb => cb.value);
         await salvarUnidadesUsuario(db, userId, unidadesSelecionadas);
+        showNotification(`Unidades do usuário ${userNome} atualizadas!`, "success");
         fechar();
         setTimeout(() => loadUsersList(db), 500);
     });
