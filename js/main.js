@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -1512,7 +1511,7 @@ class SIGEPApp {
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
             const adminPanelBtn = document.getElementById('admin-panel-btn');         
-            const adminBtnMain = document.getElementById('admin-btn-main');           
+            const adminBtnMain = document.getElementById('admin-btn-main');            
 
             if ((adminModal && adminModal.contains(e.target)) ||
                 (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
@@ -1646,7 +1645,7 @@ class SIGEPApp {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
             showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+            showFaltosos: document.getElementById('toggle-distribuicao')?.checked || false,
         };
         localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
         this.applyColumnPreferences(preferences);
@@ -2208,6 +2207,10 @@ class SIGEPApp {
                 tipoPauta = this.tipoPautaSelecionado || 'mutirao';
             }
             
+            // RECUPERA O TIPO EXATO (Multisala, avulso, agendamento) QUE FOI INJETADO NO MODAL
+            const modalDOM = document.getElementById('create-pauta-modal');
+            const tipoDefinitivo = modalDOM?.dataset?.pautaType || 'agendamento';
+
             // Monta os dados da pauta
             const pautaData = {
                 name: nomePauta,
@@ -2216,7 +2219,7 @@ class SIGEPApp {
                 memberEmails: [user.email],
                 createdAt: new Date().toISOString(),
                 tipo: tipoPauta,
-                type: 'agendamento',
+                type: tipoDefinitivo, // CORRIGIDO: Usa a variável dinâmica em vez de 'agendamento' fixo
                 isClosed: false,
                 isPublic: false,
                 modo: modoAtual,
