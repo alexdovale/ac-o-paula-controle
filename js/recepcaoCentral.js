@@ -53,6 +53,34 @@ function colaboradoresStatus(colaboradores) {
     return { livres, ocupados };
 }
 
+// Helper para extrair e exibir as verificações de documentos do "Ver Detalhes"
+function renderVerificacoesBadge(a) {
+    const docs = a.verifications || a.documentos || a.verificacoes || a.customFields?.verifications;
+    if (!docs) return '';
+    
+    let htmlLista = '';
+    
+    // Se for um array de documentos (Ex: ["RG", "CPF"])
+    if (Array.isArray(docs)) {
+        const itens = docs.map(d => typeof d === 'string' ? d : (d.nome || d.name || d.label || 'Doc'));
+        if(itens.length === 0) return '';
+        htmlLista = itens.map(i => `<span class="inline-block bg-slate-100 text-slate-600 border border-slate-200 text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1 shadow-sm">📄 ${escapeHTML(i)}</span>`).join('');
+    } 
+    // Se for um objeto com chaves e booleanos (Ex: { rg: true, cpf: false })
+    else if (typeof docs === 'object') {
+        const keys = Object.keys(docs);
+        if(keys.length === 0) return '';
+        htmlLista = keys.map(k => {
+            const checked = docs[k];
+            return `<span class="inline-block ${checked ? 'bg-green-50 text-green-700 border-green-200' : 'bg-red-50 text-red-600 border-red-200'} border text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1 shadow-sm">
+                ${checked ? '✔️' : '❌'} ${escapeHTML(k)}
+            </span>`;
+        }).join('');
+    }
+    
+    return htmlLista ? `<div class="mt-1.5 flex flex-wrap gap-0.5">${htmlLista}</div>` : '';
+}
+
 // ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
 
 export const RecepçãoCentralService = {
@@ -360,7 +388,10 @@ export const RecepçãoCentralService = {
             : aguardando.slice(0, 5).map((a, i) => `
                 <div class="flex items-center gap-2 py-1 border-b border-slate-100 last:border-0">
                     <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
-                    <span class="text-xs font-semibold text-slate-700 truncate flex-1">${escapeHTML(a.name)}</span>
+                    <span class="text-xs font-semibold text-slate-700 truncate flex-1">
+                        ${escapeHTML(a.name)} 
+                        ${a.numAgendamento ? `<span class="text-[9px] text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                    </span>
                     <span class="text-[9px] text-slate-400 shrink-0">${a.scheduledTime || ''}</span>
                 </div>
             `).join('')
@@ -558,13 +589,17 @@ export const RecepçãoCentralService = {
                             ${aguardando.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
-                                    <div class="flex items-center gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                                        <span class="w-6 h-6 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
+                                    <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                        <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
                                         <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
-                                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(a.subject || '')}</p>
+                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                            </p>
+                                            ${renderVerificacoesBadge(a)}
                                         </div>
-                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1 rounded-lg transition"
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition"
                                             data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
                                     </div>
                                 `).join('')
@@ -579,9 +614,21 @@ export const RecepçãoCentralService = {
                             ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
                                 : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
-                                    <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5">
-                                        <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
-                                        <p class="text-[10px] text-blue-600 font-bold mt-0.5">${escapeHTML(a.assignedCollaborator?.name || a.attendant || '—')}</p>
+                                    <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-3">
+                                        <span class="text-lg mt-1 shrink-0">💬</span>
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                            </p>
+                                            <div class="mt-1">
+                                                <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
+                                                    🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
+                                                </span>
+                                            </div>
+                                            ${renderVerificacoesBadge(a)}
+                                        </div>
                                     </div>
                                 `).join('')
                             }
@@ -670,8 +717,15 @@ export const RecepçãoCentralService = {
                 return `
                     <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
                         <div class="min-w-0 flex-1">
-                            <p class="font-black text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
-                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(pauta.name)} · ${escapeHTML(a.subject || '')}</p>
+                            <p class="font-black text-slate-800 text-sm truncate">
+                                ${escapeHTML(a.name)} 
+                            </p>
+                            <p class="text-[10px] text-slate-500 truncate">
+                                ${a.numAgendamento ? `<span class="font-mono text-slate-400 mr-1">#${a.numAgendamento}</span>` : ''}
+                                ${a.scheduledTime ? `⏰ ${a.scheduledTime} · ` : ''}
+                                ${escapeHTML(pauta.name)} · ${escapeHTML(a.subject || '')}
+                                ${a.assignedCollaborator?.name || a.attendant ? ` · 🧑‍💻 ${escapeHTML(a.assignedCollaborator?.name || a.attendant)}` : ''}
+                            </p>
                         </div>
                         <span class="text-[10px] font-black px-2 py-0.5 rounded ${sl.cor}">${sl.txt}</span>
                         ${podeCheckin ? `
@@ -769,7 +823,7 @@ export const RecepçãoCentralService = {
         // Salva global (para acompanhamento-recepcao.html na mesma máquina)
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
 
-        // NOVA PARTE: Salva diretamente no Firebase para o Painel Unificado (TV) escutar e piscar de qualquer lugar
+        // Salva diretamente no Firebase para o Painel Unificado (TV)
         try {
             const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
             await setDoc(painelRef, {
@@ -780,7 +834,6 @@ export const RecepçãoCentralService = {
             console.error("Erro ao atualizar último chamado no Firebase:", error);
         }
 
-        // Dispara evento (capturado pelo acompanhamento aberto na mesma aba)
         window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
     },
 
@@ -923,8 +976,8 @@ export const RecepçãoCentralService = {
                             : naPauta.map(a => `
                                 <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
                                     <div>
-                                        <p class="font-bold text-slate-800 text-sm">${escapeHTML(a.name)}</p>
-                                        <p class="text-[10px] text-slate-500">${a.scheduledTime || ''} · ${escapeHTML(a.subject || '')}</p>
+                                        <p class="font-bold text-slate-800 text-sm">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                        <p class="text-[10px] text-slate-500">${a.scheduledTime ? `⏰ ${a.scheduledTime} · ` : ''}${escapeHTML(a.subject || '')}</p>
                                     </div>
                                     <button class="rc-modal-checkin-btn bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
                                         data-id="${a.id}" data-nome="${escapeHTML(a.name)}">
