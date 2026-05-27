@@ -2247,6 +2247,23 @@ class SIGEPApp {
     });
 }
 
+    setupRealtimeListener(pautaId) {
+    if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+    const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+    this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+        this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+        UIService.renderAssistedLists(this);
+        setTimeout(() => { 
+            if (typeof PautaService.injectRoomSearches === 'function') {
+                PautaService.injectRoomSearches(this); 
+            }
+        }, 150);
+    }, (error) => {
+        console.error("Erro no snapshot:", error);
+        showNotification("Erro ao carregar dados em tempo real", "error");
+    });
+}
+
 
 
     
