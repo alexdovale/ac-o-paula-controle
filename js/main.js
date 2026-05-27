@@ -27,6 +27,9 @@ import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
 
+import { renderEstruturaAtual } from './estruturaAtual.js';
+import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+
 // 1. IMPORTAR E INJETAR OS MODAIS ANTES DE TUDO!
 import { injetarModais } from './modais.js';
 injetarModais();
@@ -2562,7 +2565,9 @@ window.sortColaboradores = function(criterio) {
     }
 };
 
-window.app = new SIGEPApp(); 
+window.app = new SIGEPApp();
+window.renderEstruturaAtual = renderEstruturaAtual;
+window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
 
 setTimeout(() => {
     if (window.app && typeof window.app.deletePauta === 'function') {
