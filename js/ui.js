@@ -19,6 +19,8 @@ export const UIService = {
         document.getElementById('app-container')?.classList.toggle('hidden', screenName !== 'app');
         document.getElementById('dashboard-container')?.classList.toggle('hidden', screenName !== 'dashboard');
         document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
+        document.getElementById('admin-container')?.classList.toggle('hidden', screenName !== 'admin');
+
 
         // Só grava o último acesso se não for tela de carregamento ou login
         if (screenName !== 'loading' && screenName !== 'login') {
