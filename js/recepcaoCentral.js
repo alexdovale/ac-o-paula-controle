@@ -154,11 +154,55 @@ export const RecepçãoCentralService = {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="max-w-7xl mx-auto px-4 py-6">
+            <div class="max-w-7xl mx-auto px-4 py-8">
+                
+                <!-- LOGO DO SIGEP -->
+                <div class="flex justify-center mb-4">
+                    <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-3 shadow-md">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
+                    </div>
+                </div>
+
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
-                <div class="mt-6 flex justify-center">
-                    <button id="rc-voltar-selector" class="bg-slate-600 text-white px-6 py-2 rounded-lg hover:bg-slate-700 transition">
-                        ← Voltar
+                
+                <!-- GUIA DE TIPOS DE RECEPÇÃO -->
+                <div class="max-w-4xl mx-auto mt-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-5">📖 Guia de Tipos de Recepção</h4>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                        <div class="flex items-start gap-3">
+                            <span class="bg-slate-800 text-white text-lg px-2.5 py-1 rounded-lg shrink-0">🏛️</span>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">Central</p>
+                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Painel principal. Permite visualizar e gerenciar pessoas de <b>todas</b> as filas e áreas da unidade.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="bg-amber-50 text-amber-600 text-lg px-2.5 py-1 rounded-lg border border-amber-200 shrink-0">⚖️</span>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">Especializada</p>
+                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Focada em um assunto específico (ex: Família). Exibe apenas a fila e os casos da sua própria área.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="bg-blue-50 text-blue-600 text-lg px-2.5 py-1 rounded-lg border border-blue-200 shrink-0">📋</span>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">Mista</p>
+                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Ponto de atendimento que agrupa <b>duas ou mais</b> áreas diferentes no mesmo local e no mesmo painel.</p>
+                            </div>
+                        </div>
+                        <div class="flex items-start gap-3">
+                            <span class="bg-emerald-50 text-emerald-600 text-lg px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">🗂️</span>
+                            <div>
+                                <p class="font-bold text-slate-800 text-sm">Generalista</p>
+                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Focada em triagem inicial. Serve para recepcionar casos novos, dar orientações e fazer encaminhamentos.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-8 flex justify-center">
+                    <button id="rc-voltar-selector" class="bg-slate-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-slate-700 transition shadow-sm">
+                        ← Voltar para o Início
                     </button>
                 </div>
             </div>
