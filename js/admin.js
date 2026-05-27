@@ -531,6 +531,20 @@ export const abrirGerenciadorUnidades = async (db) => {
                 abrirGerenciadorUnidades(db);
             });
         });
+
+        container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                if (window.abrirModalNovaRecepcao) {
+                    window.abrirModalNovaRecepcao(window.app, {
+                        unidadeId: btn.dataset.id,
+                        unidadeNome: btn.dataset.nome,
+                        orgaoId: btn.dataset.id // Se precisar de outro campo, ajuste aqui
+                    });
+                } else {
+                    showNotification("Módulo de Nova Recepção não carregado.", "error");
+                }
+            });
+        });
     };
     
     const modal = document.createElement('div');
