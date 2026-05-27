@@ -187,16 +187,36 @@ export const PautaConfigService = {
 
     _abrirModalCriacao(type) {
         const app = this._app;
-        const createModal = document.getElementById('create-pauta-modal');
+        
+        // CORREÇÃO: 1. Pede para o main.js criar o HTML do modal ANTES de usar
+        let createModal = document.getElementById('create-pauta-modal');
+        if (!createModal) {
+            if (app && typeof app.abrirModalCriarPauta === 'function') {
+                app.tipoPautaSelecionado = type; 
+                app.abrirModalCriarPauta(); // Injeta o modal no DOM
+                createModal = document.getElementById('create-pauta-modal'); // Seleciona novamente
+            }
+        }
+
+        // CORREÇÃO: 2. Proteção de segurança caso falhe
+        if (!createModal) {
+            console.error("Modal 'create-pauta-modal' não foi encontrado ou gerado.");
+            return; // Interrompe para evitar o erro fatal
+        }
+
+        // Agora é seguro setar o dataset!
         createModal.dataset.pautaType = type;
 
+        // CORREÇÃO 3: Verificação de nulidade no roomConfig
         const roomConfig = document.getElementById('room-config-container');
-        if (type === 'multisala') {
-            roomConfig.classList.remove('hidden');
-            app.customRoomsList = [];
-            this._renderCustomRooms();
-        } else {
-            roomConfig.classList.add('hidden');
+        if (roomConfig) {
+            if (type === 'multisala') {
+                roomConfig.classList.remove('hidden');
+                app.customRoomsList = [];
+                this._renderCustomRooms();
+            } else {
+                roomConfig.classList.add('hidden');
+            }
         }
 
         // Preencher data de operação com hoje
