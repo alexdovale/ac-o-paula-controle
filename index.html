@@ -302,6 +302,20 @@
             </div>
         </div>
 
+        <!-- ADMIN (MESMO PADRÃO DO DASHBOARD) -->
+        <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
+            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
+                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">🛡️ Painel do Administrador</h2>
+                <button id="admin-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">
+                    &larr; Voltar para Pautas
+                </button>
+            </div>
+            <div id="admin-content">
+                <div class="loader-small mx-auto my-12"></div>
+                <p class="text-center text-gray-500 mt-4">Carregando painel administrativo...</p>
+            </div>
+        </div>
+
         <div id="recepcao-central-container" class="hidden w-full max-w-7xl mx-auto px-2 sm:px-4 py-4"></div>
         <div id="atendimento-externo-container" class="hidden w-full flex-1 bg-slate-100 p-2 sm:p-4"></div>
 
@@ -729,105 +743,6 @@
             <button id="btn-confirm-lgpd" disabled class="w-full bg-gray-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed">
                 Confirmar e Entrar
             </button>
-        </div>
-    </div>
-
-    <!-- MODAL DO ADMINISTRADOR (PADRÃO RECEPÇÃO CENTRAL/DASHBOARD) -->
-    <div id="admin-modal" class="hidden fixed inset-0 bg-black/50 z-[500] flex items-center justify-center p-4 overflow-y-auto">
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[85vh] overflow-hidden flex flex-col animate-fade-in">
-            
-            <!-- Cabeçalho padronizado -->
-            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2">
-                        <span>🛡️</span> Painel do Administrador
-                    </h2>
-                    <p class="text-slate-300 text-sm mt-1">Gerencie usuários, auditoria, BI e unidades do sistema</p>
-                </div>
-                <button id="close-admin-modal-btn" class="text-white/60 hover:text-white text-3xl leading-none transition-all duration-200">&times;</button>
-            </div>
-            
-            <!-- Conteúdo com scroll próprio -->
-            <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                
-                <!-- Botão Unidades Master -->
-                <div class="mb-4">
-                    <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                        <span>🏢</span> Gerenciar Unidades / Órgãos
-                    </button>
-                </div>
-                
-                <!-- Usuários Pendentes -->
-                <div id="pending-users-list" class="space-y-2"></div>
-                
-                <!-- Usuários Aprovados -->
-                <div>
-                    <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2 flex items-center gap-2">
-                        <span>👥</span> Usuários Aprovados
-                    </h3>
-                    <div id="approved-users-list" class="space-y-2"></div>
-                </div>
-                
-                <!-- Seção de Auditoria -->
-                <div class="pt-2">
-                    <h3 class="text-lg font-bold text-slate-800 mb-3 flex items-center gap-2">
-                        <span>📜</span> Auditoria
-                    </h3>
-                    
-                    <!-- Filtros -->
-                    <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                        <select id="filter-log-user" class="p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500">
-                            <option value="all">Todos os usuários</option>
-                        </select>
-                        <select id="filter-log-action" class="p-2 border border-gray-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-indigo-500">
-                            <option value="all">Todas as ações</option>
-                        </select>
-                        <input type="date" id="filter-log-start" class="p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-                        <input type="date" id="filter-log-end" class="p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500">
-                    </div>
-                    
-                    <!-- Botões de ação -->
-                    <div class="flex flex-wrap gap-3 mb-4">
-                        <button id="view-audit-logs-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow-md flex items-center gap-2">
-                            <span>🔍</span> Carregar Logs
-                        </button>
-                        <button id="export-audit-pdf-btn" class="hidden bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow-md flex items-center gap-2">
-                            <span>📄</span> Exportar PDF
-                        </button>
-                        <button id="cleanup-old-data-btn" class="bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow-md flex items-center gap-2">
-                            <span>🗑️</span> Limpar Dados Antigos
-                        </button>
-                        <button id="btn-load-dashboard" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow-md flex items-center gap-2">
-                            <span>📊</span> BI Dashboard
-                        </button>
-                    </div>
-                    
-                    <!-- Tabela de logs -->
-                    <div id="audit-logs-container" class="hidden overflow-x-auto">
-                        <div class="border rounded-xl overflow-hidden">
-                            <table class="w-full text-sm border-collapse">
-                                <thead class="bg-slate-100">
-                                    <tr>
-                                        <th class="p-3 text-left text-xs font-bold text-slate-600">Data/Hora</th>
-                                        <th class="p-3 text-left text-xs font-bold text-slate-600">Usuário</th>
-                                        <th class="p-3 text-left text-xs font-bold text-slate-600">Ação</th>
-                                        <th class="p-3 text-left text-xs font-bold text-slate-600">Detalhes</th>
-                                    </tr>
-                                </thead>
-                                <tbody id="audit-logs-table-body" class="divide-y divide-slate-100"></tbody>
-                            </table>
-                        </div>
-                    </div>
-                    
-                    <!-- Resultados do Dashboard BI -->
-                    <div id="dashboard-results" class="hidden mt-6"></div>
-                </div>
-            </div>
-            
-            <!-- Rodapé padronizado -->
-            <div class="bg-slate-50 px-6 py-3 flex justify-end border-t shrink-0">
-                <button id="close-admin-modal-footer" class="bg-gray-300 hover:bg-gray-400 text-gray-700 font-bold px-5 py-2 rounded-lg transition text-sm">Fechar</button>
-            </div>
         </div>
     </div>
 
