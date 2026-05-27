@@ -53,10 +53,10 @@
             border: 1px solid #334155;
             border-left: 4px solid #f59e0b;
             border-radius: 12px;
-            padding: 10px 14px;
+            padding: 12px 16px;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
             margin-bottom: 8px;
             transition: background 0.2s;
         }
@@ -64,27 +64,23 @@
             border-left-color: #6366f1;
             background: #1a1f3a;
         }
-        .pessoa-card.distribuicao {
-            border-left-color: #06b6d4;
-            background: #0f2a32;
-        }
 
-        /* Badge de sala */
+        /* Badge de sala/pauta */
         .sala-badge {
-            background: #1e293b;
+            background: #161d2a;
             border: 1px solid #475569;
             color: #94a3b8;
             font-size: 10px;
             font-weight: 700;
-            padding: 2px 8px;
+            padding: 4px 10px;
             border-radius: 6px;
             text-transform: uppercase;
             letter-spacing: 0.05em;
             white-space: nowrap;
         }
 
-        /* Coluna de pauta */
-        .pauta-col {
+        /* Colunas principais unificadas */
+        .coluna-unificada {
             background: #161d2a;
             border: 1px solid #1e293b;
             border-radius: 20px;
@@ -92,14 +88,13 @@
             display: flex;
             flex-direction: column;
         }
-        .pauta-col-header {
-            padding: 14px 18px;
+        .coluna-header {
+            padding: 16px 20px;
             background: #1e293b;
             border-bottom: 1px solid #334155;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            gap: 8px;
         }
 
         /* Gradiente de texto para o nome chamado */
@@ -112,7 +107,7 @@
 
         /* Pill contador */
         .pill {
-            padding: 2px 10px;
+            padding: 4px 12px;
             border-radius: 999px;
             font-size: 11px;
             font-weight: 800;
@@ -122,47 +117,28 @@
 </head>
 <body class="p-3 sm:p-5 md:p-8 flex flex-col min-h-screen">
 
-    <!-- LOADING -->
     <div id="loading" class="fixed inset-0 bg-[#0d1117] flex flex-col items-center justify-center z-50 gap-4">
         <div class="w-12 h-12 rounded-full border-2 border-transparent border-t-amber-500 animate-spin"></div>
         <p class="text-slate-500 text-xs font-bold uppercase tracking-widest">Conectando ao SIGEP...</p>
     </div>
 
-    <!-- ERRO -->
-    <div id="error-screen" class="hidden fixed inset-0 bg-[#0d1117] flex flex-col items-center justify-center p-4 z-50">
-        <div class="bg-[#161d2a] border border-red-900 p-10 rounded-3xl max-w-md w-full text-center">
-            <p class="text-4xl mb-4">🔒</p>
-            <h1 class="text-xl font-black text-white mb-2">Recepção não encontrada</h1>
-            <p class="text-slate-400 text-sm mb-6">O link da recepção é inválido ou expirou.</p>
-            <button onclick="location.reload()" class="bg-amber-500 text-black font-black px-8 py-3 rounded-xl text-sm uppercase tracking-widest">
-                Tentar Novamente
-            </button>
-        </div>
-    </div>
+    <div id="app" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex flex-col gap-5 h-full">
 
-    <!-- APP -->
-    <div id="app" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex flex-col gap-5">
-
-        <!-- HEADER -->
-        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 
-                        bg-[#161d2a] border border-[#1e293b] rounded-2xl px-6 py-4">
+        <header class="flex flex-col sm:flex-row items-center justify-between gap-4 bg-[#161d2a] border border-[#1e293b] rounded-2xl px-6 py-4 shrink-0">
             <div class="flex items-center gap-4">
-                <!-- Logo / marca -->
                 <div class="bg-[#0d1117] border border-[#334155] rounded-xl p-2 shrink-0">
-                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png"
-                         alt="SIGEP" class="h-9 w-auto object-contain">
+                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-9 w-auto object-contain">
                 </div>
                 <div>
                     <div class="flex items-center gap-2">
                         <h1 class="text-white font-black text-xl tracking-tight leading-none">SIGEP</h1>
                         <span class="text-slate-600 text-xs font-bold">·</span>
-                        <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Painel da Recepção</span>
+                        <span class="text-slate-400 text-xs font-bold uppercase tracking-widest">Painel de Atendimento</span>
                     </div>
                     <h2 id="recepcao-nome" class="text-amber-400 font-black text-lg leading-tight mt-0.5 tracking-tight">—</h2>
                 </div>
             </div>
 
-            <!-- Status ao vivo + contadores globais -->
             <div class="flex items-center gap-4 flex-wrap justify-center sm:justify-end">
                 <div class="flex items-center gap-2">
                     <span class="relative flex h-2.5 w-2.5">
@@ -180,23 +156,13 @@
                     <p class="text-indigo-400 font-black text-2xl leading-none" id="g-atendendo">0</p>
                     <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Atendendo</p>
                 </div>
-                <div class="text-center">
-                    <p class="text-emerald-400 font-black text-2xl leading-none" id="g-atendidos">0</p>
-                    <p class="text-slate-500 text-[9px] font-bold uppercase tracking-widest mt-0.5">Concluídos</p>
-                </div>
                 <div id="data-hora" class="mono text-slate-500 text-xs font-bold bg-[#0d1117] border border-[#1e293b] px-3 py-1.5 rounded-lg"></div>
             </div>
         </header>
 
-        <!-- BLOCO ÚLTIMO CHAMADO -->
-        <div id="ultimo-chamado-wrap" class="hidden">
-            <div id="ultimo-chamado-card"
-                 class="bg-[#161d2a] border border-[#334155] rounded-2xl p-6 md:p-8 
-                        flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
-                <!-- Glow decorativo -->
-                <div class="absolute inset-0 pointer-events-none"
-                     style="background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 70%)"></div>
-
+        <div id="ultimo-chamado-wrap" class="hidden shrink-0">
+            <div id="ultimo-chamado-card" class="bg-[#161d2a] border border-[#334155] rounded-2xl p-6 md:p-8 flex flex-col md:flex-row items-center gap-6 relative overflow-hidden">
+                <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, rgba(251,191,36,0.07) 0%, transparent 70%)"></div>
                 <div class="text-center md:text-left flex-1">
                     <p class="text-amber-500 text-[10px] font-black uppercase tracking-[0.35em] mb-3">📣 Chamando Agora</p>
                     <h2 id="uc-nome" class="nome-chamado text-5xl sm:text-6xl font-black uppercase tracking-tight leading-none mb-4">—</h2>
@@ -206,29 +172,45 @@
                         <span id="uc-hora"  class="mono text-slate-500 text-xs font-bold self-center">—</span>
                     </div>
                 </div>
-
-                <!-- Chamados recentes -->
-                <div id="uc-recentes" class="hidden w-full md:w-64 shrink-0 space-y-2"></div>
             </div>
         </div>
 
-        <!-- GRADE DE PAUTAS -->
-        <div id="grade-pautas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 flex-1"></div>
+        <div class="flex flex-col md:flex-row gap-6 flex-1 min-h-[400px]">
+            
+            <div class="coluna-unificada w-full md:w-1/3">
+                <div class="coluna-header">
+                    <div>
+                        <p class="text-indigo-400 font-black text-sm uppercase tracking-widest">🧑‍💻 Em Atendimento</p>
+                        <p class="text-slate-500 text-[10px] font-bold mt-1">Sendo atendidos neste momento</p>
+                    </div>
+                </div>
+                <div id="lista-atendimento" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0d1117]">
+                    </div>
+            </div>
 
-        <!-- RODAPÉ -->
-        <footer class="text-center text-slate-700 text-[10px] font-bold uppercase tracking-widest pb-2">
-            SIGEP · Painel Público da Recepção · Dados em tempo real
+            <div class="coluna-unificada w-full md:w-2/3">
+                <div class="coluna-header">
+                    <div>
+                        <p class="text-amber-400 font-black text-sm uppercase tracking-widest">⏳ Fila de Espera Geral</p>
+                        <p class="text-slate-500 text-[10px] font-bold mt-1">Aguardando chamada</p>
+                    </div>
+                </div>
+                <div id="lista-espera" class="flex-1 overflow-y-auto p-4 space-y-3 bg-[#0d1117] grid grid-cols-1 md:grid-cols-2 gap-3 items-start content-start">
+                    </div>
+            </div>
+
+        </div>
+
+        <footer class="text-center text-slate-700 text-[10px] font-bold uppercase tracking-widest pb-2 shrink-0">
+            SIGEP · Painel Público da Recepção Unificada · Dados em tempo real
         </footer>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, collection, getDocs, query, where }
-            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider }
-            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
+        import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // ── Firebase ──────────────────────────────────────────────────────────
+        // ── Firebase Config ──
         const firebaseConfig = {
             apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
             authDomain: "pauta-ce162.firebaseapp.com",
@@ -240,368 +222,193 @@
         const firebaseApp = initializeApp(firebaseConfig);
         const db = getFirestore(firebaseApp);
 
-        try {
-            initializeAppCheck(firebaseApp, {
-                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
-                isTokenAutoRefreshEnabled: true
-            });
-        } catch(e) {}
-
-        // ── Params da URL ─────────────────────────────────────────────────────
+        // ── Params ──
         const params  = new URLSearchParams(window.location.search);
-        // Aceita lista de IDs de pautas: ?pautas=id1,id2,id3
-        // OU um ID de recepção para buscar pautas: ?recepcao=recepcaoId (requer pautas públicas)
-        const pautasParam  = params.get('pautas');   // ex: "abc123,def456"
-        const recepcaoNome = params.get('nome') || 'Recepção';
+        const pautasParam  = params.get('pautas');
+        let recepcaoNome = params.get('nome') || 'Recepção Geral';
 
-        // ── Estado global ─────────────────────────────────────────────────────
         const estado = {
-            pautas: {},        // { [pautaId]: { id, name, sala, type, ... } }
-            assistidos: {},    // { [pautaId]: [assistidos] }
+            pautas: {},
+            assistidos: {},
             ultimoChamado: null,
-            ultimoChamadoNome: null,
         };
 
-        // ── Helpers ───────────────────────────────────────────────────────────
         function esc(str) {
             if (!str) return '';
-            return String(str).replace(/[&<>'"]/g,
-                t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
-        }
-
-        function maskName(name) {
-            if (!name) return '—';
-            const conn = ['de','da','do','dos','das','e'];
-            return esc(name.trim().split(/\s+/).map((p,i) => {
-                if (i === 0) return p;
-                if (conn.includes(p.toLowerCase())) return p;
-                return p[0].toUpperCase() + '.';
-            }).join(' '));
+            return String(str).replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
         }
 
         function horaAgora() {
             return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
 
-        // ── Relógio ───────────────────────────────────────────────────────────
         function tickRelogio() {
             const el = document.getElementById('data-hora');
-            if (!el) return;
-            const agora = new Date();
-            el.textContent = agora.toLocaleString('pt-BR', {
-                weekday: 'short', day: '2-digit', month: '2-digit',
-                hour: '2-digit', minute: '2-digit', second: '2-digit'
-            }).replace(',', ' ·');
+            if (el) el.textContent = new Date().toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
         }
-        tickRelogio();
-        setInterval(tickRelogio, 1000);
+        setInterval(tickRelogio, 1000); tickRelogio();
 
-        // ── Som (Web Audio) ───────────────────────────────────────────────────
         function tocarSom() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
                 const notas = [[523,0,0.22],[659,0.22,0.22],[784,0.44,0.35]];
-                notas.forEach(([freq, inicio, dur]) => {
-                    const o = ctx.createOscillator();
-                    const g = ctx.createGain();
+                notas.forEach(([f, i, d]) => {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
                     o.connect(g); g.connect(ctx.destination);
-                    o.type = 'sine';
-                    o.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
-                    g.gain.setValueAtTime(0.35, ctx.currentTime + inicio);
-                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + dur);
-                    o.start(ctx.currentTime + inicio);
-                    o.stop(ctx.currentTime + inicio + dur);
+                    o.type = 'sine'; o.frequency.setValueAtTime(f, ctx.currentTime + i);
+                    g.gain.setValueAtTime(0.35, ctx.currentTime + i);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i + d);
+                    o.start(ctx.currentTime + i); o.stop(ctx.currentTime + i + d);
                 });
                 setTimeout(() => ctx.close(), 1400);
             } catch(e) {}
         }
 
-        // ── Último chamado ─────────────────────────────────────────────────────
-        function renderUltimoChamado(chamado, historico) {
+        function renderUltimoChamado(chamado) {
             if (!chamado) return;
-
-            const wrap    = document.getElementById('ultimo-chamado-wrap');
-            const card    = document.getElementById('ultimo-chamado-card');
-            const nomeEl  = document.getElementById('uc-nome');
-            const pautaEl = document.getElementById('uc-pauta');
-            const localEl = document.getElementById('uc-local');
-            const horaEl  = document.getElementById('uc-hora');
-            const recentesEl = document.getElementById('uc-recentes');
-
-            const novoNome = chamado.nome ? chamado.nome.toUpperCase() : '—';
-            const nomeMudou = nomeEl.textContent !== novoNome && novoNome !== '—';
+            const wrap = document.getElementById('ultimo-chamado-wrap');
+            const card = document.getElementById('ultimo-chamado-card');
+            const nomeMudou = document.getElementById('uc-nome').textContent !== chamado.nome.toUpperCase();
 
             wrap.classList.remove('hidden');
-            nomeEl.textContent  = novoNome;
-            pautaEl.textContent = esc(chamado.pautaNome || chamado.local || '—');
-            localEl.textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
-            horaEl.textContent  = chamado.hora || horaAgora();
+            document.getElementById('uc-nome').textContent  = chamado.nome.toUpperCase();
+            document.getElementById('uc-pauta').textContent = esc(chamado.pautaNome || chamado.local || '—');
+            document.getElementById('uc-local').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
+            document.getElementById('uc-hora').textContent  = chamado.hora || horaAgora();
 
             if (nomeMudou) {
-                nomeEl.classList.remove('anim-chamado');
-                card.classList.remove('anim-glow');
-                void nomeEl.offsetWidth; void card.offsetWidth;
-                nomeEl.classList.add('anim-chamado');
-                card.classList.add('anim-glow');
+                document.getElementById('uc-nome').classList.remove('anim-chamado'); card.classList.remove('anim-glow');
+                void card.offsetWidth;
+                document.getElementById('uc-nome').classList.add('anim-chamado'); card.classList.add('anim-glow');
                 tocarSom();
             }
+        }
 
-            // Recentes
-            const anteriores = (historico || []).filter((c,i) => i > 0 && i < 4);
-            if (anteriores.length > 0) {
-                recentesEl.classList.remove('hidden');
-                recentesEl.innerHTML = anteriores.map((c, i) => `
-                    <div class="bg-[#0d1117] border border-[#1e293b] rounded-xl px-4 py-2.5 anim-card"
-                         style="animation-delay:${i*0.07}s">
-                        <p class="text-slate-600 text-[9px] font-black uppercase tracking-widest mb-0.5">Chamado Anterior</p>
-                        <p class="text-slate-300 font-bold text-sm uppercase truncate">${esc(c.nome||'')}</p>
-                        <p class="text-slate-600 text-[10px] mt-0.5">${esc(c.pautaNome||c.local||'')} · ${esc(c.hora||'')}</p>
+        // ── LÓGICA PRINCIPAL: RENDERIZAÇÃO UNIFICADA ──
+        function renderPainelUnificado() {
+            let todosAguardando = [];
+            let todosEmAtendimento = [];
+            let concluidos = 0;
+
+            // Achata (flatten) todos os dados de todas as pautas em listas únicas
+            for (const pautaId in estado.assistidos) {
+                const pauta = estado.pautas[pautaId];
+                const lista = estado.assistidos[pautaId] || [];
+                
+                lista.forEach(a => {
+                    // Adicionamos as informações da pauta pai para mostrar no card
+                    const pessoaContexto = { 
+                        ...a, 
+                        nomePauta: pauta?.name || 'Geral', 
+                        salaPauta: pauta?.sala || a.room || ''
+                    };
+
+                    if (a.status === 'aguardando') todosAguardando.push(pessoaContexto);
+                    else if (a.status === 'emAtendimento') todosEmAtendimento.push(pessoaContexto);
+                    else if (a.status === 'atendido') concluidos++;
+                });
+            }
+
+            // Atualiza Top Bar Contadores
+            document.getElementById('g-aguardando').textContent = todosAguardando.length;
+            document.getElementById('g-atendendo').textContent = todosEmAtendimento.length;
+            document.getElementById('g-atendidos').textContent = concluidos;
+
+            // Ordena Fila (Prioridade URGENTE primeiro, depois ordem normal)
+            todosAguardando.sort((a, b) => {
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+            });
+
+            // Ordena Atendimentos (Mais recentes no topo)
+            todosEmAtendimento.sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
+
+            // Renderiza Em Atendimento
+            const listaAtendimentoEl = document.getElementById('lista-atendimento');
+            if (todosEmAtendimento.length === 0) {
+                listaAtendimentoEl.innerHTML = `<p class="text-slate-600 text-xs font-bold uppercase text-center mt-10">Nenhum atendimento no momento</p>`;
+            } else {
+                listaAtendimentoEl.innerHTML = todosEmAtendimento.map(a => `
+                    <div class="pessoa-card em-atendimento anim-fade-up !mb-0">
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-lg truncate uppercase">${esc(a.name)}</p>
+                            <p class="text-indigo-400 text-[11px] font-bold mt-1 uppercase tracking-wider">${esc(a.nomePauta)}</p>
+                        </div>
+                        ${a.salaPauta ? `<span class="sala-badge border-indigo-500/30 text-indigo-300 bg-indigo-900/20">${esc(a.salaPauta)}</span>` : ''}
                     </div>
                 `).join('');
+            }
+
+            // Renderiza Fila de Espera (Em Grid para aproveitar espaço lateral)
+            const listaEsperaEl = document.getElementById('lista-espera');
+            if (todosAguardando.length === 0) {
+                listaEsperaEl.innerHTML = `<div class="col-span-full"><p class="text-slate-600 text-xs font-bold uppercase text-center mt-10">Fila vazia</p></div>`;
             } else {
-                recentesEl.classList.add('hidden');
+                listaEsperaEl.innerHTML = todosAguardando.map((a, i) => `
+                    <div class="pessoa-card anim-card !mb-0" style="animation-delay:${i*0.03}s">
+                        <span class="text-amber-500 font-black text-sm mono w-6 shrink-0 text-center">${i+1}</span>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-white font-bold text-base truncate uppercase">${esc(a.name)}</p>
+                            <p class="text-slate-500 text-[10px] font-bold mt-0.5 truncate uppercase tracking-widest">${esc(a.nomePauta)}</p>
+                        </div>
+                        ${a.priority === 'URGENTE' 
+                            ? `<span class="pill bg-red-900/60 text-red-400 border border-red-800/50">URGENTE</span>` 
+                            : ''}
+                    </div>
+                `).join('');
             }
         }
 
-        // ── Atualizar contadores globais ───────────────────────────────────────
-        function atualizarContadores() {
-            let ag = 0, at = 0, done = 0;
-            for (const lista of Object.values(estado.assistidos)) {
-                ag   += lista.filter(a => a.status === 'aguardando').length;
-                at   += lista.filter(a => a.status === 'emAtendimento').length;
-                done += lista.filter(a => a.status === 'atendido').length;
-            }
-            document.getElementById('g-aguardando').textContent = ag;
-            document.getElementById('g-atendendo').textContent  = at;
-            document.getElementById('g-atendidos').textContent  = done;
-        }
-
-        // ── Renderizar coluna de uma pauta ────────────────────────────────────
-        function renderColunaPauta(pautaId) {
-            const pauta     = estado.pautas[pautaId];
-            const assistidos = estado.assistidos[pautaId] || [];
-            if (!pauta) return;
-
-            const aguardando = assistidos
-                .filter(a => a.status === 'aguardando')
-                .sort((a, b) => {
-                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
-                });
-
-            const emAtendimento = assistidos
-                .filter(a => a.status === 'emAtendimento')
-                .sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
-
-            const distribuicao = assistidos.filter(a =>
-                a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao'
-            );
-
-            const porcentagem = assistidos.length > 0
-                ? Math.round((assistidos.filter(a => a.status === 'atendido').length / assistidos.length) * 100)
-                : 0;
-
-            const col = document.getElementById(`col-pauta-${pautaId}`);
-            if (!col) return;
-
-            col.innerHTML = `
-                <!-- Header da coluna/pauta -->
-                <div class="pauta-col-header">
-                    <div class="min-w-0">
-                        <p class="text-white font-black text-sm truncate">${esc(pauta.name)}</p>
-                        <div class="flex items-center gap-2 mt-1">
-                            ${pauta.sala ? `<span class="text-[9px] text-purple-400 font-bold bg-purple-900/30 border border-purple-800/40 px-2 py-0.5 rounded-md">🏠 ${esc(pauta.sala)}</span>` : ''}
-                            <span class="text-[9px] text-slate-500 font-bold uppercase">${pauta.type || 'agendamento'}</span>
-                        </div>
-                    </div>
-                    <!-- Barra de progresso + % -->
-                    <div class="flex items-center gap-2 shrink-0">
-                        <div class="w-16 h-1.5 bg-[#0d1117] rounded-full overflow-hidden">
-                            <div class="h-full bg-emerald-500 transition-all duration-700 rounded-full" style="width:${porcentagem}%"></div>
-                        </div>
-                        <span class="mono text-slate-500 text-[10px] font-bold">${porcentagem}%</span>
-                    </div>
-                </div>
-
-                <!-- Contadores rápidos -->
-                <div class="grid grid-cols-3 border-b border-[#1e293b] text-center">
-                    <div class="py-3 border-r border-[#1e293b]">
-                        <p class="text-amber-400 font-black text-xl leading-none">${aguardando.length}</p>
-                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">Fila</p>
-                    </div>
-                    <div class="py-3 border-r border-[#1e293b]">
-                        <p class="text-indigo-400 font-black text-xl leading-none">${emAtendimento.length}</p>
-                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">Atendendo</p>
-                    </div>
-                    <div class="py-3">
-                        <p class="text-emerald-400 font-black text-xl leading-none">${assistidos.filter(a=>a.status==='atendido').length}</p>
-                        <p class="text-slate-600 text-[9px] font-bold uppercase mt-0.5">OK</p>
-                    </div>
-                </div>
-
-                <!-- Corpo rolável -->
-                <div class="flex-1 overflow-y-auto p-3 space-y-4" style="max-height: 420px;">
-
-                    <!-- Em atendimento agora -->
-                    ${emAtendimento.length > 0 ? `
-                        <div>
-                            <p class="text-indigo-400 text-[9px] font-black uppercase tracking-widest mb-2">🧑‍💻 Em Atendimento</p>
-                            ${emAtendimento.map(a => `
-                                <div class="pessoa-card em-atendimento anim-fade-up">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
-                                        ${a.assignedCollaborator?.name
-                                            ? `<p class="text-indigo-400 text-[10px] font-bold mt-0.5">com ${esc(a.assignedCollaborator.name)}</p>`
-                                            : ''}
-                                    </div>
-                                    ${a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    <!-- Distribuição -->
-                    ${distribuicao.length > 0 ? `
-                        <div>
-                            <p class="text-cyan-400 text-[9px] font-black uppercase tracking-widest mb-2">⚖️ Distribuição</p>
-                            ${distribuicao.map(a => `
-                                <div class="pessoa-card distribuicao">
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
-                                    </div>
-                                    ${a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : ''}
-                                </div>
-                            `).join('')}
-                        </div>
-                    ` : ''}
-
-                    <!-- Fila de espera -->
-                    <div>
-                        <p class="text-amber-500 text-[9px] font-black uppercase tracking-widest mb-2">⏳ Fila de Espera${aguardando.length > 0 ? ' ('+aguardando.length+')' : ''}</p>
-                        ${aguardando.length === 0
-                            ? `<div class="text-center py-8">
-                                <p class="text-slate-700 text-[10px] font-black uppercase tracking-widest">Fila vazia</p>
-                               </div>`
-                            : aguardando.map((a, i) => `
-                                <div class="pessoa-card anim-card" style="animation-delay:${i*0.04}s">
-                                    <span class="text-amber-500 font-black text-xs mono w-5 shrink-0 text-center">${i+1}</span>
-                                    <div class="min-w-0 flex-1">
-                                        <p class="text-white font-bold text-sm truncate uppercase">${esc(a.name)}</p>
-                                        <div class="flex items-center gap-1.5 mt-0.5">
-                                            ${a.scheduledTime ? `<span class="mono text-slate-500 text-[9px]">⏰ ${esc(a.scheduledTime)}</span>` : ''}
-                                            ${a.subject ? `<span class="text-slate-600 text-[9px] truncate">· ${esc(a.subject)}</span>` : ''}
-                                        </div>
-                                    </div>
-                                    ${a.priority === 'URGENTE'
-                                        ? `<span class="pill bg-red-900/60 text-red-400 border border-red-800/50">URGENTE</span>`
-                                        : (a.room ? `<span class="sala-badge">${esc(a.room)}</span>` : '')
-                                    }
-                                </div>
-                            `).join('')
-                        }
-                    </div>
-
-                </div>
-            `;
-        }
-
-        // ── Iniciar listener de assistidos de uma pauta ───────────────────────
-        function iniciarListenerAssistidos(pautaId) {
-            onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snap) => {
-                estado.assistidos[pautaId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                renderColunaPauta(pautaId);
-                atualizarContadores();
-            });
-        }
-
-        // ── Iniciar listener do último chamado de uma pauta ───────────────────
-        function iniciarListenerChamado(pautaId) {
-            onSnapshot(doc(db, "pautas", pautaId, "painel", "ultimoChamado"), (snap) => {
-                if (!snap.exists()) return;
-                const data = snap.data();
-                if (!data.atual) return;
-
-                // Adiciona contexto da pauta ao chamado
-                const pauta = estado.pautas[pautaId];
-                const chamado = {
-                    ...data.atual,
-                    pautaNome: pauta?.name || data.atual.local || '',
-                    sala: pauta?.sala || data.atual.sala || '',
-                };
-
-                // Exibe apenas se for o mais recente entre todas as pautas
-                const tsAtual = data.atual.timestamp || 0;
-                const tsUlt   = estado.ultimoChamado?.timestamp || 0;
-
-                if (tsAtual >= tsUlt) {
-                    estado.ultimoChamado = chamado;
-                    renderUltimoChamado(chamado, data.historico || []);
-                }
-            });
-        }
-
-        // ── BOOTSTRAP ─────────────────────────────────────────────────────────
         async function init() {
-            if (!pautasParam) {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('error-screen').classList.remove('hidden');
-                return;
-            }
-
+            if (!pautasParam) return;
             const pautaIds = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
+            if (pautaIds.length === 0) return;
 
-            if (pautaIds.length === 0) {
-                document.getElementById('loading').classList.add('hidden');
-                document.getElementById('error-screen').classList.remove('hidden');
-                return;
-            }
-
-            // Define nome da recepção
             document.getElementById('recepcao-nome').textContent = decodeURIComponent(recepcaoNome);
-
-            // Cria colunas placeholder na grade
-            const grade = document.getElementById('grade-pautas');
-            pautaIds.forEach(id => {
-                const col = document.createElement('div');
-                col.id = `col-pauta-${id}`;
-                col.className = 'pauta-col';
-                col.innerHTML = `
-                    <div class="pauta-col-header">
-                        <div class="w-32 h-4 bg-[#1e293b] rounded animate-pulse"></div>
-                    </div>
-                    <div class="flex-1 flex items-center justify-center py-16">
-                        <div class="w-8 h-8 rounded-full border-2 border-transparent border-t-slate-600 animate-spin"></div>
-                    </div>
-                `;
-                grade.appendChild(col);
-            });
-
-            // Esconde loading, mostra app
             document.getElementById('loading').classList.add('hidden');
             document.getElementById('app').classList.remove('hidden');
 
-            // Para cada pauta: listener de config + dados
             pautaIds.forEach(pautaId => {
-                // Config da pauta (nome, sala, etc.)
+                // Escuta os dados gerais da pauta para pegar o nome da Unidade/Órgão e o nome da pauta
                 onSnapshot(doc(db, "pautas", pautaId), (snap) => {
                     if (!snap.exists()) return;
                     const d = snap.data();
                     estado.pautas[pautaId] = { id: pautaId, ...d };
-                    renderColunaPauta(pautaId);
+                    
+                    if (d.unidade) {
+                        document.getElementById('recepcao-nome').textContent = esc(d.unidade);
+                    }
+                    renderPainelUnificado();
                 });
 
-                iniciarListenerAssistidos(pautaId);
-                iniciarListenerChamado(pautaId);
+                // Escuta as pessoas na fila da pauta
+                onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snap) => {
+                    estado.assistidos[pautaId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                    renderPainelUnificado();
+                });
+
+                // Escuta o sistema de chamados (Painel Sonoro/Flash)
+                onSnapshot(doc(db, "pautas", pautaId, "painel", "ultimoChamado"), (snap) => {
+                    if (!snap.exists()) return;
+                    const data = snap.data();
+                    if (!data.atual) return;
+
+                    const tsAtual = data.atual.timestamp || 0;
+                    const tsUlt = estado.ultimoChamado?.timestamp || 0;
+
+                    if (tsAtual >= tsUlt) {
+                        estado.ultimoChamado = {
+                            ...data.atual,
+                            pautaNome: estado.pautas[pautaId]?.name || data.atual.local || '',
+                            sala: estado.pautas[pautaId]?.sala || data.atual.sala || '',
+                        };
+                        renderUltimoChamado(estado.ultimoChamado);
+                    }
+                });
             });
         }
-
         init();
-
-        // Escuta chamados locais (mesma aba) para resposta imediata
-        window.addEventListener('sigep:chamado', (e) => {
-            if (e.detail) renderUltimoChamado(e.detail, []);
-        });
     </script>
 </body>
 </html>
