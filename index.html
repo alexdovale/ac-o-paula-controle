@@ -103,6 +103,24 @@
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* Barra de redimensionamento do modal admin */
+        .resize-handle {
+            position: absolute;
+            right: 0;
+            bottom: 0;
+            width: 12px;
+            height: 12px;
+            cursor: ew-resize;
+            background: #94a3b8;
+            border-radius: 50%;
+            transition: all 0.2s;
+            margin: -4px -4px 0 0;
+        }
+        .resize-handle:hover {
+            background: #3b82f6;
+            transform: scale(1.2);
+        }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -257,7 +275,7 @@
 
             <div class="flex flex-col sm:flex-row justify-center items-center w-full gap-3 mb-6">
                 <button id="btn-recepcao-central" class="bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
-                    Recepção Central
+                    🏛️ Recepção Central
                 </button>
                 <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md">
                     Painel do Administrador
@@ -733,18 +751,131 @@
         </div>
     </div>
 
-    <!-- TODOS OS OUTROS MODAIS (pauta-type-modal, create-pauta-modal, admin-modal, etc.) PERMANECEM COMO NO SEU CÓDIGO ORIGINAL -->
+    <!-- MODAL DO ADMINISTRADOR (COM REDIMENSIONAMENTO) -->
+    <div id="admin-modal" class="hidden fixed inset-0 bg-black/70 z-[500] flex items-center justify-center p-4 overflow-y-auto">
+        <div id="admin-window" class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl max-h-[85vh] overflow-hidden flex flex-col relative" style="width: 80%; min-width: 400px;">
+            <!-- Cabeçalho com botões de controle -->
+            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">🛡️ Painel do Administrador</h2>
+                    <p class="text-slate-300 text-sm mt-1">Gerencie usuários, auditoria, BI e unidades</p>
+                </div>
+                <div class="flex items-center gap-2">
+                    <button id="min-admin-btn" class="text-gray-400 hover:text-gray-600 text-sm font-bold px-2 py-1 rounded transition" title="Minimizar">🗕</button>
+                    <button id="max-admin-btn" class="text-gray-400 hover:text-gray-600 text-sm font-bold px-2 py-1 rounded transition" title="Maximizar">🗖</button>
+                    <button id="close-admin-modal-btn" class="text-gray-400 hover:text-red-500 text-sm font-bold px-2 py-1 rounded transition" title="Fechar">✕</button>
+                </div>
+            </div>
+            
+            <!-- Conteúdo -->
+            <div id="admin-content-area" class="flex-1 overflow-y-auto p-6">
+                <div class="space-y-6">
+                    <!-- Abas do Admin -->
+                    <div class="flex border-b gap-2">
+                        <button class="admin-tab-btn py-2 px-4 font-bold text-sm text-slate-600 border-b-2 border-transparent hover:text-slate-800" data-tab="usuarios">👥 Usuários</button>
+                        <button class="admin-tab-btn py-2 px-4 font-bold text-sm text-slate-600 border-b-2 border-transparent hover:text-slate-800" data-tab="unidades">🏢 Unidades</button>
+                        <button class="admin-tab-btn py-2 px-4 font-bold text-sm text-slate-600 border-b-2 border-transparent hover:text-slate-800" data-tab="auditoria">📜 Auditoria</button>
+                        <button class="admin-tab-btn py-2 px-4 font-bold text-sm text-slate-600 border-b-2 border-transparent hover:text-slate-800" data-tab="bi">📊 BI</button>
+                    </div>
+                    
+                    <!-- PAINEL: USUÁRIOS -->
+                    <div id="admin-tab-usuarios" class="admin-tab-panel">
+                        <div class="mb-4">
+                            <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow-md flex items-center gap-2">
+                                🏢 Gerenciar Unidades / Órgãos
+                            </button>
+                        </div>
+                        <div id="pending-users-list" class="space-y-2 mb-6"></div>
+                        <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">Usuários Aprovados</h3>
+                        <div id="approved-users-list" class="space-y-2"></div>
+                    </div>
+                    
+                    <!-- PAINEL: UNIDADES (será preenchido pelo admin.js) -->
+                    <div id="admin-tab-unidades" class="admin-tab-panel hidden">
+                        <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                    </div>
+                    
+                    <!-- PAINEL: AUDITORIA -->
+                    <div id="admin-tab-auditoria" class="admin-tab-panel hidden space-y-4">
+                        <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                            <input type="text" id="filter-log-user" placeholder="Usuário" class="p-2 border rounded-lg text-sm">
+                            <input type="text" id="filter-log-action" placeholder="Ação" class="p-2 border rounded-lg text-sm">
+                            <input type="date" id="filter-log-start" class="p-2 border rounded-lg text-sm">
+                            <input type="date" id="filter-log-end" class="p-2 border rounded-lg text-sm">
+                        </div>
+                        <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Carregar Logs</button>
+                        <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Exportar PDF</button>
+                        <div id="audit-logs-container" class="hidden overflow-x-auto">
+                            <table class="w-full text-sm border-collapse">
+                                <thead><tr class="bg-slate-100"><th class="p-2 text-left">Data</th><th class="p-2 text-left">Usuário</th><th class="p-2 text-left">Ação</th><th class="p-2 text-left">Detalhes</th></tr></thead>
+                                <tbody id="audit-logs-table-body"></tbody>
+                            </table>
+                        </div>
+                    </div>
+                    
+                    <!-- PAINEL: BI -->
+                    <div id="admin-tab-bi" class="admin-tab-panel hidden space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            <input type="date" id="stats-filter-start" placeholder="Data inicial" class="p-2 border rounded-lg text-sm">
+                            <input type="date" id="stats-filter-end" placeholder="Data final" class="p-2 border rounded-lg text-sm">
+                            <select id="stats-filter-user" class="p-2 border rounded-lg text-sm"><option value="all">Todos os usuários</option></select>
+                            <select id="stats-filter-attendant" class="p-2 border rounded-lg text-sm"><option value="all">Todos os atendentes</option></select>
+                        </div>
+                        <div class="flex gap-3">
+                            <button id="btn-load-dashboard" class="bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Atualizar Dashboard</button>
+                            <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg text-sm font-bold">Limpar Dados Antigos</button>
+                        </div>
+                        <div id="dashboard-results"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Rodapé -->
+            <div class="bg-slate-50 px-6 py-3 flex justify-end border-t shrink-0">
+                <button id="close-admin-modal-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg text-sm font-bold">Fechar</button>
+            </div>
+            
+            <!-- Barra de redimensionamento lateral -->
+            <div id="admin-resize-handle" class="resize-handle"></div>
+        </div>
+    </div>
+
     <div id="modals-container"></div>
 
     <script src="./js/api_integration.js" type="module"></script>
     <script type="module" src="./js/main.js"></script>
+
+    <!-- Script de abas do admin -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Abas do administrador
+            const adminModal = document.getElementById('admin-modal');
+            if (adminModal) {
+                const tabs = adminModal.querySelectorAll('.admin-tab-btn');
+                const panels = adminModal.querySelectorAll('.admin-tab-panel');
+                
+                tabs.forEach(tab => {
+                    tab.addEventListener('click', () => {
+                        const tabId = tab.dataset.tab;
+                        tabs.forEach(t => t.classList.remove('text-slate-800', 'border-slate-800', 'border-b-2'));
+                        tabs.forEach(t => t.classList.add('text-slate-600', 'border-transparent'));
+                        tab.classList.remove('text-slate-600', 'border-transparent');
+                        tab.classList.add('text-slate-800', 'border-slate-800', 'border-b-2');
+                        
+                        panels.forEach(panel => panel.classList.add('hidden'));
+                        const activePanel = adminModal.querySelector(`#admin-tab-${tabId}`);
+                        if (activePanel) activePanel.classList.remove('hidden');
+                    });
+                });
+            }
+        });
+    </script>
 
     <!-- ===================================================== -->
     <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
     <!-- ===================================================== -->
     <script>
         (function() {
-            // 1. Input para CSV (Carregar CSV)
             function garantirInputCSV() {
                 let input = document.getElementById('file-upload');
                 if (!input) {
@@ -768,7 +899,6 @@
                 return input;
             }
 
-            // 2. Input para importação de órgãos (CSV/JSON)
             let inputOrgaos = null;
             function garantirInputOrgaos() {
                 if (!inputOrgaos) {
@@ -792,7 +922,6 @@
                 return inputOrgaos;
             }
 
-            // Função auxiliar para acionar clique (compatível com mobile)
             function safeClick(element) {
                 if (element.click) {
                     element.click();
@@ -803,7 +932,6 @@
                 }
             }
 
-            // Intercepta cliques e toques
             const handleTrigger = (e) => {
                 const labelCSV = e.target.closest('label[for="file-upload"]');
                 if (labelCSV) {
@@ -828,13 +956,11 @@
             document.body.addEventListener('click', handleTrigger);
             document.body.addEventListener('touchstart', handleTrigger, { passive: false });
 
-            // Inicialização antecipada
             setTimeout(() => {
                 garantirInputCSV();
                 garantirInputOrgaos();
             }, 100);
 
-            // Suporte a drag-and-drop na área do modal de órgãos
             function setupDragAndDrop() {
                 const dropZones = document.querySelectorAll('#importador-orgaos-modal .drop-zone, .drop-area, [data-dropzone="orgaos"]');
                 dropZones.forEach(zone => {
@@ -865,7 +991,6 @@
                 });
             }
 
-            // Observa quando o modal de órgãos for aberto para configurar o drag-and-drop
             const observer = new MutationObserver(() => {
                 const modal = document.getElementById('importador-orgaos-modal');
                 if (modal && !modal.classList.contains('hidden')) {
