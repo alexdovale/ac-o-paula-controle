@@ -853,6 +853,40 @@ export const deleteUser = async (db, userId) => {
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
+
+setupAdminEvents() {
+    // ESTA É A MUDANÇA QUE FAZ O BOTÃO ABRIR O NOVO GERENCIADOR
+    document.getElementById('btn-unidades-master')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        abrirGerenciadorUnidades(this.db);
+    });
+    
+    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('view-audit-logs-btn');
+        if (btn) {
+            btn.textContent = "Carregando...";
+            btn.disabled = true;
+        }
+        await loadAuditLogs(this.db);
+        if (btn) {
+            btn.textContent = "🔍 Carregar Logs";
+            btn.disabled = false;
+        }
+    });
+    
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+        cleanupOldData(this.db);
+    });
+    
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+        loadDashboardData(this.db);
+    });
+    
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+        exportAuditLogsPDF(this.db);
+    });
+}
 // Vinculações globais do escopo Window
 window.approveUser = (userId) => approveUser(window.app?.db, userId);
 window.updateUserRole = (userId) => updateUserRole(window.app?.db, userId);
