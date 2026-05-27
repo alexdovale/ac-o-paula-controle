@@ -1,4 +1,3 @@
-
 // js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
 
 import { 
@@ -889,11 +888,10 @@ export const loadAuditLogs = async (db) => {
 
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><div class="loader-small mx-auto"></div><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td><tr>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
-        // Carrega os filtros se estiverem vazios
         if (document.getElementById('filter-log-user')?.options.length <= 1) {
             await loadLogFilters(db);
         }
