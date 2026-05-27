@@ -1,5 +1,5 @@
 import {
-    collection, doc, onSnapshot, updateDoc, getDocs, query, where
+    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -263,9 +263,15 @@ export const RecepçãoCentralService = {
                         <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto flex-wrap">
-                        <button id="rc-btn-painel-geral" class="flex-1 sm:flex-none flex items-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow" title="Abrir painel público da recepção em nova aba">
-                            📺 Painel Geral
+                        
+                        <!-- BOTÕES ADICIONADOS PARA A TV UNIFICADA -->
+                        <button id="rc-btn-copiar-link" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold px-4 py-2 rounded-lg transition text-sm shadow-sm" title="Copiar link para enviar para a TV">
+                            🔗 Copiar Link da TV
                         </button>
+                        <button id="rc-btn-painel-geral" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-700 hover:bg-indigo-800 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow" title="Abrir painel unificado nesta máquina">
+                            📺 Abrir Painel Aqui
+                        </button>
+
                         <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
                             🔍 Busca Global
                         </button>
@@ -738,7 +744,7 @@ export const RecepçãoCentralService = {
         playSound('chime');
     },
 
-    _registrarUltimoChamado(pautaId, assistido, pautaNome) {
+    async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
 
         const chamado = {
@@ -752,7 +758,7 @@ export const RecepçãoCentralService = {
             timestamp: Date.now(),
         };
 
-        // Salva no localStorage por pauta (para acompanhamento.html individual)
+        // Salva no localStorage por pauta (para acompanhamento.html individual na mesma aba)
         const chave = `sigep_chamados_${pautaId}`;
         let historico = [];
         try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
@@ -760,8 +766,19 @@ export const RecepçãoCentralService = {
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
 
-        // Salva global (para acompanhamento-recepcao.html)
+        // Salva global (para acompanhamento-recepcao.html na mesma máquina)
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
+
+        // NOVA PARTE: Salva diretamente no Firebase para o Painel Unificado (TV) escutar e piscar de qualquer lugar
+        try {
+            const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
+            await setDoc(painelRef, {
+                atual: chamado,
+                historico: historico
+            }, { merge: true });
+        } catch (error) {
+            console.error("Erro ao atualizar último chamado no Firebase:", error);
+        }
 
         // Dispara evento (capturado pelo acompanhamento aberto na mesma aba)
         window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
@@ -806,12 +823,16 @@ export const RecepçãoCentralService = {
             }
         });
 
-        // Painel Geral — abre acompanhamento-recepcao.html com todas as pautas
+        // =======================================================================
+        // NOVA LÓGICA DO PAINEL GERAL (UNIFICADO)
+        // =======================================================================
+
+        // 1. Abrir Painel Geral nesta máquina
         document.getElementById('rc-btn-painel-geral')?.addEventListener('click', () => {
             const ids  = estado.pautasHoje.map(p => p.id).join(',');
             const nome = encodeURIComponent(
                 this._recepcaoAtual?.nome ||
-                this._recepcaoAtual?.name ||
+                this._unidadeAtual?.nome ||
                 'Recepção'
             );
 
@@ -822,6 +843,37 @@ export const RecepçãoCentralService = {
 
             window.open(`acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}`, '_blank');
         });
+
+        // 2. Copiar Link para a TV
+        document.getElementById('rc-btn-copiar-link')?.addEventListener('click', () => {
+            const ids  = estado.pautasHoje.map(p => p.id).join(',');
+            const nome = encodeURIComponent(
+                this._recepcaoAtual?.nome ||
+                this._unidadeAtual?.nome ||
+                'Recepção'
+            );
+
+            if (!ids) {
+                showNotification("Nenhuma pauta ativa para gerar o link.", "info");
+                return;
+            }
+
+            // Pega a URL do sistema atual para montar o link absoluto
+            let baseUrl = window.location.href;
+            if (baseUrl.includes('?')) baseUrl = baseUrl.split('?')[0];
+            if (baseUrl.endsWith('index.html')) baseUrl = baseUrl.replace('index.html', '');
+            if (!baseUrl.endsWith('/')) baseUrl += '/';
+
+            const linkCompleto = `${baseUrl}acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}`;
+
+            navigator.clipboard.writeText(linkCompleto).then(() => {
+                showNotification("Link do Painel Unificado copiado!", "success");
+            }).catch(err => {
+                console.error('Erro ao copiar', err);
+                showNotification("Erro ao copiar o link.", "error");
+            });
+        });
+        // =======================================================================
 
         // Cliques na grade de cards
         document.getElementById('rc-grade-pautas')?.addEventListener('click', (e) => {
@@ -834,7 +886,6 @@ export const RecepçãoCentralService = {
             } else if (btn.classList.contains('rc-btn-chamar')) {
                 this._chamarProximo(pautaId);
             } else if (btn.classList.contains('rc-btn-acomp')) {
-                // Acompanhamento público individual da pauta (acompanhamento.html existente)
                 window.open(`acompanhamento.html?id=${pautaId}`, '_blank');
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
