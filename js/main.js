@@ -2085,128 +2085,165 @@ class SIGEPApp {
     // ============================================================
     // abrirModalCriarPauta - IMPLEMENTAÇÃO COMPLETA
     async abrirModalCriarPauta() {
-        // Verifica se já existe um modal, se não, cria um
-        let modal = document.getElementById('create-pauta-modal');
-        
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'create-pauta-modal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
-            modal.innerHTML = `
-                <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
-                    <h3 class="text-lg font-bold mb-4">Criar Nova Pauta</h3>
-                    <input type="text" id="new-pauta-name" placeholder="Digite o nome da pauta" class="w-full p-2 border border-gray-300 rounded-lg mb-4 focus:ring-2 focus:ring-green-500 focus:border-green-500">
-                    <div class="flex gap-2">
-                        <button id="confirm-create-pauta-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">Criar</button>
-                        <button id="cancel-create-pauta-btn" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modal);
-            
-            // Evento do botão Cancelar
-            document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
-                modal.classList.add('hidden');
-                document.getElementById('new-pauta-name').value = '';
-            });
-            
-            // Evento do botão Confirmar (ONDE A PAUTA É CRIADA DE FATO)
-            document.getElementById('confirm-create-pauta-btn')?.addEventListener('click', async () => {
-                const nomePauta = document.getElementById('new-pauta-name')?.value.trim();
-                
-                if (!nomePauta) {
-                    showNotification("Digite um nome para a pauta", "error");
-                    return;
-                }
-                
-                const user = this.auth.currentUser;
-                if (!user) {
-                    showNotification("Você precisa estar logado", "error");
-                    return;
-                }
-                
-                const modoAtual = this.currentMode;
-                
-                // ⭐ DEFINE O TIPO CORRETO BASEADO NO MODO SELECIONADO
-                let tipoPauta = 'normal';
-                if (modoAtual === 'evento') {
-                    // Usa o tipo de evento selecionado (mutirao, plantao, acao_social)
-                    tipoPauta = this.tipoPautaSelecionado || 'mutirao';
-                }
-                
-                // ⭐ DADOS DA PAUTA COM O TIPO CORRETO
-                const pautaData = {
-                    name: nomePauta,
-                    owner: user.uid,
-                    members: [user.uid],
-                    memberEmails: [user.email],
-                    createdAt: new Date().toISOString(),
-                    tipo: tipoPauta,        // ← CAMPO CRUCIAL PARA O FILTRO
-                    type: 'agendamento',
-                    isClosed: false,
-                    isPublic: false,
-                    modo: modoAtual,        // Salva o modo original também
-                    createdBy: user.email,
-                    useDelegationFlow: false,
-                    useDistributionFlow: false
-                };
-                
-                // Mostra loading no botão
-                const confirmBtn = document.getElementById('confirm-create-pauta-btn');
-                const originalText = confirmBtn.textContent;
-                confirmBtn.textContent = 'Criando...';
-                confirmBtn.disabled = true;
-                
-                try {
-                    // Salva no Firestore
-                    const docRef = await addDoc(collection(this.db, "pautas"), pautaData);
-                    console.log("Pauta criada com ID:", docRef.id, "Tipo:", tipoPauta);
-                    
-                    // Fecha o modal
-                    modal.classList.add('hidden');
-                    
-                    // Limpa o input
-                    document.getElementById('new-pauta-name').value = '';
-                    
-                    showNotification(`Pauta "${nomePauta}" criada com sucesso!`, "success");
-                    
-                    // Recarrega a lista de pautas
-                    await this.loadPautasWithFilter();
-                    
-                } catch (error) {
-                    console.error("Erro ao criar pauta:", error);
-                    showNotification("Erro ao criar pauta: " + error.message, "error");
-                } finally {
-                    // Restaura o botão
-                    confirmBtn.textContent = originalText;
-                    confirmBtn.disabled = false;
-                }
-            });
+    const modoAtual = this.currentMode;
+    const isModoNormal = (modoAtual === 'normal');
+    
+    let unidadesPermitidas = [];
+    let orgaoHtml = '';
+    
+    if (isModoNormal) {
+        // Carrega as unidades que o usuário pode acessar
+        if (this.currentUser && this.currentUser.unidadesPermitidas && this.currentUser.unidadesPermitidas.length > 0) {
+            const unidadesSnap = await getDocs(collection(this.db, "unidades"));
+            const todasUnidades = unidadesSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+            unidadesPermitidas = todasUnidades.filter(u => 
+                this.currentUser.unidadesPermitidas.includes(u.id) && u.ativo !== false
+            );
         }
         
-        // Mostra o modal
-        modal.classList.remove('hidden');
+        if (unidadesPermitidas.length === 0) {
+            showNotification("Você não está vinculado a nenhum órgão. Peça ao administrador para lhe atribuir unidades.", "error");
+            return;
+        }
         
-        // Foca no input após mostrar o modal
-        setTimeout(() => {
-            const input = document.getElementById('new-pauta-name');
-            if (input) {
-                input.value = '';
-                input.focus();
+        const unicaUnidade = unidadesPermitidas.length === 1 ? unidadesPermitidas[0] : null;
+        orgaoHtml = `
+            <div>
+                <label class="block text-sm font-bold text-gray-700 mb-1">Órgão / Unidade *</label>
+                <select id="new-pauta-orgao" class="w-full p-2 border border-gray-300 rounded-lg bg-white">
+                    ${unidadesPermitidas.map(u => `<option value="${u.id}" data-nome="${escapeHTML(u.nome)}" ${unicaUnidade && unicaUnidade.id === u.id ? 'selected' : ''}>${escapeHTML(u.nome)} (${escapeHTML(u.sigla || '')})</option>`).join('')}
+                </select>
+            </div>
+        `;
+    }
+    
+    // Data de atuação: obrigatória no Modo Normal, opcional no Evento
+    const dataAtuacaoObrigatoria = isModoNormal ? 'required' : '';
+    const dataAtuacaoTexto = isModoNormal 
+        ? '<p class="text-[10px] text-gray-500 mt-1">Data do evento/atendimento. O prazo LGPD de 7 dias começa a partir desta data.</p>'
+        : '<p class="text-[10px] text-gray-500 mt-1">(Opcional) Data do evento. Se não informada, será usada a data de criação.</p>';
+    
+    // Remove modal antigo se existir (evita duplicação)
+    let modal = document.getElementById('create-pauta-modal');
+    if (modal) modal.remove();
+    
+    modal = document.createElement('div');
+    modal.id = 'create-pauta-modal';
+    modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+            <h3 class="text-lg font-bold mb-4">Criar Nova Pauta ${isModoNormal ? '(Modo Normal)' : '(Modo Evento)'}</h3>
+            <div class="space-y-4">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Nome da Pauta *</label>
+                    <input type="text" id="new-pauta-name" placeholder="Ex: Atendimentos 10/04" class="w-full p-2 border border-gray-300 rounded-lg">
+                </div>
+                ${orgaoHtml}
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">Data de Atuação ${isModoNormal ? '*' : '(opcional)'}</label>
+                    <input type="date" id="new-pauta-data-atuacao" value="${new Date().toISOString().slice(0,10)}" class="w-full p-2 border border-gray-300 rounded-lg" ${dataAtuacaoObrigatoria}>
+                    ${dataAtuacaoTexto}
+                </div>
+            </div>
+            <div class="flex gap-2 mt-6">
+                <button id="confirm-create-pauta-btn" class="flex-1 bg-green-600 text-white py-2 rounded-lg hover:bg-green-700 transition">Criar Pauta</button>
+                <button id="cancel-create-pauta-btn" class="flex-1 bg-gray-300 text-gray-700 py-2 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    
+    // Evento do botão Cancelar
+    document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
+        modal.remove();
+    });
+    
+    // Evento do botão Confirmar
+    document.getElementById('confirm-create-pauta-btn')?.addEventListener('click', async () => {
+        const nomePauta = document.getElementById('new-pauta-name')?.value.trim();
+        if (!nomePauta) {
+            showNotification("Digite um nome para a pauta", "error");
+            return;
+        }
+        
+        let orgaoId = null;
+        let orgaoNome = null;
+        if (isModoNormal) {
+            const orgaoSelect = document.getElementById('new-pauta-orgao');
+            if (!orgaoSelect) {
+                showNotification("Erro: campo de órgão não encontrado.", "error");
+                return;
             }
-        }, 100);
-    }// ============================================================
-
-
-    setupRealtimeListener(pautaId) {
-    if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-    const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-    this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-        this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-        UIService.renderAssistedLists(this);
-        setTimeout(() => { if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); }, 150);
-    }, (error) => {
-        showNotification("Erro ao carregar dados", "error");
+            orgaoId = orgaoSelect.value;
+            orgaoNome = orgaoSelect.options[orgaoSelect.selectedIndex]?.dataset.nome || '';
+            if (!orgaoId) {
+                showNotification("Selecione um órgão", "error");
+                return;
+            }
+        }
+        
+        const dataAtuacao = document.getElementById('new-pauta-data-atuacao')?.value;
+        if (isModoNormal && !dataAtuacao) {
+            showNotification("Informe a data de atuação", "error");
+            return;
+        }
+        
+        const user = this.auth.currentUser;
+        if (!user) {
+            showNotification("Você precisa estar logado", "error");
+            return;
+        }
+        
+        // Define o tipo da pauta
+        let tipoPauta = 'normal';
+        if (modoAtual === 'evento') {
+            tipoPauta = this.tipoPautaSelecionado || 'mutirao';
+        }
+        
+        // Monta os dados da pauta
+        const pautaData = {
+            name: nomePauta,
+            owner: user.uid,
+            members: [user.uid],
+            memberEmails: [user.email],
+            createdAt: new Date().toISOString(),
+            tipo: tipoPauta,
+            type: 'agendamento',
+            isClosed: false,
+            isPublic: false,
+            modo: modoAtual,
+            createdBy: user.email,
+            useDelegationFlow: false,
+            useDistributionFlow: false
+        };
+        
+        if (isModoNormal) {
+            pautaData.orgaoId = orgaoId;
+            pautaData.orgaoNome = orgaoNome;
+            pautaData.dataAtuacao = dataAtuacao;
+        } else if (dataAtuacao) {
+            // Modo Evento: se o usuário informou uma data, salva também
+            pautaData.dataAtuacao = dataAtuacao;
+        }
+        
+        const confirmBtn = document.getElementById('confirm-create-pauta-btn');
+        const originalText = confirmBtn.textContent;
+        confirmBtn.textContent = 'Criando...';
+        confirmBtn.disabled = true;
+        
+        try {
+            const docRef = await addDoc(collection(this.db, "pautas"), pautaData);
+            console.log("Pauta criada com ID:", docRef.id, "Tipo:", tipoPauta);
+            modal.remove();
+            showNotification(`Pauta "${nomePauta}" criada com sucesso!`, "success");
+            await this.loadPautasWithFilter();
+        } catch (error) {
+            console.error("Erro ao criar pauta:", error);
+            showNotification("Erro ao criar pauta: " + error.message, "error");
+        } finally {
+            confirmBtn.textContent = originalText;
+            confirmBtn.disabled = false;
+        }
     });
 }
 
