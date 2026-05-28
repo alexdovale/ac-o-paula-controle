@@ -71,6 +71,8 @@ class SIGEPApp {
             const app = initializeApp(firebaseConfig);
             this.db = getFirestore(app);
             this.auth = getAuth(app);
+            
+            console.log("Firebase inicializado:", !!this.db && !!this.auth);
 
             DashboardService.init(this);
 
