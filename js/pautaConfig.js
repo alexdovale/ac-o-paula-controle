@@ -1,26 +1,62 @@
-// js/pautaConfig.js
-import { collection, addDoc, updateDoc, doc, getDoc, getDocs, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
+
+import {
+    collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, Timestamp
+} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { logAction } from './admin.js';
 import { PautaService } from './pauta.js';
 
-const TEMPLATES_KEY = 'sigep_pauta_templates';
-const DEFAULTS = { ordemAtendimento: 'padrao', useDelegationFlow: false, useDistributionFlow: false, type: 'agendamento', tipo: 'normal' };
+// ─── CONSTANTES ────────────────────────────────────────────────────────────────
 
-async function verificarNomeDuplicadoHoje(db, nome, userId) {
-    const hoje = new Date().toISOString().split('T')[0];
-    const snap = await getDocs(collection(db, "pautas"));
-    return snap.docs.some(d => {
-        const data = d.data();
-        return (data.createdAt || '').startsWith(hoje) && 
-               (data.name || '').toLowerCase().trim() === nome.toLowerCase().trim() && 
-               (data.owner === userId || (data.members && data.members.includes(userId)));
-    });
+const TEMPLATES_KEY = 'sigep_pauta_templates';
+
+const DEFAULTS = {
+    ordemAtendimento: 'padrao',
+    useDelegationFlow: false,
+    useDistributionFlow: false,
+    type: 'agendamento',
+    tipo: 'normal'
+};
+
+// ─── HELPERS INTERNOS ──────────────────────────────────────────────────────────
+
+function lerTemplates() {
+    try {
+        return JSON.parse(localStorage.getItem(TEMPLATES_KEY)) || [];
+    } catch {
+        return [];
+    }
 }
 
+function salvarTemplates(templates) {
+    localStorage.setItem(TEMPLATES_KEY, JSON.stringify(templates));
+}
+
+async function verificarNomeDuplicadoHoje(db, nome, userId) {
+    try {
+        const hoje = new Date().toISOString().split('T')[0];
+        const snap = await getDocs(collection(db, "pautas"));
+        return snap.docs.some(d => {
+            const data = d.data();
+            const criadoHoje = (data.createdAt || '').startsWith(hoje);
+            const mesmoNome = (data.name || '').toLowerCase().trim() === nome.toLowerCase().trim();
+            const mesmoOwner = data.owner === userId || (data.members && data.members.includes(userId));
+            return criadoHoje && mesmoNome && mesmoOwner;
+        });
+    } catch {
+        return false;
+    }
+}
+
+// ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
+
 export const PautaConfigService = {
+
     init(app) {
         this._app = app;
+        this._setupEventListeners();
+        this._renderTemplatesSelect();
     },
 
     _setupEventListeners() {
@@ -271,16 +307,12 @@ export const PautaConfigService = {
     },
 
     _adicionarSelectorModo() {
-        // Correção de segurança para evitar o erro de Optional Chaining (?.)
-        const app = this._app;
-        const modoAtual = (app && app.currentMode) ? app.currentMode : 'normal';
-        
+        const modoAtual = this._app?.currentMode || 'normal'; 
         let modoContainer = document.getElementById('pauta-modo-container');
         
         if (!modoContainer) {
             const dateInput = document.getElementById('create-pauta-date-input');
-            const nameInput = document.getElementById('create-pauta-name-input');
-            const pai = (dateInput && dateInput.parentNode) ? dateInput.parentNode : (nameInput ? nameInput.parentNode : null);
+            const pai = dateInput?.parentNode || document.getElementById('create-pauta-name-input')?.parentNode;
             
             if (!pai) return;
             
