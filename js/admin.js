@@ -121,7 +121,7 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
             excluidoEm: new Date().toISOString() 
         });
         
-        const usersSnap = await getDocs(collection(db, "usuarios"));
+        const usersSnap = await getDocs(collection(db, "users"));
         const batch = writeBatch(db);
         let usuariosAfetados = 0;
         
@@ -424,7 +424,7 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
     document.body.appendChild(modal);
 
     try {
-        const usersSnap = await getDocs(collection(db, "usuarios"));
+        const usersSnap = await getDocs(collection(db, "users"));
         const usuariosVinculados = usersSnap.docs
             .map(d => ({ id: d.id, ...d.data() }))
             .filter(u => u.unidades?.some(un => un.unidadeId === unidadeId) && u.status !== 'pending' && u.role !== 'suspended');
@@ -713,7 +713,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 
 export const loadUsersList = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "usuarios"));
+        const snapshot = await getDocs(collection(db, "users"));
         const allUsers = [];
         snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         
@@ -861,7 +861,7 @@ function renderAprovadosTable(db) {
 export const approveUser = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "usuarios", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
+        await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
         showNotification("Usuário aprovado!");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao aprovar.", "error"); }
@@ -870,7 +870,7 @@ export const approveUser = async (db, userId) => {
 export const updateUserRole = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "usuarios", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
+        await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
         showNotification(`Cargo atualizado!`);
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
@@ -879,7 +879,7 @@ export const updateUserRole = async (db, userId) => {
 export const deleteUser = async (db, userId) => {
     if (!confirm("Excluir este usuário?")) return;
     try {
-        await deleteDoc(doc(db, "usuarios", userId));
+        await deleteDoc(doc(db, "users", userId));
         showNotification("Usuário removido.");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao remover.", "error"); }
@@ -894,7 +894,7 @@ export const loadLogFilters = async (db) => {
         const userSelect = document.getElementById('filter-log-user');
         const actionSelect = document.getElementById('filter-log-action');
         if (userSelect) {
-            const usersSnap = await getDocs(collection(db, "usuarios"));
+            const usersSnap = await getDocs(collection(db, "users"));
             userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
             usersSnap.forEach(doc => { const user = doc.data(); if (user.email) userSelect.appendChild(new Option(user.name || user.email, user.email)); });
         }
@@ -1133,7 +1133,7 @@ export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
-        const snapshot = await getDocs(collection(db, "usuarios"));
+        const snapshot = await getDocs(collection(db, "users"));
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
