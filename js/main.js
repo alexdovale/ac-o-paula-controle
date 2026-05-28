@@ -66,6 +66,7 @@ class SIGEPApp {
     }
 
     async init() {
+        console.log("SIGEPApp: Iniciando...");
         try {
             const app = initializeApp(firebaseConfig);
             this.db = getFirestore(app);
@@ -88,8 +89,9 @@ class SIGEPApp {
             if (AdminService && typeof AdminService.setupAdminEvents === 'function') {
                 AdminService.setupAdminEvents(this);
             }
-            
+            console.log("SIGEPApp: Inicialização concluída com sucesso.");
         } catch (error) {
+            console.error("SIGEPApp: ERRO NA INICIALIZAÇÃO", error)
             console.error("Erro na inicialização:", error);
             showNotification("Erro ao iniciar o sistema SIGEP", "error");
         }
