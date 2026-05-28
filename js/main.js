@@ -460,79 +460,76 @@ class SIGEPApp {
     // setupEventListeners - COMPLETO
     // ============================================================
     setupEventListeners() {
-        document.getElementById('login-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.login(this);
-        });
+        const loginForm = document.getElementById('login-form');
+        if (loginForm) loginForm.addEventListener('submit', (e) => { e.preventDefault(); AuthService.login(this); });
 
-        document.getElementById('register-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.register(this);
-        });
+        const registerForm = document.getElementById('register-form');
+        if (registerForm) registerForm.addEventListener('submit', (e) => { e.preventDefault(); AuthService.register(this); });
 
-        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            AuthService.resetPassword(this.auth);
-        });
+        const forgotPass = document.getElementById('forgot-password-link');
+        if (forgotPass) forgotPass.addEventListener('click', (e) => { e.preventDefault(); AuthService.resetPassword(this.auth); });
 
-        document.getElementById('login-tab-btn')?.addEventListener('click', () => {
-            UIService.toggleAuthTabs('login');
-        });
+        const loginTab = document.getElementById('login-tab-btn');
+        if (loginTab) loginTab.addEventListener('click', () => UIService.toggleAuthTabs('login'));
 
-        document.getElementById('register-tab-btn')?.addEventListener('click', () => {
-            UIService.toggleAuthTabs('register');
-        });
+        const registerTab = document.getElementById('register-tab-btn');
+        if (registerTab) registerTab.addEventListener('click', () => UIService.toggleAuthTabs('register'));
 
         document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
-            if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
+            btn.addEventListener('click', () => AuthService.logout(this.auth));
         });
 
-        document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
-            PautaService.callNextAssisted(this);
-        });
+        const callNextBtn = document.getElementById('call-next-assisted-btn');
+        if (callNextBtn) callNextBtn.addEventListener('click', () => PautaService.callNextAssisted(this));
 
-        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            DashboardService.showDashboardScreen();
-        });
+        const viewDashBtn = document.getElementById('view-dashboard-btn');
+        if (viewDashBtn) viewDashBtn.addEventListener('click', () => DashboardService.showDashboardScreen());
 
-        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen();
-        });        
+        const dashBackBtn = document.getElementById('dashboard-back-to-pautas-btn');
+        if (dashBackBtn) dashBackBtn.addEventListener('click', () => this.showPautaSelectionScreen());
 
-        document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            await RecepçãoCentralService.abrir(this);
-        });
+        const btnRecepcao = document.getElementById('btn-recepcao-central');
+        if (btnRecepcao) btnRecepcao.addEventListener('click', async () => await RecepçãoCentralService.abrir(this));
 
-        document.getElementById('btn-trocar-modo')?.addEventListener('click', () => {
-            this.voltarParaSelecaoModo();
-        });
-        
-        document.getElementById('btn-trocar-modo-app')?.addEventListener('click', () => {
-            this.voltarParaSelecaoModo();
-        });
+        const btnModo = document.getElementById('btn-trocar-modo');
+        if (btnModo) btnModo.addEventListener('click', () => this.voltarParaSelecaoModo());
 
-                document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
-            // Como o pautaConfig.js já cuida de saber se é Evento ou Normal, 
-            // a gente só precisa abrir o modal de escolher o tipo (Agendamento, Avulso, etc)
-            const typeModal = document.getElementById('pauta-type-modal');
-            if (typeModal) {
-                typeModal.classList.remove('hidden');
-            } else {
-                showNotification("Modal de tipo de pauta não encontrado.", "error");
-            }
-        });
+        const btnModoApp = document.getElementById('btn-trocar-modo-app');
+        if (btnModoApp) btnModoApp.addEventListener('click', () => this.voltarParaSelecaoModo());
 
-
-            document.addEventListener('click', (e) => {
-                if (pautaSettingsPanel && !pautaSettingsPanel.contains(e.target) && !pautaSettingsToggle.contains(e.target)) {
-                    pautaSettingsPanel.classList.add('hidden');
-                }
+        const createPautaBtn = document.getElementById('create-pauta-btn');
+        if (createPautaBtn) {
+            createPautaBtn.addEventListener('click', () => {
+                const typeModal = document.getElementById('pauta-type-modal');
+                if (typeModal) typeModal.classList.remove('hidden');
+                else showNotification("Modal de tipo de pauta não encontrado.", "error");
             });
         }
 
-        toggleEmAtendimento?.addEventListener('change', () => this.saveColumnPreferences());
-        toggleDistribuicao?.addEventListener('change', () => this.saveColumnPreferences());
-        toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
+        // Correção das referências para evitar erro de escopo
+        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+
+        document.addEventListener('click', (e) => {
+            if (pautaSettingsPanel && pautaSettingsToggle) {
+                if (!pautaSettingsPanel.classList.contains('hidden') && 
+                    !pautaSettingsPanel.contains(e.target) && 
+                    !pautaSettingsToggle.contains(e.target)) {
+                    pautaSettingsPanel.classList.add('hidden');
+                }
+            }
+        });
+
+        // Toggles de preferência corrigidos
+        const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
+        if (toggleEmAtendimento) toggleEmAtendimento.addEventListener('change', () => this.saveColumnPreferences());
+
+        const toggleDistribuicao = document.getElementById('toggle-distribuicao');
+        if (toggleDistribuicao) toggleDistribuicao.addEventListener('change', () => this.saveColumnPreferences());
+
+        const toggleFaltosos = document.getElementById('toggle-faltosos');
+        if (toggleFaltosos) toggleFaltosos.addEventListener('change', () => this.saveColumnPreferences());
+    }
 
         document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
             const listContainer = document.getElementById('manage-rooms-list');
