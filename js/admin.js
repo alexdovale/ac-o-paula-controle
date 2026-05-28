@@ -1094,40 +1094,90 @@ export const loadDashboardData = async (db) => {
     const end = document.getElementById('stats-filter-end')?.value;
     const userFilter = document.getElementById('stats-filter-user')?.value;
     const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
+    
     const resultsArea = document.getElementById('dashboard-results');
     if (!resultsArea) return;
-    resultsArea.innerHTML = '<div class="text-center py-8"><p class="text-gray-600 mt-2">Carregando dados...</p></div>';
+
+    // A MÁGICA ACONTECE AQUI: Remove a classe que deixa o BI invisível!
+    resultsArea.classList.remove('hidden');
+
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600 mt-2">Carregando dados do BI...</p></div>';
+    
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
         if (snapshot.empty) {
-            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3></div>`;
+            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3><p class="text-sm text-gray-500">Nenhum dado permanente foi gerado ainda.</p></div>`;
             return;
         }
+        
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         let filteredData = [...rawData];
+        
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
         if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
         
         let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0, mapAssuntos = {}, mapUsers = {};
+        
         filteredData.forEach(d => {
-            totalGeral += d.total || 0; totalAtendidos += d.atendidos || 0; totalFaltosos += d.faltosos || 0;
+            totalGeral += d.total || 0; 
+            totalAtendidos += d.atendidos || 0; 
+            totalFaltosos += d.faltosos || 0;
             if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
             if (d.atendentes) for (let [k, v] of Object.entries(d.atendentes)) mapUsers[k] = (mapUsers[k] || 0) + v;
         });
+        
         const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
-        resultsArea.innerHTML = `<div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6"><div class="p-4 bg-blue-50 rounded-lg text-center"><p class="text-[9px] text-blue-600 font-bold uppercase">Demandado</p><h4 class="text-xl font-black text-blue-800">${totalGeral}</h4></div><div class="p-4 bg-green-50 rounded-lg text-center"><p class="text-[9px] text-green-600 font-bold uppercase">Atendidos</p><h4 class="text-xl font-black text-green-800">${totalAtendidos}</h4></div><div class="p-4 bg-orange-50 rounded-lg text-center"><p class="text-[9px] text-orange-600 font-bold uppercase">Absenteísmo</p><h4 class="text-xl font-black text-orange-800">${taxa}%</h4></div></div><div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6"><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Top Assuntos</h5><div id="dash-subjects-list" class="space-y-2 text-xs"></div></div><div class="border rounded-lg p-4 bg-white"><h5 class="text-[10px] font-bold mb-4 uppercase text-gray-500 border-b pb-2">Produtividade</h5><div id="dash-users-list" class="space-y-2 text-xs"></div></div></div>`;
+        
+        resultsArea.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm">
+                    <p class="text-[9px] text-blue-600 font-bold uppercase tracking-widest">Demandado</p>
+                    <h4 class="text-2xl font-black text-blue-800 mt-1">${totalGeral}</h4>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm">
+                    <p class="text-[9px] text-green-600 font-bold uppercase tracking-widest">Atendidos</p>
+                    <h4 class="text-2xl font-black text-green-800 mt-1">${totalAtendidos}</h4>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm">
+                    <p class="text-[9px] text-orange-600 font-bold uppercase tracking-widest">Absenteísmo</p>
+                    <h4 class="text-2xl font-black text-orange-800 mt-1">${taxa}%</h4>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
+                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Top Assuntos</h5>
+                    <div id="dash-subjects-list" class="space-y-3 text-xs"></div>
+                </div>
+                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
+                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Produtividade da Equipe</h5>
+                    <div id="dash-users-list" class="space-y-3 text-xs"></div>
+                </div>
+            </div>
+        `;
         
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-gray-400 py-4">Sem dados.</p>'; return; }
-            el.innerHTML = sorted.map(([name, count]) => `<div class="flex justify-between items-center border-b border-dashed pb-1 pt-1"><span class="truncate pr-2 font-medium">${escapeHTML(name)}</span><span class="font-bold text-green-700 bg-green-50 px-2 py-0.5 rounded-md">${count}</span></div>`).join('');
+            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-slate-400 py-4 italic">Sem dados suficientes.</p>'; return; }
+            el.innerHTML = sorted.map(([name, count]) => `
+                <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                    <span class="truncate pr-2 font-bold text-slate-700">${escapeHTML(name)}</span>
+                    <span class="font-black text-indigo-700 bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px]">${count}</span>
+                </div>
+            `).join('');
         };
+        
         renderRanking('dash-subjects-list', mapAssuntos);
         renderRanking('dash-users-list', mapUsers);
-    } catch (error) { resultsArea.innerHTML = `<div class="text-center py-8 text-red-500">Erro: ${error.message}</div>`; }
+        
+    } catch (error) { 
+        console.error("Erro no BI:", error);
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold border border-red-200 bg-red-50 rounded-xl">Erro ao processar dados: ${error.message}</div>`; 
+    }
 };
+
 
 export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
