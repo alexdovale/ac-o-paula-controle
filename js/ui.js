@@ -1542,98 +1542,83 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     renderPautaCards(pautas, userId, userEmail, app) {
-        const container = document.getElementById('pautas-list');
-        if (!container) return;
+    const container = document.getElementById('pautas-list');
+    if (!container) return;
 
-        if (!pautas || pautas.length === 0) {
-            container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
-            return;
+    if (!pautas || pautas.length === 0) {
+        container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
+        return;
+    }
+
+    container.innerHTML = '';
+    
+    pautas.forEach(pauta => {
+        const isOwner = pauta.owner === userId;
+        const isClosed = pauta.isClosed;
+        
+        let dataCriacaoStr = '---';
+        let dataExpiracaoStr = '';
+        let isExpired = false;
+
+        if (pauta.createdAt) {
+            const creationDate = new Date(pauta.createdAt);
+            dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
+            const expirationDate = new Date(creationDate);
+            expirationDate.setDate(creationDate.getDate() + 7);
+            dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
+            isExpired = new Date() > expirationDate;
         }
 
-        container.innerHTML = '';
+        const card = document.createElement('div');
+        card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
         
-        pautas.forEach(pauta => {
-            const isOwner = pauta.owner === userId;
-            const isClosed = pauta.isClosed;
+        // CONSTRUTOR DO CARD
+        card.innerHTML = `
+            ${isOwner ? `
+            <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
+            </button>` : ''}
+
+            <div>
+                <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
+                    ${escapeHTML(pauta.orgaoNome || 'Órgão não definido')}
+                </span>
+                <h3 class="font-bold text-lg text-gray-800 leading-tight mb-2 pr-8 break-words line-clamp-2">
+                    ${escapeHTML(pauta.name)}
+                </h3>
+                <p class="text-xs text-gray-500 mb-4">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+            </div>
             
-            let dataCriacaoStr = '---';
-            let dataExpiracaoStr = '';
-            let isExpired = false;
-
-            if (pauta.createdAt) {
-                const creationDate = new Date(pauta.createdAt);
-                dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
-                
-                const expirationDate = new Date(creationDate);
-                expirationDate.setDate(creationDate.getDate() + 7);
-                dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
-
-                const now = new Date();
-                isExpired = now > expirationDate;
-            }
-
-            const card = document.createElement('div');
-            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
-            
-            card.innerHTML = `
-                ${isOwner ? `
-                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
-                    </svg>
-                </button>` : ''}
-
-                <div>
-                    <h3 class="font-bold text-xl text-gray-600 leading-tight uppercase mb-2 pr-8">
-                        ${escapeHTML(pauta.name)}
-                    </h3>
-                    <p class="text-sm text-gray-500 mb-6">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+            <div class="pt-4 border-t border-gray-100">
+                <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
+                <p class="text-[10px] ${isExpired ? 'text-red-500' : 'text-amber-600'} font-bold mt-1">
+                    ${isExpired ? '🚫 EXPIRADA EM:' : 'ELIMINAÇÃO EM:'} ${dataExpiracaoStr}
+                </p>
+                <div class="mt-3">
+                    ${isOwner ? 
+                        `<span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
+                            Criador
+                        </span>` : 
+                        `<span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
+                            Compartilhada
+                        </span>`
+                    }
                 </div>
-                
-                <div class="pt-4 border-t border-gray-100">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
-                    
-                    ${isExpired ? `
-                        <p class="text-[10px] text-red-500 font-bold mt-1 flex items-center gap-1">
-                            🚫 EXPIRADA EM: ${dataExpiracaoStr}
-                        </p>
-                    ` : `
-                        <p class="text-[10px] text-amber-600 font-bold mt-1">
-                            ELIMINAÇÃO EM: ${dataExpiracaoStr}
-                        </p>
-                    `}
-                    
-                    <div class="mt-3">
-                        ${isOwner ? `
-                            <span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
-                                 Criador
-                            </span>
-                        ` : `
-                            <span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
-                                 Compartilhada
-                            </span>
-                        `}
-                    </div>
-                </div>
-            `;
+        `;
 
-            const deleteBtn = card.querySelector('.delete-pauta-btn');
-            if (deleteBtn) {
-                deleteBtn.onclick = (e) => {
-                    e.stopPropagation();
-                    app.deletePauta(pauta.id, pauta.name);
-                };
-            }
-
-            card.onclick = () => {
-                if (isExpired) {
-                    this.showExpiredPautaModal(pauta, app);
-                    return;
-                }
-                app.loadPauta(pauta.id, pauta.name, pauta.type);
-            };
-
-            container.appendChild(card);
+        card.querySelector('.delete-pauta-btn')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            app.deletePauta(pauta.id, pauta.name);
         });
-    }
-};
+
+        card.onclick = () => {
+            if (isExpired) {
+                this.showExpiredPautaModal(pauta, app);
+                return;
+            }
+            app.loadPauta(pauta.id, pauta.name, pauta.type);
+        };
+
+        container.appendChild(card);
+    });
+}
