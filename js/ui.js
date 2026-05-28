@@ -3,6 +3,7 @@
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
+import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 export const UIService = {
     showScreen(screenName) {
@@ -106,7 +107,7 @@ export const UIService = {
     },
 
     // ============================================================
-    // RENDERIZAÇÃO DO FILTRO (CORRIGIDO PARA ADMIN E UNIDADES)
+    // RENDERIZAÇÃO DO FILTRO (ATUALIZADO COM GRUPOS PARA ADMIN)
     // ============================================================
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
@@ -122,7 +123,7 @@ export const UIService = {
         // O botão aparece se tiver unidades ou se for admin
         const hasUnidadesVinculadas = userUnidades.length > 0 || isAdmin;
         
-        // Reconstrói o HTML do filtro de datas
+        // HTML do filtro de datas
         const dateFiltersHTML = `
             <div id="periodo-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isPeriodo ? '' : 'hidden'} animate-fade-in">
                 <div class="flex-1 min-w-[150px]">
@@ -152,10 +153,8 @@ export const UIService = {
             </div>
         `;
         
-        // Define as opções do select de unidades dinamicamente
-        const unidadesOptions = isAdmin 
-            ? `<option value="todas">Todas as Unidades (Visão Admin)</option>` + userUnidades.map(u => `<option value="${escapeHTML(u.unidadeNome)}">${escapeHTML(u.unidadeNome)}</option>`).join('')
-            : `<option value="todas">Todas as minhas unidades vinculadas</option>` + userUnidades.map(u => `<option value="${escapeHTML(u.unidadeNome)}">${escapeHTML(u.unidadeNome)}</option>`).join('');
+        // HTML do filtro de unidades (as opções serão injetadas async abaixo)
+        const unidadesOptions = `<option value="todas">Carregando unidades...</option>`;
 
         const unidadesFiltersHTML = `
             <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 ${isUnidades ? '' : 'hidden'} animate-fade-in">
@@ -187,13 +186,13 @@ export const UIService = {
                     <label for="main-pauta-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1 text-center w-full">Filtro de Exibição</label>
                     <div class="relative">
                         <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border-2 border-gray-200 hover:border-green-400 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-bold outline-none transition-all cursor-pointer text-gray-700">
-                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>🌍 Mostrar Todas as Pautas</option>
-                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}>✅ Pautas ativas (com prazo)</option>
-                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}>⏰ Pautas expiradas</option>
-                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}>👑 Criadas por mim</option>
-                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}>🤝 Compartilhadas comigo</option>
-                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}>🏢 Filtrar por Unidade</option>` : ''}
-                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}>📅 Filtrar por Período / Tipo</option>
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}> Mostrar Todas as Pautas</option>
+                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}> Pautas ativas (com prazo)</option>
+                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
+                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
+                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas comigo</option>
+                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Filtrar por Unidade</option>` : ''}
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-green-600 group-hover:text-green-700">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
@@ -204,6 +203,51 @@ export const UIService = {
             ${dateFiltersHTML}
             ${hasUnidadesVinculadas ? unidadesFiltersHTML : ''}
         `;
+        
+        // População assíncrona das unidades no Select
+        const selectUnidade = document.getElementById('filter-unidade-select');
+        if (selectUnidade) {
+            if (isAdmin) {
+                // Admin: Carrega todas as unidades do sistema e agrupa com as unidades pessoais
+                getDocs(collection(app.db, "unidades")).then(snap => {
+                    const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
+                    
+                    let html = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
+                    
+                    // Mostra as unidades pessoais do admin separadas com destaque
+                    if (userUnidades.length > 0) {
+                        html += `<optgroup label=" Minhas Unidades Vinculadas">`;
+                        userUnidades.forEach(u => {
+                            const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
+                            if (nome) html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+                        });
+                        html += `</optgroup>`;
+                        
+                        html += `<optgroup label=" Todas as Unidades do Sistema">`;
+                    }
+
+                    allUnidades.forEach(nome => {
+                        html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+                    });
+
+                    if (userUnidades.length > 0) {
+                        html += `</optgroup>`;
+                    }
+
+                    selectUnidade.innerHTML = html;
+                }).catch(err => {
+                    console.error("Erro ao carregar unidades do sistema:", err);
+                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option>`;
+                });
+            } else {
+                // Usuário comum: apenas a lista das unidades vinculadas a ele
+                const opcoesUser = userUnidades.map(u => {
+                    const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
+                    return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                }).join('');
+                selectUnidade.innerHTML = `<option value="todas">🌍 Todas as minhas unidades vinculadas</option>` + opcoesUser;
+            }
+        }
         
         // Listeners do filtro Principal
         const filterSelect = document.getElementById('main-pauta-filter');
