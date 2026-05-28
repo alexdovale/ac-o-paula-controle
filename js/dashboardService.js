@@ -122,7 +122,8 @@ export const DashboardService = {
                         id: pauta.id,
                         name: pauta.name,
                         type: pauta.type,
-                        origin: pauta.origin || pauta.unidade || "Não especificada",
+                        // Prioriza o campo "unidade" do banco, com fallback para origin ou default
+                        unidade: pauta.unidade || pauta.origin || pauta.orgao || "Unidade não informada",
                         isOwner: pauta.owner === currentUser.uid,
                         total: attendances.length,
                         aguardando,
@@ -165,7 +166,7 @@ export const DashboardService = {
                     <div class="flex justify-between items-start mb-4 pl-2 w-full gap-2">
                         <div class="min-w-0 flex-1"> <!-- min-w-0 evita que o flexbox quebre o truncate -->
                             <h4 class="font-black text-slate-800 text-base sm:text-lg leading-tight group-hover:text-indigo-700 transition-colors truncate" title="${pauta.name}">${pauta.name}</h4>
-                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.origin}">📍 ${pauta.origin}</p>
+                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.unidade}">📍 ${pauta.unidade}</p>
                             <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? '👑 Criada por você' : '🤝 Compartilhada'}</span>
                         </div>
                         <span class="bg-slate-100 text-slate-600 text-xs font-black px-2 py-1 rounded-lg shrink-0">
