@@ -80,8 +80,31 @@ export const DashboardService = {
                     return tiposEvento.includes(tipoPauta);
                 });
             }
+
+            // ============================================================
+            // FILTRO DE UNIDADES VINCULADAS E OUTROS DA TELA PRINCIPAL
+            // ============================================================
+            const currentFilter = this.appInstance.currentPautaFilter || 'all';
+            const currentUserData = this.appInstance.currentUser || {};
             
-            console.log(`📊 Dashboard - Modo: ${modoAtual}, Pautas filtradas: ${pautas.length}`);
+            if (currentFilter === 'unidades') {
+                const userUnidades = currentUserData.unidades || [];
+                const isAdmin = currentUserData.role === 'admin' || currentUserData.role === 'superadmin';
+                
+                if (!isAdmin && userUnidades.length > 0) {
+                    const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
+                    pautas = pautas.filter(p => {
+                        const unidadePauta = p.unidadeNome || p.unidade || p.origin || p.orgao;
+                        return userUnidadesNomes.includes(unidadePauta);
+                    });
+                }
+            } else if (currentFilter === 'my') {
+                pautas = pautas.filter(p => p.owner === currentUser.uid);
+            } else if (currentFilter === 'shared') {
+                pautas = pautas.filter(p => p.members?.includes(currentUser.email) && p.owner !== currentUser.uid);
+            }
+            
+            console.log(`📊 Dashboard - Modo: ${modoAtual}, Filtro Ativo: ${currentFilter}, Pautas filtradas: ${pautas.length}`);
     
             let metricas = {
                 ativas: 0,
@@ -198,8 +221,8 @@ export const DashboardService = {
             pautasListHtml = `
                 <div class="col-span-full bg-white p-10 rounded-2xl border border-dashed border-slate-300 text-center opacity-70">
                     <span class="text-5xl block mb-4">📭</span>
-                    <h3 class="text-lg font-bold text-slate-700">Nenhuma Pauta Ativa</h3>
-                    <p class="text-slate-500 text-sm mt-2">Você não possui pautas criadas ou compartilhadas nos últimos 7 dias.</p>
+                    <h3 class="text-lg font-bold text-slate-700">Nenhuma Pauta Encontrada</h3>
+                    <p class="text-slate-500 text-sm mt-2">Nenhuma pauta correspondente ao filtro ativo foi localizada.</p>
                 </div>
             `;
         }
@@ -208,7 +231,7 @@ export const DashboardService = {
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">📁</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Pautas Ativas</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Pautas Filtradas</p>
                     <h3 class="text-3xl font-black text-slate-800">${data.metricas.ativas}</h3>
                 </div>
                 
