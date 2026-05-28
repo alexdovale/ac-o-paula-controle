@@ -38,7 +38,7 @@ const ROLE_STYLE = {
 // ─── BUSCA DE DADOS ────────────────────────────────────────────────────────────
 
 async function buscarUsuario(db, uid) {
-    const snap = await getDoc(doc(db, 'usuarios', uid));
+    const snap = await getDoc(doc(db, 'users', uid));
     if (!snap.exists()) throw new Error('Usuário não encontrado');
     return { id: snap.id, ...snap.data() };
 }
@@ -64,7 +64,7 @@ async function buscarTodasUnidades(db) {
  * Estrutura: usuario.unidades = [{ unidadeId, role }, ...]
  */
 async function salvarVinculos(db, uid, vinculos) {
-    await updateDoc(doc(db, 'usuarios', uid), { unidades: vinculos });
+    await updateDoc(doc(db, 'users', uid), { unidades: vinculos });
 }
 
 // ─── RENDERIZAÇÃO DO MODAL ────────────────────────────────────────────────────
