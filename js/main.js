@@ -41,7 +41,7 @@ import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './geren
 import { injetarModais } from './modais.js';
 injetarModais();
 
-class SIGEPApp { 
+class SIGEPApp {
     constructor() {
         this.db = null;
         this.auth = null;
@@ -57,9 +57,8 @@ class SIGEPApp {
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
-        this.monitorInterval = null; 
+        this.monitorInterval = null;
         
-        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         
         this.init();
@@ -80,17 +79,12 @@ class SIGEPApp {
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
             
-            // INICIALIZAÇÃO PAUTACONFIG
             PautaConfigService.init(this);
-            
-            // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
             this.setupModoListeners();
             
-            // EXPÕE O APP GLOBALMENTE PARA OS MÓDULOS ADMIN
             window.app = this;
             
-            // REGISTRA O AdminService COM O APP
-            if (AdminService && AdminService.setupAdminEvents) {
+            if (AdminService && typeof AdminService.setupAdminEvents === 'function') {
                 AdminService.setupAdminEvents(this);
             }
             
