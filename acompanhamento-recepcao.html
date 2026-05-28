@@ -180,7 +180,7 @@
             font-weight: 900;
             font-family: 'DM Mono', monospace;
             color: #f59e0b;
-            width: clamp(18px, 2vw, 28px);
+            min-width: clamp(24px, 3vw, 36px);
             text-align: center;
             flex-shrink: 0;
         }
@@ -297,7 +297,7 @@
                         <p class="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
                             ⏳ Fila de Espera
                         </p>
-                        <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Agrupado por unidade · ordem global de chamada</p>
+                        <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Agrupado por unidade · numerado localmente</p>
                     </div>
                     <!-- Legenda de cores por unidade -->
                     <div id="legenda-unidades" class="flex flex-wrap gap-1.5 justify-end max-w-xs"></div>
@@ -409,28 +409,55 @@
         }
 
         function renderPainelUnificado() {
-            let todosAguardando = [];
             let todosEmAtendimento = [];
+            let totalAguardando = 0;
+            
+            // Agrupamento e ordenação isolada por unidade
+            const grupos = {}; 
 
             for (const pautaId in estado.assistidos) {
                 const pauta = estado.pautas[pautaId];
                 const lista = estado.assistidos[pautaId] || [];
+                const nomePauta = pauta?.name || 'Geral';
+                const salaPauta = pauta?.sala || '';
+
+                let aguardandoLocal = [];
+
                 lista.forEach(a => {
-                    const p = { ...a, nomePauta: pauta?.name || 'Geral', salaPauta: pauta?.sala || a.room || '', pautaId };
-                    if (a.status === 'aguardando') todosAguardando.push(p);
-                    else if (a.status === 'emAtendimento') todosEmAtendimento.push(p);
+                    const p = { ...a, nomePauta, salaPauta, pautaId };
+                    if (a.status === 'aguardando') {
+                        aguardandoLocal.push(p);
+                    } else if (a.status === 'emAtendimento') {
+                        todosEmAtendimento.push(p);
+                    }
                 });
+
+                if (aguardandoLocal.length > 0) {
+                    // Ordenação específica PARA ESTA UNIDADE (Prioridade sobe só na fila dela)
+                    aguardandoLocal.sort((a, b) => {
+                        if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                        if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                        return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+                    });
+
+                    // Define a numeração separada para esta fila em específico
+                    aguardandoLocal.forEach((p, idx) => {
+                        p.ordemLocal = idx + 1;
+                    });
+
+                    grupos[pautaId] = {
+                        nomePauta,
+                        salaPauta,
+                        pessoas: aguardandoLocal
+                    };
+                    totalAguardando += aguardandoLocal.length;
+                }
             }
 
-            document.getElementById('g-aguardando').textContent = todosAguardando.length;
+            document.getElementById('g-aguardando').textContent = totalAguardando;
             document.getElementById('g-atendendo').textContent = todosEmAtendimento.length;
 
-            // Ordenação global
-            todosAguardando.sort((a, b) => {
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                return (a.checkInOrder || 0) - (b.checkInOrder || 0);
-            });
+            // Ordena os que estão em atendimento pela hora que foram chamados
             todosEmAtendimento.sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
 
             // ── Renderiza Em Atendimento ──
@@ -453,9 +480,9 @@
                 }).join('');
             }
 
-            // ── Renderiza Fila — agrupada por unidade ──
+            // ── Renderiza Fila — agrupada por unidade com ordem alfabética estável ──
             const listaEsEl = document.getElementById('lista-espera');
-            if (todosAguardando.length === 0) {
+            if (totalAguardando === 0) {
                 listaEsEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center">
                     <svg style="width:40px;height:40px;opacity:0.25;margin-bottom:8px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
                     <p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p>
@@ -464,18 +491,8 @@
                 return;
             }
 
-            // Agrupa mantendo a numeração global (ordem de chamada)
-            const grupos = {}; // pautaId → { nomePauta, pessoas[] }
-            const ordemGrupos = []; // ordem de primeiro aparecimento
-
-            todosAguardando.forEach((a, idx) => {
-                const key = a.pautaId;
-                if (!grupos[key]) {
-                    grupos[key] = { nomePauta: a.nomePauta, salaPauta: a.salaPauta, pessoas: [] };
-                    ordemGrupos.push(key);
-                }
-                grupos[key].pessoas.push({ ...a, ordemGlobal: idx + 1 });
-            });
+            // Cria uma ordem alfabética para que as áreas fiquem sempre estáticas no lugar (ex: Área A sempre acima da Área B)
+            const ordemGrupos = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
 
             // Legenda de cores
             const legendaEl = document.getElementById('legenda-unidades');
@@ -493,7 +510,7 @@
                 
                 const pessoasHTML = g.pessoas.map((a, li) => `
                     <div class="pessoa-card ucor-${cor} anim-card" style="margin:0;animation-delay:${(gi*0.1 + li*0.03)}s">
-                        <span class="ordem-num">${a.ordemGlobal}</span>
+                        <span class="ordem-num">${a.ordemLocal}º</span>
                         <div style="min-width:0;flex:1">
                             <p style="font-size:var(--fs-md);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
                         </div>
