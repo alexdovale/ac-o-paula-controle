@@ -1896,7 +1896,7 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // loadPautasWithFilter - COM FILTRO POR MODO E UNIDADES VINCULADAS
+    // loadPautasWithFilter - COM FILTRO POR MODO E UNIDADES VINCULADAS (CORRIGIDO)
     // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
@@ -1905,6 +1905,13 @@ class SIGEPApp {
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
+        
+        // CARREGAR DADOS DO USUÁRIO ATUALIZADOS (incluindo unidades)
+        const userDoc = await getDoc(doc(this.db, "users", user.uid));
+        if (userDoc.exists()) {
+            const userData = userDoc.data();
+            this.currentUser = { ...this.currentUser, ...userData };
+        }
     
         try {
             const q = query(
@@ -1961,14 +1968,22 @@ class SIGEPApp {
                         break;
                         
                     case 'unidades':
-                        // Obter unidades vinculadas ao usuário
-                        const userUnidades = this.currentUser?.unidadesVinculadas || [];
+                        // CORREÇÃO: Usar o campo 'unidades' do usuário (array de objetos)
+                        const userUnidades = this.currentUser?.unidades || [];
                         
-                        // Filtrar apenas pautas das unidades vinculadas ao usuário
-                        filteredPautas = filteredPautas.filter(pauta => {
-                            const unidadePauta = pauta.unidadeNome;
-                            return userUnidades.includes(unidadePauta);
-                        });
+                        // Admin/Superadmin vê todas as unidades
+                        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+                        
+                        if (!isAdmin && userUnidades.length > 0) {
+                            // Extrair apenas os nomes das unidades para comparação
+                            const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
+                            
+                            // Filtrar apenas pautas cuja unidadeNome está na lista do usuário
+                            filteredPautas = filteredPautas.filter(pauta => {
+                                const unidadePauta = pauta.unidadeNome;
+                                return userUnidadesNomes.includes(unidadePauta);
+                            });
+                        }
                         
                         // Aplicar filtro de unidade específica
                         if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
