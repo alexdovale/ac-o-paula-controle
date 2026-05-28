@@ -122,8 +122,8 @@ export const DashboardService = {
                         id: pauta.id,
                         name: pauta.name,
                         type: pauta.type,
-                        // Prioriza o campo "unidade" do banco, com fallback para origin ou default
-                        unidade: pauta.unidade || pauta.origin || pauta.orgao || "Unidade não informada",
+                        // ATUALIZADO: Usando unidadeNome conforme consta no main.js
+                        unidade: pauta.unidadeNome || pauta.unidade || pauta.origin || pauta.orgao || "Unidade não informada",
                         isOwner: pauta.owner === currentUser.uid,
                         total: attendances.length,
                         aguardando,
