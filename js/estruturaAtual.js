@@ -49,7 +49,7 @@ async function carregarEstrutura(db) {
         getDocs(collection(db, 'orgaos')),
         getDocs(collection(db, 'unidades')),
         getDocs(collection(db, 'recepcoes')),
-        getDocs(collection(db, 'usuarios')),
+        getDocs(collection(db, 'users')),
     ]);
 
     const orgaos    = orgSnap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a, b) => (a.ordem ?? 99) - (b.ordem ?? 99));
