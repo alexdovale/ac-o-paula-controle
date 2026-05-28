@@ -28,7 +28,6 @@ export const DashboardService = {
 
         const dashboardContent = document.getElementById('dashboard-content');
         if (dashboardContent) {
-            // Skeleton Loading Premium
             dashboardContent.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-20 animate-pulse">
                     <div class="w-16 h-16 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
@@ -52,7 +51,7 @@ export const DashboardService = {
     
         const db = this.appInstance.db;
         const currentUser = this.appInstance.auth.currentUser;
-        const modoAtual = this.appInstance.currentMode; // ⭐ PEGA O MODO ATUAL
+        const modoAtual = this.appInstance.currentMode; 
         
         const pautasRef = collection(db, "pautas");
         const q = query(pautasRef, where("members", "array-contains", currentUser.uid));
@@ -62,9 +61,8 @@ export const DashboardService = {
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
             // ============================================================
-            // ⭐ FILTRO POR MODO (NORMAL vs EVENTO) - MESMA LÓGICA DO MAIN.JS
+            // FILTRO POR MODO (NORMAL vs EVENTO)
             // ============================================================
-            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
             
             if (modoAtual === 'normal') {
@@ -97,7 +95,6 @@ export const DashboardService = {
             const pautasProcessadas = [];
             const now = new Date();
     
-            // Processa todas as pautas ativas (menos de 7 dias)
             for (const pauta of pautas) {
                 const creationDate = new Date(pauta.createdAt);
                 const expirationDate = new Date(creationDate);
@@ -125,6 +122,7 @@ export const DashboardService = {
                         id: pauta.id,
                         name: pauta.name,
                         type: pauta.type,
+                        origin: pauta.origin || pauta.unidade || "Não especificada",
                         isOwner: pauta.owner === currentUser.uid,
                         total: attendances.length,
                         aguardando,
@@ -156,40 +154,40 @@ export const DashboardService = {
         const dashboardContent = document.getElementById('dashboard-content');
         if (!dashboardContent) return;
 
-        // 1. Renderiza os Cards das Pautas
         let pautasListHtml = '';
         if (data.pautas.length > 0) {
             pautasListHtml = data.pautas.map(pauta => `
                 <button onclick="window.app.loadPauta('${pauta.id}', '${pauta.name}', '${pauta.type}')" 
-                        class="w-full text-left bg-white p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-400 hover:shadow-lg transition-all duration-200 relative group overflow-hidden flex flex-col h-full">
+                        class="w-full text-left bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 hover:border-indigo-400 hover:shadow-lg transition-all duration-200 relative group overflow-hidden flex flex-col h-full">
                     
                     <div class="absolute top-0 left-0 w-1 h-full ${pauta.isOwner ? 'bg-indigo-500' : 'bg-slate-300'} group-hover:w-1.5 transition-all"></div>
                     
-                    <div class="flex justify-between items-start mb-4 pl-2">
-                        <div>
-                            <h4 class="font-black text-slate-800 text-lg leading-tight group-hover:text-indigo-700 transition-colors">${pauta.name}</h4>
-                            <span class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mt-1">${pauta.isOwner ? '👑 Criada por você' : '🤝 Compartilhada'}</span>
+                    <div class="flex justify-between items-start mb-4 pl-2 w-full gap-2">
+                        <div class="min-w-0 flex-1"> <!-- min-w-0 evita que o flexbox quebre o truncate -->
+                            <h4 class="font-black text-slate-800 text-base sm:text-lg leading-tight group-hover:text-indigo-700 transition-colors truncate" title="${pauta.name}">${pauta.name}</h4>
+                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.origin}">📍 ${pauta.origin}</p>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? '👑 Criada por você' : '🤝 Compartilhada'}</span>
                         </div>
-                        <span class="bg-slate-100 text-slate-600 text-xs font-black px-2 py-1 rounded-lg">
+                        <span class="bg-slate-100 text-slate-600 text-xs font-black px-2 py-1 rounded-lg shrink-0">
                             ${pauta.total}
                         </span>
                     </div>
 
-                    <div class="grid grid-cols-2 gap-2 mt-auto pl-2">
+                    <div class="grid grid-cols-2 gap-2 mt-auto pl-2 w-full">
                         <div class="bg-slate-50 p-2 rounded border border-slate-100 flex flex-col justify-between">
-                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Aguardando</span>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">Aguardando</span>
                             <span class="text-base font-black text-slate-700">${pauta.aguardando}</span>
                         </div>
                         <div class="bg-slate-50 p-2 rounded border border-slate-100 flex flex-col justify-between">
-                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest">Em Fluxo</span>
+                            <span class="text-[9px] font-bold text-slate-500 uppercase tracking-widest truncate">Em Fluxo</span>
                             <span class="text-base font-black text-indigo-600">${pauta.emMesa}</span>
                         </div>
                         <div class="bg-emerald-50 p-2 rounded border border-emerald-100 flex flex-col justify-between">
-                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest">Concluídos</span>
+                            <span class="text-[9px] font-bold text-emerald-600 uppercase tracking-widest truncate">Concluídos</span>
                             <span class="text-base font-black text-emerald-700">${pauta.atendidos}</span>
                         </div>
                         <div class="bg-rose-50 p-2 rounded border border-rose-100 flex flex-col justify-between">
-                            <span class="text-[9px] font-bold text-rose-600 uppercase tracking-widest">Faltosos</span>
+                            <span class="text-[9px] font-bold text-rose-600 uppercase tracking-widest truncate">Faltosos</span>
                             <span class="text-base font-black text-rose-700">${pauta.faltosos}</span>
                         </div>
                     </div>
@@ -205,36 +203,35 @@ export const DashboardService = {
             `;
         }
 
-        // 2. Renderiza a Tela Completa
         dashboardContent.innerHTML = `
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">📁</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Pautas Ativas</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Pautas Ativas</p>
                     <h3 class="text-3xl font-black text-slate-800">${data.metricas.ativas}</h3>
                 </div>
                 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mb-3">👥</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Assistidos (Total)</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Assistidos (Total)</p>
                     <h3 class="text-3xl font-black text-slate-800">${data.metricas.total}</h3>
                 </div>
                 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3">⏳</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Na Recepção</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Na Recepção</p>
                     <h3 class="text-3xl font-black text-blue-600">${data.metricas.aguardando}</h3>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">✅</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Atendidos</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Atendidos</p>
                     <h3 class="text-3xl font-black text-emerald-600">${data.metricas.concluidos}</h3>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
                     <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">🚫</div>
-                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Faltosos</p>
+                    <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Faltosos</p>
                     <h3 class="text-3xl font-black text-rose-600">${data.metricas.faltosos}</h3>
                 </div>
             </div>
@@ -252,7 +249,7 @@ export const DashboardService = {
             <div class="mt-12 text-center">
                 <span class="inline-flex items-center gap-2 bg-slate-100 text-slate-500 px-3 py-1.5 rounded-full text-xs font-bold border border-slate-200 shadow-sm">
                     <span class="w-2 h-2 rounded-full bg-emerald-500 animate-pulse"></span>
-                    Sincronizado hoje às ${new Date().toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'})}
+                    Sincronizado agora
                 </span>
             </div>
         `;
