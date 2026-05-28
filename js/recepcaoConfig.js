@@ -7,7 +7,7 @@
 // - Filtrar pautas por recepção
 
 import {
-    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
+    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 
@@ -127,14 +127,17 @@ export const RecepcaoConfigService = {
     },
 
     /**
-     * Busca todas as recepções ativas de uma unidade.
+     * Busca todas as recepções ativas de uma unidade (com query otimizada).
      */
     async buscarRecepcoesUnidade(db, unidadeId) {
         try {
-            const snap = await getDocs(collection(db, "recepcoes"));
-            return snap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(r => r.unidadeId === unidadeId && r.ativo !== false);
+            const q = query(
+                collection(db, "recepcoes"),
+                where("unidadeId", "==", unidadeId),
+                where("ativo", "==", true)
+            );
+            const snap = await getDocs(q);
+            return snap.docs.map(d => ({ id: d.id, ...d.data() }));
         } catch (err) {
             console.error("Erro ao buscar recepções:", err);
             return [];
@@ -149,7 +152,7 @@ export const RecepcaoConfigService = {
             const snap = await getDocs(collection(db, "recepcoes"));
             const todas = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
-                .filter(r => r.ativo !== false);
+                .filter(r => r.ativo === true); // Padronizado com === true
 
             if (role === 'superadmin') return todas;
 
@@ -162,6 +165,27 @@ export const RecepcaoConfigService = {
             console.error("Erro ao buscar recepções do usuário:", err);
             return [];
         }
+    },
+
+    /**
+     * Inicia cache em tempo real com onSnapshot.
+     * Retorna função de unsubscribe para limpar quando necessário.
+     */
+    iniciarCache(db, userId, role, onChange) {
+        return onSnapshot(collection(db, "recepcoes"), (snap) => {
+            const todas = snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(r => r.ativo === true);
+            
+            this._cache = {
+                recepcoes: role === 'superadmin' ? todas : todas.filter(r =>
+                    r.membros?.includes(userId) || r.tipo === 'central' || role === 'admin'
+                ),
+                carregadoEm: Date.now()
+            };
+            
+            onChange?.(this._cache.recepcoes);
+        });
     },
 
     /**
@@ -265,11 +289,11 @@ export const RecepcaoConfigService = {
         };
     },
 
-    // ─── RENDER DO SELETOR HIERÁRQUICO ────────────────────────────────────────
+    // ─── RENDER DO SELETOR HIERÁRQUICO (VERSÃO COMPACTADA) ────────────────────
 
     /**
      * Renderiza o HTML do seletor de recepções agrupado por unidade.
-     * Recebe a lista já filtrada pelo usuário.
+     * Versão compactada: agrupa por região, mostra unidades com poucas recepções em linha horizontal
      */
     renderSelectorRecepcoes(recepcoes) {
         if (!recepcoes || recepcoes.length === 0) {
@@ -289,64 +313,138 @@ export const RecepcaoConfigService = {
             porUnidade[key].recepcoes.push(rec);
         }
 
+        // Extrair região do nome da unidade (padrão: "1º Núcleo Regional... - Região Norte Fluminense")
+        const extrairRegiao = (unidadeNome) => {
+            const match = unidadeNome?.match(/- (Região .+)$/);
+            return match ? match[1] : 'Outras Regiões';
+        };
+
+        // Agrupar unidades por região
+        const porRegiao = {};
+        for (const [unidadeId, unidade] of Object.entries(porUnidade)) {
+            const regiao = extrairRegiao(unidade.nome);
+            if (!porRegiao[regiao]) porRegiao[regiao] = [];
+            porRegiao[regiao].push({ id: unidadeId, ...unidade });
+        }
+
         let html = `
-            <div class="max-w-4xl mx-auto">
+            <div class="max-w-6xl mx-auto">
                 <div class="text-center mb-8">
-                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight"> Selecionar Recepção</h2>
+                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight">🏛️ Selecionar Recepção</h2>
                     <p class="text-slate-500 text-sm mt-1">Escolha a recepção que deseja gerenciar hoje</p>
                 </div>
         `;
 
-        for (const [unidadeId, unidade] of Object.entries(porUnidade)) {
+        for (const [regiaoNome, unidades] of Object.entries(porRegiao)) {
             html += `
-                <div class="mb-8">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3 flex items-center gap-2">
-                        <span class="w-6 h-px bg-slate-300 flex-1"></span>
-                        ${unidade.nome}
-                        <span class="w-6 h-px bg-slate-300 flex-1"></span>
+                <div class="mb-10">
+                    <h3 class="text-xs font-black text-amber-600 uppercase tracking-widest mb-4 flex items-center gap-2">
+                        <span class="w-8 h-px bg-amber-300"></span>
+                        📍 ${regiaoNome}
+                        <span class="w-8 h-px bg-amber-300 flex-1"></span>
                     </h3>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
             `;
 
-            // Agrupar por andar dentro da unidade
-            const porAndar = {};
-            for (const rec of unidade.recepcoes) {
-                const andar = rec.andar || 'Sem Andar';
-                if (!porAndar[andar]) porAndar[andar] = [];
-                porAndar[andar].push(rec);
-            }
-
-            for (const [andar, recs] of Object.entries(porAndar)) {
-                for (const rec of recs) {
-                    const corConfig = CORES[rec.cor] || CORES.slate;
+            for (const unidade of unidades) {
+                const qtdeRecs = unidade.recepcoes.length;
+                const isPoucasRecs = qtdeRecs <= 2;
+                
+                if (isPoucasRecs) {
+                    // Formato compacto: linha horizontal
                     html += `
-                        <button class="rc-selector-recepcao group text-left bg-white border-2 ${corConfig.border} hover:${corConfig.bg} rounded-2xl p-5 shadow-sm hover:shadow-lg transition-all duration-200"
-                            data-recepcao-id="${rec.id}"
-                            data-unidade-id="${unidadeId}">
-                            <div class="flex items-start gap-3">
-                                <span class="text-3xl group-hover:scale-110 transition-transform">${rec.icone || ICONES_SUGERIDOS.default}</span>
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-black text-slate-800 group-hover:text-white text-base truncate transition-colors">${rec.nome}</p>
-                                    ${rec.andar ? `<p class="text-[10px] font-bold text-slate-400 group-hover:text-white/70 uppercase tracking-wider mt-0.5 transition-colors">${rec.andar}</p>` : ''}
-                                    ${rec.grupos && rec.grupos.length > 0 ? `
-                                        <div class="flex flex-wrap gap-1 mt-2">
-                                            ${rec.grupos.map(g => `
-                                                <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${corConfig.light} ${corConfig.text} group-hover:bg-white/20 group-hover:text-white border ${corConfig.border} group-hover:border-white/30 transition-colors uppercase">${g}</span>
-                                            `).join('')}
-                                        </div>
-                                    ` : ''}
-                                </div>
-                            </div>
-                        </button>
+                        <div class="mb-4">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 pl-1">${unidade.nome}</h4>
+                            <div class="flex flex-wrap gap-2">
                     `;
+                    for (const rec of unidade.recepcoes) {
+                        html += this._cardSelectorCompacto(rec);
+                    }
+                    html += `</div></div>`;
+                } else {
+                    // Formato expandido: grid para unidades com muitas recepções
+                    html += `
+                        <div class="mb-6">
+                            <h4 class="text-sm font-bold text-slate-600 mb-3 pl-1 border-l-4 border-amber-400">${unidade.nome}</h4>
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    `;
+                    for (const rec of unidade.recepcoes) {
+                        html += this._cardSelectorRecepcao(rec);
+                    }
+                    html += `</div></div>`;
                 }
             }
-
-            html += `</div></div>`;
+            html += `</div>`;
         }
 
-        html += `</div>`;
+        // Guia por tipo no rodapé
+        html += `
+            <div class="mt-10 pt-6 border-t border-slate-200">
+                <p class="text-[10px] text-slate-400 text-center uppercase tracking-wider font-semibold">
+                    📋 Recepções Especializadas · 🏛️ Recepções Centrais
+                </p>
+            </div>
+        </div>`;
+        
         return html;
+    },
+
+    /**
+     * Card compacto para unidades com poucas recepções (formato linha horizontal)
+     */
+    _cardSelectorCompacto(rec) {
+        const corConfig = CORES[rec.cor] || CORES.slate;
+        return `
+            <button class="rc-selector-recepcao group flex items-center gap-2 bg-white border ${corConfig.border} hover:${corConfig.bg} rounded-full px-4 py-2 shadow-sm hover:shadow-md transition-all duration-200"
+                data-recepcao-id="${rec.id}"
+                data-unidade-id="${rec.unidadeId}">
+                <span class="text-xl group-hover:scale-110 transition-transform">${rec.icone || ICONES_SUGERIDOS.default}</span>
+                <span class="font-bold text-sm text-slate-700 group-hover:text-white truncate max-w-[150px]">${rec.nome}</span>
+                ${rec.tipo === 'central' ? '<span class="text-[10px] ml-1">🏛️</span>' : ''}
+            </button>
+        `;
+    },
+
+    /**
+     * Card padrão para unidades com muitas recepções (formato grid)
+     */
+    _cardSelectorRecepcao(rec) {
+        const corConfig = CORES[rec.cor] || CORES.slate;
+        const tipoTag = rec.tipo === 'central' 
+            ? '<span class="text-[8px] font-black bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full uppercase tracking-wider">Central</span>'
+            : '';
+        
+        return `
+            <button class="rc-selector-recepcao group text-left bg-white border-2 ${corConfig.border} hover:${corConfig.bg} rounded-2xl p-4 shadow-sm hover:shadow-lg transition-all duration-200"
+                data-recepcao-id="${rec.id}"
+                data-unidade-id="${rec.unidadeId}">
+                <div class="flex items-start gap-3">
+                    <span class="text-3xl group-hover:scale-110 transition-transform">${rec.icone || ICONES_SUGERIDOS.default}</span>
+                    <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                            <p class="font-black text-slate-800 group-hover:text-white text-base truncate">${rec.nome}</p>
+                            ${tipoTag}
+                        </div>
+                        ${rec.andar ? `<p class="text-[10px] font-bold text-slate-400 group-hover:text-white/70 uppercase tracking-wider mt-0.5">${rec.andar}</p>` : ''}
+                        ${rec.grupos && rec.grupos.length > 0 ? `
+                            <div class="flex flex-wrap gap-1 mt-2">
+                                ${rec.grupos.map(g => this._tagGrupo(g, corConfig)).join('')}
+                            </div>
+                        ` : ''}
+                    </div>
+                </div>
+            </button>
+        `;
+    },
+
+    /**
+     * Tag de grupo para exibição nos cards
+     */
+    _tagGrupo(grupo, corConfig) {
+        return `
+            <span class="text-[9px] font-bold px-2 py-0.5 rounded-full ${corConfig.light} ${corConfig.text} group-hover:bg-white/20 group-hover:text-white border ${corConfig.border} group-hover:border-white/30 transition-colors uppercase">
+                ${grupo}
+            </span>
+        `;
     },
 
     // ─── RENDER DO PAINEL DE CONFIGURAÇÃO (para Admin) ────────────────────────
@@ -429,6 +527,7 @@ export const RecepcaoConfigService = {
                         <input type="text" id="form-rec-unidade-nome" value="${recepcao?.unidadeNome || ''}"
                             class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-green-500"
                             placeholder="Ex: DP Duque de Caxias">
+                        <input type="hidden" id="form-rec-unidade-id" value="${recepcao?.unidadeId || ''}">
                     </div>
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Andar / Localização</label>
@@ -587,6 +686,8 @@ export const RecepcaoConfigService = {
         document.getElementById('btn-salvar-recepcao')?.addEventListener('click', () => {
             const nome      = document.getElementById('form-rec-nome')?.value.trim();
             const unidNome  = document.getElementById('form-rec-unidade-nome')?.value.trim();
+            const unidadeId = document.getElementById('form-rec-unidade-id')?.value 
+                || unidNome?.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
             const andar     = document.getElementById('form-rec-andar')?.value.trim();
             const tipo      = document.querySelector('input[name="form-rec-tipo"]:checked')?.value || 'especializada';
             const icone     = document.getElementById('form-rec-icone')?.value || ICONES_SUGERIDOS.default;
@@ -607,7 +708,7 @@ export const RecepcaoConfigService = {
                 id:          recepcaoId || undefined,
                 nome,
                 unidadeNome: unidNome,
-                unidadeId:   unidNome.toLowerCase().replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, ''),
+                unidadeId,
                 andar,
                 tipo,
                 grupos:      gruposAtivos,
@@ -690,4 +791,3 @@ export const RecepcaoConfigService = {
 };
 
 export default RecepcaoConfigService;
-
