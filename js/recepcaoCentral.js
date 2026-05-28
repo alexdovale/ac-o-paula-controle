@@ -89,6 +89,7 @@ export const RecepçãoCentralService = {
 
     async init(app) {
         this._app = app;
+        this._filtroTipo = this._filtroTipo || 'todos'; // preserva se já estava selecionado
 
         const role = app.currentUser?.role;
         if (!['apoio', 'admin', 'superadmin'].includes(role)) {
@@ -156,7 +157,6 @@ export const RecepçãoCentralService = {
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-8">
                 
-                <!-- LOGO DO SIGEP -->
                 <div class="flex justify-center mb-4">
                     <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-3 shadow-md">
                         <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
@@ -165,7 +165,6 @@ export const RecepçãoCentralService = {
     
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
                 
-                <!-- GUIA DE TIPOS DE RECEPÇÃO -->
                 <div class="max-w-4xl mx-auto mt-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-5">📖 Guia de Tipos de Recepção</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -223,6 +222,7 @@ export const RecepçãoCentralService = {
     
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
+
     // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
 
     async _carregarPautasPorRecepcao() {
@@ -237,6 +237,23 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
+        // ── FILTRO POR DATA DE ATUAÇÃO (só pautas do dia atual) ──────────────
+        const hoje = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+        pautas = pautas.filter(p => {
+            const dataAtuacao = p.dataAtuacao || p.data || p.createdAt || '';
+            // Se não tem data definida, deixa passar (compatibilidade)
+            if (!dataAtuacao) return true;
+            return dataAtuacao.slice(0, 10) === hoje;
+        });
+
+        // ── FILTRO POR TIPO DE RECEPÇÃO (se selecionado) ──────────────────────
+        if (this._filtroTipo && this._filtroTipo !== 'todos') {
+            pautas = pautas.filter(p =>
+                (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
+            );
+        }
+
+        // ── FILTRO POR RECEPÇÃO (especializada, mista, generalista) ──────────
         if (this._recepcaoAtual && this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
@@ -310,7 +327,6 @@ export const RecepçãoCentralService = {
         container.innerHTML = `
             <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4">
 
-                <!-- CONTEXTO DA RECEPÇÃO ATUAL -->
                 <div class="mb-4 ${contexto.cor} rounded-2xl p-4 shadow-lg">
                     <div class="flex items-center justify-between flex-wrap gap-3">
                         <div class="flex items-center gap-3">
@@ -327,15 +343,31 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <!-- CABEÇALHO PRINCIPAL -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
                         <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
+                        <div class="flex items-center gap-2 mt-2 flex-wrap">
+                            <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar por tipo:</span>
+                            ${['todos','agendamento','avulso','multisala','mutirao','plantao','acao_social'].map(t => `
+                                <button class="rc-filtro-tipo text-xs px-3 py-1 rounded-full border font-bold transition
+                                    ${(this._filtroTipo || 'todos') === t
+                                        ? 'bg-slate-800 text-white border-slate-800'
+                                        : 'bg-white text-slate-600 border-slate-300 hover:border-slate-500'}"
+                                    data-tipo="${t}">
+                                    ${t === 'todos' ? '🔀 Todos'
+                                    : t === 'agendamento' ? '📅 Agendamento'
+                                    : t === 'avulso' ? '🚶 Avulso'
+                                    : t === 'multisala' ? '🏢 Multi-Sala'
+                                    : t === 'mutirao' ? '👥 Mutirão'
+                                    : t === 'plantao' ? '🚨 Plantão'
+                                    : '❤️ Ação Social'}
+                                </button>
+                            `).join('')}
+                        </div>
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto flex-wrap">
                         
-                        <!-- BOTÕES ADICIONADOS PARA A TV UNIFICADA -->
                         <button id="rc-btn-copiar-link" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold px-4 py-2 rounded-lg transition text-sm shadow-sm" title="Copiar link para enviar para a TV">
                             🔗 Copiar Link da TV
                         </button>
@@ -355,7 +387,6 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <!-- BUSCA GLOBAL -->
                 <div id="rc-busca-global-wrap" class="hidden mb-4 animate-fade-in">
                     <div class="relative">
                         <input type="search" id="rc-input-busca" placeholder="Digite nome ou nº de agendamento para buscar em todas as pautas..."
@@ -365,13 +396,10 @@ export const RecepçãoCentralService = {
                     <div id="rc-resultados-busca" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
                 </div>
 
-                <!-- SUMÁRIO GERAL -->
                 <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
 
-                <!-- GRADE DE PAUTAS -->
                 <div id="rc-grade-pautas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
-                <!-- PAINEL DE FOCO -->
                 <div id="rc-painel-foco" class="hidden"></div>
 
             </div>
@@ -445,7 +473,6 @@ export const RecepçãoCentralService = {
         return `
             <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col" data-pauta-id="${pauta.id}">
 
-                <!-- Cabeçalho do card -->
                 <div class="bg-slate-800 px-5 py-4 flex justify-between items-start gap-2">
                     <div class="min-w-0">
                         <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
@@ -457,12 +484,10 @@ export const RecepçãoCentralService = {
                     <span class="text-white/60 text-xs font-mono shrink-0">${porcentagem}%</span>
                 </div>
 
-                <!-- Barra de progresso -->
                 <div class="h-1.5 bg-slate-100">
                     <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
                 </div>
 
-                <!-- Contadores -->
                 <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-amber-600">${c.aguardando}</div>
@@ -478,7 +503,6 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <!-- Fila de espera com nomes -->
                 <div class="px-5 pt-3 pb-2 border-b border-slate-100">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">📋 Fila de Espera</p>
                     <div class="space-y-0">
@@ -486,7 +510,6 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <!-- Equipe -->
                 <div class="px-5 py-3 flex items-center gap-3 border-b border-slate-100">
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -501,7 +524,6 @@ export const RecepçãoCentralService = {
                         : ''}
                 </div>
 
-                <!-- Ações rápidas -->
                 <div class="px-5 py-3 flex gap-2 mt-auto">
                     <button class="rc-btn-checkin flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
                         ✅ Check-in
@@ -606,7 +628,6 @@ export const RecepçãoCentralService = {
         foco.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-2xl shadow overflow-hidden">
 
-                <!-- Header do foco -->
                 <div class="bg-slate-800 px-6 py-5 flex justify-between items-center">
                     <div>
                         <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade</button>
@@ -625,7 +646,6 @@ export const RecepçãoCentralService = {
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
 
-                    <!-- FILA DE ESPERA -->
                     <div class="p-5">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">⏳ Fila de Espera (${aguardando.length})</h4>
                         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
@@ -650,7 +670,6 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
 
-                    <!-- EM ATENDIMENTO -->
                     <div class="p-5">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
                         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
@@ -678,7 +697,6 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
 
-                    <!-- EQUIPE -->
                     <div class="p-5">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
                         <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
@@ -986,6 +1004,15 @@ export const RecepçãoCentralService = {
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
             }
+        });
+
+        // ── FILTRO POR TIPO ──────────────────────────────────────────────────────
+        document.querySelectorAll('.rc-filtro-tipo').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                this._filtroTipo = btn.dataset.tipo;
+                this._cancelarListeners();
+                await this._carregarPautasPorRecepcao();
+            });
         });
     },
 
