@@ -1147,37 +1147,6 @@ export const setupAdminEvents = (app) => {
     globalApp = app;
 };
 
-    
-    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-        const btn = document.getElementById('view-audit-logs-btn');
-        if (btn) {
-            btn.textContent = "Carregando...";
-            btn.disabled = true;
-        }
-        await loadAuditLogs(db);
-        if (btn) {
-            btn.textContent = "🔍 Carregar Logs";
-            btn.disabled = false;
-        }
-    });
-    
-    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-        cleanupOldData(db);
-    });
-    
-    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-        loadDashboardData(db);
-    });
-    
-    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-        exportAuditLogsPDF(db);
-    });
-    
-    document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(db));
-    document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(db));
-    document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(db));
-    document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(db));
-};
 
 // ============================================================
 // VINCULAÇÕES GLOBAIS DO ESCOPO WINDOW
