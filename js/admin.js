@@ -814,7 +814,7 @@ function renderAprovadosTable(db) {
                 <td class="px-3 py-3 text-center">
                     <button class="btn-gerenciar-unidades bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 flex items-center gap-1 mx-auto"
                         data-userid="${user.id}">
-                        🏢 ${unidadesCount}
+                         ${unidadesCount}
                     </button>
                 </td>
                 <td class="px-3 py-3 text-center">
