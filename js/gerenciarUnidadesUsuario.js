@@ -2,23 +2,14 @@
  * gerenciarUnidadesUsuario.js
  * SIGEP — Modal "Gerenciar Unidades" do usuário individual
  *
- * Uso:
- * import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
- * await abrirGerenciarUnidades(app, usuarioId);
- *
- * Dependências esperadas em app:
- * app.db          — instância Firestore
- * app.currentUser — { uid, role }
- *
  * Coleções Firestore usadas:
  * /users/{uid}                       — doc do usuário (campo unidades: [{unidadeId, role}])
- * /unidades/{uid}                    — doc da unidade (campos: nome, orgaoNome, orgaoId)
- * /orgaos/{orgaoId}                  — doc do órgão (campo: nome)
+ * /estrutura_unidades/{id}           — doc da unidade (nova arquitetura)
  */
 
 import {
     doc, getDoc, getDocs, collection, query, where,
-    updateDoc, arrayUnion, arrayRemove
+    updateDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML } from './utils.js';
 
@@ -44,35 +35,23 @@ async function buscarUsuario(db, uid) {
 }
 
 async function buscarTodasUnidades(db) {
-    console.log("🔍 Buscando unidades para vinculação...");
+    console.log("🔍 Buscando unidades da NOVA estrutura...");
     try {
-        // Traz apenas as unidades ativas para evitar lixo
-        const unidadesRef = collection(db, 'unidades');
-        const q = query(unidadesRef, where("ativo", "==", true));
-        
-        let snap;
-        try {
-             snap = await getDocs(q);
-        } catch(e) {
-             console.warn("Busca por índice falhou, buscando todas as unidades sem filtro...", e);
-             snap = await getDocs(unidadesRef);
-        }
+        // A MÁGICA ESTÁ AQUI: Lendo da coleção nova criada pelo importadorOrgaos
+        const unidadesRef = collection(db, 'estrutura_unidades');
+        const snap = await getDocs(unidadesRef);
 
-        console.log("✅ Unidades ativas encontradas:", snap.docs.length);
-        // Filtra novamente no JS caso a query sem index tenha sido usada
+        console.log("✅ Unidades encontradas:", snap.docs.length);
+        // Filtra para não mostrar unidades excluídas logicamente
         return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.ativo !== false);
     } catch (error) {
-        console.error("❌ Erro grave ao buscar unidades:", error.code, error.message);
+        console.error("❌ Erro ao buscar unidades:", error.code, error.message);
         throw error;
     }
 }
 
 // ─── PERSISTÊNCIA ─────────────────────────────────────────────────────────────
 
-/**
- * Salva o array completo de vínculos no documento do usuário.
- * Estrutura: usuario.unidades = [{ unidadeId, role }, ...]
- */
 async function salvarVinculos(db, uid, vinculos) {
     await updateDoc(doc(db, 'users', uid), { unidades: vinculos });
 }
@@ -82,62 +61,46 @@ async function salvarVinculos(db, uid, vinculos) {
 export async function abrirGerenciarUnidades(app, usuarioId) {
     const { db } = app;
 
-    // Remove modal anterior se existir
     document.getElementById('modal-gerenciar-unidades')?.remove();
 
-    // Overlay de carregamento
     const overlay = document.createElement('div');
     overlay.id = 'modal-gerenciar-unidades';
     overlay.style.cssText = `
-        position:fixed;inset:0;background:rgba(0,0,0,0.5);
+        position:fixed;inset:0;background:rgba(0,0,0,0.6);
         display:flex;align-items:center;justify-content:center;
-        z-index:9000;padding:16px;font-family:inherit
+        z-index:9000;padding:16px;font-family:inherit; backdrop-filter: blur(4px);
     `;
     overlay.innerHTML = `
-        <div style="background:var(--color-background-primary,#fff);border-radius:16px;
-                    width:100%;max-width:760px;max-height:90vh;overflow:hidden;
-                    display:flex;flex-direction:column;box-shadow:0 4px 32px rgba(0,0,0,.18)">
-            <div style="padding:20px 24px 16px;border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb);
-                        display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-                <div style="display:flex;align-items:center;gap:12px">
-                    <div id="guu-avatar" style="width:40px;height:40px;border-radius:50%;
-                         background:#E6F1FB;color:#185FA5;display:flex;align-items:center;
-                         justify-content:center;font-size:14px;font-weight:500"></div>
+        <div class="bg-white rounded-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-fade-in">
+            <div class="bg-gradient-to-r from-indigo-900 to-slate-800 padding px-6 py-4 flex items-center justify-between shrink-0">
+                <div class="flex items-center gap-4">
+                    <div id="guu-avatar" class="w-12 h-12 rounded-full bg-white/20 text-white flex items-center justify-center text-lg font-black shadow-inner"></div>
                     <div>
-                        <p id="guu-nome" style="font-size:15px;font-weight:500;color:var(--color-text-primary,#111)"></p>
-                        <p id="guu-email" style="font-size:12px;color:var(--color-text-secondary,#6b7280)"></p>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2">Vincular Unidades</h2>
+                        <p id="guu-nome-email" class="text-indigo-200 text-sm mt-0.5"></p>
                     </div>
                 </div>
-                <button id="guu-fechar" style="width:32px;height:32px;border-radius:8px;border:0.5px solid var(--color-border-secondary,#d1d5db);
-                         background:transparent;cursor:pointer;font-size:18px;color:var(--color-text-secondary,#6b7280);
-                         display:flex;align-items:center;justify-content:center">×</button>
+                <button id="guu-fechar" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
-            <div style="padding:16px 24px;overflow-y:auto;flex:1" id="guu-body">
-                <p style="color:var(--color-text-secondary,#6b7280);font-size:13px;text-align:center;padding:32px 0">
-                    Carregando…
-                </p>
+            
+            <div class="p-6 overflow-y-auto flex-1 bg-slate-50" id="guu-body">
+                <div class="flex justify-center py-12"><div class="loader-small border-indigo-600"></div></div>
             </div>
-            <div style="padding:12px 24px;border-top:0.5px solid var(--color-border-tertiary,#e5e7eb);
-                        display:flex;justify-content:flex-end;gap:8px;flex-shrink:0">
-                <button id="guu-cancelar" style="padding:8px 20px;border-radius:8px;border:0.5px solid var(--color-border-secondary,#d1d5db);
-                         background:transparent;cursor:pointer;font-size:13px;color:var(--color-text-primary,#111)">Cancelar</button>
-                <button id="guu-salvar" style="padding:8px 20px;border-radius:8px;border:none;
-                         background:#1e293b;color:#fff;cursor:pointer;font-size:13px;font-weight:500">Salvar Vínculos</button>
+            
+            <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                <button id="guu-cancelar" class="px-5 py-2.5 rounded-xl border border-slate-300 text-slate-700 font-bold hover:bg-slate-100 transition">Cancelar</button>
+                <button id="guu-salvar" class="px-6 py-2.5 rounded-xl bg-indigo-600 text-white font-black shadow-md hover:bg-indigo-700 transition flex items-center gap-2">💾 Salvar Vínculos</button>
             </div>
         </div>
     `;
     document.body.appendChild(overlay);
 
-    // Fechar ao clicar fora
     overlay.addEventListener('click', e => { if (e.target === overlay) fecharModal(); });
     document.getElementById('guu-fechar').onclick   = fecharModal;
     document.getElementById('guu-cancelar').onclick = fecharModal;
 
-    function fecharModal() {
-        overlay.remove();
-    }
+    function fecharModal() { overlay.remove(); }
 
-    // ── Carrega dados ──────────────────────────────────────────────────────────
     let usuario, todasUnidades;
     try {
         [usuario, todasUnidades] = await Promise.all([
@@ -145,133 +108,104 @@ export async function abrirGerenciarUnidades(app, usuarioId) {
             buscarTodasUnidades(db),
         ]);
     } catch (err) {
-        document.getElementById('guu-body').innerHTML =
-            `<p style="color:#A32D2D;font-size:13px;padding:24px;text-align:center">Erro ao carregar dados: ${err.message}</p>`;
+        document.getElementById('guu-body').innerHTML = `<div class="p-4 bg-red-50 text-red-600 rounded-xl border border-red-200 font-bold text-center">Erro ao carregar: ${err.message}</div>`;
         return;
     }
 
-    // Preenche cabeçalho
-    document.getElementById('guu-avatar').textContent = initials(usuario.nome || usuario.displayName || '?');
-    document.getElementById('guu-nome').textContent   = usuario.nome || usuario.displayName || 'Usuário';
-    document.getElementById('guu-email').textContent  = usuario.email || '';
+    document.getElementById('guu-avatar').textContent = initials(usuario.name || usuario.nome || usuario.email || '?');
+    document.getElementById('guu-nome-email').textContent = `${usuario.name || usuario.nome || 'Usuário'} · ${usuario.email || ''}`;
 
-    // Estado local de vínculos: [{ unidadeId, role }]
     let vinculos = Array.isArray(usuario.unidades)
         ? usuario.unidades.map(v => ({ unidadeId: v.unidadeId || v.id, role: v.role || 'apoio' }))
         : [];
 
     let filtroDisponivel = '';
 
-    // ── Renderiza corpo ────────────────────────────────────────────────────────
     function render() {
         const body = document.getElementById('guu-body');
         const linkedIds = vinculos.map(v => v.unidadeId);
+        
+        // Filtra as que ainda não estão vinculadas
         const disponiveis = todasUnidades.filter(u =>
             !linkedIds.includes(u.id) &&
             (!filtroDisponivel ||
              (u.nome || '').toLowerCase().includes(filtroDisponivel.toLowerCase()) ||
-             (u.orgaoNome || '').toLowerCase().includes(filtroDisponivel.toLowerCase()))
+             (u.sigla || '').toLowerCase().includes(filtroDisponivel.toLowerCase()))
         );
 
         body.innerHTML = `
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
 
-                <div>
-                    <div style="font-size:11px;color:var(--color-text-secondary,#6b7280);text-transform:uppercase;
-                                letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                        <span>🔗 Unidades vinculadas</span>
-                        <span style="background:var(--color-background-secondary,#f9fafb);border:0.5px solid var(--color-border-secondary,#d1d5db);
-                                     border-radius:10px;padding:1px 7px;font-size:10px">${vinculos.length}</span>
+                <div class="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-indigo-50 border-b border-indigo-100 px-4 py-3 flex justify-between items-center">
+                        <span class="font-black text-indigo-900 uppercase tracking-widest text-[11px]">🔗 Unidades Vinculadas</span>
+                        <span class="bg-indigo-200 text-indigo-800 text-[10px] font-black px-2 py-0.5 rounded-full">${vinculos.length}</span>
                     </div>
-                    <div style="border:0.5px solid var(--color-border-tertiary,#e5e7eb);border-radius:12px;overflow:hidden">
+                    <div class="p-3 flex-1 overflow-y-auto max-h-[400px]">
                         ${vinculos.length === 0 ? `
-                            <div style="padding:24px;text-align:center;font-size:13px;color:var(--color-text-secondary,#6b7280)">
-                                Nenhuma unidade vinculada
+                            <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+                                <span class="text-4xl mb-2">🏢</span>
+                                <p class="text-sm font-bold">Nenhum vínculo ativo</p>
                             </div>
                         ` : vinculos.map(v => {
                             const unidade = todasUnidades.find(u => u.id === v.unidadeId);
                             if (!unidade) return '';
                             return `
-                            <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-                                        border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb)"
-                                 class="guu-linked-item">
-                                <div style="width:30px;height:30px;border-radius:6px;background:#EAF3DE;color:#27500A;
-                                            display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🏛️</div>
-                                <div style="flex:1;min-width:0">
-                                    <p style="font-size:13px;font-weight:500;color:var(--color-text-primary,#111);
-                                              white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(unidade.nome || '')}</p>
-                                    <p style="font-size:11px;color:var(--color-text-secondary,#6b7280);
-                                              white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(unidade.orgaoNome || '')}</p>
+                            <div class="mb-2 p-3 bg-white border border-slate-200 rounded-xl flex items-center gap-3 hover:border-indigo-300 transition shadow-sm">
+                                <div class="w-10 h-10 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center text-lg shrink-0">🏢</div>
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(unidade.nome || '')}</p>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
                                 </div>
-                                <select data-uid="${v.unidadeId}" class="guu-role-select"
-                                    style="font-size:11px;padding:2px 5px;border:0.5px solid var(--color-border-secondary,#d1d5db);
-                                           border-radius:6px;background:var(--color-background-secondary,#f9fafb);
-                                           color:var(--color-text-primary,#111);cursor:pointer;max-width:95px">
-                                    ${ROLE_OPTIONS.map(r =>
-                                        `<option value="${r}"${r === v.role ? ' selected' : ''}>${r}</option>`
-                                    ).join('')}
-                                </select>
-                                <button data-uid="${v.unidadeId}" class="guu-btn-remover"
-                                    style="width:28px;height:28px;border-radius:6px;border:0.5px solid var(--color-border-secondary,#d1d5db);
-                                           background:transparent;cursor:pointer;font-size:14px;color:var(--color-text-secondary,#6b7280);
-                                           display:flex;align-items:center;justify-content:center;flex-shrink:0"
-                                    title="Remover vínculo">🔗</button>
+                                <div class="flex flex-col gap-1 shrink-0 items-end">
+                                    <select data-uid="${v.unidadeId}" class="guu-role-select text-[10px] font-bold uppercase px-2 py-1 rounded bg-slate-100 border border-slate-200 text-slate-700 outline-none cursor-pointer hover:bg-slate-200 transition">
+                                        ${ROLE_OPTIONS.map(r => `<option value="${r}"${r === v.role ? ' selected' : ''}>Cargo: ${r}</option>`).join('')}
+                                    </select>
+                                    <button data-uid="${v.unidadeId}" class="guu-btn-remover text-[10px] text-red-500 hover:text-red-700 font-bold px-2 py-1 rounded hover:bg-red-50 transition">Remover ✕</button>
+                                </div>
                             </div>`;
                         }).join('')}
                     </div>
                 </div>
 
-                <div>
-                    <div style="font-size:11px;color:var(--color-text-secondary,#6b7280);text-transform:uppercase;
-                                letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
-                        <span>🏢 Disponíveis para vincular</span>
-                        <span style="background:var(--color-background-secondary,#f9fafb);border:0.5px solid var(--color-border-secondary,#d1d5db);
-                                     border-radius:10px;padding:1px 7px;font-size:10px">${disponiveis.length}</span>
+                <div class="flex flex-col bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <div class="bg-slate-100 border-b border-slate-200 px-4 py-3 flex justify-between items-center">
+                        <span class="font-black text-slate-600 uppercase tracking-widest text-[11px]">➕ Adicionar Vínculo</span>
+                        <span class="bg-slate-200 text-slate-700 text-[10px] font-black px-2 py-0.5 rounded-full">${disponiveis.length}</span>
                     </div>
-                    <div style="border:0.5px solid var(--color-border-tertiary,#e5e7eb);border-radius:12px;overflow:hidden">
-                        <div style="padding:8px 12px;border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb)">
+                    
+                    <div class="p-3 border-b border-slate-100 bg-white">
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
                             <input type="search" id="guu-filtro-disp" value="${escapeHTML(filtroDisponivel)}"
-                                placeholder="Buscar unidade ou órgão..."
-                                style="width:100%;font-size:13px;padding:6px 10px;
-                                       border:0.5px solid var(--color-border-secondary,#d1d5db);border-radius:8px;
-                                       background:var(--color-background-secondary,#f9fafb);
-                                       color:var(--color-text-primary,#111);outline:none">
+                                placeholder="Buscar unidade por nome ou sigla..."
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-9 pr-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400 transition">
                         </div>
-                        <div style="max-height:260px;overflow-y:auto">
-                            ${disponiveis.length === 0 ? `
-                                <div style="padding:24px;text-align:center;font-size:13px;color:var(--color-text-secondary,#6b7280)">
-                                    ${filtroDisponivel ? 'Nenhum resultado.' : 'Todas as unidades já vinculadas.'}
+                    </div>
+
+                    <div class="p-3 flex-1 overflow-y-auto max-h-[345px]">
+                        ${disponiveis.length === 0 ? `
+                            <div class="h-full flex flex-col items-center justify-center text-slate-400 py-12">
+                                <p class="text-sm font-bold">${filtroDisponivel ? 'Nenhuma unidade encontrada.' : 'Todas as unidades já foram vinculadas.'}</p>
+                            </div>
+                        ` : disponiveis.map(u => `
+                            <div class="mb-2 p-3 bg-white border border-slate-200 rounded-xl flex items-center justify-between gap-3 hover:border-slate-400 transition">
+                                <div class="flex-1 min-w-0">
+                                    <p class="font-bold text-slate-700 text-sm truncate">${escapeHTML(u.nome || '')}</p>
+                                    <p class="text-[10px] text-slate-400 uppercase tracking-wider">${escapeHTML(u.sigla || 'Sem sigla')}</p>
                                 </div>
-                            ` : disponiveis.map(u => `
-                                <div style="display:flex;align-items:center;gap:10px;padding:10px 14px;
-                                            border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb)">
-                                    <div style="width:30px;height:30px;border-radius:6px;background:#E6F1FB;color:#0C447C;
-                                                display:flex;align-items:center;justify-content:center;font-size:13px;flex-shrink:0">🏢</div>
-                                    <div style="flex:1;min-width:0">
-                                        <p style="font-size:13px;font-weight:500;color:var(--color-text-primary,#111);
-                                                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(u.nome || '')}</p>
-                                        <p style="font-size:11px;color:var(--color-text-secondary,#6b7280);
-                                                  white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${escapeHTML(u.orgaoNome || '')}</p>
-                                    </div>
-                                    <button data-uid="${u.id}" class="guu-btn-vincular"
-                                        style="width:28px;height:28px;border-radius:6px;border:0.5px solid var(--color-border-secondary,#d1d5db);
-                                               background:transparent;cursor:pointer;font-size:16px;color:var(--color-text-secondary,#6b7280);
-                                               display:flex;align-items:center;justify-content:center;flex-shrink:0"
-                                        title="Vincular unidade">+</button>
-                                </div>
-                            `).join('')}
-                        </div>
+                                <button data-uid="${u.id}" class="guu-btn-vincular shrink-0 bg-slate-800 hover:bg-slate-900 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm">
+                                    Adicionar +
+                                </button>
+                            </div>
+                        `).join('')}
                     </div>
                 </div>
             </div>
         `;
 
-        // Eventos
         body.querySelectorAll('.guu-btn-remover').forEach(btn => {
-            btn.onclick = () => {
-                vinculos = vinculos.filter(v => v.unidadeId !== btn.dataset.uid);
-                render();
-            };
+            btn.onclick = () => { vinculos = vinculos.filter(v => v.unidadeId !== btn.dataset.uid); render(); };
         });
         body.querySelectorAll('.guu-btn-vincular').forEach(btn => {
             btn.onclick = () => {
@@ -287,29 +221,24 @@ export async function abrirGerenciarUnidades(app, usuarioId) {
                 if (v) v.role = sel.value;
             };
         });
-        document.getElementById('guu-filtro-disp').oninput = e => {
-            filtroDisponivel = e.target.value;
-            render();
-        };
+        document.getElementById('guu-filtro-disp').oninput = e => { filtroDisponivel = e.target.value; render(); };
     }
 
     render();
 
-    // ── Salvar ─────────────────────────────────────────────────────────────────
     document.getElementById('guu-salvar').onclick = async () => {
         const btn = document.getElementById('guu-salvar');
         btn.disabled = true;
-        btn.textContent = 'Salvando…';
+        btn.innerHTML = '<div class="loader-small border-white mr-2"></div> Salvando...';
         try {
             await salvarVinculos(db, usuarioId, vinculos);
             fecharModal();
-            // Notificação opcional (usa window.showNotification se disponível)
             if (typeof window.showNotification === 'function') {
-                window.showNotification('Vínculos salvos com sucesso!', 'success');
+                window.showNotification('Vínculos atualizados com sucesso!', 'success');
             }
         } catch (err) {
             btn.disabled = false;
-            btn.textContent = 'Salvar Vínculos';
+            btn.innerHTML = '💾 Salvar Vínculos';
             alert('Erro ao salvar: ' + err.message);
         }
     };
