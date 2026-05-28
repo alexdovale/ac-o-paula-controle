@@ -174,13 +174,13 @@ export const UIService = {
                     <label for="main-pauta-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1 text-center w-full">Filtro de Exibição</label>
                     <div class="relative">
                         <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border border-gray-300 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold outline-none transition cursor-pointer text-gray-700">
-                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>📋 Mostrar Todas as Pautas</option>
-                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}>✅ Pautas com prazo</option>
-                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}>🔒 Pautas expiradas</option>
-                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}>👑 Criadas por mim</option>
-                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}>🤝 Compartilhadas</option>
-                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}>🏢 Minhas Unidades Vinculadas</option>` : ''}
-                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}>📅 Filtrar por Período / Tipo</option>
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}> Mostrar Todas as Pautas</option>
+                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}> Pautas com prazo</option>
+                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
+                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
+                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas</option>
+                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Minhas Unidades Vinculadas</option>` : ''}
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
