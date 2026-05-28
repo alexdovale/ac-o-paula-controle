@@ -50,7 +50,7 @@ export const UIService = {
 
     getAttendantName(item) {
         if (!item) return 'Não informado';
-        
+
         if (item.attendedBy) {
             const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
             if (name) return String(name).trim();
@@ -59,12 +59,12 @@ export const UIService = {
         if (item.assignedCollaborator && item.assignedCollaborator.name) {
             return String(item.assignedCollaborator.name).trim();
         }
-        
+
         if (item.attendant) {
             const name = typeof item.attendant === 'object' ? (item.attendant.nome || item.attendant.name) : item.attendant;
             if (name) return String(name).trim();
         }
-        
+
         return 'Não informado';
     },
 
@@ -107,23 +107,26 @@ export const UIService = {
     },
 
     // ============================================================
-    // RENDERIZAÇÃO DO FILTRO (ATUALIZADO COM EVENTOS)
+    // RENDERIZAÇÃO DO FILTRO - CORRIGIDO (MODO EVENTO/NORMAL)
     // ============================================================
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) return;
-        
+
         const isPeriodo = activeFilter === 'periodo';
         const isUnidades = activeFilter === 'unidades';
-        
+
         // Verifica se é administrador
         const isAdmin = app.currentUser?.role === 'admin' || app.currentUser?.role === 'superadmin';
         const userUnidades = app.currentUser?.unidades || [];
-        
+
         // O botão aparece se tiver unidades ou se for admin
         const hasUnidadesVinculadas = userUnidades.length > 0 || isAdmin;
-        
-        // HTML do filtro de datas
+
+        // NOVO: detecta modo atual
+        const isEventoMode = app?.currentMode === 'evento';
+
+        // HTML do filtro de datas — sem tipo no modo normal, com tipos de evento no modo evento
         const dateFiltersHTML = `
             <div id="periodo-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isPeriodo ? '' : 'hidden'} animate-fade-in">
                 <div class="flex-1 min-w-[150px]">
@@ -134,18 +137,16 @@ export const UIService = {
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Final</label>
                     <input type="date" id="filter-data-final" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
                 </div>
+                ${isEventoMode ? `
                 <div class="flex-1 min-w-[200px]">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Pauta</label>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Evento</label>
                     <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
                         <option value="todos">Todos os Tipos</option>
-                        <option value="normal">Normal</option>
-                        <option value="evento">Evento</option>
-                        <option value="agendamento">Agendamento</option>
                         <option value="mutirao">Mutirão</option>
                         <option value="plantao">Plantão</option>
                         <option value="acao_social">Ação Social</option>
                     </select>
-                </div>
+                </div>` : ''}
                 <div class="flex items-end">
                     <button id="aplicar-filtro-periodo" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md w-full sm:w-auto">
                         Aplicar Filtro
@@ -153,11 +154,11 @@ export const UIService = {
                 </div>
             </div>
         `;
-        
-        // HTML do filtro de unidades (as opções serão injetadas async abaixo)
+
+        // HTML do filtro de unidades (só aparece em modo normal)
         const unidadesOptions = `<option value="todas">Carregando unidades...</option>`;
 
-        const unidadesFiltersHTML = `
+        const unidadesFiltersHTML = !isEventoMode ? `
             <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 ${isUnidades ? '' : 'hidden'} animate-fade-in">
                 <div class="flex-1 min-w-[250px]">
                     <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Origem / Unidade</label>
@@ -179,8 +180,8 @@ export const UIService = {
                     </button>
                 </div>
             </div>
-        `;
-        
+        ` : '';
+
         container.innerHTML = `
             <div class="flex flex-col items-center mb-6">
                 <div class="w-full max-w-sm relative group">
@@ -192,8 +193,8 @@ export const UIService = {
                             <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
                             <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
                             <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas comigo</option>
-                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Filtrar por Origem / Unidade</option>` : ''}
-                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
+                            ${hasUnidadesVinculadas && !isEventoMode ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Filtrar por Origem / Unidade</option>` : ''}
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período${isEventoMode ? ' / Tipo' : ''}</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-green-600 group-hover:text-green-700">
                             <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
@@ -202,78 +203,74 @@ export const UIService = {
                 </div>
             </div>
             ${dateFiltersHTML}
-            ${hasUnidadesVinculadas ? unidadesFiltersHTML : ''}
+            ${unidadesFiltersHTML}
         `;
-        
-        // População assíncrona das unidades no Select
-        const selectUnidade = document.getElementById('filter-unidade-select');
-        if (selectUnidade) {
-            if (isAdmin) {
-                // Admin: Carrega todas as unidades do sistema e agrupa com as unidades pessoais
-                getDocs(collection(app.db, "unidades")).then(snap => {
-                    const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
-                    
-                    let html = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
-                    html += `<option value="evento">⭐ Pautas de Evento (Sem Unidade)</option>`;
-                    
-                    // Mostra as unidades pessoais do admin separadas com destaque
-                    if (userUnidades.length > 0) {
-                        html += `<optgroup label=" Minhas Unidades Vinculadas">`;
-                        userUnidades.forEach(u => {
-                            const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
-                            if (nome) html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+
+        // População assíncrona das unidades no Select (só em modo normal)
+        if (!isEventoMode) {
+            const selectUnidade = document.getElementById('filter-unidade-select');
+            if (selectUnidade) {
+                if (isAdmin) {
+                    getDocs(collection(app.db, "unidades")).then(snap => {
+                        const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
+
+                        let html = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
+
+                        if (userUnidades.length > 0) {
+                            html += `<optgroup label=" Minhas Unidades Vinculadas">`;
+                            userUnidades.forEach(u => {
+                                const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
+                                if (nome) html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+                            });
+                            html += `</optgroup>`;
+                            html += `<optgroup label=" Todas as Unidades do Sistema">`;
+                        }
+
+                        allUnidades.forEach(nome => {
+                            html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
                         });
-                        html += `</optgroup>`;
-                        
-                        html += `<optgroup label=" Todas as Unidades do Sistema">`;
-                    }
 
-                    allUnidades.forEach(nome => {
-                        html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+                        if (userUnidades.length > 0) {
+                            html += `</optgroup>`;
+                        }
+
+                        selectUnidade.innerHTML = html;
+                    }).catch(err => {
+                        console.error("Erro ao carregar unidades do sistema:", err);
+                        selectUnidade.innerHTML = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
                     });
-
-                    if (userUnidades.length > 0) {
-                        html += `</optgroup>`;
-                    }
-
-                    selectUnidade.innerHTML = html;
-                }).catch(err => {
-                    console.error("Erro ao carregar unidades do sistema:", err);
-                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option><option value="evento">⭐ Pautas de Evento (Sem Unidade)</option>`;
-                });
-            } else {
-                // Usuário comum: apenas a lista das unidades vinculadas a ele + Eventos
-                const opcoesUser = userUnidades.map(u => {
-                    const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
-                    return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
-                }).join('');
-                selectUnidade.innerHTML = `<option value="todas">🌍 Todas as origens</option>
-                <option value="evento">⭐ Pautas de Eventos</option>` + opcoesUser;
+                } else {
+                    const opcoesUser = userUnidades.map(u => {
+                        const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
+                        return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                    }).join('');
+                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as origens</option>` + opcoesUser;
+                }
             }
         }
-        
+
         // Listeners do filtro Principal
         const filterSelect = document.getElementById('main-pauta-filter');
         const periodoContainer = document.getElementById('periodo-filters-container');
         const unidadesContainer = document.getElementById('unidades-filters-container');
-        
+
         if (filterSelect) {
             filterSelect.addEventListener('change', (e) => {
                 const val = e.target.value;
-                
+
                 if (periodoContainer) periodoContainer.classList.add('hidden');
                 if (unidadesContainer) unidadesContainer.classList.add('hidden');
-                
+
                 if (val === 'periodo' && periodoContainer) {
                     periodoContainer.classList.remove('hidden');
                 } else if (val === 'unidades' && unidadesContainer) {
                     unidadesContainer.classList.remove('hidden');
                 }
-                
+
                 onFilterChange(val);
             });
         }
-        
+
         // Aplicação do Filtro de Período
         const btnAplicarPeriodo = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicarPeriodo) {
@@ -286,32 +283,34 @@ export const UIService = {
                 }
             });
         }
-        
-        // Aplicação do Filtro de Unidades
-        const btnAplicarUnidades = document.getElementById('aplicar-filtro-unidades');
-        if (btnAplicarUnidades) {
-            btnAplicarUnidades.addEventListener('click', () => {
-                if (app && typeof app.loadPautasWithFilter === 'function') {
-                    const unidadeSelecionada = document.getElementById('filter-unidade-select')?.value;
-                    const statusUnidade = document.getElementById('filter-unidade-status')?.value;
-                    app.loadPautasWithFilter({ 
-                        tipo: 'unidades', 
-                        unidade: unidadeSelecionada,
-                        status: statusUnidade
-                    });
-                }
-            });
+
+        // Aplicação do Filtro de Unidades (só em modo normal)
+        if (!isEventoMode) {
+            const btnAplicarUnidades = document.getElementById('aplicar-filtro-unidades');
+            if (btnAplicarUnidades) {
+                btnAplicarUnidades.addEventListener('click', () => {
+                    if (app && typeof app.loadPautasWithFilter === 'function') {
+                        const unidadeSelecionada = document.getElementById('filter-unidade-select')?.value;
+                        const statusUnidade = document.getElementById('filter-unidade-status')?.value;
+                        app.loadPautasWithFilter({
+                            tipo: 'unidades',
+                            unidade: unidadeSelecionada,
+                            status: statusUnidade
+                        });
+                    }
+                });
+            }
         }
     },
 
     togglePautaLock(app) {
         const isClosed = app.isPautaClosed;
-    
+
         const buttonsToDisable = [
             'form-agendamento', 'file-upload', 'add-assisted-btn',
             'download-pdf-btn', 'toggle-faltosos-btn', 'tab-avulso', 'tab-agendamento'
         ];
-    
+
         buttonsToDisable.forEach(id => {
             const element = document.getElementById(id);
             if (element) {
@@ -324,7 +323,7 @@ export const UIService = {
                 }
             }
         });
-    
+
         const actionPanelButtons = document.querySelectorAll('#actions-panel button');
         actionPanelButtons.forEach(btn => {
             if (btn.id === 'reopen-pauta-btn') {
@@ -333,16 +332,16 @@ export const UIService = {
                 btn.disabled = isClosed;
             }
         });
-        
+
         const cardActionButtons = document.querySelectorAll('.assisted-card button:not(.quick-action-toggle), .assisted-card select');
         cardActionButtons.forEach(btn => {
             btn.disabled = isClosed;
         });
-    
+
         const closedAlert = document.getElementById('closed-pauta-alert');
         const closeBtn = document.getElementById('close-pauta-btn');
         const reopenBtn = document.getElementById('reopen-pauta-btn');
-        
+
         if (closedAlert) {
             if (isClosed) {
                 closedAlert.classList.remove('hidden');
@@ -350,7 +349,7 @@ export const UIService = {
                 closedAlert.classList.add('hidden');
             }
         }
-        
+
         if (closeBtn) {
             if (isClosed) {
                 closeBtn.classList.add('hidden');
@@ -358,7 +357,7 @@ export const UIService = {
                 closeBtn.classList.remove('hidden');
             }
         }
-        
+
         if (reopenBtn) {
             if (isClosed) {
                 reopenBtn.classList.remove('hidden');
@@ -366,7 +365,7 @@ export const UIService = {
                 reopenBtn.classList.add('hidden');
             }
         }
-    
+
         const isOwner = app.auth?.currentUser?.uid === app.currentPautaOwnerId;
         if (!isOwner) {
             if (closeBtn) closeBtn.classList.add('hidden');
@@ -396,7 +395,7 @@ export const UIService = {
     toggleActionsPanel() {
         const panel = document.getElementById('actions-panel');
         const arrow = document.getElementById('actions-arrow');
-        
+
         panel.classList.toggle('opacity-0');
         panel.classList.toggle('scale-95');
         panel.classList.toggle('pointer-events-none');
@@ -447,7 +446,7 @@ export const UIService = {
             } else {
                 emAtendimentoColumn.classList.add('hidden');
             }
-            if(formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
+            if (formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
             this.showAgendamentoForm();
         } else {
             tabAvulso.classList.add('tab-active');
@@ -460,7 +459,7 @@ export const UIService = {
             } else {
                 emAtendimentoColumn.classList.add('hidden');
             }
-            if(formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
+            if (formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
             this.showAvulsoForm(app);
         }
         this.renderAssistedLists(app);
@@ -481,7 +480,7 @@ export const UIService = {
 
         const manualRoomWrapper = document.getElementById('manual-room-wrapper');
         const manualRoomSelect = document.getElementById('manual-room-select');
-        
+
         if (app.currentPautaData?.type === 'multisala' && app.currentPautaData.rooms) {
             manualRoomWrapper.classList.remove('hidden');
             manualRoomSelect.innerHTML = '';
@@ -498,9 +497,9 @@ export const UIService = {
 
     renderAssistedLists(app) {
         if (!app) return;
-        
+
         if (typeof PainelGeralService !== 'undefined') {
-            const painelModal = document.getElementById('painel-geral-externo-modal'); 
+            const painelModal = document.getElementById('painel-geral-externo-modal');
             if (painelModal && !painelModal.classList.contains('hidden')) {
                 PainelGeralService.atualizarConteudo(app);
             }
@@ -512,21 +511,21 @@ export const UIService = {
 
         if (allAssisted.length === 0) {
             this.clearContainers();
-            
+
             const pautaList = document.getElementById('pauta-list');
             const aguardandoList = document.getElementById('aguardando-list');
             const atendidosList = document.getElementById('atendidos-list');
             const emAtendimentoList = document.getElementById('em-atendimento-list');
-            const faltososList = document.getElementById('faltosos-list'); 
-            const distribuicaoList = document.getElementById('distribuicao-list'); 
-            
+            const faltososList = document.getElementById('faltosos-list');
+            const distribuicaoList = document.getElementById('distribuicao-list');
+
             if (pautaList) pautaList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum agendamento</p>';
             if (aguardandoList) aguardandoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém aguardando</p>';
             if (emAtendimentoList) emAtendimentoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Ninguém em atendimento</p>';
             if (atendidosList) atendidosList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum atendido</p>';
             if (faltososList) faltososList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum faltoso</p>';
             if (distribuicaoList) distribuicaoList.innerHTML = '<p class="text-gray-400 text-center p-4 text-xs">Nenhum aguardando distribuição/correção</p>';
-            
+
             this.updateCounters({ pauta: 0, aguardando: 0, emAtendimento: 0, atendidos: 0, faltosos: 0, distribuicao: 0 });
             return;
         }
@@ -551,10 +550,10 @@ export const UIService = {
         };
 
         lists.pauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
-        lists.atendidos.sort((a, b) => new Date(b.attendedAt || b.lastActionTimestamp) - new Date(a.attendedAt || a.lastActionTimestamp)); 
-        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00')); 
-        lists.emAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime)); 
-        
+        lists.atendidos.sort((a, b) => new Date(b.attendedAt || b.lastActionTimestamp) - new Date(a.attendedAt || a.lastActionTimestamp));
+        lists.faltosos.sort((a, b) => (a.scheduledTime || '00:00').localeCompare(b.scheduledTime || '00:00'));
+        lists.emAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime));
+
         if (currentPautaData?.ordemAtendimento) {
             lists.aguardando = PautaService.sortAguardando(lists.aguardando, currentPautaData.ordemAtendimento);
         }
@@ -566,11 +565,11 @@ export const UIService = {
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
-        this.renderFaltososColumn(lists.faltosos); 
+        this.renderFaltososColumn(lists.faltosos);
         this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
 
         this.togglePautaLock(app);
-        
+
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         const isApoio = app.currentUser?.role === 'apoio';
         if (callNextBtn) {
@@ -580,8 +579,8 @@ export const UIService = {
                 callNextBtn.classList.remove('hidden');
             }
         }
-        
-        setTimeout(() => { if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); }, 100); 
+
+        setTimeout(() => { if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); }, 100);
     },
 
     getSearchTerms() {
@@ -597,31 +596,31 @@ export const UIService = {
 
     searchFilter(assisted, term) {
         if (!term) return true;
-        
+
         const termLower = normalizeText(term);
 
-        const arrivalTimeFormatted = assisted.arrivalTime ? 
+        const arrivalTimeFormatted = assisted.arrivalTime ?
             new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-        
-        const attendedTimeFormatted = assisted.attendedAt ? 
+
+        const attendedTimeFormatted = assisted.attendedAt ?
             new Date(assisted.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
-        const inAttendanceTimeFormatted = assisted.inAttendanceTime ? 
+        const inAttendanceTimeFormatted = assisted.inAttendanceTime ?
             new Date(assisted.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
         const attendantName = this.getAttendantName(assisted);
         const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
-        
+
         const searchableString = normalizeText(`
             ${assisted.numeroAgendamento || assisted.assistedManualNumAgendamento || ''}
-            ${assisted.name || ''} 
-            ${assisted.cpf || ''} 
-            ${assisted.subject || ''} 
-            ${assisted.scheduledTime || ''} 
-            ${arrivalTimeFormatted} 
+            ${assisted.name || ''}
+            ${assisted.cpf || ''}
+            ${assisted.subject || ''}
+            ${assisted.scheduledTime || ''}
+            ${arrivalTimeFormatted}
             ${attendedTimeFormatted}
             ${inAttendanceTimeFormatted}
-            ${attendantName} 
+            ${attendantName}
             ${demandsText}
             ${assisted.room || ''}
             ${assisted.status || ''}
@@ -637,7 +636,7 @@ export const UIService = {
         const atendidosCount = document.getElementById('atendidos-count');
         const faltososCount = document.getElementById('faltosos-count');
         const distribuicaoCount = document.getElementById('distribuicao-count');
-        
+
         if (pautaCount) pautaCount.textContent = lists.pauta.length;
         if (aguardandoCount) aguardandoCount.textContent = lists.aguardando.length;
         if (emAtendimentoCount) emAtendimentoCount.textContent = lists.emAtendimento.length;
@@ -683,7 +682,7 @@ export const UIService = {
     createPautaCard(item) {
         const currentUserRole = window.app?.currentUser?.role;
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        const canEdit = currentUserRole !== 'apoio'; 
+        const canEdit = currentUserRole !== 'apoio';
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
 
         const numAgendamento = item.numeroAgendamento || item.numAgendamento || item.assistedManualNumAgendamento || '';
@@ -691,7 +690,7 @@ export const UIService = {
         const card = document.createElement('div');
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
         card.setAttribute('data-id', item.id);
-        
+
         card.innerHTML = `
             ${canDelete ? `
             <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
@@ -701,7 +700,7 @@ export const UIService = {
             </button>` : ''}
 
             <p class="font-bold text-lg text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
-            
+
             <div class="mt-2 space-y-0.5 text-xs text-gray-700">
                 ${numAgendamento ? `<p class="text-blue-700 font-bold mb-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p>Assunto: <span class="font-bold uppercase text-slate-700">${escapeHTML(item.subject || 'Não informado')}</span></p>
@@ -742,10 +741,10 @@ export const UIService = {
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
                 if (peopleInRoom.length === 0) return;
-                
+
                 const roomGroup = document.createElement('div');
                 roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
-                
+
                 roomGroup.innerHTML = `
                     <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
@@ -758,14 +757,14 @@ export const UIService = {
                     </div>
                     <div class="p-2 space-y-2 room-cards-wrapper"></div>
                 `;
-                
+
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
-                
+
                 peopleInRoom.forEach((item, index) => {
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
                     if (card) cardsWrapper.appendChild(card);
                 });
-                
+
                 container.appendChild(roomGroup);
             });
 
@@ -773,7 +772,7 @@ export const UIService = {
             if (peopleNoRoom.length > 0) {
                 const roomGroupNoRoom = document.createElement('div');
                 roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
-                
+
                 roomGroupNoRoom.innerHTML = `
                     <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
@@ -786,7 +785,7 @@ export const UIService = {
                     </div>
                     <div class="p-2 space-y-2 room-cards-wrapper"></div>
                 `;
-                
+
                 const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
                 peopleNoRoom.forEach((item, index) => {
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
@@ -823,25 +822,25 @@ export const UIService = {
                 let statusColor = 'bg-gray-100 text-gray-600';
                 let statusText = '📋 Selecionado';
                 let statusIcon = '📋';
-                
-                if (item.documentState === 'filling') { 
-                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                    statusText = '✏️ Preenchendo'; 
+
+                if (item.documentState === 'filling') {
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
+                    statusText = '✏️ Preenchendo';
                     statusIcon = '✏️';
-                } else if (item.documentState === 'saved') { 
-                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                    statusText = '✅ Salvo'; 
+                } else if (item.documentState === 'saved') {
+                    statusColor = 'bg-green-100 text-green-700 font-bold';
+                    statusText = '✅ Salvo';
                     statusIcon = '✅';
-                } else if (item.documentState === 'pdf') { 
-                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = '📄 PDF Emitido'; 
+                } else if (item.documentState === 'pdf') {
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold';
+                    statusText = '📄 PDF Emitido';
                     statusIcon = '📄';
                 }
 
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span> 
+                            <span>📂</span>
                             <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
                             <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
                         </span>
@@ -860,8 +859,8 @@ export const UIService = {
             let roomDropdownHtml = '';
             if (currentPautaData?.type === 'multisala') {
                 const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
-                
-                if (availableRooms.length > 0 && canEditPriority) { 
+
+                if (availableRooms.length > 0 && canEditPriority) {
                     const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
                     roomDropdownHtml = `
                         <div class="ml-auto flex flex-col items-end">
@@ -949,7 +948,7 @@ export const UIService = {
 
             card.innerHTML = `
                 ${numeroBadge}
-                ${canAttend ? actionButtonsHTML : ''} 
+                ${canAttend ? actionButtonsHTML : ''}
                 ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -959,9 +958,9 @@ export const UIService = {
                 <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
                     <p class="font-bold text-lg text-gray-800 leading-tight mb-1 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
-                    
+
                     ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
-                    
+
                     <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
                     <div class="flex items-end justify-between w-full mb-2 gap-2">
                         <div class="flex flex-wrap items-center gap-2">
@@ -979,7 +978,7 @@ export const UIService = {
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
-            
+
             const roomSelect = card.querySelector('.change-room-select');
             if (roomSelect) {
                 roomSelect.addEventListener('change', (e) => {
@@ -995,14 +994,14 @@ export const UIService = {
                     }
                 });
             }
-            
+
             return card;
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
             return null;
         }
     },
-    
+
     renderEmAtendimentoColumn(items, currentPautaData, pautaId, userName) {
         const container = document.getElementById('em-atendimento-list');
         if (!container) return;
@@ -1031,18 +1030,18 @@ export const UIService = {
             const card = document.createElement('div');
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
             card.setAttribute('data-id', item.id);
-            
-            const startTime = item.inAttendanceTime ? 
+
+            const startTime = item.inAttendanceTime ?
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
+
             const atendenteNome = this.getAttendantName(item);
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
-            const historicoTransferenciaHtml = item.historicoTransferencia 
+            const historicoTransferenciaHtml = item.historicoTransferencia
                 ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
-                       <span class="text-xs">🔄</span> 
+                       <span class="text-xs">🔄</span>
                        <span>${escapeHTML(item.historicoTransferencia)}</span>
-                   </div>` 
+                   </div>`
                 : '';
 
             let docStatusHtml = '';
@@ -1050,25 +1049,25 @@ export const UIService = {
                 let statusColor = 'bg-gray-100 text-gray-600';
                 let statusText = '📋 Selecionado';
                 let statusIcon = '📋';
-                
-                if (item.documentState === 'filling') { 
-                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                    statusText = '✏️ Preenchendo'; 
+
+                if (item.documentState === 'filling') {
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
+                    statusText = '✏️ Preenchendo';
                     statusIcon = '✏️';
-                } else if (item.documentState === 'saved') { 
-                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                    statusText = '✅ Salvo'; 
+                } else if (item.documentState === 'saved') {
+                    statusColor = 'bg-green-100 text-green-700 font-bold';
+                    statusText = '✅ Salvo';
                     statusIcon = '✅';
-                } else if (item.documentState === 'pdf') { 
-                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                    statusText = '📄 PDF Emitido'; 
+                } else if (item.documentState === 'pdf') {
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold';
+                    statusText = '📄 PDF Emitido';
                     statusIcon = '📄';
                 }
 
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span> 
+                            <span>📂</span>
                             <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
                             <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
                         </span>
@@ -1079,7 +1078,7 @@ export const UIService = {
                     </div>`;
             }
 
-            const buttonsContainerHtml = canDelegateOrFinalize 
+            const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
@@ -1157,17 +1156,17 @@ export const UIService = {
             const card = document.createElement('div');
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
             card.setAttribute('data-id', item.id);
-            
-            const arrivalT = item.arrivalTime ? 
+
+            const arrivalT = item.arrivalTime ?
                 new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : 'N/A';
-            const attendedT = item.attendedAt ? 
+            const attendedT = item.attendedAt ?
                 new Date(item.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-            
+
             const atendenteNome = this.getAttendantName(item);
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
-            const confirmButton = item.isConfirmed 
-                ? 'bg-green-500 border-green-500 text-white' 
+            const confirmButton = item.isConfirmed
+                ? 'bg-green-500 border-green-500 text-white'
                 : 'bg-slate-100 text-slate-300';
 
             card.innerHTML = `
@@ -1179,10 +1178,10 @@ export const UIService = {
                         </svg>
                     </button>
                 </div>
-                
+
                 ${numAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-                
+
                 ${item.tipoAcaoRapida ? (() => {
                     const acaoCfg = {
                         'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
@@ -1196,7 +1195,7 @@ export const UIService = {
                         </span>
                     </div>`;
                 })() : ''}
-                
+
                 <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                     <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
                     <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
@@ -1259,8 +1258,8 @@ export const UIService = {
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
             card.setAttribute('data-id', item.id);
 
-            const confirmButtonClass = isConfirmed 
-                ? 'bg-green-500 border-green-500 text-white' 
+            const confirmButtonClass = isConfirmed
+                ? 'bg-green-500 border-green-500 text-white'
                 : 'bg-slate-100 text-slate-300';
 
             card.innerHTML = `
@@ -1269,17 +1268,17 @@ export const UIService = {
                         <p class="font-bold text-lg md:text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
                         <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
                     </div>
-                    
+
                     <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
-                
+
                 ${numAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
                 <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-                
+
                 <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
                     <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
                     <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
@@ -1364,7 +1363,7 @@ export const UIService = {
                 const card = document.createElement('div');
                 card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
                 card.setAttribute('data-id', item.id);
-                
+
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
                 const numeroOrdem = index + 1;
@@ -1374,15 +1373,15 @@ export const UIService = {
                     </div>
                 `;
 
-                const badgeStatus = item.status === 'aguardandoCorrecao' 
-                    ? `<span class="absolute top-2 left-8 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>` 
+                const badgeStatus = item.status === 'aguardandoCorrecao'
+                    ? `<span class="absolute top-2 left-8 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>`
                     : `<span class="absolute top-2 left-8 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
 
-                const historicoTransferenciaHtml = item.historicoTransferencia 
+                const historicoTransferenciaHtml = item.historicoTransferencia
                     ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
-                           <span class="text-xs">🔄</span> 
+                           <span class="text-xs">🔄</span>
                            <span>${escapeHTML(item.historicoTransferencia)}</span>
-                       </div>` 
+                       </div>`
                     : '';
 
                 let docStatusHtml = '';
@@ -1390,25 +1389,25 @@ export const UIService = {
                     let statusColor = 'bg-gray-100 text-gray-600';
                     let statusText = '📋 Selecionado';
                     let statusIcon = '📋';
-                    
-                    if (item.documentState === 'filling') { 
-                        statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
-                        statusText = '✏️ Preenchendo'; 
+
+                    if (item.documentState === 'filling') {
+                        statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
+                        statusText = '✏️ Preenchendo';
                         statusIcon = '✏️';
-                    } else if (item.documentState === 'saved') { 
-                        statusColor = 'bg-green-100 text-green-700 font-bold'; 
-                        statusText = '✅ Salvo'; 
+                    } else if (item.documentState === 'saved') {
+                        statusColor = 'bg-green-100 text-green-700 font-bold';
+                        statusText = '✅ Salvo';
                         statusIcon = '✅';
-                    } else if (item.documentState === 'pdf') { 
-                        statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
-                        statusText = '📄 PDF Emitido'; 
+                    } else if (item.documentState === 'pdf') {
+                        statusColor = 'bg-purple-100 text-purple-700 font-bold';
+                        statusText = '📄 PDF Emitido';
                         statusIcon = '📄';
                     }
 
                     docStatusHtml = `
                         <div class="mt-2 flex flex-col gap-1">
                             <span class="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 truncate flex items-center gap-1">
-                                <span>📂</span> 
+                                <span>📂</span>
                                 <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
                                 <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
                             </span>
@@ -1450,7 +1449,7 @@ export const UIService = {
                     ${numeroBadge}
                     ${badgeStatus}
                     ${deleteBtnHtml}
-                    
+
                     <div class="pr-8 pt-4">
                         <p class="font-bold text-lg text-gray-800 leading-tight">${escapeHTML(item.name || '')}</p>
                     </div>
@@ -1463,16 +1462,16 @@ export const UIService = {
 
                     ${historicoTransferenciaHtml}
                     ${docStatusHtml}
-                    
+
                     ${item.notasRevisao ? `
                         <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-2.5 rounded-lg border border-yellow-200 shadow-sm leading-snug">
-                            <span class="font-black text-yellow-900 block mb-0.5">⚠️ NOTA PARA O DEFENSOR:</span> 
+                            <span class="font-black text-yellow-900 block mb-0.5">⚠️ NOTA PARA O DEFENSOR:</span>
                             ${escapeHTML(item.notasRevisao)}
-                        </div>` 
+                        </div>`
                     : ''}
-                    
+
                     ${actionControlsHtml}
-                    
+
                     ${this._getStandardizedFooterHtml(item)}
                 `;
                 cardsWrapper.appendChild(card);
@@ -1486,10 +1485,10 @@ export const UIService = {
         const bindModal = (btnId, modalId, closeIds) => {
             const btn = document.getElementById(btnId);
             const modal = document.getElementById(modalId);
-            
+
             if (btn && modal) {
                 btn.onclick = () => modal.classList.remove('hidden');
-                
+
                 closeIds.forEach(id => {
                     const closeBtn = document.getElementById(id);
                     if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
@@ -1504,7 +1503,7 @@ export const UIService = {
         bindModal('privacy-btn-footer', 'privacy-policy-modal', ['close-policy-modal-btn-x', 'close-policy-modal-btn']);
         bindModal('manual-btn-footer', 'manual-modal', ['close-manual-modal-x', 'close-manual-modal-btn']);
         bindModal('terms-btn-footer', 'terms-modal', ['close-terms-modal-x', 'close-terms-modal-btn']);
-        
+
         this.renderFormatHelpModal();
     },
 
@@ -1532,7 +1531,9 @@ export const UIService = {
                         <button id="copy-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-300 w-full sm:w-auto transition-colors">Copiar Exemplo</button>
                     </div>
                     <pre class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto mb-6 border border-gray-200"><code id="example-text-code" class="whitespace-pre-wrap word-break font-mono">12345;Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+
 ;João da Silva;09:30;Ação de Alimentos;
+
 67890;Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
 
                     <ul class="list-disc list-inside space-y-2 text-sm mb-6">
@@ -1568,12 +1569,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     navigator.clipboard.writeText(codeEl.textContent);
                     const originalHtml = btn.innerHTML;
                     btn.innerHTML = `✅ Copiado!`;
-                    
+
                     btn.classList.remove('bg-gray-200', 'text-gray-800');
                     btn.classList.add('bg-green-500', 'text-white');
 
                     if (window.showNotification) window.showNotification("Texto copiado para a área de transferência!", "success");
-                    
+
                     setTimeout(() => {
                         btn.innerHTML = originalHtml;
                         btn.classList.remove('bg-green-500', 'text-white');
@@ -1627,14 +1628,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const btn = document.getElementById('expired-stats-btn');
             btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
             btn.disabled = true;
-            
+
             try {
                 const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const snapshot = await getDocs(collection(app.db, "pautas", pauta.id, "attendances"));
                 const allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                
+
                 modal.remove();
-                
+
                 if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
                     window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
                 } else {
@@ -1648,6 +1649,9 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
     },
 
+    // ============================================================
+    // renderPautaCards - CORRIGIDO (sem unidade em modo evento)
+    // ============================================================
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1658,12 +1662,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         }
 
         container.innerHTML = '';
-        
+
         pautas.forEach(pauta => {
             const isOwner = pauta.owner === userId;
             const isClosed = pauta.isClosed;
-            const isEvento = pauta.modo === 'evento' || pauta.type === 'evento' || pauta.modoCriacao === 'evento' || pauta.isEvento;
-            
+            const isEvento = pauta.modo === 'evento'
+                || pauta.type === 'evento'
+                || pauta.modoCriacao === 'evento'
+                || pauta.isEvento
+                || ['mutirao', 'mutirão', 'plantao', 'acao_social'].includes(String(pauta.tipo || pauta.type || '').toLowerCase());
+
             let dataCriacaoStr = '---';
             let dataExpiracaoStr = '';
             let isExpired = false;
@@ -1679,13 +1687,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
             const card = document.createElement('div');
             card.className = `relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'} ${isClosed ? 'opacity-60' : ''}`;
-            
-            // Verifica a origem com base no modo (Normal x Evento)
+
+            // CORRIGIDO: modo evento não mostra unidade
             let originHtml = '';
             if (isEvento) {
                 originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span>⭐</span> MODO EVENTO</h2>`;
             } else {
-                originHtml = `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span>🏢</span> ${escapeHTML(pauta.unidadeNome || pauta.origin || pauta.orgao || 'Unidade não definida')}</h2>`;
+                const nomeUnidade = pauta.unidadeNome || pauta.origin || pauta.orgao;
+                originHtml = nomeUnidade
+                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span>🏢</span> ${escapeHTML(nomeUnidade)}</h2>`
+                    : `<h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1"><span>📋</span> Pauta Normal</h2>`;
             }
 
             card.innerHTML = `
@@ -1706,10 +1717,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     <p class="text-sm text-gray-500 mt-1">Membros: ${pauta.members ? pauta.members.length : 1}</p>
 
                     <div class="mt-4">
-                        ${isOwner ? 
+                        ${isOwner ?
                             `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
                                 Criador
-                            </span>` : 
+                            </span>` :
                             `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
                                 Compartilhada
                             </span>`
