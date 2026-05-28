@@ -65,6 +65,29 @@ class SIGEPApp {
         this.init();
     }
 
+    // Função auxiliar para safe query
+    function $(id, callback) {
+        const el = document.getElementById(id);
+        if (el && callback) callback(el);
+        return el;
+    }
+    
+    // Uso:
+    $('btn-manage-rooms', (el) => {
+        el.addEventListener('click', () => {
+            // seu código aqui
+        });
+    });
+    
+    // Para classList
+    function toggleModal(id, action) {
+        const el = document.getElementById(id);
+        if (el) el.classList[action]('hidden');
+    }
+    
+    // Uso:
+    toggleModal('manage-rooms-modal', 'remove');
+
     async init() {
         try {
             const app = initializeApp(firebaseConfig);
