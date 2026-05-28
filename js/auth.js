@@ -36,7 +36,6 @@ export const AuthService = {
             if (errorDiv) {
                 let mensagem = 'Email ou senha inválidos.';
                 
-                // NOVO: Tratamento para o código unificado do Firebase
                 if (error.code === 'auth/invalid-credential') {
                     mensagem = 'E-mail ou senha incorretos.';
                 } else if (error.code === 'auth/user-not-found') {
@@ -85,13 +84,13 @@ export const AuthService = {
             const userCredential = await createUserWithEmailAndPassword(app.auth, email, password);
             const user = userCredential.user;
 
-            // Cria o perfil inicial como 'pending'
             await setDoc(doc(app.db, "users", user.uid), {
                 name: name,
                 email: email,
                 uid: user.uid,
                 status: 'pending',
                 role: 'user',
+                unidades: [],  // ← ADICIONAR CAMPO UNIDADES VAZIO
                 createdAt: new Date().toISOString(),
                 preferences: {
                     enableSoundsSuccess: true,
@@ -104,7 +103,6 @@ export const AuthService = {
             if (errorDiv) errorDiv.classList.add('hidden');
             showNotification('Conta criada! Aguarde aprovação do administrador.', 'success');
             
-            // Retorna para a aba de login
             const loginTabBtn = document.getElementById('login-tab-btn');
             if (loginTabBtn) loginTabBtn.click();
 
@@ -153,10 +151,11 @@ export const AuthService = {
 
     /**
      * Gerencia o que o usuário vê baseado no Firestore (Aprovado/Pendente)
+     * CORRIGIDO PARA INCLUIR O CAMPO UNIDADES
      */
     async handleAuthState(app, user) {
         try {
-            // --- INÍCIO DA MIGRAÇÃO TEMPORÁRIA ---
+            // Migração temporária
             const oldRef = doc(app.db, "users", user.uid);
             const newRef = doc(app.db, "usuarios", user.uid);
             
@@ -169,23 +168,33 @@ export const AuthService = {
                     console.log("Migração de documento concluída para: usuarios/" + user.uid);
                 }
             }
-            // --- FIM DA MIGRAÇÃO TEMPORÁRIA ---
 
-            // Passa a ler da coleção 'usuarios' para refletir a migração
             const userDocRef = doc(app.db, "usuarios", user.uid);
             const userDoc = await getDoc(userDocRef);
 
             if (userDoc.exists()) {
                 const userData = userDoc.data();
-                app.currentUser = userData;
-                app.currentUserName = userData.name || user.email;
+                
+                // 🔥 CORREÇÃO: Garantir que o campo unidades seja incluído
+                app.currentUser = {
+                    uid: user.uid,
+                    email: user.email,
+                    name: userData.name || user.email,
+                    role: userData.role || 'user',
+                    status: userData.status || 'pending',
+                    unidades: userData.unidades || [],  // ← LINHA CRUCIAL!
+                    preferences: userData.preferences || {}
+                };
+                
+                app.currentUserName = app.currentUser.name || user.email;
 
-                // Interface administrativa
+                // Debug: Verificar se as unidades foram carregadas
+                console.log("✅ Usuário carregado com unidades:", app.currentUser.unidades);
+
                 const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
                 document.getElementById('admin-panel-btn')?.classList.toggle('hidden', !isAdmin);
 
                 if (userData.status === 'approved') {
-                    // FLUXO USUÁRIO APROVADO
                     const lastPautaId = localStorage.getItem('lastPautaId');
                     
                     if (lastPautaId) {
@@ -197,7 +206,6 @@ export const AuthService = {
                     }
                     app.showPautaSelectionScreen();
                 } else {
-                    // FLUXO USUÁRIO PENDENTE
                     UIService.showScreen('loading');
                     const loadingText = document.getElementById('loading-text');
                     if (loadingText) {
@@ -211,14 +219,12 @@ export const AuthService = {
                                 </button>
                             </div>
                         `;
-                        // Adiciona o listener ao botão criado dinamicamente
                         document.getElementById('btn-logout-pending')?.addEventListener('click', () => this.logout(app.auth));
                     }
                     const loader = document.querySelector('.loader');
                     if (loader) loader.style.display = 'none';
                 }
             } else {
-                // Se o documento não existe no Firestore, força logout
                 console.warn("Perfil Firestore não encontrado.");
                 this.logout(app.auth);
             }
