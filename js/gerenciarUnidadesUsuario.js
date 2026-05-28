@@ -3,21 +3,21 @@
  * SIGEP — Modal "Gerenciar Unidades" do usuário individual
  *
  * Uso:
- *   import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
- *   await abrirGerenciarUnidades(app, usuarioId);
+ * import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
+ * await abrirGerenciarUnidades(app, usuarioId);
  *
  * Dependências esperadas em app:
- *   app.db          — instância Firestore
- *   app.currentUser — { uid, role }
+ * app.db          — instância Firestore
+ * app.currentUser — { uid, role }
  *
  * Coleções Firestore usadas:
- *   /usuarios/{uid}                    — doc do usuário (campo unidades: [{unidadeId, role}])
- *   /unidades/{uid}                    — doc da unidade (campos: nome, orgaoNome, orgaoId)
- *   /orgaos/{orgaoId}                  — doc do órgão (campo: nome)
+ * /users/{uid}                       — doc do usuário (campo unidades: [{unidadeId, role}])
+ * /unidades/{uid}                    — doc da unidade (campos: nome, orgaoNome, orgaoId)
+ * /orgaos/{orgaoId}                  — doc do órgão (campo: nome)
  */
 
 import {
-    doc, getDoc, getDocs, collection,
+    doc, getDoc, getDocs, collection, query, where,
     updateDoc, arrayUnion, arrayRemove
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML } from './utils.js';
@@ -44,15 +44,25 @@ async function buscarUsuario(db, uid) {
 }
 
 async function buscarTodasUnidades(db) {
-    console.log("🔍 Buscando unidades...");
-    console.log("Usuário autenticado?", window.app.auth.currentUser?.uid);
-    
+    console.log("🔍 Buscando unidades para vinculação...");
     try {
-        const snap = await getDocs(collection(db, 'unidades'));
-        console.log("✅ Unidades encontradas:", snap.docs.length);
-        return snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        // Traz apenas as unidades ativas para evitar lixo
+        const unidadesRef = collection(db, 'unidades');
+        const q = query(unidadesRef, where("ativo", "==", true));
+        
+        let snap;
+        try {
+             snap = await getDocs(q);
+        } catch(e) {
+             console.warn("Busca por índice falhou, buscando todas as unidades sem filtro...", e);
+             snap = await getDocs(unidadesRef);
+        }
+
+        console.log("✅ Unidades ativas encontradas:", snap.docs.length);
+        // Filtra novamente no JS caso a query sem index tenha sido usada
+        return snap.docs.map(d => ({ id: d.id, ...d.data() })).filter(u => u.ativo !== false);
     } catch (error) {
-        console.error("❌ Erro ao buscar unidades:", error.code, error.message);
+        console.error("❌ Erro grave ao buscar unidades:", error.code, error.message);
         throw error;
     }
 }
@@ -166,7 +176,6 @@ export async function abrirGerenciarUnidades(app, usuarioId) {
         body.innerHTML = `
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px">
 
-                <!-- VINCULADAS -->
                 <div>
                     <div style="font-size:11px;color:var(--color-text-secondary,#6b7280);text-transform:uppercase;
                                 letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
@@ -212,7 +221,6 @@ export async function abrirGerenciarUnidades(app, usuarioId) {
                     </div>
                 </div>
 
-                <!-- DISPONÍVEIS -->
                 <div>
                     <div style="font-size:11px;color:var(--color-text-secondary,#6b7280);text-transform:uppercase;
                                 letter-spacing:.06em;margin-bottom:8px;display:flex;align-items:center;gap:6px">
