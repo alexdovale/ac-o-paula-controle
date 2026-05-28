@@ -1622,3 +1622,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         container.appendChild(card);
     });
 }
+
+};
