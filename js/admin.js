@@ -1145,13 +1145,8 @@ export const populateUserFilter = async (db) => {
 
 export const setupAdminEvents = (app) => {
     globalApp = app;
-    const { db } = app;
-    
-    document.getElementById('btn-unidades-master')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        e.stopPropagation();
-        abrirGerenciadorUnidades(db);
-    });
+};
+
     
     document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
         const btn = document.getElementById('view-audit-logs-btn');
