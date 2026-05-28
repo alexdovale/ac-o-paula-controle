@@ -1868,7 +1868,7 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // showPautaSelectionScreen
+    // showPautaSelectionScreen - ATUALIZADO
     // ============================================================
     async showPautaSelectionScreen() {
         localStorage.setItem('sigep_active_screen', 'pauta-selection');
@@ -1881,18 +1881,27 @@ class SIGEPApp {
         
         UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
             this.currentPautaFilter = filter;
-            await this.loadPautasWithFilter();
+            
+            // Se o filtro for 'unidades', não aplicamos filtros padrão adicionais
+            if (filter === 'unidades') {
+                // O filtro de unidades será aplicado via filterOptions
+                await this.loadPautasWithFilter(null);
+            } else {
+                await this.loadPautasWithFilter(null);
+            }
         }, this);
-        await this.loadPautasWithFilter();
+        
+        await this.loadPautasWithFilter(null);
         this.loadColumnPreferences();
     }
 
     // ============================================================
-    // loadPautasWithFilter - COM FILTRO POR MODO
+    // loadPautasWithFilter - COM FILTRO POR MODO E UNIDADES VINCULADAS
     // ============================================================
-    async loadPautasWithFilter() {
+    async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
+        
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
@@ -1905,6 +1914,7 @@ class SIGEPApp {
             const snapshot = await getDocs(q);
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
+            // FILTRO POR MODO (Normal x Evento)
             const modoAtual = this.currentMode;
             const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
@@ -1925,14 +1935,99 @@ class SIGEPApp {
             
             this.mostrarIndicadorModo();
             
-            const filtrosAdicionais = {};
-            if (this.currentPautaFilter === 'periodo') {
-                filtrosAdicionais.dataInicial = document.getElementById('filter-data-inicial')?.value;
-                filtrosAdicionais.dataFinal = document.getElementById('filter-data-final')?.value;
-                filtrosAdicionais.tipo = document.getElementById('filter-tipo-pauta')?.value;
+            // APLICAR FILTROS ADICIONAIS (período ou unidades)
+            let filteredPautas = [...pautas];
+            
+            if (filterOptions) {
+                switch (filterOptions.tipo) {
+                    case 'periodo':
+                        if (filterOptions.dataInicial && filterOptions.dataFinal) {
+                            const dataInicial = new Date(filterOptions.dataInicial);
+                            const dataFinal = new Date(filterOptions.dataFinal);
+                            dataFinal.setHours(23, 59, 59);
+                            
+                            filteredPautas = filteredPautas.filter(pauta => {
+                                if (!pauta.createdAt) return false;
+                                const dataCriacao = new Date(pauta.createdAt);
+                                return dataCriacao >= dataInicial && dataCriacao <= dataFinal;
+                            });
+                        }
+                        
+                        if (filterOptions.tipoPauta && filterOptions.tipoPauta !== 'todos') {
+                            filteredPautas = filteredPautas.filter(pauta => 
+                                pauta.type === filterOptions.tipoPauta
+                            );
+                        }
+                        break;
+                        
+                    case 'unidades':
+                        // Obter unidades vinculadas ao usuário
+                        const userUnidades = this.currentUser?.unidadesVinculadas || [];
+                        
+                        // Filtrar apenas pautas das unidades vinculadas ao usuário
+                        filteredPautas = filteredPautas.filter(pauta => {
+                            const unidadePauta = pauta.unidadeNome;
+                            return userUnidades.includes(unidadePauta);
+                        });
+                        
+                        // Aplicar filtro de unidade específica
+                        if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
+                            filteredPautas = filteredPautas.filter(pauta => 
+                                pauta.unidadeNome === filterOptions.unidade
+                            );
+                        }
+                        
+                        // Aplicar filtro de status (ativa/expirada)
+                        if (filterOptions.status && filterOptions.status !== 'todas') {
+                            filteredPautas = filteredPautas.filter(pauta => {
+                                if (!pauta.createdAt) return false;
+                                const dataCriacao = new Date(pauta.createdAt);
+                                const dataExpiracao = new Date(dataCriacao);
+                                dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                                const isExpired = new Date() > dataExpiracao;
+                                
+                                if (filterOptions.status === 'ativas') {
+                                    return !isExpired && !pauta.isClosed;
+                                } else if (filterOptions.status === 'expiradas') {
+                                    return isExpired || pauta.isClosed;
+                                }
+                                return true;
+                            });
+                        }
+                        break;
+                }
             }
             
-            const filteredPautas = PautaService.filterPautas(pautas, this.currentPautaFilter, user.uid, user.email, filtrosAdicionais);
+            // APLICAR FILTROS PADRÃO (all, active, expired, my, shared)
+            switch (this.currentPautaFilter) {
+                case 'my':
+                    filteredPautas = filteredPautas.filter(p => p.owner === user.uid);
+                    break;
+                case 'shared':
+                    filteredPautas = filteredPautas.filter(p => 
+                        p.members?.includes(user.email) && 
+                        p.owner !== user.uid
+                    );
+                    break;
+                case 'active':
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (!p.createdAt) return false;
+                        const dataCriacao = new Date(p.createdAt);
+                        const dataExpiracao = new Date(dataCriacao);
+                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                        return new Date() <= dataExpiracao && !p.isClosed;
+                    });
+                    break;
+                case 'expired':
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (!p.createdAt) return false;
+                        const dataCriacao = new Date(p.createdAt);
+                        const dataExpiracao = new Date(dataCriacao);
+                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                        return new Date() > dataExpiracao || p.isClosed;
+                    });
+                    break;
+            }
             
             if (filteredPautas.length === 0) {
                 const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
@@ -1947,7 +2042,6 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         }
     }
-
     // ============================================================
     // loadPauta
     // ============================================================
