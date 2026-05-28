@@ -107,7 +107,7 @@ export const UIService = {
     },
 
     // ============================================================
-    // RENDERIZAÇÃO DO FILTRO (ATUALIZADO COM GRUPOS PARA ADMIN)
+    // RENDERIZAÇÃO DO FILTRO (ATUALIZADO COM EVENTOS)
     // ============================================================
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
@@ -139,6 +139,7 @@ export const UIService = {
                     <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
                         <option value="todos">Todos os Tipos</option>
                         <option value="normal">Normal</option>
+                        <option value="evento">Evento</option>
                         <option value="agendamento">Agendamento</option>
                         <option value="mutirao">Mutirão</option>
                         <option value="plantao">Plantão</option>
@@ -159,7 +160,7 @@ export const UIService = {
         const unidadesFiltersHTML = `
             <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 ${isUnidades ? '' : 'hidden'} animate-fade-in">
                 <div class="flex-1 min-w-[250px]">
-                    <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Unidade</label>
+                    <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Origem / Unidade</label>
                     <select id="filter-unidade-select" class="w-full p-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
                         ${unidadesOptions}
                     </select>
@@ -191,7 +192,7 @@ export const UIService = {
                             <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
                             <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
                             <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas comigo</option>
-                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Filtrar por Unidade</option>` : ''}
+                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Filtrar por Origem / Unidade</option>` : ''}
                             <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-green-600 group-hover:text-green-700">
@@ -213,6 +214,7 @@ export const UIService = {
                     const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
                     
                     let html = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
+                    html += `<option value="evento">⭐ Pautas de Evento (Sem Unidade)</option>`;
                     
                     // Mostra as unidades pessoais do admin separadas com destaque
                     if (userUnidades.length > 0) {
@@ -237,15 +239,16 @@ export const UIService = {
                     selectUnidade.innerHTML = html;
                 }).catch(err => {
                     console.error("Erro ao carregar unidades do sistema:", err);
-                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option>`;
+                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option><option value="evento">⭐ Pautas de Evento (Sem Unidade)</option>`;
                 });
             } else {
-                // Usuário comum: apenas a lista das unidades vinculadas a ele
+                // Usuário comum: apenas a lista das unidades vinculadas a ele + Eventos
                 const opcoesUser = userUnidades.map(u => {
                     const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
                     return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
                 }).join('');
-                selectUnidade.innerHTML = `<option value="todas">🌍 Todas as minhas unidades vinculadas</option>` + opcoesUser;
+                selectUnidade.innerHTML = `<option value="todas">🌍 Todas as origens</option>
+                <option value="evento">⭐ Pautas de Eventos</option>` + opcoesUser;
             }
         }
         
@@ -1659,6 +1662,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         pautas.forEach(pauta => {
             const isOwner = pauta.owner === userId;
             const isClosed = pauta.isClosed;
+            const isEvento = pauta.modo === 'evento' || pauta.type === 'evento' || pauta.modoCriacao === 'evento' || pauta.isEvento;
             
             let dataCriacaoStr = '---';
             let dataExpiracaoStr = '';
@@ -1676,13 +1680,19 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const card = document.createElement('div');
             card.className = `relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'} ${isClosed ? 'opacity-60' : ''}`;
             
+            // Verifica a origem com base no modo (Normal x Evento)
+            let originHtml = '';
+            if (isEvento) {
+                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span>⭐</span> MODO EVENTO</h2>`;
+            } else {
+                originHtml = `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span>🏢</span> ${escapeHTML(pauta.unidadeNome || pauta.origin || pauta.orgao || 'Unidade não definida')}</h2>`;
+            }
+
             card.innerHTML = `
                 <!-- Conteúdo Principal -->
                 <div class="p-5">
                     <div class="flex justify-between items-start">
-                        <h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide">
-                            ${escapeHTML(pauta.unidadeNome || pauta.origin || pauta.orgao || 'Unidade não definida')}
-                        </h2>
+                        ${originHtml}
                         ${isOwner ? `
                         <button class="delete-pauta-btn text-gray-400 hover:text-red-500 transition-colors z-20">
                             <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
