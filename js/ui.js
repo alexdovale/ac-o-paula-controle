@@ -1565,6 +1565,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const card = document.createElement('div');
             card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
             
+            // CONSTRUTOR DO CARD
             card.innerHTML = `
                 ${isOwner ? `
                 <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
@@ -1573,7 +1574,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 <div>
                     <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
-                        ${escapeHTML(pauta.orgaoNome || 'Órgão não definido')}
+                        ${escapeHTML(pauta.unidadeNome || 'Unidade não definida')}
                     </span>
                     <h3 class="font-bold text-lg text-gray-800 leading-tight mb-2 pr-8 break-words line-clamp-2">
                         ${escapeHTML(pauta.name)}
@@ -1587,9 +1588,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${isExpired ? '🚫 EXPIRADA EM:' : 'ELIMINAÇÃO EM:'} ${dataExpiracaoStr}
                     </p>
                     <div class="mt-3">
-                        <span class="bg-${isOwner ? 'green' : 'blue'}-50 text-${isOwner ? 'green' : 'blue'}-600 text-[9px] font-black px-2 py-1 rounded border border-${isOwner ? 'green' : 'blue'}-100 uppercase flex items-center w-max gap-1">
-                            ${isOwner ? 'Criador' : 'Compartilhada'}
-                        </span>
+                        ${isOwner ? 
+                            `<span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">Criador</span>` : 
+                            `<span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">Compartilhada</span>`
+                        }
                     </div>
                 </div>
             `;
@@ -1610,4 +1612,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             container.appendChild(card);
         });
     }
+
 }; // Fim do objeto UIService
