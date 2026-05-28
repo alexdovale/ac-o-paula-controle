@@ -1,11 +1,9 @@
 // js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
-// Extraído do main.js para manter o orquestrador enxuto.
-// Responsabilidades: criação, edição, templates, validação, vínculo de equipe e data de operação.
 
 import {
     collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, Timestamp
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification, playSound } from './utils.js';
+import { showNotification, playSound, escapeHTML } from './utils.js';
 import { logAction } from './admin.js';
 import { PautaService } from './pauta.js';
 
@@ -55,30 +53,23 @@ async function verificarNomeDuplicadoHoje(db, nome, userId) {
 
 export const PautaConfigService = {
 
-    // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
-
     init(app) {
         this._app = app;
         this._setupEventListeners();
         this._renderTemplatesSelect();
     },
 
-    // ── EVENT LISTENERS ───────────────────────────────────────────────────────
-
     _setupEventListeners() {
         const app = this._app;
 
-        // Abrir modal de tipo
         document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
             this._abrirModalTipo();
         });
 
-        // Cancelar tipo
         document.getElementById('cancel-pauta-type-btn')?.addEventListener('click', () => {
             document.getElementById('pauta-type-modal').classList.add('hidden');
         });
 
-        // Selecionar tipo
         document.querySelectorAll('.pauta-type-btn').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const type = e.currentTarget.dataset.type;
@@ -87,7 +78,6 @@ export const PautaConfigService = {
             });
         });
 
-        // Sala customizada — adicionar
         document.getElementById('add-custom-room-btn')?.addEventListener('click', (e) => {
             e.preventDefault();
             const input = document.getElementById('custom-room-input');
@@ -103,7 +93,6 @@ export const PautaConfigService = {
             }
         });
 
-        // Sala customizada — remover
         document.getElementById('custom-rooms-list')?.addEventListener('click', (e) => {
             if (e.target.classList.contains('remove-room-btn')) {
                 app.customRoomsList.splice(e.target.dataset.index, 1);
@@ -111,72 +100,61 @@ export const PautaConfigService = {
             }
         });
 
-        // Cancelar criação
         document.getElementById('cancel-create-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('create-pauta-modal').classList.add('hidden');
         });
 
-        // Avançar para ordem
         document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
             const unidade = document.getElementById('create-pauta-unidade-select')?.value;
             const dataOp = document.getElementById('create-pauta-date-input')?.value;
             const name = document.getElementById('create-pauta-name-input').value.trim();
             
             if (!unidade) { showNotification("Selecione a Unidade Vinculada.", "error"); return; }
-            if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
             if (!name) { showNotification("O nome da pauta não pode ser vazio.", "error"); return; }
+            if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
             
             document.getElementById('create-pauta-modal').classList.add('hidden');
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
-        // Voltar para criação
         document.getElementById('cancel-ordem-btn')?.addEventListener('click', () => {
             document.getElementById('ordem-atendimento-modal').classList.add('hidden');
             document.getElementById('create-pauta-modal').classList.remove('hidden');
         });
 
-        // Avançar para delegação
         document.getElementById('next-to-delegation-btn')?.addEventListener('click', () => {
             document.getElementById('ordem-atendimento-modal').classList.add('hidden');
             document.getElementById('delegation-flow-modal').classList.remove('hidden');
         });
 
-        // Voltar para ordem
         document.getElementById('cancel-delegation-flow-btn')?.addEventListener('click', () => {
             document.getElementById('delegation-flow-modal').classList.add('hidden');
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
 
-        // Confirmar criação final
         document.getElementById('confirm-create-pauta-final-btn')?.addEventListener('click', async () => {
             await this.criarPauta();
         });
 
-        // Salvar template
         document.getElementById('btn-salvar-template')?.addEventListener('click', () => {
             this._salvarComoTemplate();
         });
 
-        // Carregar template
         document.getElementById('select-template-pauta')?.addEventListener('change', (e) => {
             if (e.target.value) this._carregarTemplate(e.target.value);
         });
 
-        // Editar nome da pauta
         document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
             document.getElementById('edit-pauta-name-input').value = app.currentPauta?.name || '';
             document.getElementById('edit-pauta-modal').classList.remove('hidden');
         });
 
-        // Editar configurações
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
             if (!app.currentPautaData) return;
             this._preencherFormEdicao(app.currentPautaData);
             document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
         });
 
-        // Confirmar edição de config
         document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
             await this.salvarEdicaoConfig();
         });
@@ -218,15 +196,13 @@ export const PautaConfigService = {
             }
         }
 
-        const dateInput = document.getElementById('create-pauta-date-input');
-        if (dateInput && !dateInput.value) {
-            dateInput.value = new Date().toISOString().split('T')[0];
-        }
-
-        // 1. INJETAR SELETOR DE UNIDADE
+        // 1. Injetar Unidade (Antes do nome)
         this._injetarSeletorUnidade();
 
-        // 2. INJETAR SELETOR DE MODO
+        // 2. Injetar Campo de Data (Depois do nome)
+        this._injetarCampoData();
+
+        // 3. Injetar Modo Evento/Normal (Depois da data)
         this._adicionarSelectorModo();
 
         createModal.classList.remove('hidden');
@@ -250,7 +226,6 @@ export const PautaConfigService = {
         `).join('');
     },
 
-    // ⭐ MÉTODO: INJETAR SELETOR DE UNIDADE ⭐
     async _injetarSeletorUnidade() {
         const app = this._app;
         let unidadeContainer = document.getElementById('pauta-unidade-container');
@@ -264,36 +239,40 @@ export const PautaConfigService = {
             unidadeContainer.className = 'mb-4';
             unidadeContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-700 mb-1">🏢 Unidade Vinculada <span class="text-red-500">*</span></label>
-                <select id="create-pauta-unidade-select" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                <select id="create-pauta-unidade-select" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <option value="">Carregando unidades...</option>
                 </select>
-                <p class="text-[10px] text-gray-500 mt-1">Selecione o local onde esta pauta ocorrerá (Necessário para a Recepção Central).</p>
+                <p class="text-[10px] text-gray-500 mt-1">Selecione o local onde esta pauta ocorrerá.</p>
             `;
-            // Insere ANTES do nome da pauta
             nameInput.parentNode.insertBefore(unidadeContainer, nameInput);
         }
 
         const select = document.getElementById('create-pauta-unidade-select');
         
         try {
+            const authUser = app.auth.currentUser;
+            if (!authUser) return;
+
+            const userDoc = await getDoc(doc(app.db, "users", authUser.uid));
+            const userData = userDoc.exists() ? userDoc.data() : null;
+
             const snap = await getDocs(collection(app.db, "estrutura_unidades"));
             const todasUnidades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
             let userUnits = [];
-            const user = app.currentUser;
             
-            if (user?.role === 'superadmin') {
-                userUnits = todasUnidades;
-            } else if (user?.unidades && user.unidades.length > 0) {
-                const linkedIds = user.unidades.map(u => u.unidadeId || u.id);
+            if (userData?.role === 'superadmin') {
+                userUnits = todasUnidades; 
+            } else if (userData?.unidades && userData.unidades.length > 0) {
+                const linkedIds = userData.unidades.map(u => u.unidadeId || u.id);
                 userUnits = todasUnidades.filter(u => linkedIds.includes(u.id));
             }
 
             if (userUnits.length === 0) {
                 select.innerHTML = '<option value="">Nenhuma unidade vinculada ao seu usuário</option>';
             } else {
-                select.innerHTML = '<option value="">— Selecione uma Unidade —</option>' +
-                    userUnits.map(u => `<option value="${u.id}" data-nome="${u.nome}">${u.nome}</option>`).join('');
+                select.innerHTML = '<option value="">— Selecione a Unidade —</option>' +
+                    userUnits.map(u => `<option value="${u.id}" data-nome="${escapeHTML(u.nome)}">${escapeHTML(u.nome)}</option>`).join('');
             }
         } catch (err) {
             console.error("Erro ao carregar unidades:", err);
@@ -301,9 +280,34 @@ export const PautaConfigService = {
         }
     },
 
-    // ⭐ MÉTODO: ADICIONAR SELETOR DE MODO (REVISADO) ⭐
+    // INJETA O CAMPO DE DATA SE ELE NÃO EXISTIR NO HTML ORIGINAL
+    _injetarCampoData() {
+        let dateInput = document.getElementById('create-pauta-date-input');
+        
+        if (!dateInput) {
+            const nameInput = document.getElementById('create-pauta-name-input');
+            if (nameInput) {
+                const dateContainer = document.createElement('div');
+                dateContainer.id = 'pauta-data-container';
+                dateContainer.className = 'mb-4 mt-4';
+                dateContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">📅 Data de Operação <span class="text-red-500">*</span></label>
+                    <input type="date" id="create-pauta-date-input" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                `;
+                // Insere logo abaixo do nome da pauta
+                nameInput.parentNode.insertBefore(dateContainer, nameInput.nextSibling);
+                dateInput = document.getElementById('create-pauta-date-input');
+            }
+        }
+
+        // Preenche com a data de hoje por padrão
+        if (dateInput && !dateInput.value) {
+            dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    },
+
     _adicionarSelectorModo() {
-        const modoAtual = this._app?.currentMode || 'normal'; // Verifica se o sistema está em 'normal' ou 'evento'
+        const modoAtual = this._app?.currentMode || 'normal'; 
         let modoContainer = document.getElementById('pauta-modo-container');
         
         if (!modoContainer) {
@@ -314,7 +318,7 @@ export const PautaConfigService = {
             
             modoContainer = document.createElement('div');
             modoContainer.id = 'pauta-modo-container';
-            modoContainer.className = 'mb-4 sm:mb-6';
+            modoContainer.className = 'mb-4 sm:mb-6 mt-4';
             
             if (dateInput) {
                 dateInput.insertAdjacentElement('afterend', modoContainer);
@@ -323,12 +327,9 @@ export const PautaConfigService = {
             }
         }
 
-        // Se o sistema está no MODO NORMAL, esconde as opções de evento e força a variável
         if (modoAtual === 'normal') {
             modoContainer.innerHTML = `<input type="hidden" name="pauta-modo" value="normal">`;
-        } 
-        // Se está no MODO EVENTO, mostra as opções
-        else {
+        } else {
             modoContainer.innerHTML = `
                 <label class="block text-sm font-medium text-gray-700 mb-2">📋 Tipo de Evento</label>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
@@ -389,24 +390,16 @@ export const PautaConfigService = {
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value;
         
-        // CAPTURAR A UNIDADE
         const unidadeSelect = document.getElementById('create-pauta-unidade-select');
         const unidadeId = unidadeSelect ? unidadeSelect.value : null;
         const unidadeNome = (unidadeSelect && unidadeId) ? unidadeSelect.options[unidadeSelect.selectedIndex].dataset.nome : null;
 
-        // CAPTURAR O MODO SELECIONADO (Radio se for evento, Hidden se for normal)
         const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value 
                              || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value 
                              || 'normal';
     
-        // VALIDAÇÕES RÍGIDAS ANTES DE SALVAR
         if (!unidadeId) {
             showNotification("Por favor, selecione uma Unidade Vinculada.", "error");
-            return;
-        }
-
-        if (!dataOp) {
-            showNotification("A Data de Operação é obrigatória.", "error");
             return;
         }
 
@@ -414,8 +407,12 @@ export const PautaConfigService = {
             showNotification("O nome da pauta não pode ser vazio.", "error");
             return;
         }
+
+        if (!dataOp) {
+            showNotification("A Data de Operação é obrigatória.", "error");
+            return;
+        }
     
-        // Validação: nome duplicado hoje
         const duplicado = await verificarNomeDuplicadoHoje(app.db, pautaName, user.uid);
         if (duplicado) {
             const continuar = confirm(`Já existe uma pauta chamada "${pautaName}" criada hoje. Deseja criar mesmo assim?`);
