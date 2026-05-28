@@ -2513,28 +2513,26 @@ class SIGEPApp {
         const verificarDisponibilidade = () => {
             if (!this.colaboradores || this.colaboradores.length === 0) return;
 
-            const colabsAtivos = this.colaboradores.filter(function(c) { return c.presente === true; });
+            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
             
-            const colabsLivres = colabsAtivos.filter(function(c) {
-                const casosOcupando = this.allAssisted.filter(function(a) {
+            const colabsLivres = colabsAtivos.filter(c => {
+                const casosOcupando = this.allAssisted.filter(a => {
                     const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator && a.assignedCollaborator.name === c.nome;
                     const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
                     return emAtendimentoNormal || pendenteAssinatura;
                 });
                 return casosOcupando.length === 0;
-            }.bind(this));
+            });
 
             const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
             if (!headerActions) return;
 
             const btnId = 'btn-colabs-disponiveis-' + this.currentPauta.id;
             
-            const existingBtns = document.querySelectorAll('[id^="btn-colabs-disponiveis-"]');
-            for (var i = 0; i < existingBtns.length; i++) {
-                if (existingBtns[i].id !== btnId) {
-                    existingBtns[i].remove();
-                }
-            }
+            // Remove botões de outras pautas
+            document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
+                if (btn.id !== btnId) btn.remove();
+            });
 
             let btnEnvelope = document.getElementById(btnId);
 
@@ -2542,23 +2540,20 @@ class SIGEPApp {
                 if (!btnEnvelope) {
                     btnEnvelope = document.createElement('button');
                     btnEnvelope.id = btnId;
-                    btnEnvelope.onclick = function() {
-                        var nomes = '';
-                        for (var j = 0; j < colabsLivres.length; j++) {
-                            nomes += '• ' + colabsLivres[j].nome + ' (' + (colabsLivres[j].cargo || 'Membro') + ')\n';
-                        }
-                        showNotification('Equipe livre no momento na pauta ' + this.currentPauta.name + ':\n\n' + nomes);
-                    }.bind(this);
+                    btnEnvelope.onclick = () => {
+                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                        showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                    };
                     headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
                 }
                 
                 btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-                btnEnvelope.title = colabsLivres.length + " Colaborador(es) Livre(s)";
-                btnEnvelope.innerHTML = '<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">' + colabsLivres.length + ' LIVRE(S)</span>';
+                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
             } else {
                 if (btnEnvelope) btnEnvelope.remove();
             }
-        }.bind(this);
+        };
 
         verificarDisponibilidade();
         this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
