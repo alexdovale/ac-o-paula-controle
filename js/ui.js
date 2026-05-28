@@ -220,7 +220,6 @@ export const UIService = {
             btn.disabled = isClosed;
         });
     
-        // ⭐ CORREÇÃO: Verificar se os elementos existem antes de manipular classList
         const closedAlert = document.getElementById('closed-pauta-alert');
         const closeBtn = document.getElementById('close-pauta-btn');
         const reopenBtn = document.getElementById('reopen-pauta-btn');
@@ -453,7 +452,6 @@ export const UIService = {
 
         this.togglePautaLock(app);
         
-        // ⭐ TRAVA EXCLUSIVA DE ENTRADA: Oculta o botão Chamar Próximo de fábrica para o perfil de Apoio ⭐
         const callNextBtn = document.getElementById('call-next-assisted-btn');
         const isApoio = app.currentUser?.role === 'apoio';
         if (callNextBtn) {
@@ -806,7 +804,6 @@ export const UIService = {
                 </div>
             `;
 
-            // ⭐ PERFIL APOIO: Oculta completamente o botão de avançar para a triagem ⭐
             const atenderButton = canAttend
                 ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
                 : '';
@@ -902,7 +899,6 @@ export const UIService = {
         });
     },
 
-    // ⭐ PERFIL APOIO: Oculta visualmente os botões de avançar no card de Em Atendimento ⭐
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
@@ -1191,8 +1187,7 @@ export const UIService = {
             container.appendChild(card);
         });
     },
-    
-    // ⭐ PERFIL APOIO: Oculta visualmente os botões administrativos no card de Distribuição ⭐
+
     renderDistribuicaoColumn(items, pautaId, userName) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
@@ -1393,7 +1388,7 @@ export const UIService = {
         
         this.renderFormatHelpModal();
     },
-    
+
     renderFormatHelpModal() {
         const modal = document.getElementById('format-help-modal');
         if (!modal) return;
@@ -1534,6 +1529,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
     },
 
+    // ⭐ NOVO MÉTODO: renderPautaCards com layout reorganizado conforme template fornecido ⭐
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1563,35 +1559,48 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
 
             const card = document.createElement('div');
-            card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
+            card.className = `relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'} ${isClosed ? 'opacity-60' : ''}`;
             
-            // CONSTRUTOR DO CARD
             card.innerHTML = `
-                ${isOwner ? `
-                <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
-                </button>` : ''}
+                <!-- Conteúdo Principal -->
+                <div class="p-5">
+                    <div class="flex justify-between items-start">
+                        <h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide">
+                            ${escapeHTML(pauta.unidadeNome || 'Unidade não definida')}
+                        </h2>
+                        ${isOwner ? `
+                        <button class="delete-pauta-btn text-gray-400 hover:text-red-500 transition-colors z-20">
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                            </svg>
+                        </button>
+                        ` : ''}
+                    </div>
 
-                <div>
-                    <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
-                        ${escapeHTML(pauta.unidadeNome || 'Unidade não definida')}
-                    </span>
-                    <h3 class="font-bold text-lg text-gray-800 leading-tight mb-2 pr-8 break-words line-clamp-2">
-                        ${escapeHTML(pauta.name)}
-                    </h3>
-                    <p class="text-xs text-gray-500 mb-4">Membros: ${pauta.members ? pauta.members.length : 1}</p>
-                </div>
-                
-                <div class="pt-4 border-t border-gray-100">
-                    <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em: ${dataCriacaoStr}</p>
-                    <p class="text-[10px] ${isExpired ? 'text-red-500' : 'text-amber-600'} font-bold mt-1">
-                        ${isExpired ? '🚫 EXPIRADA EM:' : 'ELIMINAÇÃO EM:'} ${dataExpiracaoStr}
-                    </p>
-                    <div class="mt-3">
+                    <p class="text-gray-700 font-medium mt-2 break-words">${escapeHTML(pauta.name)}</p>
+                    <p class="text-sm text-gray-500 mt-1">Membros: ${pauta.members ? pauta.members.length : 1}</p>
+
+                    <div class="mt-4">
                         ${isOwner ? 
-                            `<span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">Criador</span>` : 
-                            `<span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">Compartilhada</span>`
+                            `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 border border-green-200">
+                                Criador
+                            </span>` : 
+                            `<span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 border border-blue-200">
+                                Compartilhada
+                            </span>`
                         }
+                    </div>
+                </div>
+
+                <!-- Rodapé com Metadados -->
+                <div class="bg-gray-50 px-5 py-3 border-t border-gray-100 grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-[10px] text-gray-400 uppercase font-bold">Criada em</p>
+                        <p class="text-xs text-gray-600">${dataCriacaoStr}</p>
+                    </div>
+                    <div>
+                        <p class="text-[10px] ${isExpired ? 'text-red-500' : 'text-orange-500'} uppercase font-bold">Eliminação (7 dias)</p>
+                        <p class="text-xs text-gray-600">${dataExpiracaoStr}</p>
                     </div>
                 </div>
             `;
