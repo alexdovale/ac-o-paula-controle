@@ -156,7 +156,23 @@ export const AuthService = {
      */
     async handleAuthState(app, user) {
         try {
-            const userDocRef = doc(app.db, "users", user.uid);
+            // --- INÍCIO DA MIGRAÇÃO TEMPORÁRIA ---
+            const oldRef = doc(app.db, "users", user.uid);
+            const newRef = doc(app.db, "usuarios", user.uid);
+            
+            const newSnap = await getDoc(newRef);
+            
+            if (!newSnap.exists()) {
+                const oldSnap = await getDoc(oldRef);
+                if (oldSnap.exists()) {
+                    await setDoc(newRef, oldSnap.data());
+                    console.log("Migração de documento concluída para: usuarios/" + user.uid);
+                }
+            }
+            // --- FIM DA MIGRAÇÃO TEMPORÁRIA ---
+
+            // Passa a ler da coleção 'usuarios' para refletir a migração
+            const userDocRef = doc(app.db, "usuarios", user.uid);
             const userDoc = await getDoc(userDocRef);
 
             if (userDoc.exists()) {
