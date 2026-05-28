@@ -105,6 +105,9 @@ export const UIService = {
         }
     },
 
+    // ============================================================
+    // RENDERIZAÇÃO DO FILTRO (CORRIGIDO PARA ADMIN E UNIDADES)
+    // ============================================================
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -112,32 +115,67 @@ export const UIService = {
         const isPeriodo = activeFilter === 'periodo';
         const isUnidades = activeFilter === 'unidades';
         
-        // Obter unidades vinculadas do usuário atual (campo CORRETO: unidades)
+        // Verifica se é administrador
+        const isAdmin = app.currentUser?.role === 'admin' || app.currentUser?.role === 'superadmin';
         const userUnidades = app.currentUser?.unidades || [];
-        const hasUnidadesVinculadas = userUnidades.length > 0;
         
-        const dateFiltersHTML = `...`; // (mantém o mesmo)
+        // O botão aparece se tiver unidades ou se for admin
+        const hasUnidadesVinculadas = userUnidades.length > 0 || isAdmin;
         
-        const unidadesFiltersHTML = `
-            <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isUnidades ? '' : 'hidden'}">
-                <div class="flex-1 min-w-[250px]">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selecione a Unidade</label>
-                    <select id="filter-unidade-select" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                        <option value="todas">Todas as unidades vinculadas</option>
-                        ${userUnidades.map(unidade => `<option value="${escapeHTML(unidade.unidadeNome)}">${escapeHTML(unidade.unidadeNome)}</option>`).join('')}
-                    </select>
+        // Reconstrói o HTML do filtro de datas
+        const dateFiltersHTML = `
+            <div id="periodo-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isPeriodo ? '' : 'hidden'} animate-fade-in">
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Inicial</label>
+                    <input type="date" id="filter-data-inicial" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                </div>
+                <div class="flex-1 min-w-[150px]">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Data Final</label>
+                    <input type="date" id="filter-data-final" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
                 </div>
                 <div class="flex-1 min-w-[200px]">
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status da Pauta</label>
-                    <select id="filter-unidade-status" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
-                        <option value="todas">Todas</option>
-                        <option value="ativas">Ativas (não expiradas)</option>
-                        <option value="expiradas">Expiradas</option>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Tipo de Pauta</label>
+                    <select id="filter-tipo-pauta" class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
+                        <option value="todos">Todos os Tipos</option>
+                        <option value="normal">Normal</option>
+                        <option value="agendamento">Agendamento</option>
+                        <option value="mutirao">Mutirão</option>
+                        <option value="plantao">Plantão</option>
+                        <option value="acao_social">Ação Social</option>
                     </select>
                 </div>
                 <div class="flex items-end">
-                    <button id="aplicar-filtro-unidades" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md">
+                    <button id="aplicar-filtro-periodo" class="bg-green-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-green-700 transition shadow-md w-full sm:w-auto">
                         Aplicar Filtro
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        // Define as opções do select de unidades dinamicamente
+        const unidadesOptions = isAdmin 
+            ? `<option value="todas">Todas as Unidades (Visão Admin)</option>` + userUnidades.map(u => `<option value="${escapeHTML(u.unidadeNome)}">${escapeHTML(u.unidadeNome)}</option>`).join('')
+            : `<option value="todas">Todas as minhas unidades vinculadas</option>` + userUnidades.map(u => `<option value="${escapeHTML(u.unidadeNome)}">${escapeHTML(u.unidadeNome)}</option>`).join('');
+
+        const unidadesFiltersHTML = `
+            <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-indigo-50 rounded-lg border border-indigo-100 ${isUnidades ? '' : 'hidden'} animate-fade-in">
+                <div class="flex-1 min-w-[250px]">
+                    <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Unidade</label>
+                    <select id="filter-unidade-select" class="w-full p-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        ${unidadesOptions}
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Status da Pauta</label>
+                    <select id="filter-unidade-status" class="w-full p-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="ativas">Ativas (não expiradas)</option>
+                        <option value="todas">Todas (incluindo expiradas)</option>
+                        <option value="expiradas">Apenas Expiradas</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="aplicar-filtro-unidades" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md w-full sm:w-auto">
+                        Buscar Pautas
                     </button>
                 </div>
             </div>
@@ -145,20 +183,20 @@ export const UIService = {
         
         container.innerHTML = `
             <div class="flex flex-col items-center mb-6">
-                <div class="w-full max-w-sm relative">
+                <div class="w-full max-w-sm relative group">
                     <label for="main-pauta-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1 text-center w-full">Filtro de Exibição</label>
                     <div class="relative">
-                        <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border border-gray-300 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold outline-none transition cursor-pointer text-gray-700">
-                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}> Mostrar Todas as Pautas</option>
-                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}> Pautas com prazo</option>
-                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
-                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
-                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas</option>
-                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}> Minhas Unidades Vinculadas</option>` : ''}
-                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
+                        <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border-2 border-gray-200 hover:border-green-400 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-bold outline-none transition-all cursor-pointer text-gray-700">
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>🌍 Mostrar Todas as Pautas</option>
+                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}>✅ Pautas ativas (com prazo)</option>
+                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}>⏰ Pautas expiradas</option>
+                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}>👑 Criadas por mim</option>
+                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}>🤝 Compartilhadas comigo</option>
+                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}>🏢 Filtrar por Unidade</option>` : ''}
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}>📅 Filtrar por Período / Tipo</option>
                         </select>
-                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
-                            <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
+                        <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-green-600 group-hover:text-green-700">
+                            <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M19 9l-7 7-7-7"></path></svg>
                         </div>
                     </div>
                 </div>
@@ -167,6 +205,7 @@ export const UIService = {
             ${hasUnidadesVinculadas ? unidadesFiltersHTML : ''}
         `;
         
+        // Listeners do filtro Principal
         const filterSelect = document.getElementById('main-pauta-filter');
         const periodoContainer = document.getElementById('periodo-filters-container');
         const unidadesContainer = document.getElementById('unidades-filters-container');
@@ -175,11 +214,9 @@ export const UIService = {
             filterSelect.addEventListener('change', (e) => {
                 const val = e.target.value;
                 
-                // Esconder todos os containers de filtro
                 if (periodoContainer) periodoContainer.classList.add('hidden');
                 if (unidadesContainer) unidadesContainer.classList.add('hidden');
                 
-                // Mostrar o container apropriado
                 if (val === 'periodo' && periodoContainer) {
                     periodoContainer.classList.remove('hidden');
                 } else if (val === 'unidades' && unidadesContainer) {
@@ -190,6 +227,7 @@ export const UIService = {
             });
         }
         
+        // Aplicação do Filtro de Período
         const btnAplicarPeriodo = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicarPeriodo) {
             btnAplicarPeriodo.addEventListener('click', () => {
@@ -202,6 +240,7 @@ export const UIService = {
             });
         }
         
+        // Aplicação do Filtro de Unidades
         const btnAplicarUnidades = document.getElementById('aplicar-filtro-unidades');
         if (btnAplicarUnidades) {
             btnAplicarUnidades.addEventListener('click', () => {
@@ -1562,7 +1601,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         };
     },
 
-    // ⭐ NOVO MÉTODO: renderPautaCards com layout reorganizado conforme template fornecido ⭐
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1599,7 +1637,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 <div class="p-5">
                     <div class="flex justify-between items-start">
                         <h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide">
-                            ${escapeHTML(pauta.unidadeNome || 'Unidade não definida')}
+                            ${escapeHTML(pauta.unidadeNome || pauta.origin || pauta.orgao || 'Unidade não definida')}
                         </h2>
                         ${isOwner ? `
                         <button class="delete-pauta-btn text-gray-400 hover:text-red-500 transition-colors z-20">
