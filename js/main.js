@@ -511,17 +511,9 @@ class SIGEPApp {
             this.voltarParaSelecaoModo();
         });
 
-        document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
-            const modoAtual = this.currentMode;
-            
-            if (modoAtual === 'evento') {
-                const tipoEvento = await this.mostrarSeletorTipoEvento();
-                if (!tipoEvento) return;
-                this.tipoPautaSelecionado = tipoEvento;
-            } else {
-                this.tipoPautaSelecionado = 'normal';
-            }
-            
+                document.getElementById('create-pauta-btn')?.addEventListener('click', () => {
+            // Como o pautaConfig.js já cuida de saber se é Evento ou Normal, 
+            // a gente só precisa abrir o modal de escolher o tipo (Agendamento, Avulso, etc)
             const typeModal = document.getElementById('pauta-type-modal');
             if (typeModal) {
                 typeModal.classList.remove('hidden');
@@ -530,20 +522,6 @@ class SIGEPApp {
             }
         });
 
-        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
-        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
-        const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const toggleDistribuicao = document.getElementById('toggle-distribuicao');
-        const toggleFaltosos = document.getElementById('toggle-faltosos');
-
-        if (pautaSettingsToggle && pautaSettingsPanel) {
-            pautaSettingsToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                pautaSettingsPanel.classList.toggle('hidden');
-                if (!pautaSettingsPanel.classList.contains('hidden')) {
-                    this.loadColumnPreferences();
-                }
-            });
 
             document.addEventListener('click', (e) => {
                 if (pautaSettingsPanel && !pautaSettingsPanel.contains(e.target) && !pautaSettingsToggle.contains(e.target)) {
