@@ -108,7 +108,6 @@ class SIGEPApp {
         localStorage.setItem('sigep_active_screen', 'admin');
         UIService.showScreen('admin');
         this.renderAdminContent();
-        this.setupAdminPanelEvents();
     }
 
     renderAdminContent() {
@@ -190,8 +189,7 @@ class SIGEPApp {
         if (typeof populateUserFilter === 'function') {
             populateUserFilter(this.db);
         }
-        
-        this.setupAdminPanelEvents();
+        this.setupAdminPanelEvents();   
     }
 
     setupAdminPanelEvents() {
@@ -1652,7 +1650,6 @@ class SIGEPApp {
             }
         });
 
-        this.setupAdminPanelEvents();
     }
 
     // ============================================================
