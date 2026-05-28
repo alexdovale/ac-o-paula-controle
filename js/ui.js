@@ -110,6 +110,11 @@ export const UIService = {
         if (!container) return;
         
         const isPeriodo = activeFilter === 'periodo';
+        const isUnidades = activeFilter === 'unidades';
+        
+        // Obter unidades vinculadas ao usuário atual
+        const userUnidades = app.currentUser?.unidadesVinculadas || [];
+        const hasUnidadesVinculadas = userUnidades.length > 0;
         
         const dateFiltersHTML = `
             <div id="periodo-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isPeriodo ? '' : 'hidden'}">
@@ -138,18 +143,44 @@ export const UIService = {
             </div>
         `;
         
+        const unidadesFiltersHTML = `
+            <div id="unidades-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isUnidades ? '' : 'hidden'}">
+                <div class="flex-1 min-w-[250px]">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Selecione a Unidade</label>
+                    <select id="filter-unidade-select" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="todas">Todas as unidades vinculadas</option>
+                        ${userUnidades.map(unidade => `<option value="${escapeHTML(unidade)}">${escapeHTML(unidade)}</option>`).join('')}
+                    </select>
+                </div>
+                <div class="flex-1 min-w-[200px]">
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Status da Pauta</label>
+                    <select id="filter-unidade-status" class="w-full p-2 border border-gray-300 rounded-lg text-sm">
+                        <option value="todas">Todas</option>
+                        <option value="ativas">Ativas (não expiradas)</option>
+                        <option value="expiradas">Expiradas</option>
+                    </select>
+                </div>
+                <div class="flex items-end">
+                    <button id="aplicar-filtro-unidades" class="bg-indigo-600 text-white px-6 py-2 rounded-lg font-bold hover:bg-indigo-700 transition shadow-md">
+                        Aplicar Filtro
+                    </button>
+                </div>
+            </div>
+        `;
+        
         container.innerHTML = `
             <div class="flex flex-col items-center mb-6">
                 <div class="w-full max-w-sm relative">
                     <label for="main-pauta-filter" class="block text-xs font-bold text-gray-500 uppercase mb-1.5 ml-1 text-center w-full">Filtro de Exibição</label>
                     <div class="relative">
                         <select id="main-pauta-filter" class="w-full p-3 pl-4 pr-10 appearance-none border border-gray-300 rounded-xl text-sm bg-white shadow-sm focus:ring-2 focus:ring-green-500 focus:border-green-500 font-semibold outline-none transition cursor-pointer text-gray-700">
-                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}> Mostrar Todas as Pautas</option>
-                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}> Pautas com prazo</option>
-                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}> Pautas expiradas</option>
-                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}> Criadas por mim</option>
-                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}> Compartilhadas</option>
-                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}> Filtrar por Período / Tipo</option>
+                            <option value="all" ${activeFilter === 'all' ? 'selected' : ''}>📋 Mostrar Todas as Pautas</option>
+                            <option value="active" ${activeFilter === 'active' ? 'selected' : ''}>✅ Pautas com prazo</option>
+                            <option value="expired" ${activeFilter === 'expired' ? 'selected' : ''}>🔒 Pautas expiradas</option>
+                            <option value="my" ${activeFilter === 'my' ? 'selected' : ''}>👑 Criadas por mim</option>
+                            <option value="shared" ${activeFilter === 'shared' ? 'selected' : ''}>🤝 Compartilhadas</option>
+                            ${hasUnidadesVinculadas ? `<option value="unidades" ${activeFilter === 'unidades' ? 'selected' : ''}>🏢 Minhas Unidades Vinculadas</option>` : ''}
+                            <option value="periodo" ${activeFilter === 'periodo' ? 'selected' : ''}>📅 Filtrar por Período / Tipo</option>
                         </select>
                         <div class="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500">
                             <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7"></path></svg>
@@ -158,28 +189,55 @@ export const UIService = {
                 </div>
             </div>
             ${dateFiltersHTML}
+            ${hasUnidadesVinculadas ? unidadesFiltersHTML : ''}
         `;
         
         const filterSelect = document.getElementById('main-pauta-filter');
         const periodoContainer = document.getElementById('periodo-filters-container');
+        const unidadesContainer = document.getElementById('unidades-filters-container');
         
         if (filterSelect) {
             filterSelect.addEventListener('change', (e) => {
                 const val = e.target.value;
-                if (val === 'periodo') {
+                
+                // Esconder todos os containers de filtro
+                if (periodoContainer) periodoContainer.classList.add('hidden');
+                if (unidadesContainer) unidadesContainer.classList.add('hidden');
+                
+                // Mostrar o container apropriado
+                if (val === 'periodo' && periodoContainer) {
                     periodoContainer.classList.remove('hidden');
-                } else {
-                    periodoContainer.classList.add('hidden');
+                } else if (val === 'unidades' && unidadesContainer) {
+                    unidadesContainer.classList.remove('hidden');
                 }
+                
                 onFilterChange(val);
             });
         }
         
-        const btnAplicar = document.getElementById('aplicar-filtro-periodo');
-        if (btnAplicar) {
-            btnAplicar.addEventListener('click', () => {
+        const btnAplicarPeriodo = document.getElementById('aplicar-filtro-periodo');
+        if (btnAplicarPeriodo) {
+            btnAplicarPeriodo.addEventListener('click', () => {
                 if (app && typeof app.loadPautasWithFilter === 'function') {
-                    app.loadPautasWithFilter();
+                    const dataInicial = document.getElementById('filter-data-inicial')?.value;
+                    const dataFinal = document.getElementById('filter-data-final')?.value;
+                    const tipoPauta = document.getElementById('filter-tipo-pauta')?.value;
+                    app.loadPautasWithFilter({ tipo: 'periodo', dataInicial, dataFinal, tipoPauta });
+                }
+            });
+        }
+        
+        const btnAplicarUnidades = document.getElementById('aplicar-filtro-unidades');
+        if (btnAplicarUnidades) {
+            btnAplicarUnidades.addEventListener('click', () => {
+                if (app && typeof app.loadPautasWithFilter === 'function') {
+                    const unidadeSelecionada = document.getElementById('filter-unidade-select')?.value;
+                    const statusUnidade = document.getElementById('filter-unidade-status')?.value;
+                    app.loadPautasWithFilter({ 
+                        tipo: 'unidades', 
+                        unidade: unidadeSelecionada,
+                        status: statusUnidade
+                    });
                 }
             });
         }
