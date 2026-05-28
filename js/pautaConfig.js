@@ -271,12 +271,16 @@ export const PautaConfigService = {
     },
 
     _adicionarSelectorModo() {
-        const modoAtual = this._app?.currentMode || 'normal'; 
+        // Correção de segurança para evitar o erro de Optional Chaining (?.)
+        const app = this._app;
+        const modoAtual = (app && app.currentMode) ? app.currentMode : 'normal';
+        
         let modoContainer = document.getElementById('pauta-modo-container');
         
         if (!modoContainer) {
             const dateInput = document.getElementById('create-pauta-date-input');
-            const pai = dateInput?.parentNode || document.getElementById('create-pauta-name-input')?.parentNode;
+            const nameInput = document.getElementById('create-pauta-name-input');
+            const pai = (dateInput && dateInput.parentNode) ? dateInput.parentNode : (nameInput ? nameInput.parentNode : null);
             
             if (!pai) return;
             
