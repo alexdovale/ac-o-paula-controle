@@ -112,43 +112,6 @@ export const UIService = {
         }
     },
 
-    // ============================================================
-    // FUNÇÕES AUXILIARES PARA CARDS COMPACTOS
-    // ============================================================
-    
-    formatarDataHoraCompacta(data) {
-        if (!data) return '—';
-        const d = data.toDate ? data.toDate() : new Date(data);
-        if (isNaN(d.getTime())) return '—';
-        return `${d.toLocaleDateString('pt-BR', {day:'2-digit', month:'2-digit'})} ${d.toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'})}`;
-    },
-
-    getUnidadeOrigem(assisted, app) {
-        // Prioridade: 1. unidadeNome do assistido, 2. unidadeId, 3. da pauta atual, 4. padrão
-        const unidade = assisted.unidadeNome || assisted.unidadeId || app?.currentPautaData?.unidadeNome || 'Sem unidade';
-        return unidade.length > 22 ? unidade.slice(0, 19) + '…' : unidade;
-    },
-
-    mascararCPF(cpf) {
-        if (!cpf || cpf.length < 11) return cpf || '';
-        const numeros = cpf.replace(/\D/g, '');
-        if (numeros.length < 11) return cpf;
-        return numeros.slice(0, 3) + '.***.***-' + numeros.slice(-2);
-    },
-
-    getStatusIcone(status) {
-        const icones = {
-            'aguardando': '⏳',
-            'emAtendimento': '👩‍💻',
-            'atendido': '✅',
-            'faltoso': '🚫',
-            'aguardandoDistribuicao': '⚖️',
-            'aguardandoCorrecao': '🔧',
-            'pauta': '📋'
-        };
-        return icones[status] || '📋';
-    },
-
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -612,38 +575,43 @@ export const UIService = {
         const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
         const canEdit = currentUserRole !== 'apoio'; 
         const isOwner = window.app?.auth?.currentUser?.uid === item.owner;
-        const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
 
         const numAgendamento = item.numeroAgendamento || item.numAgendamento || item.assistedManualNumAgendamento || '';
 
         const card = document.createElement('div');
-        card.className = 'assisted-card relative bg-white rounded-lg shadow-sm border mb-2';
+        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
         card.setAttribute('data-id', item.id);
         
         card.innerHTML = `
-            <div class="p-2.5">
-                <div class="flex items-start justify-between gap-2 mb-0.5">
-                    <span class="font-bold text-slate-800 text-sm truncate flex-1">${escapeHTML(item.name || '').toUpperCase()}</span>
-                    <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full" title="${unidadeOrigem}">🏢 ${unidadeOrigem}</span>
-                </div>
-                
-                <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 mb-1.5">
-                    ${numAgendamento ? `<span class="text-blue-600 font-mono">#${escapeHTML(numAgendamento)}</span>` : ''}
-                    <span>📅 ${item.scheduledTime || '--:--'}</span>
-                    <span>📋 ${escapeHTML(item.subject || 'Sem assunto')}</span>
-                </div>
-                
-                <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                    <div class="flex gap-1">
-                        <button data-id="${item.id}" class="check-in-btn bg-green-600 text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm hover:bg-green-700">Chegada</button>
-                        <button data-id="${item.id}" class="faltou-btn bg-yellow-500 text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm hover:bg-yellow-600">Faltou</button>
-                    </div>
-                    <div class="flex gap-1">
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 hover:text-blue-500 text-[9px] px-1">✏️</button>
-                        ${canDelete && isOwner ? `<button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 text-[9px] px-1">🗑️</button>` : ''}
-                    </div>
-                </div>
+            ${canDelete ? `
+            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                    <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                </svg>
+            </button>` : ''}
+
+            <p class="font-bold text-lg text-gray-800 leading-tight pr-6">${escapeHTML(item.name || '').toUpperCase()}</p>
+            
+            <div class="mt-2 space-y-0.5 text-xs text-gray-700">
+                ${numAgendamento ? `<p class="text-blue-700 font-bold mb-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                <p>Assunto: <span class="font-bold uppercase text-slate-700">${escapeHTML(item.subject || 'Não informado')}</span></p>
+                <p>Agendado: <span class="font-bold text-slate-800">${item.scheduledTime || '--:--'}</span></p>
             </div>
+
+            <div class="mt-4 space-y-2">
+                <div class="grid grid-cols-2 gap-2">
+                    <button data-id="${item.id}" class="check-in-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
+                        Marcar Chegada
+                    </button>
+                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
+                        Faltou
+                    </button>
+                </div>
+                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
+                    Editar Dados
+                </button>
+            </div>
+
             ${this._getStandardizedFooterHtml(item)}
         `;
         return card;
@@ -730,87 +698,177 @@ export const UIService = {
             if (!item || !item.id) return null;
 
             const currentUserRole = window.app?.currentUser?.role;
-            const canEditPriority = currentUserRole !== 'apoio';
+            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canAttend = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
-            
-            const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
-            
+
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
-            card.className = `assisted-card relative bg-white rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200 hover:shadow-md`;
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
-            let timeInfoHtml = `<span class="text-[9px] text-slate-400">⏳ Aguardando</span>`;
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = '📋 Selecionado';
+                let statusIcon = '📋';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = '✏️ Preenchendo'; 
+                    statusIcon = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = '✅ Salvo'; 
+                    statusIcon = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = '📄 PDF Emitido'; 
+                    statusIcon = '📄';
+                }
+
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
+            }
+
+            const nomeSeguro = item.name || 'Nome não informado';
+            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const scheduledTimeSeguro = item.scheduledTime || '--:--';
+            const priorityReasonSeguro = item.priorityReason || '';
+
+            let roomDropdownHtml = '';
+            if (currentPautaData?.type === 'multisala') {
+                const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
+                
+                if (availableRooms.length > 0 && canEditPriority) { 
+                    const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
+                    roomDropdownHtml = `
+                        <div class="ml-auto flex flex-col items-end">
+                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
+                            <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
+                                <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
+                                ${options}
+                            </select>
+                        </div>
+                    `;
+                } else if (item.room) {
+                    roomDropdownHtml = `
+                        <div class="ml-auto flex flex-col items-end">
+                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Sala Atual</label>
+                            <span class="bg-purple-50 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 shadow-sm">${escapeHTML(item.room)}</span>
+                        </div>
+                    `;
+                }
+            }
+
+            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-                        const scheduledTimeSeguro = item.scheduledTime || '--:--';
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
-                            timeInfoHtml = `<span class="text-[9px] text-amber-600">📅 ${scheduledTimeSeguro} | 🚪 ${horaChegada}</span>`;
+                            timeInfoHtml = `
+                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
+                                    </div>
+                                    <div class="w-px h-3 bg-blue-200"></div>
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
+                                    </div>
+                                </div>
+                            `;
                         } else {
-                            timeInfoHtml = `<span class="text-[9px] text-green-600">🚪 ${horaChegada}</span>`;
+                            timeInfoHtml = `
+                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
+                                </div>
+                            `;
                         }
                     }
-                } catch (e) { console.warn(e); }
+                } catch (e) {
+                    console.warn("Erro ao formatar data:", e);
+                }
             }
 
             const numeroOrdem = index + 1;
-            const nomeSeguro = item.name || 'Nome não informado';
-            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const numeroBadge = `
+                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                    ${numeroOrdem}
+                </div>
+            `;
 
+            // ⭐ PERFIL APOIO: Oculta completamente o botão de avançar para a triagem ⭐
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-1.5 px-2 rounded text-[10px] shadow-sm hover:bg-blue-700 transition">Atender</button>`
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
                 : '';
 
-            card.innerHTML = `
-                <div class="p-2.5">
-                    <div class="flex items-start justify-between gap-2 mb-0.5">
-                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                            <span class="font-bold text-slate-800 text-sm truncate">
-                                ${numeroOrdem}. ${escapeHTML(nomeSeguro)}
-                            </span>
-                            ${item.priority === 'URGENTE' ? `<span class="text-[8px] font-black bg-red-100 text-red-700 px-1 py-0.5 rounded-full">🚨</span>` : ''}
+            const actionButtonsHTML = `
+                <div class="absolute top-2 right-10 flex items-center">
+                    <div class="relative">
+                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento" aria-expanded="false" aria-controls="quick-menu-${item.id}">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
+                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                            </svg>
+                        </button>
+                        <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
+                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem"><span>🔄</span> Reagendar</button>
+                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem"><span>📅</span> Agendar</button>
+                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem"><span>🔍</span> Consulta</button>
+                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>⚙️</span> Outros</button>
+                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>✏️</span> Editar Assistido</button>
+                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>👁️</span> Ver Detalhes</button>
                         </div>
-                        <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full whitespace-nowrap shadow-sm" title="${unidadeOrigem}">
-                            🏢 ${unidadeOrigem}
-                        </span>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-1.5 mb-1">
-                        <p class="text-[9px] text-slate-500 truncate flex-1">${escapeHTML(assuntoSeguro)}</p>
-                        ${numAgendamento ? `<span class="text-[8px] font-mono bg-blue-50 text-blue-600 px-1 py-0.5 rounded">#${escapeHTML(numAgendamento)}</span>` : ''}
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-400 mb-1.5">
-                        <span class="flex items-center gap-0.5">📅 ${this.formatarDataHoraCompacta(item.createdAt || item.dataCriacao)}</span>
-                        <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                        ${timeInfoHtml}
-                        ${item.room ? `<span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span><span class="text-purple-500">🚪 ${escapeHTML(item.room)}</span>` : ''}
-                    </div>
-                    
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                        <div class="flex gap-1">
-                            ${atenderButton}
-                            <button data-id="${item.id}" class="priority-btn text-[9px] font-bold ${item.priority === 'URGENTE' ? 'bg-orange-100 text-orange-700' : 'bg-red-50 text-red-600'} px-2 py-1 rounded hover:bg-opacity-80">⚡</button>
-                        </div>
-                        <div class="flex gap-1">
-                            <button data-id="${item.id}" class="quick-action-toggle text-slate-400 hover:text-blue-500 text-[9px] px-1">⋮</button>
-                            ${canDelete ? `<button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 text-[9px] px-1">🗑️</button>` : ''}
-                        </div>
-                    </div>
-                    
-                    <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-2 bottom-12 bg-white rounded-lg shadow-xl border z-30 py-1 min-w-[120px]">
-                        <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-1.5 text-[10px] hover:bg-amber-50">🔄 Reagendar</button>
-                        <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-1.5 text-[10px] hover:bg-emerald-50">📅 Agendar</button>
-                        <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-1.5 text-[10px] hover:bg-purple-50">🔍 Consulta</button>
-                        <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-1.5 text-[10px] hover:bg-gray-50">✏️ Editar</button>
-                        <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-1.5 text-[10px] hover:bg-gray-50">👁️ Detalhes</button>
                     </div>
                 </div>
+            `;
+
+            card.innerHTML = `
+                ${numeroBadge}
+                ${canAttend ? actionButtonsHTML : ''} 
+                ${canDelete ? `
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>` : ''}
+                <div class="flex flex-col h-full">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
+                    
+                    ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                    
+                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <div class="flex items-end justify-between w-full mb-2 gap-2">
+                        <div class="flex flex-wrap items-center gap-2">
+                            ${timeInfoHtml}
+                        </div>
+                        ${roomDropdownHtml}
+                    </div>
+                    ${docStatusHtml}
+                    <div class="mt-4 grid grid-cols-2 gap-2">
+                        ${atenderButton ? atenderButton : ''}
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide">Voltar para Pauta</button>
+                    </div>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
+                </div>
+                ${this._getStandardizedFooterHtml(item)}
             `;
             
             const roomSelect = card.querySelector('.change-room-select');
@@ -851,19 +909,19 @@ export const UIService = {
         });
     },
 
+    // ⭐ PERFIL APOIO: Oculta visualmente os botões de avançar no card de Em Atendimento ⭐
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
             const canDelegateOrFinalize = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            
-            const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
-            
+
             const isDelegated = !!(item.assignedCollaborator && item.assignedCollaborator.name);
+            const canDelegate = canDelegateOrFinalize && !isDelegated;
             const delegateBtnClass = isDelegated ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600';
-            
+
             const card = document.createElement('div');
-            card.className = `assisted-card relative bg-white rounded-lg shadow-sm border-l-4 border-l-purple-400 mb-2`;
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
             card.setAttribute('data-id', item.id);
             
             const startTime = item.inAttendanceTime ? 
@@ -872,43 +930,89 @@ export const UIService = {
             const atendenteNome = this.getAttendantName(item);
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
+            const historicoTransferenciaHtml = item.historicoTransferencia 
+                ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
+                       <span class="text-xs">🔄</span> 
+                       <span>${escapeHTML(item.historicoTransferencia)}</span>
+                   </div>` 
+                : '';
+
+            let docStatusHtml = '';
+            if (item.selectedAction) {
+                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusText = '📋 Selecionado';
+                let statusIcon = '📋';
+                
+                if (item.documentState === 'filling') { 
+                    statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                    statusText = '✏️ Preenchendo'; 
+                    statusIcon = '✏️';
+                } else if (item.documentState === 'saved') { 
+                    statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                    statusText = '✅ Salvo'; 
+                    statusIcon = '✅';
+                } else if (item.documentState === 'pdf') { 
+                    statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                    statusText = '📄 PDF Emitido'; 
+                    statusIcon = '📄';
+                }
+
+                docStatusHtml = `
+                    <div class="mt-2 flex flex-col gap-1">
+                        <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
+                            <span>📂</span> 
+                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                        </span>
+                        <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                            <span>${statusIcon}</span>
+                            <span class="hidden xs:inline">${statusText}</span>
+                        </span>
+                    </div>`;
+            }
+
+            const buttonsContainerHtml = canDelegateOrFinalize 
+                ? `<div class="mt-4 flex flex-col gap-2">
+                        <div class="grid grid-cols-2 gap-2">
+                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
+                                Delegar
+                            </button>
+                            <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                                Finalizar / Avançar
+                            </button>
+                        </div>
+                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                            Mover para Fila
+                        </button>
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
+                            Ver Detalhes
+                        </button>
+                   </div>`
+                : `<div class="mt-4 flex flex-col gap-2">
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                            👁️ Ver Detalhes / Checklist
+                        </button>
+                   </div>`;
+
             card.innerHTML = `
-                <div class="p-2.5">
-                    <div class="flex items-start justify-between gap-2 mb-0.5">
-                        <span class="font-bold text-slate-800 text-sm truncate flex-1">
-                            ${index + 1}. ${escapeHTML(item.name || '')}
-                        </span>
-                        <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full" title="${unidadeOrigem}">
-                            🏢 ${unidadeOrigem}
-                        </span>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 mb-1">
-                        <span>👤 ${escapeHTML(atendenteNome)}</span>
-                        <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                        <span>⏱️ ${startTime}</span>
-                        ${numAgendamento ? `<span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span><span class="text-blue-500">#${escapeHTML(numAgendamento)}</span>` : ''}
-                    </div>
-                    
-                    <p class="text-[9px] text-slate-400 truncate mb-2">${escapeHTML(item.subject || 'Sem assunto')}</p>
-                    
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                        <div class="flex gap-1">
-                            ${canDelegateOrFinalize ? `
-                                <button data-id="${item.id}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm" ${canDelegateOrFinalize && !isDelegated ? '' : 'disabled'}>
-                                    Delegar
-                                </button>
-                                <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm hover:bg-green-700">
-                                    Finalizar
-                                </button>
-                            ` : ''}
-                        </div>
-                        <div class="flex gap-1">
-                            <button data-id="${item.id}" class="view-details-btn text-indigo-500 text-[9px] px-1">👁️</button>
-                            ${canDelete ? `<button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 text-[9px] px-1">🗑️</button>` : ''}
-                        </div>
-                    </div>
-                </div>
+                ${canDelete ? `
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                        <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                    </svg>
+                </button>` : ''}
+
+                <p class="font-bold text-lg text-gray-800 leading-tight">${index + 1}. ${escapeHTML(item.name || '')}</p>
+                ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mt-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
+                <p class="text-xs text-gray-400 mt-1">Início do Tempo: ${startTime}</p>
+
+                ${historicoTransferenciaHtml}
+                ${docStatusHtml}
+                ${buttonsContainerHtml}
+
+                ${this._getStandardizedFooterHtml(item)}
             `;
             return card;
         } catch (error) {
@@ -941,10 +1045,9 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
 
             const card = document.createElement('div');
-            card.className = 'assisted-card relative bg-white rounded-lg shadow-sm border mb-2';
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
             card.setAttribute('data-id', item.id);
             
             const arrivalT = item.arrivalTime ? 
@@ -960,37 +1063,63 @@ export const UIService = {
                 : 'bg-slate-100 text-slate-300';
 
             card.innerHTML = `
-                <div class="p-2.5">
-                    <div class="flex items-start justify-between gap-2 mb-0.5">
-                        <span class="font-bold text-slate-800 text-sm truncate flex-1">${escapeHTML(item.name || '')}</span>
-                        <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full" title="${unidadeOrigem}">🏢 ${unidadeOrigem}</span>
-                        <button data-id="${item.id}" class="toggle-confirmed-atendido w-5 h-5 rounded-full border flex items-center justify-center ${confirmButton} text-[8px]" ${canToggleConfirmed ? '' : 'disabled'}>✓</button>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 mb-1">
-                        ${numAgendamento ? `<span class="text-blue-600">#${escapeHTML(numAgendamento)}</span>` : ''}
-                        <span>📋 ${escapeHTML(item.subject || 'Sem assunto')}</span>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-2 text-[9px] text-slate-400 mb-1.5">
-                        <span>📅 ${item.scheduledTime || '---'}</span>
-                        <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                        <span>🚪 ${arrivalT}</span>
-                        <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                        <span>✅ ${attendedT}</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                        <span class="text-[9px] text-gray-500">👤 ${escapeHTML(atendenteNome)}</span>
-                        <div class="flex gap-1">
-                            <button data-id="${item.id}" class="manage-demands-btn text-blue-500 text-[9px] px-1" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>📋</button>
-                            <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 text-[9px] px-1">✏️</button>
-                            <button data-id="${item.id}" class="edit-attendant-btn text-green-600 text-[9px] px-1">👤</button>
-                            <button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 text-[9px] px-1" ${canDelete ? '' : 'disabled'}>🗑️</button>
-                        </div>
-                    </div>
-                    ${this._getStandardizedFooterHtml(item)}
+                <div class="flex justify-between items-start">
+                    <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm" ${canToggleConfirmed ? '' : 'disabled'}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
+                        </svg>
+                    </button>
                 </div>
+                
+                ${numAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                
+                ${item.tipoAcaoRapida ? (() => {
+                    const acaoCfg = {
+                        'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
+                        'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
+                        'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
+                        'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
+                    }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
+                    return `<div class="mt-1 mb-2">
+                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
+                            ${acaoCfg.icon} ${acaoCfg.label}
+                        </span>
+                    </div>`;
+                })() : ''}
+                
+                <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                    <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
+                    <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
+                    <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
+                </div>
+
+                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
+                    <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
+                    <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
+                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
+                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
+                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
+                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
+                    </div>
+                </div>
+
+                ${item.arquivoPdfConteudo ? `
+                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                        📄 Baixar Protocolo
+                    </a>
+                ` : ''}
+
+                <div class="pt-3 border-t">
+                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
+                        <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
+                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
+                            Mover de Volta
+                        </button>
+                    </div>
+                </div>
+                ${this._getStandardizedFooterHtml(item)}
             `;
             return card;
         } catch (error) {
@@ -1014,13 +1143,12 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
             const isConfirmed = item.isConfirmed || false;
 
-            card.className = 'assisted-card relative bg-white rounded-lg shadow-sm border mb-2 opacity-90';
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4 opacity-90';
             card.setAttribute('data-id', item.id);
 
             const confirmButtonClass = isConfirmed 
@@ -1028,37 +1156,44 @@ export const UIService = {
                 : 'bg-slate-100 text-slate-300';
 
             card.innerHTML = `
-                <div class="p-2.5">
-                    <div class="flex items-start justify-between gap-2 mb-0.5">
-                        <div class="flex items-center gap-1.5 flex-1 min-w-0">
-                            <span class="font-bold text-slate-800 text-sm truncate">${escapeHTML(item.name || '').toUpperCase()}</span>
-                            <span class="text-[8px] font-black text-purple-600 bg-purple-50 px-1 py-0.5 rounded">🚫</span>
-                        </div>
-                        <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full" title="${unidadeOrigem}">🏢 ${unidadeOrigem}</span>
-                        <button data-id="${item.id}" class="toggle-confirmed-faltoso w-5 h-5 rounded-full border flex items-center justify-center ${confirmButtonClass} text-[8px]" ${canToggleConfirmed ? '' : 'disabled'}>✓</button>
+                <div class="flex justify-between items-start">
+                    <div>
+                        <p class="font-bold text-lg md:text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
+                        <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
                     </div>
                     
-                    <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 mb-1">
-                        ${numAgendamento ? `<span class="text-blue-600">#${escapeHTML(numAgendamento)}</span>` : ''}
-                        <span>📋 ${escapeHTML(item.subject || 'Sem assunto')}</span>
-                    </div>
-                    
-                    <div class="flex flex-wrap items-center gap-2 text-[9px] text-slate-400 mb-1.5">
-                        <span>📅 ${item.scheduledTime || '---'}</span>
-                        <span class="w-0.5 h-0.5 rounded-full bg-slate-300"></span>
-                        <span>⚠️ ${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'}) : '--:--'}</span>
-                    </div>
-                    
-                    <div class="flex items-center justify-between gap-2 pt-1 border-t border-slate-100">
-                        <span class="text-[8px] text-gray-400 italic">${isConfirmed ? '✓ Lançado no Verde' : '⏳ Pendente'}</span>
-                        <div class="flex gap-1">
-                            <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 text-[9px] px-1">✏️</button>
-                            <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn text-orange-500 text-[9px] px-1" ${canRevert ? '' : 'disabled'}>↩️</button>
-                            <button data-id="${item.id}" class="delete-btn text-slate-300 hover:text-red-500 text-[9px] px-1" ${canDelete ? '' : 'disabled'}>🗑️</button>
-                        </div>
-                    </div>
-                    ${this._getStandardizedFooterHtml(item)}
+                    <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                            <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
+                        </svg>
+                    </button>
                 </div>
+                
+                ${numAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                
+                <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
+                    <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
+                    <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
+                </div>
+
+                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
+                    <p class="text-gray-400 italic">Status: <span class="${isConfirmed ? 'text-green-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente no Verde'}</span></p>
+                    <div class="flex gap-3">
+                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canRevert ? '' : 'disabled'}>Dados</button>
+                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
+                    </div>
+                </div>
+
+                <div class="pt-3 border-t">
+                    <div class="flex flex-col sm:flex-row justify-end items-center gap-2">
+                        <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 px-6 rounded-lg text-[9px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
+                            Reativar Assistido
+                        </button>
+                    </div>
+                </div>
+
+                ${this._getStandardizedFooterHtml(item)}
             `;
             container.appendChild(card);
         });
@@ -1117,45 +1252,120 @@ export const UIService = {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole !== 'apoio';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-                const unidadeOrigem = this.getUnidadeOrigem(item, window.app);
                 const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
                 const card = document.createElement('div');
-                card.className = 'assisted-card relative bg-white p-3 rounded-lg shadow-sm border border-cyan-200 mb-2';
+                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
                 card.setAttribute('data-id', item.id);
                 
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
                 const numeroOrdem = index + 1;
+                const numeroBadge = `
+                    <div class="absolute -left-2 -top-2 w-8 h-8 bg-cyan-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                        ${numeroOrdem}
+                    </div>
+                `;
+
                 const badgeStatus = item.status === 'aguardandoCorrecao' 
-                    ? `<span class="absolute top-1 left-1 bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded">P/ Avaliação</span>` 
-                    : `<span class="absolute top-1 left-1 bg-blue-100 text-blue-700 text-[8px] font-black px-1.5 py-0.5 rounded">P/ Assinatura</span>`;
+                    ? `<span class="absolute top-2 left-8 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>` 
+                    : `<span class="absolute top-2 left-8 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
+
+                const historicoTransferenciaHtml = item.historicoTransferencia 
+                    ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
+                           <span class="text-xs">🔄</span> 
+                           <span>${escapeHTML(item.historicoTransferencia)}</span>
+                       </div>` 
+                    : '';
+
+                let docStatusHtml = '';
+                if (item.selectedAction) {
+                    let statusColor = 'bg-gray-100 text-gray-600';
+                    let statusText = '📋 Selecionado';
+                    let statusIcon = '📋';
+                    
+                    if (item.documentState === 'filling') { 
+                        statusColor = 'bg-amber-100 text-amber-700 animate-pulse'; 
+                        statusText = '✏️ Preenchendo'; 
+                        statusIcon = '✏️';
+                    } else if (item.documentState === 'saved') { 
+                        statusColor = 'bg-green-100 text-green-700 font-bold'; 
+                        statusText = '✅ Salvo'; 
+                        statusIcon = '✅';
+                    } else if (item.documentState === 'pdf') { 
+                        statusColor = 'bg-purple-100 text-purple-700 font-bold'; 
+                        statusText = '📄 PDF Emitido'; 
+                        statusIcon = '📄';
+                    }
+
+                    docStatusHtml = `
+                        <div class="mt-2 flex flex-col gap-1">
+                            <span class="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 truncate flex items-center gap-1">
+                                <span>📂</span> 
+                                <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
+                                <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                            </span>
+                            <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
+                                <span>${statusIcon}</span>
+                                <span class="hidden xs:inline">${statusText}</span>
+                            </span>
+                        </div>`;
+                }
+
+                const deleteBtnHtml = canDelete ? `
+                    <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
+                        </svg>
+                    </button>` : '';
 
                 const actionControlsHtml = canManageDistribution
-                    ? `<div class="flex gap-1 mt-2">
-                            <button onclick="window.open('${linkExterno}', '_blank')" class="flex-1 bg-cyan-600 text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm hover:bg-cyan-700">Abrir</button>
-                            <button data-id="${item.id}" class="delegate-finalization-btn flex-1 bg-green-600 text-white font-bold py-1 px-2 rounded text-[9px] shadow-sm hover:bg-green-700">Concluir</button>
-                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn flex-1 bg-slate-100 text-slate-600 border font-bold py-1 px-2 rounded text-[9px]">↩️</button>
+                    ? `<div class="mt-4 flex flex-col gap-2">
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide">
+                                    Abrir Link
+                                </button>
+                                <button data-id="${item.id}" class="delegate-finalization-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-green-700 transition active:scale-95 uppercase tracking-wide">
+                                    Concluir Protocolo
+                                </button>
+                            </div>
+                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide">
+                                Reverter para Fila
+                            </button>
                        </div>`
-                    : `<button data-id="${item.id}" class="view-details-btn text-indigo-500 text-[9px] font-bold w-full border p-1 rounded mt-1">👁️ Detalhes</button>`;
+                    : `<div class="mt-4">
+                            <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold w-full border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                                👁️ Ver Detalhes / Checklist
+                            </button>
+                       </div>`;
 
                 card.innerHTML = `
+                    ${numeroBadge}
                     ${badgeStatus}
-                    <div class="pl-16">
-                        <div class="flex items-start justify-between gap-2 mb-0.5">
-                            <span class="font-bold text-slate-800 text-sm">${numeroOrdem}. ${escapeHTML(item.name || '')}</span>
-                            <span class="text-[8px] font-mono bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded-full" title="${unidadeOrigem}">🏢 ${unidadeOrigem}</span>
-                        </div>
-                        
-                        <div class="flex flex-wrap items-center gap-1.5 text-[9px] text-slate-500 mb-1">
-                            ${numAgendamento ? `<span class="text-blue-600">#${escapeHTML(numAgendamento)}</span>` : ''}
-                            <span>📋 ${escapeHTML(item.subject || 'Sem assunto')}</span>
-                        </div>
-                        
-                        ${item.numeroProcesso ? `<span class="text-[8px] text-blue-600 font-mono">📄 ${escapeHTML(item.numeroProcesso)}</span>` : ''}
-                        
-                        ${actionControlsHtml}
+                    ${deleteBtnHtml}
+                    
+                    <div class="pr-8 pt-4">
+                        <p class="font-bold text-lg text-gray-800 leading-tight">${escapeHTML(item.name || '')}</p>
                     </div>
+
+                    <div class="mt-2 space-y-1">
+                        ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                        <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                        ${item.numeroProcesso ? `<p class="text-xs text-blue-700 font-bold">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
+                    </div>
+
+                    ${historicoTransferenciaHtml}
+                    ${docStatusHtml}
+                    
+                    ${item.notasRevisao ? `
+                        <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-2.5 rounded-lg border border-yellow-200 shadow-sm leading-snug">
+                            <span class="font-black text-yellow-900 block mb-0.5">⚠️ NOTA PARA O DEFENSOR:</span> 
+                            ${escapeHTML(item.notasRevisao)}
+                        </div>` 
+                    : ''}
+                    
+                    ${actionControlsHtml}
+                    
                     ${this._getStandardizedFooterHtml(item)}
                 `;
                 cardsWrapper.appendChild(card);
