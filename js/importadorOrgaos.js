@@ -4,6 +4,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 import { logAction } from './admin.js';
+import { abrirModalNovaRecepcao } from './novaRecepcao.js'; // 👈 IMPORTAÇÃO DO MODAL NOVO!
 
 // ─── HELPER ───────────────────────────────────────────────────────────────────
 
@@ -156,7 +157,6 @@ export const ImportadorOrgaosService = {
         return `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-5xl max-h-[92vh] overflow-hidden flex flex-col">
 
-            <!-- Cabeçalho -->
             <div class="bg-gradient-to-r from-zinc-800 to-zinc-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-white flex items-center gap-2">📁 Importador e Gerenciador de Órgãos</h2>
@@ -165,7 +165,6 @@ export const ImportadorOrgaosService = {
                 <button id="fechar-importador" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
 
-            <!-- Abas -->
             <div class="flex border-b border-zinc-200 bg-white shrink-0">
                 <button class="tab-imp active-tab py-3 px-5 font-bold text-sm text-zinc-800 border-b-2 border-zinc-800" data-tab="upload">📤 Upload</button>
                 <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="preview">👁️ Prévia</button>
@@ -173,10 +172,8 @@ export const ImportadorOrgaosService = {
                 <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="modelo">📄 Modelo</button>
             </div>
 
-            <!-- Conteúdo -->
             <div class="flex-1 overflow-y-auto min-h-0">
 
-                <!-- ABA: UPLOAD -->
                 <div id="painel-upload" class="p-6">
                     <div class="border-2 border-dashed border-zinc-300 rounded-2xl p-10 text-center hover:border-zinc-500 transition cursor-pointer" id="drop-zone">
                         <input type="file" id="arquivo-estrutura" accept=".csv,.json" class="hidden">
@@ -202,7 +199,6 @@ export const ImportadorOrgaosService = {
                     </div>
                 </div>
 
-                <!-- ABA: PREVIEW -->
                 <div id="painel-preview" class="hidden p-6">
                     <div class="flex justify-between items-center mb-4">
                         <h3 class="font-black text-zinc-800 text-base">Prévia e ajustes antes de importar</h3>
@@ -216,12 +212,8 @@ export const ImportadorOrgaosService = {
                     <div id="preview-estrutura" class="space-y-4"></div>
                 </div>
 
-                <!-- ================================================================
-                     ABA: ESTRUTURA ATUAL (GERENCIAMENTO PROFISSIONAL)
-                     ================================================================ -->
                 <div id="painel-estrutura" class="hidden flex flex-col" style="height: calc(92vh - 120px);">
 
-                    <!-- Toolbar de busca e filtros -->
                     <div class="px-6 pt-5 pb-4 border-b border-zinc-200 bg-zinc-50 space-y-3 shrink-0">
                         <div class="flex items-center justify-between gap-3">
                             <div>
@@ -234,7 +226,6 @@ export const ImportadorOrgaosService = {
                             </button>
                         </div>
 
-                        <!-- Barra de pesquisa -->
                         <div class="relative">
                             <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
                             <input
@@ -249,7 +240,6 @@ export const ImportadorOrgaosService = {
                             </button>
                         </div>
 
-                        <!-- Filtros por tipo + contador -->
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-[10px] font-black text-zinc-400 uppercase tracking-wider shrink-0">Filtrar:</span>
                             <button class="est-filtro-tipo" data-tipo="todos">Todos</button>
@@ -261,7 +251,6 @@ export const ImportadorOrgaosService = {
                         </div>
                     </div>
 
-                    <!-- Tabela com scroll próprio -->
                     <div class="flex-1 overflow-y-auto min-h-0">
                         <div id="lista-estrutura-atual">
                             <div class="flex justify-center py-12">
@@ -271,7 +260,6 @@ export const ImportadorOrgaosService = {
                     </div>
                 </div>
 
-                <!-- ABA: MODELO -->
                 <div id="painel-modelo" class="hidden p-6 space-y-5">
                     <div class="bg-zinc-900 text-white p-4 rounded-xl overflow-x-auto text-xs">
                         <p class="text-zinc-400 font-bold mb-2">CSV — Cabeçalho:</p>
@@ -320,7 +308,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                 </div>
             </div>
 
-            <!-- Rodapé -->
             <div class="bg-zinc-50 px-6 py-3 flex justify-end border-t border-zinc-200 shrink-0">
                 <button id="fechar-importador-footer" class="bg-zinc-200 text-zinc-700 px-4 py-2 rounded-lg hover:bg-zinc-300 text-sm font-bold transition">Fechar</button>
             </div>
@@ -356,12 +343,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                 });
                 document.getElementById(`painel-${tab.dataset.tab}`)?.classList.remove('hidden');
 
-                // ─── DICA DE INTEGRAÇÃO ───────────────────────────────────────
-                // Quando o usuário clica na aba "estrutura", garantimos que a
-                // toolbar já está no DOM antes de fazer o bind dos controles.
-                // _bindControles() é chamado aqui e também dentro do onSnapshot
-                // (com guard para evitar double-bind). Isso resolve o caso em
-                // que o snapshot já disparou antes da aba ser aberta pela 1ª vez.
                 if (tab.dataset.tab === 'estrutura') {
                     this._bindControlesEstrutura();
                 }
@@ -861,7 +842,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                         const recs = this._estRecepcoesPorUnidade[unidade.id] || [];
                         const tiposUnicos = [...new Set(recs.map(r => r.tipo))];
                         return `
-                        <!-- Linha principal -->
                         <tr class="est-linha-unidade border-b border-zinc-100 hover:bg-zinc-50 transition cursor-pointer group"
                             data-unidade-id="${unidade.id}">
                             <td class="px-4 py-3.5 text-center">
@@ -909,7 +889,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                 </div>
                             </td>
                         </tr>
-                        <!-- Linha expandida (recepções) -->
                         <tr class="est-linha-detalhe hidden" data-unidade-id="${unidade.id}">
                             <td colspan="6" class="bg-zinc-50 border-b border-zinc-200 px-8 py-4">
                                 ${recs.length === 0
@@ -1001,7 +980,11 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         lista.querySelectorAll('.est-btn-add-rec').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
-                this._abrirFormRecepcao({ unidadeId: btn.dataset.unidadeId, unidadeNome: btn.dataset.unidadeNome }, true);
+                // ─── AQUI A LIGAÇÃO COM O MODAL NOVO! ───
+                abrirModalNovaRecepcao(this._app, {
+                    unidadeId: btn.dataset.unidadeId,
+                    unidadeNome: btn.dataset.unidadeNome
+                });
             });
         });
 
@@ -1158,13 +1141,6 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             // Renderiza a tabela com os dados atuais
             this._renderTabelaEstrutura();
 
-            // ─── DICA DE INTEGRAÇÃO ───────────────────────────────────────────
-            // Se a aba "estrutura" já estava visível quando o snapshot disparou
-            // (ex: abrirGerenciador), fazemos o bind dos controles agora.
-            // Se a aba ainda não foi aberta, o bind acontecerá quando o usuário
-            // clicar nela (ver _setupEventos > tab.click > estrutura).
-            // O guard _estControlesBound garante que só fazemos o bind 1 vez,
-            // independentemente de qual caminho chegou primeiro.
             const painelVisivel = !document.getElementById('painel-estrutura')?.classList.contains('hidden');
             if (painelVisivel) {
                 this._bindControlesEstrutura();
