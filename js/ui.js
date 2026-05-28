@@ -6,23 +6,16 @@ import { PainelGeralService } from './painelGeralService.js';
 
 export const UIService = {
     showScreen(screenName) {
-        // Telas de entrada
         document.getElementById('loading-container')?.classList.toggle('hidden', screenName !== 'loading');
         document.getElementById('login-container')?.classList.toggle('hidden', screenName !== 'login');
-        
-        // 🚀 NOVAS TELAS ADICIONADAS: Seleção de Modo e Atendimento Externo
         document.getElementById('modo-selection-screen')?.classList.toggle('hidden', screenName !== 'modoSelection');
         document.getElementById('atendimento-externo-container')?.classList.toggle('hidden', screenName !== 'atendimentoExterno');
-        
-        // Telas principais do sistema
         document.getElementById('pauta-selection-container')?.classList.toggle('hidden', screenName !== 'pautaSelection');
         document.getElementById('app-container')?.classList.toggle('hidden', screenName !== 'app');
         document.getElementById('dashboard-container')?.classList.toggle('hidden', screenName !== 'dashboard');
         document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
         document.getElementById('admin-container')?.classList.toggle('hidden', screenName !== 'admin');
 
-
-        // Só grava o último acesso se não for tela de carregamento ou login
         if (screenName !== 'loading' && screenName !== 'login') {
             localStorage.setItem('lastScreen', screenName);
         }
@@ -1542,14 +1535,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     renderPautaCards(pautas, userId, userEmail, app) {
-    const container = document.getElementById('pautas-list');
+        const container = document.getElementById('pautas-list');
         if (!container) return;
-    
+
         if (!pautas || pautas.length === 0) {
             container.innerHTML = '<p class="col-span-full text-center py-8 text-gray-500 font-medium">Nenhuma pauta encontrada.</p>';
             return;
         }
-    
+
         container.innerHTML = '';
         
         pautas.forEach(pauta => {
@@ -1559,7 +1552,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             let dataCriacaoStr = '---';
             let dataExpiracaoStr = '';
             let isExpired = false;
-    
+
             if (pauta.createdAt) {
                 const creationDate = new Date(pauta.createdAt);
                 dataCriacaoStr = creationDate.toLocaleDateString('pt-BR');
@@ -1568,17 +1561,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 dataExpiracaoStr = expirationDate.toLocaleDateString('pt-BR');
                 isExpired = new Date() > expirationDate;
             }
-    
+
             const card = document.createElement('div');
             card.className = `relative bg-white p-6 rounded-xl shadow-sm border border-gray-100 hover:shadow-md transition-all flex flex-col justify-between min-h-[220px] ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer'} ${isClosed ? 'opacity-60' : ''}`;
             
-            // CONSTRUTOR DO CARD
             card.innerHTML = `
                 ${isOwner ? `
                 <button class="delete-pauta-btn absolute top-4 right-4 text-gray-300 hover:text-red-500 transition-colors z-20">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16"><path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/></svg>
                 </button>` : ''}
-    
+
                 <div>
                     <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2 py-0.5 rounded-full uppercase tracking-wider mb-2 inline-block">
                         ${escapeHTML(pauta.orgaoNome || 'Órgão não definido')}
@@ -1595,22 +1587,18 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                         ${isExpired ? '🚫 EXPIRADA EM:' : 'ELIMINAÇÃO EM:'} ${dataExpiracaoStr}
                     </p>
                     <div class="mt-3">
-                        ${isOwner ? 
-                            `<span class="bg-green-50 text-green-600 text-[9px] font-black px-2 py-1 rounded border border-green-100 uppercase flex items-center w-max gap-1">
-                                Criador
-                            </span>` : 
-                            `<span class="bg-blue-50 text-blue-600 text-[9px] font-black px-2 py-1 rounded border border-blue-100 uppercase flex items-center w-max gap-1">
-                                Compartilhada
-                            </span>`
-                        }
+                        <span class="bg-${isOwner ? 'green' : 'blue'}-50 text-${isOwner ? 'green' : 'blue'}-600 text-[9px] font-black px-2 py-1 rounded border border-${isOwner ? 'green' : 'blue'}-100 uppercase flex items-center w-max gap-1">
+                            ${isOwner ? 'Criador' : 'Compartilhada'}
+                        </span>
                     </div>
+                </div>
             `;
-    
+
             card.querySelector('.delete-pauta-btn')?.addEventListener('click', (e) => {
                 e.stopPropagation();
                 app.deletePauta(pauta.id, pauta.name);
             });
-    
+
             card.onclick = () => {
                 if (isExpired) {
                     this.showExpiredPautaModal(pauta, app);
@@ -1618,9 +1606,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
                 app.loadPauta(pauta.id, pauta.name, pauta.type);
             };
-    
+
             container.appendChild(card);
         });
     }
-
-};
+}; // Fim do objeto UIService
