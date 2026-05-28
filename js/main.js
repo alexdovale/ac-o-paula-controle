@@ -62,6 +62,7 @@ class SIGEPApp {
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         
         this.init();
+        console.log("SIGEPApp: init() foi chamado.");
     }
 
     async init() {
