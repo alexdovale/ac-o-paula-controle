@@ -558,11 +558,12 @@ export const abrirGerenciadorUnidades = async (db) => {
         container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (globalApp) {
-                    abrirModalNovaRecepcao(globalApp, {
-                        unidadeId: btn.dataset.id,
-                        unidadeNome: btn.dataset.nome,
-                        orgaoId: btn.dataset.id
-                    });
+                    // E na leitura:
+abrirModalNovaRecepcao(globalApp, {
+    unidadeId: btn.dataset.id,
+    unidadeNome: btn.dataset.nome,
+    orgaoId: btn.dataset.orgaoid   // ← campo correto
+});
                 } else {
                     showNotification("Módulo de Nova Recepção não carregado.", "error");
                 }
@@ -712,7 +713,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 
 export const loadUsersList = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const snapshot = await getDocs(collection(db, "usuarios"));
         const allUsers = [];
         snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         
@@ -1132,7 +1133,7 @@ export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const snapshot = await getDocs(collection(db, "usuarios"));
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
