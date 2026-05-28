@@ -292,7 +292,7 @@ export const RecepcaoConfigService = {
         let html = `
             <div class="max-w-4xl mx-auto">
                 <div class="text-center mb-8">
-                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight">🏛️ Selecionar Recepção</h2>
+                    <h2 class="text-2xl font-black text-slate-800 uppercase tracking-tight"> Selecionar Recepção</h2>
                     <p class="text-slate-500 text-sm mt-1">Escolha a recepção que deseja gerenciar hoje</p>
                 </div>
         `;
