@@ -292,9 +292,22 @@
 
         <!-- DASHBOARD -->
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">Seu Dashboard</h2>
-                <button id="dashboard-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300">&larr; Voltar para Pautas</button>
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="dashboard-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+                    &larr; Voltar
+                </button>
+                <img 
+                    src="https://alexdovale.github.io/ponto.codoc/imagem.png" 
+                    alt="Logo do Sistema SIGEP" 
+                    class="h-16 sm:h-20 w-auto object-contain mb-4 drop-shadow-md"
+                    onerror="this.style.display='none'" 
+                >
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
+                    📊 Seu Dashboard
+                </h2>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">
+                    SIGEP - Defensoria Pública
+                </p>
             </div>
             <div id="dashboard-content">
                 <div class="loader-small mx-auto my-12"></div>
@@ -302,13 +315,24 @@
             </div>
         </div>
 
-        <!-- ADMIN (MESMO PADRÃO DO DASHBOARD) -->
+        <!-- ADMIN (ATUALIZADO COM LOGO E TÍTULO CENTRALIZADOS) -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
-                <h2 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center sm:text-left">🛡️ Painel do Administrador</h2>
-                <button id="admin-back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition">
-                    &larr; Voltar para Pautas
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+                    &larr; Voltar
                 </button>
+                <img 
+                    src="https://alexdovale.github.io/ponto.codoc/imagem.png" 
+                    alt="Logo do Sistema SIGEP" 
+                    class="h-16 sm:h-20 w-auto object-contain mb-4 drop-shadow-md"
+                    onerror="this.style.display='none'" 
+                >
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
+                    🛡️ Painel do Administrador
+                </h2>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">
+                    SIGEP - Defensoria Pública
+                </p>
             </div>
             <div id="admin-content">
                 <div class="loader-small mx-auto my-12"></div>
