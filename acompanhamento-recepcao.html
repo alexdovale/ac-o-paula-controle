@@ -21,7 +21,7 @@
         * { font-family: 'DM Sans', sans-serif; }
         code, .mono { font-family: 'DM Mono', monospace; }
 
-        body { background: #f1f5f9; min-height: 100vh; color: #0f172a; }
+        body { min-height: 100vh; color: #0f172a; transition: background-color 0.3s; margin: 0; }
 
         ::-webkit-scrollbar { width: 4px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -61,7 +61,6 @@
         .anim-fade-up  { animation: fade-up 0.4s ease-out forwards; }
         .anim-group    { animation: group-in 0.4s ease-out forwards; }
 
-        /* ── Card de pessoa ── */
         .pessoa-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
@@ -74,148 +73,69 @@
             transition: all 0.2s ease;
             box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
-        .pessoa-card:hover {
-            box-shadow: 0 4px 8px rgba(0,0,0,0.08);
-            transform: translateY(-1px);
-        }
-        .pessoa-card.em-atendimento {
-            border-left-color: #4f46e5;
-            background: #f5f8ff;
-            border-color: #e0e7ff;
-        }
+        .pessoa-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
+        .pessoa-card.em-atendimento { border-left-color: #4f46e5; background: #f5f8ff; border-color: #e0e7ff; }
 
-        /* ── Agrupamento por unidade na fila ── */
-        .unidade-group {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 14px;
-            overflow: hidden;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.05);
-        }
-        .unidade-group-header {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 18px);
-            border-bottom: 1px solid #f1f5f9;
-        }
-        .unidade-group-body {
-            padding: clamp(8px, 1vw, 10px);
-            display: flex;
-            flex-direction: column;
-            gap: 6px;
-        }
+        .unidade-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .unidade-group-header { display: flex; align-items: center; justify-content: space-between; padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 18px); border-bottom: 1px solid #f1f5f9; }
+        .unidade-group-body { padding: clamp(8px, 1vw, 10px); display: flex; flex-direction: column; gap: 6px; }
 
-        /* ── Paleta de cores por unidade (até 8 unidades distintas) ── */
-        .ucor-0 { background: #eff6ff; border-left-color: #3b82f6 !important; }
-        .ucor-0 .u-label { color: #1d4ed8; }
-        .ucor-0 .u-badge { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        /* Cores das Unidades */
+        .ucor-0 { background: #eff6ff; border-left-color: #3b82f6 !important; } .ucor-0 .u-label { color: #1d4ed8; } .ucor-0 .u-badge { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
+        .ucor-1 { background: #fdf4ff; border-left-color: #a855f7 !important; } .ucor-1 .u-label { color: #7e22ce; } .ucor-1 .u-badge { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+        .ucor-2 { background: #f0fdf4; border-left-color: #22c55e !important; } .ucor-2 .u-label { color: #15803d; } .ucor-2 .u-badge { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
+        .ucor-3 { background: #fff7ed; border-left-color: #f97316 !important; } .ucor-3 .u-label { color: #c2410c; } .ucor-3 .u-badge { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
+        .ucor-4 { background: #fef2f2; border-left-color: #ef4444 !important; } .ucor-4 .u-label { color: #b91c1c; } .ucor-4 .u-badge { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
+        .ucor-5 { background: #f0fdfa; border-left-color: #14b8a6 !important; } .ucor-5 .u-label { color: #0f766e; } .ucor-5 .u-badge { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
+        .ucor-6 { background: #fffbeb; border-left-color: #eab308 !important; } .ucor-6 .u-label { color: #a16207; } .ucor-6 .u-badge { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
+        .ucor-7 { background: #f8f5ff; border-left-color: #8b5cf6 !important; } .ucor-7 .u-label { color: #6d28d9; } .ucor-7 .u-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
 
-        .ucor-1 { background: #fdf4ff; border-left-color: #a855f7 !important; }
-        .ucor-1 .u-label { color: #7e22ce; }
-        .ucor-1 .u-badge { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
+        .coluna-unificada { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
+        .coluna-header { padding: clamp(12px, 1.5vw, 18px) clamp(14px, 2vw, 22px); background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
+        .nome-chamado { background: linear-gradient(90deg, #d97706, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        .pill { padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 14px); border-radius: 999px; font-size: var(--fs-xs); font-weight: 800; letter-spacing: 0.04em; }
+        .ordem-num { font-size: var(--fs-md); font-weight: 900; font-family: 'DM Mono', monospace; color: #f59e0b; min-width: clamp(24px, 3vw, 36px); text-align: center; flex-shrink: 0; }
+        .sala-badge { font-size: var(--fs-xs); font-weight: 700; padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 12px); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; }
 
-        .ucor-2 { background: #f0fdf4; border-left-color: #22c55e !important; }
-        .ucor-2 .u-label { color: #15803d; }
-        .ucor-2 .u-badge { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-
-        .ucor-3 { background: #fff7ed; border-left-color: #f97316 !important; }
-        .ucor-3 .u-label { color: #c2410c; }
-        .ucor-3 .u-badge { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
-
-        .ucor-4 { background: #fef2f2; border-left-color: #ef4444 !important; }
-        .ucor-4 .u-label { color: #b91c1c; }
-        .ucor-4 .u-badge { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-
-        .ucor-5 { background: #f0fdfa; border-left-color: #14b8a6 !important; }
-        .ucor-5 .u-label { color: #0f766e; }
-        .ucor-5 .u-badge { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
-
-        .ucor-6 { background: #fffbeb; border-left-color: #eab308 !important; }
-        .ucor-6 .u-label { color: #a16207; }
-        .ucor-6 .u-badge { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
-
-        .ucor-7 { background: #f8f5ff; border-left-color: #8b5cf6 !important; }
-        .ucor-7 .u-label { color: #6d28d9; }
-        .ucor-7 .u-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
-
-        /* ── Coluna unificada ── */
-        .coluna-unificada {
-            background: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 20px;
-            overflow: hidden;
-            display: flex;
-            flex-direction: column;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.04);
-        }
-        .coluna-header {
-            padding: clamp(12px, 1.5vw, 18px) clamp(14px, 2vw, 22px);
-            background: #f8fafc;
-            border-bottom: 1px solid #e2e8f0;
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            flex-shrink: 0;
-        }
-
-        .nome-chamado {
-            background: linear-gradient(90deg, #d97706, #ea580c);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-
-        .pill {
-            padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 14px);
-            border-radius: 999px;
-            font-size: var(--fs-xs);
-            font-weight: 800;
-            letter-spacing: 0.04em;
-        }
-
-        /* Número de ordem */
-        .ordem-num {
-            font-size: var(--fs-md);
-            font-weight: 900;
-            font-family: 'DM Mono', monospace;
-            color: #f59e0b;
-            min-width: clamp(24px, 3vw, 36px);
-            text-align: center;
-            flex-shrink: 0;
-        }
-
-        /* Sala badge */
-        .sala-badge {
-            font-size: var(--fs-xs);
-            font-weight: 700;
-            padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 12px);
-            border-radius: 6px;
-            text-transform: uppercase;
-            letter-spacing: 0.05em;
-            white-space: nowrap;
-            background: #f1f5f9;
-            border: 1px solid #cbd5e1;
-            color: #475569;
-        }
-
-        /* Zoom */
-        #zoom-controls {
-            opacity: 0;
-            transition: opacity 0.3s;
-        }
+        /* Zoom controls */
+        #zoom-controls { opacity: 0; transition: opacity 0.3s; }
         #zoom-controls:hover { opacity: 1; }
+
+        .bg-tema-panel { background-color: #22c55e; } 
+        .text-tema-panel { color: #16a34a; } 
+
+        @keyframes piscar-chamado-tv {
+            0%, 100% { background-color: #22c55e; transform: scale(1); }
+            50% { background-color: #15803d; transform: scale(0.98); }
+        }
+        .animar-chamado-tv { animation: piscar-chamado-tv 0.6s cubic-bezier(0.22,1,0.36,1) 3; }
+
+        @keyframes fade-in-left {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+        .item-historico { animation: fade-in-left 0.4s ease-out forwards; }
+
+        .texto-nome-tv { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
+        .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; }
     </style>
 </head>
-<body class="p-2 sm:p-4 md:p-6 flex flex-col min-h-screen">
+<body class="p-0 flex flex-col min-h-screen">
 
+    <!-- Tela de Carregamento -->
     <div id="loading" class="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50 gap-4">
         <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-amber-500 animate-spin"></div>
         <p class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Conectando ao SIGEP...</p>
     </div>
 
-    <div id="app" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex flex-col gap-4 h-full">
+    <!-- Botão de Alternar Layout -->
+    <button onclick="alternarModo()" class="fixed bottom-4 left-4 z-[100] bg-white/80 hover:bg-white border border-slate-200 p-3 rounded-full shadow-lg opacity-30 hover:opacity-100 transition-all text-slate-700" title="Alternar Modo de Ecrã">
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
+        </svg>
+    </button>
 
+    <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6">
         <!-- Header -->
         <header class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 shrink-0">
             <div class="flex items-center gap-3">
@@ -228,7 +148,7 @@
                         <span class="text-slate-300 font-bold" style="font-size:var(--fs-xs)">·</span>
                         <span class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Painel de Atendimento</span>
                     </div>
-                    <h2 id="recepcao-nome" class="text-amber-600 font-black leading-tight mt-0.5 tracking-tight" style="font-size:var(--fs-md)">—</h2>
+                    <h2 id="recepcao-nome-fila" class="text-amber-600 font-black leading-tight mt-0.5 tracking-tight" style="font-size:var(--fs-md)">—</h2>
                 </div>
             </div>
 
@@ -249,11 +169,11 @@
                     <p class="text-indigo-600 font-black leading-none" id="g-atendendo" style="font-size:var(--fs-xl)">0</p>
                     <p class="text-slate-500 font-bold uppercase tracking-widest mt-0.5" style="font-size:var(--fs-xs)">Atendendo</p>
                 </div>
-                <div id="data-hora" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg ml-1" style="font-size:var(--fs-xs)"></div>
+                <div id="data-hora-fila" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg ml-1" style="font-size:var(--fs-xs)"></div>
             </div>
         </header>
 
-        <!-- Último Chamado -->
+        <!-- Último Chamado (Fila) -->
         <div id="ultimo-chamado-wrap" class="hidden shrink-0">
             <div id="ultimo-chamado-card" class="bg-white border border-amber-200 shadow-md rounded-2xl relative overflow-hidden" style="padding:clamp(16px,2.5vw,36px) clamp(20px,3vw,44px)">
                 <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.05) 0%, transparent 70%)"></div>
@@ -262,11 +182,11 @@
                         <p class="text-amber-600 font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-2" style="font-size:var(--fs-xs);letter-spacing:0.3em">
                             📣 Chamando Agora
                         </p>
-                        <h2 id="uc-nome" class="nome-chamado font-black uppercase tracking-tight leading-none mb-3" style="font-size:var(--fs-3xl)">—</h2>
+                        <h2 id="uc-nome-fila" class="nome-chamado font-black uppercase tracking-tight leading-none mb-3" style="font-size:var(--fs-3xl)">—</h2>
                         <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                            <span id="uc-pauta" class="bg-slate-100 border border-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
-                            <span id="uc-local" class="bg-amber-50 border border-amber-200 text-amber-800 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
-                            <span id="uc-hora"  class="mono text-slate-500 font-bold self-center" style="font-size:var(--fs-xs)">—</span>
+                            <span id="uc-pauta-fila" class="bg-slate-100 border border-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
+                            <span id="uc-local-fila" class="bg-amber-50 border border-amber-200 text-amber-800 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
+                            <span id="uc-hora-fila"  class="mono text-slate-500 font-bold self-center" style="font-size:var(--fs-xs)">—</span>
                         </div>
                     </div>
                 </div>
@@ -275,7 +195,6 @@
 
         <!-- Colunas -->
         <div class="flex flex-col md:flex-row gap-4 flex-1 min-h-[400px]">
-            
             <!-- Em Atendimento -->
             <div class="coluna-unificada w-full md:w-1/3 border-indigo-100">
                 <div class="coluna-header bg-indigo-50/50 border-indigo-100">
@@ -286,11 +205,10 @@
                         <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Sendo atendidos neste momento</p>
                     </div>
                 </div>
-                <div id="lista-atendimento" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:8px">
-                </div>
+                <div id="lista-atendimento" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:8px"></div>
             </div>
 
-            <!-- Fila de Espera — agrupada por unidade -->
+            <!-- Fila de Espera -->
             <div class="coluna-unificada w-full md:w-2/3 border-amber-100">
                 <div class="coluna-header bg-amber-50/30 border-amber-100">
                     <div>
@@ -299,32 +217,112 @@
                         </p>
                         <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Agrupado por unidade · numerado localmente</p>
                     </div>
-                    <!-- Legenda de cores por unidade -->
                     <div id="legenda-unidades" class="flex flex-wrap gap-1.5 justify-end max-w-xs"></div>
                 </div>
-                <div id="lista-espera" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:10px">
-                </div>
+                <div id="lista-espera" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:10px"></div>
             </div>
-
         </div>
-
-        <!-- Rodapé -->
+        
         <footer class="text-center text-slate-400 font-bold uppercase tracking-widest pb-2 shrink-0" style="font-size:var(--fs-xs)">
             SIGEP · Painel Público da Recepção Unificada · Dados em tempo real
         </footer>
     </div>
 
-    <!-- Controles de Zoom -->
+    <!-- Controles de Zoom (Apenas Modo Fila) -->
     <div id="zoom-controls" class="fixed bottom-4 right-4 flex items-center gap-2 z-[100] bg-white border border-slate-200 p-2 rounded-xl shadow-xl">
         <button onclick="mudarZoom(-0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">-</button>
         <span id="zoom-level" class="font-bold text-slate-600 text-center" style="font-size:var(--fs-xs);min-width:3rem">100%</span>
         <button onclick="mudarZoom(0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">+</button>
     </div>
 
+    <div id="modo-tv" class="hidden w-full h-screen sm:p-4 flex items-center justify-center overflow-hidden">
+        <div class="w-full h-full sm:max-h-[90vh] sm:max-w-[160vh] sm:aspect-video bg-white shadow-2xl overflow-hidden rounded-none sm:rounded-2xl flex flex-col sm:flex-row">
+            
+            <!-- Lado Esquerdo: Chamada Atual (Verde) -->
+            <div id="painel-destaque-tv" class="w-full sm:w-2/3 bg-tema-panel flex flex-col justify-center items-center text-white p-6 sm:p-12 text-center transition-all duration-300 flex-1">
+                <h1 class="text-3xl sm:text-5xl font-semibold uppercase tracking-widest mb-2 sm:mb-4 opacity-90 leading-tight drop-shadow-md">
+                    Chamando
+                </h1>
+                
+                <!-- Nome -->
+                <div id="uc-nome-tv" class="texto-nome-tv font-black mb-6 sm:mb-12 w-full px-4 drop-shadow-lg" style="min-height: 3em; display: flex; align-items: center; justify-content: center;">
+                    AGUARDANDO...
+                </div>
+                
+                <h2 class="text-2xl sm:text-4xl font-semibold uppercase tracking-widest mb-1 sm:mb-3 opacity-90 drop-shadow-md" id="label-local-tv">
+                    Dirija-se a
+                </h2>
+                
+                <!-- Local/Sala -->
+                <div id="uc-local-tv" class="texto-local-tv font-black tracking-tighter drop-shadow-lg">
+                    —
+                </div>
+            </div>
+
+            <!-- Lado Direito: Histórico -->
+            <div class="w-full sm:w-1/3 flex flex-col bg-white border-t-4 sm:border-t-0 sm:border-l-4 border-gray-100 flex-shrink-0" style="height: 100%;">
+                <!-- Cabeçalho Histórico -->
+                <div class="p-6 pb-2">
+                    <h3 class="text-xl sm:text-2xl font-black text-tema-panel text-center mb-6 uppercase tracking-widest">
+                        Últimos Chamados
+                    </h3>
+                    <div class="flex justify-between text-xs sm:text-sm text-slate-400 font-bold mb-2 px-2 uppercase tracking-wider border-b-2 border-slate-100 pb-2">
+                        <span>Nome</span>
+                        <span>Local</span>
+                    </div>
+                </div>
+
+                <!-- Lista de Histórico -->
+                <div id="lista-historico-tv" class="flex flex-col flex-grow overflow-hidden px-4 space-y-3 mt-2">
+                    <!-- Preenchido via JS -->
+                </div>
+
+                <!-- Rodapé -->
+                <div class="mt-auto h-32 sm:h-48 bg-slate-50 flex flex-col justify-center items-center border-t border-slate-200 p-4">
+                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 sm:h-16 object-contain mb-3 grayscale opacity-70">
+                    <div id="data-hora-tv" class="mono text-slate-500 font-bold text-sm sm:text-base uppercase tracking-widest text-center"></div>
+                    <div id="recepcao-nome-tv" class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Recepção</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+        // Gestão de Modos
+        window.alternarModo = function() {
+            const url = new URL(window.location);
+            if (url.searchParams.get('modo') === 'tv') {
+                url.searchParams.delete('modo');
+            } else {
+                url.searchParams.set('modo', 'tv');
+            }
+            window.history.pushState({}, '', url);
+            aplicarModoAtual();
+        };
+
+        function aplicarModoAtual() {
+            const isTV = new URLSearchParams(window.location.search).get('modo') === 'tv';
+            if (isTV) {
+                document.getElementById('modo-fila').classList.add('hidden');
+                document.getElementById('modo-fila').classList.remove('flex');
+                document.getElementById('zoom-controls').classList.add('hidden');
+                document.getElementById('modo-tv').classList.remove('hidden');
+                document.body.style.background = '#1e293b'; // Fundo escuro para a TV
+                document.body.style.zoom = 1; // Previne quebras se o utilizador deu zoom na fila
+            } else {
+                document.getElementById('modo-tv').classList.add('hidden');
+                document.getElementById('modo-fila').classList.remove('hidden');
+                document.getElementById('modo-fila').classList.add('flex');
+                document.getElementById('zoom-controls').classList.remove('hidden');
+                document.body.style.background = '#f1f5f9'; // Fundo claro original
+                document.body.style.zoom = window.zoomAtual;
+            }
+        }
+
+        // Zoom (Apenas Modo Fila)
         window.zoomAtual = 1;
         window.mudarZoom = function(delta) {
             window.zoomAtual = Math.max(0.4, Math.min(2.5, window.zoomAtual + delta));
@@ -347,9 +345,9 @@
         const pautasParam = params.get('pautas');
         let recepcaoNome = params.get('nome') || 'Recepção Geral';
 
-        const estado = { pautas: {}, assistidos: {}, ultimoChamado: null };
+        const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
 
-        // Mapa de cores por unidade (estável durante a sessão)
+        // Mapa de cores
         const corPorUnidade = {};
         let proximaCor = 0;
         function getCorUnidade(key) {
@@ -368,51 +366,55 @@
             return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
         }
         function tickRelogio() {
-            const el = document.getElementById('data-hora');
-            if (el) el.textContent = new Date().toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
+            const dataStrFila = new Date().toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
+            const dataStrTV = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            
+            const elFila = document.getElementById('data-hora-fila');
+            if (elFila) elFila.textContent = dataStrFila;
+            
+            const elTV = document.getElementById('data-hora-tv');
+            if (elTV) elTV.textContent = dataStrTV;
         }
         setInterval(tickRelogio, 1000); tickRelogio();
 
         function tocarSom() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const notas = [[523,0,0.22],[659,0.22,0.22],[784,0.44,0.35]];
+                // Som Ding-Dong padrão
+                const notas = [[659, 0, 0.4], [523, 0.4, 0.6]];
                 notas.forEach(([f, i, d]) => {
                     const o = ctx.createOscillator(), g = ctx.createGain();
                     o.connect(g); g.connect(ctx.destination);
                     o.type = 'sine'; o.frequency.setValueAtTime(f, ctx.currentTime + i);
-                    g.gain.setValueAtTime(0.35, ctx.currentTime + i);
+                    g.gain.setValueAtTime(0.5, ctx.currentTime + i);
                     g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i + d);
                     o.start(ctx.currentTime + i); o.stop(ctx.currentTime + i + d);
                 });
-                setTimeout(() => ctx.close(), 1400);
+                setTimeout(() => ctx.close(), 1500);
             } catch(e) {}
         }
 
-        function renderUltimoChamado(chamado) {
+        // Renderiza Modo Original
+        function renderUltimoChamadoFila(chamado) {
             if (!chamado) return;
             const wrap = document.getElementById('ultimo-chamado-wrap');
             const card = document.getElementById('ultimo-chamado-card');
-            const nomeEl = document.getElementById('uc-nome');
-            const nomeMudou = nomeEl.textContent !== chamado.nome.toUpperCase();
+            const nomeEl = document.getElementById('uc-nome-fila');
+            
             wrap.classList.remove('hidden');
             nomeEl.textContent = chamado.nome.toUpperCase();
-            document.getElementById('uc-pauta').textContent = esc(chamado.pautaNome || chamado.local || '—');
-            document.getElementById('uc-local').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
-            document.getElementById('uc-hora').textContent  = chamado.hora || horaAgora();
-            if (nomeMudou) {
-                nomeEl.classList.remove('anim-chamado'); card.classList.remove('anim-glow');
-                void card.offsetWidth;
-                nomeEl.classList.add('anim-chamado'); card.classList.add('anim-glow');
-                tocarSom();
-            }
+            document.getElementById('uc-pauta-fila').textContent = esc(chamado.pautaNome || chamado.local || '—');
+            document.getElementById('uc-local-fila').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
+            document.getElementById('uc-hora-fila').textContent  = chamado.hora || horaAgora();
+            
+            nomeEl.classList.remove('anim-chamado'); card.classList.remove('anim-glow');
+            void card.offsetWidth;
+            nomeEl.classList.add('anim-chamado'); card.classList.add('anim-glow');
         }
 
         function renderPainelUnificado() {
             let todosEmAtendimento = [];
             let totalAguardando = 0;
-            
-            // Agrupamento e ordenação isolada por unidade
             const grupos = {}; 
 
             for (const pautaId in estado.assistidos) {
@@ -425,48 +427,30 @@
 
                 lista.forEach(a => {
                     const p = { ...a, nomePauta, salaPauta, pautaId };
-                    if (a.status === 'aguardando') {
-                        aguardandoLocal.push(p);
-                    } else if (a.status === 'emAtendimento') {
-                        todosEmAtendimento.push(p);
-                    }
+                    if (a.status === 'aguardando') aguardandoLocal.push(p);
+                    else if (a.status === 'emAtendimento') todosEmAtendimento.push(p);
                 });
 
                 if (aguardandoLocal.length > 0) {
-                    // Ordenação específica PARA ESTA UNIDADE (Prioridade sobe só na fila dela)
                     aguardandoLocal.sort((a, b) => {
                         if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                         if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                         return (a.checkInOrder || 0) - (b.checkInOrder || 0);
                     });
-
-                    // Define a numeração separada para esta fila em específico
-                    aguardandoLocal.forEach((p, idx) => {
-                        p.ordemLocal = idx + 1;
-                    });
-
-                    grupos[pautaId] = {
-                        nomePauta,
-                        salaPauta,
-                        pessoas: aguardandoLocal
-                    };
+                    aguardandoLocal.forEach((p, idx) => p.ordemLocal = idx + 1);
+                    grupos[pautaId] = { nomePauta, salaPauta, pessoas: aguardandoLocal };
                     totalAguardando += aguardandoLocal.length;
                 }
             }
 
             document.getElementById('g-aguardando').textContent = totalAguardando;
             document.getElementById('g-atendendo').textContent = todosEmAtendimento.length;
-
-            // Ordena os que estão em atendimento pela hora que foram chamados
             todosEmAtendimento.sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
 
-            // ── Renderiza Em Atendimento ──
+            // Lista Atendimento
             const listaAtEl = document.getElementById('lista-atendimento');
             if (todosEmAtendimento.length === 0) {
-                listaAtEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center">
-                    <svg style="width:40px;height:40px;opacity:0.25;margin-bottom:8px" fill="currentColor" viewBox="0 0 24 24"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 14H9V8h2v8zm4 0h-2V8h2v8z"/></svg>
-                    <p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Nenhum atendimento</p>
-                </div>`;
+                listaAtEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Nenhum atendimento</p></div>`;
             } else {
                 listaAtEl.innerHTML = todosEmAtendimento.map(a => {
                     const cor = getCorUnidade(a.pautaId);
@@ -480,29 +464,21 @@
                 }).join('');
             }
 
-            // ── Renderiza Fila — agrupada por unidade com ordem alfabética estável ──
+            // Lista Espera
             const listaEsEl = document.getElementById('lista-espera');
             if (totalAguardando === 0) {
-                listaEsEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center">
-                    <svg style="width:40px;height:40px;opacity:0.25;margin-bottom:8px" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"/></svg>
-                    <p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p>
-                </div>`;
+                listaEsEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p></div>`;
                 document.getElementById('legenda-unidades').innerHTML = '';
                 return;
             }
 
-            // Cria uma ordem alfabética para que as áreas fiquem sempre estáticas no lugar (ex: Área A sempre acima da Área B)
             const ordemGrupos = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
-
-            // Legenda de cores
-            const legendaEl = document.getElementById('legenda-unidades');
-            legendaEl.innerHTML = ordemGrupos.map(key => {
+            document.getElementById('legenda-unidades').innerHTML = ordemGrupos.map(key => {
                 const cor = getCorUnidade(key);
                 const g = grupos[key];
                 return `<span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:700;padding:3px 10px;border-radius:6px;white-space:nowrap">${esc(g.nomePauta)} <strong>${g.pessoas.length}</strong></span>`;
             }).join('');
 
-            // Renderiza grupos
             listaEsEl.innerHTML = ordemGrupos.map((key, gi) => {
                 const g = grupos[key];
                 const cor = getCorUnidade(key);
@@ -514,11 +490,8 @@
                         <div style="min-width:0;flex:1">
                             <p style="font-size:var(--fs-md);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
                         </div>
-                        ${a.priority === 'URGENTE' 
-                            ? `<span class="pill" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca">URGENTE</span>` 
-                            : ''}
-                    </div>
-                `).join('');
+                        ${a.priority === 'URGENTE' ? `<span class="pill" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca">URGENTE</span>` : ''}
+                    </div>`).join('');
 
                 return `<div class="unidade-group anim-group ucor-${cor}" style="animation-delay:${gi*0.08}s;border-left:4px solid currentColor">
                     <div class="unidade-group-header ucor-${cor}">
@@ -529,25 +502,58 @@
                                 ${g.salaPauta ? `<p style="font-size:var(--fs-xs);color:#64748b;font-weight:600;margin-top:1px">🏠 ${esc(g.salaPauta)}</p>` : ''}
                             </div>
                         </div>
-                        <span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:800;padding:4px 12px;border-radius:999px;flex-shrink:0;margin-left:8px">
-                            ${g.pessoas.length} na fila
-                        </span>
+                        <span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:800;padding:4px 12px;border-radius:999px;flex-shrink:0;margin-left:8px">${g.pessoas.length} na fila</span>
                     </div>
-                    <div class="unidade-group-body">
-                        ${pessoasHTML}
-                    </div>
+                    <div class="unidade-group-body">${pessoasHTML}</div>
                 </div>`;
             }).join('');
         }
 
+        // Renderiza Modo TV (Verde)
+        function renderHistoricoTV() {
+            const listaEl = document.getElementById('lista-historico-tv');
+            if (estado.historico.length === 0) {
+                listaEl.innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-300 font-bold uppercase text-xs">Nenhum histórico recente</div>`;
+                return;
+            }
+            listaEl.innerHTML = estado.historico.slice(0, 5).map(h => `
+                <div class="item-historico flex justify-between items-center bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100 shadow-sm">
+                    <span class="text-lg sm:text-xl font-bold text-slate-700 truncate pr-2 w-2/3" style="text-transform: uppercase;">
+                        ${esc(h.nome)}
+                    </span>
+                    <span class="text-base sm:text-lg font-black text-tema-panel whitespace-nowrap text-right">
+                        ${esc(h.sala || h.local || '—')}
+                    </span>
+                </div>
+            `).join('');
+        }
+
+        function renderUltimoChamadoTV(chamado) {
+            if (!chamado) return;
+            const nomeEl = document.getElementById('uc-nome-tv');
+            const localEl = document.getElementById('uc-local-tv');
+            const painelDestaque = document.getElementById('painel-destaque-tv');
+
+            nomeEl.textContent = esc(chamado.nome).toUpperCase();
+            localEl.textContent = chamado.sala ? esc(chamado.sala) : esc(chamado.local || '—');
+            document.getElementById('label-local-tv').textContent = chamado.sala ? 'Sala' : 'Local';
+
+            painelDestaque.classList.remove('animar-chamado-tv');
+            void painelDestaque.offsetWidth; 
+            painelDestaque.classList.add('animar-chamado-tv');
+        }
+
+        // Inicialização
         async function init() {
+            aplicarModoAtual(); // Aplica o modo logo no início
+
             if (!pautasParam) {
                 document.getElementById('loading').innerHTML = `
                     <div style="background:#fff;border:1px solid #e2e8f0;border-radius:16px;padding:40px 32px;max-width:420px;text-align:center">
                         <span style="font-size:40px;display:block;margin-bottom:12px">⚠️</span>
                         <h2 style="color:#1e293b;font-size:var(--fs-lg);font-weight:700;margin-bottom:8px">Painel não configurado</h2>
-                        <p style="color:#475569;font-size:var(--fs-sm);margin-bottom:16px">Faltam os identificadores na URL.</p>
-                        <code style="background:#f1f5f9;color:#475569;font-size:var(--fs-xs);padding:8px 12px;border-radius:8px;display:block;word-break:break-all">?pautas=ID_DA_PAUTA_AQUI</code>
+                        <p style="color:#475569;font-size:var(--fs-sm);margin-bottom:16px">Faltam os parâmetros na URL.</p>
+                        <code style="background:#f1f5f9;color:#475569;font-size:var(--fs-xs);padding:8px 12px;border-radius:8px;display:block;word-break:break-all">?pautas=ID_DA_PAUTA</code>
                     </div>`;
                 return;
             }
@@ -555,16 +561,21 @@
             const pautaIds = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
             if (pautaIds.length === 0) return;
 
-            document.getElementById('recepcao-nome').textContent = decodeURIComponent(recepcaoNome);
+            document.getElementById('recepcao-nome-fila').textContent = decodeURIComponent(recepcaoNome);
+            document.getElementById('recepcao-nome-tv').textContent = decodeURIComponent(recepcaoNome);
             document.getElementById('loading').classList.add('hidden');
-            document.getElementById('app').classList.remove('hidden');
+
+            renderHistoricoTV();
 
             pautaIds.forEach(pautaId => {
                 onSnapshot(doc(db, "pautas", pautaId), (snap) => {
                     if (!snap.exists()) return;
                     const d = snap.data();
                     estado.pautas[pautaId] = { id: pautaId, ...d };
-                    if (d.unidade) document.getElementById('recepcao-nome').textContent = esc(d.unidade);
+                    if (d.unidade) {
+                        document.getElementById('recepcao-nome-fila').textContent = esc(d.unidade);
+                        document.getElementById('recepcao-nome-tv').textContent = esc(d.unidade);
+                    }
                     renderPainelUnificado();
                 });
 
@@ -577,15 +588,31 @@
                     if (!snap.exists()) return;
                     const data = snap.data();
                     if (!data.atual) return;
+                    
                     const tsAtual = data.atual.timestamp || 0;
                     const tsUlt = estado.ultimoChamado?.timestamp || 0;
-                    if (tsAtual >= tsUlt) {
-                        estado.ultimoChamado = {
+                    
+                    if (tsAtual > tsUlt) {
+                        const novoChamadoTratado = {
                             ...data.atual,
                             pautaNome: estado.pautas[pautaId]?.name || data.atual.local || '',
                             sala: estado.pautas[pautaId]?.sala || data.atual.sala || '',
                         };
-                        renderUltimoChamado(estado.ultimoChamado);
+
+                        // Gestão do Histórico para a TV
+                        if (estado.ultimoChamado) {
+                            estado.historico.unshift(estado.ultimoChamado);
+                            if (estado.historico.length > 5) estado.historico.pop();
+                            renderHistoricoTV();
+                        }
+
+                        estado.ultimoChamado = novoChamadoTratado;
+                        
+                        // Atualiza as duas interfaces
+                        renderUltimoChamadoFila(novoChamadoTratado);
+                        renderUltimoChamadoTV(novoChamadoTratado);
+                        
+                        tocarSom();
                     }
                 });
             });
