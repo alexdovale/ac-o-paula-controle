@@ -938,7 +938,7 @@ export const RecepçãoCentralService = {
         });
 
         // =======================================================================
-        // NOVA LÓGICA DO PAINEL GERAL (UNIFICADO)
+        // INTEGRAÇÃO DOS MODOS DE TV COM O ACOMPANHAMENTO RECEPÇÃO
         // =======================================================================
 
         // 1. Abrir Painel Geral nesta máquina
@@ -949,13 +949,17 @@ export const RecepçãoCentralService = {
                 this._unidadeAtual?.nome ||
                 'Recepção'
             );
+            
+            // Pega o modo e vídeo da recepção configurada
+            const modo = this._recepcaoAtual?.modoVisualizacao || 'fila';
+            const video = encodeURIComponent(this._recepcaoAtual?.videoUrl || '');
 
             if (!ids) {
                 showNotification("Nenhuma pauta ativa para exibir.", "info");
                 return;
             }
 
-            window.open(`acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}`, '_blank');
+            window.open(`acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}&modo=${modo}&video=${video}`, '_blank');
         });
 
         // 2. Copiar Link para a TV
@@ -966,6 +970,10 @@ export const RecepçãoCentralService = {
                 this._unidadeAtual?.nome ||
                 'Recepção'
             );
+            
+            // Pega o modo e vídeo da recepção configurada
+            const modo = this._recepcaoAtual?.modoVisualizacao || 'fila';
+            const video = encodeURIComponent(this._recepcaoAtual?.videoUrl || '');
 
             if (!ids) {
                 showNotification("Nenhuma pauta ativa para gerar o link.", "info");
@@ -978,7 +986,7 @@ export const RecepçãoCentralService = {
             if (baseUrl.endsWith('index.html')) baseUrl = baseUrl.replace('index.html', '');
             if (!baseUrl.endsWith('/')) baseUrl += '/';
 
-            const linkCompleto = `${baseUrl}acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}`;
+            const linkCompleto = `${baseUrl}acompanhamento-recepcao.html?pautas=${ids}&nome=${nome}&modo=${modo}&video=${video}`;
 
             navigator.clipboard.writeText(linkCompleto).then(() => {
                 showNotification("Link do Painel Unificado copiado!", "success");
