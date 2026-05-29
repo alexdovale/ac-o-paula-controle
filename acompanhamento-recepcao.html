@@ -20,7 +20,6 @@
 
         * { font-family: 'DM Sans', sans-serif; }
         code, .mono { font-family: 'DM Mono', monospace; }
-
         body { min-height: 100vh; color: #0f172a; transition: background-color 0.3s; margin: 0; }
 
         ::-webkit-scrollbar { width: 4px; }
@@ -80,7 +79,6 @@
         .unidade-group-header { display: flex; align-items: center; justify-content: space-between; padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 18px); border-bottom: 1px solid #f1f5f9; }
         .unidade-group-body { padding: clamp(8px, 1vw, 10px); display: flex; flex-direction: column; gap: 6px; }
 
-        /* Cores das Unidades */
         .ucor-0 { background: #eff6ff; border-left-color: #3b82f6 !important; } .ucor-0 .u-label { color: #1d4ed8; } .ucor-0 .u-badge { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
         .ucor-1 { background: #fdf4ff; border-left-color: #a855f7 !important; } .ucor-1 .u-label { color: #7e22ce; } .ucor-1 .u-badge { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
         .ucor-2 { background: #f0fdf4; border-left-color: #22c55e !important; } .ucor-2 .u-label { color: #15803d; } .ucor-2 .u-badge { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
@@ -97,12 +95,11 @@
         .ordem-num { font-size: var(--fs-md); font-weight: 900; font-family: 'DM Mono', monospace; color: #f59e0b; min-width: clamp(24px, 3vw, 36px); text-align: center; flex-shrink: 0; }
         .sala-badge { font-size: var(--fs-xs); font-weight: 700; padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 12px); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; }
 
-        /* Zoom controls */
         #zoom-controls { opacity: 0; transition: opacity 0.3s; }
         #zoom-controls:hover { opacity: 1; }
 
-        .bg-tema-panel { background-color: #22c55e; } 
-        .text-tema-panel { color: #16a34a; } 
+        .bg-tema-panel { background-color: #22c55e; }
+        .text-tema-panel { color: #16a34a; }
 
         @keyframes piscar-chamado-tv {
             0%, 100% { background-color: #22c55e; transform: scale(1); }
@@ -116,23 +113,123 @@
         }
         .item-historico { animation: fade-in-left 0.4s ease-out forwards; }
 
-        .texto-nome-tv { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
+        .texto-nome-tv  { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
         .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; }
 
-        /* Botão de ativar som */
-        #btn-ativar-som {
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 200;
-            background: white;
-            border: 2px solid #e2e8f0;
-            border-radius: 20px;
-            padding: 32px 48px;
-            text-align: center;
-            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        /* ── MODO TV+VÍDEO ─────────────────────────────── */
+
+        /* Banner de chamado sobreposto ao vídeo */
+        @keyframes banner-slide-in {
+            from { transform: translateY(100%); opacity: 0; }
+            to   { transform: translateY(0);    opacity: 1; }
         }
+        @keyframes banner-slide-out {
+            from { transform: translateY(0);    opacity: 1; }
+            to   { transform: translateY(100%); opacity: 0; }
+        }
+        @keyframes banner-pulse {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); }
+            50%       { box-shadow: 0 0 0 24px rgba(34,197,94,0.18); }
+        }
+
+        #banner-chamado {
+            position: absolute;
+            bottom: 0; left: 0; right: 0;
+            z-index: 30;
+            background: linear-gradient(135deg, #16a34a 0%, #15803d 100%);
+            color: white;
+            padding: clamp(14px, 2.5vh, 32px) clamp(20px, 4vw, 60px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
+            transform: translateY(100%);
+            opacity: 0;
+            border-top: 4px solid #4ade80;
+        }
+        #banner-chamado.visivel {
+            animation: banner-slide-in 0.5s cubic-bezier(0.22,1,0.36,1) forwards,
+                       banner-pulse 1.5s ease-in-out 0.5s 2;
+        }
+        #banner-chamado.saindo {
+            animation: banner-slide-out 0.4s ease-in forwards;
+        }
+
+        #video-container {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            background: #000;
+            overflow: hidden;
+        }
+        #video-container iframe,
+        #video-container video {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+        }
+        #video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            background: #0f172a;
+            color: #475569;
+            gap: 12px;
+        }
+
+        /* Faixa lateral do modo vídeo */
+        #faixa-video {
+            width: clamp(220px, 22vw, 340px);
+            flex-shrink: 0;
+            display: flex;
+            flex-direction: column;
+            background: #ffffff;
+            border-left: 4px solid #e2e8f0;
+            height: 100%;
+        }
+
+        /* Seletor de modo (3 botões flutuantes) */
+        #seletor-modo {
+            position: fixed;
+            bottom: 16px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 200;
+            display: flex;
+            gap: 8px;
+            background: white;
+            border: 1px solid #e2e8f0;
+            border-radius: 16px;
+            padding: 6px;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.12);
+            opacity: 0.25;
+            transition: opacity 0.3s;
+        }
+        #seletor-modo:hover { opacity: 1; }
+        .btn-modo {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            padding: 8px 14px;
+            border-radius: 10px;
+            border: none;
+            font-weight: 800;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 0.06em;
+            cursor: pointer;
+            transition: all 0.18s;
+            color: #64748b;
+            background: transparent;
+        }
+        .btn-modo:hover { background: #f1f5f9; color: #1e293b; }
+        .btn-modo.ativo { background: #0f172a; color: white; }
+        .btn-modo span { font-size: 16px; }
     </style>
 </head>
 <body class="p-0 flex flex-col min-h-screen">
@@ -143,33 +240,32 @@
         <p class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Conectando ao SIGEP...</p>
     </div>
 
-    <!-- Overlay para ativar som (navegadores bloqueiam áudio antes de interação) -->
-    <div id="overlay-som" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm flex items-center justify-center" style="display:none!important">
-        <div id="btn-ativar-som">
-            <div style="font-size:48px;margin-bottom:12px">🔔</div>
-            <h2 style="font-size:var(--fs-lg);font-weight:900;color:#0f172a;margin-bottom:8px">Ativar Som</h2>
-            <p style="font-size:var(--fs-sm);color:#64748b;margin-bottom:24px;max-width:280px">Clique para ativar as notificações sonoras dos chamados.</p>
-            <button onclick="ativarSom()" style="background:#22c55e;color:white;font-weight:800;font-size:var(--fs-md);padding:12px 32px;border:none;border-radius:12px;cursor:pointer;width:100%">
-                ✓ Ativar Notificações
-            </button>
-        </div>
+    <!-- Seletor de Modo (3 opções) -->
+    <div id="seletor-modo">
+        <button class="btn-modo" id="btn-modo-fila"  onclick="definirModo('fila')">
+            <span>📋</span> Fila
+        </button>
+        <button class="btn-modo" id="btn-modo-tv" onclick="definirModo('tv')">
+            <span>📺</span> TV Chamados
+        </button>
+        <button class="btn-modo" id="btn-modo-video" onclick="definirModo('video')">
+            <span>🎬</span> TV + Vídeo
+        </button>
     </div>
 
-    <!-- Botão de Alternar Layout -->
-    <button onclick="alternarModo()" class="fixed bottom-4 left-4 z-[100] bg-white/80 hover:bg-white border border-slate-200 p-3 rounded-full shadow-lg opacity-30 hover:opacity-100 transition-all text-slate-700" title="Alternar Modo de Ecrã">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
+    <!-- Botão Som (Fixo, visível em todos os modos) -->
+    <button onclick="toggleSom()" id="btn-som-fixo"
+        class="fixed top-4 right-4 z-[100] flex items-center gap-1.5 bg-white/90 hover:bg-white border border-slate-200 px-3 py-2 rounded-full shadow-md opacity-40 hover:opacity-100 transition-all"
+        style="font-size:var(--fs-xs)">
+        <span id="icone-som-fixo" style="font-size:15px">🔇</span>
+        <span id="texto-som-fixo" class="font-bold text-slate-600 uppercase tracking-widest hidden sm:inline">Som</span>
     </button>
 
-    <!-- Indicador de status do som -->
-    <div id="indicador-som" class="fixed top-4 right-4 z-[100] flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-full shadow-md opacity-0 transition-opacity duration-300" style="font-size:var(--fs-xs)">
-        <span id="icone-som">🔇</span>
-        <span id="texto-som" class="font-bold text-slate-600">Som desativado</span>
-    </div>
-
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  MODO FILA                                             -->
+    <!-- ═══════════════════════════════════════════════════════ -->
     <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6">
-        <!-- Header -->
+
         <header class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 shrink-0">
             <div class="flex items-center gap-3">
                 <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 shrink-0">
@@ -184,7 +280,6 @@
                     <h2 id="recepcao-nome-fila" class="text-amber-600 font-black leading-tight mt-0.5 tracking-tight" style="font-size:var(--fs-md)">—</h2>
                 </div>
             </div>
-
             <div class="flex items-center gap-3 flex-wrap justify-center sm:justify-end">
                 <div class="flex items-center gap-2 px-2">
                     <span class="relative flex" style="height:10px;width:10px">
@@ -202,29 +297,22 @@
                     <p class="text-indigo-600 font-black leading-none" id="g-atendendo" style="font-size:var(--fs-xl)">0</p>
                     <p class="text-slate-500 font-bold uppercase tracking-widest mt-0.5" style="font-size:var(--fs-xs)">Atendendo</p>
                 </div>
-                <!-- Botão de Som no Header -->
-                <button onclick="toggleSom()" id="btn-som-header" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition-all" title="Ativar/desativar som">
-                    <span id="icone-som-header" style="font-size:16px">🔇</span>
-                    <span id="texto-som-header" class="font-bold text-slate-600 uppercase tracking-widest" style="font-size:var(--fs-xs)">Som</span>
-                </button>
-                <div id="data-hora-fila" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg ml-1" style="font-size:var(--fs-xs)"></div>
+                <div id="data-hora-fila" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg" style="font-size:var(--fs-xs)"></div>
             </div>
         </header>
 
-        <!-- Último Chamado (Fila) -->
+        <!-- Último Chamado -->
         <div id="ultimo-chamado-wrap" class="hidden shrink-0">
             <div id="ultimo-chamado-card" class="bg-white border border-amber-200 shadow-md rounded-2xl relative overflow-hidden" style="padding:clamp(16px,2.5vw,36px) clamp(20px,3vw,44px)">
                 <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.05) 0%, transparent 70%)"></div>
                 <div class="flex flex-col md:flex-row items-center gap-5 relative z-10">
                     <div class="text-center md:text-left flex-1">
-                        <p class="text-amber-600 font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-2" style="font-size:var(--fs-xs);letter-spacing:0.3em">
-                            📣 Chamando Agora
-                        </p>
+                        <p class="text-amber-600 font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-2" style="font-size:var(--fs-xs);letter-spacing:0.3em">📣 Chamando Agora</p>
                         <h2 id="uc-nome-fila" class="nome-chamado font-black uppercase tracking-tight leading-none mb-3" style="font-size:var(--fs-3xl)">—</h2>
                         <div class="flex flex-wrap gap-2 justify-center md:justify-start">
                             <span id="uc-pauta-fila" class="bg-slate-100 border border-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
                             <span id="uc-local-fila" class="bg-amber-50 border border-amber-200 text-amber-800 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
-                            <span id="uc-hora-fila"  class="mono text-slate-500 font-bold self-center" style="font-size:var(--fs-xs)">—</span>
+                            <span id="uc-hora-fila" class="mono text-slate-500 font-bold self-center" style="font-size:var(--fs-xs)">—</span>
                         </div>
                     </div>
                 </div>
@@ -233,26 +321,19 @@
 
         <!-- Colunas -->
         <div class="flex flex-col md:flex-row gap-4 flex-1 min-h-[400px]">
-            <!-- Em Atendimento -->
             <div class="coluna-unificada w-full md:w-1/3 border-indigo-100">
                 <div class="coluna-header bg-indigo-50/50 border-indigo-100">
                     <div>
-                        <p class="text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
-                            🧑‍💻 Em Atendimento
-                        </p>
+                        <p class="text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">🧑‍💻 Em Atendimento</p>
                         <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Sendo atendidos neste momento</p>
                     </div>
                 </div>
                 <div id="lista-atendimento" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:8px"></div>
             </div>
-
-            <!-- Fila de Espera -->
             <div class="coluna-unificada w-full md:w-2/3 border-amber-100">
                 <div class="coluna-header bg-amber-50/30 border-amber-100">
                     <div>
-                        <p class="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
-                            ⏳ Fila de Espera
-                        </p>
+                        <p class="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">⏳ Fila de Espera</p>
                         <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Agrupado por unidade · numerado localmente</p>
                     </div>
                     <div id="legenda-unidades" class="flex flex-wrap gap-1.5 justify-end max-w-xs"></div>
@@ -260,66 +341,121 @@
                 <div id="lista-espera" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:10px"></div>
             </div>
         </div>
-        
+
         <footer class="text-center text-slate-400 font-bold uppercase tracking-widest pb-2 shrink-0" style="font-size:var(--fs-xs)">
             SIGEP · Painel Público da Recepção Unificada · Dados em tempo real
         </footer>
     </div>
 
-    <!-- Controles de Zoom (Apenas Modo Fila) -->
-    <div id="zoom-controls" class="fixed bottom-4 right-4 flex items-center gap-2 z-[100] bg-white border border-slate-200 p-2 rounded-xl shadow-xl">
+    <!-- Zoom (só modo fila) -->
+    <div id="zoom-controls" class="fixed bottom-16 right-4 flex items-center gap-2 z-[100] bg-white border border-slate-200 p-2 rounded-xl shadow-xl" style="opacity:0;transition:opacity 0.3s">
         <button onclick="mudarZoom(-0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">-</button>
         <span id="zoom-level" class="font-bold text-slate-600 text-center" style="font-size:var(--fs-xs);min-width:3rem">100%</span>
         <button onclick="mudarZoom(0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">+</button>
     </div>
 
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  MODO TV (Chamados clássico)                           -->
+    <!-- ═══════════════════════════════════════════════════════ -->
     <div id="modo-tv" class="hidden w-full h-screen sm:p-4 flex items-center justify-center overflow-hidden">
         <div class="w-full h-full sm:max-h-[90vh] sm:max-w-[160vh] sm:aspect-video bg-white shadow-2xl overflow-hidden rounded-none sm:rounded-2xl flex flex-col sm:flex-row">
-            
-            <!-- Lado Esquerdo: Chamada Atual (Verde) -->
+
             <div id="painel-destaque-tv" class="w-full sm:w-2/3 bg-tema-panel flex flex-col justify-center items-center text-white p-6 sm:p-12 text-center transition-all duration-300 flex-1">
-                <h1 class="text-3xl sm:text-5xl font-semibold uppercase tracking-widest mb-2 sm:mb-4 opacity-90 leading-tight drop-shadow-md">
-                    Chamando
-                </h1>
-                
-                <!-- Nome -->
-                <div id="uc-nome-tv" class="texto-nome-tv font-black mb-6 sm:mb-12 w-full px-4 drop-shadow-lg" style="min-height: 3em; display: flex; align-items: center; justify-content: center;">
-                    AGUARDANDO...
+                <h1 class="text-3xl sm:text-5xl font-semibold uppercase tracking-widest mb-2 sm:mb-4 opacity-90 leading-tight drop-shadow-md">Chamando</h1>
+                <div id="uc-nome-tv" class="texto-nome-tv font-black mb-6 sm:mb-12 w-full px-4 drop-shadow-lg" style="min-height:3em;display:flex;align-items:center;justify-content:center;">AGUARDANDO...</div>
+                <h2 class="text-2xl sm:text-4xl font-semibold uppercase tracking-widest mb-1 sm:mb-3 opacity-90 drop-shadow-md" id="label-local-tv">Dirija-se a</h2>
+                <div id="uc-local-tv" class="texto-local-tv font-black tracking-tighter drop-shadow-lg">—</div>
+            </div>
+
+            <div class="w-full sm:w-1/3 flex flex-col bg-white border-t-4 sm:border-t-0 sm:border-l-4 border-gray-100 flex-shrink-0" style="height:100%">
+                <div class="p-6 pb-2">
+                    <h3 class="text-xl sm:text-2xl font-black text-tema-panel text-center mb-6 uppercase tracking-widest">Últimos Chamados</h3>
+                    <div class="flex justify-between text-xs sm:text-sm text-slate-400 font-bold mb-2 px-2 uppercase tracking-wider border-b-2 border-slate-100 pb-2">
+                        <span>Nome</span><span>Local</span>
+                    </div>
                 </div>
-                
-                <h2 class="text-2xl sm:text-4xl font-semibold uppercase tracking-widest mb-1 sm:mb-3 opacity-90 drop-shadow-md" id="label-local-tv">
-                    Dirija-se a
-                </h2>
-                
-                <!-- Local/Sala -->
-                <div id="uc-local-tv" class="texto-local-tv font-black tracking-tighter drop-shadow-lg">
-                    —
+                <div id="lista-historico-tv" class="flex flex-col flex-grow overflow-hidden px-4 space-y-3 mt-2"></div>
+                <div class="mt-auto h-32 sm:h-48 bg-slate-50 flex flex-col justify-center items-center border-t border-slate-200 p-4">
+                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 sm:h-16 object-contain mb-3 grayscale opacity-70">
+                    <div id="data-hora-tv" class="mono text-slate-500 font-bold text-sm sm:text-base uppercase tracking-widest text-center"></div>
+                    <div id="recepcao-nome-tv" class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Recepção</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <!--  MODO TV + VÍDEO  (terceiro modo)                      -->
+    <!-- ═══════════════════════════════════════════════════════ -->
+    <div id="modo-video" class="hidden w-full h-screen overflow-hidden" style="background:#0f172a">
+        <div class="w-full h-full flex flex-col sm:flex-row">
+
+            <!-- ÁREA DO VÍDEO (esquerda/cima) -->
+            <div id="video-container" class="flex-1 relative">
+
+                <!-- Placeholder quando não há vídeo configurado -->
+                <div id="video-placeholder">
+                    <div style="font-size:64px">📺</div>
+                    <p class="font-black text-slate-400 text-xl uppercase tracking-widest">Sem vídeo configurado</p>
+                    <p class="text-slate-600 text-sm mt-2">Configure o vídeo no recepcaoConfig.js</p>
+                    <p class="text-slate-600 text-sm">usando o parâmetro <code class="text-amber-400">?video=URL</code></p>
+                </div>
+
+                <!-- Iframe do vídeo (YouTube / URL direta) -->
+                <div id="video-embed" style="display:none;position:absolute;inset:0"></div>
+
+                <!-- Banner de chamado sobreposto -->
+                <div id="banner-chamado">
+                    <div style="flex:1;min-width:0">
+                        <p style="font-size:clamp(11px,1.2vw,15px);font-weight:800;letter-spacing:0.3em;text-transform:uppercase;opacity:0.85;margin-bottom:4px">📣 Chamando Agora</p>
+                        <p id="banner-nome" style="font-size:clamp(2rem,5vw,5.5rem);font-weight:900;line-height:1;text-transform:uppercase;word-break:break-word">—</p>
+                    </div>
+                    <div style="text-align:right;flex-shrink:0">
+                        <p id="banner-label-local" style="font-size:clamp(11px,1.2vw,15px);font-weight:700;opacity:0.8;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px">Dirija-se a</p>
+                        <p id="banner-local" style="font-size:clamp(1.8rem,4vw,4.5rem);font-weight:900;line-height:1">—</p>
+                    </div>
                 </div>
             </div>
 
-            <!-- Lado Direito: Histórico -->
-            <div class="w-full sm:w-1/3 flex flex-col bg-white border-t-4 sm:border-t-0 sm:border-l-4 border-gray-100 flex-shrink-0" style="height: 100%;">
-                <!-- Cabeçalho Histórico -->
-                <div class="p-6 pb-2">
-                    <h3 class="text-xl sm:text-2xl font-black text-tema-panel text-center mb-6 uppercase tracking-widest">
-                        Últimos Chamados
-                    </h3>
-                    <div class="flex justify-between text-xs sm:text-sm text-slate-400 font-bold mb-2 px-2 uppercase tracking-wider border-b-2 border-slate-100 pb-2">
-                        <span>Nome</span>
-                        <span>Local</span>
+            <!-- FAIXA LATERAL (direita) -->
+            <div id="faixa-video">
+                <!-- Header da faixa -->
+                <div style="padding:20px 16px 12px;border-bottom:2px solid #f1f5f9;flex-shrink:0">
+                    <div class="flex items-center gap-3 mb-4">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" style="height:36px;object-fit:contain;filter:grayscale(0.3)">
+                        <div>
+                            <p style="font-size:11px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.05em">SIGEP</p>
+                            <p id="recepcao-nome-video" style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.03em">Recepção</p>
+                        </div>
+                    </div>
+                    <div style="display:flex;gap:8px">
+                        <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
+                            <p id="video-g-aguardando" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#f59e0b;line-height:1">0</p>
+                            <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Aguard.</p>
+                        </div>
+                        <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
+                            <p id="video-g-atendendo" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#4f46e5;line-height:1">0</p>
+                            <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Atend.</p>
+                        </div>
                     </div>
                 </div>
 
-                <!-- Lista de Histórico -->
-                <div id="lista-historico-tv" class="flex flex-col flex-grow overflow-hidden px-4 space-y-3 mt-2">
-                    <!-- Preenchido via JS -->
+                <!-- Último chamado na faixa -->
+                <div id="video-ultimo-chamado" style="padding:12px 16px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;display:none;flex-shrink:0">
+                    <p style="font-size:9px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px">📣 Chamando Agora</p>
+                    <p id="video-uc-nome" style="font-size:clamp(14px,1.8vw,20px);font-weight:900;color:#0f172a;text-transform:uppercase;line-height:1.2;word-break:break-word">—</p>
+                    <p id="video-uc-local" style="font-size:11px;font-weight:700;color:#16a34a;margin-top:4px">—</p>
                 </div>
 
-                <!-- Rodapé -->
-                <div class="mt-auto h-32 sm:h-48 bg-slate-50 flex flex-col justify-center items-center border-t border-slate-200 p-4">
-                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 sm:h-16 object-contain mb-3 grayscale opacity-70">
-                    <div id="data-hora-tv" class="mono text-slate-500 font-bold text-sm sm:text-base uppercase tracking-widest text-center"></div>
-                    <div id="recepcao-nome-tv" class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider">Recepção</div>
+                <!-- Histórico na faixa -->
+                <div style="padding:12px 16px 4px;flex-shrink:0">
+                    <p style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em">Últimos Chamados</p>
+                </div>
+                <div id="lista-historico-video" style="flex:1;overflow-y:auto;padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px"></div>
+
+                <!-- Relógio -->
+                <div style="padding:12px 16px;border-top:1px solid #f1f5f9;text-align:center;flex-shrink:0;background:#f8fafc">
+                    <div id="data-hora-video" class="mono" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em"></div>
                 </div>
             </div>
         </div>
@@ -330,141 +466,185 @@
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // ─────────────────────────────────────────────
-        //  GESTÃO DE SOM — corrige bloqueio de autoplay
+        //  SOM
         // ─────────────────────────────────────────────
         let audioCtx = null;
         let somAtivo = false;
 
         function garantirAudioCtx() {
-            if (!audioCtx) {
-                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
-            if (audioCtx.state === 'suspended') {
-                audioCtx.resume();
-            }
+            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            if (audioCtx.state === 'suspended') audioCtx.resume();
             return audioCtx;
         }
 
         window.ativarSom = function() {
-            try {
-                garantirAudioCtx();
-                somAtivo = true;
-                atualizarIndicadorSom();
-                // Toca um som de teste suave para confirmar
-                tocarSom();
-                // Esconde o overlay se existir
-                const overlay = document.getElementById('overlay-som');
-                if (overlay) overlay.style.display = 'none';
-            } catch(e) {
-                console.warn('Não foi possível ativar o áudio:', e);
-            }
+            try { garantirAudioCtx(); somAtivo = true; atualizarIndicadorSom(); tocarSom(); } catch(e) {}
         };
-
         window.toggleSom = function() {
-            if (!somAtivo) {
-                window.ativarSom();
-            } else {
-                somAtivo = false;
-                atualizarIndicadorSom();
-            }
+            if (!somAtivo) { window.ativarSom(); } else { somAtivo = false; atualizarIndicadorSom(); }
         };
 
         function atualizarIndicadorSom() {
-            // Atualiza botão no header (modo fila)
-            const iconeHeader = document.getElementById('icone-som-header');
-            const textoHeader = document.getElementById('texto-som-header');
-            const btnHeader   = document.getElementById('btn-som-header');
-
+            const icone = document.getElementById('icone-som-fixo');
+            const texto = document.getElementById('texto-som-fixo');
+            const btn   = document.getElementById('btn-som-fixo');
             if (somAtivo) {
-                if (iconeHeader) iconeHeader.textContent = '🔔';
-                if (textoHeader) textoHeader.textContent = 'Som ativo';
-                if (btnHeader) {
-                    btnHeader.style.background = '#dcfce7';
-                    btnHeader.style.borderColor = '#86efac';
-                }
+                if (icone) icone.textContent = '🔔';
+                if (texto) texto.textContent = 'Som ativo';
+                if (btn) { btn.style.background = '#dcfce7'; btn.style.borderColor = '#86efac'; }
             } else {
-                if (iconeHeader) iconeHeader.textContent = '🔇';
-                if (textoHeader) textoHeader.textContent = 'Som';
-                if (btnHeader) {
-                    btnHeader.style.background = '';
-                    btnHeader.style.borderColor = '';
-                }
+                if (icone) icone.textContent = '🔇';
+                if (texto) texto.textContent = 'Som';
+                if (btn) { btn.style.background = ''; btn.style.borderColor = ''; }
             }
         }
 
-        // Ativa o AudioContext na primeira interação do utilizador
-        // (necessário para cumprir a política de autoplay dos browsers)
         function onPrimeiraInteracao() {
-            if (!somAtivo) {
-                try {
-                    garantirAudioCtx();
-                    somAtivo = true;
-                    atualizarIndicadorSom();
-                } catch(e) {}
-            }
+            if (!somAtivo) { try { garantirAudioCtx(); somAtivo = true; atualizarIndicadorSom(); } catch(e) {} }
         }
-        document.addEventListener('click',   onPrimeiraInteracao, { once: true });
-        document.addEventListener('keydown', onPrimeiraInteracao, { once: true });
+        document.addEventListener('click',      onPrimeiraInteracao, { once: true });
+        document.addEventListener('keydown',    onPrimeiraInteracao, { once: true });
         document.addEventListener('touchstart', onPrimeiraInteracao, { once: true });
 
         function tocarSom() {
             if (!somAtivo) return;
             try {
                 const ctx = garantirAudioCtx();
-                // Ding-Dong: duas notas suaves
-                const notas = [[659, 0, 0.4], [523, 0.4, 0.6]];
-                notas.forEach(([freq, inicio, duracao]) => {
-                    const osc  = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain);
-                    gain.connect(ctx.destination);
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
-                    gain.gain.setValueAtTime(0.5, ctx.currentTime + inicio);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracao);
-                    osc.start(ctx.currentTime + inicio);
-                    osc.stop(ctx.currentTime + inicio + duracao);
+                [[659, 0, 0.4], [523, 0.4, 0.6]].forEach(([f, i, d]) => {
+                    const o = ctx.createOscillator(), g = ctx.createGain();
+                    o.connect(g); g.connect(ctx.destination);
+                    o.type = 'sine';
+                    o.frequency.setValueAtTime(f, ctx.currentTime + i);
+                    g.gain.setValueAtTime(0.5, ctx.currentTime + i);
+                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i + d);
+                    o.start(ctx.currentTime + i); o.stop(ctx.currentTime + i + d);
                 });
-            } catch(e) {
-                console.warn('Erro ao tocar som:', e);
-            }
+            } catch(e) {}
         }
 
         // ─────────────────────────────────────────────
-        //  GESTÃO DE MODOS (Fila / TV)
+        //  MODOS: 'fila' | 'tv' | 'video'
         // ─────────────────────────────────────────────
-        window.alternarModo = function() {
+        const MODOS = ['fila', 'tv', 'video'];
+
+        window.definirModo = function(modo) {
             const url = new URL(window.location);
-            if (url.searchParams.get('modo') === 'tv') {
-                url.searchParams.delete('modo');
-            } else {
-                url.searchParams.set('modo', 'tv');
-            }
+            url.searchParams.set('modo', modo);
             window.history.pushState({}, '', url);
             aplicarModoAtual();
         };
 
         function aplicarModoAtual() {
-            const isTV = new URLSearchParams(window.location.search).get('modo') === 'tv';
-            if (isTV) {
-                document.getElementById('modo-fila').classList.add('hidden');
-                document.getElementById('modo-fila').classList.remove('flex');
-                document.getElementById('zoom-controls').classList.add('hidden');
-                document.getElementById('modo-tv').classList.remove('hidden');
-                document.body.style.background = '#1e293b';
-                document.body.style.zoom = 1;
-            } else {
-                document.getElementById('modo-tv').classList.add('hidden');
+            const modo = new URLSearchParams(window.location.search).get('modo') || 'fila';
+
+            // esconde tudo
+            document.getElementById('modo-fila').classList.add('hidden');
+            document.getElementById('modo-fila').classList.remove('flex');
+            document.getElementById('modo-tv').classList.add('hidden');
+            document.getElementById('modo-tv').classList.remove('flex');
+            document.getElementById('modo-video').classList.add('hidden');
+            document.getElementById('zoom-controls').style.opacity = '0';
+            document.getElementById('zoom-controls').style.pointerEvents = 'none';
+
+            // botões
+            document.querySelectorAll('.btn-modo').forEach(b => b.classList.remove('ativo'));
+
+            if (modo === 'fila') {
                 document.getElementById('modo-fila').classList.remove('hidden');
                 document.getElementById('modo-fila').classList.add('flex');
-                document.getElementById('zoom-controls').classList.remove('hidden');
+                document.getElementById('zoom-controls').style.opacity = '';
+                document.getElementById('zoom-controls').style.pointerEvents = '';
+                document.getElementById('zoom-controls').addEventListener('mouseenter', () => { document.getElementById('zoom-controls').style.opacity='1'; });
+                document.getElementById('zoom-controls').addEventListener('mouseleave', () => { document.getElementById('zoom-controls').style.opacity='0'; });
                 document.body.style.background = '#f1f5f9';
                 document.body.style.zoom = window.zoomAtual;
+                document.getElementById('btn-modo-fila').classList.add('ativo');
+            } else if (modo === 'tv') {
+                document.getElementById('modo-tv').classList.remove('hidden');
+                document.getElementById('modo-tv').classList.add('flex');
+                document.body.style.background = '#1e293b';
+                document.body.style.zoom = 1;
+                document.getElementById('btn-modo-tv').classList.add('ativo');
+            } else if (modo === 'video') {
+                document.getElementById('modo-video').classList.remove('hidden');
+                document.body.style.background = '#0f172a';
+                document.body.style.zoom = 1;
+                document.getElementById('btn-modo-video').classList.add('ativo');
+                iniciarVideo();
             }
         }
 
         // ─────────────────────────────────────────────
-        //  ZOOM (Apenas Modo Fila)
+        //  VÍDEO — carrega YouTube ou arquivo direto
+        // ─────────────────────────────────────────────
+        let videoCarregado = false;
+
+        function extrairYoutubeId(url) {
+            // Suporta: youtu.be/ID, youtube.com/watch?v=ID, youtube.com/embed/ID, /live/ID
+            const m = url.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|live\/|shorts\/))([A-Za-z0-9_-]{11})/);
+            return m ? m[1] : null;
+        }
+
+        function iniciarVideo() {
+            if (videoCarregado) return;
+            const params = new URLSearchParams(window.location.search);
+            const videoUrl = params.get('video') || '';
+            if (!videoUrl) return;
+
+            videoCarregado = true;
+            const placeholder = document.getElementById('video-placeholder');
+            const embedDiv    = document.getElementById('video-embed');
+
+            placeholder.style.display = 'none';
+            embedDiv.style.display    = 'block';
+
+            const ytId = extrairYoutubeId(videoUrl);
+            if (ytId) {
+                // YouTube embed com autoplay, sem controles, loop, mudo (necessário para autoplay)
+                embedDiv.innerHTML = `<iframe
+                    src="https://www.youtube.com/embed/${ytId}?autoplay=1&mute=1&loop=1&playlist=${ytId}&controls=0&modestbranding=1&rel=0&disablekb=1"
+                    allow="autoplay; encrypted-media"
+                    allowfullscreen
+                    style="position:absolute;inset:0;width:100%;height:100%;border:none">
+                </iframe>`;
+            } else {
+                // URL direta de vídeo
+                embedDiv.innerHTML = `<video
+                    src="${videoUrl}"
+                    autoplay muted loop playsinline
+                    style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover">
+                </video>`;
+            }
+        }
+
+        // Banner de chamado sobre o vídeo
+        let bannerTimer = null;
+        function mostrarBannerChamado(chamado) {
+            const banner    = document.getElementById('banner-chamado');
+            const nomeEl    = document.getElementById('banner-nome');
+            const localEl   = document.getElementById('banner-local');
+            const labelEl   = document.getElementById('banner-label-local');
+
+            if (!banner) return;
+            nomeEl.textContent  = (chamado.nome || '').toUpperCase();
+            localEl.textContent = chamado.sala || chamado.local || '—';
+            labelEl.textContent = chamado.sala ? 'Sala' : 'Local';
+
+            // Remove estado anterior
+            banner.classList.remove('visivel', 'saindo');
+            void banner.offsetWidth;
+            banner.classList.add('visivel');
+
+            if (bannerTimer) clearTimeout(bannerTimer);
+            bannerTimer = setTimeout(() => {
+                banner.classList.remove('visivel');
+                banner.classList.add('saindo');
+                setTimeout(() => banner.classList.remove('saindo'), 500);
+            }, 8000); // banner visível por 8 segundos
+        }
+
+        // ─────────────────────────────────────────────
+        //  ZOOM
         // ─────────────────────────────────────────────
         window.zoomAtual = 1;
         window.mudarZoom = function(delta) {
@@ -484,23 +664,17 @@
             messagingSenderId: "87113750208",
             appId: "1:87113750208:web:4abba0024f4d4af699bf25"
         };
-        const firebaseApp = initializeApp(firebaseConfig);
-        const db = getFirestore(firebaseApp);
+        const db = getFirestore(initializeApp(firebaseConfig));
 
-        const params = new URLSearchParams(window.location.search);
+        const params     = new URLSearchParams(window.location.search);
         const pautasParam = params.get('pautas');
-        let recepcaoNome = params.get('nome') || 'Recepção Geral';
+        let recepcaoNome  = params.get('nome') || 'Recepção Geral';
 
         const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
-
-        // Mapa de cores por unidade
         const corPorUnidade = {};
         let proximaCor = 0;
         function getCorUnidade(key) {
-            if (corPorUnidade[key] === undefined) {
-                corPorUnidade[key] = proximaCor % 8;
-                proximaCor++;
-            }
+            if (corPorUnidade[key] === undefined) { corPorUnidade[key] = proximaCor % 8; proximaCor++; }
             return corPorUnidade[key];
         }
 
@@ -508,42 +682,33 @@
             if (!str) return '';
             return String(str).replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
         }
-        function horaAgora() {
-            return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        }
+        function horaAgora() { return new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }); }
+
         function tickRelogio() {
-            const dataStrFila = new Date().toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
-            const dataStrTV   = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
-            
-            const elFila = document.getElementById('data-hora-fila');
-            if (elFila) elFila.textContent = dataStrFila;
-            
-            const elTV = document.getElementById('data-hora-tv');
-            if (elTV) elTV.textContent = dataStrTV;
+            const dFila  = new Date().toLocaleString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit', second:'2-digit' }).replace(',', ' ·');
+            const dTV    = new Date().toLocaleString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
+            const elFila = document.getElementById('data-hora-fila');    if (elFila) elFila.textContent = dFila;
+            const elTV   = document.getElementById('data-hora-tv');      if (elTV)   elTV.textContent   = dTV;
+            const elVid  = document.getElementById('data-hora-video');   if (elVid)  elVid.textContent  = dTV;
         }
-        setInterval(tickRelogio, 1000);
-        tickRelogio();
+        setInterval(tickRelogio, 1000); tickRelogio();
 
         // ─────────────────────────────────────────────
         //  RENDER — Modo Fila
         // ─────────────────────────────────────────────
-        function renderUltimoChamadoFila(chamado) {
-            if (!chamado) return;
-            const wrap  = document.getElementById('ultimo-chamado-wrap');
-            const card  = document.getElementById('ultimo-chamado-card');
+        function renderUltimoChamadoFila(c) {
+            if (!c) return;
+            const wrap = document.getElementById('ultimo-chamado-wrap');
+            const card = document.getElementById('ultimo-chamado-card');
             const nomeEl = document.getElementById('uc-nome-fila');
-            
             wrap.classList.remove('hidden');
-            nomeEl.textContent = chamado.nome.toUpperCase();
-            document.getElementById('uc-pauta-fila').textContent = esc(chamado.pautaNome || chamado.local || '—');
-            document.getElementById('uc-local-fila').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
-            document.getElementById('uc-hora-fila').textContent  = chamado.hora || horaAgora();
-            
-            nomeEl.classList.remove('anim-chamado');
-            card.classList.remove('anim-glow');
+            nomeEl.textContent = c.nome.toUpperCase();
+            document.getElementById('uc-pauta-fila').textContent = esc(c.pautaNome || c.local || '—');
+            document.getElementById('uc-local-fila').textContent = c.sala ? '🏠 ' + esc(c.sala) : '📋 ' + esc(c.local || '—');
+            document.getElementById('uc-hora-fila').textContent  = c.hora || horaAgora();
+            nomeEl.classList.remove('anim-chamado'); card.classList.remove('anim-glow');
             void card.offsetWidth;
-            nomeEl.classList.add('anim-chamado');
-            card.classList.add('anim-glow');
+            nomeEl.classList.add('anim-chamado'); card.classList.add('anim-glow');
         }
 
         function renderPainelUnificado() {
@@ -557,13 +722,11 @@
                 const nomePauta = pauta?.name || 'Geral';
                 const salaPauta = pauta?.sala || '';
                 let aguardandoLocal = [];
-
                 lista.forEach(a => {
                     const p = { ...a, nomePauta, salaPauta, pautaId };
-                    if (a.status === 'aguardando')    aguardandoLocal.push(p);
+                    if (a.status === 'aguardando')       aguardandoLocal.push(p);
                     else if (a.status === 'emAtendimento') todosEmAtendimento.push(p);
                 });
-
                 if (aguardandoLocal.length > 0) {
                     aguardandoLocal.sort((a, b) => {
                         if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
@@ -576,70 +739,72 @@
                 }
             }
 
-            document.getElementById('g-aguardando').textContent = totalAguardando;
-            document.getElementById('g-atendendo').textContent  = todosEmAtendimento.length;
+            const setNum = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setNum('g-aguardando', totalAguardando);
+            setNum('g-atendendo',  todosEmAtendimento.length);
+            setNum('video-g-aguardando', totalAguardando);
+            setNum('video-g-atendendo',  todosEmAtendimento.length);
             todosEmAtendimento.sort((a, b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
 
-            // Lista Atendimento
+            // Lista atendimento
             const listaAtEl = document.getElementById('lista-atendimento');
-            if (todosEmAtendimento.length === 0) {
-                listaAtEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Nenhum atendimento</p></div>`;
-            } else {
-                listaAtEl.innerHTML = todosEmAtendimento.map(a => {
-                    const cor = getCorUnidade(a.pautaId);
-                    return `<div class="pessoa-card em-atendimento anim-fade-up ucor-${cor}" style="margin:0;border-left-color:#4f46e5!important">
-                        <div style="min-width:0;flex:1">
-                            <p style="font-size:var(--fs-lg);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
-                            <p class="u-label" style="font-size:var(--fs-xs);font-weight:700;margin-top:2px;text-transform:uppercase;letter-spacing:0.05em">${esc(a.nomePauta)}</p>
-                        </div>
-                        ${a.salaPauta ? `<span class="sala-badge" style="border-color:#c7d2fe;color:#4338ca;background:#e0e7ff">${esc(a.salaPauta)}</span>` : ''}
-                    </div>`;
-                }).join('');
-            }
-
-            // Lista Espera
-            const listaEsEl = document.getElementById('lista-espera');
-            if (totalAguardando === 0) {
-                listaEsEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p></div>`;
-                document.getElementById('legenda-unidades').innerHTML = '';
-                return;
-            }
-
-            const ordemGrupos = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
-            document.getElementById('legenda-unidades').innerHTML = ordemGrupos.map(key => {
-                const cor = getCorUnidade(key);
-                const g = grupos[key];
-                return `<span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:700;padding:3px 10px;border-radius:6px;white-space:nowrap">${esc(g.nomePauta)} <strong>${g.pessoas.length}</strong></span>`;
-            }).join('');
-
-            listaEsEl.innerHTML = ordemGrupos.map((key, gi) => {
-                const g = grupos[key];
-                const cor = getCorUnidade(key);
-                const primeiroUrgente = g.pessoas.some(p => p.priority === 'URGENTE');
-                
-                const pessoasHTML = g.pessoas.map((a, li) => `
-                    <div class="pessoa-card ucor-${cor} anim-card" style="margin:0;animation-delay:${(gi*0.1 + li*0.03)}s">
-                        <span class="ordem-num">${a.ordemLocal}º</span>
-                        <div style="min-width:0;flex:1">
-                            <p style="font-size:var(--fs-md);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
-                        </div>
-                        ${a.priority === 'URGENTE' ? `<span class="pill" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca">URGENTE</span>` : ''}
-                    </div>`).join('');
-
-                return `<div class="unidade-group anim-group ucor-${cor}" style="animation-delay:${gi*0.08}s;border-left:4px solid currentColor">
-                    <div class="unidade-group-header ucor-${cor}">
-                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
-                            ${primeiroUrgente ? `<span style="font-size:var(--fs-md)">🔴</span>` : `<span style="font-size:var(--fs-md)">🏢</span>`}
-                            <div style="min-width:0">
-                                <p class="u-label" style="font-size:var(--fs-sm);font-weight:900;text-transform:uppercase;letter-spacing:0.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.nomePauta)}</p>
-                                ${g.salaPauta ? `<p style="font-size:var(--fs-xs);color:#64748b;font-weight:600;margin-top:1px">🏠 ${esc(g.salaPauta)}</p>` : ''}
+            if (listaAtEl) {
+                if (todosEmAtendimento.length === 0) {
+                    listaAtEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Nenhum atendimento</p></div>`;
+                } else {
+                    listaAtEl.innerHTML = todosEmAtendimento.map(a => {
+                        const cor = getCorUnidade(a.pautaId);
+                        return `<div class="pessoa-card em-atendimento anim-fade-up ucor-${cor}" style="margin:0;border-left-color:#4f46e5!important">
+                            <div style="min-width:0;flex:1">
+                                <p style="font-size:var(--fs-lg);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
+                                <p class="u-label" style="font-size:var(--fs-xs);font-weight:700;margin-top:2px;text-transform:uppercase;letter-spacing:0.05em">${esc(a.nomePauta)}</p>
                             </div>
-                        </div>
-                        <span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:800;padding:4px 12px;border-radius:999px;flex-shrink:0;margin-left:8px">${g.pessoas.length} na fila</span>
-                    </div>
-                    <div class="unidade-group-body">${pessoasHTML}</div>
-                </div>`;
-            }).join('');
+                            ${a.salaPauta ? `<span class="sala-badge" style="border-color:#c7d2fe;color:#4338ca;background:#e0e7ff">${esc(a.salaPauta)}</span>` : ''}
+                        </div>`;
+                    }).join('');
+                }
+            }
+
+            // Lista espera
+            const listaEsEl = document.getElementById('lista-espera');
+            if (listaEsEl) {
+                if (totalAguardando === 0) {
+                    listaEsEl.innerHTML = `<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;color:#94a3b8;margin-top:40px;text-align:center"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p></div>`;
+                    document.getElementById('legenda-unidades').innerHTML = '';
+                } else {
+                    const ordemGrupos = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
+                    document.getElementById('legenda-unidades').innerHTML = ordemGrupos.map(key => {
+                        const cor = getCorUnidade(key);
+                        return `<span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:700;padding:3px 10px;border-radius:6px;white-space:nowrap">${esc(grupos[key].nomePauta)} <strong>${grupos[key].pessoas.length}</strong></span>`;
+                    }).join('');
+                    listaEsEl.innerHTML = ordemGrupos.map((key, gi) => {
+                        const g = grupos[key];
+                        const cor = getCorUnidade(key);
+                        const primeiroUrgente = g.pessoas.some(p => p.priority === 'URGENTE');
+                        const pessoasHTML = g.pessoas.map((a, li) => `
+                            <div class="pessoa-card ucor-${cor} anim-card" style="margin:0;animation-delay:${(gi*0.1 + li*0.03)}s">
+                                <span class="ordem-num">${a.ordemLocal}º</span>
+                                <div style="min-width:0;flex:1">
+                                    <p style="font-size:var(--fs-md);font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${esc(a.name)}</p>
+                                </div>
+                                ${a.priority === 'URGENTE' ? `<span class="pill" style="background:#fee2e2;color:#991b1b;border:1px solid #fecaca">URGENTE</span>` : ''}
+                            </div>`).join('');
+                        return `<div class="unidade-group anim-group ucor-${cor}" style="animation-delay:${gi*0.08}s;border-left:4px solid currentColor">
+                            <div class="unidade-group-header ucor-${cor}">
+                                <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
+                                    ${primeiroUrgente ? `<span style="font-size:var(--fs-md)">🔴</span>` : `<span style="font-size:var(--fs-md)">🏢</span>`}
+                                    <div style="min-width:0">
+                                        <p class="u-label" style="font-size:var(--fs-sm);font-weight:900;text-transform:uppercase;letter-spacing:0.06em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${esc(g.nomePauta)}</p>
+                                        ${g.salaPauta ? `<p style="font-size:var(--fs-xs);color:#64748b;font-weight:600;margin-top:1px">🏠 ${esc(g.salaPauta)}</p>` : ''}
+                                    </div>
+                                </div>
+                                <span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:800;padding:4px 12px;border-radius:999px;flex-shrink:0;margin-left:8px">${g.pessoas.length} na fila</span>
+                            </div>
+                            <div class="unidade-group-body">${pessoasHTML}</div>
+                        </div>`;
+                    }).join('');
+                }
+            }
         }
 
         // ─────────────────────────────────────────────
@@ -647,35 +812,59 @@
         // ─────────────────────────────────────────────
         function renderHistoricoTV() {
             const listaEl = document.getElementById('lista-historico-tv');
+            if (!listaEl) return;
             if (estado.historico.length === 0) {
-                listaEl.innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-300 font-bold uppercase text-xs">Nenhum histórico recente</div>`;
+                listaEl.innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-300 font-bold uppercase text-xs">Nenhum histórico</div>`;
                 return;
             }
             listaEl.innerHTML = estado.historico.slice(0, 5).map(h => `
                 <div class="item-historico flex justify-between items-center bg-slate-50 rounded-lg p-3 sm:p-4 border border-slate-100 shadow-sm">
-                    <span class="text-lg sm:text-xl font-bold text-slate-700 truncate pr-2 w-2/3" style="text-transform: uppercase;">
-                        ${esc(h.nome)}
-                    </span>
-                    <span class="text-base sm:text-lg font-black text-tema-panel whitespace-nowrap text-right">
-                        ${esc(h.sala || h.local || '—')}
-                    </span>
-                </div>
-            `).join('');
+                    <span class="text-lg sm:text-xl font-bold text-slate-700 truncate pr-2 w-2/3" style="text-transform:uppercase">${esc(h.nome)}</span>
+                    <span class="text-base sm:text-lg font-black text-tema-panel whitespace-nowrap text-right">${esc(h.sala || h.local || '—')}</span>
+                </div>`).join('');
         }
 
-        function renderUltimoChamadoTV(chamado) {
-            if (!chamado) return;
-            const nomeEl        = document.getElementById('uc-nome-tv');
-            const localEl       = document.getElementById('uc-local-tv');
-            const painelDestaque = document.getElementById('painel-destaque-tv');
+        function renderUltimoChamadoTV(c) {
+            if (!c) return;
+            const nomeEl = document.getElementById('uc-nome-tv');
+            const localEl = document.getElementById('uc-local-tv');
+            const painel  = document.getElementById('painel-destaque-tv');
+            if (nomeEl)  nomeEl.textContent  = (c.nome || '').toUpperCase();
+            if (localEl) localEl.textContent = c.sala ? esc(c.sala) : esc(c.local || '—');
+            const label = document.getElementById('label-local-tv');
+            if (label) label.textContent = c.sala ? 'Sala' : 'Local';
+            if (painel) {
+                painel.classList.remove('animar-chamado-tv');
+                void painel.offsetWidth;
+                painel.classList.add('animar-chamado-tv');
+            }
+        }
 
-            nomeEl.textContent  = esc(chamado.nome).toUpperCase();
-            localEl.textContent = chamado.sala ? esc(chamado.sala) : esc(chamado.local || '—');
-            document.getElementById('label-local-tv').textContent = chamado.sala ? 'Sala' : 'Local';
+        // ─────────────────────────────────────────────
+        //  RENDER — Modo Vídeo (faixa lateral)
+        // ─────────────────────────────────────────────
+        function renderHistoricoVideo() {
+            const listaEl = document.getElementById('lista-historico-video');
+            if (!listaEl) return;
+            if (estado.historico.length === 0) {
+                listaEl.innerHTML = `<div style="flex:1;display:flex;align-items:center;justify-content:center;color:#94a3b8;font-size:10px;font-weight:700;text-transform:uppercase">Nenhum histórico</div>`;
+                return;
+            }
+            listaEl.innerHTML = estado.historico.slice(0, 6).map(h => `
+                <div style="display:flex;justify-content:space-between;align-items:center;background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:8px 10px;gap:8px">
+                    <span style="font-size:12px;font-weight:700;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase;flex:1">${esc(h.nome)}</span>
+                    <span style="font-size:11px;font-weight:800;color:#16a34a;white-space:nowrap;flex-shrink:0">${esc(h.sala || h.local || '—')}</span>
+                </div>`).join('');
+        }
 
-            painelDestaque.classList.remove('animar-chamado-tv');
-            void painelDestaque.offsetWidth;
-            painelDestaque.classList.add('animar-chamado-tv');
+        function renderUltimoChamadoVideo(c) {
+            if (!c) return;
+            const wrap  = document.getElementById('video-ultimo-chamado');
+            const nomeEl = document.getElementById('video-uc-nome');
+            const localEl = document.getElementById('video-uc-local');
+            if (wrap)  wrap.style.display = 'block';
+            if (nomeEl)  nomeEl.textContent  = (c.nome || '').toUpperCase();
+            if (localEl) localEl.textContent = (c.sala ? '🏠 ' + c.sala : '📋 ' + (c.local || '—'));
         }
 
         // ─────────────────────────────────────────────
@@ -690,7 +879,7 @@
                         <span style="font-size:40px;display:block;margin-bottom:12px">⚠️</span>
                         <h2 style="color:#1e293b;font-size:var(--fs-lg);font-weight:700;margin-bottom:8px">Painel não configurado</h2>
                         <p style="color:#475569;font-size:var(--fs-sm);margin-bottom:16px">Faltam os parâmetros na URL.</p>
-                        <code style="background:#f1f5f9;color:#475569;font-size:var(--fs-xs);padding:8px 12px;border-radius:8px;display:block;word-break:break-all">?pautas=ID_DA_PAUTA</code>
+                        <code style="background:#f1f5f9;color:#475569;font-size:var(--fs-xs);padding:8px 12px;border-radius:8px;display:block;word-break:break-all">?pautas=ID&video=YOUTUBE_URL&modo=video</code>
                     </div>`;
                 return;
             }
@@ -698,20 +887,25 @@
             const pautaIds = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
             if (pautaIds.length === 0) return;
 
-            document.getElementById('recepcao-nome-fila').textContent = decodeURIComponent(recepcaoNome);
-            document.getElementById('recepcao-nome-tv').textContent   = decodeURIComponent(recepcaoNome);
-            document.getElementById('loading').classList.add('hidden');
+            const setNome = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
+            setNome('recepcao-nome-fila',  decodeURIComponent(recepcaoNome));
+            setNome('recepcao-nome-tv',    decodeURIComponent(recepcaoNome));
+            setNome('recepcao-nome-video', decodeURIComponent(recepcaoNome));
 
+            document.getElementById('loading').classList.add('hidden');
             renderHistoricoTV();
+            renderHistoricoVideo();
 
             pautaIds.forEach(pautaId => {
+
                 onSnapshot(doc(db, "pautas", pautaId), (snap) => {
                     if (!snap.exists()) return;
                     const d = snap.data();
                     estado.pautas[pautaId] = { id: pautaId, ...d };
                     if (d.unidade) {
-                        document.getElementById('recepcao-nome-fila').textContent = esc(d.unidade);
-                        document.getElementById('recepcao-nome-tv').textContent   = esc(d.unidade);
+                        setNome('recepcao-nome-fila',  esc(d.unidade));
+                        setNome('recepcao-nome-tv',    esc(d.unidade));
+                        setNome('recepcao-nome-video', esc(d.unidade));
                     }
                     renderPainelUnificado();
                 });
@@ -725,29 +919,31 @@
                     if (!snap.exists()) return;
                     const data = snap.data();
                     if (!data.atual) return;
-                    
+
                     const tsAtual = data.atual.timestamp || 0;
                     const tsUlt   = estado.ultimoChamado?.timestamp || 0;
-                    
+
                     if (tsAtual > tsUlt) {
-                        const novoChamadoTratado = {
+                        const novo = {
                             ...data.atual,
                             pautaNome: estado.pautas[pautaId]?.name || data.atual.local || '',
                             sala: estado.pautas[pautaId]?.sala || data.atual.sala || '',
                         };
 
-                        // Histórico para TV
                         if (estado.ultimoChamado) {
                             estado.historico.unshift(estado.ultimoChamado);
-                            if (estado.historico.length > 5) estado.historico.pop();
+                            if (estado.historico.length > 6) estado.historico.pop();
                             renderHistoricoTV();
+                            renderHistoricoVideo();
                         }
 
-                        estado.ultimoChamado = novoChamadoTratado;
+                        estado.ultimoChamado = novo;
 
-                        renderUltimoChamadoFila(novoChamadoTratado);
-                        renderUltimoChamadoTV(novoChamadoTratado);
-                        tocarSom(); // Toca apenas se somAtivo === true
+                        renderUltimoChamadoFila(novo);
+                        renderUltimoChamadoTV(novo);
+                        renderUltimoChamadoVideo(novo);
+                        mostrarBannerChamado(novo);   // banner sobre o vídeo
+                        tocarSom();
                     }
                 });
             });
