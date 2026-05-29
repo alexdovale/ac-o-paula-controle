@@ -118,6 +118,21 @@
 
         .texto-nome-tv { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
         .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; }
+
+        /* Botão de ativar som */
+        #btn-ativar-som {
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 200;
+            background: white;
+            border: 2px solid #e2e8f0;
+            border-radius: 20px;
+            padding: 32px 48px;
+            text-align: center;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.15);
+        }
     </style>
 </head>
 <body class="p-0 flex flex-col min-h-screen">
@@ -128,12 +143,30 @@
         <p class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Conectando ao SIGEP...</p>
     </div>
 
+    <!-- Overlay para ativar som (navegadores bloqueiam áudio antes de interação) -->
+    <div id="overlay-som" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm flex items-center justify-center" style="display:none!important">
+        <div id="btn-ativar-som">
+            <div style="font-size:48px;margin-bottom:12px">🔔</div>
+            <h2 style="font-size:var(--fs-lg);font-weight:900;color:#0f172a;margin-bottom:8px">Ativar Som</h2>
+            <p style="font-size:var(--fs-sm);color:#64748b;margin-bottom:24px;max-width:280px">Clique para ativar as notificações sonoras dos chamados.</p>
+            <button onclick="ativarSom()" style="background:#22c55e;color:white;font-weight:800;font-size:var(--fs-md);padding:12px 32px;border:none;border-radius:12px;cursor:pointer;width:100%">
+                ✓ Ativar Notificações
+            </button>
+        </div>
+    </div>
+
     <!-- Botão de Alternar Layout -->
     <button onclick="alternarModo()" class="fixed bottom-4 left-4 z-[100] bg-white/80 hover:bg-white border border-slate-200 p-3 rounded-full shadow-lg opacity-30 hover:opacity-100 transition-all text-slate-700" title="Alternar Modo de Ecrã">
         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
             <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
         </svg>
     </button>
+
+    <!-- Indicador de status do som -->
+    <div id="indicador-som" class="fixed top-4 right-4 z-[100] flex items-center gap-2 bg-white border border-slate-200 px-3 py-2 rounded-full shadow-md opacity-0 transition-opacity duration-300" style="font-size:var(--fs-xs)">
+        <span id="icone-som">🔇</span>
+        <span id="texto-som" class="font-bold text-slate-600">Som desativado</span>
+    </div>
 
     <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6">
         <!-- Header -->
@@ -169,6 +202,11 @@
                     <p class="text-indigo-600 font-black leading-none" id="g-atendendo" style="font-size:var(--fs-xl)">0</p>
                     <p class="text-slate-500 font-bold uppercase tracking-widest mt-0.5" style="font-size:var(--fs-xs)">Atendendo</p>
                 </div>
+                <!-- Botão de Som no Header -->
+                <button onclick="toggleSom()" id="btn-som-header" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition-all" title="Ativar/desativar som">
+                    <span id="icone-som-header" style="font-size:16px">🔇</span>
+                    <span id="texto-som-header" class="font-bold text-slate-600 uppercase tracking-widest" style="font-size:var(--fs-xs)">Som</span>
+                </button>
                 <div id="data-hora-fila" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg ml-1" style="font-size:var(--fs-xs)"></div>
             </div>
         </header>
@@ -291,7 +329,110 @@
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Gestão de Modos
+        // ─────────────────────────────────────────────
+        //  GESTÃO DE SOM — corrige bloqueio de autoplay
+        // ─────────────────────────────────────────────
+        let audioCtx = null;
+        let somAtivo = false;
+
+        function garantirAudioCtx() {
+            if (!audioCtx) {
+                audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            if (audioCtx.state === 'suspended') {
+                audioCtx.resume();
+            }
+            return audioCtx;
+        }
+
+        window.ativarSom = function() {
+            try {
+                garantirAudioCtx();
+                somAtivo = true;
+                atualizarIndicadorSom();
+                // Toca um som de teste suave para confirmar
+                tocarSom();
+                // Esconde o overlay se existir
+                const overlay = document.getElementById('overlay-som');
+                if (overlay) overlay.style.display = 'none';
+            } catch(e) {
+                console.warn('Não foi possível ativar o áudio:', e);
+            }
+        };
+
+        window.toggleSom = function() {
+            if (!somAtivo) {
+                window.ativarSom();
+            } else {
+                somAtivo = false;
+                atualizarIndicadorSom();
+            }
+        };
+
+        function atualizarIndicadorSom() {
+            // Atualiza botão no header (modo fila)
+            const iconeHeader = document.getElementById('icone-som-header');
+            const textoHeader = document.getElementById('texto-som-header');
+            const btnHeader   = document.getElementById('btn-som-header');
+
+            if (somAtivo) {
+                if (iconeHeader) iconeHeader.textContent = '🔔';
+                if (textoHeader) textoHeader.textContent = 'Som ativo';
+                if (btnHeader) {
+                    btnHeader.style.background = '#dcfce7';
+                    btnHeader.style.borderColor = '#86efac';
+                }
+            } else {
+                if (iconeHeader) iconeHeader.textContent = '🔇';
+                if (textoHeader) textoHeader.textContent = 'Som';
+                if (btnHeader) {
+                    btnHeader.style.background = '';
+                    btnHeader.style.borderColor = '';
+                }
+            }
+        }
+
+        // Ativa o AudioContext na primeira interação do utilizador
+        // (necessário para cumprir a política de autoplay dos browsers)
+        function onPrimeiraInteracao() {
+            if (!somAtivo) {
+                try {
+                    garantirAudioCtx();
+                    somAtivo = true;
+                    atualizarIndicadorSom();
+                } catch(e) {}
+            }
+        }
+        document.addEventListener('click',   onPrimeiraInteracao, { once: true });
+        document.addEventListener('keydown', onPrimeiraInteracao, { once: true });
+        document.addEventListener('touchstart', onPrimeiraInteracao, { once: true });
+
+        function tocarSom() {
+            if (!somAtivo) return;
+            try {
+                const ctx = garantirAudioCtx();
+                // Ding-Dong: duas notas suaves
+                const notas = [[659, 0, 0.4], [523, 0.4, 0.6]];
+                notas.forEach(([freq, inicio, duracao]) => {
+                    const osc  = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
+                    gain.gain.setValueAtTime(0.5, ctx.currentTime + inicio);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracao);
+                    osc.start(ctx.currentTime + inicio);
+                    osc.stop(ctx.currentTime + inicio + duracao);
+                });
+            } catch(e) {
+                console.warn('Erro ao tocar som:', e);
+            }
+        }
+
+        // ─────────────────────────────────────────────
+        //  GESTÃO DE MODOS (Fila / TV)
+        // ─────────────────────────────────────────────
         window.alternarModo = function() {
             const url = new URL(window.location);
             if (url.searchParams.get('modo') === 'tv') {
@@ -310,19 +451,21 @@
                 document.getElementById('modo-fila').classList.remove('flex');
                 document.getElementById('zoom-controls').classList.add('hidden');
                 document.getElementById('modo-tv').classList.remove('hidden');
-                document.body.style.background = '#1e293b'; // Fundo escuro para a TV
-                document.body.style.zoom = 1; // Previne quebras se o utilizador deu zoom na fila
+                document.body.style.background = '#1e293b';
+                document.body.style.zoom = 1;
             } else {
                 document.getElementById('modo-tv').classList.add('hidden');
                 document.getElementById('modo-fila').classList.remove('hidden');
                 document.getElementById('modo-fila').classList.add('flex');
                 document.getElementById('zoom-controls').classList.remove('hidden');
-                document.body.style.background = '#f1f5f9'; // Fundo claro original
+                document.body.style.background = '#f1f5f9';
                 document.body.style.zoom = window.zoomAtual;
             }
         }
 
-        // Zoom (Apenas Modo Fila)
+        // ─────────────────────────────────────────────
+        //  ZOOM (Apenas Modo Fila)
+        // ─────────────────────────────────────────────
         window.zoomAtual = 1;
         window.mudarZoom = function(delta) {
             window.zoomAtual = Math.max(0.4, Math.min(2.5, window.zoomAtual + delta));
@@ -330,6 +473,9 @@
             document.getElementById('zoom-level').textContent = Math.round(window.zoomAtual * 100) + '%';
         };
 
+        // ─────────────────────────────────────────────
+        //  FIREBASE
+        // ─────────────────────────────────────────────
         const firebaseConfig = {
             apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
             authDomain: "pauta-ce162.firebaseapp.com",
@@ -347,7 +493,7 @@
 
         const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
 
-        // Mapa de cores
+        // Mapa de cores por unidade
         const corPorUnidade = {};
         let proximaCor = 0;
         function getCorUnidade(key) {
@@ -367,7 +513,7 @@
         }
         function tickRelogio() {
             const dataStrFila = new Date().toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
-            const dataStrTV = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dataStrTV   = new Date().toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
             
             const elFila = document.getElementById('data-hora-fila');
             if (elFila) elFila.textContent = dataStrFila;
@@ -375,30 +521,16 @@
             const elTV = document.getElementById('data-hora-tv');
             if (elTV) elTV.textContent = dataStrTV;
         }
-        setInterval(tickRelogio, 1000); tickRelogio();
+        setInterval(tickRelogio, 1000);
+        tickRelogio();
 
-        function tocarSom() {
-            try {
-                const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                // Som Ding-Dong padrão
-                const notas = [[659, 0, 0.4], [523, 0.4, 0.6]];
-                notas.forEach(([f, i, d]) => {
-                    const o = ctx.createOscillator(), g = ctx.createGain();
-                    o.connect(g); g.connect(ctx.destination);
-                    o.type = 'sine'; o.frequency.setValueAtTime(f, ctx.currentTime + i);
-                    g.gain.setValueAtTime(0.5, ctx.currentTime + i);
-                    g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i + d);
-                    o.start(ctx.currentTime + i); o.stop(ctx.currentTime + i + d);
-                });
-                setTimeout(() => ctx.close(), 1500);
-            } catch(e) {}
-        }
-
-        // Renderiza Modo Original
+        // ─────────────────────────────────────────────
+        //  RENDER — Modo Fila
+        // ─────────────────────────────────────────────
         function renderUltimoChamadoFila(chamado) {
             if (!chamado) return;
-            const wrap = document.getElementById('ultimo-chamado-wrap');
-            const card = document.getElementById('ultimo-chamado-card');
+            const wrap  = document.getElementById('ultimo-chamado-wrap');
+            const card  = document.getElementById('ultimo-chamado-card');
             const nomeEl = document.getElementById('uc-nome-fila');
             
             wrap.classList.remove('hidden');
@@ -407,27 +539,28 @@
             document.getElementById('uc-local-fila').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
             document.getElementById('uc-hora-fila').textContent  = chamado.hora || horaAgora();
             
-            nomeEl.classList.remove('anim-chamado'); card.classList.remove('anim-glow');
+            nomeEl.classList.remove('anim-chamado');
+            card.classList.remove('anim-glow');
             void card.offsetWidth;
-            nomeEl.classList.add('anim-chamado'); card.classList.add('anim-glow');
+            nomeEl.classList.add('anim-chamado');
+            card.classList.add('anim-glow');
         }
 
         function renderPainelUnificado() {
             let todosEmAtendimento = [];
             let totalAguardando = 0;
-            const grupos = {}; 
+            const grupos = {};
 
             for (const pautaId in estado.assistidos) {
                 const pauta = estado.pautas[pautaId];
                 const lista = estado.assistidos[pautaId] || [];
                 const nomePauta = pauta?.name || 'Geral';
                 const salaPauta = pauta?.sala || '';
-
                 let aguardandoLocal = [];
 
                 lista.forEach(a => {
                     const p = { ...a, nomePauta, salaPauta, pautaId };
-                    if (a.status === 'aguardando') aguardandoLocal.push(p);
+                    if (a.status === 'aguardando')    aguardandoLocal.push(p);
                     else if (a.status === 'emAtendimento') todosEmAtendimento.push(p);
                 });
 
@@ -444,8 +577,8 @@
             }
 
             document.getElementById('g-aguardando').textContent = totalAguardando;
-            document.getElementById('g-atendendo').textContent = todosEmAtendimento.length;
-            todosEmAtendimento.sort((a,b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
+            document.getElementById('g-atendendo').textContent  = todosEmAtendimento.length;
+            todosEmAtendimento.sort((a, b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
 
             // Lista Atendimento
             const listaAtEl = document.getElementById('lista-atendimento');
@@ -509,7 +642,9 @@
             }).join('');
         }
 
-        // Renderiza Modo TV (Verde)
+        // ─────────────────────────────────────────────
+        //  RENDER — Modo TV
+        // ─────────────────────────────────────────────
         function renderHistoricoTV() {
             const listaEl = document.getElementById('lista-historico-tv');
             if (estado.historico.length === 0) {
@@ -530,22 +665,24 @@
 
         function renderUltimoChamadoTV(chamado) {
             if (!chamado) return;
-            const nomeEl = document.getElementById('uc-nome-tv');
-            const localEl = document.getElementById('uc-local-tv');
+            const nomeEl        = document.getElementById('uc-nome-tv');
+            const localEl       = document.getElementById('uc-local-tv');
             const painelDestaque = document.getElementById('painel-destaque-tv');
 
-            nomeEl.textContent = esc(chamado.nome).toUpperCase();
+            nomeEl.textContent  = esc(chamado.nome).toUpperCase();
             localEl.textContent = chamado.sala ? esc(chamado.sala) : esc(chamado.local || '—');
             document.getElementById('label-local-tv').textContent = chamado.sala ? 'Sala' : 'Local';
 
             painelDestaque.classList.remove('animar-chamado-tv');
-            void painelDestaque.offsetWidth; 
+            void painelDestaque.offsetWidth;
             painelDestaque.classList.add('animar-chamado-tv');
         }
 
-        // Inicialização
+        // ─────────────────────────────────────────────
+        //  INICIALIZAÇÃO
+        // ─────────────────────────────────────────────
         async function init() {
-            aplicarModoAtual(); // Aplica o modo logo no início
+            aplicarModoAtual();
 
             if (!pautasParam) {
                 document.getElementById('loading').innerHTML = `
@@ -562,7 +699,7 @@
             if (pautaIds.length === 0) return;
 
             document.getElementById('recepcao-nome-fila').textContent = decodeURIComponent(recepcaoNome);
-            document.getElementById('recepcao-nome-tv').textContent = decodeURIComponent(recepcaoNome);
+            document.getElementById('recepcao-nome-tv').textContent   = decodeURIComponent(recepcaoNome);
             document.getElementById('loading').classList.add('hidden');
 
             renderHistoricoTV();
@@ -574,7 +711,7 @@
                     estado.pautas[pautaId] = { id: pautaId, ...d };
                     if (d.unidade) {
                         document.getElementById('recepcao-nome-fila').textContent = esc(d.unidade);
-                        document.getElementById('recepcao-nome-tv').textContent = esc(d.unidade);
+                        document.getElementById('recepcao-nome-tv').textContent   = esc(d.unidade);
                     }
                     renderPainelUnificado();
                 });
@@ -590,7 +727,7 @@
                     if (!data.atual) return;
                     
                     const tsAtual = data.atual.timestamp || 0;
-                    const tsUlt = estado.ultimoChamado?.timestamp || 0;
+                    const tsUlt   = estado.ultimoChamado?.timestamp || 0;
                     
                     if (tsAtual > tsUlt) {
                         const novoChamadoTratado = {
@@ -599,7 +736,7 @@
                             sala: estado.pautas[pautaId]?.sala || data.atual.sala || '',
                         };
 
-                        // Gestão do Histórico para a TV
+                        // Histórico para TV
                         if (estado.ultimoChamado) {
                             estado.historico.unshift(estado.ultimoChamado);
                             if (estado.historico.length > 5) estado.historico.pop();
@@ -607,16 +744,15 @@
                         }
 
                         estado.ultimoChamado = novoChamadoTratado;
-                        
-                        // Atualiza as duas interfaces
+
                         renderUltimoChamadoFila(novoChamadoTratado);
                         renderUltimoChamadoTV(novoChamadoTratado);
-                        
-                        tocarSom();
+                        tocarSom(); // Toca apenas se somAtivo === true
                     }
                 });
             });
         }
+
         init();
     </script>
 </body>
