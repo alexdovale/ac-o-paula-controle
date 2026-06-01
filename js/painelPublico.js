@@ -121,7 +121,7 @@ export const PainelPublicoService = {
             #banner-chamado {
                 flex-shrink: 0; z-index: 30;
                 background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white;
-                padding: clamp(14px, 2.5vh, 32px) clamp(20px, 4vw, 60px);
+                padding: clamp(10px, 1.5vh, 20px) clamp(20px, 4vw, 60px);
                 display: flex; align-items: center; justify-content: space-between; gap: 20px;
                 border-top: 4px solid #4ade80;
                 box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
@@ -322,12 +322,12 @@ export const PainelPublicoService = {
                     <!-- Banner Chamado (Fixo em baixo) -->
                     <div id="banner-chamado">
                         <div style="flex:1; min-width:0;">
-                            <p style="font-size:clamp(11px,1.2vw,15px); font-weight:800; letter-spacing:0.3em; text-transform:uppercase; opacity:0.85; margin-bottom:4px;">📣 Chamando Agora</p>
-                            <p id="banner-nome" style="font-size:clamp(2rem,5vw,5.5rem); font-weight:900; line-height:1; text-transform:uppercase; word-break:break-word;">AGUARDANDO...</p>
+                            <p style="font-size:clamp(9px,0.9vw,12px); font-weight:800; letter-spacing:0.2em; text-transform:uppercase; opacity:0.85; margin-bottom:2px;">📣 Chamando Agora</p>
+                            <p id="banner-nome" style="font-size:clamp(1.5rem,3.5vw,3.5rem); font-weight:900; line-height:1; text-transform:uppercase; word-break:break-word;">AGUARDANDO...</p>
                         </div>
                         <div style="text-align:right; flex-shrink:0;">
-                            <p id="banner-label-local" style="font-size:clamp(11px,1.2vw,15px); font-weight:700; opacity:0.8; text-transform:uppercase; letter-spacing:0.2em; margin-bottom:4px;">Dirija-se a</p>
-                            <p id="banner-local" style="font-size:clamp(1.8rem,4vw,4.5rem); font-weight:900; line-height:1; text-transform:uppercase;">—</p>
+                            <p id="banner-label-local" style="font-size:clamp(9px,0.9vw,12px); font-weight:700; opacity:0.8; text-transform:uppercase; letter-spacing:0.15em; margin-bottom:2px;">Dirija-se a</p>
+                            <p id="banner-local" style="font-size:clamp(1.3rem,2.8vw,2.8rem); font-weight:900; line-height:1; text-transform:uppercase;">—</p>
                         </div>
                     </div>
 
