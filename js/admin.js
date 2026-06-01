@@ -9,8 +9,7 @@ import { escapeHTML, showNotification } from './utils.js';
 // ============================================================
 // IMPORTAÇÃO DOS COMPONENTES HOMOLOGADOS
 // ============================================================
-import { abrirGerenciarUnidades } from './gerenciarUnidadesUsuario.js';
-import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
 
 // ============================================================
@@ -56,7 +55,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
 };
 
 // ============================================================
-// MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS (CRUD + IMPORTAÇÃO + PESQUISA)
+// MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS (CRUD)
 // ============================================================
 
 export const carregarUnidades = async (db) => {
@@ -477,7 +476,7 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
 };
 
 // ============================================================
-// GERENCIADOR PRINCIPAL DE UNIDADES
+// GERENCIADOR PRINCIPAL DE UNIDADES E RECEPÇÕES
 // ============================================================
 
 export const abrirGerenciadorUnidades = async (db) => {
@@ -506,24 +505,26 @@ export const abrirGerenciadorUnidades = async (db) => {
                         <p class="text-xs text-slate-500">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
                         ${unidade.endereco ? `<p class="text-[10px] text-slate-400 mt-1">📍 ${escapeHTML(unidade.endereco)}</p>` : ''}
                     </div>
-                    <div class="flex gap-1">
+                    <div class="flex gap-1 flex-wrap justify-end max-w-[120px]">
                         <button class="btn-ver-usuarios text-emerald-600 hover:text-emerald-800 p-1.5 rounded-full hover:bg-emerald-50 transition-all" 
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Ver usuários vinculados">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         </button>
                         <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1.5 rounded-full hover:bg-blue-50 transition-all" 
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" 
-                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}">
+                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}" title="Editar Unidade">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
                         <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}">
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir Unidade">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
-                        <button class="btn-nova-recepcao text-purple-500 hover:text-purple-700 p-1.5 rounded-full hover:bg-purple-50 transition-all" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Nova Recepção">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        </button>
+                        <div class="w-full flex justify-end mt-1">
+                            <button class="btn-nova-recepcao bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 w-full justify-center" 
+                                    data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Gerenciar Recepções">
+                                <span>🏛️</span> Recepções
+                            </button>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -555,17 +556,13 @@ export const abrirGerenciadorUnidades = async (db) => {
             });
         });
 
+        // 🟢 NOVA LIGAÇÃO PARA O GERENCIADOR DE RECEPÇÕES DA UNIDADE
         container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (globalApp) {
-                    // E na leitura:
-abrirModalNovaRecepcao(globalApp, {
-    unidadeId: btn.dataset.id,
-    unidadeNome: btn.dataset.nome,
-    orgaoId: btn.dataset.orgaoid   // ← campo correto
-});
+                    abrirModalGerenciarRecepcoesPorUnidade(globalApp, btn.dataset.id, btn.dataset.nome);
                 } else {
-                    showNotification("Módulo de Nova Recepção não carregado.", "error");
+                    showNotification("Aplicativo não inicializado.", "error");
                 }
             });
         });
@@ -598,6 +595,7 @@ abrirModalNovaRecepcao(globalApp, {
     `;
     document.body.appendChild(modal);
     renderLista();
+    
     const fechar = () => modal.remove();
     document.getElementById('fechar-gerenciador-unidades')?.addEventListener('click', fechar);
     document.getElementById('fechar-gerenciador-unidades-footer')?.addEventListener('click', fechar);
@@ -605,6 +603,124 @@ abrirModalNovaRecepcao(globalApp, {
     document.getElementById('btn-nova-unidade')?.addEventListener('click', () => { abrirModalFormUnidade(db, null, () => { fechar(); abrirGerenciadorUnidades(db); }); });
     document.getElementById('btn-importar-unidades-massa')?.addEventListener('click', () => { fechar(); abrirImportadorUnidades(db); });
 };
+
+// ============================================================
+// NOVO MÓDULO: GERENCIAR RECEPÇÕES DIRETAMENTE DA UNIDADE
+// ============================================================
+
+const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNome) => {
+    const { db } = app;
+    const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto';
+    modal.innerHTML = `
+        <div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative">
+            <div class="bg-gradient-to-r from-purple-800 to-indigo-700 px-6 py-5 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2"><span>🏛️</span> Recepções da Unidade</h2>
+                    <p class="text-purple-200 text-sm mt-0.5">${escapeHTML(unidadeNome)}</p>
+                </div>
+                <button id="fechar-gerenciador-recepcoes" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6" id="painel-conteudo-recepcoes">
+                <div class="flex justify-center items-center h-40">
+                    <div class="loader-small mx-auto mb-4"></div>
+                </div>
+            </div>
+            
+            <div class="bg-white px-6 py-4 flex justify-end border-t shrink-0">
+                <button id="fechar-gerenciador-recepcoes-footer" class="bg-gray-200 text-gray-700 hover:bg-gray-300 font-bold px-6 py-2.5 rounded-xl transition-colors">Fechar</button>
+            </div>
+        </div>
+    `;
+    
+    document.body.appendChild(modal);
+
+    const fechar = () => modal.remove();
+    document.getElementById('fechar-gerenciador-recepcoes').onclick = fechar;
+    document.getElementById('fechar-gerenciador-recepcoes-footer').onclick = fechar;
+
+    const renderizarTelaAdmin = async () => {
+        const container = document.getElementById('painel-conteudo-recepcoes');
+        if (!container) return;
+
+        // Busca recepções desta unidade
+        const recepcoes = await RecepcaoConfigService.buscarRecepcoesUnidade(db, unidadeId);
+
+        // Gera o HTML do painel centralizado
+        container.innerHTML = RecepcaoConfigService.renderPainelAdmin(recepcoes, [{ id: unidadeId, nome: unidadeNome }]);
+
+        // Botão de Nova Recepção
+        document.getElementById('btn-nova-recepcao')?.addEventListener('click', () => {
+            renderizarFormularioRecepcao();
+        });
+
+        // Edição
+        container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.recepcaoId);
+                if (rec) renderizarFormularioRecepcao(rec);
+            });
+        });
+
+        // Copiar Link
+        container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.recepcaoId);
+                if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
+            });
+        });
+
+        // Exclusão
+        container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm(`Desativar a recepção "${btn.dataset.nome}"?`)) {
+                    await RecepcaoConfigService.excluirRecepcao(db, btn.dataset.recepcaoId);
+                    renderizarTelaAdmin();
+                }
+            });
+        });
+
+        // Eventos de Busca embutidos
+        RecepcaoConfigService.initAdminBuscaEventos();
+    };
+
+    const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
+        const container = document.getElementById('painel-conteudo-recepcoes');
+        
+        // Fixa a unidade atual
+        if (!recepcaoEdicao) {
+            recepcaoEdicao = { unidadeId, unidadeNome };
+        }
+
+        container.innerHTML = RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [{ id: unidadeId, nome: unidadeNome }]);
+
+        RecepcaoConfigService.initFormRecepcaoEventos(
+            async (dadosSalvos, idEdicao) => {
+                // Ao Salvar
+                if (idEdicao) {
+                    await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
+                } else {
+                    await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
+                }
+                renderizarTelaAdmin();
+            },
+            () => {
+                // Ao Cancelar
+                renderizarTelaAdmin();
+            }
+        );
+    };
+
+    // Inicia carregando a tabela
+    await renderizarTelaAdmin();
+};
+
+// ============================================================
+// FORMULÁRIO DE UNIDADES
+// ============================================================
 
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     const isEdicao = !!unidade;
@@ -840,7 +956,7 @@ function renderAprovadosTable(db) {
         btn.addEventListener('click', () => {
             const userId = btn.dataset.userid;
             if (globalApp) {
-                abrirGerenciarUnidades(globalApp, userId);
+                abrirGerenciarUnidadesUsuario(globalApp, userId);
             } else {
                 showNotification("Erro: app não inicializado", "error");
             }
@@ -886,7 +1002,7 @@ export const deleteUser = async (db, userId) => {
 };
 
 // ============================================================
-// MÓDULO DE AUDITORIA (COM PAGINAÇÃO E BUSCA)
+// MÓDULO DE AUDITORIA E LOGS
 // ============================================================
 
 export const loadLogFilters = async (db) => {
@@ -1098,7 +1214,6 @@ export const loadDashboardData = async (db) => {
     const resultsArea = document.getElementById('dashboard-results');
     if (!resultsArea) return;
 
-    // A MÁGICA ACONTECE AQUI: Remove a classe que deixa o BI invisível!
     resultsArea.classList.remove('hidden');
 
     resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600 mt-2">Carregando dados do BI...</p></div>';
@@ -1197,7 +1312,6 @@ export const setupAdminEvents = (app) => {
     globalApp = app;
 };
 
-
 // ============================================================
 // VINCULAÇÕES GLOBAIS DO ESCOPO WINDOW
 // ============================================================
@@ -1218,7 +1332,7 @@ window.deleteUser = (userId) => {
 };
 
 window.gerenciarUnidades = (userId) => {
-    if (globalApp) abrirGerenciarUnidades(globalApp, userId);
+    if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, userId);
     else console.error("App não inicializado");
 };
 
@@ -1238,7 +1352,8 @@ window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
 };
 
 window.abrirModalNovaRecepcao = (options) => {
-    if (globalApp) abrirModalNovaRecepcao(globalApp, options);
+    // Agora aponta para a função correta
+    if (globalApp) abrirModalGerenciarRecepcoesPorUnidade(globalApp, options?.unidadeId, options?.unidadeNome);
     else console.error("App não inicializado");
 };
 
@@ -1296,7 +1411,6 @@ export const AdminService = {
     updateUserRole,
     deleteUser,
     setupAdminEvents,
-    abrirModalNovaRecepcao,
     renderEstruturaAtual
 };
 
