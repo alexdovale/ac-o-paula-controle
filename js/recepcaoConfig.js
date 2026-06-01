@@ -98,6 +98,20 @@ export const RecepcaoConfigService = {
             return false;
         }
     },
+    
+
+    async buscarTodasRecepcoesAdmin(db) {
+        try {
+            // Traz TODAS as recepções globais para o painel de Admin
+            const snap = await getDocs(collection(db, "recepcoes"));
+            return snap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(r => r.ativo !== false);
+        } catch (err) {
+            console.error("Erro ao buscar todas as recepções:", err);
+            return [];
+        }
+    },
 
     async buscarRecepcoesUnidade(db, unidadeId) {
         try {
