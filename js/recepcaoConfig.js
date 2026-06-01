@@ -151,11 +151,7 @@ export const RecepcaoConfigService = {
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(r => r.ativo === true);
             if (role === 'superadmin') return todas;
-            return todas.filter(r =>
-                r.membros?.includes(userId) ||
-                r.tipo === 'central' ||
-                role === 'admin'
-            );
+            return todas.filter(r => r.membros?.includes(userId));
         } catch (err) {
             console.error("Erro ao buscar recepções do usuário:", err);
             return [];
@@ -169,7 +165,7 @@ export const RecepcaoConfigService = {
                 .filter(r => r.ativo === true);
             this._cache = {
                 recepcoes: role === 'superadmin' ? todas : todas.filter(r =>
-                    r.membros?.includes(userId) || r.tipo === 'central' || role === 'admin'
+                    r.membros?.includes(userId)
                 ),
                 carregadoEm: Date.now()
             };
