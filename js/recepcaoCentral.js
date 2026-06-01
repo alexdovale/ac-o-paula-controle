@@ -152,6 +152,7 @@ export const RecepçãoCentralService = {
                     <button id="rc-voltar-selector" class="bg-slate-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-slate-700 transition shadow-sm">← Voltar para o Início</button>
                 </div>
             </div>`;
+                    RecepcaoConfigService.initSelectorEventos();
 
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
