@@ -957,7 +957,6 @@ export const RecepçãoCentralService = {
             } else if (btn.classList.contains('rc-btn-chamar')) {
                 this._chamarProximo(pautaId);
             } else if (btn.classList.contains('rc-btn-acomp')) {
-                // ATUALIZADO: Aponta para a raiz do sistema
                 window.open(`?painel=true&pautas=${pautaId}`, '_blank');
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
