@@ -71,6 +71,17 @@ class SIGEPApp {
             this.db = getFirestore(app);
             this.auth = getAuth(app);
 
+            // ============================================================
+            // VERIFICAR SE É A TELA DA TV (PAINEL PÚBLICO NATIVO)
+            // ============================================================
+            const urlParams = new URLSearchParams(window.location.search);
+            if (urlParams.get('painel') === 'true') {
+                const { PainelPublicoService } = await import('./painelPublico.js');
+                await PainelPublicoService.init(this);
+                return; // Interrompe o carregamento do resto do sistema (Login, etc.)
+            }
+            // ============================================================
+
             DashboardService.init(this);
 
             await this.setupOfflinePersistence();
