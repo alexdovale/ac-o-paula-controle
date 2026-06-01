@@ -10,12 +10,12 @@ import { logAction } from './admin.js';
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
 
 const estado = {
-    pautasHoje: [],              // [{id, name, type, ...pautaData}]
-    assistidosPorPauta: {},      // { [pautaId]: [assistidos] }
-    colaboradoresPorPauta: {},   // { [pautaId]: [colaboradores] }
-    unsubscribers: [],           // listeners ativos
-    pautaFocadaId: null,         // pauta selecionada no modo de navegação
-    modoVisao: 'grade',          // 'grade' | 'foco'
+    pautasHoje: [],              
+    assistidosPorPauta: {},      
+    colaboradoresPorPauta: {},   
+    unsubscribers: [],           
+    pautaFocadaId: null,         
+    modoVisao: 'grade',          
     termoBusca: '',
     recepcaoAtual: null,
     unidadeAtual: null,
@@ -53,20 +53,17 @@ function colaboradoresStatus(colaboradores) {
     return { livres, ocupados };
 }
 
-// Helper para extrair e exibir as verificações de documentos do "Ver Detalhes"
 function renderVerificacoesBadge(a) {
     const docs = a.verifications || a.documentos || a.verificacoes || a.customFields?.verifications;
     if (!docs) return '';
     
     let htmlLista = '';
     
-    // Se for um array de documentos (Ex: ["RG", "CPF"])
     if (Array.isArray(docs)) {
         const itens = docs.map(d => typeof d === 'string' ? d : (d.nome || d.name || d.label || 'Doc'));
         if(itens.length === 0) return '';
         htmlLista = itens.map(i => `<span class="inline-block bg-slate-100 text-slate-600 border border-slate-200 text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1 shadow-sm">📄 ${escapeHTML(i)}</span>`).join('');
     } 
-    // Se for um objeto com chaves e booleanos (Ex: { rg: true, cpf: false })
     else if (typeof docs === 'object') {
         const keys = Object.keys(docs);
         if(keys.length === 0) return '';
@@ -89,7 +86,7 @@ export const RecepçãoCentralService = {
 
     async init(app) {
         this._app = app;
-        this._filtroTipo = this._filtroTipo || 'todos'; // preserva se já estava selecionado
+        this._filtroTipo = this._filtroTipo || 'todos';
 
         const role = app.currentUser?.role;
         if (!['apoio', 'admin', 'superadmin'].includes(role)) {
@@ -123,7 +120,6 @@ export const RecepçãoCentralService = {
 
         if (recepcoes.length === 1) {
             this._recepcaoAtual = recepcoes[0];
-            this._unidadeAtual  = { id: recepcoes[0].unidadeId, nome: recepcoes[0].unidadeNome };
             await this._carregarPautasPorRecepcao();
         } else {
             this._renderSelectorRecepcoes(recepcoes);
@@ -139,7 +135,7 @@ export const RecepçãoCentralService = {
                 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8">
                     <span class="text-6xl block mb-4">🔒</span>
                     <h3 class="text-xl font-bold text-amber-800 mb-2">Acesso Restrito</h3>
-                    <p class="text-amber-600">Você não tem permissão para acessar nenhuma recepção.</p>
+                    <p class="text-amber-600">Você não tem permissão para acessar nenhuma recepção no momento.</p>
                     <button id="rc-voltar-sem-permissao" class="mt-6 bg-slate-700 text-white px-6 py-2 rounded-lg hover:bg-slate-800 transition">
                         Voltar
                     </button>
@@ -172,7 +168,7 @@ export const RecepçãoCentralService = {
                             <span class="bg-slate-800 text-white text-lg px-2.5 py-1 rounded-lg shrink-0">🏛️</span>
                             <div>
                                 <p class="font-bold text-slate-800 text-sm">Central</p>
-                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Painel principal. Permite visualizar e gerenciar pessoas de <b>todas</b> as filas e áreas da unidade.</p>
+                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Painel principal. Permite visualizar e gerenciar pessoas de <b>todas</b> as filas e áreas vinculadas à recepção.</p>
                             </div>
                         </div>
                         <div class="flex items-start gap-3">
@@ -180,20 +176,6 @@ export const RecepçãoCentralService = {
                             <div>
                                 <p class="font-bold text-slate-800 text-sm">Especializada</p>
                                 <p class="text-xs text-slate-500 mt-0.5 leading-snug">Focada em um assunto específico (ex: Família). Exibe apenas a fila e os casos da sua própria área.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="bg-blue-50 text-blue-600 text-lg px-2.5 py-1 rounded-lg border border-blue-200 shrink-0">📋</span>
-                            <div>
-                                <p class="font-bold text-slate-800 text-sm">Mista</p>
-                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Ponto de atendimento que agrupa <b>duas ou mais</b> áreas diferentes no mesmo local e no mesmo painel.</p>
-                            </div>
-                        </div>
-                        <div class="flex items-start gap-3">
-                            <span class="bg-emerald-50 text-emerald-600 text-lg px-2.5 py-1 rounded-lg border border-emerald-200 shrink-0">🗂️</span>
-                            <div>
-                                <p class="font-bold text-slate-800 text-sm">Generalista</p>
-                                <p class="text-xs text-slate-500 mt-0.5 leading-snug">Focada em triagem inicial. Serve para recepcionar casos novos, dar orientações e fazer encaminhamentos.</p>
                             </div>
                         </div>
                     </div>
@@ -214,11 +196,13 @@ export const RecepçãoCentralService = {
     
                 if (recepcaoEncontrada) {
                     this._recepcaoAtual = recepcaoEncontrada;
-                    this._unidadeAtual = { id: recepcaoEncontrada.unidadeId, nome: recepcaoEncontrada.unidadeNome };
                     await this._carregarPautasPorRecepcao();
                 }
             });
         });
+        
+        // Ativa os eventos de pesquisa e filtros do HTML que acabamos de injetar
+        RecepcaoConfigService.initSelectorEventos();
     
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
@@ -230,6 +214,7 @@ export const RecepçãoCentralService = {
 
         this._mostrarLoading();
 
+        // 1. Busca todas as pautas a que o utilizador tem acesso hoje
         let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
@@ -237,24 +222,24 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
-        // ── FILTRO POR DATA DE ATUAÇÃO (só pautas do dia atual) ──────────────
-        const hoje = new Date().toISOString().slice(0, 10); // "YYYY-MM-DD"
+        // 2. Filtro por data de atuação (apenas hoje)
+        const hoje = new Date().toISOString().slice(0, 10); 
         pautas = pautas.filter(p => {
             const dataAtuacao = p.dataAtuacao || p.data || p.createdAt || '';
-            // Se não tem data definida, deixa passar (compatibilidade)
             if (!dataAtuacao) return true;
             return dataAtuacao.slice(0, 10) === hoje;
         });
 
-        // ── FILTRO POR TIPO DE RECEPÇÃO (se selecionado) ──────────────────────
+        // 3. Filtro rápido de UI (Todos, Mutirão, Plantão, etc.)
         if (this._filtroTipo && this._filtroTipo !== 'todos') {
             pautas = pautas.filter(p =>
                 (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
             );
         }
 
-        // ── FILTRO POR RECEPÇÃO (especializada, mista, generalista) ──────────
-        if (this._recepcaoAtual && this._recepcaoAtual.tipo !== 'central' && this._recepcaoAtual.verTudo !== true) {
+        // 4. FILTRO ESTRITO DA RECEPÇÃO ATUAL (Agora obrigatório para todos)
+        // Corta as pautas que não pertencem às unidades e/ou aos grupos da receção
+        if (this._recepcaoAtual) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
 
@@ -284,7 +269,6 @@ export const RecepçãoCentralService = {
         this._cancelarListeners();
 
         for (const pauta of estado.pautasHoje) {
-            // Listener de assistidos
             const refAt  = collection(app.db, "pautas", pauta.id, "attendances");
             const unsubAt = onSnapshot(refAt, (snap) => {
                 estado.assistidosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -296,7 +280,6 @@ export const RecepçãoCentralService = {
                 this._atualizarPainelPublicoUltimoChamado(pauta.id);
             });
 
-            // Listener de colaboradores
             const refCo  = collection(app.db, "pautas", pauta.id, "collaborators");
             const unsubCo = onSnapshot(refCo, (snap) => {
                 estado.colaboradoresPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -325,7 +308,7 @@ export const RecepçãoCentralService = {
         const contexto = RecepcaoConfigService.getContextoRecepcao(this._recepcaoAtual);
 
         container.innerHTML = `
-            <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4">
+            <div class="recepcao-central-wrap max-w-7xl mx-auto px-2 sm:px-4 py-4 animate-fade-in">
 
                 <div class="mb-4 ${contexto.cor} rounded-2xl p-4 shadow-lg">
                     <div class="flex items-center justify-between flex-wrap gap-3">
@@ -424,7 +407,7 @@ export const RecepçãoCentralService = {
                 <div class="col-span-full text-center py-16 opacity-60">
                     <span class="text-5xl block mb-4">📋</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa para esta recepção.</p>
-                    <p class="text-xs text-slate-400 mt-2">Selecione outra recepção ou crie uma nova pauta.</p>
+                    <p class="text-xs text-slate-400 mt-2">Certifique-se que existem pautas vinculadas a esta unidade ou aos grupos corretos.</p>
                 </div>
             `;
             return;
@@ -445,7 +428,6 @@ export const RecepçãoCentralService = {
             ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>`
             : '';
 
-        // Lista de pessoas aguardando (máx 5)
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
@@ -870,7 +852,6 @@ export const RecepçãoCentralService = {
             timestamp: Date.now(),
         };
 
-        // Salva no localStorage por pauta (para acompanhamento.html individual na mesma aba)
         const chave = `sigep_chamados_${pautaId}`;
         let historico = [];
         try { historico = JSON.parse(localStorage.getItem(chave)) || []; } catch { historico = []; }
@@ -878,10 +859,8 @@ export const RecepçãoCentralService = {
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
 
-        // Salva global (para acompanhamento-recepcao.html na mesma máquina)
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
 
-        // Salva diretamente no Firebase para o Painel Unificado (TV)
         try {
             const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
             await setDoc(painelRef, {
@@ -914,17 +893,14 @@ export const RecepçãoCentralService = {
     // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
 
     _setupInteracoes() {
-        // Fechar
         document.getElementById('rc-btn-fechar')?.addEventListener('click', () => this.fechar());
 
-        // Atualizar
         document.getElementById('rc-btn-atualizar')?.addEventListener('click', async () => {
             this._cancelarListeners();
             await this._carregarPautasPorRecepcao();
             showNotification("Dados atualizados!", "info");
         });
 
-        // Busca global
         document.getElementById('rc-btn-busca-global')?.addEventListener('click', () => {
             const wrap = document.getElementById('rc-busca-global-wrap');
             wrap.classList.toggle('hidden');
@@ -934,9 +910,6 @@ export const RecepçãoCentralService = {
             }
         });
 
-        // =======================================================================
-        // MODAL DE CONFIGURAÇÃO DA TV
-        // =======================================================================
         document.getElementById('rc-btn-configurar-tv')?.addEventListener('click', () => {
             if (estado.pautasHoje.length === 0) {
                 showNotification("Nenhuma pauta ativa nesta recepção.", "warning");
@@ -944,9 +917,7 @@ export const RecepçãoCentralService = {
             }
             this._abrirModalConfigTV();
         });
-        // =======================================================================
 
-        // Cliques na grade de cards
         document.getElementById('rc-grade-pautas')?.addEventListener('click', (e) => {
             const btn = e.target.closest('button[data-pauta-id]');
             if (!btn) return;
@@ -963,7 +934,6 @@ export const RecepçãoCentralService = {
             }
         });
 
-        // ── FILTRO POR TIPO ──────────────────────────────────────────────────────
         document.querySelectorAll('.rc-filtro-tipo').forEach(btn => {
             btn.addEventListener('click', async () => {
                 this._filtroTipo = btn.dataset.tipo;
@@ -979,7 +949,6 @@ export const RecepçãoCentralService = {
         const recepcao = this._recepcaoAtual;
         if (!recepcao) return;
 
-        // Recupera configs salvas (prioriza localStorage local, depois banco)
         const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${recepcao.id}`) || '{}');
         const modoAtual = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
         const videoAtual = cacheConfig.video !== undefined ? cacheConfig.video : (recepcao.videoUrl || '');
@@ -1004,7 +973,6 @@ export const RecepçãoCentralService = {
                 
                 <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50">
                     
-                    <!-- MODO DE VISUALIZAÇÃO -->
                     <div>
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Modo de Visualização</label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1035,7 +1003,6 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
 
-                    <!-- LINK DO YOUTUBE -->
                     <div>
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link do YouTube ou Vídeo</label>
                         <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}"
@@ -1044,7 +1011,6 @@ export const RecepçãoCentralService = {
                         <p class="text-[10px] text-slate-400 mt-1.5 font-medium">Funciona com links do YouTube, Shorts, Lives ou arquivos .mp4</p>
                     </div>
 
-                    <!-- SOM AO CHAMAR PRÓXIMO -->
                     <div>
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Som ao Chamar Próximo</label>
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1065,7 +1031,6 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
 
-                    <!-- PRÉ-VISUALIZAÇÃO DO LINK -->
                     <div class="bg-slate-100/80 border border-slate-200 rounded-xl p-4">
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pré-Visualização do Link Gerado</label>
                         <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 text-[11px] text-slate-500 font-mono resize-none focus:ring-0 p-0 h-12 outline-none"></textarea>
@@ -1089,7 +1054,6 @@ export const RecepçãoCentralService = {
 
         document.body.appendChild(modal);
 
-        // Funções internas do modal
         const updatePreview = () => {
             const modo = document.querySelector('input[name="tv_modo"]:checked').value;
             const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
@@ -1105,7 +1069,6 @@ export const RecepçãoCentralService = {
             return { link, modo, video, som };
         };
 
-        // Eventos visuais dos cards
         modal.querySelectorAll('input[name="tv_modo"]').forEach(radio => {
             radio.addEventListener('change', () => {
                 modal.querySelectorAll('.tv-modo-card').forEach(card => {
@@ -1128,23 +1091,19 @@ export const RecepçãoCentralService = {
 
         document.getElementById('tv_video_url').addEventListener('input', updatePreview);
 
-        updatePreview(); // Gera preview inicial
+        updatePreview();
 
-        // Fechar modal
         const closeModal = () => modal.remove();
         document.getElementById('rc-modal-tv-close').onclick = closeModal;
         document.getElementById('rc-btn-tv-cancelar').onclick = closeModal;
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-        // Salvar configs
         const saveConfig = async () => {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
             
-            // Salva cache local
             localStorage.setItem(`sigep_tv_config_${recepcao.id}`, JSON.stringify(configToSave));
 
-            // Tenta salvar no Firebase (sem bloquear se o user não for admin)
             try {
                 await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
                     modoVisualizacao: configToSave.modo,
@@ -1155,7 +1114,6 @@ export const RecepçãoCentralService = {
             return data.link;
         };
 
-        // Ações dos botões
         document.getElementById('rc-btn-tv-abrir').addEventListener('click', async () => {
             const link = await saveConfig();
             window.open(link, '_blank');
@@ -1247,13 +1205,12 @@ export const RecepçãoCentralService = {
         const container = document.getElementById('recepcao-central-container');
         if (container) container.innerHTML = '';
 
-        // Restaura a rota original
         const app = this._app;
         if (app && typeof app.changeUrl === 'function') {
             app.changeUrl('');
         }
 
-        if (typeof app.showPautaSelectionScreen === 'function') {
+        if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
     },
@@ -1265,10 +1222,6 @@ export const RecepçãoCentralService = {
         if (!container) {
             console.error("Container #recepcao-central-container não encontrado no index.html");
             return;
-        }
-        
-        if (app && typeof app.mudarURL === 'function') {
-            app.mudarURL('recepcaocentral');
         }
 
         const { UIService } = await import('./ui.js');
