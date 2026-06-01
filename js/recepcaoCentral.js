@@ -1247,7 +1247,12 @@ export const RecepçãoCentralService = {
         const container = document.getElementById('recepcao-central-container');
         if (container) container.innerHTML = '';
 
+        // Restaura a rota original
         const app = this._app;
+        if (app && typeof app.changeUrl === 'function') {
+            app.changeUrl('');
+        }
+
         if (typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
@@ -1260,6 +1265,10 @@ export const RecepçãoCentralService = {
         if (!container) {
             console.error("Container #recepcao-central-container não encontrado no index.html");
             return;
+        }
+        
+        if (app && typeof app.mudarURL === 'function') {
+            app.mudarURL('recepcaocentral');
         }
 
         const { UIService } = await import('./ui.js');
