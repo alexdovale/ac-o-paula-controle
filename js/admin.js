@@ -6,15 +6,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
-// ============================================================
-// IMPORTAÇÃO DOS COMPONENTES HOMOLOGADOS
-// ============================================================
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
-
-// ============================================================
-// CONTROLE DE PAGINAÇÃO E FILTROS
-// ============================================================
 
 let adminFilters = {
     usuarios: { page: 1, pageSize: 10, search: '' },
@@ -25,15 +18,7 @@ let adminFilters = {
 let cachedUsuarios = [];
 let cachedPendentes = [];
 let cachedLogs = [];
-
-// ============================================================
-// VARIÁVEL GLOBAL DO APP
-// ============================================================
 let globalApp = null;
-
-// ============================================================
-// FUNÇÃO PARA GRAVAR LOG DE AUDITORIA
-// ============================================================
 
 export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
     try {
@@ -54,10 +39,6 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
     }
 };
 
-// ============================================================
-// MÓDULO DE GERENCIAMENTO DE UNIDADES/ÓRGÃOS (CRUD)
-// ============================================================
-
 export const carregarUnidades = async (db) => {
     try {
         const snapshot = await getDocs(collection(db, "unidades"));
@@ -66,7 +47,6 @@ export const carregarUnidades = async (db) => {
         }
         return [];
     } catch (error) {
-        console.error("Erro ao carregar unidades:", error);
         return [];
     }
 };
@@ -113,7 +93,6 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
 
 export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
     if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
-    
     try {
         await updateDoc(doc(db, "unidades", unidadeId), { 
             ativo: false, 
@@ -127,13 +106,9 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
         for (const userDoc of usersSnap.docs) {
             const userData = userDoc.data();
             const unidades = userData.unidades || [];
-            
             if (unidades.some(u => u.unidadeId === unidadeId)) {
                 const novasUnidades = unidades.filter(u => u.unidadeId !== unidadeId);
-                batch.update(userDoc.ref, { 
-                    unidades: novasUnidades,
-                    updatedAt: new Date().toISOString()
-                });
+                batch.update(userDoc.ref, { unidades: novasUnidades, updatedAt: new Date().toISOString() });
                 usuariosAfetados++;
             }
         }
@@ -144,34 +119,22 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
         } else {
             showNotification(`Unidade "${unidadeNome}" desativada!`, "info");
         }
-        
         return true;
     } catch (error) {
-        console.error("Erro ao excluir unidade:", error);
         showNotification("Erro ao excluir unidade: " + error.message, "error");
         return false;
     }
 };
 
-// ============================================================
-// MÓDULO DE IMPORTAÇÃO EM MASSA DE UNIDADES
-// ============================================================
-
 const parseCSVLinha = (linha) => {
     const resultado = [];
     let dentroAspas = false;
     let valorAtual = '';
-    
     for (let i = 0; i < linha.length; i++) {
         const char = linha[i];
-        if (char === '"') {
-            dentroAspas = !dentroAspas;
-        } else if (char === ',' && !dentroAspas) {
-            resultado.push(valorAtual.trim());
-            valorAtual = '';
-        } else {
-            valorAtual += char;
-        }
+        if (char === '"') dentroAspas = !dentroAspas;
+        else if (char === ',' && !dentroAspas) { resultado.push(valorAtual.trim()); valorAtual = ''; } 
+        else valorAtual += char;
     }
     resultado.push(valorAtual.trim());
     return resultado;
@@ -185,31 +148,16 @@ const parseCSVUnidades = (file) => {
                 const text = e.target.result;
                 const lines = text.split('\n');
                 const headers = lines[0].split(',').map(h => h.trim().toLowerCase());
-                
                 const unidades = [];
                 for (let i = 1; i < lines.length; i++) {
                     if (!lines[i].trim()) continue;
-                    
                     const valores = parseCSVLinha(lines[i]);
                     const unidade = {};
-                    headers.forEach((h, idx) => {
-                        unidade[h] = valores[idx] || '';
-                    });
-                    
-                    if (unidade.nome) {
-                        unidades.push({
-                            nome: unidade.nome,
-                            sigla: unidade.sigla || '',
-                            endereco: unidade.endereco || '',
-                            telefone: unidade.telefone || '',
-                            email: unidade.email || ''
-                        });
-                    }
+                    headers.forEach((h, idx) => { unidade[h] = valores[idx] || ''; });
+                    if (unidade.nome) unidades.push({ nome: unidade.nome, sigla: unidade.sigla || '', endereco: unidade.endereco || '', telefone: unidade.telefone || '', email: unidade.email || '' });
                 }
                 resolve(unidades);
-            } catch (err) {
-                reject(err);
-            }
+            } catch (err) { reject(err); }
         };
         reader.onerror = reject;
         reader.readAsText(file, 'UTF-8');
@@ -223,16 +171,8 @@ const parseJSONUnidades = (file) => {
             try {
                 const data = JSON.parse(e.target.result);
                 const unidades = Array.isArray(data) ? data : data.unidades || [];
-                resolve(unidades.map(u => ({
-                    nome: u.nome,
-                    sigla: u.sigla || '',
-                    endereco: u.endereco || '',
-                    telefone: u.telefone || '',
-                    email: u.email || ''
-                })));
-            } catch (err) {
-                reject(err);
-            }
+                resolve(unidades.map(u => ({ nome: u.nome, sigla: u.sigla || '', endereco: u.endereco || '', telefone: u.telefone || '', email: u.email || '' })));
+            } catch (err) { reject(err); }
         };
         reader.onerror = reject;
         reader.readAsText(file);
@@ -242,19 +182,12 @@ const parseJSONUnidades = (file) => {
 const importarUnidadesEmMassa = async (db, unidades) => {
     const unidadesExistentes = await carregarUnidades(db);
     const nomesExistentes = new Set(unidadesExistentes.map(u => u.nome.toLowerCase()));
-    
-    let criadas = 0;
-    let duplicadas = 0;
-    
+    let criadas = 0; let duplicadas = 0;
     for (const unidade of unidades) {
-        if (nomesExistentes.has(unidade.nome.toLowerCase())) {
-            duplicadas++;
-            continue;
-        }
+        if (nomesExistentes.has(unidade.nome.toLowerCase())) { duplicadas++; continue; }
         await criarUnidade(db, unidade);
         criadas++;
     }
-    
     showNotification(`✅ ${criadas} unidade(s) importada(s)! ${duplicadas} duplicada(s) ignorada(s).`, criadas > 0 ? 'success' : 'warning');
 };
 
@@ -266,7 +199,6 @@ export const abrirImportadorUnidades = async (db) => {
             <div class="bg-gradient-to-r from-blue-800 to-blue-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-white flex items-center gap-2"><span>📁</span> Importar Unidades em Massa</h2>
-                    <p class="text-blue-100 text-sm mt-1">Importe múltiplas unidades de uma só vez via CSV ou JSON</p>
                 </div>
                 <button id="fechar-importador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
@@ -281,7 +213,6 @@ export const abrirImportadorUnidades = async (db) => {
                     <div class="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
                         <input type="file" id="arquivo-unidades" accept=".csv,.json" class="hidden">
                         <button id="btn-selecionar-arquivo-unidades" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg">📂 Selecionar Arquivo</button>
-                        <p class="text-sm text-gray-500 mt-3">Suporta CSV ou JSON</p>
                     </div>
                     <div id="info-arquivo-unidades" class="hidden p-4 bg-green-50 rounded-xl border border-green-200">
                         <p class="text-green-700 font-bold">✅ Arquivo carregado!</p>
@@ -292,7 +223,6 @@ export const abrirImportadorUnidades = async (db) => {
                         </div>
                     </div>
                     <div id="preview-unidades" class="hidden">
-                        <h4 class="font-bold text-slate-700 mb-3">📋 Prévia</h4>
                         <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto">
                             <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
                         </div>
@@ -301,12 +231,11 @@ export const abrirImportadorUnidades = async (db) => {
                 <div id="painel-modelo-unidades" class="hidden space-y-4">
                     <div class="bg-slate-50 rounded-xl p-6">
                         <h3 class="font-bold text-lg mb-4">📄 Formato Esperado</h3>
-                        <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email\n"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy, s/n - Centro, Duque de Caxias - RJ","(21) 2675-1234","caxias@dperj.br"</code></pre>
+                        <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email\n"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy...</code></pre>
                     </div>
                 </div>
                 <div id="painel-manual-unidades" class="hidden space-y-4">
                     <div class="bg-slate-50 rounded-xl p-6">
-                        <h3 class="font-bold text-lg mb-4">✏️ Inserção Manual</h3>
                         <textarea id="manual-unidades-text" rows="6" class="w-full p-3 border rounded-lg font-mono text-sm" placeholder="sigla|nome|endereco|telefone|email"></textarea>
                         <button id="btn-importar-manual-unidades" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Importar</button>
                     </div>
@@ -321,7 +250,6 @@ export const abrirImportadorUnidades = async (db) => {
         </div>
     `;
     document.body.appendChild(modal);
-    
     const fechar = () => modal.remove();
     document.getElementById('fechar-importador-unidades')?.addEventListener('click', fechar);
     document.getElementById('fechar-importador-unidades-footer')?.addEventListener('click', fechar);
@@ -340,17 +268,10 @@ export const abrirImportadorUnidades = async (db) => {
             document.getElementById('painel-estrutura-unidades').classList.add('hidden');
             document.getElementById(`painel-${aba}-unidades`).classList.remove('hidden');
             
-            if (aba === 'estrutura') {
+            if (aba === 'estrutura' && globalApp) {
                 const container = document.getElementById('meu-container-estrutura');
-                if (container && globalApp) {
-                    container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loader-small mx-auto"></div><p class="text-gray-500 mt-2">Carregando estrutura...</p></div>';
-                    renderEstruturaAtual(globalApp, container).catch(err => {
-                        console.error("Erro ao renderizar estrutura:", err);
-                        container.innerHTML = `<p class="text-red-500 text-center p-8">Erro ao carregar estrutura: ${err.message}</p>`;
-                    });
-                } else if (!globalApp) {
-                    console.warn("App não inicializado para renderEstruturaAtual");
-                }
+                container.innerHTML = '<div style="text-align:center;padding:40px;"><div class="loader-small mx-auto"></div></div>';
+                renderEstruturaAtual(globalApp, container);
             }
         });
     });
@@ -359,35 +280,28 @@ export const abrirImportadorUnidades = async (db) => {
     document.getElementById('btn-selecionar-arquivo-unidades')?.addEventListener('click', () => fileInput.click());
     
     let dadosImportados = null;
-    
     fileInput?.addEventListener('change', async (e) => {
         const file = e.target.files[0];
         if (!file) return;
-        const infoDiv = document.getElementById('info-arquivo-unidades');
-        const infoDetalhes = document.getElementById('info-arquivo-unidades-detalhes');
         try {
             const extensao = file.name.split('.').pop().toLowerCase();
             let unidades = [];
             if (extensao === 'csv') unidades = await parseCSVUnidades(file);
             else if (extensao === 'json') unidades = await parseJSONUnidades(file);
-            else { showNotification("Formato não suportado", "error"); return; }
             dadosImportados = unidades;
-            infoDetalhes.textContent = `Arquivo: ${file.name} | ${unidades.length} unidade(s)`;
-            infoDiv.classList.remove('hidden');
-        } catch (error) {
-            showNotification("Erro ao ler arquivo", "error");
-        }
+            document.getElementById('info-arquivo-unidades-detalhes').textContent = `Arquivo: ${file.name} | ${unidades.length} unidade(s)`;
+            document.getElementById('info-arquivo-unidades').classList.remove('hidden');
+        } catch (error) { showNotification("Erro ao ler arquivo", "error"); }
     });
     
     document.getElementById('btn-previsualizar-unidades')?.addEventListener('click', () => {
-        if (!dadosImportados?.length) { showNotification("Nenhum dado", "warning"); return; }
-        const tbody = document.getElementById('preview-unidades-tbody');
-        tbody.innerHTML = dadosImportados.slice(0, 10).map(u => `<tr class="border-b"><td class="p-2">${escapeHTML(u.nome)}</td><td class="p-2">${escapeHTML(u.sigla || '-')}</td></tr>`).join('');
+        if (!dadosImportados?.length) return;
+        document.getElementById('preview-unidades-tbody').innerHTML = dadosImportados.slice(0, 10).map(u => `<tr class="border-b"><td class="p-2">${escapeHTML(u.nome)}</td><td class="p-2">${escapeHTML(u.sigla || '-')}</td></tr>`).join('');
         document.getElementById('preview-unidades').classList.remove('hidden');
     });
     
     document.getElementById('btn-importar-unidades')?.addEventListener('click', async () => {
-        if (!dadosImportados?.length) { showNotification("Nenhum dado", "error"); return; }
+        if (!dadosImportados?.length) return;
         await importarUnidadesEmMassa(db, dadosImportados);
         fechar();
         if (window.abrirGerenciadorUnidades) window.abrirGerenciadorUnidades();
@@ -395,31 +309,20 @@ export const abrirImportadorUnidades = async (db) => {
     
     document.getElementById('btn-importar-manual-unidades')?.addEventListener('click', async () => {
         const texto = document.getElementById('manual-unidades-text').value.trim();
-        if (!texto) { showNotification("Digite as unidades", "error"); return; }
         const unidades = texto.split('\n').filter(l => l.trim()).map(l => {
             const p = l.split('|').map(v => v.trim());
             return { sigla: p[0] || '', nome: p[1] || '', endereco: p[2] || '', telefone: p[3] || '', email: p[4] || '' };
         }).filter(u => u.nome);
-        if (!unidades.length) { showNotification("Nenhuma unidade válida", "error"); return; }
         await importarUnidadesEmMassa(db, unidades);
         fechar();
         if (window.abrirGerenciadorUnidades) window.abrirGerenciadorUnidades();
     });
 };
 
-// ============================================================
-// FUNÇÃO PARA VISUALIZAR USUÁRIOS VINCULADOS À UNIDADE
-// ============================================================
-
 export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) => {
-    if (!db || !unidadeId) {
-        showNotification("Erro ao abrir: dados da unidade não encontrados.", "error");
-        return;
-    }
-
     const modal = document.createElement('div');
     modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4';
-    modal.innerHTML = `<div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl text-center"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600">Carregando usuários vinculados a ${escapeHTML(unidadeNome)}...</p></div>`;
+    modal.innerHTML = `<div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl text-center"><div class="loader-small mx-auto mb-4"></div></div>`;
     document.body.appendChild(modal);
 
     try {
@@ -432,7 +335,7 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh] animate-fadeIn">
                 <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-black text-lg flex items-center gap-2">Usuários Vinculados</h3>
+                        <h3 class="font-black text-lg">Usuários Vinculados</h3>
                         <p class="text-emerald-100 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
                     </div>
                     <button id="fechar-usuarios-unidade" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
@@ -440,25 +343,20 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
                 <div class="p-4 overflow-y-auto flex-1">
                     ${usuariosVinculados.length > 0 
                         ? `<div class="space-y-2">
-                            <div class="text-xs text-gray-500 mb-2 px-1">Total: <span class="font-bold text-emerald-600">${usuariosVinculados.length}</span> usuário(s)</div>
                             ${usuariosVinculados.map(u => `
-                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100">
-                                <div class="flex justify-between items-start">
-                                    <div class="flex-1">
-                                        <p class="font-bold text-gray-800 text-sm flex items-center gap-2">
-                                            ${escapeHTML(u.name || 'Sem nome')}
-                                            <span class="text-[9px] ${u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-blue-100 text-blue-700'} px-2 py-0.5 rounded-full uppercase font-mono">${u.role || 'user'}</span>
-                                        </p>
-                                        <p class="text-xs text-gray-500 mt-0.5 break-all">${escapeHTML(u.email || '')}</p>
-                                    </div>
+                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+                                <div>
+                                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(u.name || 'Sem nome')}</p>
+                                    <p class="text-xs text-gray-500">${escapeHTML(u.email || '')}</p>
                                 </div>
+                                <span class="text-[9px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full uppercase">${u.role || 'user'}</span>
                             </div>`).join('')}
                           </div>`
-                        : '<div class="text-center py-12 text-gray-400"><p>Nenhum usuário ativo vinculado a esta unidade.</p></div>'
+                        : '<div class="text-center py-12 text-gray-400">Nenhum usuário.</div>'
                     }
                 </div>
                 <div class="p-4 border-t bg-gray-50 flex justify-end shrink-0">
-                    <button id="fechar-usuarios-unidade-footer" class="bg-gray-200 hover:bg-gray-300 px-5 py-2 rounded-xl text-sm font-bold transition-colors">Fechar</button>
+                    <button id="fechar-usuarios-unidade-footer" class="bg-gray-200 hover:bg-gray-300 px-5 py-2 rounded-xl text-sm font-bold">Fechar</button>
                 </div>
             </div>
         `;
@@ -466,18 +364,10 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
         const closeModal = () => modal.remove();
         document.getElementById('fechar-usuarios-unidade')?.addEventListener('click', closeModal);
         document.getElementById('fechar-usuarios-unidade-footer')?.addEventListener('click', closeModal);
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-        
     } catch (error) {
-        console.error("Erro ao carregar usuários da unidade:", error);
-        showNotification("Erro ao carregar usuários da unidade.", "error");
         modal.remove();
     }
 };
-
-// ============================================================
-// GERENCIADOR PRINCIPAL DE UNIDADES E RECEPÇÕES
-// ============================================================
 
 export const abrirGerenciadorUnidades = async (db) => {
     let unidades = await carregarUnidades(db);
@@ -519,12 +409,6 @@ export const abrirGerenciadorUnidades = async (db) => {
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir Unidade">
                             <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
-                        <div class="w-full flex justify-end mt-1">
-                            <button class="btn-nova-recepcao bg-purple-100 text-purple-700 hover:bg-purple-600 hover:text-white px-3 py-1.5 rounded-lg text-[10px] font-black transition-all flex items-center gap-1 w-full justify-center" 
-                                    data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Gerenciar Recepções">
-                                <span>🏛️</span> Recepções
-                            </button>
-                        </div>
                     </div>
                 </div>
             </div>
@@ -536,12 +420,7 @@ export const abrirGerenciadorUnidades = async (db) => {
         
         container.querySelectorAll('.btn-editar-unidade').forEach(btn => {
             btn.addEventListener('click', () => abrirModalFormUnidade(db, {
-                id: btn.dataset.id,
-                nome: btn.dataset.nome,
-                sigla: btn.dataset.sigla,
-                endereco: btn.dataset.endereco,
-                telefone: btn.dataset.telefone,
-                email: btn.dataset.email
+                id: btn.dataset.id, nome: btn.dataset.nome, sigla: btn.dataset.sigla, endereco: btn.dataset.endereco, telefone: btn.dataset.telefone, email: btn.dataset.email
             }, () => {
                 document.getElementById('gerenciador-unidades-modal')?.remove();
                 abrirGerenciadorUnidades(db);
@@ -555,16 +434,6 @@ export const abrirGerenciadorUnidades = async (db) => {
                 abrirGerenciadorUnidades(db);
             });
         });
-
-        container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
-            btn.addEventListener('click', () => {
-                if (globalApp) {
-                    abrirModalGerenciarRecepcoesPorUnidade(globalApp, btn.dataset.id, btn.dataset.nome);
-                } else {
-                    showNotification("Aplicativo não inicializado.", "error");
-                }
-            });
-        });
     };
     
     const modal = document.createElement('div');
@@ -575,7 +444,6 @@ export const abrirGerenciadorUnidades = async (db) => {
             <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
                     <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
-                    <p class="text-slate-300 text-sm mt-0.5">SIGEP - Defensoria Pública</p>
                 </div>
                 <button id="fechar-gerenciador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
@@ -604,21 +472,21 @@ export const abrirGerenciadorUnidades = async (db) => {
 };
 
 // ============================================================
-// NOVO MÓDULO: GERENCIAR RECEPÇÕES DIRETAMENTE DA UNIDADE
+// NOVO MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
 // ============================================================
 
-const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNome) => {
+const abrirModalGerenciarRecepcoesGlobal = async (app) => {
     const { db } = app;
     const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
 
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
+    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in';
     modal.innerHTML = `
         <div class="bg-slate-50 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative animate-fade-in">
-            <div class="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-6 flex justify-between items-center shrink-0">
+            <div class="bg-gradient-to-r from-purple-900 to-indigo-800 px-8 py-6 flex justify-between items-center shrink-0">
                 <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><span>🏛️</span> Gerenciar Recepções</h2>
-                    <p class="text-slate-400 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><span>🏛️</span> Unidades de Apoio (Recepções)</h2>
+                    <p class="text-slate-300 text-sm mt-1">Crie e gerencie Recepções que atuam como Hubs para várias Unidades/DPs</p>
                 </div>
                 <button id="fechar-gerenciador-recepcoes" class="text-white/60 hover:text-white text-4xl leading-none transition-colors">&times;</button>
             </div>
@@ -639,16 +507,17 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
         const container = document.getElementById('painel-conteudo-recepcoes');
         if (!container) return;
 
-        const recepcoes = await RecepcaoConfigService.buscarRecepcoesUnidade(db, unidadeId);
+        // Fetch ALL receptions for the admin view
+        const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
 
         let html = `
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
                 <div>
-                    <h3 class="font-black text-slate-800 text-xl">Salas de Espera / Recepções</h3>
-                    <p class="text-sm text-slate-500 mt-1">Crie as recepções e defina quem tem acesso a cada uma delas.</p>
+                    <h3 class="font-black text-slate-800 text-xl">Gestão Global de Recepções</h3>
+                    <p class="text-sm text-slate-500 mt-1">Defina quais unidades cada Recepção atende e quem são os servidores lotados nelas.</p>
                 </div>
                 <button id="btn-nova-recepcao-custom" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 shrink-0">
-                    <span class="text-lg">+</span> Nova Recepção
+                    <span class="text-lg">+</span> Nova Recepção (Apoio)
                 </button>
             </div>
             
@@ -656,8 +525,8 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                 ${recepcoes.length === 0 ? `
                     <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200">
                         <span class="text-6xl mb-4">🪑</span>
-                        <h4 class="text-lg font-bold text-slate-700">Nenhuma recepção configurada</h4>
-                        <p class="text-slate-500 text-sm mt-1">Clique em "Nova Recepção" para começar.</p>
+                        <h4 class="text-lg font-bold text-slate-700">Nenhuma Unidade de Apoio configurada</h4>
+                        <p class="text-slate-500 text-sm mt-1">Clique em "Nova Recepção" para criar a primeira.</p>
                     </div>
                 ` : recepcoes.map(rec => `
                     <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all relative flex flex-col h-full group">
@@ -674,28 +543,36 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                             </div>
                             <div class="flex-1 min-w-0 pr-16">
                                 <h4 class="font-black text-slate-800 text-lg leading-tight truncate">${escapeHTML(rec.nome)}</h4>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">${rec.andar ? escapeHTML(rec.andar) : 'Sem andar definido'}</p>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">${rec.andar ? escapeHTML(rec.andar) : 'Apoio Global'}</p>
                             </div>
                         </div>
                         
                         <div class="mb-6 flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100">
                             <div class="mb-3">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏷️</span> Grupos Atendidos</p>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏢</span> Unidades Atendidas</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${(rec.unidadesVinculadas || []).length > 0 
+                                        ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm">${rec.unidadesVinculadas.length} Unidade(s)</span>`
+                                        : (rec.unidadeNome ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm truncate max-w-full">${escapeHTML(rec.unidadeNome)}</span>` : '<span class="text-xs text-slate-400 italic">Nenhuma unidade vinculada</span>')}
+                                </div>
+                            </div>
+                            <div class="mb-3">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏷️</span> Grupos</p>
                                 <div class="flex flex-wrap gap-1.5">
                                     ${(rec.grupos || []).length > 0 
-                                        ? rec.grupos.map(g => `<span class="bg-white text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase shadow-sm">${escapeHTML(g)}</span>`).join('') 
-                                        : '<span class="text-xs text-slate-400 italic">Todos os grupos</span>'}
+                                        ? rec.grupos.slice(0,3).map(g => `<span class="bg-white text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase shadow-sm">${escapeHTML(g)}</span>`).join('') + (rec.grupos.length > 3 ? `<span class="text-[10px] text-slate-400">...</span>` : '')
+                                        : '<span class="text-xs text-slate-400 italic">Todos</span>'}
                                 </div>
                             </div>
                             <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Acessos Permitidos</p>
-                                <span class="bg-indigo-100 text-indigo-700 font-black px-2.5 py-0.5 rounded-full text-xs">${(rec.membros || []).length} usuários</span>
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Servidores Lotados</p>
+                                <span class="bg-green-100 text-green-700 font-black px-2.5 py-0.5 rounded-full text-xs">${(rec.membros || []).length}</span>
                             </div>
                         </div>
                         
                         <div class="grid grid-cols-2 gap-2 mt-auto">
                             <button class="btn-vincular-usuarios bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm col-span-2 flex items-center justify-center gap-2" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">
-                                <span>👥</span> Gerenciar Acessos
+                                <span>👥</span> Lotar Servidores (Acessos)
                             </button>
                             <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1.5" data-id="${rec.id}">
                                 <span>✏️</span> Editar
@@ -730,7 +607,7 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
 
             container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
                 btn.addEventListener('click', async () => {
-                    if (confirm(`Tem certeza que deseja excluir permanentemente a recepção "${btn.dataset.nome}"?`)) {
+                    if (confirm(`Tem certeza que deseja excluir permanentemente a Unidade de Apoio "${btn.dataset.nome}"?`)) {
                         try {
                             await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
                             showNotification("Recepção excluída com sucesso!", "success");
@@ -743,7 +620,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                 });
             });
 
-            // ABRE O NOVO MODAL DE VINCULAR USUÁRIOS
             container.querySelectorAll('.btn-vincular-usuarios').forEach(btn => {
                 btn.addEventListener('click', () => {
                     const rec = recepcoes.find(r => r.id === btn.dataset.id);
@@ -754,12 +630,10 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
 
         const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
             const container = document.getElementById('painel-conteudo-recepcoes');
-            if (!recepcaoEdicao) recepcaoEdicao = { unidadeId, unidadeNome };
             
-            // Reutiliza o formulário padrão mas dentro deste painel
             container.innerHTML = `
                 <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                    ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [{ id: unidadeId, nome: unidadeNome }])}
+                    ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [])}
                 </div>
             `;
 
@@ -768,7 +642,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                     if (idEdicao) {
                         await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
                     } else {
-                        // Ao criar, adiciona o criador como o primeiro membro automaticamente
                         await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
                     }
                     renderizarTelaAdmin();
@@ -777,9 +650,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
             );
         };
 
-        // ============================================================
-        // MODAL DE GESTÃO DE ACESSOS (VINCULAR USUÁRIOS)
-        // ============================================================
         const abrirModalVincularUsuarios = async (recepcao) => {
             const modalVinculo = document.createElement('div');
             modalVinculo.className = 'fixed inset-0 bg-slate-900/80 z-[900] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
@@ -787,8 +657,8 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                 <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh]">
                     <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
                         <div>
-                            <h3 class="font-black text-white text-lg">Acessos: ${escapeHTML(recepcao.nome)}</h3>
-                            <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode ver e usar esta recepção.</p>
+                            <h3 class="font-black text-white text-lg">Lotar Servidores: ${escapeHTML(recepcao.nome)}</h3>
+                            <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode acessar e trabalhar nesta unidade de apoio.</p>
                         </div>
                         <button class="fechar-vinculo text-white/60 hover:text-white text-3xl leading-none">&times;</button>
                     </div>
@@ -809,7 +679,7 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                         <span id="contagem-membros" class="text-sm font-bold text-slate-500"></span>
                         <div class="flex gap-3">
                             <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition text-sm">Cancelar</button>
-                            <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Acessos</button>
+                            <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Lotação</button>
                         </div>
                     </div>
                 </div>
@@ -820,7 +690,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
             modalVinculo.querySelectorAll('.fechar-vinculo').forEach(b => b.addEventListener('click', fecharVinculo));
 
             try {
-                // Carrega todos os utilizadores aprovados
                 const usersSnap = await getDocs(collection(db, "users"));
                 const todosUsuarios = usersSnap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'approved' && u.role !== 'suspended');
                 todosUsuarios.sort((a,b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''));
@@ -858,7 +727,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                         </div>
                     `;
 
-                    // Lógica para selecionar o utilizador
                     container.querySelectorAll('.cb-membro').forEach(cb => {
                         cb.addEventListener('change', (e) => {
                             const label = cb.closest('label');
@@ -875,7 +743,7 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
                 };
 
                 const atualizarContador = () => {
-                    document.getElementById('contagem-membros').textContent = `${membrosAtuais.length} selecionado(s)`;
+                    document.getElementById('contagem-membros').textContent = `${membrosAtuais.length} servidor(es) lotado(s)`;
                 };
 
                 renderUsuarios();
@@ -890,13 +758,13 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
 
                     try {
                         await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
-                        showNotification("Acessos atualizados com sucesso!", "success");
+                        showNotification("Lotação atualizada com sucesso!", "success");
                         fecharVinculo();
-                        renderizarTelaAdmin(); // Atualiza os números no fundo
+                        renderizarTelaAdmin();
                     } catch (error) {
-                        showNotification("Erro ao salvar acessos.", "error");
+                        showNotification("Erro ao salvar.", "error");
                         btn.disabled = false;
-                        btn.textContent = 'Salvar Acessos';
+                        btn.textContent = 'Salvar Lotação';
                     }
                 });
 
@@ -907,10 +775,6 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
 
         await renderizarTelaAdmin();
     };
-
-// ============================================================
-// FORMULÁRIO DE UNIDADES
-// ============================================================
 
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     const isEdicao = !!unidade;
@@ -948,10 +812,6 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
         if (onClose) onClose();
     });
 };
-
-// ============================================================
-// MÓDULO DE GERENCIAMENTO DE USUÁRIOS (PAGINAÇÃO, BUSCA E FILTROS)
-// ============================================================
 
 function renderPagination(containerId, currentPage, totalPages, onPageChange) {
     const container = document.getElementById(containerId);
@@ -1190,10 +1050,6 @@ export const deleteUser = async (db, userId) => {
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
-
-// ============================================================
-// MÓDULO DE AUDITORIA E LOGS
-// ============================================================
 
 export const loadLogFilters = async (db) => {
     try {
@@ -1483,7 +1339,6 @@ export const loadDashboardData = async (db) => {
     }
 };
 
-
 export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
@@ -1494,17 +1349,16 @@ export const populateUserFilter = async (db) => {
     } catch (e) {}
 };
 
-// ============================================================
-// SETUP DOS EVENTOS DO ADMIN
-// ============================================================
-
 export const setupAdminEvents = (app) => {
     globalApp = app;
+    // O evento do botão global agora é anexado na renderização do admin (renderAdminContent do main.js)
+    const btnGlobal = document.getElementById('btn-recepcoes-master');
+    if(btnGlobal) {
+        btnGlobal.addEventListener('click', () => {
+            abrirModalGerenciarRecepcoesGlobal(globalApp);
+        });
+    }
 };
-
-// ============================================================
-// VINCULAÇÕES GLOBAIS DO ESCOPO WINDOW
-// ============================================================
 
 window.approveUser = (userId) => {
     if (globalApp) approveUser(globalApp.db, userId);
@@ -1541,9 +1395,9 @@ window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
     else console.error("App não inicializado");
 };
 
-window.abrirModalNovaRecepcao = (options) => {
-    // Agora aponta para a função correta
-    if (globalApp) abrirModalGerenciarRecepcoesPorUnidade(globalApp, options?.unidadeId, options?.unidadeNome);
+// Agora expomos globalmente para ser chamado no botão de Gerenciar Recepções
+window.abrirModalGerenciarRecepcoesGlobal = () => {
+    if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp);
     else console.error("App não inicializado");
 };
 
@@ -1579,10 +1433,6 @@ window.exportAuditLogsPDF = () => {
 
 window.setupAdminSearch = () => setupAdminSearch();
 
-// ============================================================
-// EXPORTAÇÃO DO SERVIÇO ADMIN
-// ============================================================
-
 export const AdminService = {
     carregarUnidades,
     criarUnidade,
@@ -1601,8 +1451,8 @@ export const AdminService = {
     updateUserRole,
     deleteUser,
     setupAdminEvents,
+    abrirModalGerenciarRecepcoesGlobal,
     renderEstruturaAtual
 };
 
-console.log("✅ AdminService registrado no window com sucesso.");
-console.log("✅ Módulo admin.js atualizado e acoplado com todos os componentes (novaRecepcao, estruturaAtual, gerenciarUnidadesUsuario).");
+console.log("✅ AdminService (Hub de Unidades e Recepções Independentes) registrado no window com sucesso.");
