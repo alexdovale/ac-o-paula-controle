@@ -215,6 +215,12 @@ class SIGEPApp {
             }
         });
         
+        document.getElementById('btn-recepcoes-master')?.addEventListener('click', () => {
+            if (window.abrirModalGerenciarRecepcoesGlobal) {
+                window.abrirModalGerenciarRecepcoesGlobal();
+            }
+        });
+        
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
             this.showPautaSelectionScreen();
         });
