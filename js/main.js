@@ -29,6 +29,7 @@ import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
+// IMPORTS DOS NOVOS MÓDULOS
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
@@ -36,6 +37,7 @@ import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 
+// 1. IMPORTAR E INJETAR OS MODAIS ANTES DE TUDO!
 import { injetarModais } from './modais.js';
 injetarModais();
 
@@ -57,6 +59,7 @@ class SIGEPApp {
         this.currentPautaFilter = 'all';
         this.monitorInterval = null; 
         
+        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         
         this.init();
@@ -75,7 +78,7 @@ class SIGEPApp {
             if (urlParams.get('painel') === 'true') {
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(this);
-                return; 
+                return; // Interrompe o carregamento do resto do sistema (Login, etc.)
             }
             // ============================================================
 
@@ -88,56 +91,23 @@ class SIGEPApp {
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
             
+            // INICIALIZAÇÃO PAUTACONFIG
             PautaConfigService.init(this);
+            
+            // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
             this.setupModoListeners();
             
+            // EXPÕE O APP GLOBALMENTE PARA OS MÓDULOS ADMIN
             window.app = this;
             
+            // REGISTRA O AdminService COM O APP
             if (AdminService && AdminService.setupAdminEvents) {
                 AdminService.setupAdminEvents(this);
             }
             
-            // Ouvinte para botão voltar/avançar do navegador (Routing SPA)
-            window.addEventListener('popstate', () => {
-                if (this.auth && this.auth.currentUser) {
-                    this.handleRoute();
-                }
-            });
-
         } catch (error) {
             console.error("Erro na inicialização:", error);
             showNotification("Erro ao iniciar o sistema SIGEP", "error");
-        }
-    }
-
-    // ============================================================
-    // SISTEMA DE ROTAS NATIVAS
-    // ============================================================
-    changeUrl(path) {
-        const url = new URL(window.location.href);
-        const segments = url.pathname.split('/').filter(s => s !== '');
-        
-        // Garante que a raiz do repositório no GitHub Pages seja mantida
-        let basePath = '/';
-        if (segments.length > 0 && segments[0] === 'ac-o-paula-controle') {
-            basePath = '/ac-o-paula-controle/';
-        }
-        
-        window.history.pushState({}, '', basePath + path);
-    }
-
-    handleRoute() {
-        if (!this.auth?.currentUser) return;
-        const path = window.location.pathname.toLowerCase();
-        
-        if (path.includes('/admin')) {
-            this.showAdminScreen();
-        } else if (path.includes('/recepcaocentral')) {
-            RecepçãoCentralService.abrir(this);
-        } else if (path.includes('/dashboard')) {
-            DashboardService.showDashboardScreen();
-        } else {
-            this.showPautaSelectionScreen();
         }
     }
 
@@ -243,7 +213,6 @@ class SIGEPApp {
         });
         
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.changeUrl('');
             this.showPautaSelectionScreen();
         });
         
@@ -278,6 +247,9 @@ class SIGEPApp {
         document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(this.db));
     }
 
+    // ============================================================
+    // MÉTODO: setupModoListeners
+    // ============================================================
     setupModoListeners() {
         document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
@@ -300,6 +272,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // MÉTODO: voltarParaSelecaoModo
+    // ============================================================
     voltarParaSelecaoModo() {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
@@ -319,6 +294,9 @@ class SIGEPApp {
         showNotification('Modo alterado com sucesso!', 'info', 2000);
     }
 
+    // ============================================================
+    // mostrarSeletorTipoEvento
+    // ============================================================
     mostrarSeletorTipoEvento() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
@@ -363,6 +341,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // mostrarIndicadorModo
+    // ============================================================
     mostrarIndicadorModo() {
         let indicador = document.getElementById('modo-indicador');
         
@@ -391,6 +372,9 @@ class SIGEPApp {
         }, 3000);
     }
 
+    // ============================================================
+    // setupAuthListener
+    // ============================================================
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
@@ -403,15 +387,18 @@ class SIGEPApp {
                 const pautaNome = localStorage.getItem('lastPautaName');
                 const pautaTipo = localStorage.getItem('lastPautaType');
 
-                const path = window.location.pathname.toLowerCase();
-                const isRoot = path.endsWith('/') || path.endsWith('/index.html') || path.endsWith('/ac-o-paula-controle') || path.endsWith('/ac-o-paula-controle/');
-
-                // Restaura o estado salvo da pauta se estiver na raiz
-                if (isRoot && telaAtiva === 'app' && pautaId && pautaNome) {
+                if (telaAtiva === 'app' && pautaId && pautaNome) {
                     await this.loadPauta(pautaId, pautaNome, pautaTipo);
+                } else if (telaAtiva === 'pauta-selection') {
+                    await this.showPautaSelectionScreen();
+                } else if (telaAtiva === 'dashboard') {
+                    DashboardService.showDashboardScreen();
+                } else if (telaAtiva === 'recepcao-central') {
+                    await RecepçãoCentralService.abrir(this);
+                } else if (telaAtiva === 'admin') {
+                    this.showAdminScreen();
                 } else {
-                    // Resolve as rotas ativas (admin, recepcaocentral, etc)
-                    this.handleRoute();
+                    UIService.showScreen('modoSelection');
                 }
 
             } else {
@@ -422,6 +409,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // setupOfflinePersistence
+    // ============================================================
     setupOfflinePersistence() {
         try {
             enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
@@ -430,6 +420,8 @@ class SIGEPApp {
                     showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
                 } else if (err.code == 'unimplemented') {
                     console.warn('⚠️ Navegador não suporta persistência offline.');
+                } else {
+                    console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
                 }
             });
         } catch (e) {
@@ -447,6 +439,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // loadExternalModalsContent
+    // ============================================================
     async loadExternalModalsContent() {
         const modalsToLoad = [
             { selector: '#policy-content', url: './politica.html' },
@@ -463,6 +458,8 @@ class SIGEPApp {
                     if (container) {
                         container.innerHTML = html; 
                     }
+                } else {
+                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
                 }
             } catch (error) {
                 console.error(`Erro ao tentar buscar ${item.url}:`, error);
@@ -470,6 +467,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // setupEventListeners - COMPLETO
+    // ============================================================
     setupEventListeners() {
         document.getElementById('login-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -503,17 +503,14 @@ class SIGEPApp {
         });
 
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            this.changeUrl('dashboard');
             DashboardService.showDashboardScreen();
         });
 
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.changeUrl('');
             this.showPautaSelectionScreen();
         });        
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            this.changeUrl('recepcaocentral');
             await RecepçãoCentralService.abrir(this);
         });
 
@@ -783,7 +780,6 @@ class SIGEPApp {
             if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
             document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
-            this.changeUrl('');
             UIService.showScreen('pautaSelection');
             if (this.auth?.currentUser) {
                 this.showPautaSelectionScreen();
@@ -1619,7 +1615,6 @@ class SIGEPApp {
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
         if (adminPanelBtnPautaSelection) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                this.changeUrl('admin');
                 this.showAdminScreen();
             });
         }
@@ -1627,7 +1622,6 @@ class SIGEPApp {
         const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
         if (adminBackBtn) {
             adminBackBtn.addEventListener('click', () => {
-                this.changeUrl('');
                 this.showPautaSelectionScreen();
             });
         }
@@ -1669,6 +1663,9 @@ class SIGEPApp {
 
     }
 
+    // ============================================================
+    // setupSubjectsAutocomplete
+    // ============================================================
     setupSubjectsAutocomplete() {
         const datalist = document.getElementById('subjects-list');
         if (!datalist) return;
@@ -1723,6 +1720,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // loadUserPreferences / saveUserPreferences / applyUserPreferences
+    // ============================================================
     async loadUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
             this.userPreferences = this.getDefaultNotificationPreferences(); 
@@ -1820,6 +1820,9 @@ class SIGEPApp {
         };
     }
 
+    // ============================================================
+    // saveColumnPreferences / loadColumnPreferences / applyColumnPreferences
+    // ============================================================
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -1875,6 +1878,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // showPautaSelectionScreen - ATUALIZADO
+    // ============================================================
     async showPautaSelectionScreen() {
         localStorage.setItem('sigep_active_screen', 'pauta-selection');
         if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
@@ -1900,6 +1906,9 @@ class SIGEPApp {
         this.loadColumnPreferences();
     }
 
+    // ============================================================
+    // loadPautasWithFilter - COM FILTRO POR MODO E UNIDADES VINCULADAS (CORRIGIDO)
+    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -2059,7 +2068,9 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         }
     }
-    
+    // ============================================================
+    // loadPauta
+    // ============================================================
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
@@ -2136,6 +2147,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // setupRealtimeListener
+    // ============================================================
     setupRealtimeListener(pautaId) {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
@@ -2153,6 +2167,9 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // iniciarMonitorEnvelopes
+    // ============================================================
     iniciarMonitorEnvelopes() {
         if (this.monitorInterval) clearInterval(this.monitorInterval);
         
@@ -2204,6 +2221,9 @@ class SIGEPApp {
         this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
     }
 
+    // ============================================================
+    // applyRoleBasedUI
+    // ============================================================
     applyRoleBasedUI() {
         const currentUser = this.currentUser;
         const currentUserRole = currentUser?.role; 
@@ -2274,6 +2294,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // deletePauta
+    // ============================================================
     async deletePauta(pautaId, pautaName) {
         const pautaRef = doc(this.db, "pautas", pautaId);
         const pautaSnap = await getDoc(pautaRef);
