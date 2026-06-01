@@ -556,7 +556,7 @@ export const abrirGerenciadorUnidades = async (db) => {
             });
         });
 
-        // 🟢 NOVA LIGAÇÃO PARA O GERENCIADOR DE RECEPÇÕES DA UNIDADE
+        // 🟢 LIGAÇÃO PARA O GERENCIADOR DE RECEPÇÕES DA UNIDADE
         container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (globalApp) {
@@ -673,12 +673,18 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
             });
         });
 
-        // Exclusão
+        // Exclusão PERMANENTE
         container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (confirm(`Desativar a recepção "${btn.dataset.nome}"?`)) {
-                    await RecepcaoConfigService.excluirRecepcao(db, btn.dataset.recepcaoId);
-                    renderizarTelaAdmin();
+                if (confirm(`Tem certeza que deseja excluir permanentemente a recepção "${btn.dataset.nome}"?`)) {
+                    try {
+                        await deleteDoc(doc(db, "recepcoes", btn.dataset.recepcaoId));
+                        showNotification("Recepção excluída com sucesso!", "success");
+                        renderizarTelaAdmin();
+                    } catch (error) {
+                        console.error("Erro ao excluir recepção:", error);
+                        showNotification("Erro ao excluir recepção.", "error");
+                    }
                 }
             });
         });
@@ -690,7 +696,7 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
     const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
         const container = document.getElementById('painel-conteudo-recepcoes');
         
-        // Fixa a unidade atual
+        // Fixa a unidade atual se não houver edição
         if (!recepcaoEdicao) {
             recepcaoEdicao = { unidadeId, unidadeNome };
         }
