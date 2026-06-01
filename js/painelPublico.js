@@ -11,9 +11,9 @@ export const PainelPublicoService = {
 
         // 1. Limpa o HTML do sistema inteiro e reseta a estrutura base
         document.body.innerHTML = '';
-        document.body.className = "p-0 m-0 flex flex-col min-h-screen overflow-hidden";
+        document.body.className = "p-0 m-0 flex flex-col min-h-screen overflow-hidden bg-slate-900";
         
-        // 2. Injeta o CSS (incluindo o layout fixo da barra e auto-hide)
+        // 2. Injeta o CSS
         const style = document.createElement('style');
         style.textContent = `
             :root {
@@ -33,7 +33,7 @@ export const PainelPublicoService = {
             ::-webkit-scrollbar-track { background: transparent; }
             ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
 
-            /* ANIMAÇÕES */
+            /* ANIMAÇÕES GERAIS */
             @keyframes ping-slow { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.4; transform: scale(1.6); } }
             .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
             @keyframes chamado-enter { from { opacity: 0; transform: translateY(-16px) scale(0.97); } to { opacity: 1; transform: translateY(0) scale(1); } }
@@ -74,55 +74,68 @@ export const PainelPublicoService = {
             .ordem-num { font-size: var(--fs-md); font-weight: 900; font-family: 'DM Mono', monospace; color: #f59e0b; min-width: clamp(24px, 3vw, 36px); text-align: center; flex-shrink: 0; }
             .sala-badge { font-size: var(--fs-xs); font-weight: 700; padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 12px); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; }
 
-            /* ESTILOS MODO TV */
+            /* ESTILOS MODO TV CLÁSSICA */
             .bg-tema-panel { background-color: #22c55e; }
             .text-tema-panel { color: #16a34a; }
             @keyframes piscar-chamado-tv { 0%, 100% { background-color: #22c55e; transform: scale(1); } 50% { background-color: #15803d; transform: scale(0.98); } }
             .animar-chamado-tv { animation: piscar-chamado-tv 0.6s cubic-bezier(0.22,1,0.36,1) 3; }
-            .texto-nome-tv  { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
-            .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; }
+            .texto-nome-tv  { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; text-transform: uppercase; }
+            .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; text-transform: uppercase; }
 
-            /* ESTILOS MODO TV+VÍDEO E BARRA LATERAL FIXA */
+            /* ESTILOS MODO TV+VÍDEO (REFORMULADO: BANNER FIXO) */
             #faixa-video {
                 width: clamp(220px, 22vw, 340px);
-                flex-shrink: 0;
-                display: flex;
-                flex-direction: column;
-                background: #ffffff;
-                border-left: 4px solid #e2e8f0;
-                height: 100vh; /* Força a barra a ocupar a tela inteira */
+                flex-shrink: 0; display: flex; flex-direction: column;
+                background: #ffffff; border-left: 4px solid #e2e8f0; height: 100vh;
             }
-            #faixa-header { flex-shrink: 0; } /* Cabeçalho não rola */
-            #video-ultimo-chamado { flex-shrink: 0; } /* Último chamado não rola */
-            #faixa-historico-titulo { flex-shrink: 0; } /* Título histórico não rola */
-            #lista-historico-video { flex: 1; overflow-y: auto; } /* Apenas a lista rola! */
-            #faixa-footer { flex-shrink: 0; } /* Rodapé não rola */
+            #faixa-header { flex-shrink: 0; }
+            #video-ultimo-chamado { flex-shrink: 0; }
+            #faixa-historico-titulo { flex-shrink: 0; }
+            #lista-historico-video { flex: 1; overflow-y: auto; }
+            #faixa-footer { flex-shrink: 0; }
 
-            @keyframes banner-slide-in { from { transform: translateY(100%); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
-            @keyframes banner-slide-out { from { transform: translateY(0); opacity: 1; } to { transform: translateY(100%); opacity: 0; } }
-            @keyframes banner-pulse { 0%, 100% { box-shadow: 0 0 0 0 rgba(34,197,94,0); } 50% { box-shadow: 0 0 0 24px rgba(34,197,94,0.18); } }
+            /* Wrapper do Vídeo e Banner Fixo */
+            #coluna-midia {
+                flex: 1; display: flex; flex-direction: column;
+                position: relative; overflow: hidden; background: #000;
+            }
+            #video-container {
+                flex: 1; position: relative; overflow: hidden; pointer-events: none; /* BLOQUEIA CLIQUES DO YOUTUBE */
+            }
+            
+            /* O iframe do youtube recebe um zoom para esconder título/controles forçados */
+            #video-embed iframe {
+                position: absolute; top: -10%; left: -10%;
+                width: 120%; height: 120%; border: none;
+            }
+            #video-embed video {
+                position: absolute; top: 0; left: 0;
+                width: 100%; height: 100%; object-fit: cover;
+            }
+            #video-placeholder {
+                position: absolute; inset: 0; display: flex; flex-direction: column; 
+                align-items: center; justify-content: center; background: #0f172a; color: #475569; gap: 12px;
+            }
 
+            /* Banner Fixo na Base do Vídeo */
             #banner-chamado {
-                position: absolute; bottom: 0; left: 0; right: 0; z-index: 30;
+                flex-shrink: 0; z-index: 30;
                 background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); color: white;
                 padding: clamp(14px, 2.5vh, 32px) clamp(20px, 4vw, 60px);
                 display: flex; align-items: center; justify-content: space-between; gap: 20px;
-                transform: translateY(100%); opacity: 0; border-top: 4px solid #4ade80;
+                border-top: 4px solid #4ade80;
+                box-shadow: 0 -10px 30px rgba(0,0,0,0.3);
             }
-            #banner-chamado.visivel { animation: banner-slide-in 0.5s cubic-bezier(0.22,1,0.36,1) forwards, banner-pulse 1.5s ease-in-out 0.5s 2; }
-            #banner-chamado.saindo { animation: banner-slide-out 0.4s ease-in forwards; }
-
-            #video-container { position: relative; width: 100%; height: 100%; background: #000; overflow: hidden; }
-            #video-container iframe, #video-container video { position: absolute; top: 0; left: 0; width: 100%; height: 100%; border: none; }
-            #video-placeholder { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #0f172a; color: #475569; gap: 12px; }
+            
+            @keyframes piscar-banner-fixo {
+                0%, 100% { background: linear-gradient(135deg, #16a34a 0%, #15803d 100%); }
+                50% { background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%); box-shadow: 0 0 40px rgba(34,197,94,0.4); }
+            }
+            .banner-destaque-anim { animation: piscar-banner-fixo 0.5s ease-in-out 3; }
 
             /* SISTEMA DE CONTROLES INVISÍVEIS (HOVER) */
-            #area-controles {
-                position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-            }
-            #controles-wrap {
-                opacity: 0; transition: opacity 0.4s ease; pointer-events: auto;
-            }
+            #area-controles { position: fixed; inset: 0; z-index: 9999; pointer-events: none; }
+            #controles-wrap { opacity: 0; transition: opacity 0.4s ease; pointer-events: auto; }
             #area-controles.ativo #controles-wrap { opacity: 1; }
 
             #seletor-modo {
@@ -181,8 +194,10 @@ export const PainelPublicoService = {
                 </div>
             </div>
 
-            <!-- MODO FILA -->
-            <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6">
+            <!-- ============================================== -->
+            <!-- MODO FILA                                      -->
+            <!-- ============================================== -->
+            <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6 bg-slate-100">
                 <header class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 shrink-0">
                     <div class="flex items-center gap-3">
                         <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 shrink-0">
@@ -256,14 +271,12 @@ export const PainelPublicoService = {
                         <div id="lista-espera" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:10px"></div>
                     </div>
                 </div>
-
-                <footer class="text-center text-slate-400 font-bold uppercase tracking-widest pb-2 shrink-0" style="font-size:var(--fs-xs)">
-                    SIGEP · Painel Público da Recepção Unificada · Dados em tempo real
-                </footer>
             </div>
 
-            <!-- MODO TV -->
-            <div id="modo-tv" class="hidden w-full h-screen sm:p-4 flex items-center justify-center overflow-hidden">
+            <!-- ============================================== -->
+            <!-- MODO TV CLÁSSICA                               -->
+            <!-- ============================================== -->
+            <div id="modo-tv" class="hidden w-full h-screen bg-slate-900 sm:p-4 flex items-center justify-center overflow-hidden">
                 <div class="w-full h-full sm:max-h-[90vh] sm:max-w-[160vh] sm:aspect-video bg-white shadow-2xl overflow-hidden rounded-none sm:rounded-2xl flex flex-col sm:flex-row">
                     <div id="painel-destaque-tv" class="w-full sm:w-2/3 bg-tema-panel flex flex-col justify-center items-center text-white p-6 sm:p-12 text-center transition-all duration-300 flex-1">
                         <h1 class="text-3xl sm:text-5xl font-semibold uppercase tracking-widest mb-2 sm:mb-4 opacity-90 leading-tight drop-shadow-md">Chamando</h1>
@@ -288,65 +301,74 @@ export const PainelPublicoService = {
                 </div>
             </div>
 
-            <!-- MODO TV + VÍDEO -->
-            <div id="modo-video" class="hidden w-full h-screen overflow-hidden" style="background:#0f172a">
-                <div class="w-full h-full flex flex-col sm:flex-row">
-                    <div id="video-container" class="flex-1 relative">
+            <!-- ============================================== -->
+            <!-- MODO TV + VÍDEO (NOVO LAYOUT FIXO)             -->
+            <!-- ============================================== -->
+            <div id="modo-video" class="hidden w-full h-screen overflow-hidden bg-black flex-col sm:flex-row">
+                
+                <!-- COLUNA DO MEIO: Vídeo em cima, Banner fixo em baixo -->
+                <div id="coluna-midia">
+                    
+                    <!-- Vídeo -->
+                    <div id="video-container">
                         <div id="video-placeholder">
                             <div style="font-size:64px">📺</div>
                             <p class="font-black text-slate-400 text-xl uppercase tracking-widest">Sem vídeo configurado</p>
-                            <p class="text-slate-600 text-sm mt-2">Configure o vídeo no painel administrativo.</p>
+                            <p class="text-slate-500 text-sm mt-2 text-center max-w-md">Feche esta janela, clique em "Configurar Painel da TV" e cole um link do YouTube válido.</p>
                         </div>
-                        <div id="video-embed" style="display:none;position:absolute;inset:0"></div>
-                        <div id="banner-chamado">
-                            <div style="flex:1;min-width:0">
-                                <p style="font-size:clamp(11px,1.2vw,15px);font-weight:800;letter-spacing:0.3em;text-transform:uppercase;opacity:0.85;margin-bottom:4px">📣 Chamando Agora</p>
-                                <p id="banner-nome" style="font-size:clamp(2rem,5vw,5.5rem);font-weight:900;line-height:1;text-transform:uppercase;word-break:break-word">—</p>
+                        <div id="video-embed" style="display:none; position:absolute; inset:0;"></div>
+                    </div>
+                    
+                    <!-- Banner Chamado (Fixo em baixo) -->
+                    <div id="banner-chamado">
+                        <div style="flex:1; min-width:0;">
+                            <p style="font-size:clamp(11px,1.2vw,15px); font-weight:800; letter-spacing:0.3em; text-transform:uppercase; opacity:0.85; margin-bottom:4px;">📣 Chamando Agora</p>
+                            <p id="banner-nome" style="font-size:clamp(2rem,5vw,5.5rem); font-weight:900; line-height:1; text-transform:uppercase; word-break:break-word;">AGUARDANDO...</p>
+                        </div>
+                        <div style="text-align:right; flex-shrink:0;">
+                            <p id="banner-label-local" style="font-size:clamp(11px,1.2vw,15px); font-weight:700; opacity:0.8; text-transform:uppercase; letter-spacing:0.2em; margin-bottom:4px;">Dirija-se a</p>
+                            <p id="banner-local" style="font-size:clamp(1.8rem,4vw,4.5rem); font-weight:900; line-height:1; text-transform:uppercase;">—</p>
+                        </div>
+                    </div>
+
+                </div>
+                
+                <!-- FAIXA LATERAL (agora fixa à direita!) -->
+                <div id="faixa-video">
+                    <div id="faixa-header" style="padding:20px 16px 12px;border-bottom:2px solid #f1f5f9;">
+                        <div class="flex items-center gap-3 mb-4">
+                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" style="height:36px;object-fit:contain;filter:grayscale(0.3)">
+                            <div>
+                                <p style="font-size:11px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.05em">SIGEP</p>
+                                <p id="recepcao-nome-video" style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.03em">Recepção</p>
                             </div>
-                            <div style="text-align:right;flex-shrink:0">
-                                <p id="banner-label-local" style="font-size:clamp(11px,1.2vw,15px);font-weight:700;opacity:0.8;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px">Dirija-se a</p>
-                                <p id="banner-local" style="font-size:clamp(1.8rem,4vw,4.5rem);font-weight:900;line-height:1">—</p>
+                        </div>
+                        <div style="display:flex;gap:8px">
+                            <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
+                                <p id="video-g-aguardando" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#f59e0b;line-height:1">0</p>
+                                <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Aguard.</p>
+                            </div>
+                            <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
+                                <p id="video-g-atendendo" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#4f46e5;line-height:1">0</p>
+                                <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Atend.</p>
                             </div>
                         </div>
                     </div>
+
+                    <div id="video-ultimo-chamado" style="padding:12px 16px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;display:none;">
+                        <p style="font-size:9px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px">📣 Último</p>
+                        <p id="video-uc-nome" style="font-size:clamp(14px,1.8vw,20px);font-weight:900;color:#0f172a;text-transform:uppercase;line-height:1.2;word-break:break-word">—</p>
+                        <p id="video-uc-local" style="font-size:11px;font-weight:700;color:#16a34a;margin-top:4px;text-transform:uppercase">—</p>
+                    </div>
+
+                    <div id="faixa-historico-titulo" style="padding:12px 16px 4px;">
+                        <p style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em">Histórico Recente</p>
+                    </div>
                     
-                    <!-- FAIXA LATERAL (agora fixa!) -->
-                    <div id="faixa-video">
-                        <div id="faixa-header" style="padding:20px 16px 12px;border-bottom:2px solid #f1f5f9;">
-                            <div class="flex items-center gap-3 mb-4">
-                                <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" style="height:36px;object-fit:contain;filter:grayscale(0.3)">
-                                <div>
-                                    <p style="font-size:11px;font-weight:900;color:#0f172a;text-transform:uppercase;letter-spacing:0.05em">SIGEP</p>
-                                    <p id="recepcao-nome-video" style="font-size:10px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.03em">Recepção</p>
-                                </div>
-                            </div>
-                            <div style="display:flex;gap:8px">
-                                <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
-                                    <p id="video-g-aguardando" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#f59e0b;line-height:1">0</p>
-                                    <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Aguard.</p>
-                                </div>
-                                <div style="flex:1;background:#f8fafc;border:1px solid #e2e8f0;border-radius:10px;padding:8px 10px;text-align:center">
-                                    <p id="video-g-atendendo" style="font-size:clamp(18px,2.5vw,28px);font-weight:900;color:#4f46e5;line-height:1">0</p>
-                                    <p style="font-size:9px;font-weight:700;color:#94a3b8;text-transform:uppercase;letter-spacing:0.06em;margin-top:2px">Atend.</p>
-                                </div>
-                            </div>
-                        </div>
+                    <div id="lista-historico-video" style="padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px"></div>
 
-                        <div id="video-ultimo-chamado" style="padding:12px 16px;background:#f0fdf4;border-bottom:2px solid #bbf7d0;display:none;">
-                            <p style="font-size:9px;font-weight:800;color:#16a34a;text-transform:uppercase;letter-spacing:0.2em;margin-bottom:4px">📣 Chamando</p>
-                            <p id="video-uc-nome" style="font-size:clamp(14px,1.8vw,20px);font-weight:900;color:#0f172a;text-transform:uppercase;line-height:1.2;word-break:break-word">—</p>
-                            <p id="video-uc-local" style="font-size:11px;font-weight:700;color:#16a34a;margin-top:4px">—</p>
-                        </div>
-
-                        <div id="faixa-historico-titulo" style="padding:12px 16px 4px;">
-                            <p style="font-size:9px;font-weight:800;color:#94a3b8;text-transform:uppercase;letter-spacing:0.15em">Últimos Chamados</p>
-                        </div>
-                        
-                        <div id="lista-historico-video" style="padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px"></div>
-
-                        <div id="faixa-footer" style="padding:12px 16px;border-top:1px solid #f1f5f9;text-align:center;background:#f8fafc">
-                            <div id="data-hora-video" class="mono" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em"></div>
-                        </div>
+                    <div id="faixa-footer" style="padding:12px 16px;border-top:1px solid #f1f5f9;text-align:center;background:#f8fafc">
+                        <div id="data-hora-video" class="mono" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em"></div>
                     </div>
                 </div>
             </div>
@@ -363,6 +385,13 @@ export const PainelPublicoService = {
         }
 
         const btnSom = document.getElementById('btn-som-fixo');
+        
+        // Ativar som via parâmetro de URL (quando vier configurado da Receção Central)
+        const urlSom = params.get('som');
+        if (urlSom === '1' || urlSom === 'true') {
+            try { garantirAudioCtx(); somAtivo = true; } catch(e){}
+        }
+
         const atualizarSom = () => {
             if (somAtivo) {
                 document.getElementById('icone-som-fixo').textContent = '🔔';
@@ -380,7 +409,7 @@ export const PainelPublicoService = {
             else { somAtivo = false; atualizarSom(); }
         });
 
-        // Controles que somem sozinhos (e escondem o cursor!)
+        // Controles que somem sozinhos (e escondem o cursor na TV!)
         let timeoutControles;
         const areaControles = document.getElementById('area-controles');
         const mostrarControles = () => {
@@ -389,12 +418,13 @@ export const PainelPublicoService = {
             clearTimeout(timeoutControles);
             timeoutControles = setTimeout(() => {
                 areaControles.classList.remove('ativo');
-                document.body.style.cursor = 'none'; // Some o mouse na TV!
+                document.body.style.cursor = 'none'; // Some o mouse!
             }, 3000);
         };
         document.addEventListener('mousemove', mostrarControles);
         document.addEventListener('click', mostrarControles);
         mostrarControles(); // Mostra inicialmente
+        atualizarSom(); // Interface do som
 
         // 5. LÓGICA DE MUDANÇA DE MODOS
         const aplicarModo = (modo) => {
@@ -404,7 +434,7 @@ export const PainelPublicoService = {
 
             document.getElementById('modo-fila').classList.add('hidden'); document.getElementById('modo-fila').classList.remove('flex');
             document.getElementById('modo-tv').classList.add('hidden'); document.getElementById('modo-tv').classList.remove('flex');
-            document.getElementById('modo-video').classList.add('hidden');
+            document.getElementById('modo-video').classList.add('hidden'); document.getElementById('modo-video').classList.remove('flex');
             document.getElementById('zoom-controls').style.display = 'none';
             document.querySelectorAll('.btn-modo').forEach(b => b.classList.remove('ativo'));
 
@@ -419,8 +449,8 @@ export const PainelPublicoService = {
                 document.body.style.background = '#1e293b'; document.body.style.zoom = 1;
                 document.getElementById('btn-modo-tv').classList.add('ativo');
             } else if (modo === 'video') {
-                document.getElementById('modo-video').classList.remove('hidden');
-                document.body.style.background = '#0f172a'; document.body.style.zoom = 1;
+                document.getElementById('modo-video').classList.remove('hidden'); document.getElementById('modo-video').classList.add('flex');
+                document.body.style.background = '#000000'; document.body.style.zoom = 1;
                 document.getElementById('btn-modo-video').classList.add('ativo');
                 iniciarVideo();
             }
@@ -442,7 +472,7 @@ export const PainelPublicoService = {
         document.getElementById('btn-zoom-in').addEventListener('click', () => mudarZoom(0.1));
         document.getElementById('btn-zoom-out').addEventListener('click', () => mudarZoom(-0.1));
 
-        // 6. LÓGICA DO VÍDEO
+        // 6. LÓGICA DO VÍDEO (BLOQUEIO DE CLIQUES E ZOOM DO YOUTUBE)
         let videoCarregado = false;
         function iniciarVideo() {
             if (videoCarregado || !videoUrl) return;
@@ -453,9 +483,10 @@ export const PainelPublicoService = {
 
             const m = videoUrl.match(/(?:youtu\.be\/|youtube\.com\/(?:watch\?v=|embed\/|live\/|shorts\/))([A-Za-z0-9_-]{11})/);
             if (m && m[1]) {
-                embedDiv.innerHTML = `<iframe src="https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&controls=0&modestbranding=1" style="position:absolute;inset:0;width:100%;height:100%;border:none" allowfullscreen></iframe>`;
+                // Parâmetros para esconder o máximo da interface do YouTube
+                embedDiv.innerHTML = `<iframe src="https://www.youtube.com/embed/${m[1]}?autoplay=1&mute=1&loop=1&playlist=${m[1]}&&controls=0&disablekb=1&fs=0&modestbranding=1&rel=0&iv_load_policy=3" allow="autoplay; encrypted-media"></iframe>`;
             } else {
-                embedDiv.innerHTML = `<video src="${videoUrl}" autoplay muted loop style="position:absolute;inset:0;width:100%;height:100%;object-fit:cover"></video>`;
+                embedDiv.innerHTML = `<video src="${videoUrl}" autoplay muted loop playsinline></video>`;
             }
         }
 
@@ -544,12 +575,21 @@ export const PainelPublicoService = {
             // TV
             document.getElementById('uc-nome-tv').textContent = (c.nome||'').toUpperCase(); document.getElementById('uc-local-tv').textContent = c.sala?esc(c.sala):esc(c.local||'—'); document.getElementById('label-local-tv').textContent = c.sala?'Sala':'Local';
             const pt = document.getElementById('painel-destaque-tv'); pt.classList.remove('animar-chamado-tv'); void pt.offsetWidth; pt.classList.add('animar-chamado-tv');
-            // Video Lateral
-            document.getElementById('video-ultimo-chamado').style.display='block'; document.getElementById('video-uc-nome').textContent=(c.nome||'').toUpperCase(); document.getElementById('video-uc-local').textContent=c.sala?'🏠 '+c.sala:'📋 '+(c.local||'—');
-            // Banner Overlay Video
-            const b = document.getElementById('banner-chamado'); document.getElementById('banner-nome').textContent=(c.nome||'').toUpperCase(); document.getElementById('banner-local').textContent=c.sala?esc(c.sala):esc(c.local||'—'); document.getElementById('banner-label-local').textContent=c.sala?'Sala':'Local';
-            b.classList.remove('visivel','saindo'); void b.offsetWidth; b.classList.add('visivel');
-            setTimeout(()=>{ b.classList.remove('visivel'); b.classList.add('saindo'); setTimeout(()=>b.classList.remove('saindo'),500); }, 8000);
+            
+            // Video Lateral e Banner Fixo
+            document.getElementById('video-ultimo-chamado').style.display='block'; 
+            document.getElementById('video-uc-nome').textContent=(c.nome||'').toUpperCase(); 
+            document.getElementById('video-uc-local').textContent=c.sala?'🏠 '+c.sala:'📋 '+(c.local||'—');
+            
+            // BANNER FIXO (apenas pisca o fundo)
+            const b = document.getElementById('banner-chamado'); 
+            document.getElementById('banner-nome').textContent=(c.nome||'').toUpperCase(); 
+            document.getElementById('banner-local').textContent=c.sala?esc(c.sala):esc(c.local||'—'); 
+            document.getElementById('banner-label-local').textContent=c.sala?'Sala':'Local';
+            
+            b.classList.remove('banner-destaque-anim');
+            void b.offsetWidth;
+            b.classList.add('banner-destaque-anim'); // Pisca a cor para chamar a atenção
         }
 
         // 8. Inicializa Listeners
@@ -582,7 +622,7 @@ export const PainelPublicoService = {
                     if(estado.ultimoChamado) { estado.historico.unshift(estado.ultimoChamado); if(estado.historico.length>6) estado.historico.pop(); }
                     estado.ultimoChamado = novo;
                     renderChamados(novo);
-                    if (somAtivo && (new URLSearchParams(window.location.search).get('som') !== '0')) tocarSom();
+                    tocarSom(); // O som já valida internamente se está ativo
                 }
             });
         });
