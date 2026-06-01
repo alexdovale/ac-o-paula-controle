@@ -556,7 +556,6 @@ export const abrirGerenciadorUnidades = async (db) => {
             });
         });
 
-        // 🟢 LIGAÇÃO PARA O GERENCIADOR DE RECEPÇÕES DA UNIDADE
         container.querySelectorAll('.btn-nova-recepcao').forEach(btn => {
             btn.addEventListener('click', () => {
                 if (globalApp) {
@@ -613,116 +612,301 @@ const abrirModalGerenciarRecepcoesPorUnidade = async (app, unidadeId, unidadeNom
     const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
 
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto';
+    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
     modal.innerHTML = `
-        <div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-5xl max-h-[90vh] overflow-hidden flex flex-col relative">
-            <div class="bg-gradient-to-r from-purple-800 to-indigo-700 px-6 py-5 flex justify-between items-center shrink-0">
+        <div class="bg-slate-50 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative animate-fade-in">
+            <div class="bg-gradient-to-r from-slate-900 to-slate-800 px-8 py-6 flex justify-between items-center shrink-0">
                 <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2"><span>🏛️</span> Recepções da Unidade</h2>
-                    <p class="text-purple-200 text-sm mt-0.5">${escapeHTML(unidadeNome)}</p>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><span>🏛️</span> Gerenciar Recepções</h2>
+                    <p class="text-slate-400 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
                 </div>
-                <button id="fechar-gerenciador-recepcoes" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                <button id="fechar-gerenciador-recepcoes" class="text-white/60 hover:text-white text-4xl leading-none transition-colors">&times;</button>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-6" id="painel-conteudo-recepcoes">
+            <div class="flex-1 overflow-y-auto p-8" id="painel-conteudo-recepcoes">
                 <div class="flex justify-center items-center h-40">
                     <div class="loader-small mx-auto mb-4"></div>
                 </div>
             </div>
-            
-            <div class="bg-white px-6 py-4 flex justify-end border-t shrink-0">
-                <button id="fechar-gerenciador-recepcoes-footer" class="bg-gray-200 text-gray-700 hover:bg-gray-300 font-bold px-6 py-2.5 rounded-xl transition-colors">Fechar</button>
-            </div>
         </div>
     `;
-    
     document.body.appendChild(modal);
 
     const fechar = () => modal.remove();
     document.getElementById('fechar-gerenciador-recepcoes').onclick = fechar;
-    document.getElementById('fechar-gerenciador-recepcoes-footer').onclick = fechar;
 
     const renderizarTelaAdmin = async () => {
         const container = document.getElementById('painel-conteudo-recepcoes');
         if (!container) return;
 
-        // Busca recepções desta unidade
         const recepcoes = await RecepcaoConfigService.buscarRecepcoesUnidade(db, unidadeId);
 
-        // Gera o HTML do painel centralizado
-        container.innerHTML = RecepcaoConfigService.renderPainelAdmin(recepcoes, [{ id: unidadeId, nome: unidadeNome }]);
+        let html = `
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+                <div>
+                    <h3 class="font-black text-slate-800 text-xl">Salas de Espera / Recepções</h3>
+                    <p class="text-sm text-slate-500 mt-1">Crie as recepções e defina quem tem acesso a cada uma delas.</p>
+                </div>
+                <button id="btn-nova-recepcao-custom" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 shrink-0">
+                    <span class="text-lg">+</span> Nova Recepção
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                ${recepcoes.length === 0 ? `
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200">
+                        <span class="text-6xl mb-4">🪑</span>
+                        <h4 class="text-lg font-bold text-slate-700">Nenhuma recepção configurada</h4>
+                        <p class="text-slate-500 text-sm mt-1">Clique em "Nova Recepção" para começar.</p>
+                    </div>
+                ` : recepcoes.map(rec => `
+                    <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all relative flex flex-col h-full group">
+                        <div class="absolute top-4 right-4">
+                            <span class="text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border
+                                ${rec.tipo === 'central' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors'}">
+                                ${rec.tipo === 'central' ? '🏛️ Central' : '⚡ Espec'}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center gap-4 mb-5">
+                            <div class="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
+                                ${rec.icone || '📋'}
+                            </div>
+                            <div class="flex-1 min-w-0 pr-16">
+                                <h4 class="font-black text-slate-800 text-lg leading-tight truncate">${escapeHTML(rec.nome)}</h4>
+                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">${rec.andar ? escapeHTML(rec.andar) : 'Sem andar definido'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-6 flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100">
+                            <div class="mb-3">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏷️</span> Grupos Atendidos</p>
+                                <div class="flex flex-wrap gap-1.5">
+                                    ${(rec.grupos || []).length > 0 
+                                        ? rec.grupos.map(g => `<span class="bg-white text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase shadow-sm">${escapeHTML(g)}</span>`).join('') 
+                                        : '<span class="text-xs text-slate-400 italic">Todos os grupos</span>'}
+                                </div>
+                            </div>
+                            <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
+                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Acessos Permitidos</p>
+                                <span class="bg-indigo-100 text-indigo-700 font-black px-2.5 py-0.5 rounded-full text-xs">${(rec.membros || []).length} usuários</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-auto">
+                            <button class="btn-vincular-usuarios bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm col-span-2 flex items-center justify-center gap-2" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">
+                                <span>👥</span> Gerenciar Acessos
+                            </button>
+                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1.5" data-id="${rec.id}">
+                                <span>✏️</span> Editar
+                            </button>
+                            <div class="flex gap-2">
+                                <button class="btn-link-recepcao flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center" data-id="${rec.id}" title="Copiar Link da TV">🔗</button>
+                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir Recepção">🗑️</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+                </div>
+            `;
+            
+            container.innerHTML = html;
 
-        // Botão de Nova Recepção
-        document.getElementById('btn-nova-recepcao')?.addEventListener('click', () => {
-            renderizarFormularioRecepcao();
-        });
+            document.getElementById('btn-nova-recepcao-custom')?.addEventListener('click', () => renderizarFormularioRecepcao());
 
-        // Edição
-        container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const rec = recepcoes.find(r => r.id === btn.dataset.recepcaoId);
-                if (rec) renderizarFormularioRecepcao(rec);
+            container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                    if (rec) renderizarFormularioRecepcao(rec);
+                });
             });
-        });
 
-        // Copiar Link
-        container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
-            btn.addEventListener('click', () => {
-                const rec = recepcoes.find(r => r.id === btn.dataset.recepcaoId);
-                if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
+            container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                    if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
+                });
             });
-        });
 
-        // Exclusão PERMANENTE
-        container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                if (confirm(`Tem certeza que deseja excluir permanentemente a recepção "${btn.dataset.nome}"?`)) {
-                    try {
-                        await deleteDoc(doc(db, "recepcoes", btn.dataset.recepcaoId));
-                        showNotification("Recepção excluída com sucesso!", "success");
-                        renderizarTelaAdmin();
-                    } catch (error) {
-                        console.error("Erro ao excluir recepção:", error);
-                        showNotification("Erro ao excluir recepção.", "error");
+            container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
+                btn.addEventListener('click', async () => {
+                    if (confirm(`Tem certeza que deseja excluir permanentemente a recepção "${btn.dataset.nome}"?`)) {
+                        try {
+                            await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
+                            showNotification("Recepção excluída com sucesso!", "success");
+                            renderizarTelaAdmin();
+                        } catch (error) {
+                            console.error("Erro ao excluir:", error);
+                            showNotification("Erro ao excluir recepção.", "error");
+                        }
                     }
-                }
+                });
             });
-        });
 
-        // Eventos de Busca embutidos
-        RecepcaoConfigService.initAdminBuscaEventos();
-    };
+            // ABRE O NOVO MODAL DE VINCULAR USUÁRIOS
+            container.querySelectorAll('.btn-vincular-usuarios').forEach(btn => {
+                btn.addEventListener('click', () => {
+                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                    if (rec) abrirModalVincularUsuarios(rec);
+                });
+            });
+        };
 
-    const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
-        const container = document.getElementById('painel-conteudo-recepcoes');
-        
-        // Fixa a unidade atual se não houver edição
-        if (!recepcaoEdicao) {
-            recepcaoEdicao = { unidadeId, unidadeNome };
-        }
+        const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
+            const container = document.getElementById('painel-conteudo-recepcoes');
+            if (!recepcaoEdicao) recepcaoEdicao = { unidadeId, unidadeNome };
+            
+            // Reutiliza o formulário padrão mas dentro deste painel
+            container.innerHTML = `
+                <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                    ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [{ id: unidadeId, nome: unidadeNome }])}
+                </div>
+            `;
 
-        container.innerHTML = RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [{ id: unidadeId, nome: unidadeNome }]);
+            RecepcaoConfigService.initFormRecepcaoEventos(
+                async (dadosSalvos, idEdicao) => {
+                    if (idEdicao) {
+                        await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
+                    } else {
+                        // Ao criar, adiciona o criador como o primeiro membro automaticamente
+                        await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
+                    }
+                    renderizarTelaAdmin();
+                },
+                () => { renderizarTelaAdmin(); }
+            );
+        };
 
-        RecepcaoConfigService.initFormRecepcaoEventos(
-            async (dadosSalvos, idEdicao) => {
-                // Ao Salvar
-                if (idEdicao) {
-                    await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
-                } else {
-                    await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
-                }
-                renderizarTelaAdmin();
-            },
-            () => {
-                // Ao Cancelar
-                renderizarTelaAdmin();
+        // ============================================================
+        // MODAL DE GESTÃO DE ACESSOS (VINCULAR USUÁRIOS)
+        // ============================================================
+        const abrirModalVincularUsuarios = async (recepcao) => {
+            const modalVinculo = document.createElement('div');
+            modalVinculo.className = 'fixed inset-0 bg-slate-900/80 z-[900] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+            modalVinculo.innerHTML = `
+                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh]">
+                    <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
+                        <div>
+                            <h3 class="font-black text-white text-lg">Acessos: ${escapeHTML(recepcao.nome)}</h3>
+                            <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode ver e usar esta recepção.</p>
+                        </div>
+                        <button class="fechar-vinculo text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                    </div>
+                    
+                    <div class="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                        <div class="relative">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                            <input type="text" id="busca-membros-recepcao" placeholder="Buscar usuário pelo nome ou email..." 
+                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
+                        </div>
+                    </div>
+
+                    <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
+                        <div class="flex justify-center items-center h-full"><div class="loader-small"></div></div>
+                    </div>
+                    
+                    <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
+                        <span id="contagem-membros" class="text-sm font-bold text-slate-500"></span>
+                        <div class="flex gap-3">
+                            <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition text-sm">Cancelar</button>
+                            <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Acessos</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modalVinculo);
+
+            const fecharVinculo = () => modalVinculo.remove();
+            modalVinculo.querySelectorAll('.fechar-vinculo').forEach(b => b.addEventListener('click', fecharVinculo));
+
+            try {
+                // Carrega todos os utilizadores aprovados
+                const usersSnap = await getDocs(collection(db, "users"));
+                const todosUsuarios = usersSnap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'approved' && u.role !== 'suspended');
+                todosUsuarios.sort((a,b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''));
+
+                let membrosAtuais = [...(recepcao.membros || [])];
+
+                const renderUsuarios = (termo = '') => {
+                    const container = document.getElementById('lista-usuarios-vinculo');
+                    const q = termo.toLowerCase();
+                    const filtrados = todosUsuarios.filter(u => 
+                        (u.name || '').toLowerCase().includes(q) || 
+                        (u.email || '').toLowerCase().includes(q)
+                    );
+
+                    if (filtrados.length === 0) {
+                        container.innerHTML = '<p class="text-center text-slate-400 py-10 font-bold">Nenhum usuário encontrado.</p>';
+                        return;
+                    }
+
+                    container.innerHTML = `
+                        <div class="space-y-2">
+                            ${filtrados.map(u => {
+                                const isChecked = membrosAtuais.includes(u.id);
+                                return `
+                                    <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors ${isChecked ? 'ring-1 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : ''}">
+                                        <input type="checkbox" class="cb-membro w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" value="${u.id}" ${isChecked ? 'checked' : ''}>
+                                        <div class="flex-1 min-w-0">
+                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(u.name || 'Sem nome')}</p>
+                                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
+                                        </div>
+                                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${u.role === 'admin' || u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}">${u.role || 'user'}</span>
+                                    </label>
+                                `;
+                            }).join('')}
+                        </div>
+                    `;
+
+                    // Lógica para selecionar o utilizador
+                    container.querySelectorAll('.cb-membro').forEach(cb => {
+                        cb.addEventListener('change', (e) => {
+                            const label = cb.closest('label');
+                            if (cb.checked) {
+                                label.classList.add('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                                if (!membrosAtuais.includes(cb.value)) membrosAtuais.push(cb.value);
+                            } else {
+                                label.classList.remove('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                                membrosAtuais = membrosAtuais.filter(id => id !== cb.value);
+                            }
+                            atualizarContador();
+                        });
+                    });
+                };
+
+                const atualizarContador = () => {
+                    document.getElementById('contagem-membros').textContent = `${membrosAtuais.length} selecionado(s)`;
+                };
+
+                renderUsuarios();
+                atualizarContador();
+
+                document.getElementById('busca-membros-recepcao').addEventListener('input', (e) => renderUsuarios(e.target.value));
+
+                document.getElementById('salvar-vinculo').addEventListener('click', async () => {
+                    const btn = document.getElementById('salvar-vinculo');
+                    btn.disabled = true;
+                    btn.textContent = 'Salvando...';
+
+                    try {
+                        await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
+                        showNotification("Acessos atualizados com sucesso!", "success");
+                        fecharVinculo();
+                        renderizarTelaAdmin(); // Atualiza os números no fundo
+                    } catch (error) {
+                        showNotification("Erro ao salvar acessos.", "error");
+                        btn.disabled = false;
+                        btn.textContent = 'Salvar Acessos';
+                    }
+                });
+
+            } catch (err) {
+                document.getElementById('lista-usuarios-vinculo').innerHTML = '<p class="text-center text-red-500 py-10 font-bold">Erro ao carregar usuários.</p>';
             }
-        );
-    };
+        };
 
-    // Inicia carregando a tabela
-    await renderizarTelaAdmin();
-};
+        await renderizarTelaAdmin();
+    };
 
 // ============================================================
 // FORMULÁRIO DE UNIDADES
