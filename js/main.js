@@ -126,9 +126,12 @@ class SIGEPApp {
         if (!container) return;
         
         container.innerHTML = `
-            <div class="mb-6">
+            <div class="mb-6 flex flex-wrap gap-3">
                 <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
                     <span>🏢</span> Gerenciar Unidades / Órgãos
+                </button>
+                <button id="btn-recepcoes-master" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>🏛️</span> Gerenciar Recepções (Unidades de Apoio)
                 </button>
             </div>
             
