@@ -1,4 +1,4 @@
-// main.js - SIGEP APP PRINCIPAL (COMPLETO)
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -29,7 +29,6 @@ import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
-// IMPORTS DOS NOVOS MÓDULOS
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
@@ -37,7 +36,6 @@ import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 
-// 1. IMPORTAR E INJETAR OS MODAIS ANTES DE TUDO!
 import { injetarModais } from './modais.js';
 injetarModais();
 
@@ -71,16 +69,12 @@ class SIGEPApp {
             this.db = getFirestore(app);
             this.auth = getAuth(app);
 
-            // ============================================================
-            // VERIFICAR SE É A TELA DA TV (PAINEL PÚBLICO NATIVO)
-            // ============================================================
             const urlParams = new URLSearchParams(window.location.search);
             if (urlParams.get('painel') === 'true') {
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(this);
-                return; // Interrompe o carregamento do resto do sistema (Login, etc.)
+                return;
             }
-            // ============================================================
 
             DashboardService.init(this);
 
@@ -88,7 +82,7 @@ class SIGEPApp {
             this.setupEventListeners();
             this.setupAuthListener();
             
-            // NOVO: Escuta o botão "Voltar" ou "Avançar" do navegador
+            // ROTAS: Escuta o botão "Voltar" ou "Avançar" do navegador/telemóvel
             window.addEventListener('popstate', (event) => {
                 this.handleRoute();
             });
@@ -96,16 +90,11 @@ class SIGEPApp {
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
             
-            // INICIALIZAÇÃO PAUTACONFIG
             PautaConfigService.init(this);
-            
-            // GARANTE QUE OS LISTENERS DO MODO SÃO CONFIGURADOS
             this.setupModoListeners();
             
-            // EXPÕE O APP GLOBALMENTE PARA OS MÓDULOS ADMIN
             window.app = this;
             
-            // REGISTRA O AdminService COM O APP
             if (AdminService && AdminService.setupAdminEvents) {
                 AdminService.setupAdminEvents(this);
             }
@@ -121,6 +110,7 @@ class SIGEPApp {
     // ============================================================
     
     changeUrl(tela) {
+        // Atualiza a URL sem recarregar a página
         const novaUrl = window.location.origin + window.location.pathname + '?tela=' + tela;
         window.history.pushState({ tela: tela }, '', novaUrl);
         localStorage.setItem('sigep_active_screen', tela);
@@ -150,6 +140,8 @@ class SIGEPApp {
             } else {
                 await this.showPautaSelectionScreen();
             }
+        } else if (tela === 'modoSelection') {
+            UIService.showScreen('modoSelection');
         } else {
             await this.showPautaSelectionScreen();
         }
@@ -160,7 +152,7 @@ class SIGEPApp {
     // ============================================================
     
     showAdminScreen() {
-        this.changeUrl('admin');
+        this.changeUrl('admin'); // Atualiza a Rota
         UIService.showScreen('admin');
         this.renderAdminContent();
     }
@@ -300,9 +292,6 @@ class SIGEPApp {
         document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(this.db));
     }
 
-    // ============================================================
-    // MÉTODO: setupModoListeners
-    // ============================================================
     setupModoListeners() {
         document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
@@ -323,9 +312,6 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // MÉTODO: voltarParaSelecaoModo
-    // ============================================================
     voltarParaSelecaoModo() {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
@@ -340,15 +326,12 @@ class SIGEPApp {
         }
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
-        this.changeUrl('modoSelection');
+        this.changeUrl('modoSelection'); // Atualiza a Rota
         UIService.showScreen('modoSelection');
         this.applyRoleBasedUI();
         showNotification('Modo alterado com sucesso!', 'info', 2000);
     }
 
-    // ============================================================
-    // mostrarSeletorTipoEvento
-    // ============================================================
     mostrarSeletorTipoEvento() {
         return new Promise((resolve) => {
             const modal = document.createElement('div');
@@ -393,9 +376,6 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // mostrarIndicadorModo
-    // ============================================================
     mostrarIndicadorModo() {
         let indicador = document.getElementById('modo-indicador');
         
@@ -424,9 +404,6 @@ class SIGEPApp {
         }, 3000);
     }
 
-    // ============================================================
-    // setupAuthListener
-    // ============================================================
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
@@ -444,9 +421,6 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // setupOfflinePersistence
-    // ============================================================
     setupOfflinePersistence() {
         try {
             enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
@@ -474,9 +448,6 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // loadExternalModalsContent
-    // ============================================================
     async loadExternalModalsContent() {
         const modalsToLoad = [
             { selector: '#policy-content', url: './politica.html' },
@@ -502,9 +473,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // setupEventListeners - COMPLETO
-    // ============================================================
     setupEventListeners() {
         document.getElementById('login-form')?.addEventListener('submit', (e) => {
             e.preventDefault();
@@ -538,7 +506,7 @@ class SIGEPApp {
         });
 
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            this.changeUrl('dashboard');
+            this.changeUrl('dashboard'); // Rota
             DashboardService.showDashboardScreen();
         });
 
@@ -547,7 +515,7 @@ class SIGEPApp {
         });        
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            this.changeUrl('recepcao-central');
+            this.changeUrl('recepcao-central'); // Rota
             await RecepçãoCentralService.abrir(this);
         });
 
@@ -2124,8 +2092,7 @@ class SIGEPApp {
             
             this.iniciarMonitorEnvelopes();
 
-            this.changeUrl('app');
-            localStorage.setItem('sigep_active_screen', 'app');
+            this.changeUrl('app'); // Atualiza a Rota
             UIService.showScreen('app');
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
@@ -2525,6 +2492,10 @@ document.addEventListener('DOMContentLoaded', function() {
         if (state === 'login') {
             localStorage.removeItem('sigep_active_screen');
             localStorage.removeItem('sigep_app_state');
+            
+            // Limpa a URL na barra também ao fazer logout
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({}, '', cleanUrl);
         }
     };
 
