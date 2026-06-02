@@ -28,8 +28,8 @@ const ROUTE_GUARDS = {
 
 export class SIGEPRouter {
     /**
-     * @param {object} app  - Instância do SIGEPApp (para ler currentUser, currentMode, etc.)
-     * @param {object} deps - { UIService, RecepçãoCentralService, DashboardService, showNotification }
+     * @param {object} app  - Instância do SIGEPApp
+     * @param {object} deps - Dependências Injetadas
      */
     constructor(app, deps) {
         this._app  = app;
@@ -44,12 +44,10 @@ export class SIGEPRouter {
     // API pública
     // ------------------------------------------------------------------
 
-    /** Inicializa listeners de History API e rota de abertura de página. */
     init() {
         if (this._listening) return;
         this._listening = true;
 
-        // Botão "voltar/avançar" do navegador
         window.addEventListener('popstate', (e) => {
             const state = e.state;
             if (state?.route) {
@@ -58,27 +56,18 @@ export class SIGEPRouter {
         });
     }
 
-    /**
-     * Navega para uma rota, aplica guards e atualiza a URL.
-     * @param {string} route  - Uma das constantes ROUTES
-     * @param {object} params - Parâmetros opcionais (ex.: { pautaId, pautaName })
-     * @param {boolean} replace - Usar replaceState em vez de pushState
-     */
     async navigate(route, params = {}, replace = false) {
         const redirected = this._guard(route);
         if (redirected) {
-            // Guard redirecionou para outra rota
             return this.navigate(redirected, {}, replace);
         }
         this._pushHistory(route, params, replace);
         await this._execute(route, params, true);
     }
 
-    /** Resolve a rota correta após o login, sem alterar o histórico. */
     async resolveInitialRoute() {
         const url = new URLSearchParams(window.location.search);
 
-        // Painel público tem prioridade (querystring ?painel=true)
         if (url.get('painel') === 'true') {
             await this._execute(ROUTES.PAINEL_PUBLICO, {}, false);
             return;
@@ -136,7 +125,6 @@ export class SIGEPRouter {
             return ROUTES.PAUTA_SELECTION;
         }
 
-        // Guard de modo: evita carregar pautas do modo errado ao retornar via back
         if (route === ROUTES.APP) {
             const savedType = localStorage.getItem('lastPautaType') || 'normal';
             const modoAtual = app.currentMode;
@@ -146,7 +134,7 @@ export class SIGEPRouter {
             if (modoAtual === 'evento' && !isEvento)   return ROUTES.PAUTA_SELECTION;
         }
 
-        return null; // sem redirecionamento
+        return null;
     }
 
     _pushHistory(route, params, replace) {
@@ -160,14 +148,10 @@ export class SIGEPRouter {
     }
 
     _buildUrl(route, params) {
-        // Mantém querystrings existentes que não pertencem ao router
         const base = window.location.pathname;
         const qs   = new URLSearchParams(window.location.search);
 
-        // Remove params controlados pelo router
         ['painel', 'r'].forEach(k => qs.delete(k));
-
-        // Injeta rota como querystring para não exigir servidor SPA
         qs.set('r', route);
 
         if (params.pautaId) qs.set('pautaId', params.pautaId);
@@ -187,11 +171,20 @@ export class SIGEPRouter {
             console.warn(`[SIGEPRouter] Rota sem handler: "${route}"`);
             return;
         }
-        await handler(params);
+        
+        try {
+            await handler(params);
+        } catch (error) {
+            console.error(`[SIGEPRouter] Falha crítica ao executar a rota ${route}:`, error);
+            // Sistema de segurança: Evita que o usuário fique preso na tela branca
+            if (route !== ROUTES.MODO_SELECTION && route !== ROUTES.LOGIN) {
+                this._deps.showNotification("Erro interno de interface. Restaurando...", "error");
+                this.navigate(ROUTES.MODO_SELECTION, {}, true);
+            }
+        }
     }
 
     _persistRoute(route, params) {
-        // Espelha o comportamento anterior com localStorage para compatibilidade
         const screenMap = {
             [ROUTES.LOGIN]:            'login',
             [ROUTES.MODO_SELECTION]:   'modo-selection',
@@ -228,11 +221,26 @@ export class SIGEPRouter {
             },
 
             [ROUTES.PAUTA_SELECTION]: async () => {
-                // Método correto dentro do app
                 if (app.currentPauta) {
                     app._teardownPauta(); // Limpa pauta atual
                 }
-                deps.UIService.showScreen('pauta-selection');
+                
+                // Exibição de emergência (Airbag) caso o UIService falhe com o nome exato
+                try {
+                    deps.UIService.showScreen('pauta-selection');
+                } catch (e) {
+                    deps.UIService.showScreen('pauta-selection-container');
+                }
+                
+                // Força bruta segura baseada no seu HTML
+                const container = document.getElementById('pauta-selection-container');
+                if (container) {
+                    document.getElementById('login-container')?.classList.add('hidden');
+                    document.getElementById('modo-selection-screen')?.classList.add('hidden');
+                    document.getElementById('app-container')?.classList.add('hidden');
+                    container.classList.remove('hidden');
+                }
+
                 await app.loadPautasWithFilter();
                 app.applyRoleBasedUI();
             },
@@ -241,8 +249,26 @@ export class SIGEPRouter {
                 const id   = pautaId   || localStorage.getItem('lastPautaId');
                 const name = pautaName || localStorage.getItem('lastPautaName');
                 const type = pautaType || localStorage.getItem('lastPautaType');
+                
                 if (id && name) {
-                    await app.loadPauta(id, name, type);
+                    // Evita o loop de carregamento se a pauta já for a atual
+                    if (!app.currentPauta || app.currentPauta.id !== id) {
+                        await app.loadPauta(id, name, type);
+                    }
+                    
+                    try {
+                        deps.UIService.showScreen('app');
+                    } catch(e) {
+                        deps.UIService.showScreen('app-container');
+                    }
+                    
+                    // Força bruta segura baseada no seu HTML
+                    const container = document.getElementById('app-container');
+                    if (container) {
+                        document.getElementById('pauta-selection-container')?.classList.add('hidden');
+                        document.getElementById('modo-selection-screen')?.classList.add('hidden');
+                        container.classList.remove('hidden');
+                    }
                 } else {
                     await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
                 }
