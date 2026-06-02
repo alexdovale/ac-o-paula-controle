@@ -784,32 +784,38 @@ export const RecepcaoConfigService = {
     initFormRecepcaoEventos(onSalvar, onCancelar) {
         let gruposAtivos = [];
 
-        // 1. CARREGAR A LISTA DE UNIDADES (Multi-Select)
+        // 1. CARREGAR A LISTA DE UNIDADES (Procura em 'orgaos' e 'unidades')
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
-            getDocs(collection(window.app.db, "unidades")).then(snap => {
-                const todas = snap.docs.map(d => ({
-                    id: d.id, 
-                    nome: d.data().nome || d.data().name || 'Sem nome', 
-                    ativo: d.data().ativo
-                })).filter(u => u.ativo !== false);
+            Promise.all([
+                getDocs(collection(window.app.db, "orgaos")).catch(() => ({docs: []})),
+                getDocs(collection(window.app.db, "unidades")).catch(() => ({docs: []}))
+            ]).then(([snapOrgaos, snapUnidades]) => {
+                const mapUnidades = new Map();
                 
+                // Extrai da coleção orgaos
+                snapOrgaos.docs.forEach(d => {
+                    if (d.data().ativo !== false) mapUnidades.set(d.id, { id: d.id, nome: d.data().nome || d.data().name || 'Sem nome' });
+                });
+                
+                // Extrai da coleção unidades
+                snapUnidades.docs.forEach(d => {
+                    if (d.data().ativo !== false) mapUnidades.set(d.id, { id: d.id, nome: d.data().nome || d.data().name || 'Sem nome' });
+                });
+
+                const todas = Array.from(mapUnidades.values());
                 todas.sort((a,b) => a.nome.localeCompare(b.nome));
 
                 const vinculadasRaw = document.getElementById('form-rec-unidades-vinculadas-data')?.value || '[]';
                 let vinculadasIds = [];
-                try { 
-                    const vinculadasArr = JSON.parse(vinculadasRaw); 
-                    vinculadasIds = vinculadasArr.map(v => v.id);
-                } catch(e) {}
+                try { vinculadasIds = JSON.parse(vinculadasRaw).map(v => v.id); } catch(e) {}
 
                 if (todas.length === 0) {
                     unidadesContainer.innerHTML = `
                         <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
                             <p class="text-sm font-black text-amber-800 mb-1">⚠️ Nenhuma unidade encontrada</p>
-                            <p class="text-xs text-amber-700">Feche esta janela, vá ao botão azul <b>"🏢 Gerenciar Unidades / Órgãos"</b> e crie uma unidade primeiro para poder vinculá-la à recepção.</p>
-                        </div>
-                    `;
+                            <p class="text-xs text-amber-700">Crie uma unidade/órgão primeiro para vinculá-la à recepção.</p>
+                        </div>`;
                     return;
                 }
 
@@ -820,9 +826,6 @@ export const RecepcaoConfigService = {
                         <span class="text-sm text-slate-700 font-semibold">${escapeHTML(u.nome)}</span>
                     </label>
                 `).join('');
-            }).catch(e => {
-                console.error("Erro ao carregar unidades:", e);
-                unidadesContainer.innerHTML = '<div class="text-xs text-red-500 text-center py-2 font-bold">Erro ao carregar unidades. Verifique sua conexão com a base de dados.</div>';
             });
         }
 
