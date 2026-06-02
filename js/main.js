@@ -35,6 +35,8 @@ import { ImportadorOrgaosService } from './importadorOrgaos.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
+import { SIGEPRouter, ROUTES } from './router.js';
+
 
 import { injetarModais } from './modais.js';
 injetarModais();
