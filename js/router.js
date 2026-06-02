@@ -232,7 +232,7 @@ export class SIGEPRouter {
                 if (app.currentPauta) {
                     app._teardownPauta(); // Limpa pauta atual
                 }
-                UIService.showScreen('pauta-selection');
+                deps.UIService.showScreen('pauta-selection');
                 await app.loadPautasWithFilter();
                 app.applyRoleBasedUI();
             },
