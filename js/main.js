@@ -88,6 +88,11 @@ class SIGEPApp {
             this.setupEventListeners();
             this.setupAuthListener();
             
+            // NOVO: Escuta o botão "Voltar" ou "Avançar" do navegador
+            window.addEventListener('popstate', (event) => {
+                this.handleRoute();
+            });
+
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
             
@@ -112,11 +117,50 @@ class SIGEPApp {
     }
 
     // ============================================================
+    // SISTEMA DE ROTAS (ROUTING)
+    // ============================================================
+    
+    changeUrl(tela) {
+        const novaUrl = window.location.origin + window.location.pathname + '?tela=' + tela;
+        window.history.pushState({ tela: tela }, '', novaUrl);
+        localStorage.setItem('sigep_active_screen', tela);
+    }
+
+    async handleRoute() {
+        const urlParams = new URLSearchParams(window.location.search);
+        let tela = urlParams.get('tela');
+        
+        if (!tela) {
+            tela = localStorage.getItem('sigep_active_screen');
+        }
+
+        if (tela === 'admin') {
+            this.showAdminScreen();
+        } else if (tela === 'recepcao-central') {
+            const { RecepçãoCentralService } = await import('./recepcaoCentral.js');
+            await RecepçãoCentralService.abrir(this);
+        } else if (tela === 'dashboard') {
+            DashboardService.showDashboardScreen();
+        } else if (tela === 'app') {
+            const pautaId = localStorage.getItem('lastPautaId');
+            const pautaNome = localStorage.getItem('lastPautaName');
+            const pautaTipo = localStorage.getItem('lastPautaType');
+            if (pautaId && pautaNome) {
+                await this.loadPauta(pautaId, pautaNome, pautaTipo);
+            } else {
+                await this.showPautaSelectionScreen();
+            }
+        } else {
+            await this.showPautaSelectionScreen();
+        }
+    }
+
+    // ============================================================
     // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
     // ============================================================
     
     showAdminScreen() {
-        localStorage.setItem('sigep_active_screen', 'admin');
+        this.changeUrl('admin');
         UIService.showScreen('admin');
         this.renderAdminContent();
     }
@@ -263,7 +307,6 @@ class SIGEPApp {
         document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            localStorage.setItem('sigep_active_screen', 'pauta-selection');
             localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
@@ -273,7 +316,6 @@ class SIGEPApp {
         document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
             this.currentMode = 'evento';
             localStorage.setItem('sigep_current_mode', 'evento');
-            localStorage.setItem('sigep_active_screen', 'pauta-selection');
             localStorage.removeItem('sigep_app_state');
             await this.showPautaSelectionScreen();
             this.applyRoleBasedUI();
@@ -298,6 +340,7 @@ class SIGEPApp {
         }
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
+        this.changeUrl('modoSelection');
         UIService.showScreen('modoSelection');
         this.applyRoleBasedUI();
         showNotification('Modo alterado com sucesso!', 'info', 2000);
@@ -391,25 +434,8 @@ class SIGEPApp {
                 await this.loadUserPreferences(); 
                 this.applyRoleBasedUI(); 
                 
-                const telaAtiva = localStorage.getItem('sigep_active_screen');
-                const pautaId   = localStorage.getItem('lastPautaId');
-                const pautaNome = localStorage.getItem('lastPautaName');
-                const pautaTipo = localStorage.getItem('lastPautaType');
-
-                if (telaAtiva === 'app' && pautaId && pautaNome) {
-                    await this.loadPauta(pautaId, pautaNome, pautaTipo);
-                } else if (telaAtiva === 'pauta-selection') {
-                    await this.showPautaSelectionScreen();
-                } else if (telaAtiva === 'dashboard') {
-                    DashboardService.showDashboardScreen();
-                } else if (telaAtiva === 'recepcao-central') {
-                    await RecepçãoCentralService.abrir(this);
-                } else if (telaAtiva === 'admin') {
-                    this.showAdminScreen();
-                } else {
-                    UIService.showScreen('modoSelection');
-                }
-
+                // DELEGA O REDIRECIONAMENTO PARA O NOSSO MOTOR DE ROTAS:
+                await this.handleRoute();
             } else {
                 UIService.showScreen('login');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
@@ -512,6 +538,7 @@ class SIGEPApp {
         });
 
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
+            this.changeUrl('dashboard');
             DashboardService.showDashboardScreen();
         });
 
@@ -520,6 +547,7 @@ class SIGEPApp {
         });        
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
+            this.changeUrl('recepcao-central');
             await RecepçãoCentralService.abrir(this);
         });
 
@@ -789,10 +817,7 @@ class SIGEPApp {
             if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
             document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
-            UIService.showScreen('pautaSelection');
-            if (this.auth?.currentUser) {
-                this.showPautaSelectionScreen();
-            }
+            this.showPautaSelectionScreen();
         });
 
         document.getElementById('tab-agendamento')?.addEventListener('click', () => {
@@ -1672,9 +1697,6 @@ class SIGEPApp {
 
     }
 
-    // ============================================================
-    // setupSubjectsAutocomplete
-    // ============================================================
     setupSubjectsAutocomplete() {
         const datalist = document.getElementById('subjects-list');
         if (!datalist) return;
@@ -1729,31 +1751,34 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // loadUserPreferences / saveUserPreferences / applyUserPreferences
-    // ============================================================
     async loadUserPreferences() {
-        if (!this.auth?.currentUser || !this.db) {
-            this.userPreferences = this.getDefaultNotificationPreferences(); 
-            return;
-        }
-
-        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
+        if (!this.auth?.currentUser || !this.db) return;
+        
         try {
+            const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
             const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-                const userData = docSnap.data();
-                this.userPreferences = userData.preferences || this.getDefaultNotificationPreferences(); 
+            if (docSnap.exists() && docSnap.data().preferences) {
+                this.userPreferences = docSnap.data().preferences;
             } else {
-                this.userPreferences = this.getDefaultNotificationPreferences(); 
+                this.userPreferences = { enableSoundsSuccess: true };
             }
         } catch (error) {
-            this.userPreferences = this.getDefaultNotificationPreferences();
-            showNotification("Erro ao carregar suas preferências.", "error");
+            console.error("Erro ao carregar preferências:", error);
+            this.userPreferences = { enableSoundsSuccess: true };
         }
-        this.applyUserPreferences(); 
     }
 
+    applyRoleBasedUI() {
+        const role = this.currentUser?.role || 'user';
+        const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
+        
+        if (role === 'admin' || role === 'superadmin') {
+            adminBtns.forEach(b => b?.classList.remove('hidden'));
+        } else {
+            adminBtns.forEach(b => b?.classList.add('hidden'));
+        }
+    }
+    
     async saveUserPreferences() {
         if (!this.auth?.currentUser || !this.db) {
             showNotification("Você precisa estar logado para salvar preferências.", "error");
@@ -1829,9 +1854,6 @@ class SIGEPApp {
         };
     }
 
-    // ============================================================
-    // saveColumnPreferences / loadColumnPreferences / applyColumnPreferences
-    // ============================================================
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -1887,37 +1909,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // showPautaSelectionScreen - ATUALIZADO
-    // ============================================================
-    async showPautaSelectionScreen() {
-        localStorage.setItem('sigep_active_screen', 'pauta-selection');
-        if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-        
-        UIService.showScreen('pautaSelection');
-        
-        this.currentPautaFilter = 'all';
-        
-        UIService.renderPautaFilters('filters-container', this.currentPautaFilter, async (filter) => {
-            this.currentPautaFilter = filter;
-            
-            // Se o filtro for 'unidades', não aplicamos filtros padrão adicionais
-            if (filter === 'unidades') {
-                // O filtro de unidades será aplicado via filterOptions
-                await this.loadPautasWithFilter(null);
-            } else {
-                await this.loadPautasWithFilter(null);
-            }
-        }, this);
-        
-        await this.loadPautasWithFilter(null);
-        this.loadColumnPreferences();
-    }
-
-    // ============================================================
-    // loadPautasWithFilter - COM FILTRO POR MODO E UNIDADES VINCULADAS (CORRIGIDO)
-    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -1926,7 +1917,6 @@ class SIGEPApp {
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
         
-        // CARREGAR DADOS DO USUÁRIO ATUALIZADOS (incluindo unidades)
         const userDoc = await getDoc(doc(this.db, "users", user.uid));
         if (userDoc.exists()) {
             const userData = userDoc.data();
@@ -1941,9 +1931,7 @@ class SIGEPApp {
             const snapshot = await getDocs(q);
             let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             
-            // FILTRO POR MODO (Normal x Evento)
             const modoAtual = this.currentMode;
-            const tiposNormais = ['normal', 'agendamento', null, undefined, ''];
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
             
             if (modoAtual === 'normal') {
@@ -1962,7 +1950,6 @@ class SIGEPApp {
             
             this.mostrarIndicadorModo();
             
-            // APLICAR FILTROS ADICIONAIS (período ou unidades)
             let filteredPautas = [...pautas];
             
             if (filterOptions) {
@@ -1988,31 +1975,23 @@ class SIGEPApp {
                         break;
                         
                     case 'unidades':
-                        // CORREÇÃO: Usar o campo 'unidades' do usuário (array de objetos)
                         const userUnidades = this.currentUser?.unidades || [];
-                        
-                        // Admin/Superadmin vê todas as unidades
                         const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
                         
                         if (!isAdmin && userUnidades.length > 0) {
-                            // Extrair apenas os nomes das unidades para comparação
                             const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
-                            
-                            // Filtrar apenas pautas cuja unidadeNome está na lista do usuário
                             filteredPautas = filteredPautas.filter(pauta => {
                                 const unidadePauta = pauta.unidadeNome;
                                 return userUnidadesNomes.includes(unidadePauta);
                             });
                         }
                         
-                        // Aplicar filtro de unidade específica
                         if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
                             filteredPautas = filteredPautas.filter(pauta => 
                                 pauta.unidadeNome === filterOptions.unidade
                             );
                         }
                         
-                        // Aplicar filtro de status (ativa/expirada)
                         if (filterOptions.status && filterOptions.status !== 'todas') {
                             filteredPautas = filteredPautas.filter(pauta => {
                                 if (!pauta.createdAt) return false;
@@ -2033,7 +2012,6 @@ class SIGEPApp {
                 }
             }
             
-            // APLICAR FILTROS PADRÃO (all, active, expired, my, shared)
             switch (this.currentPautaFilter) {
                 case 'my':
                     filteredPautas = filteredPautas.filter(p => p.owner === user.uid);
@@ -2077,9 +2055,7 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
         }
     }
-    // ============================================================
-    // loadPauta
-    // ============================================================
+
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
@@ -2148,6 +2124,7 @@ class SIGEPApp {
             
             this.iniciarMonitorEnvelopes();
 
+            this.changeUrl('app');
             localStorage.setItem('sigep_active_screen', 'app');
             UIService.showScreen('app');
         } catch (error) {
@@ -2156,9 +2133,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // setupRealtimeListener
-    // ============================================================
     setupRealtimeListener(pautaId) {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
         const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
@@ -2176,9 +2150,6 @@ class SIGEPApp {
         });
     }
 
-    // ============================================================
-    // iniciarMonitorEnvelopes
-    // ============================================================
     iniciarMonitorEnvelopes() {
         if (this.monitorInterval) clearInterval(this.monitorInterval);
         
@@ -2230,82 +2201,6 @@ class SIGEPApp {
         this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
     }
 
-    // ============================================================
-    // applyRoleBasedUI
-    // ============================================================
-    applyRoleBasedUI() {
-        const currentUser = this.currentUser;
-        const currentUserRole = currentUser?.role; 
-        const isAuthenticated = this.auth?.currentUser != null;
-        const isUserApproved = currentUser?.status === 'approved'; 
-        const isApoio = currentUserRole === 'apoio'; 
-        
-        const adminPanelBtnMain = document.getElementById('admin-btn-main');
-        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
-        const canAccessAdminPanel = (currentUserRole === 'admin' || currentUserRole === 'superadmin') && isAuthenticated && isUserApproved;
-        
-        if (adminPanelBtnMain) adminPanelBtnMain.classList.toggle('hidden', !canAccessAdminPanel);
-        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.classList.toggle('hidden', !canAccessAdminPanel);
-
-        const btnRecepcaoCentral = document.getElementById('btn-recepcao-central');
-        if (btnRecepcaoCentral) {
-            const isModoEvento = (this.currentMode === 'evento');
-            const temPermissao = ['apoio', 'admin', 'superadmin'].includes(currentUserRole) && isAuthenticated && isUserApproved;
-            const deveMostrar = temPermissao && !isModoEvento;
-            btnRecepcaoCentral.classList.toggle('hidden', !deveMostrar);
-        }
-
-        const closePautaBtn = document.getElementById('close-pauta-btn');
-        const reopenPautaBtn = document.getElementById('reopen-pauta-btn');
-        const resetAllBtn = document.getElementById('reset-all-btn');
-        const manageMembersBtn = document.getElementById('manage-members-btn');
-        const manageCollaboratorsBtn = document.getElementById('manage-collaborators-btn');
-        const viewStatsBtn = document.getElementById('view-stats-btn');
-
-        const canManagePauta = (isUserApproved && (currentUserRole === 'user' || currentUserRole === 'apoio')) || currentUserRole === 'admin' || currentUserRole === 'superadmin';
-        
-        if (closePautaBtn) closePautaBtn.classList.toggle('hidden', !canManagePauta);
-        if (reopenPautaBtn) reopenPautaBtn.classList.toggle('hidden', !canManagePauta);
-        if (resetAllBtn) resetAllBtn.classList.toggle('hidden', !canManagePauta);
-        if (manageMembersBtn) manageMembersBtn.classList.toggle('hidden', !canManagePauta);
-        if (manageCollaboratorsBtn) manageCollaboratorsBtn.classList.toggle('hidden', !canManagePauta);
-        if (viewStatsBtn) viewStatsBtn.classList.toggle('hidden', !canAccessAdminPanel);
-
-        const callNextBtn = document.getElementById('call-next-assisted-btn');
-        if (callNextBtn) {
-            if (isApoio || !isAuthenticated) {
-                callNextBtn.classList.add('hidden');
-            } else {
-                callNextBtn.classList.remove('hidden');
-            }
-        }
-
-        const addAssistedBtn = document.getElementById('add-assisted-btn');
-        const fileUpload = document.getElementById('file-upload');
-        const btnSyncVerde = document.getElementById('btn-sync-verde');
-
-        if (addAssistedBtn) addAssistedBtn.disabled = !isAuthenticated; 
-        if (fileUpload) fileUpload.disabled = isApoio;
-        if (btnSyncVerde) btnSyncVerde.disabled = isApoio;
-
-        const btnMonitor = document.getElementById('btn-painel-geral-externo');
-        if (btnMonitor) {
-            const liberadoApoio = this.currentPautaData?.liberarPainelGeralApoio === true;
-            if (isApoio && !liberadoApoio) { 
-                btnMonitor.classList.add('hidden');
-            } else {
-                btnMonitor.classList.remove('hidden');
-            }
-        }
-        
-        if (typeof UIService !== 'undefined' && typeof UIService.renderAssistedLists === 'function') {
-            UIService.renderAssistedLists(this); 
-        }
-    }
-
-    // ============================================================
-    // deletePauta
-    // ============================================================
     async deletePauta(pautaId, pautaName) {
         const pautaRef = doc(this.db, "pautas", pautaId);
         const pautaSnap = await getDoc(pautaRef);
