@@ -2,8 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
@@ -409,20 +408,17 @@ class SIGEPApp {
         });
     }
 
-    setupOfflinePersistence() {
+    async setupOfflinePersistence() {
         try {
-            enableIndexedDbPersistence(this.db, { synchronizeTabs: true }).catch((err) => {
-                if (err.code == 'failed-precondition') {
-                    console.warn('⚠️ Persistência desativada: Múltiplas abas abertas.');
-                    showNotification('Múltiplas abas detectadas. Feche outras abas para evitar erros no modo offline.', 'warning');
-                } else if (err.code == 'unimplemented') {
-                    console.warn('⚠️ Navegador não suporta persistência offline.');
-                } else {
-                    console.error('⚠️ Falha de integridade ou corrupção no cache local IndexedDB. Forçando inicialização estritamente online.', err.message);
-                }
-            });
-        } catch (e) {
-            console.log("Erro ao ativar persistência:", e);
+            await enableMultiTabIndexedDbPersistence(this.db);
+        } catch (err) {
+            if (err.code == 'failed-precondition') {
+                console.warn('⚠️ Múltiplas abas detectadas, mas o MultiTab deve lidar com isso nativamente.');
+            } else if (err.code == 'unimplemented') {
+                console.warn('⚠️ Navegador não suporta persistência offline.');
+            } else {
+                console.error('⚠️ Falha de integridade no cache local.', err.message);
+            }
         }
     
         window.addEventListener('offline', () => {
