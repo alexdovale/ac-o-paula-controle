@@ -228,7 +228,13 @@ export class SIGEPRouter {
             },
 
             [ROUTES.PAUTA_SELECTION]: async () => {
-                await app.showPautaSelectionScreen();
+                // Método correto dentro do app
+                if (app.currentPauta) {
+                    app._teardownPauta(); // Limpa pauta atual
+                }
+                UIService.showScreen('pauta-selection');
+                await app.loadPautasWithFilter();
+                app.applyRoleBasedUI();
             },
 
             [ROUTES.APP]: async ({ pautaId, pautaName, pautaType } = {}) => {
