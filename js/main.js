@@ -68,42 +68,37 @@ class SIGEPApp {
     async init() {
         try {
             const app = initializeApp(firebaseConfig);
-            this.db = getFirestore(app);
+            this.db   = getFirestore(app);
             this.auth = getAuth(app);
-
-            const urlParams = new URLSearchParams(window.location.search);
-            if (urlParams.get('painel') === 'true') {
-                const { PainelPublicoService } = await import('./painelPublico.js');
-                await PainelPublicoService.init(this);
-                return;
-            }
-
+    
+            // ── Inicializa o router antes de qualquer verificação de URL ──
+            this.router = new SIGEPRouter(this, {
+                UIService,
+                DashboardService,
+                RecepçãoCentralService,
+                showNotification,
+            });
+            this.router.init();
+    
             DashboardService.init(this);
-
             await this.setupOfflinePersistence();
             this.setupEventListeners();
-            this.setupAuthListener();
-            
-            // ROTAS: Escuta o botão "Voltar" ou "Avançar" do navegador/telemóvel
-            window.addEventListener('popstate', (event) => {
-                this.handleRoute();
-            });
-
+            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
+    
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
-            
             PautaConfigService.init(this);
             this.setupModoListeners();
-            
+    
             window.app = this;
-            
-            if (AdminService && AdminService.setupAdminEvents) {
+    
+            if (AdminService?.setupAdminEvents) {
                 AdminService.setupAdminEvents(this);
             }
-            
+    
         } catch (error) {
-            console.error("Erro na inicialização:", error);
-            showNotification("Erro ao iniciar o sistema SIGEP", "error");
+            console.error('Erro na inicialização:', error);
+            showNotification('Erro ao iniciar o sistema SIGEP', 'error');
         }
     }
 
@@ -410,15 +405,13 @@ class SIGEPApp {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
                 await AuthService.handleAuthState(this, user);
-                await this.loadUserPreferences(); 
-                this.applyRoleBasedUI(); 
-                
-                // DELEGA O REDIRECIONAMENTO PARA O NOSSO MOTOR DE ROTAS:
-                await this.handleRoute();
+                await this.loadUserPreferences();
+                this.applyRoleBasedUI();
+    
+                // O router resolve qual tela abrir com base em localStorage/URL
+                await this.router.resolveInitialRoute();
             } else {
-                UIService.showScreen('login');
-                document.getElementById('admin-panel-btn')?.classList.add('hidden');
-                document.getElementById('admin-btn-main')?.classList.add('hidden');
+                await this.router.navigate(ROUTES.LOGIN, {}, true);
             }
         });
     }
