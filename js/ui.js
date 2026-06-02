@@ -1746,12 +1746,24 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 app.deletePauta(pauta.id, pauta.name);
             });
 
-            card.onclick = () => {
+            // CÓDIGO NOVO CORRIGIDO
+            card.onclick = async () => {
                 if (isExpired) {
                     this.showExpiredPautaModal(pauta, app);
                     return;
                 }
-                app.loadPauta(pauta.id, pauta.name, pauta.type);
+                
+                // NOVO: Delegamos a abertura da pauta para o roteador oficial
+                if (app.router) {
+                    await app.router.navigate('app', { 
+                        pautaId: pauta.id, 
+                        pautaName: pauta.name, 
+                        pautaType: pauta.type || 'normal' 
+                    }, true);
+                } else {
+                    // Fallback de segurança caso o router engasgue
+                    app.loadPauta(pauta.id, pauta.name, pauta.type);
+                }
             };
 
             container.appendChild(card);
