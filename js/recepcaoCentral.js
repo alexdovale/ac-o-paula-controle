@@ -1202,15 +1202,15 @@ export const RecepçãoCentralService = {
 
     fechar() {
         this._cancelarListeners();
-        const container = document.getElementById('recepcao-central-container');
-        if (container) container.innerHTML = '';
 
+        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
+        
         const app = this._app;
-        if (app && typeof app.changeUrl === 'function') {
-            app.changeUrl('');
-        }
-
-        if (app && typeof app.showPautaSelectionScreen === 'function') {
+        
+        // Delega a navegação de volta para o novo Roteador
+        if (app && app.router) {
+            app.router.navigate('pauta-selection');
+        } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
     },
