@@ -108,7 +108,14 @@ class SIGEPApp {
     // ============================================================
     
     showAdminScreen() {
-        this.router.navigate(ROUTES.ADMIN);   // ← substitui UIService.showScreen + localStorage
+        document.getElementById('pauta-selection-container')?.classList.add('hidden');
+        document.getElementById('dashboard-container')?.classList.add('hidden');
+        document.getElementById('app-container')?.classList.add('hidden');
+        
+        // Mostra a tela do admin
+        document.getElementById('admin-container')?.classList.remove('hidden');
+        
+        // Renderiza o conteúdo
         this.renderAdminContent();
     }
 
@@ -1538,7 +1545,7 @@ class SIGEPApp {
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
         if (adminPanelBtnPautaSelection) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                this.showAdminScreen();
+                this.router.navigate(ROUTES.ADMIN);
             });
         }
         
