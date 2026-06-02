@@ -36,8 +36,6 @@ const MODOS_LABEL = {
 
 export const RecepcaoConfigService = {
 
-    // ─── CRUD DE RECEPÇÕES ────────────────────────────────────────────────────
-
     async criarRecepcao(db, dados, criadorUid) {
         try {
             const id = `rec_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
@@ -47,8 +45,8 @@ export const RecepcaoConfigService = {
                 icone:              dados.icone || ICONES_SUGERIDOS.default,
                 cor:                dados.cor || 'slate',
                 unidadesVinculadas: dados.unidadesVinculadas || [],
-                unidadeId:          dados.unidadesVinculadas?.[0]?.id || '',     // Backup de retrocompatibilidade
-                unidadeNome:        dados.unidadesVinculadas?.[0]?.nome || '',   // Backup de retrocompatibilidade
+                unidadeId:          dados.unidadesVinculadas?.[0]?.id || '',     
+                unidadeNome:        dados.unidadesVinculadas?.[0]?.nome || '',   
                 andar:              dados.andar || '',
                 tipo:               dados.tipo || 'especializada',
                 grupos:             dados.grupos || [],
@@ -88,7 +86,6 @@ export const RecepcaoConfigService = {
 
     async excluirRecepcao(db, recepcaoId) {
         try {
-            // EXCLUSÃO PERMANENTE
             await deleteDoc(doc(db, "recepcoes", recepcaoId));
             showNotification("Recepção excluída permanentemente do sistema.", "success");
             return true;
@@ -99,10 +96,8 @@ export const RecepcaoConfigService = {
         }
     },
     
-
     async buscarTodasRecepcoesAdmin(db) {
         try {
-            // Traz TODAS as recepções globais para o painel de Admin
             const snap = await getDocs(collection(db, "recepcoes"));
             return snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
@@ -115,12 +110,10 @@ export const RecepcaoConfigService = {
 
     async buscarRecepcoesUnidade(db, unidadeId) {
         try {
-            // Busca todas as recepções ativas
             const snap = await getDocs(collection(db, "recepcoes"));
             return snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(r => r.ativo !== false && 
-                    // Verifica se a unidade específica está na lista de vinculadas OU no campo antigo
                     (r.unidadeId === unidadeId || (r.unidadesVinculadas && r.unidadesVinculadas.some(u => u.id === unidadeId)))
                 );
         } catch (err) {
@@ -136,10 +129,8 @@ export const RecepcaoConfigService = {
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(r => r.ativo !== false);
             
-            // Administradores e Superadmins vêm a lista total
             if (role === 'superadmin' || role === 'admin') return todas;
             
-            // ISOLAMENTO MANUAL: O usuário SÓ vê se tiver sido explicitamente vinculado pelo Admin
             return todas.filter(r => r.membros && r.membros.includes(userId));
         } catch (err) {
             console.error("Erro ao buscar recepções do usuário:", err);
@@ -192,8 +183,6 @@ export const RecepcaoConfigService = {
         }
     },
 
-    // ─── LINK DO PAINEL PÚBLICO ───────────────────────────────────────────────
-
     gerarLinkPainel(recepcao, pautaIds = []) {
         const base   = window.location.origin + '/' + PAINEL_BASE_URL;
         const params = new URLSearchParams();
@@ -216,25 +205,19 @@ export const RecepcaoConfigService = {
         }
     },
 
-    // ─── FILTRAGEM DE PAUTAS (CRUZAMENTO COM MÚLTIPLAS UNIDADES) ──────────────
-
     filtrarPautasPorRecepcao(pautas, recepcao) {
         if (!recepcao) return [];
         
-        // Pega os IDs de todas as unidades permitidas nesta recepção
         const unidadesPermitidas = recepcao.unidadesVinculadas && recepcao.unidadesVinculadas.length > 0
             ? recepcao.unidadesVinculadas.map(u => u.id)
             : [recepcao.unidadeId];
         
-        // Filtra para mostrar apenas pautas que pertençam a uma das unidades vinculadas
         let pautasDaUnidade = pautas.filter(p => unidadesPermitidas.includes(p.unidadeId));
         
-        // Se a recepção for central ou estiver marcada para ver tudo da unidade, exibe as pautas direto
         if (recepcao.tipo === 'central' || recepcao.verTudo === true) {
             return pautasDaUnidade;
         }
 
-        // Se for especializada, filtra rigorosamente pelas tags/grupos
         const grupos = recepcao.grupos || [];
         if (grupos.length === 0) return pautasDaUnidade;
 
@@ -245,15 +228,12 @@ export const RecepcaoConfigService = {
         });
     },
 
-    // ─── CONTEXTO VISUAL DA RECEPÇÃO ──────────────────────────────────────────
-
     getContextoRecepcao(recepcao) {
         if (!recepcao) {
             return { icone: '🏛️', titulo: 'Recepção', subtitulo: '', cor: 'bg-slate-800' };
         }
         const corConfig = CORES[recepcao.cor] || CORES.slate;
         
-        // Exibe "Múltiplas Unidades" caso existam várias.
         let subNome = recepcao.unidadeNome;
         if (recepcao.unidadesVinculadas && recepcao.unidadesVinculadas.length > 1) {
             subNome = `${recepcao.unidadesVinculadas.length} Unidades Vinculadas`;
@@ -270,8 +250,6 @@ export const RecepcaoConfigService = {
         };
     },
 
-    // ─── RENDER DO SELETOR HIERÁRQUICO ────────────────────────────────────────
-
     renderSelectorRecepcoes(recepcoes) {
         if (!recepcoes || recepcoes.length === 0) {
             return `<p class="text-center text-slate-400 py-8">Nenhuma recepção disponível ou vinculada à sua conta.</p>`;
@@ -279,7 +257,6 @@ export const RecepcaoConfigService = {
 
         const porUnidade = {};
         for (const rec of recepcoes) {
-            // Agrupa pelo nome principal (para visualização no seletor)
             const key = rec.unidadesVinculadas?.length > 1 ? 'multi' : (rec.unidadeId || 'sem_unidade');
             const nomeGrupo = rec.unidadesVinculadas?.length > 1 ? 'Recepções Multi-Unidades' : (rec.unidadeNome || 'Sem Unidade');
             
@@ -378,8 +355,6 @@ export const RecepcaoConfigService = {
         `;
     },
 
-    // ─── EVENTOS DO SELETOR ───────────────────────────────────────────────────
-
     initSelectorEventos() {
         const input     = document.getElementById('rc-busca-input');
         const limpar    = document.getElementById('rc-busca-limpar');
@@ -440,8 +415,6 @@ export const RecepcaoConfigService = {
             });
         });
     },
-
-    // ─── RENDER DO PAINEL DE ADMIN ────────────────────────────────────────────
 
     renderPainelAdmin(recepcoes, unidades) {
         const totalAtivas  = recepcoes.length;
@@ -575,8 +548,6 @@ export const RecepcaoConfigService = {
         });
     },
 
-    // ─── RENDER DO FORMULÁRIO DE RECEPÇÃO ─────────────────────────────────────
-
     renderFormRecepcao(recepcao = null, unidadesDeContexto = []) {
         const isEdicao = !!recepcao;
         const titulo   = isEdicao ? 'Editar Recepção' : 'Nova Recepção';
@@ -595,7 +566,6 @@ export const RecepcaoConfigService = {
         const somPadrao = recepcao?.somPadrao !== false;
         const videoUrl  = recepcao?.videoUrl || '';
 
-        // Cria a string JSON contendo as unidades a enviar para pre-seleção
         let defaultVinculadas = recepcao?.unidadesVinculadas || [];
         if (defaultVinculadas.length === 0 && recepcao?.unidadeId) {
             defaultVinculadas = [{ id: recepcao.unidadeId, nome: recepcao.unidadeNome }];
@@ -779,12 +749,10 @@ export const RecepcaoConfigService = {
         `;
     },
 
-    // ─── EVENTOS DO FORMULÁRIO ────────────────────────────────────────────────
-
     initFormRecepcaoEventos(onSalvar, onCancelar) {
         let gruposAtivos = [];
 
-        // 1. CARREGAR A LISTA DE UNIDADES (Procura em 'orgaos' e 'unidades')
+        // 1. CARREGAR A LISTA DE UNIDADES E ORGAOS (Multi-Select)
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
             Promise.all([
@@ -973,7 +941,7 @@ export const RecepcaoConfigService = {
                 unidadesVinculadas
             }, recepcaoId);
         });
-    }
+    },
 
     _renderGruposLista(grupos) {
         const lista = document.getElementById('form-rec-grupos-lista');
