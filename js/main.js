@@ -144,6 +144,27 @@ class SIGEPApp {
         }
     }
 
+
+    // Adicione este método na classe SIGEPApp
+    async showPautaSelectionScreen() {
+        // Limpa qualquer estado anterior da pauta
+        this._teardownPauta();
+        
+        // Esconde outras telas e mostra a tela de seleção de pautas
+        UIService.showScreen('pauta-selection');
+        
+        // Atualiza a URL via router (opcional, para não quebrar navegação)
+        if (this.router) {
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+        }
+        
+        // Recarrega a lista de pautas
+        await this.loadPautasWithFilter();
+        
+        // Aplica UI baseada no papel do usuário
+        this.applyRoleBasedUI();
+    }
+
     // ============================================================
     // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
     // ============================================================
