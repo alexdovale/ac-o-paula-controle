@@ -101,55 +101,7 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // SISTEMA DE ROTAS (ROUTING)
-    // ============================================================
-    
-    changeUrl(tela) {
-        // Atualiza a URL sem recarregar a página
-        const novaUrl = window.location.origin + window.location.pathname + '?tela=' + tela;
-        window.history.pushState({ tela: tela }, '', novaUrl);
-        localStorage.setItem('sigep_active_screen', tela);
-    }
 
-    async handleRoute() {
-        const urlParams = new URLSearchParams(window.location.search);
-        let tela = urlParams.get('tela');
-        
-        if (!tela) {
-            tela = localStorage.getItem('sigep_active_screen');
-        }
-
-        if (tela === 'admin') {
-            this.showAdminScreen();
-        } else if (tela === 'recepcao-central') {
-            const { RecepçãoCentralService } = await import('./recepcaoCentral.js');
-            await RecepçãoCentralService.abrir(this);
-        } else if (tela === 'dashboard') {
-            DashboardService.showDashboardScreen();
-        } else if (tela === 'app') {
-            const pautaId = localStorage.getItem('lastPautaId');
-            const pautaNome = localStorage.getItem('lastPautaName');
-            const pautaTipo = localStorage.getItem('lastPautaType');
-            if (pautaId && pautaNome) {
-                await this.loadPauta(pautaId, pautaNome, pautaTipo);
-            } else {
-                await this.showPautaSelectionScreen();
-            }
-        } else if (tela === 'modoSelection') {
-            UIService.showScreen('modoSelection');
-        } else {
-            await this.showPautaSelectionScreen();
-        }
-    }
-
-
-    // Adicione este método na classe SIGEPApp
-    async showPautaSelectionScreen() {
-        if (this.router) {
-            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
-        }
-    }
 
     // ============================================================
     // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
