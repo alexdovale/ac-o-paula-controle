@@ -179,10 +179,16 @@ export class SIGEPRouter {
             await handler(params);
         } catch (error) {
             console.error(`[SIGEPRouter] Falha crítica ao executar a rota ${route}:`, error);
-            if (route !== ROUTES.MODO_SELECTION && route !== ROUTES.LOGIN) {
-                this._deps.showNotification("Erro interno de interface. Restaurando...", "error");
-                this.navigate(ROUTES.MODO_SELECTION, {}, true);
+            
+            // Em vez de navegar de volta e causar loop, apenas notificamos
+            // e impedimos que a execução continue.
+            if (this._deps && typeof this._deps.showNotification === 'function') {
+                this._deps.showNotification("Erro na interface: " + (error.message || "Erro desconhecido"), "error");
             }
+            
+            // Opcional: Você pode forçar um console.trace() aqui para ver 
+            // exatamente de onde veio a chamada que quebrou
+            console.trace("Stacktrace da falha na rota " + route);
         }
     }
 
