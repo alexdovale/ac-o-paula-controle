@@ -57,7 +57,8 @@ export class SIGEPRouter {
     }
 
     async navigate(route, params = {}, replace = false) {
-        const redirected = this._guard(route);
+        // Passando os params para o guard para evitar loop de modo de pauta
+        const redirected = this._guard(route, params);
         if (redirected) {
             return this.navigate(redirected, {}, replace);
         }
@@ -107,7 +108,7 @@ export class SIGEPRouter {
     // Internos
     // ------------------------------------------------------------------
 
-    _guard(route) {
+    _guard(route, params = {}) {
         const guard = ROUTE_GUARDS[route];
         if (!guard) return null;
 
@@ -121,15 +122,17 @@ export class SIGEPRouter {
         }
 
         if (guard.roles && !guard.roles.includes(user?.role)) {
-            this._deps.showNotification('Acesso não permitido para seu perfil.', 'error');
+            console.warn('Acesso negado pelo perfil:', user?.role);
             return ROUTES.PAUTA_SELECTION;
         }
 
         if (route === ROUTES.APP) {
-            const savedType = localStorage.getItem('lastPautaType') || 'normal';
+            // Usa o parâmetro atual primeiro, se não tiver usa o storage
+            const savedType = params.pautaType || localStorage.getItem('lastPautaType') || 'normal';
             const modoAtual = app.currentMode;
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
             const isEvento = tiposEvento.includes(String(savedType).toLowerCase());
+            
             if (modoAtual === 'normal' && isEvento)    return ROUTES.PAUTA_SELECTION;
             if (modoAtual === 'evento' && !isEvento)   return ROUTES.PAUTA_SELECTION;
         }
@@ -176,7 +179,6 @@ export class SIGEPRouter {
             await handler(params);
         } catch (error) {
             console.error(`[SIGEPRouter] Falha crítica ao executar a rota ${route}:`, error);
-            // Sistema de segurança: Evita que o usuário fique preso na tela branca
             if (route !== ROUTES.MODO_SELECTION && route !== ROUTES.LOGIN) {
                 this._deps.showNotification("Erro interno de interface. Restaurando...", "error");
                 this.navigate(ROUTES.MODO_SELECTION, {}, true);
@@ -225,20 +227,31 @@ export class SIGEPRouter {
                     app._teardownPauta(); // Limpa pauta atual
                 }
                 
-                // Exibição de emergência (Airbag) caso o UIService falhe com o nome exato
                 try {
                     deps.UIService.showScreen('pauta-selection');
                 } catch (e) {
                     deps.UIService.showScreen('pauta-selection-container');
                 }
                 
-                // Força bruta segura baseada no seu HTML
                 const container = document.getElementById('pauta-selection-container');
                 if (container) {
                     document.getElementById('login-container')?.classList.add('hidden');
                     document.getElementById('modo-selection-screen')?.classList.add('hidden');
                     document.getElementById('app-container')?.classList.add('hidden');
                     container.classList.remove('hidden');
+                }
+
+                // Renderiza os filtros na tela
+                if (deps.UIService && typeof deps.UIService.renderPautaFilters === 'function') {
+                    deps.UIService.renderPautaFilters(
+                        'filters-container', 
+                        app.currentPautaFilter || 'all', 
+                        (val) => {
+                            app.currentPautaFilter = val;
+                            app.loadPautasWithFilter();
+                        }, 
+                        app
+                    );
                 }
 
                 await app.loadPautasWithFilter();
@@ -251,7 +264,6 @@ export class SIGEPRouter {
                 const type = pautaType || localStorage.getItem('lastPautaType');
                 
                 if (id && name) {
-                    // Evita o loop de carregamento se a pauta já for a atual
                     if (!app.currentPauta || app.currentPauta.id !== id) {
                         await app.loadPauta(id, name, type);
                     }
@@ -262,7 +274,6 @@ export class SIGEPRouter {
                         deps.UIService.showScreen('app-container');
                     }
                     
-                    // Força bruta segura baseada no seu HTML
                     const container = document.getElementById('app-container');
                     if (container) {
                         document.getElementById('pauta-selection-container')?.classList.add('hidden');
