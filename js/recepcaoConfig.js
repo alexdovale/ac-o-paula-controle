@@ -788,7 +788,12 @@ export const RecepcaoConfigService = {
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
             getDocs(collection(window.app.db, "unidades")).then(snap => {
-                const todas = snap.docs.map(d => ({id: d.id, nome: d.data().nome, ativo: d.data().ativo})).filter(u => u.ativo !== false);
+                const todas = snap.docs.map(d => ({
+                    id: d.id, 
+                    nome: d.data().nome || d.data().name || 'Sem nome', 
+                    ativo: d.data().ativo
+                })).filter(u => u.ativo !== false);
+                
                 todas.sort((a,b) => a.nome.localeCompare(b.nome));
 
                 const vinculadasRaw = document.getElementById('form-rec-unidades-vinculadas-data')?.value || '[]';
@@ -799,7 +804,12 @@ export const RecepcaoConfigService = {
                 } catch(e) {}
 
                 if (todas.length === 0) {
-                    unidadesContainer.innerHTML = '<div class="text-xs text-red-400 text-center py-2 font-bold">Nenhuma unidade cadastrada no sistema.</div>';
+                    unidadesContainer.innerHTML = `
+                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
+                            <p class="text-sm font-black text-amber-800 mb-1">⚠️ Nenhuma unidade encontrada</p>
+                            <p class="text-xs text-amber-700">Feche esta janela, vá ao botão azul <b>"🏢 Gerenciar Unidades / Órgãos"</b> e crie uma unidade primeiro para poder vinculá-la à recepção.</p>
+                        </div>
+                    `;
                     return;
                 }
 
@@ -811,10 +821,10 @@ export const RecepcaoConfigService = {
                     </label>
                 `).join('');
             }).catch(e => {
-                unidadesContainer.innerHTML = '<div class="text-xs text-red-400 text-center py-2 font-bold">Erro ao carregar unidades. Verifique sua conexão.</div>';
+                console.error("Erro ao carregar unidades:", e);
+                unidadesContainer.innerHTML = '<div class="text-xs text-red-500 text-center py-2 font-bold">Erro ao carregar unidades. Verifique sua conexão com a base de dados.</div>';
             });
         }
-
 
         // 2. RECUPERAR GRUPOS EXISTENTES
         document.querySelectorAll('#form-rec-grupos-lista span').forEach(span => {
@@ -957,10 +967,10 @@ export const RecepcaoConfigService = {
                 modoVisualizacao, 
                 videoUrl, 
                 somPadrao,
-                unidadesVinculadas // Array completo salvo
+                unidadesVinculadas
             }, recepcaoId);
         });
-    },
+    }
 
     _renderGruposLista(grupos) {
         const lista = document.getElementById('form-rec-grupos-lista');
