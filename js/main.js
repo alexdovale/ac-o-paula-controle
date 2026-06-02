@@ -1,4 +1,4 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO)
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -149,8 +149,7 @@ class SIGEPApp {
     // ============================================================
     
     showAdminScreen() {
-        this.changeUrl('admin'); // Atualiza a Rota
-        UIService.showScreen('admin');
+        this.router.navigate(ROUTES.ADMIN);   // ← substitui UIService.showScreen + localStorage
         this.renderAdminContent();
     }
 
@@ -255,7 +254,7 @@ class SIGEPApp {
         });
         
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen();
+            this.router.navigate(ROUTES.PAUTA_SELECTION);
         });
         
         document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
@@ -294,38 +293,24 @@ class SIGEPApp {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
             localStorage.removeItem('sigep_app_state');
-            await this.showPautaSelectionScreen();
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             this.applyRoleBasedUI();
-            showNotification('Modo Normal ativado - Atendimento regular', 'info', 3000);
+            showNotification('Modo Normal ativado', 'info', 3000);
         });
     
         document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
             this.currentMode = 'evento';
             localStorage.setItem('sigep_current_mode', 'evento');
             localStorage.removeItem('sigep_app_state');
-            await this.showPautaSelectionScreen();
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             this.applyRoleBasedUI();
-            showNotification('Modo Evento ativado - Mutirão/Plantão/Ação Social', 'info', 3000);
+            showNotification('Modo Evento ativado', 'info', 3000);
         });
     }
 
     voltarParaSelecaoModo() {
-        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-        
-        this.currentPauta = null;
-        this.allAssisted = [];
-        this.colaboradores = [];
-        
-        if (this.monitorInterval) { 
-            clearInterval(this.monitorInterval); 
-            this.monitorInterval = null; 
-        }
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-
-        this.changeUrl('modoSelection'); // Atualiza a Rota
-        UIService.showScreen('modoSelection');
-        this.applyRoleBasedUI();
+        this._teardownPauta();
+        this.router.navigate(ROUTES.MODO_SELECTION);
         showNotification('Modo alterado com sucesso!', 'info', 2000);
     }
 
@@ -501,17 +486,15 @@ class SIGEPApp {
         });
 
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            this.changeUrl('dashboard'); // Rota
-            DashboardService.showDashboardScreen();
+            this.router.navigate(ROUTES.DASHBOARD);
         });
 
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen();
+            this.router.navigate(ROUTES.PAUTA_SELECTION);
         });        
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            this.changeUrl('recepcao-central'); // Rota
-            await RecepçãoCentralService.abrir(this);
+            await this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
         });
 
         document.getElementById('btn-trocar-modo')?.addEventListener('click', () => {
@@ -766,21 +749,8 @@ class SIGEPApp {
         });
 
         document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
-            if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-            if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-            
-            this.currentPauta = null;
-            this.allAssisted = [];
-            this.colaboradores = [];
-            
-            localStorage.removeItem('lastPautaId');
-            localStorage.removeItem('lastPautaName');
-            localStorage.removeItem('lastPautaType');
-
-            if (this.monitorInterval) { clearInterval(this.monitorInterval); this.monitorInterval = null; }
-            document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-
-            this.showPautaSelectionScreen();
+            this._teardownPauta();
+            this.router.navigate(ROUTES.PAUTA_SELECTION);
         });
 
         document.getElementById('tab-agendamento')?.addEventListener('click', () => {
@@ -1619,7 +1589,7 @@ class SIGEPApp {
         const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
         if (adminBackBtn) {
             adminBackBtn.addEventListener('click', () => {
-                this.showPautaSelectionScreen();
+                this.router.navigate(ROUTES.PAUTA_SELECTION);
             });
         }
 
@@ -2039,9 +2009,10 @@ class SIGEPApp {
         this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
         document.getElementById('pauta-title').textContent = pautaName;
 
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastPautaName', pautaName);
-        localStorage.setItem('lastPautaType', pautaType);
+        // REMOVER estas três linhas (o router já faz isso):
+        // localStorage.setItem('lastPautaId', pautaId);
+        // localStorage.setItem('lastPautaName', pautaName);
+        // localStorage.setItem('lastPautaType', pautaType);
 
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
@@ -2087,12 +2058,30 @@ class SIGEPApp {
             
             this.iniciarMonitorEnvelopes();
 
-            this.changeUrl('app'); // Atualiza a Rota
-            UIService.showScreen('app');
+            // O handler ROUTES.APP já faz UIService.showScreen('app')
+            await this.router.navigate(ROUTES.APP);
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
             showNotification("Erro ao carregar pauta", "error");
         }
+    }
+
+    _teardownPauta() {
+        if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
+        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+        if (this.monitorInterval) {
+            clearInterval(this.monitorInterval);
+            this.monitorInterval = null;
+        }
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
+
+        this.currentPauta = null;
+        this.allAssisted  = [];
+        this.colaboradores = [];
+
+        localStorage.removeItem('lastPautaId');
+        localStorage.removeItem('lastPautaName');
+        localStorage.removeItem('lastPautaType');
     }
 
     setupRealtimeListener(pautaId) {
