@@ -112,17 +112,18 @@ export class SIGEPRouter {
         const guard = ROUTE_GUARDS[route];
         if (!guard) return null;
 
+        // Dentro do seu _guard(route) no router.js
         const app  = this._app;
         const user = app.currentUser;
         const isAuth     = !!app.auth?.currentUser;
         const isApproved = user?.status === 'approved';
-
+        
         if (guard.requiresAuth && (!isAuth || !isApproved)) {
             return ROUTES.LOGIN;
         }
-
+        
         if (guard.roles && !guard.roles.includes(user?.role)) {
-            console.warn('Acesso negado pelo perfil:', user?.role);
+            this._deps.showNotification('Acesso não permitido para seu perfil.', 'error');
             return ROUTES.PAUTA_SELECTION;
         }
 
