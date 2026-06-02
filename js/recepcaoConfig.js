@@ -752,24 +752,31 @@ export const RecepcaoConfigService = {
     initFormRecepcaoEventos(onSalvar, onCancelar) {
         let gruposAtivos = [];
 
-        // 1. CARREGAR A LISTA DE UNIDADES E ORGAOS (Multi-Select)
+        // 1. CARREGAR A LISTA DE UNIDADES (Busca global à prova de falhas)
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
+            const db = window.app.db;
+            
             Promise.all([
-                getDocs(collection(window.app.db, "orgaos")).catch(() => ({docs: []})),
-                getDocs(collection(window.app.db, "unidades")).catch(() => ({docs: []}))
-            ]).then(([snapOrgaos, snapUnidades]) => {
+                getDocs(collection(db, "unidades")).catch(() => ({docs: []})),
+                getDocs(collection(db, "orgaos")).catch(() => ({docs: []})),
+                getDocs(collection(db, "estrutura_unidades")).catch(() => ({docs: []}))
+            ]).then(([snapUnidades, snapOrgaos, snapEstrutura]) => {
                 const mapUnidades = new Map();
                 
-                // Extrai da coleção orgaos
-                snapOrgaos.docs.forEach(d => {
-                    if (d.data().ativo !== false) mapUnidades.set(d.id, { id: d.id, nome: d.data().nome || d.data().name || 'Sem nome' });
-                });
-                
-                // Extrai da coleção unidades
-                snapUnidades.docs.forEach(d => {
-                    if (d.data().ativo !== false) mapUnidades.set(d.id, { id: d.id, nome: d.data().nome || d.data().name || 'Sem nome' });
-                });
+                const processarDocs = (docs) => {
+                    docs.forEach(d => {
+                        const data = d.data();
+                        if (data.ativo === false || data.status === 'inativo') return;
+                        
+                        const nome = data.nome || data.name || data.titulo || data.descricao || d.id;
+                        mapUnidades.set(d.id, { id: d.id, nome: nome });
+                    });
+                };
+
+                processarDocs(snapUnidades.docs);
+                processarDocs(snapOrgaos.docs);
+                processarDocs(snapEstrutura.docs);
 
                 const todas = Array.from(mapUnidades.values());
                 todas.sort((a,b) => a.nome.localeCompare(b.nome));
