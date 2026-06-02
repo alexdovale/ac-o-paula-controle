@@ -502,9 +502,16 @@ class SIGEPApp {
                 }
             });
 
+            // Dentro de _setupInteracoes() em recepcaoCentral.js
+    
+            // Mude de um listener simples para um que sobreviva a renderizações:
             document.addEventListener('click', (e) => {
-                if (pautaSettingsPanel && !pautaSettingsPanel.contains(e.target) && !pautaSettingsToggle.contains(e.target)) {
-                    pautaSettingsPanel.classList.add('hidden');
+                if (e.target.id === 'rc-btn-configurar-tv' || e.target.closest('#rc-btn-configurar-tv')) {
+                    if (estado.pautasHoje.length === 0) {
+                        showNotification("Nenhuma pauta ativa nesta recepção.", "warning");
+                        return;
+                    }
+                    this._abrirModalConfigTV();
                 }
             });
         }
@@ -1653,26 +1660,32 @@ class SIGEPApp {
         try {
             const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
             const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists() && docSnap.data().preferences) {
-                this.userPreferences = docSnap.data().preferences;
-            } else {
-                this.userPreferences = { enableSoundsSuccess: true };
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                // ✅ GARANTE QUE O PERFIL É ATUALIZADO NO OBJETO APP
+                this.currentUser = { ...this.currentUser, ...userData }; 
+                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
+                this.applyRoleBasedUI(); // Chama para liberar os botões
             }
         } catch (error) {
-            console.error("Erro ao carregar preferências:", error);
-            this.userPreferences = { enableSoundsSuccess: true };
+            console.error("Erro ao carregar perfil:", error);
         }
     }
 
     applyRoleBasedUI() {
-        const role = this.currentUser?.role || 'user';
-        const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
+        // Se ainda não carregou o user, espera um pouco ou ignora
+        if (!this.currentUser) return;
+
+        const role = this.currentUser?.role;
+        const isAdmin = (role === 'admin' || role === 'superadmin');
         
-        if (role === 'admin' || role === 'superadmin') {
-            adminBtns.forEach(b => b?.classList.remove('hidden'));
-        } else {
-            adminBtns.forEach(b => b?.classList.add('hidden'));
-        }
+        // Aplica visibilidade apenas se o elemento existir
+        const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
+        adminBtns.forEach(b => {
+            if (b) b.classList.toggle('hidden', !isAdmin);
+        });
+        
+        console.log("UI atualizada para o perfil:", role);
     }
     
     async saveUserPreferences() {
