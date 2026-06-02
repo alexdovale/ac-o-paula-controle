@@ -588,7 +588,13 @@ export const RecepcaoConfigService = {
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                     <div class="md:col-span-2">
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Unidades Vinculadas (Multi-Seleção) *</label>
-                        <div id="form-rec-unidades-lista" class="max-h-40 overflow-y-auto border border-slate-300 rounded-xl p-2 bg-slate-50 space-y-1">
+                        
+                        <div class="relative mb-2">
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
+                            <input type="text" id="form-rec-busca-unidade" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar unidade por nome, sigla ou endereço...">
+                        </div>
+
+                        <div id="form-rec-unidades-lista" class="max-h-56 overflow-y-auto border border-slate-300 rounded-xl p-2 bg-slate-50 space-y-1">
                             <div class="text-xs text-slate-400 text-center py-4 flex items-center justify-center gap-2">
                                 <div class="loader-small"></div> Carregando unidades...
                             </div>
@@ -752,7 +758,7 @@ export const RecepcaoConfigService = {
     initFormRecepcaoEventos(onSalvar, onCancelar) {
         let gruposAtivos = [];
 
-        // 1. CARREGAR A LISTA DE UNIDADES (Busca global à prova de falhas)
+        // 1. CARREGAR A LISTA DE UNIDADES COM BUSCA (Multi-Select)
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
             const db = window.app.db;
@@ -770,7 +776,10 @@ export const RecepcaoConfigService = {
                         if (data.ativo === false || data.status === 'inativo') return;
                         
                         const nome = data.nome || data.name || data.titulo || data.descricao || d.id;
-                        mapUnidades.set(d.id, { id: d.id, nome: nome });
+                        const sigla = data.sigla || '';
+                        const endereco = data.endereco || '';
+                        
+                        mapUnidades.set(d.id, { id: d.id, nome, sigla, endereco });
                     });
                 };
 
@@ -794,13 +803,40 @@ export const RecepcaoConfigService = {
                     return;
                 }
 
-                unidadesContainer.innerHTML = todas.map(u => `
-                    <label class="flex items-center gap-3 p-2.5 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg cursor-pointer transition-colors">
-                        <input type="checkbox" class="form-rec-unidade-cb w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" 
-                            value="${u.id}" data-nome="${escapeHTML(u.nome)}" ${vinculadasIds.includes(u.id) ? 'checked' : ''}>
-                        <span class="text-sm text-slate-700 font-semibold">${escapeHTML(u.nome)}</span>
+                unidadesContainer.innerHTML = todas.map(u => {
+                    const textoBusca = escapeHTML(`${u.nome} ${u.sigla} ${u.endereco}`).toLowerCase();
+                    return `
+                    <label class="item-unidade-cb flex items-start gap-3 p-3 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg cursor-pointer transition-colors" data-busca="${textoBusca}">
+                        <div class="mt-0.5">
+                            <input type="checkbox" class="form-rec-unidade-cb w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" 
+                                value="${u.id}" data-nome="${escapeHTML(u.nome)}" ${vinculadasIds.includes(u.id) ? 'checked' : ''}>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm text-slate-700 font-bold leading-tight">
+                                ${escapeHTML(u.nome)} 
+                                ${u.sigla ? `<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-1 font-mono align-middle">${escapeHTML(u.sigla)}</span>` : ''}
+                            </p>
+                            ${u.endereco ? `<p class="text-[10px] text-slate-500 mt-1 truncate">📍 ${escapeHTML(u.endereco)}</p>` : ''}
+                        </div>
                     </label>
-                `).join('');
+                `}).join('');
+                
+                // EVENTO DE BUSCA (Filtra a lista em tempo real)
+                const buscaInput = document.getElementById('form-rec-busca-unidade');
+                if (buscaInput) {
+                    buscaInput.addEventListener('input', (e) => {
+                        const termo = e.target.value.toLowerCase().trim();
+                        const labels = unidadesContainer.querySelectorAll('.item-unidade-cb');
+                        labels.forEach(label => {
+                            const textoItem = label.getAttribute('data-busca');
+                            if (textoItem.includes(termo)) {
+                                label.style.display = '';
+                            } else {
+                                label.style.display = 'none';
+                            }
+                        });
+                    });
+                }
             });
         }
 
