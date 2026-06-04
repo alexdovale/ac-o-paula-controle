@@ -355,13 +355,20 @@ class SIGEPApp {
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
             if (user) {
+                // 1. Primeiro, autentica o estado global
                 await AuthService.handleAuthState(this, user);
+                
+                // 2. Carrega as preferências e o perfil do Firestore
                 await this.loadUserPreferences();
+                
+                // 3. Só agora, com o currentUser populado, aplicamos a UI
                 this.applyRoleBasedUI();
     
-                // O router resolve qual tela abrir com base em localStorage/URL
+                // 4. Resolve a rota apenas após garantir que o usuário está carregado
                 await this.router.resolveInitialRoute();
             } else {
+                // Caso não logado
+                this.currentUser = null;
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
             }
         });
