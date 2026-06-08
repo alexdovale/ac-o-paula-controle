@@ -2041,8 +2041,18 @@ class SIGEPApp {
             
             this.iniciarMonitorEnvelopes();
 
-            // REMOVIDO: await this.router.navigate(ROUTES.APP);
-            // O handler ROUTES.APP já cuida de mostrar a tela após loadPauta terminar
+            // FAILSAFE: Garantir a exibição da tela principal do app.
+            // Se a chamada de loadPauta() vier diretamente de um clique no card em vez do router,
+            // a tela não transicionaria sozinha porque o comando antigo foi removido.
+            // Este bloco força as outras telas a sumirem e a tela da pauta a aparecer.
+            const appContainer = document.getElementById('app-container');
+            if (appContainer && appContainer.classList.contains('hidden')) {
+                document.getElementById('pauta-selection-container')?.classList.add('hidden');
+                document.getElementById('dashboard-container')?.classList.add('hidden');
+                document.getElementById('admin-container')?.classList.add('hidden');
+                document.getElementById('modo-selection-screen')?.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+            }
 
         } catch (error) {
             console.error("Erro ao carregar pauta:", error);
