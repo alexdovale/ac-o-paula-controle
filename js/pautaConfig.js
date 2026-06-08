@@ -104,15 +104,17 @@ export const PautaConfigService = {
             document.getElementById('create-pauta-modal').classList.add('hidden');
         });
 
+        // CORRIGIDO: validação de unidade ignora modo evento
         document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
+            const modoEvento = this._app?.currentMode === 'evento';
             const unidade = document.getElementById('create-pauta-unidade-select')?.value;
             const dataOp = document.getElementById('create-pauta-date-input')?.value;
             const name = document.getElementById('create-pauta-name-input').value.trim();
-            
-            if (!unidade) { showNotification("Selecione a Unidade Vinculada.", "error"); return; }
+
+            if (!modoEvento && !unidade) { showNotification("Selecione a Unidade Vinculada.", "error"); return; }
             if (!name) { showNotification("O nome da pauta não pode ser vazio.", "error"); return; }
             if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
-            
+
             document.getElementById('create-pauta-modal').classList.add('hidden');
             document.getElementById('ordem-atendimento-modal').classList.remove('hidden');
         });
@@ -168,19 +170,19 @@ export const PautaConfigService = {
 
     _abrirModalCriacao(type) {
         const app = this._app;
-        
+
         let createModal = document.getElementById('create-pauta-modal');
         if (!createModal) {
             if (app && typeof app.abrirModalCriarPauta === 'function') {
-                app.tipoPautaSelecionado = type; 
-                app.abrirModalCriarPauta(); 
-                createModal = document.getElementById('create-pauta-modal'); 
+                app.tipoPautaSelecionado = type;
+                app.abrirModalCriarPauta();
+                createModal = document.getElementById('create-pauta-modal');
             }
         }
 
         if (!createModal) {
             console.error("Modal 'create-pauta-modal' não foi encontrado ou gerado.");
-            return; 
+            return;
         }
 
         createModal.dataset.pautaType = type;
@@ -196,13 +198,18 @@ export const PautaConfigService = {
             }
         }
 
-        // 1. Injetar Unidade (Antes do nome)
+        // CORRIGIDO: esconde campo de órgão/integração em modo evento
+        const isEvento = app?.currentMode === 'evento';
+        const orgaoWrapper = document.getElementById('orgao-integration-wrapper');
+        if (orgaoWrapper) orgaoWrapper.classList.toggle('hidden', isEvento);
+
+        // 1. Injetar Unidade (apenas no modo normal)
         this._injetarSeletorUnidade();
 
-        // 2. Injetar Campo de Data (Depois do nome)
+        // 2. Injetar Campo de Data
         this._injetarCampoData();
 
-        // 3. Injetar Modo Evento/Normal (Depois da data)
+        // 3. Injetar Seletor de Modo/Tipo
         this._adicionarSelectorModo();
 
         createModal.classList.remove('hidden');
@@ -226,10 +233,20 @@ export const PautaConfigService = {
         `).join('');
     },
 
+    // CORRIGIDO: modo evento não injeta nem exige unidade
     async _injetarSeletorUnidade() {
         const app = this._app;
+
+        // NOVO: se for modo evento, remove o container de unidade se existir e sai
+        const isEvento = app?.currentMode === 'evento';
+        if (isEvento) {
+            const existing = document.getElementById('pauta-unidade-container');
+            if (existing) existing.remove();
+            return;
+        }
+
         let unidadeContainer = document.getElementById('pauta-unidade-container');
-        
+
         if (!unidadeContainer) {
             const nameInput = document.getElementById('create-pauta-name-input');
             if (!nameInput) return;
@@ -248,7 +265,7 @@ export const PautaConfigService = {
         }
 
         const select = document.getElementById('create-pauta-unidade-select');
-        
+
         try {
             const authUser = app.auth.currentUser;
             if (!authUser) return;
@@ -260,9 +277,9 @@ export const PautaConfigService = {
             const todasUnidades = snap.docs.map(d => ({ id: d.id, ...d.data() }));
 
             let userUnits = [];
-            
+
             if (userData?.role === 'superadmin') {
-                userUnits = todasUnidades; 
+                userUnits = todasUnidades;
             } else if (userData?.unidades && userData.unidades.length > 0) {
                 const linkedIds = userData.unidades.map(u => u.unidadeId || u.id);
                 userUnits = todasUnidades.filter(u => linkedIds.includes(u.id));
@@ -283,7 +300,7 @@ export const PautaConfigService = {
     // INJETA O CAMPO DE DATA SE ELE NÃO EXISTIR NO HTML ORIGINAL
     _injetarCampoData() {
         let dateInput = document.getElementById('create-pauta-date-input');
-        
+
         if (!dateInput) {
             const nameInput = document.getElementById('create-pauta-name-input');
             if (nameInput) {
@@ -294,7 +311,6 @@ export const PautaConfigService = {
                     <label class="block text-sm font-medium text-gray-700 mb-1">📅 Data de Operação <span class="text-red-500">*</span></label>
                     <input type="date" id="create-pauta-date-input" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                 `;
-                // Insere logo abaixo do nome da pauta
                 nameInput.parentNode.insertBefore(dateContainer, nameInput.nextSibling);
                 dateInput = document.getElementById('create-pauta-date-input');
             }
@@ -307,19 +323,19 @@ export const PautaConfigService = {
     },
 
     _adicionarSelectorModo() {
-        const modoAtual = this._app?.currentMode || 'normal'; 
+        const modoAtual = this._app?.currentMode || 'normal';
         let modoContainer = document.getElementById('pauta-modo-container');
-        
+
         if (!modoContainer) {
             const dateInput = document.getElementById('create-pauta-date-input');
             const pai = dateInput?.parentNode || document.getElementById('create-pauta-name-input')?.parentNode;
-            
+
             if (!pai) return;
-            
+
             modoContainer = document.createElement('div');
             modoContainer.id = 'pauta-modo-container';
             modoContainer.className = 'mb-4 sm:mb-6 mt-4';
-            
+
             if (dateInput) {
                 dateInput.insertAdjacentElement('afterend', modoContainer);
             } else {
@@ -384,21 +400,27 @@ export const PautaConfigService = {
     async criarPauta() {
         const app = this._app;
         const user = app.auth.currentUser;
-    
+
         const pautaName = document.getElementById('create-pauta-name-input').value.trim();
         const pautaType = document.getElementById('create-pauta-modal').dataset.pautaType;
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value;
-        
-        const unidadeSelect = document.getElementById('create-pauta-unidade-select');
-        const unidadeId = unidadeSelect ? unidadeSelect.value : null;
-        const unidadeNome = (unidadeSelect && unidadeId) ? unidadeSelect.options[unidadeSelect.selectedIndex].dataset.nome : null;
 
-        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value 
-                             || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value 
+        // CORRIGIDO: detecta modo evento
+        const isEvento = app?.currentMode === 'evento';
+
+        const unidadeSelect = document.getElementById('create-pauta-unidade-select');
+        const unidadeId = (!isEvento && unidadeSelect) ? unidadeSelect.value : null;
+        const unidadeNome = (!isEvento && unidadeSelect && unidadeId)
+            ? unidadeSelect.options[unidadeSelect.selectedIndex].dataset.nome
+            : null;
+
+        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value
+                             || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value
                              || 'normal';
-    
-        if (!unidadeId) {
+
+        // CORRIGIDO: unidade só obrigatória no modo normal
+        if (!isEvento && !unidadeId) {
             showNotification("Por favor, selecione uma Unidade Vinculada.", "error");
             return;
         }
@@ -412,20 +434,21 @@ export const PautaConfigService = {
             showNotification("A Data de Operação é obrigatória.", "error");
             return;
         }
-    
+
         const duplicado = await verificarNomeDuplicadoHoje(app.db, pautaName, user.uid);
         if (duplicado) {
             const continuar = confirm(`Já existe uma pauta chamada "${pautaName}" criada hoje. Deseja criar mesmo assim?`);
             if (!continuar) return;
         }
-    
+
         try {
             const novaPautaData = {
                 name: pautaName,
-                unidadeId: unidadeId,
-                unidadeNome: unidadeNome,
+                // CORRIGIDO: unidade nula em modo evento
+                unidadeId: isEvento ? null : unidadeId,
+                unidadeNome: isEvento ? null : unidadeNome,
                 type: pautaType || DEFAULTS.type,
-                tipo: tipoSelecionado, 
+                tipo: tipoSelecionado,
                 owner: user.uid,
                 members: [user.uid],
                 memberEmails: [user.email],
@@ -436,23 +459,23 @@ export const PautaConfigService = {
                 useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                 useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
             };
-    
+
             if (pautaType === 'multisala') {
                 novaPautaData.customRooms = app.customRoomsList;
                 novaPautaData.rooms = app.customRoomsList;
             }
-    
+
             const pautaRef = await addDoc(collection(app.db, "pautas"), novaPautaData);
-    
+
             await logAction(
                 app.db, app.auth,
                 app.currentUserName,
                 pautaRef.id,
                 'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) em ${unidadeNome} para ${dataOp} - Tipo: ${tipoSelecionado}`
+                `Criou pauta "${pautaName}" (${pautaType}) ${isEvento ? `[EVENTO: ${tipoSelecionado}]` : `em ${unidadeNome}`} para ${dataOp}`
             );
-    
-            if (orgaoId) {
+
+            if (orgaoId && !isEvento) {
                 showNotification("Sincronizando com base de dados Solar/Verde...", "info");
                 const { ApiIntegration } = await import('./api_integration.js');
                 const assistidosOficiais = await ApiIntegration.buscarDadosPautaOficial(orgaoId);
@@ -468,10 +491,10 @@ export const PautaConfigService = {
                 showNotification("Pauta criada com sucesso!", 'success');
                 playSound('success');
             }
-    
+
             this._limparFormCriacao();
-            app.showPautaSelectionScreen();
-    
+            await app.showPautaSelectionScreen();
+
         } catch (error) {
             console.error("Erro ao criar pauta:", error);
             showNotification("Erro ao criar pauta: " + error.message, "error");
@@ -482,6 +505,12 @@ export const PautaConfigService = {
         document.getElementById('create-pauta-name-input').value = '';
         const orgaoInput = document.getElementById('select-orgao-integracao');
         if (orgaoInput) orgaoInput.value = '';
+
+        // Remove containers injetados dinamicamente para evitar duplicação
+        document.getElementById('pauta-unidade-container')?.remove();
+        document.getElementById('pauta-data-container')?.remove();
+        document.getElementById('pauta-modo-container')?.remove();
+
         document.getElementById('delegation-flow-modal').classList.add('hidden');
         document.getElementById('create-pauta-modal').classList.add('hidden');
         document.getElementById('ordem-atendimento-modal').classList.add('hidden');
@@ -541,14 +570,14 @@ export const PautaConfigService = {
         const nome = prompt("Nome do template:");
         if (!nome || !nome.trim()) return;
 
-        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value 
-                             || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value 
+        const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value
+                             || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value
                              || DEFAULTS.tipo;
 
         const template = {
             id: Date.now().toString(),
             nome: nome.trim(),
-            tipo: tipoSelecionado, 
+            tipo: tipoSelecionado,
             type: document.getElementById('create-pauta-modal')?.dataset.pautaType || DEFAULTS.type,
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
@@ -624,7 +653,7 @@ export const PautaConfigService = {
                 const novaPauta = {
                     name: item.name,
                     type: item.type || DEFAULTS.type,
-                    tipo: item.tipo || DEFAULTS.tipo, 
+                    tipo: item.tipo || DEFAULTS.tipo,
                     owner: user.uid,
                     members: [user.uid],
                     memberEmails: [user.email],
@@ -652,7 +681,7 @@ export const PautaConfigService = {
 
         showNotification(`${criadas} de ${lista.length} pautas criadas com sucesso!`, criadas === lista.length ? 'success' : 'warning');
         playSound('success');
-        app.showPautaSelectionScreen();
+        await app.showPautaSelectionScreen();
     },
 
     // ── BUSCAR PAUTAS DO DIA ───────────────────────────────────────────────────
@@ -666,7 +695,7 @@ export const PautaConfigService = {
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
                     if (!p.tipo) p.tipo = DEFAULTS.tipo;
-                    
+
                     const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
                     const ehHoje = dataOp === hoje;
                     const isAdmin = role === 'admin' || role === 'superadmin';
