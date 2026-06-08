@@ -242,9 +242,9 @@ export const UIService = {
                 } else {
                     const opcoesUser = userUnidades.map(u => {
                         const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
-                        return `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
+                        return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
                     }).join('');
-                    selectUnidade.innerHTML = `<option value="todas"> Todas as origens</option>` + opcoesUser;
+                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as origens</option>` + opcoesUser;
                 }
             }
         }
@@ -749,7 +749,7 @@ export const UIService = {
                     <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
                             <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
-                                <span> </span> ${escapeHTML(roomName)}
+                                <span>🏢</span> ${escapeHTML(roomName)}
                             </h4>
                             <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
                         </div>
@@ -1691,11 +1691,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             // CORRIGIDO: modo evento não mostra unidade
             let originHtml = '';
             if (isEvento) {
-                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span> </span> </h2>`;
+                const tipoLabel = {
+                    'mutirao': '🤝 Mutirão',
+                    'mutirão': '🤝 Mutirão',
+                    'plantao': '🚨 Plantão',
+                    'acao_social': '❤️ Ação Social'
+                }[String(pauta.tipo || '').toLowerCase()] || '⭐ Evento';
+                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span>⭐</span> ${tipoLabel}</h2>`;
             } else {
                 const nomeUnidade = pauta.unidadeNome || pauta.origin || pauta.orgao;
                 originHtml = nomeUnidade
-                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span> </span> ${escapeHTML(nomeUnidade)}</h2>`
+                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span>🏢</span> ${escapeHTML(nomeUnidade)}</h2>`
                     : `<h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1"><span>📋</span> Pauta Normal</h2>`;
             }
 
@@ -1746,24 +1752,12 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 app.deletePauta(pauta.id, pauta.name);
             });
 
-            // CÓDIGO NOVO CORRIGIDO
-            card.onclick = async () => {
+            card.onclick = () => {
                 if (isExpired) {
                     this.showExpiredPautaModal(pauta, app);
                     return;
                 }
-                
-                // NOVO: Delegamos a abertura da pauta para o roteador oficial
-                if (app.router) {
-                    await app.router.navigate('app', { 
-                        pautaId: pauta.id, 
-                        pautaName: pauta.name, 
-                        pautaType: pauta.type || 'normal' 
-                    }, true);
-                } else {
-                    // Fallback de segurança caso o router engasgue
-                    app.loadPauta(pauta.id, pauta.name, pauta.type);
-                }
+                app.loadPauta(pauta.id, pauta.name, pauta.type);
             };
 
             container.appendChild(card);
