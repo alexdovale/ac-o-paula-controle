@@ -6,6 +6,7 @@ import {
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { logAction } from './admin.js';
 import { PautaService } from './pauta.js';
+import { ROUTES } from './router.js';
 
 // ─── CONSTANTES ────────────────────────────────────────────────────────────────
 
@@ -493,7 +494,11 @@ export const PautaConfigService = {
             }
 
             this._limparFormCriacao();
-            await app.showPautaSelectionScreen();
+            if (app.router) {
+                await app.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+            } else if (typeof app.showPautaSelectionScreen === 'function') {
+                await app.showPautaSelectionScreen();
+            }
 
         } catch (error) {
             console.error("Erro ao criar pauta:", error);
@@ -681,7 +686,11 @@ export const PautaConfigService = {
 
         showNotification(`${criadas} de ${lista.length} pautas criadas com sucesso!`, criadas === lista.length ? 'success' : 'warning');
         playSound('success');
-        await app.showPautaSelectionScreen();
+        if (app.router) {
+            await app.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+        } else if (typeof app.showPautaSelectionScreen === 'function') {
+            await app.showPautaSelectionScreen();
+        }
     },
 
     // ── BUSCAR PAUTAS DO DIA ───────────────────────────────────────────────────
