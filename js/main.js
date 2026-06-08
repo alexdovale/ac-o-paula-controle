@@ -461,7 +461,7 @@ class SIGEPApp {
 
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
             this.router.navigate(ROUTES.PAUTA_SELECTION);
-        });        
+        });       
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
             await this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
@@ -2033,22 +2033,22 @@ class SIGEPApp {
                 }
             }
 
-            // ...
-        this.setupRealtimeListener(pautaId);
-        
-        if (typeof CollaboratorService?.setupListener === 'function') {
-            CollaboratorService.setupListener(this, pautaId);
+            this.setupRealtimeListener(pautaId);
+            
+            if (typeof CollaboratorService?.setupListener === 'function') {
+                CollaboratorService.setupListener(this, pautaId);
+            }
+            
+            this.iniciarMonitorEnvelopes();
+
+            // REMOVIDO: await this.router.navigate(ROUTES.APP);
+            // O handler ROUTES.APP já cuida de mostrar a tela após loadPauta terminar
+
+        } catch (error) {
+            console.error("Erro ao carregar pauta:", error);
+            showNotification("Erro ao carregar pauta", "error");
         }
-        
-        this.iniciarMonitorEnvelopes();
-
-        // REMOVIDO: await this.router.navigate(ROUTES.APP);
-        // O handler ROUTES.APP já cuida de mostrar a tela após loadPauta terminar
-
-    } catch (error) {
-        console.error("Erro ao carregar pauta:", error);
-        showNotification("Erro ao carregar pauta", "error");
-    },
+    }
 
     _teardownPauta() {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
