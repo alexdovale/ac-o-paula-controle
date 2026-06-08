@@ -2033,20 +2033,21 @@ class SIGEPApp {
                 }
             }
 
-            this.setupRealtimeListener(pautaId);
-            
-            if (typeof CollaboratorService?.setupListener === 'function') {
-                CollaboratorService.setupListener(this, pautaId);
-            }
-            
-            this.iniciarMonitorEnvelopes();
-
-            // O handler ROUTES.APP já faz UIService.showScreen('app')
-            await this.router.navigate(ROUTES.APP);
-        } catch (error) {
-            console.error("Erro ao carregar pauta:", error);
-            showNotification("Erro ao carregar pauta", "error");
+            // ...
+        this.setupRealtimeListener(pautaId);
+        
+        if (typeof CollaboratorService?.setupListener === 'function') {
+            CollaboratorService.setupListener(this, pautaId);
         }
+        
+        this.iniciarMonitorEnvelopes();
+
+        // REMOVIDO: await this.router.navigate(ROUTES.APP);
+        // O handler ROUTES.APP já cuida de mostrar a tela após loadPauta terminar
+
+    } catch (error) {
+        console.error("Erro ao carregar pauta:", error);
+        showNotification("Erro ao carregar pauta", "error");
     }
 
     _teardownPauta() {
