@@ -172,11 +172,14 @@ class SIGEPApp {
             <div>
                 <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
                 <div class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead class="bg-slate-100">
-                            <tr><th class="p-3 text-left">Usuário</th><th class="p-3 text-left">E-mail</th><th class="p-3 text-center">Unidades</th><th class="p-3 text-center">Perfil</th><th class="p-3 text-center">Ações</th></tr></thead>
-                            <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
-                        </table>
+                    <thead class="bg-slate-100">
+    <tr>
+        <th class="p-3 text-left">Usuário / Perfil Atual</th>
+        <th class="p-3 text-center">Unidades</th>
+        <th class="p-3 text-center">Alterar Permissão</th>
+        <th class="p-3 text-center">Ações</th>
+    </tr>
+</thead>
                 </div>
                 <div id="pagination-usuarios" class="mt-4"></div>
             </div>
