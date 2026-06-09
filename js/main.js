@@ -101,7 +101,29 @@ class SIGEPApp {
         }
     }
 
-
+    // ============================================================
+    // MÉTODOS DE COMPATIBILIDADE LEGADA (ROUTER WRAPPERS)
+    // Previne crashes se arquivos como auth.js tentarem chamar métodos antigos
+    // ============================================================
+    showPautaSelectionScreen() {
+        if (this.router) this.router.navigate(ROUTES.PAUTA_SELECTION);
+    }
+    
+    showAppScreen() {
+        if (this.router) this.router.navigate(ROUTES.APP);
+    }
+    
+    showLoginScreen() {
+        if (this.router) this.router.navigate(ROUTES.LOGIN);
+    }
+    
+    showDashboardScreen() {
+        if (this.router) this.router.navigate(ROUTES.DASHBOARD);
+    }
+    
+    showRecepcaoCentralScreen() {
+        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
+    }
 
     // ============================================================
     // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
@@ -1833,19 +1855,61 @@ class SIGEPApp {
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
         
-        const userDoc = await getDoc(doc(this.db, "users", user.uid));
-        if (userDoc.exists()) {
-            const userData = userDoc.data();
-            this.currentUser = { ...this.currentUser, ...userData };
+        try {
+            const userDoc = await getDoc(doc(this.db, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                this.currentUser = { ...this.currentUser, ...userData };
+            }
+        } catch (err) {
+            console.warn("Aviso: erro ao buscar dados adicionais do usuário.", err);
         }
     
         try {
-            const q = query(
-                collection(this.db, "pautas"),
-                where("members", "array-contains", user.uid)
-            );
-            const snapshot = await getDocs(q);
-            let pautas = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            let pautasMap = new Map();
+            let success = false;
+            
+            // TENTATIVA 1: Filtro padrão (Membros da pauta)
+            // Muitos firestores barram se a regra exige ser o owner e a query usar array-contains
+            try {
+                const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
+                const snapMembers = await getDocs(qMembers);
+                snapMembers.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+                success = true;
+            } catch (err) {
+                console.warn("Tentativa por 'members' falhou. Tentando próxima...", err.message);
+            }
+            
+            // TENTATIVA 2: Filtro secundário (Dono da pauta)
+            // Se as regras do Firestore barram 'array-contains', a regra owner == uid é a mais forte.
+            if (!success) {
+                try {
+                    const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
+                    const snapOwner = await getDocs(qOwner);
+                    snapOwner.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+                    success = true;
+                } catch (err) {
+                    console.warn("Tentativa por 'owner' falhou.", err.message);
+                }
+            }
+            
+            // TENTATIVA 3: Se for admin/superadmin e nada mais funcionou, força carregar tudo
+            const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+            if (!success && isAdmin) {
+                try {
+                    const snapAll = await getDocs(collection(this.db, "pautas"));
+                    snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+                    success = true;
+                } catch (err) {
+                    console.warn("Tentativa full admin falhou.", err.message);
+                }
+            }
+            
+            if (!success) {
+                throw new Error("Você não possui permissão para acessar as pautas. Verifique com um administrador.");
+            }
+            
+            let pautas = Array.from(pautasMap.values());
             
             const modoAtual = this.currentMode;
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
@@ -1892,9 +1956,9 @@ class SIGEPApp {
                         
                     case 'unidades':
                         const userUnidades = this.currentUser?.unidades || [];
-                        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+                        const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
                         
-                        if (!isAdmin && userUnidades.length > 0) {
+                        if (!isAdminFiltro && userUnidades.length > 0) {
                             const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
                             filteredPautas = filteredPautas.filter(pauta => {
                                 const unidadePauta = pauta.unidadeNome;
@@ -1967,8 +2031,8 @@ class SIGEPApp {
             UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
             
         } catch (error) {
-            console.error("Erro ao carregar pautas:", error);
-            if (pautasList) pautasList.innerHTML = '<p class="col-span-full text-center text-red-500">Erro ao carregar pautas</p>';
+            console.error("Erro fatal ao carregar pautas:", error);
+            if (pautasList) pautasList.innerHTML = `<p class="col-span-full text-center text-red-500">Erro: ${error.message}</p>`;
         }
     }
 
