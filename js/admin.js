@@ -1,3 +1,4 @@
+
 // js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
 
 import { 
@@ -953,66 +954,98 @@ function renderPendentesList(db) {
     });
 }
 
+// NOVA VERSÃO DE renderAprovadosTable (com badge colorido, select com emojis, 3 botões e linha vermelha)
 function renderAprovadosTable(db) {
     const tableBody = document.getElementById('approved-users-list');
     if (!tableBody) return;
-    
+
     const aprovados = cachedUsuarios;
     const { page, pageSize } = adminFilters.usuarios;
     const start = (page - 1) * pageSize;
     const paginated = aprovados.slice(start, start + pageSize);
     const totalPages = Math.ceil(aprovados.length / pageSize);
-    
+
     if (aprovados.length === 0) {
         tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
     }
-    
+
+    const roleConfig = {
+        'superadmin': { label: '⭐ Superadmin', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+        'admin':      { label: '🛡️ Admin',      color: 'bg-blue-100 text-blue-800 border-blue-300'   },
+        'user':       { label: '👤 Usuário',    color: 'bg-green-100 text-green-800 border-green-300' },
+        'apoio':      { label: '🤝 Apoio',      color: 'bg-amber-100 text-amber-800 border-amber-300' },
+        'suspended':  { label: '🚫 Suspenso',   color: 'bg-red-100 text-red-800 border-red-300'       },
+    };
+
     tableBody.innerHTML = paginated.map(user => {
+        const cfg = roleConfig[user.role] || roleConfig['user'];
         const unidadesCount = user.unidades?.length || 0;
-        const statusBadge = user.role === 'suspended' ? '<span class="bg-red-100 text-red-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Suspenso</span>' : '<span class="bg-green-100 text-green-800 text-[9px] px-2 py-0.5 rounded-full ml-2">Ativo</span>';
-        
+        const isSuspended = user.role === 'suspended' || user.status === 'suspended';
+        const rowClass = isSuspended ? 'opacity-60 bg-red-50' : 'hover:bg-gray-50';
+
         return `
-            <tr class="border-b hover:bg-gray-50 transition">
-                <td class="px-3 py-3"><p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>${statusBadge}</td>
-                <td class="px-3 py-3 text-xs text-gray-500">${escapeHTML(user.email)}</td>
+            <tr class="border-b ${rowClass} transition">
+                <!-- Nome + email + badge role atual -->
+                <td class="px-3 py-3">
+                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>
+                    <p class="text-xs text-gray-400">${escapeHTML(user.email)}</p>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border mt-1 ${cfg.color}">
+                        ${cfg.label}
+                    </span>
+                 </td>
+
+                <!-- Unidades vinculadas -->
                 <td class="px-3 py-3 text-center">
-                    <button class="btn-gerenciar-unidades bg-indigo-600 text-white px-3 py-1.5 rounded text-[10px] hover:bg-indigo-700 flex items-center gap-1 mx-auto"
-                        data-userid="${user.id}">
-                         ${unidadesCount}
+                    <button class="btn-gerenciar-unidades bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 mx-auto transition"
+                        data-userid="${user.id}" title="Gerenciar unidades vinculadas">
+                        🏢 ${unidadesCount} unidade(s)
                     </button>
-                </td>
-                <td class="px-3 py-3 text-center">
-                    <select id="role-select-${user.id}" class="text-[10px] border rounded p-1 bg-gray-50">
-                        <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
-                        <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
-                        <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
-                        <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
+                 </td>
+
+                <!-- Select de permissão -->
+                <td class="px-3 py-3">
+                    <select id="role-select-${user.id}" class="w-full text-xs border rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold cursor-pointer">
+                        <option value="user"       ${user.role === 'user'       ? 'selected' : ''}>👤 Usuário</option>
+                        <option value="apoio"      ${user.role === 'apoio'      ? 'selected' : ''}>🤝 Apoio</option>
+                        <option value="admin"      ${user.role === 'admin'      ? 'selected' : ''}>🛡️ Admin</option>
+                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
+                        <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
                     </select>
-                </td>
-                <td class="px-3 py-3 text-center">
-                    <div class="flex items-center justify-center gap-2">
-                        <button onclick="window.updateUserRole('${user.id}')" class="bg-blue-600 text-white px-2 py-1 rounded text-[9px] font-bold">SALVAR</button>
-                        <button onclick="window.deleteUser('${user.id}')" class="bg-gray-100 text-red-500 px-2 py-1 rounded text-[9px] font-bold">EXCLUIR</button>
+                 </td>
+
+                <!-- Ações -->
+                <td class="px-3 py-3">
+                    <div class="flex flex-col gap-1.5 min-w-[110px]">
+                        <button onclick="window.updateUserRole('${user.id}')"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition shadow-sm">
+                            💾 Salvar Perfil
+                        </button>
+                        <button onclick="window.toggleSuspendUser('${user.id}', ${isSuspended})"
+                            class="${isSuspended
+                                ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-300'
+                                : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300'} border px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
+                            ${isSuspended ? '✅ Reativar' : '⏸️ Suspender'}
+                        </button>
+                        <button onclick="window.deleteUser('${user.id}')"
+                            class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
+                            🗑️ Excluir
+                        </button>
                     </div>
-                </td>
-            </tr>
+                 </td>
+              </tr>
         `;
     }).join('');
-    
+
+    // Listener dos botões de unidade
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
-            const userId = btn.dataset.userid;
-            if (globalApp) {
-                abrirGerenciarUnidadesUsuario(globalApp, userId);
-            } else {
-                showNotification("Erro: app não inicializado", "error");
-            }
+            if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, btn.dataset.userid);
+            else showNotification("Erro: app não inicializado", "error");
         });
     });
-    
+
     renderPageSizeSelector('page-size-usuarios', pageSize, (newSize) => {
         adminFilters.usuarios.pageSize = newSize;
         adminFilters.usuarios.page = 1;
@@ -1040,6 +1073,24 @@ export const updateUserRole = async (db, userId) => {
         showNotification(`Cargo atualizado!`);
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
+};
+
+// NOVA FUNÇÃO toggleSuspendUser (adicionada logo após updateUserRole)
+export const toggleSuspendUser = async (db, userId, isSuspended) => {
+    const novoRole   = isSuspended ? 'user'      : 'suspended';
+    const novoStatus = isSuspended ? 'approved'  : 'suspended';
+    const msg        = isSuspended ? 'Usuário reativado com sucesso!' : 'Usuário suspenso!';
+    try {
+        await updateDoc(doc(db, "users", userId), {
+            role: novoRole,
+            status: novoStatus,
+            updatedAt: new Date().toISOString()
+        });
+        showNotification(msg, isSuspended ? 'success' : 'warning');
+        await loadUsersList(db);
+    } catch (e) {
+        showNotification("Erro ao alterar status.", "error");
+    }
 };
 
 export const deleteUser = async (db, userId) => {
@@ -1079,7 +1130,7 @@ export const loadAuditLogs = async (db) => {
     if (!logsContainer || !tableBody) return;
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></table>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
@@ -1161,7 +1212,7 @@ function renderLogsTable(db) {
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-              </tr>
+               </tr>
         `;
     }).join('');
     
@@ -1360,6 +1411,7 @@ export const setupAdminEvents = (app) => {
     }
 };
 
+// Globals
 window.approveUser = (userId) => {
     if (globalApp) approveUser(globalApp.db, userId);
     else console.error("App não inicializado");
@@ -1367,6 +1419,11 @@ window.approveUser = (userId) => {
 
 window.updateUserRole = (userId) => {
     if (globalApp) updateUserRole(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.toggleSuspendUser = (userId, isSuspended) => {
+    if (globalApp) toggleSuspendUser(globalApp.db, userId, isSuspended);
     else console.error("App não inicializado");
 };
 
@@ -1449,6 +1506,7 @@ export const AdminService = {
     populateUserFilter,
     approveUser,
     updateUserRole,
+    toggleSuspendUser,
     deleteUser,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
