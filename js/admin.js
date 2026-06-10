@@ -954,7 +954,9 @@ function renderPendentesList(db) {
     });
 }
 
+// ============================================================
 // NOVA VERSÃO DE renderAprovadosTable (com badge colorido, select com emojis, 3 botões e linha vermelha)
+// ============================================================
 function renderAprovadosTable(db) {
     const tableBody = document.getElementById('approved-users-list');
     if (!tableBody) return;
@@ -966,7 +968,8 @@ function renderAprovadosTable(db) {
     const totalPages = Math.ceil(aprovados.length / pageSize);
 
     if (aprovados.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="5" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
+        // colspan corrigido para 4 (número de colunas da tabela)
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
     }
@@ -994,7 +997,7 @@ function renderAprovadosTable(db) {
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border mt-1 ${cfg.color}">
                         ${cfg.label}
                     </span>
-                 </td>
+                  </td>
 
                 <!-- Unidades vinculadas -->
                 <td class="px-3 py-3 text-center">
@@ -1002,7 +1005,7 @@ function renderAprovadosTable(db) {
                         data-userid="${user.id}" title="Gerenciar unidades vinculadas">
                         🏢 ${unidadesCount} unidade(s)
                     </button>
-                 </td>
+                  </td>
 
                 <!-- Select de permissão -->
                 <td class="px-3 py-3">
@@ -1013,7 +1016,7 @@ function renderAprovadosTable(db) {
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
                         <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
                     </select>
-                 </td>
+                  </td>
 
                 <!-- Ações -->
                 <td class="px-3 py-3">
@@ -1033,7 +1036,7 @@ function renderAprovadosTable(db) {
                             🗑️ Excluir
                         </button>
                     </div>
-                 </td>
+                  </td>
               </tr>
         `;
     }).join('');
@@ -1075,7 +1078,9 @@ export const updateUserRole = async (db, userId) => {
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
 
+// ============================================================
 // NOVA FUNÇÃO toggleSuspendUser (adicionada logo após updateUserRole)
+// ============================================================
 export const toggleSuspendUser = async (db, userId, isSuspended) => {
     const novoRole   = isSuspended ? 'user'      : 'suspended';
     const novoStatus = isSuspended ? 'approved'  : 'suspended';
@@ -1411,7 +1416,9 @@ export const setupAdminEvents = (app) => {
     }
 };
 
-// Globals
+// ============================================================
+// GLOBAIS
+// ============================================================
 window.approveUser = (userId) => {
     if (globalApp) approveUser(globalApp.db, userId);
     else console.error("App não inicializado");
