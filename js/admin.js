@@ -952,6 +952,9 @@ function renderPendentesList(db) {
     });
 }
 
+// ============================================================
+// NOVA VERSÃO DE renderAprovadosTable (com badge colorido, select com emojis, 3 botões e linha vermelha)
+// ============================================================
 function renderAprovadosTable(db) {
     const tableBody = document.getElementById('approved-users-list');
     if (!tableBody) return;
@@ -963,7 +966,7 @@ function renderAprovadosTable(db) {
     const totalPages = Math.ceil(aprovados.length / pageSize);
 
     if (aprovados.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td</tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
     }
@@ -1008,22 +1011,18 @@ function renderAprovadosTable(db) {
                 </td>
                 <td class="px-3 py-3">
                     <div class="flex flex-col gap-1.5 min-w-[110px]">
-                        <button
-                            class="btn-salvar-perfil bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition shadow-sm"
-                            data-userid="${user.id}">
+                        <button onclick="window.updateUserRole('${user.id}')"
+                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition shadow-sm">
                             💾 Salvar Perfil
                         </button>
-                        <button
-                            class="btn-toggle-suspend ${isSuspended
+                        <button onclick="window.toggleSuspendUser('${user.id}', ${isSuspended})"
+                            class="${isSuspended
                                 ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-300'
-                                : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300'} border px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition"
-                            data-userid="${user.id}"
-                            data-suspended="${isSuspended}">
+                                : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300'} border px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
                             ${isSuspended ? '✅ Reativar' : '⏸️ Suspender'}
                         </button>
-                        <button
-                            class="btn-deletar-usuario bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition"
-                            data-userid="${user.id}">
+                        <button onclick="window.deleteUser('${user.id}')"
+                            class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
                             🗑️ Excluir
                         </button>
                     </div>
@@ -1031,39 +1030,6 @@ function renderAprovadosTable(db) {
             </tr>
         `;
     }).join('');
-
-    // ── Event listeners via delegação — sem onclick inline ──────────────────
-    tableBody.querySelectorAll('.btn-salvar-perfil').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!globalApp) {
-                showNotification("Erro interno: app não inicializado. Recarregue a página.", "error");
-                console.error("[btn-salvar-perfil] globalApp é null");
-                return;
-            }
-            updateUserRole(globalApp.db, btn.dataset.userid);
-        });
-    });
-
-    tableBody.querySelectorAll('.btn-toggle-suspend').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!globalApp) {
-                showNotification("Erro interno: app não inicializado. Recarregue a página.", "error");
-                return;
-            }
-            const isSuspended = btn.dataset.suspended === 'true';
-            toggleSuspendUser(globalApp.db, btn.dataset.userid, isSuspended);
-        });
-    });
-
-    tableBody.querySelectorAll('.btn-deletar-usuario').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (!globalApp) {
-                showNotification("Erro interno: app não inicializado. Recarregue a página.", "error");
-                return;
-            }
-            deleteUser(globalApp.db, btn.dataset.userid);
-        });
-    });
 
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
@@ -1086,37 +1052,457 @@ function renderAprovadosTable(db) {
 export const approveUser = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
+        await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
+        showNotification("Usuário aprovado!");
+        await loadUsersList(db);
+    } catch (e) { showNotification("Erro ao aprovar.", "error"); }
+};
+
+export const updateUserRole = async (db, userId) => {
+    try {
+        const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
+        await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
+        showNotification(`Cargo atualizado!`);
+        await loadUsersList(db);
+    } catch (e) { showNotification("Erro ao atualizar.", "error"); }
+};
+
+export const toggleSuspendUser = async (db, userId, isSuspended) => {
+    const novoRole   = isSuspended ? 'user'      : 'suspended';
+    const novoStatus = isSuspended ? 'approved'  : 'suspended';
+    const msg        = isSuspended ? 'Usuário reativado com sucesso!' : 'Usuário suspenso!';
+    try {
         await updateDoc(doc(db, "users", userId), {
-            status: 'approved',
-            role: role,
-            approvedAt: new Date().toISOString()
+            role: novoRole,
+            status: novoStatus,
+            updatedAt: new Date().toISOString()
         });
-        showNotification("Usuário aprovado!", "success");
+        showNotification(msg, isSuspended ? 'success' : 'warning');
         await loadUsersList(db);
     } catch (e) {
-        console.error("[approveUser]", e);
-        showNotification("Erro ao aprovar: " + e.message, "error");
+        showNotification("Erro ao alterar status.", "error");
     }
 };
 
-// ── CORREÇÃO PRINCIPAL: busca o select com segurança e loga erros ──────────
-export const updateUserRole = async (db, userId) => {
+export const deleteUser = async (db, userId) => {
+    if (!confirm("Excluir este usuário?")) return;
     try {
-        const select = document.getElementById(`role-select-${userId}`);
+        await deleteDoc(doc(db, "users", userId));
+        showNotification("Usuário removido.");
+        await loadUsersList(db);
+    } catch (e) { showNotification("Erro ao remover.", "error"); }
+};
 
-        if (!select) {
-            showNotification("Erro: elemento de perfil não encontrado. Recarregue a lista.", "error");
-            console.error(`[updateUserRole] #role-select-${userId} não encontrado no DOM`);
+export const loadLogFilters = async (db) => {
+    try {
+        const userSelect = document.getElementById('filter-log-user');
+        const actionSelect = document.getElementById('filter-log-action');
+        if (userSelect) {
+            const usersSnap = await getDocs(collection(db, "users"));
+            userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
+            usersSnap.forEach(doc => { const user = doc.data(); if (user.email) userSelect.appendChild(new Option(user.name || user.email, user.email)); });
+        }
+        if (actionSelect) {
+            const logsSnap = await getDocs(collection(db, "audit_logs"));
+            const actions = new Set();
+            logsSnap.forEach(doc => { const action = doc.data().action; if (action) actions.add(action); });
+            actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
+            Array.from(actions).sort().forEach(action => actionSelect.appendChild(new Option(action, action)));
+        }
+    } catch (error) { console.error("Erro ao carregar filtros de log:", error); }
+};
+
+export const loadAuditLogs = async (db) => {
+    const logsContainer = document.getElementById('audit-logs-container');
+    const tableBody = document.getElementById('audit-logs-table-body');
+    const pdfBtn = document.getElementById('export-audit-pdf-btn');
+    const filterSection = document.getElementById('audit-filters-section');
+    
+    if (!logsContainer || !tableBody) return;
+    if (filterSection) filterSection.classList.remove('hidden');
+    logsContainer.classList.remove('hidden');
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
+    if (pdfBtn) pdfBtn.classList.add('hidden');
+
+    try {
+        if (document.getElementById('filter-log-user')?.options.length <= 1) await loadLogFilters(db);
+
+        const logsRef = collection(db, "audit_logs");
+        const userFilter = document.getElementById('filter-log-user')?.value;
+        const actionFilter = document.getElementById('filter-log-action')?.value;
+        const startDate = document.getElementById('filter-log-start')?.value;
+        const endDate = document.getElementById('filter-log-end')?.value;
+
+        const q = query(logsRef, orderBy("timestamp", "desc"), limit(5000));
+        const snapshot = await getDocs(q);
+
+        let filteredLogs = [];
+        snapshot.forEach((docSnap) => {
+            const log = docSnap.data();
+            if (!log.timestamp) return;
+            if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
+            if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
+            if (startDate && log.timestamp < startDate) return;
+            if (endDate && log.timestamp > endDate + "T23:59:59") return;
+            filteredLogs.push(log);
+        });
+        
+        cachedLogs = filteredLogs;
+        renderLogsTable(db);
+        
+        if (pdfBtn && filteredLogs.length > 0) pdfBtn.classList.remove('hidden');
+        
+    } catch (error) {
+        console.error("Erro ao carregar logs:", error);
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td</tr>`;
+    }
+};
+
+function renderLogsTable(db) {
+    const tableBody = document.getElementById('audit-logs-table-body');
+    if (!tableBody) return;
+    
+    let logs = [...cachedLogs];
+    if (adminFilters.logs.search) {
+        const search = adminFilters.logs.search.toLowerCase();
+        logs = logs.filter(log => 
+            (log.userName || '').toLowerCase().includes(search) ||
+            (log.action || '').toLowerCase().includes(search) ||
+            (log.details || '').toLowerCase().includes(search)
+        );
+    }
+    
+    const { page, pageSize } = adminFilters.logs;
+    const start = (page - 1) * pageSize;
+    const paginated = logs.slice(start, start + pageSize);
+    const totalPages = Math.ceil(logs.length / pageSize);
+    
+    if (logs.length === 0) {
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado</td</tr>';
+        document.getElementById('pagination-logs')?.classList.add('hidden');
+        return;
+    }
+    
+    tableBody.innerHTML = paginated.map(log => {
+        let formattedDate = 'Data inválida';
+        try {
+            const date = new Date(log.timestamp);
+            if (!isNaN(date.getTime())) formattedDate = date.toLocaleString('pt-BR');
+        } catch (e) {}
+        
+        let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
+        const action = (log.action || '').toLowerCase();
+        if (action.includes('erro') || action.includes('error') || action.includes('falha')) actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
+        else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) actionColor = 'bg-red-100 text-red-700 border border-red-200';
+        else if (action.includes('create') || action.includes('criou') || action.includes('add')) actionColor = 'bg-green-100 text-green-700 border border-green-200';
+        else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) actionColor = 'bg-blue-100 text-blue-700 border border-blue-200';
+        
+        return `
+            <tr class="border-b hover:bg-gray-50 transition">
+                <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
+                <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
+                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
+                <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
+            </tr>
+        `;
+    }).join('');
+    
+    renderPageSizeSelector('page-size-logs', pageSize, (newSize) => {
+        adminFilters.logs.pageSize = newSize;
+        adminFilters.logs.page = 1;
+        renderLogsTable(db);
+    });
+    renderPagination('pagination-logs', page, totalPages, (newPage) => {
+        adminFilters.logs.page = newPage;
+        renderLogsTable(db);
+    });
+}
+
+export const setupAdminSearch = () => {
+    renderSearchInput('search-pendentes', 'Buscar usuário pendente...', (val) => {
+        adminFilters.pendentes.search = val;
+        adminFilters.pendentes.page = 1;
+        if (globalApp) loadUsersList(globalApp.db);
+    });
+    renderSearchInput('search-usuarios', 'Buscar usuário...', (val) => {
+        adminFilters.usuarios.search = val;
+        adminFilters.usuarios.page = 1;
+        if (globalApp) loadUsersList(globalApp.db);
+    });
+    renderSearchInput('search-logs', 'Buscar logs...', (val) => {
+        adminFilters.logs.search = val;
+        adminFilters.logs.page = 1;
+        if (globalApp) renderLogsTable(globalApp.db);
+    });
+};
+
+export const exportAuditLogsPDF = async (db) => {
+    showNotification("Gerando PDF da Auditoria...", "info");
+    try {
+        const { jsPDF } = window.jspdf;
+        const docPDF = new jsPDF({ orientation: 'landscape' });
+        const logs = cachedLogs;
+        if (logs.length === 0) { showNotification("Nenhum log para exportar.", "warning"); return; }
+        docPDF.setFontSize(18); docPDF.setTextColor(55, 65, 81);
+        docPDF.text("Relatorio de Auditoria - SIGEP", 14, 20);
+        
+        const body = logs.slice(0, 500).map(log => [
+            log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida',
+            `${log.userName || log.userEmail || 'Desconhecido'}`,
+            log.action || '-',
+            (log.details || '-').substring(0, 100)
+        ]);
+        docPDF.autoTable({ head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']], body: body, startY: 45, theme: 'striped' });
+        docPDF.save(`Auditoria_SIGEP_${new Date().toISOString().slice(0,10)}.pdf`);
+        showNotification("PDF gerado!");
+    } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
+};
+
+export const cleanupOldData = async (db) => {
+    if (!confirm("Isso apagará dados com mais de 7 dias. Confirmar?")) return;
+    try {
+        const limitDate = new Date();
+        limitDate.setDate(limitDate.getDate() - 7);
+        const pautas = await getDocs(collection(db, "pautas"));
+        let count = 0; let statsCount = 0;
+        for (const pautaDoc of pautas.docs) {
+            const pautaData = pautaDoc.data();
+            const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
+            const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
+            const snapshot = await getDocs(q);
+            if (!snapshot.empty) {
+                const stats = { pautaName: pautaData.name || 'Sem nome', creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido', dataReferencia: limitDate.toISOString(), diaSemana: limitDate.getDay(), total: snapshot.size, atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length, faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length, assuntos: {}, atendentes: {} };
+                snapshot.docs.forEach(d => {
+                    const data = d.data();
+                    const sub = data.subject || 'Não informado';
+                    stats.assuntos[sub] = (stats.assuntos[sub] || 0) + 1;
+                    let profissionalNome = 'Não atribuído';
+                    if (data.attendedBy) profissionalNome = typeof data.attendedBy === 'object' ? (data.attendedBy.nome || data.attendedBy.name) : data.attendedBy;
+                    if (profissionalNome) stats.atendentes[profissionalNome] = (stats.atendentes[profissionalNome] || 0) + 1;
+                });
+                await addDoc(collection(db, "estatisticas_permanentes"), stats);
+                statsCount++;
+                const batch = writeBatch(db);
+                snapshot.docs.forEach(d => batch.delete(d.ref));
+                await batch.commit();
+                count += snapshot.size;
+            }
+        }
+        showNotification(`Sucesso! ${count} registros limpos.`);
+        if (window.loadDashboardData) window.loadDashboardData();
+    } catch (error) { showNotification("Erro: " + error.message, "error"); }
+};
+
+export const loadDashboardData = async (db) => {
+    const start = document.getElementById('stats-filter-start')?.value;
+    const end = document.getElementById('stats-filter-end')?.value;
+    const userFilter = document.getElementById('stats-filter-user')?.value;
+    const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
+    
+    const resultsArea = document.getElementById('dashboard-results');
+    if (!resultsArea) return;
+
+    resultsArea.classList.remove('hidden');
+
+    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600 mt-2">Carregando dados do BI...</p></div>';
+    
+    try {
+        const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
+        if (snapshot.empty) {
+            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3><p class="text-sm text-gray-500">Nenhum dado permanente foi gerado ainda.</p></div>`;
             return;
         }
+        
+        let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+        let filteredData = [...rawData];
+        
+        if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
+        if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
+        if (userFilter && userFilter !== 'all') filteredData = filteredData.filter(d => d.creatorEmail === userFilter);
+        
+        let totalGeral = 0, totalAtendidos = 0, totalFaltosos = 0, mapAssuntos = {}, mapUsers = {};
+        
+        filteredData.forEach(d => {
+            totalGeral += d.total || 0; 
+            totalAtendidos += d.atendidos || 0; 
+            totalFaltosos += d.faltosos || 0;
+            if (d.assuntos) for (let [k, v] of Object.entries(d.assuntos)) mapAssuntos[k] = (mapAssuntos[k] || 0) + v;
+            if (d.atendentes) for (let [k, v] of Object.entries(d.atendentes)) mapUsers[k] = (mapUsers[k] || 0) + v;
+        });
+        
+        const taxa = totalGeral > 0 ? ((totalFaltosos / totalGeral) * 100).toFixed(1) : 0;
+        
+        resultsArea.innerHTML = `
+            <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
+                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm">
+                    <p class="text-[9px] text-blue-600 font-bold uppercase tracking-widest">Demandado</p>
+                    <h4 class="text-2xl font-black text-blue-800 mt-1">${totalGeral}</h4>
+                </div>
+                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm">
+                    <p class="text-[9px] text-green-600 font-bold uppercase tracking-widest">Atendidos</p>
+                    <h4 class="text-2xl font-black text-green-800 mt-1">${totalAtendidos}</h4>
+                </div>
+                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm">
+                    <p class="text-[9px] text-orange-600 font-bold uppercase tracking-widest">Absenteísmo</p>
+                    <h4 class="text-2xl font-black text-orange-800 mt-1">${taxa}%</h4>
+                </div>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
+                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
+                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Top Assuntos</h5>
+                    <div id="dash-subjects-list" class="space-y-3 text-xs"></div>
+                </div>
+                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
+                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Produtividade da Equipe</h5>
+                    <div id="dash-users-list" class="space-y-3 text-xs"></div>
+                </div>
+            </div>
+        `;
+        
+        const renderRanking = (elementId, dataMap) => {
+            const el = document.getElementById(elementId);
+            const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
+            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-slate-400 py-4 italic">Sem dados suficientes.</p>'; return; }
+            el.innerHTML = sorted.map(([name, count]) => `
+                <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
+                    <span class="truncate pr-2 font-bold text-slate-700">${escapeHTML(name)}</span>
+                    <span class="font-black text-indigo-700 bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px]">${count}</span>
+                </div>
+            `).join('');
+        };
+        
+        renderRanking('dash-subjects-list', mapAssuntos);
+        renderRanking('dash-users-list', mapUsers);
+        
+    } catch (error) { 
+        console.error("Erro no BI:", error);
+        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold border border-red-200 bg-red-50 rounded-xl">Erro ao processar dados: ${error.message}</div>`; 
+    }
+};
 
-        const role = select.value;
+export const populateUserFilter = async (db) => {
+    const select = document.getElementById('stats-filter-user');
+    if (!select) return;
+    try {
+        const snapshot = await getDocs(collection(db, "users"));
+        select.innerHTML = '<option value="all">Todos os Usuários</option>';
+        snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
+    } catch (e) {}
+};
 
-        if (!role) {
-            showNotification("Selecione um perfil válido.", "error");
-            return;
-        }
+export const setupAdminEvents = (app) => {
+    globalApp = app;
+    const btnGlobal = document.getElementById('btn-recepcoes-master');
+    if(btnGlobal) {
+        btnGlobal.removeEventListener('click', () => abrirModalGerenciarRecepcoesGlobal(globalApp));
+        btnGlobal.addEventListener('click', () => {
+            abrirModalGerenciarRecepcoesGlobal(globalApp);
+        });
+    }
+};
 
-        await updateDoc(doc(db, "users", userId), {
-            role: role,
-            status: role === 'suspended' ? 'suspended' : 'ap
+// ============================================================
+// GLOBAIS
+// ============================================================
+window.approveUser = (userId) => {
+    if (globalApp) approveUser(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.updateUserRole = (userId) => {
+    if (globalApp) updateUserRole(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.toggleSuspendUser = (userId, isSuspended) => {
+    if (globalApp) toggleSuspendUser(globalApp.db, userId, isSuspended);
+    else console.error("App não inicializado");
+};
+
+window.deleteUser = (userId) => {
+    if (globalApp) deleteUser(globalApp.db, userId);
+    else console.error("App não inicializado");
+};
+
+window.gerenciarUnidades = (userId) => {
+    if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, userId);
+    else console.error("App não inicializado");
+};
+
+window.abrirGerenciadorUnidades = () => {
+    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.abrirImportadorUnidades = () => {
+    if (globalApp) abrirImportadorUnidades(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
+    if (globalApp) abrirModalUsuariosPorUnidade(globalApp.db, unidadeId, unidadeNome);
+    else console.error("App não inicializado");
+};
+
+window.abrirModalGerenciarRecepcoesGlobal = () => {
+    if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp);
+    else console.error("App não inicializado");
+};
+
+window.renderEstruturaAtual = (container) => {
+    if (globalApp) renderEstruturaAtual(globalApp, container);
+    else console.error("App não inicializado");
+};
+
+window.cleanupOldData = () => {
+    if (globalApp) cleanupOldData(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.loadDashboardData = () => {
+    if (globalApp) loadDashboardData(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.populateUserFilter = () => {
+    if (globalApp) populateUserFilter(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.loadAuditLogs = () => {
+    if (globalApp) loadAuditLogs(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.exportAuditLogsPDF = () => {
+    if (globalApp) exportAuditLogsPDF(globalApp.db);
+    else console.error("App não inicializado");
+};
+
+window.setupAdminSearch = () => setupAdminSearch();
+
+export const AdminService = {
+    carregarUnidades,
+    criarUnidade,
+    atualizarUnidade,
+    excluirUnidade,
+    abrirImportadorUnidades,
+    abrirModalUsuariosPorUnidade,
+    abrirGerenciadorUnidades,
+    setupAdminSearch,
+    loadAuditLogs,
+    exportAuditLogsPDF,
+    cleanupOldData,
+    loadDashboardData,
+    populateUserFilter,
+    approveUser,
+    updateUserRole,
+    toggleSuspendUser,
+    deleteUser,
+    setupAdminEvents,
+    abrirModalGerenciarRecepcoesGlobal,
+    renderEstruturaAtual
+};
+
+console.log("✅ AdminService (Hub de Unidades e Recepções Independentes) registrado no window com sucesso.");
