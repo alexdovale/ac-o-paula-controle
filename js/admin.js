@@ -1,3 +1,4 @@
+
 // js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
 
 import { 
@@ -472,7 +473,7 @@ export const abrirGerenciadorUnidades = async (db) => {
 };
 
 // ============================================================
-// MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
+// NOVO MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
 // ============================================================
 
 const abrirModalGerenciarRecepcoesGlobal = async (app) => {
@@ -507,6 +508,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
         const container = document.getElementById('painel-conteudo-recepcoes');
         if (!container) return;
 
+        // Fetch ALL receptions for the admin view
         const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
 
         let html = `
@@ -966,7 +968,8 @@ function renderAprovadosTable(db) {
     const totalPages = Math.ceil(aprovados.length / pageSize);
 
     if (aprovados.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td</tr>';
+        // colspan corrigido para 4 (número de colunas da tabela)
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
     }
@@ -987,19 +990,24 @@ function renderAprovadosTable(db) {
 
         return `
             <tr class="border-b ${rowClass} transition">
+                <!-- Nome + email + badge role atual -->
                 <td class="px-3 py-3">
                     <p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>
                     <p class="text-xs text-gray-400">${escapeHTML(user.email)}</p>
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border mt-1 ${cfg.color}">
                         ${cfg.label}
                     </span>
-                </td>
+                  </td>
+
+                <!-- Unidades vinculadas -->
                 <td class="px-3 py-3 text-center">
                     <button class="btn-gerenciar-unidades bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 mx-auto transition"
                         data-userid="${user.id}" title="Gerenciar unidades vinculadas">
                         🏢 ${unidadesCount} unidade(s)
                     </button>
-                </td>
+                  </td>
+
+                <!-- Select de permissão -->
                 <td class="px-3 py-3">
                     <select id="role-select-${user.id}" class="w-full text-xs border rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold cursor-pointer">
                         <option value="user"       ${user.role === 'user'       ? 'selected' : ''}>👤 Usuário</option>
@@ -1008,7 +1016,9 @@ function renderAprovadosTable(db) {
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
                         <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
                     </select>
-                </td>
+                  </td>
+
+                <!-- Ações -->
                 <td class="px-3 py-3">
                     <div class="flex flex-col gap-1.5 min-w-[110px]">
                         <button onclick="window.updateUserRole('${user.id}')"
@@ -1026,11 +1036,12 @@ function renderAprovadosTable(db) {
                             🗑️ Excluir
                         </button>
                     </div>
-                </td>
-            </tr>
+                  </td>
+              </tr>
         `;
     }).join('');
 
+    // Listener dos botões de unidade
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, btn.dataset.userid);
@@ -1067,6 +1078,9 @@ export const updateUserRole = async (db, userId) => {
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
 
+// ============================================================
+// NOVA FUNÇÃO toggleSuspendUser (adicionada logo após updateUserRole)
+// ============================================================
 export const toggleSuspendUser = async (db, userId, isSuspended) => {
     const novoRole   = isSuspended ? 'user'      : 'suspended';
     const novoStatus = isSuspended ? 'approved'  : 'suspended';
@@ -1154,7 +1168,7 @@ export const loadAuditLogs = async (db) => {
         
     } catch (error) {
         console.error("Erro ao carregar logs:", error);
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td</tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td></tr>`;
     }
 };
 
@@ -1178,7 +1192,7 @@ function renderLogsTable(db) {
     const totalPages = Math.ceil(logs.length / pageSize);
     
     if (logs.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado</td</tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado</td></tr>';
         document.getElementById('pagination-logs')?.classList.add('hidden');
         return;
     }
@@ -1203,7 +1217,7 @@ function renderLogsTable(db) {
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-            </tr>
+               </tr>
         `;
     }).join('');
     
@@ -1393,9 +1407,9 @@ export const populateUserFilter = async (db) => {
 
 export const setupAdminEvents = (app) => {
     globalApp = app;
+    // O evento do botão global agora é anexado na renderização do admin (renderAdminContent do main.js)
     const btnGlobal = document.getElementById('btn-recepcoes-master');
     if(btnGlobal) {
-        btnGlobal.removeEventListener('click', () => abrirModalGerenciarRecepcoesGlobal(globalApp));
         btnGlobal.addEventListener('click', () => {
             abrirModalGerenciarRecepcoesGlobal(globalApp);
         });
@@ -1445,6 +1459,7 @@ window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
     else console.error("App não inicializado");
 };
 
+// Agora expomos globalmente para ser chamado no botão de Gerenciar Recepções
 window.abrirModalGerenciarRecepcoesGlobal = () => {
     if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp);
     else console.error("App não inicializado");
