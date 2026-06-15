@@ -1,4 +1,3 @@
-
 // js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
 
 import { 
@@ -473,7 +472,7 @@ export const abrirGerenciadorUnidades = async (db) => {
 };
 
 // ============================================================
-// NOVO MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
+// MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
 // ============================================================
 
 const abrirModalGerenciarRecepcoesGlobal = async (app) => {
@@ -504,12 +503,13 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
     const fechar = () => modal.remove();
     document.getElementById('fechar-gerenciador-recepcoes').onclick = fechar;
 
+    // ── BUG 2 CORRIGIDO: container buscado APÓS o await para evitar race condition ──
     const renderizarTelaAdmin = async () => {
+        const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
+
+        // Verifica se o modal ainda está no DOM após o await
         const container = document.getElementById('painel-conteudo-recepcoes');
         if (!container) return;
-
-        // Fetch ALL receptions for the admin view
-        const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
 
         let html = `
             <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
@@ -585,197 +585,203 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                         </div>
                     </div>
                 `).join('')}
-                </div>
-            `;
-            
-            container.innerHTML = html;
+            </div>
+        `;
 
-            document.getElementById('btn-nova-recepcao-custom')?.addEventListener('click', () => renderizarFormularioRecepcao());
+        container.innerHTML = html;
 
-            container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
-                    if (rec) renderizarFormularioRecepcao(rec);
-                });
+        document.getElementById('btn-nova-recepcao-custom')?.addEventListener('click', () => renderizarFormularioRecepcao());
+
+        container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) renderizarFormularioRecepcao(rec);
             });
+        });
 
-            container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
-                    if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
-                });
+        container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
             });
+        });
 
-            container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
-                btn.addEventListener('click', async () => {
-                    if (confirm(`Tem certeza que deseja excluir permanentemente a Unidade de Apoio "${btn.dataset.nome}"?`)) {
-                        try {
-                            await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
-                            showNotification("Recepção excluída com sucesso!", "success");
-                            renderizarTelaAdmin();
-                        } catch (error) {
-                            console.error("Erro ao excluir:", error);
-                            showNotification("Erro ao excluir recepção.", "error");
-                        }
-                    }
-                });
-            });
-
-            container.querySelectorAll('.btn-vincular-usuarios').forEach(btn => {
-                btn.addEventListener('click', () => {
-                    const rec = recepcoes.find(r => r.id === btn.dataset.id);
-                    if (rec) abrirModalVincularUsuarios(rec);
-                });
-            });
-        };
-
-        const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
-            const container = document.getElementById('painel-conteudo-recepcoes');
-            
-            container.innerHTML = `
-                <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
-                    ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [])}
-                </div>
-            `;
-
-            RecepcaoConfigService.initFormRecepcaoEventos(
-                async (dadosSalvos, idEdicao) => {
-                    if (idEdicao) {
-                        await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
-                    } else {
-                        await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
-                    }
-                    renderizarTelaAdmin();
-                },
-                () => { renderizarTelaAdmin(); }
-            );
-        };
-
-        const abrirModalVincularUsuarios = async (recepcao) => {
-            const modalVinculo = document.createElement('div');
-            modalVinculo.className = 'fixed inset-0 bg-slate-900/80 z-[900] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
-            modalVinculo.innerHTML = `
-                <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh]">
-                    <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
-                        <div>
-                            <h3 class="font-black text-white text-lg">Lotar Servidores: ${escapeHTML(recepcao.nome)}</h3>
-                            <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode acessar e trabalhar nesta unidade de apoio.</p>
-                        </div>
-                        <button class="fechar-vinculo text-white/60 hover:text-white text-3xl leading-none">&times;</button>
-                    </div>
-                    
-                    <div class="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
-                        <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                            <input type="text" id="busca-membros-recepcao" placeholder="Buscar usuário pelo nome ou email..." 
-                                class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
-                        </div>
-                    </div>
-
-                    <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
-                        <div class="flex justify-center items-center h-full"><div class="loader-small"></div></div>
-                    </div>
-                    
-                    <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
-                        <span id="contagem-membros" class="text-sm font-bold text-slate-500"></span>
-                        <div class="flex gap-3">
-                            <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition text-sm">Cancelar</button>
-                            <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Lotação</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-            document.body.appendChild(modalVinculo);
-
-            const fecharVinculo = () => modalVinculo.remove();
-            modalVinculo.querySelectorAll('.fechar-vinculo').forEach(b => b.addEventListener('click', fecharVinculo));
-
-            try {
-                const usersSnap = await getDocs(collection(db, "users"));
-                const todosUsuarios = usersSnap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'approved' && u.role !== 'suspended');
-                todosUsuarios.sort((a,b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''));
-
-                let membrosAtuais = [...(recepcao.membros || [])];
-
-                const renderUsuarios = (termo = '') => {
-                    const container = document.getElementById('lista-usuarios-vinculo');
-                    const q = termo.toLowerCase();
-                    const filtrados = todosUsuarios.filter(u => 
-                        (u.name || '').toLowerCase().includes(q) || 
-                        (u.email || '').toLowerCase().includes(q)
-                    );
-
-                    if (filtrados.length === 0) {
-                        container.innerHTML = '<p class="text-center text-slate-400 py-10 font-bold">Nenhum usuário encontrado.</p>';
-                        return;
-                    }
-
-                    container.innerHTML = `
-                        <div class="space-y-2">
-                            ${filtrados.map(u => {
-                                const isChecked = membrosAtuais.includes(u.id);
-                                return `
-                                    <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors ${isChecked ? 'ring-1 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : ''}">
-                                        <input type="checkbox" class="cb-membro w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" value="${u.id}" ${isChecked ? 'checked' : ''}>
-                                        <div class="flex-1 min-w-0">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(u.name || 'Sem nome')}</p>
-                                            <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
-                                        </div>
-                                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${u.role === 'admin' || u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}">${u.role || 'user'}</span>
-                                    </label>
-                                `;
-                            }).join('')}
-                        </div>
-                    `;
-
-                    container.querySelectorAll('.cb-membro').forEach(cb => {
-                        cb.addEventListener('change', (e) => {
-                            const label = cb.closest('label');
-                            if (cb.checked) {
-                                label.classList.add('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
-                                if (!membrosAtuais.includes(cb.value)) membrosAtuais.push(cb.value);
-                            } else {
-                                label.classList.remove('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
-                                membrosAtuais = membrosAtuais.filter(id => id !== cb.value);
-                            }
-                            atualizarContador();
-                        });
-                    });
-                };
-
-                const atualizarContador = () => {
-                    document.getElementById('contagem-membros').textContent = `${membrosAtuais.length} servidor(es) lotado(s)`;
-                };
-
-                renderUsuarios();
-                atualizarContador();
-
-                document.getElementById('busca-membros-recepcao').addEventListener('input', (e) => renderUsuarios(e.target.value));
-
-                document.getElementById('salvar-vinculo').addEventListener('click', async () => {
-                    const btn = document.getElementById('salvar-vinculo');
-                    btn.disabled = true;
-                    btn.textContent = 'Salvando...';
-
+        container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm(`Tem certeza que deseja excluir permanentemente a Unidade de Apoio "${btn.dataset.nome}"?`)) {
                     try {
-                        await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
-                        showNotification("Lotação atualizada com sucesso!", "success");
-                        fecharVinculo();
+                        await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
+                        showNotification("Recepção excluída com sucesso!", "success");
                         renderizarTelaAdmin();
                     } catch (error) {
-                        showNotification("Erro ao salvar.", "error");
-                        btn.disabled = false;
-                        btn.textContent = 'Salvar Lotação';
+                        console.error("Erro ao excluir:", error);
+                        showNotification("Erro ao excluir recepção.", "error");
                     }
-                });
+                }
+            });
+        });
 
-            } catch (err) {
-                document.getElementById('lista-usuarios-vinculo').innerHTML = '<p class="text-center text-red-500 py-10 font-bold">Erro ao carregar usuários.</p>';
-            }
-        };
-
-        await renderizarTelaAdmin();
+        container.querySelectorAll('.btn-vincular-usuarios').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) abrirModalVincularUsuarios(rec);
+            });
+        });
     };
+
+    const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
+        const container = document.getElementById('painel-conteudo-recepcoes');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+                ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [])}
+            </div>
+        `;
+
+        RecepcaoConfigService.initFormRecepcaoEventos(
+            async (dadosSalvos, idEdicao) => {
+                if (idEdicao) {
+                    await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
+                } else {
+                    await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
+                }
+                renderizarTelaAdmin();
+            },
+            () => { renderizarTelaAdmin(); }
+        );
+    };
+
+    const abrirModalVincularUsuarios = async (recepcao) => {
+        const modalVinculo = document.createElement('div');
+        modalVinculo.className = 'fixed inset-0 bg-slate-900/80 z-[900] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+        modalVinculo.innerHTML = `
+            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh]">
+                <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="font-black text-white text-lg">Lotar Servidores: ${escapeHTML(recepcao.nome)}</h3>
+                        <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode acessar e trabalhar nesta unidade de apoio.</p>
+                    </div>
+                    <button class="fechar-vinculo text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                </div>
+                
+                <div class="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                        <input type="text" id="busca-membros-recepcao" placeholder="Buscar usuário pelo nome ou email..." 
+                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
+                    <div class="flex justify-center items-center h-full"><div class="loader-small"></div></div>
+                </div>
+                
+                <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
+                    <span id="contagem-membros" class="text-sm font-bold text-slate-500"></span>
+                    <div class="flex gap-3">
+                        <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition text-sm">Cancelar</button>
+                        <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Lotação</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalVinculo);
+
+        const fecharVinculo = () => modalVinculo.remove();
+        modalVinculo.querySelectorAll('.fechar-vinculo').forEach(b => b.addEventListener('click', fecharVinculo));
+
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            const todosUsuarios = usersSnap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'approved' && u.role !== 'suspended');
+            todosUsuarios.sort((a,b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''));
+
+            let membrosAtuais = [...(recepcao.membros || [])];
+
+            const renderUsuarios = (termo = '') => {
+                const listContainer = document.getElementById('lista-usuarios-vinculo');
+                if (!listContainer) return;
+                const q = termo.toLowerCase();
+                const filtrados = todosUsuarios.filter(u => 
+                    (u.name || '').toLowerCase().includes(q) || 
+                    (u.email || '').toLowerCase().includes(q)
+                );
+
+                if (filtrados.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 font-bold">Nenhum usuário encontrado.</p>';
+                    return;
+                }
+
+                listContainer.innerHTML = `
+                    <div class="space-y-2">
+                        ${filtrados.map(u => {
+                            const isChecked = membrosAtuais.includes(u.id);
+                            return `
+                                <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors ${isChecked ? 'ring-1 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : ''}">
+                                    <input type="checkbox" class="cb-membro w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" value="${u.id}" ${isChecked ? 'checked' : ''}>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(u.name || 'Sem nome')}</p>
+                                        <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
+                                    </div>
+                                    <span class="text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${u.role === 'admin' || u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}">${u.role || 'user'}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+                listContainer.querySelectorAll('.cb-membro').forEach(cb => {
+                    cb.addEventListener('change', (e) => {
+                        const label = cb.closest('label');
+                        if (cb.checked) {
+                            label.classList.add('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                            if (!membrosAtuais.includes(cb.value)) membrosAtuais.push(cb.value);
+                        } else {
+                            label.classList.remove('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                            membrosAtuais = membrosAtuais.filter(id => id !== cb.value);
+                        }
+                        atualizarContador();
+                    });
+                });
+            };
+
+            const atualizarContador = () => {
+                const el = document.getElementById('contagem-membros');
+                if (el) el.textContent = `${membrosAtuais.length} servidor(es) lotado(s)`;
+            };
+
+            renderUsuarios();
+            atualizarContador();
+
+            document.getElementById('busca-membros-recepcao')?.addEventListener('input', (e) => renderUsuarios(e.target.value));
+
+            document.getElementById('salvar-vinculo')?.addEventListener('click', async () => {
+                const btn = document.getElementById('salvar-vinculo');
+                if (!btn) return;
+                btn.disabled = true;
+                btn.textContent = 'Salvando...';
+
+                try {
+                    await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
+                    showNotification("Lotação atualizada com sucesso!", "success");
+                    fecharVinculo();
+                    renderizarTelaAdmin();
+                } catch (error) {
+                    showNotification("Erro ao salvar.", "error");
+                    btn.disabled = false;
+                    btn.textContent = 'Salvar Lotação';
+                }
+            });
+
+        } catch (err) {
+            const listContainer = document.getElementById('lista-usuarios-vinculo');
+            if (listContainer) listContainer.innerHTML = '<p class="text-center text-red-500 py-10 font-bold">Erro ao carregar usuários.</p>';
+        }
+    };
+
+    // ── BUG 1 CORRIGIDO: renderizarTelaAdmin agora está dentro do escopo correto ──
+    await renderizarTelaAdmin();
+}; // fecha abrirModalGerenciarRecepcoesGlobal
 
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     const isEdicao = !!unidade;
@@ -954,9 +960,6 @@ function renderPendentesList(db) {
     });
 }
 
-// ============================================================
-// NOVA VERSÃO DE renderAprovadosTable (com badge colorido, select com emojis, 3 botões e linha vermelha)
-// ============================================================
 function renderAprovadosTable(db) {
     const tableBody = document.getElementById('approved-users-list');
     if (!tableBody) return;
@@ -968,7 +971,6 @@ function renderAprovadosTable(db) {
     const totalPages = Math.ceil(aprovados.length / pageSize);
 
     if (aprovados.length === 0) {
-        // colspan corrigido para 4 (número de colunas da tabela)
         tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
@@ -990,24 +992,19 @@ function renderAprovadosTable(db) {
 
         return `
             <tr class="border-b ${rowClass} transition">
-                <!-- Nome + email + badge role atual -->
                 <td class="px-3 py-3">
                     <p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>
                     <p class="text-xs text-gray-400">${escapeHTML(user.email)}</p>
                     <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border mt-1 ${cfg.color}">
                         ${cfg.label}
                     </span>
-                  </td>
-
-                <!-- Unidades vinculadas -->
+                </td>
                 <td class="px-3 py-3 text-center">
                     <button class="btn-gerenciar-unidades bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 mx-auto transition"
                         data-userid="${user.id}" title="Gerenciar unidades vinculadas">
                         🏢 ${unidadesCount} unidade(s)
                     </button>
-                  </td>
-
-                <!-- Select de permissão -->
+                </td>
                 <td class="px-3 py-3">
                     <select id="role-select-${user.id}" class="w-full text-xs border rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold cursor-pointer">
                         <option value="user"       ${user.role === 'user'       ? 'selected' : ''}>👤 Usuário</option>
@@ -1016,9 +1013,7 @@ function renderAprovadosTable(db) {
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
                         <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
                     </select>
-                  </td>
-
-                <!-- Ações -->
+                </td>
                 <td class="px-3 py-3">
                     <div class="flex flex-col gap-1.5 min-w-[110px]">
                         <button onclick="window.updateUserRole('${user.id}')"
@@ -1036,12 +1031,11 @@ function renderAprovadosTable(db) {
                             🗑️ Excluir
                         </button>
                     </div>
-                  </td>
-              </tr>
+                </td>
+            </tr>
         `;
     }).join('');
 
-    // Listener dos botões de unidade
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, btn.dataset.userid);
@@ -1078,9 +1072,6 @@ export const updateUserRole = async (db, userId) => {
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
 
-// ============================================================
-// NOVA FUNÇÃO toggleSuspendUser (adicionada logo após updateUserRole)
-// ============================================================
 export const toggleSuspendUser = async (db, userId, isSuspended) => {
     const novoRole   = isSuspended ? 'user'      : 'suspended';
     const novoStatus = isSuspended ? 'approved'  : 'suspended';
@@ -1217,7 +1208,7 @@ function renderLogsTable(db) {
                 <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
                 <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
                 <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
-               </tr>
+            </tr>
         `;
     }).join('');
     
@@ -1311,13 +1302,11 @@ export const loadDashboardData = async (db) => {
     const start = document.getElementById('stats-filter-start')?.value;
     const end = document.getElementById('stats-filter-end')?.value;
     const userFilter = document.getElementById('stats-filter-user')?.value;
-    const attendantFilter = document.getElementById('stats-filter-attendant')?.value;
     
     const resultsArea = document.getElementById('dashboard-results');
     if (!resultsArea) return;
 
     resultsArea.classList.remove('hidden');
-
     resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600 mt-2">Carregando dados do BI...</p></div>';
     
     try {
@@ -1407,9 +1396,8 @@ export const populateUserFilter = async (db) => {
 
 export const setupAdminEvents = (app) => {
     globalApp = app;
-    // O evento do botão global agora é anexado na renderização do admin (renderAdminContent do main.js)
     const btnGlobal = document.getElementById('btn-recepcoes-master');
-    if(btnGlobal) {
+    if (btnGlobal) {
         btnGlobal.addEventListener('click', () => {
             abrirModalGerenciarRecepcoesGlobal(globalApp);
         });
@@ -1459,7 +1447,6 @@ window.abrirModalUsuariosPorUnidade = (unidadeId, unidadeNome) => {
     else console.error("App não inicializado");
 };
 
-// Agora expomos globalmente para ser chamado no botão de Gerenciar Recepções
 window.abrirModalGerenciarRecepcoesGlobal = () => {
     if (globalApp) abrirModalGerenciarRecepcoesGlobal(globalApp);
     else console.error("App não inicializado");
@@ -1497,6 +1484,8 @@ window.exportAuditLogsPDF = () => {
 
 window.setupAdminSearch = () => setupAdminSearch();
 
+// ── BUG 3 CORRIGIDO: renderEstruturaAtual removida do AdminService
+//    (é importada de outro módulo, não deve ser reexportada aqui)
 export const AdminService = {
     carregarUnidades,
     criarUnidade,
@@ -1517,7 +1506,6 @@ export const AdminService = {
     deleteUser,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
-    renderEstruturaAtual
 };
 
 console.log("✅ AdminService (Hub de Unidades e Recepções Independentes) registrado no window com sucesso.");
