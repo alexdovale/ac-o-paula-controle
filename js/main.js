@@ -106,7 +106,14 @@ class SIGEPApp {
     // Previne crashes se arquivos como auth.js tentarem chamar métodos antigos
     // ============================================================
     showPautaSelectionScreen() {
-        if (this.router) this.router.navigate(ROUTES.PAUTA_SELECTION);
+        // Esconde TODOS os containers principais
+        document.getElementById('app-container')?.classList.add('hidden');
+        document.getElementById('dashboard-container')?.classList.add('hidden');
+        document.getElementById('admin-container')?.classList.add('hidden');
+        document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        
+        // Mostra o container de seleção de pautas
+        document.getElementById('pauta-selection-container')?.classList.remove('hidden');
     }
     
     showAppScreen() {
@@ -130,9 +137,11 @@ class SIGEPApp {
     // ============================================================
     
     showAdminScreen() {
+        // Esconde TODOS os outros containers
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
+        document.getElementById('modo-selection-screen')?.classList.add('hidden');
         
         // Mostra a tela do admin
         document.getElementById('admin-container')?.classList.remove('hidden');
@@ -146,6 +155,13 @@ class SIGEPApp {
         if (!container) return;
         
         container.innerHTML = `
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+                <button id="admin-back-to-pautas-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
+                    ← Voltar para Pautas
+                </button>
+            </div>
+            
             <div class="mb-6 flex flex-wrap gap-3">
                 <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
                     <span>🏢</span> Gerenciar Unidades / Órgãos
@@ -156,22 +172,20 @@ class SIGEPApp {
             </div>
             
             <!-- Seção de Usuários Pendentes -->
-            <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-                <div id="search-pendentes" class="w-full sm:w-80"></div>
-                <div id="page-size-pendentes"></div>
-            </div>
             <div class="mb-8">
+                <div class="mb-4">
+                    <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
                 <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
                 <div id="pending-users-list" class="space-y-2"></div>
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
             
             <!-- Seção de Usuários do Sistema (APENAS UMA VEZ) -->
-            <div class="mt-8 mb-4 flex flex-wrap gap-4 items-center justify-between">
-                <div id="search-usuarios" class="w-full sm:w-80"></div>
-                <div id="page-size-usuarios"></div>
-            </div>
-            <div class="mt-2">
+            <div class="mt-8">
+                <div class="mb-4">
+                    <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
                 <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm border-collapse">
@@ -259,7 +273,7 @@ class SIGEPApp {
         });
         
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION);
+            this.showPautaSelectionScreen();
         });
         
         document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
@@ -545,19 +559,6 @@ class SIGEPApp {
                 pautaSettingsPanel.classList.toggle('hidden');
                 if (!pautaSettingsPanel.classList.contains('hidden')) {
                     this.loadColumnPreferences();
-                }
-            });
-
-            // Dentro de _setupInteracoes() em recepcaoCentral.js
-    
-            // Mude de um listener simples para um que sobreviva a renderizações:
-            document.addEventListener('click', (e) => {
-                if (e.target.id === 'rc-btn-configurar-tv' || e.target.closest('#rc-btn-configurar-tv')) {
-                    if (estado.pautasHoje.length === 0) {
-                        showNotification("Nenhuma pauta ativa nesta recepção.", "warning");
-                        return;
-                    }
-                    this._abrirModalConfigTV();
                 }
             });
         }
@@ -1598,14 +1599,14 @@ class SIGEPApp {
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
         if (adminPanelBtnPautaSelection) {
             adminPanelBtnPautaSelection.addEventListener('click', () => {
-                this.router.navigate(ROUTES.ADMIN);
+                this.showAdminScreen();
             });
         }
         
         const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
         if (adminBackBtn) {
             adminBackBtn.addEventListener('click', () => {
-                this.router.navigate(ROUTES.PAUTA_SELECTION);
+                this.showPautaSelectionScreen();
             });
         }
 
@@ -2072,11 +2073,6 @@ class SIGEPApp {
 
         this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
         document.getElementById('pauta-title').textContent = pautaName;
-
-        // REMOVER estas três linhas (o router já faz isso):
-        // localStorage.setItem('lastPautaId', pautaId);
-        // localStorage.setItem('lastPautaName', pautaName);
-        // localStorage.setItem('lastPautaType', pautaType);
 
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
