@@ -157,9 +157,6 @@ class SIGEPApp {
         container.innerHTML = `
             <div class="flex justify-between items-center mb-6">
                 <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
-                <button id="admin-back-to-pautas-btn" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded-lg">
-                    ← Voltar para Pautas
-                </button>
             </div>
             
             <div class="mb-6 flex flex-wrap gap-3">
