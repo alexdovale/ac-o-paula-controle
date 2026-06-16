@@ -2445,7 +2445,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const chkTermos = document.getElementById('lgpd-check-termos');
     const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
     const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
-    const hasAcceptedLGPD = localStorage.getItem('sigep_lgpd_accepted') === 'true';
+    const lgpdJaAceito = () => localStorage.getItem('sigep_lgpd_accepted') === 'true';
 
     const validateLgpdChecks = () => {
         if (chkTermos?.checked && chkPrivacidade?.checked) {
@@ -2472,7 +2472,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     const authObserver = new MutationObserver(() => {
         const isLoginHidden = loginContainer?.classList.contains('hidden');
-        if (isLoginHidden && !hasAcceptedLGPD && lgpdModal) {
+        if (isLoginHidden && !lgpdJaAceito() && lgpdModal) {
             lgpdModal.classList.remove('hidden');
         }
     });
