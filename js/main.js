@@ -575,7 +575,7 @@ class SIGEPApp {
                     const div = document.createElement('div');
                     div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
                     div.innerHTML = `
-                        <span class="text-gray-500">🏢</span>
+                        <span class="text-gray-500"></span>
                         <input type="text" class="room-edit-input flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">
                     `;
                     listContainer.appendChild(div);
