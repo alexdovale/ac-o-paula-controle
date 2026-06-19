@@ -953,36 +953,56 @@ export const PautaService = {
         
         listContainer.innerHTML = '';
         
-        // Filtra apenas os colaboradores que estão marcados como "presentes"
-        const presentes = (app.colaboradores || []).filter(c => c.presente);
+        // Puxa TODOS os colaboradores vinculados à pauta
+        const colaboradores = app.colaboradores || [];
         
-        if (presentes.length === 0) {
-            listContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador online no momento.</p>';
+        // 1. ADICIONANDO O BOTÃO "NÃO ATRIBUIR"
+        const btnNaoAtribuir = document.createElement('button');
+        btnNaoAtribuir.className = "w-full text-left p-3 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 transition-colors mb-3 border-dashed";
+        btnNaoAtribuir.innerHTML = `
+            <div class="font-bold text-gray-700">🚫 Não Atribuir a Ninguém</div>
+            <div class="text-xs text-gray-500">Mover card sem vincular um atendente específico</div>
+        `;
+        btnNaoAtribuir.onclick = (e) => {
+            e.preventDefault();
+            // Limpa seleções anteriores
+            listContainer.querySelectorAll('button').forEach(b => {
+                b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'ring-gray-500', 'border-gray-500');
+            });
+            // Destaca este botão
+            btnNaoAtribuir.classList.add('ring-2', 'ring-gray-500', 'border-gray-500');
+            
+            // Seta os valores como nulos/vazios para o sistema ignorar a atribuição
+            window.selectedCollaboratorId = 'null';
+            window.selectedCollaboratorName = null;
+        };
+        listContainer.appendChild(btnNaoAtribuir);
+
+        // 2. LISTANDO OS COLABORADORES DA PAUTA
+        if (colaboradores.length === 0) {
+            listContainer.innerHTML += '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador adicionado a esta pauta.</p>';
             return;
         }
 
-        presentes.forEach(colab => {
+        colaboradores.forEach(colab => {
             const btn = document.createElement('button');
-            // Design do botão de escolha do colaborador
             btn.className = "w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-colors mb-2";
+            
+            // Mostra uma tag verde se ele estiver "Presente"
+            const tagPresente = colab.presente ? '<span class="text-green-600 font-bold ml-1 text-[10px] bg-green-100 px-1.5 py-0.5 rounded uppercase">Online</span>' : '';
+            
             btn.innerHTML = `
                 <div class="font-bold text-gray-800">${escapeHTML(colab.nome)}</div>
-                <div class="text-xs text-gray-500">${escapeHTML(colab.cargo || 'Membro')}</div>
+                <div class="text-xs text-gray-500">${escapeHTML(colab.cargo || 'Membro')} ${tagPresente}</div>
             `;
             
             btn.onclick = (e) => {
                 e.preventDefault();
-                // 1. Remove a cor azul de todos os outros botões (se o usuário trocar de ideia)
                 listContainer.querySelectorAll('button').forEach(b => {
-                    b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
-                    b.classList.add('border-gray-200');
+                    b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'ring-gray-500', 'border-gray-500');
                 });
-                
-                // 2. Pinta o botão clicado de azul para dar feedback visual
-                btn.classList.remove('border-gray-200');
                 btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
                 
-                // 3. Salva a escolha na memória para o botão "Confirmar" usar depois
                 window.selectedCollaboratorId = colab.id;
                 window.selectedCollaboratorName = colab.nome;
             };
@@ -998,16 +1018,22 @@ export const PautaService = {
         const valorAtual = select.value;
         select.innerHTML = '<option value="">Selecione um profissional...</option>';
         
-        const presentes = (app.colaboradores || []).filter(c => c.presente);
+        // ADICIONANDO A OPÇÃO "NÃO ATRIBUIR"
+        const optNaoAtribuir = document.createElement('option');
+        optNaoAtribuir.value = "null";
+        optNaoAtribuir.textContent = "🚫 Não Atribuir a ninguém";
+        select.appendChild(optNaoAtribuir);
         
-        presentes.forEach(colab => {
+        const colaboradores = app.colaboradores || [];
+        
+        colaboradores.forEach(colab => {
             const opt = document.createElement('option');
             opt.value = colab.nome;
-            opt.textContent = `${colab.nome} (${colab.cargo || 'Membro'})`;
+            const statusText = colab.presente ? ' (Online)' : '';
+            opt.textContent = `${colab.nome} - ${colab.cargo || 'Membro'}${statusText}`;
             select.appendChild(opt);
         });
         
-        // Devolve a seleção anterior caso o usuário já tivesse escolhido alguém
         if (valorAtual) select.value = valorAtual;
     },
 
