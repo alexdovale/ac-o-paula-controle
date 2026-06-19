@@ -84,26 +84,54 @@ export const UIService = {
         if (currentVal) select.value = currentVal;
     },
 
+   // Adicione ou substitua esta função no seu js/ui.js
     preencherListaColaboradoresModal(app) {
-        if (window.CollaboratorService && typeof window.CollaboratorService.renderModalList === 'function') {
-            window.CollaboratorService.renderModalList(app);
-        } else if (app.colaboradores) {
-            const container = document.getElementById('collaborator-selection-list');
-            if (container) {
-                container.innerHTML = '';
-                app.colaboradores.forEach(c => {
-                    const btn = document.createElement('button');
-                    btn.className = "w-full text-left p-3 mb-2 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 transition shadow-sm font-semibold text-gray-700";
-                    btn.innerHTML = `<span class="text-blue-600 mr-2">👤</span> ${escapeHTML(c.nome)} <span class="text-xs text-gray-400 font-normal ml-1">- ${escapeHTML(c.cargo)}</span>`;
-                    btn.onclick = () => {
-                        window.selectedCollaboratorId = c.id || c.nome;
-                        window.selectedCollaboratorName = c.nome;
-                        document.getElementById('confirm-select-collaborator-btn')?.click();
-                    };
-                    container.appendChild(btn);
-                });
-            }
+        const container = document.getElementById('collaborators-list-container');
+        if (!container) {
+            console.error("Container de colaboradores não encontrado no HTML!");
+            return;
         }
+        
+        container.innerHTML = '';
+        const colaboradores = app.colaboradores || [];
+        
+        // Botão "Não Atribuir"
+        const btnNaoAtribuir = document.createElement('button');
+        btnNaoAtribuir.className = "w-full text-left p-3 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors mb-3 border-dashed";
+        btnNaoAtribuir.innerHTML = `
+            <div class="font-bold text-gray-700">🚫 Não Atribuir a Ninguém</div>
+            <div class="text-xs text-gray-500">Mover sem vincular atendente</div>
+        `;
+        btnNaoAtribuir.onclick = (e) => {
+            e.preventDefault();
+            container.querySelectorAll('button').forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500'));
+            btnNaoAtribuir.classList.add('ring-2', 'ring-gray-500', 'border-gray-500');
+            window.selectedCollaboratorId = 'null';
+            window.selectedCollaboratorName = null;
+        };
+        container.appendChild(btnNaoAtribuir);
+
+        if (colaboradores.length === 0) {
+            container.innerHTML += '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador adicionado a esta pauta.</p>';
+            return;
+        }
+
+        colaboradores.forEach(c => {
+            const btn = document.createElement('button');
+            btn.className = "w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors mb-2";
+            btn.innerHTML = `
+                <div class="font-bold text-gray-800">${escapeHTML(c.nome)}</div>
+                <div class="text-xs text-gray-500">${escapeHTML(c.cargo || 'Membro')}</div>
+            `;
+            btn.onclick = (e) => {
+                e.preventDefault();
+                container.querySelectorAll('button').forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500'));
+                btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
+                window.selectedCollaboratorId = c.id;
+                window.selectedCollaboratorName = c.nome;
+            };
+            container.appendChild(btn);
+        });
     },
 
     // ============================================================
