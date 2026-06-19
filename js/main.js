@@ -1755,38 +1755,6 @@ class SIGEPApp {
         
         console.log("UI atualizada para o perfil:", role);
     }
-    
-    async saveUserPreferences() {
-        if (!this.auth?.currentUser || !this.db) {
-            showNotification("Você precisa estar logado para salvar preferências.", "error");
-            return;
-        }
-
-        this.userPreferences = {
-            enableSoundsSuccess: document.getElementById('pref-enable-sounds-success')?.checked || false,
-            enableSoundsError: document.getElementById('pref-enable-sounds-error')?.checked || false,
-            enableSoundsInfo: document.getElementById('pref-enable-sounds-info')?.checked || false,
-            enableSoundsWarning: document.getElementById('pref-enable-sounds-warning')?.checked || false,
-            showToastsSuccess: document.getElementById('pref-show-toasts-success')?.checked || false,
-            showToastsError: document.getElementById('pref-show-toasts-error')?.checked || false,
-            showToastsInfo: document.getElementById('pref-show-toasts-info')?.checked || false,
-            showToastsWarning: document.getElementById('pref-show-toasts-warning')?.checked || false,
-        };
-
-        const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
-        try {
-            await updateDoc(userDocRef, {
-                preferences: this.userPreferences,
-                lastPreferenceUpdate: new Date().toISOString()
-            }, { merge: true });
-            
-            this.applyUserPreferences();
-            document.getElementById('user-preferences-modal').classList.add('hidden');
-            showNotification("Preferências salvas com sucesso!", 'success');
-        } catch (error) {
-            showNotification("Erro ao salvar suas preferências.", "error");
-        }
-    }
 
     async openUserPreferencesModal() {
         if (!this.auth?.currentUser) {
