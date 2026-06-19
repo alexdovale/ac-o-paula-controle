@@ -1274,7 +1274,7 @@ class SIGEPApp {
             const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
             const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
 
-            if (!isAcaoRapida && collaboratorId === undefined) { 
+            if (!isAcaoRapida && collaboratorId === null) { 
                 showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
                 return;
             }
@@ -1376,8 +1376,8 @@ class SIGEPApp {
 
         document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
             document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-            window.selectedCollaboratorId = undefined;
-            window.selectedCollaboratorName = undefined;
+            window.selectedCollaboratorId = null;
+            window.selectedCollaboratorName = null;
             window.assistedTipoAcao = null;
             window.assistedTipoDescricao = null;
         });
