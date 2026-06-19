@@ -2268,15 +2268,6 @@ class SIGEPApp {
             showNotification("Erro ao excluir pauta. Tente novamente.", "error");
         }
     }
-    // Dentro de loadPauta, após a chamada do CollaboratorService
-    console.log('🔍 Chamando CollaboratorService.setupListener...');
-    if (typeof CollaboratorService?.setupListener === 'function') {
-        CollaboratorService.setupListener(this, pautaId);
-        console.log('✅ CollaboratorService.setupListener chamado com sucesso!');
-    } else {
-        console.error('❌ CollaboratorService.setupListener NÃO é uma função!');
-        console.log('CollaboratorService:', CollaboratorService);
-    }
 }
 
 // ============================================================
