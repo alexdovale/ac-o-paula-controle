@@ -947,6 +947,70 @@ export const PautaService = {
         }
     },
 
+    preencherListaColaboradoresModal(app) {
+        const listContainer = document.getElementById('collaborators-list-container');
+        if (!listContainer) return;
+        
+        listContainer.innerHTML = '';
+        
+        // Filtra apenas os colaboradores que estão marcados como "presentes"
+        const presentes = (app.colaboradores || []).filter(c => c.presente);
+        
+        if (presentes.length === 0) {
+            listContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador online no momento.</p>';
+            return;
+        }
+
+        presentes.forEach(colab => {
+            const btn = document.createElement('button');
+            // Design do botão de escolha do colaborador
+            btn.className = "w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-colors mb-2";
+            btn.innerHTML = `
+                <div class="font-bold text-gray-800">${escapeHTML(colab.nome)}</div>
+                <div class="text-xs text-gray-500">${escapeHTML(colab.cargo || 'Membro')}</div>
+            `;
+            
+            btn.onclick = (e) => {
+                e.preventDefault();
+                // 1. Remove a cor azul de todos os outros botões (se o usuário trocar de ideia)
+                listContainer.querySelectorAll('button').forEach(b => {
+                    b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
+                    b.classList.add('border-gray-200');
+                });
+                
+                // 2. Pinta o botão clicado de azul para dar feedback visual
+                btn.classList.remove('border-gray-200');
+                btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
+                
+                // 3. Salva a escolha na memória para o botão "Confirmar" usar depois
+                window.selectedCollaboratorId = colab.id;
+                window.selectedCollaboratorName = colab.nome;
+            };
+            
+            listContainer.appendChild(btn);
+        });
+    },
+
+    preencherSelectColaboradores(app, selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="">Selecione um profissional...</option>';
+        
+        const presentes = (app.colaboradores || []).filter(c => c.presente);
+        
+        presentes.forEach(colab => {
+            const opt = document.createElement('option');
+            opt.value = colab.nome;
+            opt.textContent = `${colab.nome} (${colab.cargo || 'Membro'})`;
+            select.appendChild(opt);
+        });
+        
+        // Devolve a seleção anterior caso o usuário já tivesse escolhido alguém
+        if (valorAtual) select.value = valorAtual;
+    },
+
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
