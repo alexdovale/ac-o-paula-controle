@@ -1370,8 +1370,8 @@ class SIGEPApp {
             window.assistedNameToHandle = null;
             window.assistedTipoAcao = null;
             window.assistedTipoDescricao = null;
-            window.selectedCollaboratorId = undefined;
-            window.selectedCollaboratorName = undefined;
+            window.selectedCollaboratorId = null;   // ← mude de undefined para null
+            window.selectedCollaboratorName = null;
         });
 
         document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
