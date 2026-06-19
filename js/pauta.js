@@ -530,8 +530,8 @@ export const PautaService = {
             nameElement.textContent = nextAssisted.name;
         }
 
-        if (typeof this.preencherListaColaboradoresModal === 'function') {
-            this.preencherListaColaboradoresModal(app);
+        if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+            PautaService.preencherListaColaboradoresModal(app);
         }
 
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
@@ -1062,8 +1062,8 @@ export const PautaService = {
             
             showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
             
-            if (typeof this.preencherListaColaboradoresModal === 'function') {
-                this.preencherListaColaboradoresModal(app);
+            if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+                PautaService.preencherListaColaboradoresModal(app);
             }
             
             const modal = document.getElementById('select-collaborator-modal');
@@ -1187,7 +1187,11 @@ export const PautaService = {
                 nameElement.textContent = assisted.name || '';
             }
             
-            this.preencherListaColaboradoresModal(app);
+            if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+                PautaService.preencherListaColaboradoresModal(app);
+            } else {
+                PautaService.preencherListaColaboradoresModal(app);
+            }
             
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
@@ -1215,7 +1219,7 @@ export const PautaService = {
                 showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
             } else {
                 window.assistedIdToHandle = id;
-                this.preencherSelectColaboradores(app, 'attendant-select');
+                PautaService.preencherSelectColaboradores(app, 'attendant-select');
                 document.getElementById('attendant-modal')?.classList.remove('hidden');
             }
         }
@@ -1280,7 +1284,7 @@ export const PautaService = {
         if (button.classList.contains('edit-attendant-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted) {
-                this.preencherSelectColaboradores(app, 'edit-attendant-select');
+                PautaService.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
                 const select = document.getElementById('edit-attendant-select');
                 if (select) {
