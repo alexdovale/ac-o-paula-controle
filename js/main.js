@@ -35,6 +35,7 @@ import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { SIGEPRouter, ROUTES } from './router.js';
+import { PerfilService } from './perfilService.js';
 
 
 import { injetarModais } from './modais.js';
@@ -75,6 +76,7 @@ class SIGEPApp {
                 UIService,
                 DashboardService,
                 RecepçãoCentralService,
+                PerfilService,
                 showNotification,
             });
             this.router.init();
@@ -1612,15 +1614,7 @@ class SIGEPApp {
         });
         
         document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
-            this.openUserPreferencesModal();
-        });
-
-        document.getElementById('cancel-user-preferences-btn')?.addEventListener('click', () => {
-            document.getElementById('user-preferences-modal').classList.add('hidden');
-        });
-
-        document.getElementById('save-user-preferences-btn')?.addEventListener('click', async () => {
-            await this.saveUserPreferences();
+            this.router.navigate(ROUTES.MEU_PERFIL);
         });
 
         const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
