@@ -85,7 +85,7 @@ export const UIService = {
     },
 
     // ============================================================
-    // PRENCHER LISTA COLABORADORES MODAL - CORRIGIDO
+    // PRENCHER LISTA COLABORADORES MODAL - CORRIGIDO E BLINDADO
     // ============================================================
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborators-list-container');
@@ -98,19 +98,19 @@ export const UIService = {
         
         container.innerHTML = '';
         
-        // Limpa seleções anteriores
+        // Limpa seleções anteriores globais
         window.selectedCollaboratorId = null;
         window.selectedCollaboratorName = null;
         
-        // 1. Botão "Não atribuir" (Estilo da imagem)
+        // 1. Botão "Não atribuir" (Adicionada a classe collaborator-item para o filtro não quebrar)
         const btnNaoAtribuir = document.createElement('button');
-        btnNaoAtribuir.className = "w-full text-left p-4 mb-2 bg-white border-2 border-blue-500 rounded-xl hover:bg-blue-50 transition-all shadow-sm flex items-center gap-3";
+        btnNaoAtribuir.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border-2 border-blue-500 rounded-xl hover:bg-blue-50 transition-all shadow-sm flex items-center gap-3";
         btnNaoAtribuir.dataset.nome = 'nao atribuir';
         btnNaoAtribuir.innerHTML = `
-            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl">🚫</div>
-            <div>
-                <div class="font-bold text-gray-800">Não atribuir</div>
-                <div class="text-xs text-gray-500">Atender sem atribuir a nenhum colaborador</div>
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl flex-shrink-0">🚫</div>
+            <div class="overflow-hidden">
+                <div class="font-bold text-gray-800 truncate">Não atribuir</div>
+                <div class="text-xs text-gray-500 truncate">Atender sem atribuir a nenhum colaborador</div>
             </div>
         `;
         btnNaoAtribuir.onclick = (e) => {
@@ -121,72 +121,81 @@ export const UIService = {
         };
         container.appendChild(btnNaoAtribuir);
 
-        // 2. Verifica se há colaboradores
-        const colabs = app?.colaboradores || [];
+        // 2. Verifica se há colaboradores de forma segura
+        const colabs = app?.colaboradores || window.app?.colaboradores || [];
 
-        
-        
         if (colabs.length === 0) {
             const msg = document.createElement('p');
             msg.className = 'text-center text-gray-400 py-4 text-sm';
             msg.innerHTML = `
                 <span class="block text-2xl mb-2">👥</span>
-                Nenhum colaborador cadastrado.<br>
-                <span class="text-xs">Adicione colaboradores em <b>Ações → Colaboradores</b> antes de atender.</span>
+                Nenhum colaborador carregado.<br>
+                <span class="text-xs">Verifique a aba <b>Ações → Colaboradores</b> no painel de gestão.</span>
             `;
             container.appendChild(msg);
-            return;
+        } else {
+            // 3. Lista de colaboradores com Try/Catch para não quebrar a tela inteira se houver 1 erro
+            colabs.forEach(c => {
+                try {
+                    const btn = document.createElement('button');
+                    btn.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border border-gray-200 rounded-xl hover:border-blue-500 transition-all shadow-sm flex items-center gap-3";
+                    
+                    // Prevenção extrema contra dados corrompidos (objetos em vez de string)
+                    const rawNome = typeof c.nome === 'object' ? (c.nome.nome || c.nome.name || '') : (c.nome || '');
+                    const nomeSeguro = String(rawNome).trim() || 'Nome não informado';
+                    
+                    btn.dataset.nome = nomeSeguro.toLowerCase();
+                    btn.dataset.id = c.id || '';
+                    
+                    // Geração segura de iniciais sem dar split em espaços vazios
+                    let iniciais = '??';
+                    const parts = nomeSeguro.split(/\s+/).filter(Boolean);
+                    if (parts.length >= 2) {
+                        iniciais = (parts[0][0] + parts[parts.length-1][0]).toUpperCase();
+                    } else if (parts.length === 1 && parts[0].length >= 1) {
+                        iniciais = parts[0].substring(0, 2).toUpperCase();
+                    }
+                    
+                    btn.innerHTML = `
+                        <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">${escapeHTML(iniciais)}</div>
+                        <div class="overflow-hidden w-full">
+                            <div class="font-bold text-gray-800 truncate pr-2">${escapeHTML(nomeSeguro)}</div>
+                            <div class="text-xs text-gray-500 truncate">${escapeHTML(c.cargo || 'Membro')} | Equipe ${escapeHTML(c.equipe || 'N/A')}</div>
+                        </div>
+                    `;
+                    
+                    btn.onclick = (e) => {
+                        e.stopPropagation();
+                        window.selectedCollaboratorId = c.id;
+                        window.selectedCollaboratorName = nomeSeguro;
+                        this.destacarSelecao(container, btn);
+                    };
+                    
+                    container.appendChild(btn);
+                } catch (err) {
+                    console.error("⚠️ Ignorando colaborador mal formatado:", err, c);
+                }
+            });
         }
 
-        // 3. Lista de colaboradores
-        colabs.forEach(c => {
-            const btn = document.createElement('button');
-            btn.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border border-gray-200 rounded-xl hover:border-blue-500 transition-all shadow-sm flex items-center gap-3";
-            btn.dataset.nome = (c.nome || '').toLowerCase();
-            btn.dataset.id = c.id;
-            
-            const iniciais = (c.nome || '??')
-                .split(' ')
-                .map(n => n[0])
-                .join('')
-                .substring(0, 2)
-                .toUpperCase();
-            
-            btn.innerHTML = `
-                <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm">${iniciais}</div>
-                <div>
-                    <div class="font-bold text-gray-800">${escapeHTML(c.nome || 'Nome não informado')}</div>
-                    <div class="text-xs text-gray-500">${escapeHTML(c.cargo || 'Membro')} | Equipe ${escapeHTML(c.equipe || 'N/A')}</div>
-                </div>
-            `;
-            
-            btn.onclick = (e) => {
-                e.stopPropagation();
-                window.selectedCollaboratorId = c.id;
-                window.selectedCollaboratorName = c.nome;
-                this.destacarSelecao(container, btn);
-            };
-            
-            container.appendChild(btn);
-        });
-
-        // 4. Configuração da pesquisa (Filtro em tempo real)
+        // 4. Configuração da pesquisa ultra-robusta
         if (searchInput) {
-            // Remove listeners antigos para evitar duplicação
-            searchInput.oninput = null;
-            searchInput.oninput = (e) => {
-                const term = (e.target.value || '').toLowerCase().trim();
-                const items = container.querySelectorAll('.collaborator-item, button[data-nome]');
+            const applyFilter = (term) => {
+                const t = (term || '').toLowerCase().trim();
+                const items = container.querySelectorAll('.collaborator-item');
                 
                 items.forEach(item => {
                     const nome = (item.dataset.nome || '').toLowerCase();
-                    const shouldShow = !term || nome.includes(term);
+                    const shouldShow = !t || nome.includes(t);
                     item.style.display = shouldShow ? 'flex' : 'none';
                 });
             };
+
+            searchInput.oninput = (e) => applyFilter(e.target.value);
             
-            // Limpa a pesquisa ao abrir o modal
+            // Força a limpeza visual E a limpeza do filtro CSS (Garante que tudo apareça)
             searchInput.value = '';
+            applyFilter('');
         }
     },
 
@@ -1746,7 +1755,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     // ============================================================
-    // renderPautaCards - CORRIGIDO (sem unidade em modo evento)
+    // renderPautaCards - MANTIDO
     // ============================================================
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
@@ -1784,7 +1793,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             const card = document.createElement('div');
             card.className = `relative bg-white rounded-xl shadow-md overflow-hidden border border-gray-200 transition-all ${isExpired ? 'opacity-60 grayscale-[0.5] cursor-not-allowed' : 'cursor-pointer hover:shadow-lg'} ${isClosed ? 'opacity-60' : ''}`;
 
-            // CORRIGIDO: modo evento não mostra unidade
             let originHtml = '';
             if (isEvento) {
                 const tipoLabel = {
@@ -1853,8 +1861,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     this.showExpiredPautaModal(pauta, app);
                     return;
                 }
-                // CORRIGIDO: passa pautaTipo (mutirao/plantao/acao_social) separado
-                // de pautaType (agendamento/avulso/multisala) para o guard do router
                 if (app.router) {
                     await app.router.navigate('app', {
                         pautaId:   pauta.id,
