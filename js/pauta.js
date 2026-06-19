@@ -500,7 +500,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // callNextAssisted - CORRIGIDO (usa UIService)
+    // callNextAssisted - CORRIGIDO (Lógica e setTimeout Invertidos)
     // ============================================================
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
@@ -532,15 +532,6 @@ export const PautaService = {
             nameElement.textContent = nextAssisted.name;
         }
 
-        // CORRIGIDO: Usar UIService em vez de PautaService
-        if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-            UIService.preencherListaColaboradoresModal(app);
-        } else {
-            console.error('UIService.preencherListaColaboradoresModal não está disponível');
-            showNotification("Erro ao carregar lista de colaboradores", "error");
-            return;
-        }
-
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
         if (selectCollaboratorModal) {
             selectCollaboratorModal.classList.remove('hidden');
@@ -548,9 +539,15 @@ export const PautaService = {
             playSound('chime');
             
             setTimeout(() => {
+                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                    UIService.preencherListaColaboradoresModal(app);
+                } else {
+                    console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                    showNotification("Erro ao carregar lista de colaboradores", "error");
+                }
                 const searchInput = document.getElementById('collaborator-search-input');
                 if (searchInput) searchInput.focus();
-            }, 100);
+            }, 50);
         }
     },
 
@@ -967,7 +964,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // handleCardActions - CORRIGIDO (usa UIService)
+    // handleCardActions - CORRIGIDO (Lógica e setTimeout Invertidos)
     // ============================================================
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -1038,7 +1035,7 @@ export const PautaService = {
         }
 
         // ============================================================
-        // QUICK ACTION ITEM - CORRIGIDO (usa UIService)
+        // QUICK ACTION ITEM - CORRIGIDO (Lógica e setTimeout Invertidos)
         // ============================================================
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
@@ -1087,22 +1084,19 @@ export const PautaService = {
             
             showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
             
-            // CORRIGIDO: Usar UIService em vez de PautaService
-            if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                UIService.preencherListaColaboradoresModal(app);
-            } else {
-                console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                showNotification("Erro ao carregar lista de colaboradores", "error");
-                return;
-            }
-            
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
                 modal.classList.remove('hidden');
                 setTimeout(() => {
+                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                        UIService.preencherListaColaboradoresModal(app);
+                    } else {
+                        console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                        showNotification("Erro ao carregar lista de colaboradores", "error");
+                    }
                     const firstInput = modal.querySelector('input, button, [tabindex="0"]');
                     if (firstInput) firstInput.focus();
-                }, 100);
+                }, 50);
             }
         }
 
@@ -1205,7 +1199,7 @@ export const PautaService = {
         }
 
         // ============================================================
-        // SELECT COLLABORATOR BTN - CORRIGIDO (usa UIService)
+        // SELECT COLLABORATOR BTN - CORRIGIDO (Lógica e setTimeout Invertidos)
         // ============================================================
         if (button.classList.contains('select-collaborator-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
@@ -1220,22 +1214,19 @@ export const PautaService = {
                 nameElement.textContent = assisted.name || '';
             }
             
-            // CORRIGIDO: Usar UIService em vez de PautaService
-            if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                UIService.preencherListaColaboradoresModal(app);
-            } else {
-                console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                showNotification("Erro ao carregar lista de colaboradores", "error");
-                return;
-            }
-            
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
                 modal.classList.remove('hidden');
                 setTimeout(() => {
+                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                        UIService.preencherListaColaboradoresModal(app);
+                    } else {
+                        console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                        showNotification("Erro ao carregar lista de colaboradores", "error");
+                    }
                     const searchInput = document.getElementById('collaborator-search-input');
                     if (searchInput) searchInput.focus();
-                }, 100);
+                }, 50);
             }
         }
 
