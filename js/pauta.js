@@ -1,4 +1,4 @@
-// js/pauta.js - SERVIÇO DE PAUTAS (COMPLETO E ATUALIZADO)
+// js/pauta.js - SERVIÇO DE PAUTAS (COMPLETO E CORRIGIDO)
 
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
@@ -115,7 +115,7 @@ export const PautaService = {
 
         let arrivalTime = null;
         let room = null;
-        let status = 'pauta';  // padrão: vai para a coluna "Pauta"
+        let status = 'pauta';
 
         if (hasArrived === 'yes') {
             const timeStr = document.getElementById('arrival-time')?.value;
@@ -166,7 +166,6 @@ export const PautaService = {
             showNotification(mensagem, 'success');
             playSound('notification');
 
-            // Limpa os campos do formulário
             document.getElementById('assisted-name').value = '';
             document.getElementById('assisted-cpf').value = '';
             document.getElementById('assisted-num-agendamento').value = '';
@@ -347,7 +346,7 @@ export const PautaService = {
         }
     },
 
-   async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
         if (!assistedId || (!collaboratorName && collaboratorId !== 'null')) {
             showNotification("Selecione um colaborador!", "error");
             return false;
@@ -500,6 +499,9 @@ export const PautaService = {
         }
     },
 
+    // ============================================================
+    // callNextAssisted - CORRIGIDO (usa UIService)
+    // ============================================================
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -530,8 +532,13 @@ export const PautaService = {
             nameElement.textContent = nextAssisted.name;
         }
 
-        if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+        // CORRIGIDO: Usar UIService em vez de PautaService
+        if (typeof UIService.preencherListaColaboradoresModal === 'function') {
             UIService.preencherListaColaboradoresModal(app);
+        } else {
+            console.error('UIService.preencherListaColaboradoresModal não está disponível');
+            showNotification("Erro ao carregar lista de colaboradores", "error");
+            return;
         }
 
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
@@ -545,7 +552,7 @@ export const PautaService = {
                 if (searchInput) searchInput.focus();
             }, 100);
         }
-    }, 
+    },
 
     async deleteAssisted(db, pautaId, assistedId, userName) {
         if (!pautaId || !assistedId) return;
@@ -800,8 +807,8 @@ export const PautaService = {
                 const diffMinutos = (chegada - agendado) / (1000 * 60);
 
                 if (diffMinutos <= 5) return 'Máxima'; 
-                if (diffMinutos <= 15) return 'Média'; // Usando 15 minutos baseados na tolerância
-                return 'Mínima'; // Atrasado
+                if (diffMinutos <= 15) return 'Média';
+                return 'Mínima';
             } catch (e) {
                 return 'Média';
             }
@@ -810,7 +817,6 @@ export const PautaService = {
         return 'Média';
     },
 
-    // --- NOVA ORDENAÇÃO COM REGRA DE PONTUALIDADE ---
     sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
         
@@ -822,58 +828,43 @@ export const PautaService = {
             return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         }
 
-        // Tolerância para atraso (em minutos)
         const TOLERANCIA_MINUTOS = 15;
 
         const isPontual = (item) => {
-            // Avulsos ou pessoas sem horário definido não são prejudicados nesta checagem
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return true;
             
             try {
                 const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
-                const schedDate = new Date(item.arrivalTime); // Baseia a data na hora de chegada
+                const schedDate = new Date(item.arrivalTime);
                 schedDate.setHours(sHours, sMins, 0, 0);
-                
-                // Adiciona a tolerância
                 schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
 
                 const arrDate = new Date(item.arrivalTime);
-                return arrDate <= schedDate; // Retorna true se chegou antes do limite
+                return arrDate <= schedDate;
             } catch (e) {
                 return true;
             }
         };
 
         return [...list].sort((a, b) => {
-            // 1. PRIORIDADE MÁXIMA (Urgência)
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            // 2. TIPO (Agendamento antes de Avulso)
             if (a.type === 'agendamento' && b.type === 'avulso') return -1;
             if (a.type === 'avulso' && b.type === 'agendamento') return 1;
 
-            // 3. REGRA DE PONTUALIDADE
             const pontualA = isPontual(a);
             const pontualB = isPontual(b);
 
-            // Atrasados vão para o fim da fila!
-            if (pontualA && !pontualB) return -1; // A é pontual, B está atrasado
-            if (!pontualA && pontualB) return 1;  // B é pontual, A está atrasado
+            if (pontualA && !pontualB) return -1;
+            if (!pontualA && pontualB) return 1;
 
-            // 4. AMBOS SÃO PONTUAIS OU AMBOS SÃO ATRASADOS
             if (pontualA && pontualB) {
-                // Se ambos são pontuais, o Horário Agendado é o que manda (09:00 antes das 10:00)
                 if (a.scheduledTime && b.scheduledTime && a.scheduledTime !== b.scheduledTime) {
                     return a.scheduledTime.localeCompare(b.scheduledTime);
                 }
             }
 
-            // 5. DESEMPATE FINAL: Quem fez check-in primeiro
-            // Acontece quando:
-            // - Estão agendados para a MESMA hora e ambos são pontuais.
-            // - Ambos são atrasados (aí o horário agendado não importa, atende quem chegou primeiro).
-            // - Ambos são Avulsos.
             const arrivalA = a.checkInOrder || 0;
             const arrivalB = b.checkInOrder || 0;
             return arrivalA - arrivalB;
@@ -947,70 +938,9 @@ export const PautaService = {
         }
     },
 
-    preencherListaColaboradoresModal(app) {
-        const listContainer = document.getElementById('collaborators-list-container');
-        if (!listContainer) return;
-        
-        listContainer.innerHTML = '';
-        
-        // Puxa TODOS os colaboradores vinculados à pauta
-        const colaboradores = app.colaboradores || [];
-        
-        // 1. ADICIONANDO O BOTÃO "NÃO ATRIBUIR"
-        const btnNaoAtribuir = document.createElement('button');
-        btnNaoAtribuir.className = "w-full text-left p-3 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 focus:ring-2 focus:ring-gray-500 transition-colors mb-3 border-dashed";
-        btnNaoAtribuir.innerHTML = `
-            <div class="font-bold text-gray-700">🚫 Não Atribuir a Ninguém</div>
-            <div class="text-xs text-gray-500">Mover card sem vincular um atendente específico</div>
-        `;
-        btnNaoAtribuir.onclick = (e) => {
-            e.preventDefault();
-            // Limpa seleções anteriores
-            listContainer.querySelectorAll('button').forEach(b => {
-                b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'ring-gray-500', 'border-gray-500');
-            });
-            // Destaca este botão
-            btnNaoAtribuir.classList.add('ring-2', 'ring-gray-500', 'border-gray-500');
-            
-            // Seta os valores como nulos/vazios para o sistema ignorar a atribuição
-            window.selectedCollaboratorId = 'null';
-            window.selectedCollaboratorName = null;
-        };
-        listContainer.appendChild(btnNaoAtribuir);
-
-        // 2. LISTANDO OS COLABORADORES DA PAUTA
-        if (colaboradores.length === 0) {
-            listContainer.innerHTML += '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador adicionado a esta pauta.</p>';
-            return;
-        }
-
-        colaboradores.forEach(colab => {
-            const btn = document.createElement('button');
-            btn.className = "w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 focus:ring-2 focus:ring-blue-500 transition-colors mb-2";
-            
-            // Mostra uma tag verde se ele estiver "Presente"
-            const tagPresente = colab.presente ? '<span class="text-green-600 font-bold ml-1 text-[10px] bg-green-100 px-1.5 py-0.5 rounded uppercase">Online</span>' : '';
-            
-            btn.innerHTML = `
-                <div class="font-bold text-gray-800">${escapeHTML(colab.nome)}</div>
-                <div class="text-xs text-gray-500">${escapeHTML(colab.cargo || 'Membro')} ${tagPresente}</div>
-            `;
-            
-            btn.onclick = (e) => {
-                e.preventDefault();
-                listContainer.querySelectorAll('button').forEach(b => {
-                    b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500', 'ring-gray-500', 'border-gray-500');
-                });
-                btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
-                
-                window.selectedCollaboratorId = colab.id;
-                window.selectedCollaboratorName = colab.nome;
-            };
-            
-            listContainer.appendChild(btn);
-        });
-    },
-
+    // ============================================================
+    // preencherSelectColaboradores - MANTIDO (usado em selects)
+    // ============================================================
     preencherSelectColaboradores(app, selectId) {
         const select = document.getElementById(selectId);
         if (!select) return;
@@ -1018,7 +948,6 @@ export const PautaService = {
         const valorAtual = select.value;
         select.innerHTML = '<option value="">Selecione um profissional...</option>';
         
-        // ADICIONANDO A OPÇÃO "NÃO ATRIBUIR"
         const optNaoAtribuir = document.createElement('option');
         optNaoAtribuir.value = "null";
         optNaoAtribuir.textContent = "🚫 Não Atribuir a ninguém";
@@ -1037,6 +966,9 @@ export const PautaService = {
         if (valorAtual) select.value = valorAtual;
     },
 
+    // ============================================================
+    // handleCardActions - CORRIGIDO (usa UIService)
+    // ============================================================
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1105,6 +1037,9 @@ export const PautaService = {
             }
         }
 
+        // ============================================================
+        // QUICK ACTION ITEM - CORRIGIDO (usa UIService)
+        // ============================================================
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
             
@@ -1152,8 +1087,13 @@ export const PautaService = {
             
             showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
             
-            if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+            // CORRIGIDO: Usar UIService em vez de PautaService
+            if (typeof UIService.preencherListaColaboradoresModal === 'function') {
                 UIService.preencherListaColaboradoresModal(app);
+            } else {
+                console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                showNotification("Erro ao carregar lista de colaboradores", "error");
+                return;
             }
             
             const modal = document.getElementById('select-collaborator-modal');
@@ -1264,6 +1204,9 @@ export const PautaService = {
             }
         }
 
+        // ============================================================
+        // SELECT COLLABORATOR BTN - CORRIGIDO (usa UIService)
+        // ============================================================
         if (button.classList.contains('select-collaborator-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
@@ -1277,10 +1220,13 @@ export const PautaService = {
                 nameElement.textContent = assisted.name || '';
             }
             
-            if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
+            // CORRIGIDO: Usar UIService em vez de PautaService
+            if (typeof UIService.preencherListaColaboradoresModal === 'function') {
                 UIService.preencherListaColaboradoresModal(app);
             } else {
-                UIService.preencherListaColaboradoresModal(app);
+                console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                showNotification("Erro ao carregar lista de colaboradores", "error");
+                return;
             }
             
             const modal = document.getElementById('select-collaborator-modal');
@@ -1309,7 +1255,7 @@ export const PautaService = {
                 showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
             } else {
                 window.assistedIdToHandle = id;
-                PautaService.preencherSelectColaboradores(app, 'attendant-select');
+                this.preencherSelectColaboradores(app, 'attendant-select');
                 document.getElementById('attendant-modal')?.classList.remove('hidden');
             }
         }
@@ -1374,7 +1320,7 @@ export const PautaService = {
         if (button.classList.contains('edit-attendant-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (assisted) {
-                PautaService.preencherSelectColaboradores(app, 'edit-attendant-select');
+                this.preencherSelectColaboradores(app, 'edit-attendant-select');
                 
                 const select = document.getElementById('edit-attendant-select');
                 if (select) {
