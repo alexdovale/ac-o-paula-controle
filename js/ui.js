@@ -118,19 +118,22 @@ export const UIService = {
             window.selectedCollaboratorId = 'null';
             window.selectedCollaboratorName = null;
             this.destacarSelecao(container, btnNaoAtribuir);
-            // Fecha o modal após selecionar
-            const modal = document.getElementById('collaborator-modal');
-            if (modal) modal.classList.add('hidden');
         };
         container.appendChild(btnNaoAtribuir);
 
         // 2. Verifica se há colaboradores
         const colabs = app?.colaboradores || [];
+
+        
         
         if (colabs.length === 0) {
             const msg = document.createElement('p');
             msg.className = 'text-center text-gray-400 py-4 text-sm';
-            msg.textContent = 'Nenhum colaborador encontrado.';
+            msg.innerHTML = `
+                <span class="block text-2xl mb-2">👥</span>
+                Nenhum colaborador cadastrado.<br>
+                <span class="text-xs">Adicione colaboradores em <b>Ações → Colaboradores</b> antes de atender.</span>
+            `;
             container.appendChild(msg);
             return;
         }
@@ -162,9 +165,6 @@ export const UIService = {
                 window.selectedCollaboratorId = c.id;
                 window.selectedCollaboratorName = c.nome;
                 this.destacarSelecao(container, btn);
-                // Fecha o modal após selecionar
-                const modal = document.getElementById('collaborator-modal');
-                if (modal) modal.classList.add('hidden');
             };
             
             container.appendChild(btn);
