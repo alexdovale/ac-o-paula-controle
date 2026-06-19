@@ -87,52 +87,72 @@ export const UIService = {
    // Adicione ou substitua esta função no seu js/ui.js
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborators-list-container');
-        if (!container) {
-            console.error("Container de colaboradores não encontrado no HTML!");
-            return;
-        }
+        const searchInput = document.getElementById('collaborator-search-input');
+        if (!container) return;
         
         container.innerHTML = '';
-        const colaboradores = app.colaboradores || [];
         
-        // Botão "Não Atribuir"
+        // 1. Botão "Não atribuir" (Estilo da imagem)
         const btnNaoAtribuir = document.createElement('button');
-        btnNaoAtribuir.className = "w-full text-left p-3 bg-gray-100 border border-gray-300 rounded-lg hover:bg-gray-200 transition-colors mb-3 border-dashed";
+        btnNaoAtribuir.className = "w-full text-left p-4 mb-2 bg-white border-2 border-blue-500 rounded-xl hover:bg-blue-50 transition-all shadow-sm flex items-center gap-3";
         btnNaoAtribuir.innerHTML = `
-            <div class="font-bold text-gray-700">🚫 Não Atribuir a Ninguém</div>
-            <div class="text-xs text-gray-500">Mover sem vincular atendente</div>
+            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500">🚫</div>
+            <div>
+                <div class="font-bold text-gray-800">Não atribuir</div>
+                <div class="text-xs text-gray-500">Atender sem atribuir a nenhum colaborador</div>
+            </div>
         `;
-        btnNaoAtribuir.onclick = (e) => {
-            e.preventDefault();
-            container.querySelectorAll('button').forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500'));
-            btnNaoAtribuir.classList.add('ring-2', 'ring-gray-500', 'border-gray-500');
+        btnNaoAtribuir.onclick = () => {
             window.selectedCollaboratorId = 'null';
             window.selectedCollaboratorName = null;
+            this.destacarSelecao(container, btnNaoAtribuir);
         };
         container.appendChild(btnNaoAtribuir);
-
-        if (colaboradores.length === 0) {
-            container.innerHTML += '<p class="text-sm text-gray-500 text-center py-4">Nenhum colaborador adicionado a esta pauta.</p>';
-            return;
-        }
-
-        colaboradores.forEach(c => {
+    
+        // 2. Lista de colaboradores
+        const colabs = app.colaboradores || [];
+        colabs.forEach(c => {
             const btn = document.createElement('button');
-            btn.className = "w-full text-left p-3 bg-white border border-gray-200 rounded-lg hover:bg-blue-50 transition-colors mb-2";
+            btn.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border border-gray-200 rounded-xl hover:border-blue-500 transition-all shadow-sm flex items-center gap-3";
+            btn.dataset.nome = c.nome.toLowerCase();
+            
+            const iniciais = c.nome.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            
             btn.innerHTML = `
-                <div class="font-bold text-gray-800">${escapeHTML(c.nome)}</div>
-                <div class="text-xs text-gray-500">${escapeHTML(c.cargo || 'Membro')}</div>
+                <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center">${iniciais}</div>
+                <div>
+                    <div class="font-bold text-gray-800">${escapeHTML(c.nome)}</div>
+                    <div class="text-xs text-gray-500">${escapeHTML(c.cargo || 'Membro')} | Equipe ${escapeHTML(c.equipe || 'N/A')}</div>
+                </div>
             `;
-            btn.onclick = (e) => {
-                e.preventDefault();
-                container.querySelectorAll('button').forEach(b => b.classList.remove('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500'));
-                btn.classList.add('ring-2', 'ring-blue-500', 'bg-blue-50', 'border-blue-500');
+            btn.onclick = () => {
                 window.selectedCollaboratorId = c.id;
                 window.selectedCollaboratorName = c.nome;
+                this.destacarSelecao(container, btn);
             };
             container.appendChild(btn);
         });
+    
+        // 3. Lógica de pesquisa (Filtro em tempo real)
+        if (searchInput) {
+            searchInput.oninput = (e) => {
+                const term = e.target.value.toLowerCase();
+                container.querySelectorAll('.collaborator-item, button').forEach(item => {
+                    const nome = item.dataset.nome || item.textContent.toLowerCase();
+                    item.style.display = nome.includes(term) ? 'flex' : 'none';
+                });
+            };
+        }
     },
+    
+    destacarSelecao(container, btnSelecionado) {
+        container.querySelectorAll('button').forEach(b => {
+            b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-200');
+            b.classList.add('border-gray-200');
+        });
+        btnSelecionado.classList.add('border-blue-500', 'ring-2', 'ring-blue-200');
+        btnSelecionado.classList.remove('border-gray-200');
+    }
 
     // ============================================================
     // RENDERIZAÇÃO DO FILTRO - CORRIGIDO (MODO EVENTO/NORMAL)
