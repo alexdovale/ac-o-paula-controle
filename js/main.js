@@ -404,22 +404,52 @@ class SIGEPApp {
 
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
-            if (user) {
-                // 1. Primeiro, autentica o estado global
-                await AuthService.handleAuthState(this, user);
-                
-                // 2. Carrega as preferências e o perfil do Firestore
-                await this.loadUserPreferences();
-                
-                // 3. Só agora, com o currentUser populado, aplicamos a UI
-                this.applyRoleBasedUI();
-    
-                // 4. Resolve a rota apenas após garantir que o usuário está carregado
-                await this.router.resolveInitialRoute();
-            } else {
-                // Caso não logado
-                this.currentUser = null;
+            try {
+                if (user) {
+                    // 1. Primeiro, autentica o estado global
+                    await AuthService.handleAuthState(this, user);
+                    
+                    // 2. Carrega as preferências e o perfil do Firestore
+                    await this.loadUserPreferences();
+                    
+                    // 3. Só agora, com o currentUser populado, aplicamos a UI
+                    this.applyRoleBasedUI();
+        
+                    // 4. Resolve a rota apenas após garantir que o usuário está carregado
+                    await this.router.resolveInitialRoute();
+                } else {
+                    // Caso não logado
+                    this.currentUser = null;
+                    await this.router.navigate(ROUTES.LOGIN, {}, true);
+                }
+            } catch (error) {
+                console.error("Erro crítico na verificação de autenticação:", error);
+                // Se der erro (ex: falha de rede ou no Firestore), joga para o login por segurança
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
+            } finally {
+                // 🔴 AQUI ESTÁ A MÁGICA: Independente de sucesso ou erro, removemos o Loading!
+                this.hideLoadingScreen();
+            }
+        });
+    }
+
+    // 🔴 ADICIONE ESTE MÉTODO LOGO ABAIXO DO setupAuthListener()
+    hideLoadingScreen() {
+        // Tentei mapear os IDs mais comuns. Descubra qual o ID real da sua div 
+        // de "Conectando com Segurança" no seu index.html e coloque aqui!
+        const idsDeCarregamento = [
+            'loading-screen', 
+            'global-loader', 
+            'splash-screen', 
+            'loading-container',
+            'auth-loading-spinner' // Possível nome da div que está dentro do seu card de login
+        ];
+
+        idsDeCarregamento.forEach(id => {
+            const loader = document.getElementById(id);
+            if (loader) {
+                loader.classList.add('hidden');
+                loader.style.display = 'none'; // Garantia dupla de que vai sumir
             }
         });
     }
