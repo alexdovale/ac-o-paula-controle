@@ -7,7 +7,8 @@ import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
-import CollaboratorService from './colaboradores.js';         
+import CollaboratorService from './colaboradores.js'; 
+window.CollaboratorService = CollaboratorService;  // ← ADICIONE ESTA LINHA
 import { ModalService } from './modal.js?v=20260313';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -2101,8 +2102,25 @@ class SIGEPApp {
 
             this.setupRealtimeListener(pautaId);
             
+            // ============================================================
+            // CARREGAR COLABORADORES - COM LOGS PARA DEBUG
+            // ============================================================
+            console.log('🔍 [loadPauta] Verificando CollaboratorService...');
+            console.log('🔍 CollaboratorService:', typeof CollaboratorService);
+            console.log('🔍 setupListener:', typeof CollaboratorService?.setupListener);
+            
             if (typeof CollaboratorService?.setupListener === 'function') {
+                console.log('✅ Chamando CollaboratorService.setupListener para pauta:', pautaId);
                 CollaboratorService.setupListener(this, pautaId);
+            } else {
+                console.error('❌ CollaboratorService.setupListener NÃO é uma função!');
+                console.log('🔍 window.CollaboratorService:', typeof window.CollaboratorService);
+                
+                // Tenta usar a versão global como fallback
+                if (typeof window.CollaboratorService?.setupListener === 'function') {
+                    console.log('✅ Usando window.CollaboratorService como fallback');
+                    window.CollaboratorService.setupListener(this, pautaId);
+                }
             }
             
             this.iniciarMonitorEnvelopes();
