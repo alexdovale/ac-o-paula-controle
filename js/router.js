@@ -10,8 +10,7 @@ export const ROUTES = {
     ADMIN:            'admin',
     RECEPCAO_CENTRAL: 'recepcao-central',
     PAINEL_PUBLICO:   'painel-publico',
-    // Adicione a rota do perfil aqui se você tiver uma específica:
-    // MEU_PERFIL:       'meu-perfil',
+    MEU_PERFIL:       'meu-perfil',
 };
 
 const ROUTE_GUARDS = {
@@ -278,6 +277,17 @@ export class SIGEPRouter {
                 this._hideAllScreens();
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(app);
+            },
+
+            // ── MEU PERFIL ───────────────────────────────────────────────
+            [ROUTES.MEU_PERFIL]: async () => {
+                this._hideAllScreens();
+                document.getElementById('meu-perfil-container')?.classList.remove('hidden');
+                
+                // Se você já tiver importado o serviço de perfil, inicializamos a tela:
+                if (deps.PerfilService) {
+                    await deps.PerfilService.carregarDados(app);
+                }
             },
         };
     }
