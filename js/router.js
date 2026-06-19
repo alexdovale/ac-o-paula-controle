@@ -23,6 +23,18 @@ const ROUTE_GUARDS = {
     [ROUTES.PAINEL_PUBLICO]:    { requiresAuth: false },
 };
 
+// Todos os IDs de container que existem no index.html
+const ALL_SCREEN_IDS = [
+    'login-container',
+    'modo-selection-screen',
+    'pauta-selection-container',
+    'app-container',
+    'dashboard-container',
+    'admin-container',
+    'recepcao-central-container',
+    'painel-publico-container',
+];
+
 export class SIGEPRouter {
     constructor(app, deps) {
         this._app  = app;
@@ -79,7 +91,14 @@ export class SIGEPRouter {
     get currentRoute()  { return this._currentRoute; }
     get currentParams() { return this._currentParams; }
 
-    // ── GUARD CORRIGIDO ────────────────────────────────────────────────
+    // ── ESCONDE TODAS AS TELAS ────────────────────────────────────────
+    _hideAllScreens() {
+        ALL_SCREEN_IDS.forEach(id => {
+            document.getElementById(id)?.classList.add('hidden');
+        });
+    }
+
+    // ── GUARD ─────────────────────────────────────────────────────────
     _guard(route, params = {}) {
         const guard = ROUTE_GUARDS[route];
         if (!guard) return null;
@@ -100,9 +119,6 @@ export class SIGEPRouter {
             const modoAtual   = app.currentMode;
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
 
-            // CORRIGIDO: verifica tanto pautaTipo (mutirao/plantao/acao_social)
-            // quanto pautaType (agendamento/avulso/multisala) — para evento
-            // o campo relevante é pautaTipo, não pautaType
             const pautaTipo = params.pautaTipo
                            || localStorage.getItem('lastPautaTipo')
                            || '';
@@ -110,8 +126,6 @@ export class SIGEPRouter {
                            || localStorage.getItem('lastPautaType')
                            || 'normal';
 
-            // É evento se o TIPO do evento bater (mutirao, plantao, acao_social)
-            // OU se pautaType for um dos tipos de evento (fallback para pautas antigas)
             const isEvento = tiposEvento.includes(String(pautaTipo).toLowerCase())
                           || tiposEvento.includes(String(pautaType).toLowerCase());
 
@@ -156,7 +170,6 @@ export class SIGEPRouter {
         }
     }
 
-    // CORRIGIDO: persiste também pautaTipo separadamente
     _persistRoute(route, params) {
         const screenMap = {
             [ROUTES.LOGIN]:            'login',
@@ -172,7 +185,6 @@ export class SIGEPRouter {
             localStorage.setItem('lastPautaId',   params.pautaId);
             localStorage.setItem('lastPautaName', params.pautaName || '');
             localStorage.setItem('lastPautaType', params.pautaType || 'normal');
-            // NOVO: persiste o tipo do evento separadamente
             localStorage.setItem('lastPautaTipo', params.pautaTipo || '');
         }
     }
@@ -182,29 +194,27 @@ export class SIGEPRouter {
         const deps = this._deps;
 
         return {
+            // ── LOGIN ──────────────────────────────────────────────────
             [ROUTES.LOGIN]: async () => {
-                deps.UIService.showScreen('login');
+                this._hideAllScreens();
+                document.getElementById('login-container')?.classList.remove('hidden');
                 document.getElementById('admin-panel-btn')?.classList.add('hidden');
                 document.getElementById('admin-btn-main')?.classList.add('hidden');
             },
 
+            // ── MODO SELECTION ─────────────────────────────────────────
             [ROUTES.MODO_SELECTION]: async () => {
-                deps.UIService.showScreen('modoSelection');
+                this._hideAllScreens();
+                document.getElementById('modo-selection-screen')?.classList.remove('hidden');
                 app.applyRoleBasedUI();
             },
 
+            // ── PAUTA SELECTION ────────────────────────────────────────
             [ROUTES.PAUTA_SELECTION]: async () => {
                 if (app.currentPauta) app._teardownPauta();
 
-                const container = document.getElementById('pauta-selection-container');
-                if (container) {
-                    document.getElementById('login-container')?.classList.add('hidden');
-                    document.getElementById('modo-selection-screen')?.classList.add('hidden');
-                    document.getElementById('app-container')?.classList.add('hidden');
-                    container.classList.remove('hidden');
-                } else {
-                    deps.UIService.showScreen('pautaSelection');
-                }
+                this._hideAllScreens();
+                document.getElementById('pauta-selection-container')?.classList.remove('hidden');
 
                 if (deps.UIService?.renderPautaFilters) {
                     deps.UIService.renderPautaFilters(
@@ -219,6 +229,7 @@ export class SIGEPRouter {
                 app.applyRoleBasedUI();
             },
 
+            // ── APP (pauta aberta) ─────────────────────────────────────
             [ROUTES.APP]: async ({ pautaId, pautaName, pautaType, pautaTipo } = {}) => {
                 const id   = pautaId   || localStorage.getItem('lastPautaId');
                 const name = pautaName || localStorage.getItem('lastPautaName');
@@ -229,33 +240,37 @@ export class SIGEPRouter {
                         await app.loadPauta(id, name, type);
                     }
 
-                    const container = document.getElementById('app-container');
-                    if (container) {
-                        document.getElementById('pauta-selection-container')?.classList.add('hidden');
-                        document.getElementById('modo-selection-screen')?.classList.add('hidden');
-                        container.classList.remove('hidden');
-                    } else {
-                        deps.UIService.showScreen('app');
-                    }
+                    this._hideAllScreens();
+                    document.getElementById('app-container')?.classList.remove('hidden');
                 } else {
                     await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
                 }
             },
 
+            // ── DASHBOARD ──────────────────────────────────────────────
             [ROUTES.DASHBOARD]: async () => {
+                this._hideAllScreens();
+                // DashboardService.showDashboardScreen() só precisa mostrar o container
                 deps.DashboardService.showDashboardScreen();
                 localStorage.setItem('sigep_active_screen', 'dashboard');
             },
 
+            // ── ADMIN ──────────────────────────────────────────────────
             [ROUTES.ADMIN]: async () => {
-                app.showAdminScreen();
+                this._hideAllScreens();
+                document.getElementById('admin-container')?.classList.remove('hidden');
+                app.renderAdminContent();
             },
 
+            // ── RECEPÇÃO CENTRAL ───────────────────────────────────────
             [ROUTES.RECEPCAO_CENTRAL]: async () => {
+                this._hideAllScreens();
                 await deps.RecepçãoCentralService.abrir(app);
             },
 
+            // ── PAINEL PÚBLICO ─────────────────────────────────────────
             [ROUTES.PAINEL_PUBLICO]: async () => {
+                this._hideAllScreens();
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(app);
             },
