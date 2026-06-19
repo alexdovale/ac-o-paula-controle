@@ -17,27 +17,40 @@ export const escapeHTML = (str) => {
  * Toca sons do sistema respeitando as preferências do usuário
  */
 export function playSound(type = 'notification') {
+    // Garante que os caminhos iniciem da raiz (/) para evitar problemas com o Router SPA
+    const sounds = {
+        'success': '/assets/sounds/success.mp3',
+        'error': '/assets/sounds/error.mp3',
+        'chime': '/assets/sounds/chime.mp3',
+        'info': '/assets/sounds/chime.mp3',
+        'warning': '/assets/sounds/notification.mp3',
+        'notification': '/assets/sounds/notification.mp3'
+    };
+
     const preferenceKey = `enableSounds${type.charAt(0).toUpperCase() + type.slice(1)}`;
     const finalPreferenceKey = (type === 'chime' || type === 'notification' || type === 'info') 
         ? 'enableSoundsInfo' 
         : preferenceKey;
 
+    // Proteção caso a preferência seja explicitamente falsa
     if (window.app?.userPreferences && window.app.userPreferences[finalPreferenceKey] === false) {
         return; 
     }
 
-    const sounds = {
-        'success': './assets/sounds/success.mp3',
-        'error': './assets/sounds/error.mp3',
-        'chime': './assets/sounds/chime.mp3',
-        'info': './assets/sounds/chime.mp3',
-        'warning': './assets/sounds/notification.mp3',
-        'notification': './assets/sounds/notification.mp3'
-    };
-
-    const audio = new Audio(sounds[type] || sounds['notification']);
-    audio.volume = 0.4; // Volume um pouco mais suave e elegante
-    audio.play().catch(() => { /* Ignora erros silenciados pelo navegador */ });
+    try {
+        const audio = new Audio(sounds[type] || sounds['notification']);
+        audio.volume = 0.4; // Volume um pouco mais suave e elegante
+        
+        // Captura o erro no console em modo de desenvolvimento para você ver se o navegador bloqueou
+        const playPromise = audio.play();
+        if (playPromise !== undefined) {
+            playPromise.catch(error => {
+                console.warn(`[Áudio Bloqueado] O navegador impediu o som '${type}':`, error.message);
+            });
+        }
+    } catch (e) {
+        console.error("Erro ao instanciar o áudio:", e);
+    }
 }
 
 /**
@@ -55,8 +68,10 @@ const closeNotification = (notification) => {
  * Sistema de Notificações Toast Premium (Glassmorphism e SVGs)
  */
 export function showNotification(message, type = 'info', duration = 4000, actions = []) {
+    // Checagem de preferência mais segura. Só aborta se for EXATAMENTE false.
     const preferenceKey = `showToasts${type.charAt(0).toUpperCase() + type.slice(1)}`;
     if (window.app?.userPreferences && window.app.userPreferences[preferenceKey] === false) {
+        console.info(`Notificação do tipo ${type} silenciada pelas preferências do usuário.`);
         return; 
     }
 
@@ -64,8 +79,8 @@ export function showNotification(message, type = 'info', duration = 4000, action
     if (!container) {
         container = document.createElement('div');
         container.id = 'notification-container';
-        // Posicionamento superior direito no Desktop, inferior no Mobile
-        container.className = 'fixed bottom-4 left-4 right-4 sm:bottom-auto sm:top-6 sm:left-auto sm:right-6 z-[9999] flex flex-col sm:items-end space-y-3 pointer-events-none';
+        // Ajustei o z-index para garantir que fique em cima de modais muito altos
+        container.className = 'fixed bottom-4 left-4 right-4 sm:bottom-auto sm:top-6 sm:left-auto sm:right-6 z-[99999] flex flex-col sm:items-end space-y-3 pointer-events-none';
         document.body.appendChild(container);
     }
 
@@ -102,6 +117,8 @@ export function showNotification(message, type = 'info', duration = 4000, action
     }
 
     notification.classList.add(borderColor);
+    
+    // Toca o som (que agora loga se houver bloqueio)
     playSound(type);
 
     // Estrutura Interna da Notificação
@@ -137,11 +154,11 @@ export function showNotification(message, type = 'info', duration = 4000, action
 
     container.appendChild(notification);
 
-    // Dispara animação fluida
-    requestAnimationFrame(() => {
+    // Dispara animação fluida (com um leve atraso para o navegador processar o DOM)
+    setTimeout(() => {
         notification.classList.remove('sm:translate-x-10', 'translate-y-10', 'opacity-0', 'scale-95');
         notification.classList.add('translate-x-0', 'translate-y-0', 'opacity-100', 'scale-100');
-    });
+    }, 10);
 
     if (!actions || actions.length === 0) {
         setTimeout(() => closeNotification(notification), duration);
