@@ -531,7 +531,7 @@ export const PautaService = {
         }
 
         if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
-            PautaService.preencherListaColaboradoresModal(app);
+            UIService.preencherListaColaboradoresModal(app);
         }
 
         const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
@@ -1153,7 +1153,7 @@ export const PautaService = {
             showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
             
             if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
-                PautaService.preencherListaColaboradoresModal(app);
+                UIService.preencherListaColaboradoresModal(app);
             }
             
             const modal = document.getElementById('select-collaborator-modal');
@@ -1278,9 +1278,9 @@ export const PautaService = {
             }
             
             if (typeof PautaService.preencherListaColaboradoresModal === 'function') {
-                PautaService.preencherListaColaboradoresModal(app);
+                UIService.preencherListaColaboradoresModal(app);
             } else {
-                PautaService.preencherListaColaboradoresModal(app);
+                UIService.preencherListaColaboradoresModal(app);
             }
             
             const modal = document.getElementById('select-collaborator-modal');
