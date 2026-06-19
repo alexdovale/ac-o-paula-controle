@@ -866,6 +866,107 @@
 
     <div id="modals-container"></div>
 
+    <!-- ============================================================ -->
+    <!-- MODAL DE SELEÇÃO DE COLABORADORES                             -->
+    <!-- ============================================================ -->
+    <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <!-- Cabeçalho -->
+            <div class="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700">
+                <h3 class="text-lg font-bold text-white">Selecione um Colaborador</h3>
+                <p id="assisted-to-attend-name" class="text-sm text-blue-100 mt-1">Carregando...</p>
+            </div>
+            
+            <!-- Corpo com pesquisa -->
+            <div class="p-4">
+                <input type="text" id="collaborator-search-input" placeholder="🔍 Pesquisar colaborador..." class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+            </div>
+            
+            <!-- Lista de colaboradores -->
+            <div id="collaborators-list-container" class="px-4 pb-4 overflow-y-auto max-h-[55vh] space-y-2">
+                <!-- Será preenchido dinamicamente pelo UIService -->
+                <p class="text-center text-gray-400 text-sm py-8">Carregando colaboradores...</p>
+            </div>
+            
+            <!-- Rodapé com botões -->
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button id="cancel-select-collaborator-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition text-sm">
+                    Cancelar
+                </button>
+                <button id="confirm-select-collaborator-btn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-md text-sm">
+                    Confirmar
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DE CONFIRMAÇÃO DE ATENDENTE (para fluxo direto)         -->
+    <!-- ============================================================ -->
+    <div id="attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
+            <div class="p-4 border-b bg-gradient-to-r from-green-600 to-green-700">
+                <h3 class="text-lg font-bold text-white">Confirmar Atendimento</h3>
+                <p class="text-sm text-green-100 mt-1">Selecione quem está atendendo</p>
+            </div>
+            <div class="p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
+                <select id="attendant-select" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button id="cancel-attendant-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+                <button id="confirm-attendant-btn" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition shadow-md text-sm font-bold">Confirmar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DE EDIÇÃO DE ATENDENTE                                  -->
+    <!-- ============================================================ -->
+    <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
+            <div class="p-4 border-b bg-gradient-to-r from-amber-600 to-amber-700">
+                <h3 class="text-lg font-bold text-white">Alterar Atendente</h3>
+                <p class="text-sm text-amber-100 mt-1">Selecione o novo atendente responsável</p>
+            </div>
+            <div class="p-4">
+                <label class="block text-sm font-medium text-gray-700 mb-1">Novo Atendente</label>
+                <select id="edit-attendant-select" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                    <option value="">Selecione...</option>
+                </select>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button id="cancel-edit-attendant-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+                <button id="confirm-edit-attendant-btn" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition shadow-md text-sm font-bold">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DE EDIÇÃO DE ASSISTIDO                                 -->
+    <!-- ============================================================ -->
+    <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
+            <div class="p-4 border-b bg-gradient-to-r from-slate-600 to-slate-700">
+                <h3 class="text-lg font-bold text-white">Editar Assistido</h3>
+            </div>
+            <div class="p-4 overflow-y-auto max-h-[60vh] space-y-3">
+                <div><label class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="w-full p-2 border rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="w-full p-2 border rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Nº Agendamento</label><input type="text" id="edit-assisted-num-agendamento" class="w-full p-2 border rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Assunto</label><input type="text" id="edit-assisted-subject" class="w-full p-2 border rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="w-full p-2 border rounded-lg"></div>
+                <div id="edit-room-container" class="hidden"><label class="block text-sm font-medium text-gray-700">Sala</label><select id="edit-room-select" class="w-full p-2 border rounded-lg"></select></div>
+            </div>
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button id="cancel-edit-assisted-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+                <button id="confirm-edit-assisted-btn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-md text-sm font-bold">Salvar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
     <!-- ===================================================== -->
