@@ -314,6 +314,102 @@
             </div>
         </div>
 
+        <!-- MEU PERFIL E PREFERÊNCIAS -->
+        <div id="meu-perfil-container" class="hidden w-full max-w-5xl mx-auto p-2 sm:p-4">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+                    &larr; Voltar
+                </button>
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl">👤</div>
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 text-center">
+                    Meu Perfil e Preferências
+                </h2>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">Gerencie seus dados, acesso, unidades e notificações</p>
+            </div>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- COLUNA 1: DADOS DE ACESSO -->
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
+                    <h3 class="text-lg font-bold text-slate-800 border-b pb-2">🔐 Dados de Acesso</h3>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
+                        <input type="text" id="perfil-nome" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+                    
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700">E-mail (Login)</label>
+                        <input type="email" id="perfil-email" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                    </div>
+
+                    <div class="pt-4 border-t border-gray-100">
+                        <h4 class="text-sm font-bold text-gray-600 mb-3">Alterar Senha (Opcional)</h4>
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700">Nova Senha</label>
+                            <input type="password" id="perfil-nova-senha" placeholder="Deixe em branco para não alterar" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+
+                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 mt-4">
+                        <label class="block text-sm font-bold text-amber-800">Senha Atual (Obrigatória para salvar)</label>
+                        <p class="text-xs text-amber-700 mb-2">Por segurança, o sistema exige sua senha atual para confirmar alterações de e-mail ou senha.</p>
+                        <input type="password" id="perfil-senha-atual" placeholder="Digite sua senha atual" class="w-full p-2 border border-amber-300 rounded-lg focus:ring-2 focus:ring-amber-500">
+                    </div>
+                </div>
+
+                <!-- COLUNA 2: VÍNCULOS E PREFERÊNCIAS -->
+                <div class="space-y-6">
+                    <!-- Vínculos -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🏛️ Vínculo Institucional</h3>
+                        
+                        <div class="mb-4">
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Seu Perfil no Sistema</label>
+                            <input type="text" id="perfil-role" disabled class="w-full p-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-semibold uppercase text-sm">
+                        </div>
+
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-1">Unidades de Lotação / Atuação</label>
+                            <p class="text-xs text-gray-500 mb-2">As pautas da Recepção Central serão filtradas com base nas unidades marcadas abaixo.</p>
+                            <div id="perfil-unidades-list" class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
+                                <p class="text-sm text-gray-500 text-center py-2">Carregando unidades...</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Notificações -->
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🔔 Preferências de Notificação</h3>
+                        
+                        <div class="grid grid-cols-2 gap-4">
+                            <div class="space-y-3">
+                                <p class="text-sm font-bold text-gray-600">Emitir Sons</p>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-success" class="h-4 w-4 text-green-600 rounded"> <span class="text-sm">Sucesso</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-error" class="h-4 w-4 text-red-600 rounded"> <span class="text-sm">Erro</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-warning" class="h-4 w-4 text-amber-600 rounded"> <span class="text-sm">Aviso</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-info" class="h-4 w-4 text-blue-600 rounded"> <span class="text-sm">Informação</span></label>
+                            </div>
+                            <div class="space-y-3">
+                                <p class="text-sm font-bold text-gray-600">Exibir Toasts (Pop-ups)</p>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-success" class="h-4 w-4 text-green-600 rounded"> <span class="text-sm">Sucesso</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-error" class="h-4 w-4 text-red-600 rounded"> <span class="text-sm">Erro</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-warning" class="h-4 w-4 text-amber-600 rounded"> <span class="text-sm">Aviso</span></label>
+                                <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-info" class="h-4 w-4 text-blue-600 rounded"> <span class="text-sm">Informação</span></label>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- BOTÃO SALVAR -->
+            <div class="mt-6 flex justify-end">
+                <button id="perfil-salvar-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-green-700 transition shadow-lg flex justify-center items-center gap-2">
+                    <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
+                    Salvar Todas as Alterações
+                </button>
+            </div>
+        </div>
+
         <!-- ADMIN (ATUALIZADO COM LOGO E TÍTULO CENTRALIZADOS) -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
