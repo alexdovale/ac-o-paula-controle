@@ -470,6 +470,36 @@ function renderChecklist(actionKey) {
     containerEl.innerHTML = ''; 
 
     // ========================================================
+    // BOTÃO INTELIGENTE: CALCULADORA DE PENSÃO
+    // ========================================================
+    const ASSUNTOS_PENSAO = [
+        'alimentos_fixacao_majoracao_oferta',
+        'alimentos_gravidicos',
+        'alimentos_avoengos',
+        'divorcio_consensual',
+        'divorcio_litigioso',
+        'investigacao_paternidade'
+    ];
+
+    if (ASSUNTOS_PENSAO.includes(actionKey)) {
+        const calcContainer = document.createElement('div');
+        calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
+        calcContainer.onclick = () => window.open('https://alexdovale.github.io/calculo-de-pens-o/', '_blank');
+        calcContainer.innerHTML = `
+            <div>
+                <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
+                    <span>🧮</span> Calculadora de Pensão Alimentícia
+                </h4>
+                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Use nossa ferramenta auxiliar para calcular valores e proporções rapidamente.</p>
+            </div>
+            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+            </div>
+        `;
+        containerEl.appendChild(calcContainer);
+    }
+
+    // ========================================================
     // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
     // ========================================================
     const socioSection = document.createElement('div');
@@ -477,7 +507,6 @@ function renderChecklist(actionKey) {
     socioSection.innerHTML = `
         <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
         
-        <!-- OCUPAÇÃO -->
         <div class="mb-4">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
             <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
@@ -486,13 +515,11 @@ function renderChecklist(actionKey) {
             </select>
         </div>
         
-        <!-- PROFISSÃO (aparece apenas para trabalho) -->
         <div id="socio-profissao-container" class="mb-4 hidden">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
             <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
         </div>
         
-        <!-- ESTADO CIVIL -->
         <div class="mb-4">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
             <select id="socio-estado-civil" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
@@ -506,7 +533,6 @@ function renderChecklist(actionKey) {
             </select>
         </div>
         
-        <!-- RENDA FAMILIAR -->
         <div class="mb-2">
             <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">RENDA FAMILIAR (R$)</label>
             <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
@@ -832,7 +858,6 @@ function renderReuSocioeconomico() {
         <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
             <h4 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-blue-600 rounded"></span>4. PERFIL SOCIOECONÔMICO DO RÉU</h4>
             <div class="space-y-3">
-                <!-- OCUPAÇÃO -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -846,7 +871,6 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
-                <!-- PROFISSÃO (aparece apenas para trabalho) -->
                 <div id="reu-profissao-container" class="hidden">
                     <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -857,7 +881,6 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
-                <!-- ESTADO CIVIL -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -876,7 +899,6 @@ function renderReuSocioeconomico() {
                     </div>
                 </div>
 
-                <!-- GANHOS LÍQUIDOS -->
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -1097,7 +1119,7 @@ function renderExpenseTable() {
                         <td class="py-3">
                             <p class="text-[10px] font-bold text-green-800 uppercase">${c.label}</p>
                             <p class="text-[9px] text-green-600 italic">${c.desc}</p>
-                        </tr>
+                        </td>
                         <td class="py-3 pl-2">
                             <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
                         </td>
