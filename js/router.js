@@ -2,14 +2,16 @@
 // Sistema de roteamento SPA para o SIGEP App
 
 export const ROUTES = {
-    LOGIN:              'login',
-    MODO_SELECTION:     'modo-selection',
-    PAUTA_SELECTION:    'pauta-selection',
-    APP:                'app',
-    DASHBOARD:          'dashboard',
-    ADMIN:              'admin',
-    RECEPCAO_CENTRAL:   'recepcao-central',
-    PAINEL_PUBLICO:     'painel-publico',
+    LOGIN:            'login',
+    MODO_SELECTION:   'modo-selection',
+    PAUTA_SELECTION:  'pauta-selection',
+    APP:              'app',
+    DASHBOARD:        'dashboard',
+    ADMIN:            'admin',
+    RECEPCAO_CENTRAL: 'recepcao-central',
+    PAINEL_PUBLICO:   'painel-publico',
+    // Adicione a rota do perfil aqui se você tiver uma específica:
+    // MEU_PERFIL:       'meu-perfil',
 };
 
 const ROUTE_GUARDS = {
@@ -23,7 +25,8 @@ const ROUTE_GUARDS = {
     [ROUTES.PAINEL_PUBLICO]:    { requiresAuth: false },
 };
 
-// Todos os IDs de container que existem no index.html
+// 🔴 CORREÇÃO AQUI: Todos os IDs de container que existem no index.html
+// Se o ID da sua tela de perfil for diferente no HTML, altere o 'meu-perfil-container' abaixo.
 const ALL_SCREEN_IDS = [
     'login-container',
     'modo-selection-screen',
@@ -33,6 +36,7 @@ const ALL_SCREEN_IDS = [
     'admin-container',
     'recepcao-central-container',
     'painel-publico-container',
+    'meu-perfil-container', // <-- Container do perfil adicionado para não empilhar!
 ];
 
 export class SIGEPRouter {
@@ -94,6 +98,7 @@ export class SIGEPRouter {
     // ── ESCONDE TODAS AS TELAS ────────────────────────────────────────
     _hideAllScreens() {
         ALL_SCREEN_IDS.forEach(id => {
+            // Isso garante que qualquer tela na lista anterior perca a visibilidade
             document.getElementById(id)?.classList.add('hidden');
         });
     }
@@ -159,6 +164,7 @@ export class SIGEPRouter {
         if (saveToStorage) this._persistRoute(route, params);
         const handler = this._handlers[route];
         if (!handler) { console.warn(`[SIGEPRouter] Rota sem handler: "${route}"`); return; }
+        
         try {
             await handler(params);
         } catch (error) {
@@ -250,7 +256,6 @@ export class SIGEPRouter {
             // ── DASHBOARD ──────────────────────────────────────────────
             [ROUTES.DASHBOARD]: async () => {
                 this._hideAllScreens();
-                // DashboardService.showDashboardScreen() só precisa mostrar o container
                 deps.DashboardService.showDashboardScreen();
                 localStorage.setItem('sigep_active_screen', 'dashboard');
             },
