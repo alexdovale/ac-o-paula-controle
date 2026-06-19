@@ -500,7 +500,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // callNextAssisted - CORRIGIDO (Lógica e setTimeout Invertidos)
+    // callNextAssisted - CORRIGIDO
     // ============================================================
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
@@ -539,15 +539,20 @@ export const PautaService = {
             playSound('chime');
             
             setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) {
+                    searchInput.value = ''; // Limpa qualquer pesquisa antiga que estivesse escondendo a lista
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
                 if (typeof UIService.preencherListaColaboradoresModal === 'function') {
                     UIService.preencherListaColaboradoresModal(app);
                 } else {
                     console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                    showNotification("Erro ao carregar lista de colaboradores", "error");
                 }
-                const searchInput = document.getElementById('collaborator-search-input');
+                
                 if (searchInput) searchInput.focus();
-            }, 50);
+            }, 150);
         }
     },
 
@@ -964,7 +969,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // handleCardActions - CORRIGIDO (Lógica e setTimeout Invertidos)
+    // handleCardActions - CORRIGIDO
     // ============================================================
     handleCardActions(e, app) {
         const button = e.target.closest('button');
@@ -1035,7 +1040,7 @@ export const PautaService = {
         }
 
         // ============================================================
-        // QUICK ACTION ITEM - CORRIGIDO (Lógica e setTimeout Invertidos)
+        // QUICK ACTION ITEM - CORRIGIDO
         // ============================================================
         if (button.classList.contains('quick-action-item')) {
             e.stopPropagation();
@@ -1088,15 +1093,19 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) {
+                        searchInput.value = ''; // Limpa filtro anterior
+                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
                     if (typeof UIService.preencherListaColaboradoresModal === 'function') {
                         UIService.preencherListaColaboradoresModal(app);
-                    } else {
-                        console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                        showNotification("Erro ao carregar lista de colaboradores", "error");
                     }
+                    
                     const firstInput = modal.querySelector('input, button, [tabindex="0"]');
                     if (firstInput) firstInput.focus();
-                }, 50);
+                }, 150);
             }
         }
 
@@ -1199,7 +1208,7 @@ export const PautaService = {
         }
 
         // ============================================================
-        // SELECT COLLABORATOR BTN - CORRIGIDO (Lógica e setTimeout Invertidos)
+        // SELECT COLLABORATOR BTN - CORRIGIDO
         // ============================================================
         if (button.classList.contains('select-collaborator-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
@@ -1218,15 +1227,18 @@ export const PautaService = {
             if (modal) {
                 modal.classList.remove('hidden');
                 setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) {
+                        searchInput.value = ''; // Limpa filtro anterior
+                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
                     if (typeof UIService.preencherListaColaboradoresModal === 'function') {
                         UIService.preencherListaColaboradoresModal(app);
-                    } else {
-                        console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                        showNotification("Erro ao carregar lista de colaboradores", "error");
                     }
-                    const searchInput = document.getElementById('collaborator-search-input');
+                    
                     if (searchInput) searchInput.focus();
-                }, 50);
+                }, 150);
             }
         }
 
