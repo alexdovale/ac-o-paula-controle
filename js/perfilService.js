@@ -1,4 +1,5 @@
 // js/perfilService.js
+import { ROUTES } from './router.js'; // <-- CORREÇÃO: Importando ROUTES
 import { doc, getDoc, updateDoc, collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { EmailAuthProvider, reauthenticateWithCredential, updatePassword, updateEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { showNotification } from './utils.js';
@@ -91,8 +92,8 @@ export const PerfilService = {
         btnVoltar.parentNode.replaceChild(newBtnVoltar, btnVoltar);
 
         newBtnVoltar.addEventListener('click', () => {
-            // Volta para a tela anterior (Pautas ou Dashboard)
-            app.router.navigate(app.ROUTES.PAUTA_SELECTION);
+            // 🔴 CORREÇÃO AQUI: Volta para a tela anterior usando apenas ROUTES
+            app.router.navigate(ROUTES.PAUTA_SELECTION);
         });
 
         newBtnSalvar.addEventListener('click', async () => {
