@@ -469,7 +469,7 @@ function renderChecklist(actionKey) {
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = ''; 
 
-    // ========================================================
+   // ========================================================
     // BOTÃO INTELIGENTE: CALCULADORA DE PENSÃO
     // ========================================================
     const ASSUNTOS_PENSAO = [
@@ -481,7 +481,11 @@ function renderChecklist(actionKey) {
         'investigacao_paternidade'
     ];
 
-    if (ASSUNTOS_PENSAO.includes(actionKey)) {
+    // Verifica se é o link do Cidadão (Assistido). Se tiver 'captacao' na URL, é ele.
+    const isLinkDoCidadao = window.location.pathname.includes('captacao');
+
+    // Mostra a calculadora se o assunto for de pensão E NÃO for a tela do cidadão
+    if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
         const calcContainer = document.createElement('div');
         calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
         calcContainer.onclick = () => window.open('https://alexdovale.github.io/calculo-de-pens-o/', '_blank');
