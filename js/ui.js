@@ -1715,7 +1715,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     </p>
                     <div class="flex flex-col gap-3">
                         <button id="expired-stats-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition-colors shadow-sm flex items-center justify-center gap-2">
-                            <span class="text-lg">📊</span> Abrir Estatísticas e PDFs
+                            <span class="text-lg"></span> Abrir Estatísticas e PDFs
                         </button>
                         <button id="expired-cancel-btn" class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl transition-colors">
                             Voltar
@@ -1795,17 +1795,17 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             let originHtml = '';
             if (isEvento) {
                 const tipoLabel = {
-                    'mutirao': '🤝 Mutirão',
-                    'mutirão': '🤝 Mutirão',
-                    'plantao': '🚨 Plantão',
-                    'acao_social': '❤️ Ação Social'
-                }[String(pauta.tipo || '').toLowerCase()] || '⭐ Evento';
-                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span>⭐</span> ${tipoLabel}</h2>`;
+                    'mutirao': 'Mutirão',
+                    'mutirão': ' Mutirão',
+                    'plantao': ' Plantão',
+                    'acao_social': ' Ação Social'
+                }[String(pauta.tipo || '').toLowerCase()] || ' Evento';
+                originHtml = `<h2 class="text-sm font-bold text-amber-600 uppercase tracking-wide flex items-center gap-1"><span></span> ${tipoLabel}</h2>`;
             } else {
                 const nomeUnidade = pauta.unidadeNome || pauta.origin || pauta.orgao;
                 originHtml = nomeUnidade
-                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span>🏢</span> ${escapeHTML(nomeUnidade)}</h2>`
-                    : `<h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1"><span>📋</span> Pauta Normal</h2>`;
+                    ? `<h2 class="text-sm font-bold text-indigo-700 uppercase tracking-wide flex items-center gap-1"><span></span> ${escapeHTML(nomeUnidade)}</h2>`
+                    : `<h2 class="text-sm font-bold text-gray-400 uppercase tracking-wide flex items-center gap-1"><span> </span> Pauta Normal</h2>`;
             }
 
             card.innerHTML = `
