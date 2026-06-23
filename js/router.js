@@ -20,7 +20,8 @@ const ROUTE_GUARDS = {
     [ROUTES.APP]:               { requiresAuth: true },
     [ROUTES.DASHBOARD]:         { requiresAuth: true },
     [ROUTES.ADMIN]:             { requiresAuth: true, roles: ['admin', 'superadmin'] },
-    [ROUTES.RECEPCAO_CENTRAL]:  { requiresAuth: true, roles: ['apoio', 'admin', 'superadmin'] },
+    // 🟢 CORREÇÃO AQUI: Removida a restrição "roles: ['apoio', 'admin', 'superadmin']"
+    [ROUTES.RECEPCAO_CENTRAL]:  { requiresAuth: true }, 
     [ROUTES.PAINEL_PUBLICO]:    { requiresAuth: false },
 };
 
