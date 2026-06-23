@@ -88,11 +88,14 @@ export const RecepçãoCentralService = {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
 
+        // 🟢 TRAVA DE ACESSO REMOVIDA PARA TODOS OS USUÁRIOS
+        /*
         const role = app.currentUser?.role;
         if (!['apoio', 'admin', 'superadmin'].includes(role)) {
             showNotification("Acesso restrito à Recepção Central.", "warning");
             return;
         }
+        */
 
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
