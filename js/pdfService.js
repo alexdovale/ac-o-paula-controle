@@ -76,11 +76,11 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGO DO SIGEP (URL RAW)
-const LOGO_SIGEP_URL = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/assets/logo/imagem%20(4).png";
+// ⭐ LOGO DO SIGEP (Firebase Storage - Usada em todos os PDFs, exceto Ata Social)
+const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
 
-// ⭐ LOGO DA DEFENSORIA (URL RAW)
-const LOGO_DEFENSORIA_URL = "https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/logo_defensoria.png";
+// ⭐ LOGO DA DEFENSORIA (Firebase Storage - Usada APENAS na Ata Social)
+const LOGO_DEFENSORIA_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7";
 
 // ⭐ FUNÇÃO: Carrega imagem e converte para Base64
 const loadImageBase64 = (url) => {
