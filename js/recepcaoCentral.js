@@ -158,7 +158,7 @@ export const RecepçãoCentralService = {
                 
                 <div class="flex justify-center mb-4">
                     <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-3 shadow-md">
-                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
+                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-10 w-auto object-contain">
                     </div>
                 </div>
     
