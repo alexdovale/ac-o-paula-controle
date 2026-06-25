@@ -2,10 +2,42 @@
  * estatisticas.js - Versão Completa e Corrigida
  * Funcionalidades:
  * - PDF por Equipe (MOSTRA TODOS + QUEBRA DE PÁGINA AUTOMÁTICA)
- * - Visual "Verde SIGAP" nativo sem imagens externas (Logo em texto)
+ * - Logo SIGEP no cabeçalho + Função Anti-CORS
  * - Tabelas inteligentes para não sobrepor textos
  * - Ordenação Hierárquica: Defensores primeiro, Servidores depois.
  */
+
+const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
+
+// ⭐ FUNÇÃO BLINDADA: Carrega imagem driblando o bloqueio de CORS do Firebase
+const loadImageBase64 = async (url) => {
+    const fetchImage = (src) => new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'Anonymous';
+        img.onload = () => {
+            const canvas = document.createElement('canvas');
+            canvas.width = img.width;
+            canvas.height = img.height;
+            canvas.getContext('2d').drawImage(img, 0, 0);
+            resolve(canvas.toDataURL('image/png'));
+        };
+        img.onerror = reject;
+        img.src = src;
+    });
+
+    try {
+        return await fetchImage(url); // Tenta direto
+    } catch (e) {
+        try {
+            // Se o Firebase bloquear, usa o proxy
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            return await fetchImage(proxyUrl);
+        } catch (e2) {
+            console.warn("Erro ao carregar logo", e2);
+            return null;
+        }
+    }
+};
 
 export const StatisticsService = {
     getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
@@ -33,12 +65,21 @@ export const StatisticsService = {
         });
     },
 
-    // Função auxiliar para desenhar o Cabeçalho SIGAP
-    drawSigapHeader(doc, margin, startY) {
+    // Função auxiliar para desenhar o Cabeçalho SIGEP com Logo
+    async drawSigepHeader(doc, margin, startY) {
+        // Tenta carregar a logo
+        const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
+        if (logoBase64) {
+            try {
+                // Alinha a logo à direita
+                doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - margin - 35, startY - 15, 35, 35);
+            } catch(e) {}
+        }
+
         doc.setFontSize(24);
-        doc.setTextColor(22, 163, 74); // Verde SIGAP
+        doc.setTextColor(22, 163, 74); // Verde SIGEP
         doc.setFont("helvetica", "bold");
-        doc.text("SIGAP", margin, startY);
+        doc.text("SIGEP", margin, startY);
         
         doc.setFontSize(10);
         doc.setTextColor(120, 120, 120);
@@ -651,8 +692,7 @@ export const StatisticsService = {
 
         let yPos = margin;
         
-        // Novo Cabeçalho do seu Sistema (Substitui Imagem)
-        yPos = this.drawSigapHeader(doc, margin, yPos);
+        yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
@@ -664,7 +704,6 @@ export const StatisticsService = {
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
         
-        // QUEBRA INTELIGENTE DO TÍTULO DA PAUTA (Resolve o problema da imagem)
         const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
         doc.text(splitTitle, margin, yPos);
         yPos += (splitTitle.length * 15);
@@ -679,7 +718,6 @@ export const StatisticsService = {
         dados.sortedGroups.forEach(({groupName, total, todosColaboradores, collaborators}) => {
             let body = [];
             if (todosColaboradores && todosColaboradores.length > 0) {
-                // USA A ORDENAÇÃO: DEFENSOR > SERVIDOR > NOME
                 const cols = this.sortCollaboratorsByRole(todosColaboradores);
                 body = cols.map(col => {
                     const count = collaborators.find(c => c.name === col.nome)?.count || 0;
@@ -724,7 +762,7 @@ export const StatisticsService = {
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
         }
 
         doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -742,7 +780,7 @@ export const StatisticsService = {
 
         let yPos = margin;
         
-        yPos = this.drawSigapHeader(doc, margin, yPos);
+        yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
@@ -767,7 +805,6 @@ export const StatisticsService = {
         dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
             let body = [];
             if (todosColaboradores && todosColaboradores.length > 0) {
-                // USA A ORDENAÇÃO: DEFENSOR > SERVIDOR > NOME
                 const cols = this.sortCollaboratorsByRole(todosColaboradores);
                 body = cols.map(c => [c.nome, c.cargo || '-']);
             } else {
@@ -799,7 +836,7 @@ export const StatisticsService = {
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
         }
 
         doc.save(`grupo_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -817,7 +854,7 @@ export const StatisticsService = {
 
         let yPos = margin;
         
-        yPos = this.drawSigapHeader(doc, margin, yPos);
+        yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
@@ -881,7 +918,7 @@ export const StatisticsService = {
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
         }
 
         doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -907,7 +944,7 @@ export const StatisticsService = {
         
         let yPos = margin;
         
-        yPos = this.drawSigapHeader(doc, margin, yPos);
+        yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
         doc.setTextColor(22, 163, 74);
@@ -1098,7 +1135,7 @@ export const StatisticsService = {
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGAP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
         }
 
         doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
@@ -1115,4 +1152,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso (Tabelas automáticas, Logo SIGAP e Ordem Hierárquica)!");
+console.log("✅ estatisticas.js carregado com sucesso (Logo SIGEP adicionada e CORS contornado)!");
