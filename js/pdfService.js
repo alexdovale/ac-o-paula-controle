@@ -82,9 +82,9 @@ const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.
 // ⭐ LOGO DA DEFENSORIA (Firebase Storage - Usada APENAS na Ata Social)
 const LOGO_DEFENSORIA_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7";
 
-// ⭐ FUNÇÃO: Carrega imagem e converte para Base64
-const loadImageBase64 = (url) => {
-    return new Promise((resolve) => {
+// ⭐ FUNÇÃO MELHORADA: Carrega imagem driblando o bloqueio de CORS do Firebase
+const loadImageBase64 = async (url) => {
+    const fetchImage = (src) => new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
         img.onload = () => {
@@ -94,9 +94,22 @@ const loadImageBase64 = (url) => {
             canvas.getContext('2d').drawImage(img, 0, 0);
             resolve(canvas.toDataURL('image/png'));
         };
-        img.onerror = () => resolve(null);
-        img.src = url;
+        img.onerror = reject;
+        img.src = src;
     });
+
+    try {
+        return await fetchImage(url); // Tenta direto no Firebase
+    } catch (e) {
+        try {
+            // Se o Firebase bloquear por CORS, usa um Proxy seguro como plano B
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            return await fetchImage(proxyUrl);
+        } catch (e2) {
+            console.warn("Erro ao carregar logo mesmo com proxy", e2);
+            return null;
+        }
+    }
 };
 
 // ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP (EXCETO na Ata Social)
