@@ -36,7 +36,10 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen text-slate-800 font-sans pb-10">
+<body class="bg-slate-50 min-h-screen text-slate-800 font-sans pb-10 relative">
+
+    <!-- Contêiner de Notificações (Substitui os alerts) -->
+    <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
     <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
         <div class="animate-spin rounded-full h-12 w-12 border-b-4 border-green-600 mb-4"></div>
@@ -356,24 +359,48 @@
         import { firebaseConfig } from './js/config.js';
         import { EXPENSE_CATEGORIES } from './js/detalhes.js';
 
+        // Sistema Customizado de Notificações para evitar o uso de 'alert()'
+        function showNotification(message, isError = true) {
+            const toast = document.createElement('div');
+            toast.className = `p-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all transform translate-y-0 opacity-100 ${isError ? 'bg-red-600' : 'bg-slate-800'}`;
+            toast.innerHTML = `<div class="flex items-center gap-2">
+                                 <svg class="w-5 h-5 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                     ${isError ? '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>' 
+                                               : '<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path>'}
+                                 </svg>
+                                 <span>${message}</span>
+                               </div>`;
+            
+            const container = document.getElementById('toast-container');
+            if (container) {
+                container.appendChild(toast);
+                setTimeout(() => {
+                    toast.classList.add('opacity-0', 'translate-y-2');
+                    setTimeout(() => toast.remove(), 300);
+                }, 4000);
+            } else {
+                console.warn("Notificação:", message);
+            }
+        }
+
         const documentsData = window.documentsData;
 
         if (!documentsData) {
             console.error("documentsData não carregado! Verifique o detalhes.js");
-            alert("Erro ao carregar o sistema. Recarregue a página.");
+            showNotification("Erro ao carregar o sistema. Recarregue a página.");
         }
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // VARIÁVEIS GLOBAIS - Atualizado com delegationToken
+        // VARIÁVEIS GLOBAIS
         let pautaId, assistedId, actionKey, delegationToken;
         let formSubmitted = false;
         let realtimeUnsubscribe = null;
 
-        // Máscaras
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
+        const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
 
         document.getElementById('telefone-assistido')?.addEventListener('input', (e) => e.target.value = maskPhone(e.target.value));
         document.getElementById('cpf-reu')?.addEventListener('input', (e) => e.target.value = maskCPF(e.target.value));
@@ -381,10 +408,7 @@
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
-        // Máscara CPF (apenas para réu)
-        const maskCPF = (v) => v.replace(/\D/g, "").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d)/, "$1.$2").replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-
-        // Máscara para renda familiar do assistido
+        // Máscara para renda familiar
         const ganhosInput = document.getElementById('socio-ganhos');
         if (ganhosInput) {
             ganhosInput.addEventListener('input', (e) => {
@@ -393,7 +417,6 @@
             });
         }
 
-        // Lógica para mostrar/esconder campo de profissão do assistido
         const ocupacaoSelect = document.getElementById('socio-ocupacao');
         const profissaoContainer = document.getElementById('socio-profissao-container');
         const profissaoInput = document.getElementById('socio-profissao');
@@ -417,7 +440,6 @@
             checkProfissaoVisibility();
         }
 
-        // ⭐ FUNÇÃO PARA LIMPAR DADOS SENSÍVEIS DO FORMULÁRIO (SEGURANÇA)
         function limparDadosSensiveis() {
             const camposParaLimpar = [
                 'telefone-assistido', 'socio-profissao', 'socio-ganhos', 'nome-reu', 'cpf-reu',
@@ -456,7 +478,6 @@
             });
         }
 
-        // ⭐ FUNÇÃO PARA BLOQUEAR O FORMULÁRIO E LIMPAR DADOS
         function bloquearFormulario(motivo) {
             if (formSubmitted) return;
             
@@ -495,7 +516,6 @@
             }
         }
 
-        // ⭐ FUNÇÃO PARA VERIFICAR SE O FORMULÁRIO JÁ FOI ENVIADO
         async function checkIfAlreadySubmitted() {
             try {
                 const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistedId));
@@ -513,21 +533,18 @@
             }
         }
 
-        // Inicialização Principal
         async function init() {
             const params = new URLSearchParams(window.location.search);
             pautaId = params.get('pid');
             assistedId = params.get('aid');
-            delegationToken = params.get('token'); // <-- CAPTURANDO O TOKEN AQUI
+            delegationToken = params.get('token');
 
-            // VERIFICAÇÃO DE SEGURANÇA NA URL
             if (!pautaId || !assistedId || !delegationToken) {
-                alert("Link inválido ou de segurança ausente. Por favor, solicite um novo link oficial da Defensoria.");
+                showNotification("Link inválido ou de segurança ausente. Por favor, solicite um novo link oficial da Defensoria.");
                 document.getElementById('loading-screen')?.classList.add('hidden');
                 return;
             }
 
-            // Renderizar Planilha de Gastos
             const containerGastos = document.getElementById('gastos-container');
             if (containerGastos && EXPENSE_CATEGORIES) {
                 EXPENSE_CATEGORIES.forEach(cat => {
@@ -619,8 +636,8 @@
                             import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ onSnapshot }) => {
                                 realtimeUnsubscribe = onSnapshot(docRef, (snapshot) => {
                                     if (snapshot.exists() && !formSubmitted) {
-                                        const data = snapshot.data();
-                                        if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
+                                        const snapData = snapshot.data();
+                                        if (snapData.documentState === 'pre_triagem_concluida' || snapData.documentState === 'saved') {
                                             bloquearFormulario("Seus dados foram registrados com sucesso! Esta página está protegida.");
                                         }
                                     }
@@ -628,10 +645,13 @@
                             });
                         }, 1000);
                     }
+                } else {
+                    document.getElementById('loading-screen')?.classList.add('hidden');
+                    showNotification("Agendamento não encontrado. Verifique se o link está correto.");
                 }
             } catch (error) {
                 console.error("Erro:", error);
-                alert("Erro ao conectar com a Defensoria.");
+                showNotification("Erro ao conectar com a Defensoria.");
             }
         }
 
@@ -721,12 +741,14 @@
             });
         }
 
-        // Buscador de CEP
         async function buscarCepAPI(cepInputId, isComercial = false) {
             const cepInput = document.getElementById(cepInputId);
             if (!cepInput) return;
             const cep = cepInput.value.replace(/\D/g, '');
-            if (cep.length !== 8) return alert("CEP inválido");
+            if (cep.length !== 8) {
+                showNotification("CEP inválido. Digite 8 números.");
+                return;
+            }
             
             const btn = isComercial ? document.getElementById('btn-buscar-cep-com') : document.getElementById('btn-buscar-cep-reu');
             if (!btn) return;
@@ -758,9 +780,11 @@
                         if (estado) estado.value = data.uf || '';
                     }
                 } else {
-                    alert("CEP não encontrado.");
+                    showNotification("CEP não encontrado na base de dados.");
                 }
-            } catch (e) { alert("Erro ao buscar CEP."); }
+            } catch (e) { 
+                showNotification("Erro ao buscar CEP. Verifique sua conexão."); 
+            }
             
             btn.textContent = originalText;
             btn.disabled = false;
@@ -857,14 +881,13 @@
             });
         }
 
-        // SALVAR DADOS
         const form = document.getElementById('form-captacao');
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
                 
                 if (formSubmitted) {
-                    alert("Este formulário já foi enviado.");
+                    showNotification("Este formulário já foi enviado.", false);
                     return;
                 }
                 
@@ -930,8 +953,8 @@
                     fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
                 };
 
+                // AQUI FOI REMOVIDO O "NAME" PARA NÃO BATER NA REGRA DE SEGURANÇA
                 const payload = {
-                    name: document.getElementById('nome-assistido')?.value || '',
                     telefone: document.getElementById('telefone-assistido')?.value || '',
                     
                     // ⭐ O SEGREDO ESTÁ AQUI: Enviando o Token capturado para o Firebase!
@@ -962,7 +985,7 @@
                     
                 } catch (error) {
                     console.error("Erro ao salvar:", error);
-                    alert("Erro ao enviar dados. Tente novamente.");
+                    showNotification("Erro de permissão ou conexão ao enviar dados. Tente novamente.");
                     btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> ENVIAR DADOS`;
                     btn.disabled = false;
                 }
