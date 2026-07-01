@@ -190,7 +190,8 @@ export const AtendimentoExternoService = {
         const hoje = new Date().toISOString().split('T')[0];
 
         try {
-            const pautasSnap = await getDocs(collection(db, "pautas"));
+            const q = query(collection(db, "pautas"), where("isPublic", "==", true));
+            const pautasSnap = await getDocs(q);
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
