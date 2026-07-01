@@ -62,23 +62,21 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
-
-        const searchLimpa = window.location.search.replace(/&amp;/g, '&');
-        const urlParams = new URLSearchParams(searchLimpa);
-
-        this.pautaId        = urlParams.get('pautaId')   || urlParams.get('amp;pautaId');
-        this.assistidoId    = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
-        this.colaboradorNome = urlParams.get('colab')    || urlParams.get('amp;colab');
-        this.colaboradorId  = urlParams.get('colabId')   || urlParams.get('amp;colabId') || '';
-        const tokenRecebido = urlParams.get('token')     || urlParams.get('amp;token');
-        const telaAtual     = urlParams.get('view')      || urlParams.get('amp;view');
-        const modo          = urlParams.get('modo')      || urlParams.get('amp;modo');
-
-        this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
-
+        console.log("⚡ Atendimento Externo Inicializado");
+    
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        // Debug para ver se a URL tem os dados
+        console.log("URL completa:", window.location.href);
+        
+        this.pautaId = urlParams.get('pautaId');
+        this.colaboradorNome = urlParams.get('colab');
+        this.colaboradorId = urlParams.get('colabId') || '';
+        
+        console.log("DEBUG - PautaId:", this.pautaId, "ColabNome:", this.colaboradorNome);
+    
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+            this.showError("Erro de Acesso", "A URL não contém 'pautaId' ou 'colab'. Verifique o link de acesso.");
             return;
         }
 
