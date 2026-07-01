@@ -11,7 +11,6 @@
     <link rel="manifest" href="manifest.json">
 
     <script src="https://browser.sentry-cdn.com/7.114.0/bundle.min.js" crossorigin="anonymous"></script>
-    
     <script>
       if (window.Sentry) {
         Sentry.init({
@@ -40,7 +39,9 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    
     <style>
+        /* (mantenha todos os estilos originais) */
         body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; min-height: 100vh; }
         html, body {
             transform: none !important;
@@ -549,6 +550,7 @@
         <!-- APP PRINCIPAL (PAUTA)                                        -->
         <!-- ============================================================ -->
         <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
+            <!-- (mantenha todo o conteúdo original do app-container) -->
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
                     <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
@@ -1070,23 +1072,87 @@
         </div>
     </div>
 
-       <!-- ============================================================ -->
-        <!-- SCRIPTS                                                       -->
-        <!-- ============================================================ -->
-        <script type="module" src="./js/api_integration.js"></script>
-        <script type="module" src="./js/main.js"></script>
-        
-        <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
-        <script>
-            (function() {
-                // ... código do upload ...
-            })();
-        </script>
-    
-        <!-- ============================================================ -->
-        <!-- FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO - NOVO!          -->
-        <!-- ============================================================ -->
-        <script>
+    <!-- ============================================================ -->
+    <!-- SCRIPTS                                                       -->
+    <!-- ============================================================ -->
+    <script type="module" src="./js/api_integration.js"></script>
+    <script type="module" src="./js/main.js"></script>
+
+    <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
+    <script>
+        (function() {
+            // (mantenha o código original de upload)
+        })();
+    </script>
+
+    <!-- ============================================================ -->
+    <!-- 🔥 INICIALIZAÇÃO DO ATENDIMENTO EXTERNO (USANDO config.js)   -->
+    <!-- ============================================================ -->
+    <script type="module">
+        import { firebaseConfig } from './js/config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // 1. Inicializa o Firebase usando a configuração central
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+        const auth = getAuth(app);
+
+        // 2. Torna globais (para uso no window.abrirMesaDeAtendimento)
+        window.db = db;
+        window.auth = auth;
+
+        // 3. Importa o serviço e injeta as dependências
+        const module = await import('./js/atendimentoExternoService.js');
+        const { AtendimentoExternoService } = module;
+
+        AtendimentoExternoService.db = db;
+        AtendimentoExternoService.auth = auth;
+        window.AtendimentoExternoService = AtendimentoExternoService;
+
+        // 4. Pega parâmetros da URL
+        const urlParams = new URLSearchParams(window.location.search);
+        const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
+        const colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
+        const assistidoId = urlParams.get('assistidoId');
+
+        if (!pautaId || !colaboradorNome) {
+            document.getElementById('atendimento-externo-container').innerHTML = `
+                <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center">
+                    <p class="font-bold">Erro: Parâmetros ausentes</p>
+                    <p class="text-sm">URL deve conter ?pautaId=XXX&colab=NOME</p>
+                </div>
+            `;
+        } else {
+            localStorage.setItem('lastPautaId', pautaId);
+            localStorage.setItem('lastColabName', colaboradorNome);
+
+            document.querySelector('#assistido-nome').textContent = `👋 Olá, ${colaboradorNome}`;
+            document.querySelector('#assistido-assunto').textContent = `Pauta: ${pautaId}`;
+
+            AtendimentoExternoService.pautaId = pautaId;
+            AtendimentoExternoService.colaboradorNome = colaboradorNome;
+            AtendimentoExternoService.assistidoId = assistidoId || null;
+
+            await AtendimentoExternoService.init();
+
+            console.log('✅ Atendimento Externo iniciado com sucesso!');
+
+            if (AtendimentoExternoService.todosAtendimentosPauta?.length > 0) {
+                AtendimentoExternoService.atualizarListasDoDashboard();
+            }
+
+            const container = document.getElementById('atendimento-externo-container');
+            if (container.innerHTML?.trim().length > 0) {
+                document.getElementById('fallback-container').classList.add('hidden');
+            }
+        }
+
+        // ============================================================
+        // FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO
+        // (mantém a que você já tinha, mas agora o serviço já está injetado)
+        // ============================================================
         window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
             console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
             
@@ -1121,27 +1187,7 @@
                 alert("Erro ao abrir atendimento: " + error.message);
             }
         };
-    
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnVoltar = document.getElementById('btn-voltar-dashboard');
-            if (btnVoltar) {
-                btnVoltar.addEventListener('click', function() {
-                    document.getElementById('view-atendimento')?.classList.add('hidden');
-                    document.getElementById('view-dashboard')?.classList.remove('hidden');
-                    document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
-                    document.getElementById('area-colaborador')?.classList.add('hidden');
-                    
-                    document.getElementById('assistido-nome').textContent = 'PAINEL DE ATENDIMENTO';
-                    document.getElementById('assistido-assunto').textContent = 'Sessão ativa: ' + (localStorage.getItem('lastColabName') || 'Colaborador');
-                    
-                    if (window.AtendimentoExternoService) {
-                        window.AtendimentoExternoService.assistidoId = null;
-                        window.AtendimentoExternoService.iniciarDashboardUnificado();
-                    }
-                });
-            }
-        });
-        </script>
-    
-    </body>
-    </html>
+    </script>
+
+</body>
+</html>
