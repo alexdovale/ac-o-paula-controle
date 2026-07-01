@@ -60,7 +60,6 @@
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         
-        /* Garantir sobreposição de exclusividade da aba ativa */
         .tab-active { border-color: #16a34a !important; background-color: #f0fdf4 !important; color: #16a34a !important; font-weight: 600 !important; }
         
         .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
@@ -102,6 +101,11 @@
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -118,10 +122,103 @@
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
 
         <!-- ============================================================ -->
-        <!-- CONTAINER CORRIGIDO: ATENDIMENTO EXTERNO                      -->
+        <!-- ATENDIMENTO EXTERNO - CONTAINER PRINCIPAL                     -->
         <!-- ============================================================ -->
-        <div id="atendimento-externo-container" class="hidden w-full flex-1 bg-slate-100 p-2 sm:p-4"></div>
+        <div id="atendimento-externo-container" class="hidden w-full max-w-6xl mx-auto my-4">
+            <!-- O serviço vai renderizar aqui -->
+        </div>
 
+        <!-- ============================================================ -->
+        <!-- FALLBACK: Interface manual para quando o serviço não renderizar -->
+        <!-- ============================================================ -->
+        <div id="fallback-atendimento" class="hidden w-full max-w-5xl mx-auto my-4">
+            <div class="bg-white rounded-2xl shadow-2xl overflow-hidden border border-slate-200">
+                
+                <!-- HEADER -->
+                <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
+                    <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                    
+                    <button id="btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+
+                    <div class="flex flex-col overflow-hidden w-full relative z-10">
+                        <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                        <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                    </div>
+
+                    <div id="status-indicator" class="hidden absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20">
+                        🟢 ONLINE
+                    </div>
+                </div>
+
+                <!-- DASHBOARD VIEW -->
+                <div id="view-dashboard" class="flex flex-col flex-1">
+                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                        <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
+                            💻 Minha Mesa
+                        </button>
+                        <button id="btn-tab-sem-atribuicao" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                            📥 Sem Atribuição
+                        </button>
+                        <button id="btn-tab-pauta-dia" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                            📅 Pauta do Dia
+                        </button>
+                    </div>
+
+                    <div class="p-4 sm:p-6 bg-slate-50/50 flex-1">
+                        <div id="painel-atendimento-container" class="w-full min-h-[300px]">
+                            <div class="flex flex-col justify-center items-center py-20 gap-3">
+                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+                                <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Carregando pautas do dia...</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ATENDIMENTO INDIVIDUAL VIEW -->
+                <div id="view-atendimento" class="hidden flex-col flex-1">
+                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                        <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
+                            Encerramento / Fluxo
+                        </button>
+                        <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">
+                            Histórico Recepção
+                        </button>
+                    </div>
+
+                    <div class="p-4 sm:p-6 bg-white flex-1">
+                        <div id="aba-encerramento" class="space-y-6">
+                            <div id="area-colaborador" class="hidden">
+                                <div class="flex flex-col justify-center items-center py-20 gap-3">
+                                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+                                    <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa Judicial...</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="aba-historico" class="hidden animate-fade-in">
+                            <div id="lista-historico" class="space-y-4">
+                                <div class="flex flex-col justify-center items-center py-20 gap-3">
+                                    <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
+                                    <p class="text-[10px] font-black text-indigo-400 tracking-widest uppercase">Puxando documentos da recepção...</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- FOOTER -->
+                <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
+                    <span>SIGEP • Mesa Unificada de Trabalho</span>
+                    <span class="font-mono text-[9px]">v2.0-2026</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- ============================================================ -->
+        <!-- LOGIN CONTAINER                                               -->
+        <!-- ============================================================ -->
         <div id="login-container" class="hidden w-full min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
@@ -156,7 +253,9 @@
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE MODO (COM LOGO) -->
+        <!-- ============================================================ -->
+        <!-- TELA DE SELEÇÃO DE MODO                                      -->
+        <!-- ============================================================ -->
         <div id="modo-selection-screen" class="hidden flex-col items-center justify-center p-4 max-w-4xl w-full mx-auto min-h-[80vh]">
             <div class="text-center mb-10 animate-fade-in" style="opacity: 0;">
                 <div class="flex justify-center mb-4">
@@ -240,7 +339,9 @@
             <button id="modo-back-to-login" class="mt-8 text-sm text-slate-400 hover:text-slate-600 font-semibold transition-colors">&larr; Sair e Voltar ao Login</button>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS -->
+        <!-- ============================================================ -->
+        <!-- TELA DE SELEÇÃO DE PAUTAS                                    -->
+        <!-- ============================================================ -->
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
@@ -272,7 +373,6 @@
                 <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
                     Meu Perfil
                 </button>
-                <!-- Botão Trocar Modo -->
                 <button id="btn-trocar-modo" class="bg-amber-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-amber-700 transition shadow-md flex items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-repeat" viewBox="0 0 16 16">
                         <path d="M11.534 7h3.932a.25.25 0 0 1 .192.41l-1.966 2.36a.25.25 0 0 1-.384 0l-1.966-2.36a.25.25 0 0 1 .192-.41zm-11 2h3.932a.25.25 0 0 0 .192-.41L2.692 6.23a.25.25 0 0 0-.384 0L.342 8.59A.25.25 0 0 0 .534 9z"/>
@@ -295,7 +395,9 @@
             </div>
         </div>
 
-        <!-- DASHBOARD -->
+        <!-- ============================================================ -->
+        <!-- DASHBOARD                                                    -->
+        <!-- ============================================================ -->
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="dashboard-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
@@ -319,7 +421,9 @@
             </div>
         </div>
 
-        <!-- MEU PERFIL E PREFERÊNCIAS -->
+        <!-- ============================================================ -->
+        <!-- MEU PERFIL E PREFERÊNCIAS                                    -->
+        <!-- ============================================================ -->
         <div id="meu-perfil-container" class="hidden w-full max-w-5xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
@@ -333,7 +437,6 @@
             </div>
 
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <!-- COLUNA 1: DADOS DE ACESSO -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
                     <h3 class="text-lg font-bold text-slate-800 border-b pb-2">🔐 Dados de Acesso</h3>
                     
@@ -362,9 +465,7 @@
                     </div>
                 </div>
 
-                <!-- COLUNA 2: VÍNCULOS E PREFERÊNCIAS -->
                 <div class="space-y-6">
-                    <!-- Vínculos -->
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🏛️ Vínculo Institucional</h3>
                         
@@ -382,7 +483,6 @@
                         </div>
                     </div>
 
-                    <!-- Notificações -->
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                         <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🔔 Preferências de Notificação</h3>
                         
@@ -406,7 +506,6 @@
                 </div>
             </div>
 
-            <!-- BOTÃO SALVAR -->
             <div class="mt-6 flex justify-end">
                 <button id="perfil-salvar-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-3 px-8 rounded-xl hover:bg-green-700 transition shadow-lg flex justify-center items-center gap-2">
                     <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clip-rule="evenodd" /></svg>
@@ -415,7 +514,9 @@
             </div>
         </div>
 
-        <!-- ADMIN (ATUALIZADO COM LOGO E TÍTULO CENTRALIZADOS) -->
+        <!-- ============================================================ -->
+        <!-- ADMIN                                                        -->
+        <!-- ============================================================ -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
@@ -439,9 +540,14 @@
             </div>
         </div>
 
+        <!-- ============================================================ -->
+        <!-- RECEPÇÃO CENTRAL                                             -->
+        <!-- ============================================================ -->
         <div id="recepcao-central-container" class="hidden w-full max-w-7xl mx-auto px-2 sm:px-4 py-4"></div>
 
-        <!-- APP PRINCIPAL (PAUTA) -->
+        <!-- ============================================================ -->
+        <!-- APP PRINCIPAL (PAUTA)                                        -->
+        <!-- ============================================================ -->
         <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
@@ -809,8 +915,11 @@
             </div>
         </div>
 
-    </div> 
+    </div> <!-- FIM main-wrapper -->
     
+    <!-- ============================================================ -->
+    <!-- FOOTER                                                        -->
+    <!-- ============================================================ -->
     <footer id="main-footer" class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
         <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-6">
             
@@ -836,6 +945,10 @@
             </div>
         </div>
     </footer>
+
+    <!-- ============================================================ -->
+    <!-- MODAIS                                                        -->
+    <!-- ============================================================ -->
 
     <!-- MODAL LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
@@ -957,6 +1070,9 @@
         </div>
     </div>
 
+    <!-- ============================================================ -->
+    <!-- SCRIPTS                                                       -->
+    <!-- ============================================================ -->
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
     
