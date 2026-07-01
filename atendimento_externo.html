@@ -123,7 +123,9 @@
     </div>
 
     <script>
-        // Configuração Firebase - Substitua com seus dados
+        // ============================================================
+        // CONFIGURAÇÃO FIREBASE
+        // ============================================================
         const firebaseConfig = {
             apiKey: "SUA_API_KEY",
             authDomain: "SEU_AUTH_DOMAIN",
@@ -133,24 +135,98 @@
             appId: "SEU_APP_ID"
         };
 
-        // Inicializar Firebase
         firebase.initializeApp(firebaseConfig);
         const db = firebase.firestore();
         const auth = firebase.auth();
 
-        // EXPOR para o escopo global
         window.db = db;
         window.auth = auth;
         window.firebaseConfig = firebaseConfig;
 
-        // Importar o serviço usando import() dinâmico
+        // ============================================================
+        // FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO
+        // ============================================================
+        window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+            console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
+            
+            try {
+                // 1. Esconde o dashboard e mostra a view de atendimento
+                const viewDashboard = document.getElementById('view-dashboard');
+                const viewAtendimento = document.getElementById('view-atendimento');
+                const btnVoltar = document.getElementById('btn-voltar-dashboard');
+                const areaColaborador = document.getElementById('area-colaborador');
+                
+                if (viewDashboard) viewDashboard.classList.add('hidden');
+                if (viewAtendimento) viewAtendimento.classList.remove('hidden');
+                if (btnVoltar) btnVoltar.classList.remove('hidden');
+                if (areaColaborador) areaColaborador.classList.remove('hidden');
+                
+                // 2. Atualiza o header
+                const nomeEl = document.getElementById('assistido-nome');
+                const assuntoEl = document.getElementById('assistido-assunto');
+                
+                if (nomeEl) nomeEl.textContent = nomeAssistido || 'Assistido';
+                if (assuntoEl) assuntoEl.textContent = `Em atendimento • Pauta: ${pautaId}`;
+                
+                // 3. Carrega os dados do assistido no serviço
+                if (window.AtendimentoExternoService) {
+                    window.AtendimentoExternoService.assistidoId = assistidoId;
+                    window.AtendimentoExternoService.pautaId = pautaId;
+                    
+                    // Chama o método para carregar o assistido individual
+                    if (typeof window.AtendimentoExternoService.carregarAssistidoIndividual === 'function') {
+                        window.AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
+                    } else {
+                        console.warn("⚠️ Método carregarAssistidoIndividual não encontrado!");
+                        // Fallback
+                        const token = window.AtendimentoExternoService.assistidoData?.delegationToken || '';
+                        window.AtendimentoExternoService.iniciarAtendimentoIndividual(token);
+                    }
+                } else {
+                    console.error("❌ AtendimentoExternoService não encontrado!");
+                    alert("Erro: Serviço de atendimento externo não carregado.");
+                }
+                
+            } catch (error) {
+                console.error("❌ Erro ao abrir mesa:", error);
+                alert("Erro ao abrir atendimento: " + error.message);
+            }
+        };
+
+        // ============================================================
+        // BOTÃO VOLTAR DO ATENDIMENTO INDIVIDUAL
+        // ============================================================
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnVoltar = document.getElementById('btn-voltar-dashboard');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', function() {
+                    document.getElementById('view-atendimento')?.classList.add('hidden');
+                    document.getElementById('view-dashboard')?.classList.remove('hidden');
+                    document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
+                    document.getElementById('area-colaborador')?.classList.add('hidden');
+                    
+                    document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
+                    document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${localStorage.getItem('lastColabName') || 'Colaborador'}`;
+                    
+                    if (window.AtendimentoExternoService) {
+                        window.AtendimentoExternoService.assistidoId = null;
+                        window.AtendimentoExternoService.iniciarDashboardUnificado();
+                    }
+                });
+            }
+        });
+
+        // ============================================================
+        // INICIAR ATENDIMENTO EXTERNO
+        // ============================================================
         async function iniciarAtendimentoExterno() {
             try {
-                // Verifica se o arquivo existe
                 const module = await import('./js/atendimentoExternoService.js');
                 const { AtendimentoExternoService } = module;
 
-                // Pegar parâmetros da URL
+                // EXPORTA O SERVIÇO PARA O ESCOPO GLOBAL
+                window.AtendimentoExternoService = AtendimentoExternoService;
+
                 const urlParams = new URLSearchParams(window.location.search);
                 const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
                 const colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
@@ -168,25 +244,22 @@
                     return;
                 }
 
-                // Salvar no localStorage para reconexão
                 localStorage.setItem('lastPautaId', pautaId);
                 localStorage.setItem('lastColabName', colaboradorNome);
 
-                // Atualizar header
                 document.querySelector('#assistido-nome').textContent = `👋 Olá, ${colaboradorNome}`;
                 document.querySelector('#assistido-assunto').textContent = `Pauta: ${pautaId} ${assistidoId ? '• Assistido: '+assistidoId : ''}`;
 
-                // Atribuir ao serviço
                 AtendimentoExternoService.pautaId = pautaId;
                 AtendimentoExternoService.colaboradorNome = colaboradorNome;
                 AtendimentoExternoService.assistidoId = assistidoId || null;
+                AtendimentoExternoService.db = db;
+                AtendimentoExternoService.auth = auth;
 
-                // Inicializar
                 await AtendimentoExternoService.init();
 
                 console.log("✅ Atendimento Externo iniciado com sucesso!");
                 
-                // Esconder fallback se o serviço renderizou
                 const container = document.getElementById('atendimento-externo-container');
                 if (container.innerHTML && container.innerHTML.trim().length > 0) {
                     document.getElementById('fallback-container').classList.add('hidden');
@@ -204,20 +277,9 @@
             }
         }
 
-        // Iniciar quando a página carregar
         document.addEventListener('DOMContentLoaded', () => {
-            // Mostrar fallback inicialmente
             document.getElementById('fallback-container').classList.remove('hidden');
-            
-            // Iniciar o serviço
             iniciarAtendimentoExterno();
-        });
-
-        // Botão voltar do fallback (opcional)
-        document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
-            document.getElementById('view-atendimento').classList.add('hidden');
-            document.getElementById('view-dashboard').classList.remove('hidden');
-            document.getElementById('btn-voltar-dashboard').classList.add('hidden');
         });
     </script>
 </body>
