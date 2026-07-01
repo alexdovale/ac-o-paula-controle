@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -206,7 +205,7 @@ export const AtendimentoExternoService = {
                 alert("Erro de Sincronização: " + error.message);
             }
         );
-    }
+    }, // <-- ESTA VÍRGULA ESTAVA FALTANDO!
 
     // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
     // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
@@ -283,7 +282,7 @@ export const AtendimentoExternoService = {
                 <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full justify-between">
                     <div class="flex items-center gap-4">
                         <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
-                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
+                            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7" alt="Logo" class="h-10 w-auto object-contain">
                         </div>
                         <div>
                             <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
@@ -544,7 +543,6 @@ export const AtendimentoExternoService = {
             // MELHORIA 1: Sumário por pauta
             html += `
                 <div class="mb-8">
-                    <!-- Header da pauta -->
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="font-black text-slate-800 text-base">${escapeHTML(pauta.name)}</h3>
@@ -553,12 +551,10 @@ export const AtendimentoExternoService = {
                         <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
                     </div>
 
-                    <!-- Barra de progresso -->
                     <div class="h-1.5 bg-slate-100 rounded-full mb-3">
                         <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
                     </div>
 
-                    <!-- Sumário compacto -->
                     <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
                         <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
                             <div class="text-lg font-black text-amber-600">${aguardando}</div>
@@ -583,7 +579,6 @@ export const AtendimentoExternoService = {
                         </div>` : ''}
                     </div>
 
-                    <!-- Cards agrupados por status -->
                     ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
                     ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
                     ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
@@ -1001,7 +996,7 @@ export const AtendimentoExternoService = {
         corpo.innerHTML = `
             <div class="w-full max-w-2xl mx-auto my-4">
                 <div class="bg-red-600 p-8 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
-                    <div class="bg-white p-3 rounded-2xl mb-4"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-12 w-auto"></div>
+                    <div class="bg-white p-3 rounded-2xl mb-4"><img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7" alt="Logo" class="h-12 w-auto"></div>
                     <h1 class="text-white font-black text-3xl uppercase tracking-widest">ACESSO NEGADO</h1>
                 </div>
                 <div class="p-10 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
@@ -1038,7 +1033,7 @@ export const AtendimentoExternoService = {
             headerBg.innerHTML = `
                 <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 <div id="logo-header-main" class="bg-white/10 p-2 rounded-xl border border-white/20 shadow-inner flex-shrink-0 relative z-10">
-                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain drop-shadow-md">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7" alt="Logo" class="h-10 w-auto object-contain drop-shadow-md">
                 </div>
             `;
             headerBg.appendChild(textosWrapper);
