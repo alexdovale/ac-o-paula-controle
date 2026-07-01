@@ -1,9 +1,8 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
-    getDocs, query, arrayUnion, onSnapshot
+    getDocs, query, arrayUnion, onSnapshot, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
@@ -93,12 +92,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // Atendimento individual (peça específica)
-            if (this.assistidoId && !telaAtual) {
-                await this.iniciarAtendimentoIndividual(tokenRecebido);
-                return;
-            }
-
             // Verificar sessão
             const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
             const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
@@ -113,17 +106,6 @@ export const AtendimentoExternoService = {
         } catch (error) {
             console.error("Erro na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
-        }
-
-        // Dentro da função init() do AtendimentoExternoService.js
-        console.log("URL Params:", window.location.search); // VERIFIQUE ISSO NO CONSOLE!
-        this.pautaId = urlParams.get('pautaId');
-        this.colaboradorNome = urlParams.get('colab');
-        
-        if (!this.pautaId || !this.colaboradorNome) {
-            console.error("FALTAM PARAMETROS! URL atual:", window.location.href);
-            this.showError("Erro", "Faltam parâmetros na URL (pautaId e colab).");
-            return;
         }
     },
 
@@ -196,7 +178,6 @@ export const AtendimentoExternoService = {
     },
 
     // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
-    // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
 
     async _carregarTodasPautasDoColaborador() {
         const hoje = new Date().toISOString().split('T')[0];
@@ -249,9 +230,8 @@ export const AtendimentoExternoService = {
     // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
 
     renderizarContainerDashboard() {
-    // Mude para buscar o container correto do seu novo painel
         const corpo = document.getElementById('atendimento-externo-container');
-        corpo.classList.remove('hidden'); // Garante que a div apareça
+        corpo.classList.remove('hidden');
 
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
@@ -335,7 +315,6 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // MELHORIA 4: botão de alternar modo
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
             this._cancelarListeners();
@@ -505,7 +484,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ── ABA 3: PAUTA DO DIA (MELHORIA 1 + 3) ─────────────────────────────────
+    // ── ABA 3: PAUTA DO DIA ─────────────────────────────────────────────────
 
     _renderPautaDia(container) {
         if (this.pautasDoDia.length === 0) {
@@ -531,7 +510,6 @@ export const AtendimentoExternoService = {
             const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
             const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
-            // MELHORIA 1: Sumário por pauta
             html += `
                 <div class="mb-8">
                     <!-- Header da pauta -->
@@ -671,10 +649,10 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── PUXAR PARA MIM (MELHORIA 2) ───────────────────────────────────────────
+    // ─── PUXAR PARA MIM ───────────────────────────────────────────────────────────
 
     async puxarParaMim(pautaId, assistidoId) {
-        // MELHORIA 2: verifica se já tem caso em andamento
+        // Verifica se já tem caso em andamento
         const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
             a.assignedCollaborator?.name === this.colaboradorNome
@@ -762,7 +740,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── DASHBOARD TRADICIONAL (preservado do código original) ────────────────
+    // ─── DASHBOARD TRADICIONAL ────────────────────────────────────────────────
 
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
@@ -834,7 +812,6 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
@@ -867,7 +844,6 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
 
                 tabsDiv.innerHTML = `
                     <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
@@ -1002,7 +978,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL (preservado) ────────────────────
+    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ────────────────────────────────────
 
     renderizarInterface(assistido, pautaData) {
         // Remove listener do dashboard se existir
@@ -1034,10 +1010,6 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        // Criar estrutura da interface individual (similar ao original)
-        // Por brevidade, assumimos que o HTML da interface individual já existe no DOM
-        // ou será injetado. O código original tem essa estrutura.
-        
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
