@@ -237,7 +237,9 @@ export const AtendimentoExternoService = {
     // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
 
     renderizarContainerDashboard() {
-        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
+    // Mude para buscar o container correto do seu novo painel
+        const corpo = document.getElementById('atendimento-externo-container');
+        corpo.classList.remove('hidden'); // Garante que a div apareça
 
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
