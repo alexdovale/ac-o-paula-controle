@@ -25,9 +25,13 @@ const statusMap = {
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
+// 🔹 REMOVA A CRIAÇÃO DO DB AQUI - SERÁ INJETADO PELO HTML
+// const app = initializeApp(firebaseConfig);
+// const auth = getAuth(app);
+// const db = getFirestore(app);
+
+let auth = null;
+let db = null;
 
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -40,6 +44,8 @@ window.addEventListener('beforeinstallprompt', (e) => {
 export const AtendimentoExternoService = {
 
     // Estado
+    db: null,  // ← SERÁ INJETADO PELO HTML
+    auth: null, // ← SERÁ INJETADO PELO HTML
     pautaId: null,
     assistidoId: null,
     colaboradorNome: null,
@@ -63,6 +69,13 @@ export const AtendimentoExternoService = {
     async init() {
         console.log("⚡ Atendimento Externo Inicializado");
 
+        // 🔹 USA O DB INJETADO
+        if (!this.db) {
+            console.error("❌ db não foi injetado! Verifique o HTML.");
+            this.showError("Erro de Conexão", "Banco de dados não inicializado.");
+            return;
+        }
+
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
 
@@ -81,7 +94,14 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            if (!auth.currentUser) await signInAnonymously(auth);
+            // 🔹 USA O AUTH INJETADO
+            if (!this.auth) {
+                console.error("❌ auth não foi injetado! Verifique o HTML.");
+                this.showError("Erro de Conexão", "Autenticação não inicializada.");
+                return;
+            }
+            
+            if (!this.auth.currentUser) await signInAnonymously(this.auth);
 
             await this.carregarColaboradoresGerais();
 
@@ -112,7 +132,7 @@ export const AtendimentoExternoService = {
         try {
             console.log("🔍 Carregando assistido:", assistidoId, "da pauta:", pautaId);
             
-            const docSnap = await getDoc(doc(db, "pautas", pautaId, "attendances", assistidoId));
+            const docSnap = await getDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId));
             if (!docSnap.exists()) {
                 this.showError("Processo não encontrado", "Este assistido não está mais na pauta.");
                 return;
@@ -124,7 +144,7 @@ export const AtendimentoExternoService = {
             this.pautaId = pautaId;
             this.assistidoId = assistidoId;
 
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaId));
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
             const pautaData = pautaDoc.exists() ? pautaDoc.data() : {};
 
             this.renderizarInterface(assistido, pautaData);
@@ -140,13 +160,13 @@ export const AtendimentoExternoService = {
     // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
 
     async iniciarAtendimentoIndividual(tokenRecebido) {
-        const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
+        const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
         if (!pautaDoc.exists()) {
             this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
             return;
         }
 
-        const docSnap = await getDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId));
+        const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
         if (!docSnap.exists()) {
             this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
             return;
@@ -190,7 +210,7 @@ export const AtendimentoExternoService = {
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
         this.unsubscribeDashboard = onSnapshot(
-            collection(db, "pautas", this.pautaId, "attendances"),
+            collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
@@ -210,7 +230,7 @@ export const AtendimentoExternoService = {
         const hoje = new Date().toISOString().split('T')[0];
 
         try {
-            const q = query(collection(db, "pautas"), where("isPublic", "==", true));
+            const q = query(collection(this.db, "pautas"), where("isPublic", "==", true));
             const pautasSnap = await getDocs(q);
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
@@ -226,12 +246,12 @@ export const AtendimentoExternoService = {
                     continue;
                 }
                 try {
-                    const colabsSnap = await getDocs(collection(db, "pautas", pauta.id, "collaborators"));
+                    const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
                     const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
                     if (estaNessa) {
                         resultado.push(pauta);
                         const unsub = onSnapshot(
-                            collection(db, "pautas", pauta.id, "attendances"),
+                            collection(this.db, "pautas", pauta.id, "attendances"),
                             (snap) => {
                                 this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                                 if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
@@ -709,7 +729,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: {
                     id: this.colaboradorId || this.colaboradorAtual?.id || '',
                     name: this.colaboradorNome
@@ -724,7 +744,7 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'ocupado',
                     currentAttendance: assistidoId
                 }).catch(() => {});
@@ -751,7 +771,7 @@ export const AtendimentoExternoService = {
         if (!confirm("Devolver este caso para a fila Sem Atribuição? Outros colaboradores poderão assumí-lo.")) return;
 
         try {
-            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
                 inAttendanceTime: null,
                 history: arrayUnion({
@@ -763,7 +783,7 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'disponivel',
                     currentAttendance: null
                 }).catch(() => {});
@@ -915,7 +935,7 @@ export const AtendimentoExternoService = {
 
     async carregarColaboradoresGerais() {
         try {
-            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
+            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
         } catch { this.todosColaboradores = []; }
@@ -1095,7 +1115,7 @@ export const AtendimentoExternoService = {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
                         try {
                             if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                                const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
+                                const colabDocRef = doc(this.db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
                                 await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
                                 this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
@@ -1386,11 +1406,11 @@ export const AtendimentoExternoService = {
         };
 
         try {
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaIdSeguro));
             const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
             const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
 
-            const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
+            const docRef = doc(this.db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
@@ -1428,7 +1448,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
                         status: 'disponivel',
                         currentAttendance: null
@@ -1469,7 +1489,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1506,7 +1526,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1542,7 +1562,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1577,7 +1597,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1602,7 +1622,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
