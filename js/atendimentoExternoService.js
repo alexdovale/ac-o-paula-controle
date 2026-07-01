@@ -168,20 +168,45 @@ export const AtendimentoExternoService = {
 
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
+        
+        // 1. Loga o ID para garantir que veio da URL
+        console.log("🔍 [DEBUG] ID da Pauta carregado:", this.pautaId);
+        
+        if (!this.pautaId || this.pautaId === "undefined" || this.pautaId === "null") {
+            console.error("❌ [DEBUG] ERRO: PautaID inválido. A URL não está passando o ID corretamente.");
+            return;
+        }
+    
+        const ref = collection(db, "pautas", this.pautaId, "attendances");
+        console.log("🔍 [DEBUG] Ouvindo coleção:", ref.path);
+    
         this.unsubscribeDashboard = onSnapshot(
-            collection(db, "pautas", this.pautaId, "attendances"),
+            ref,
             (snap) => {
+                // 2. Loga o sucesso
+                console.log("✅ [DEBUG] Firestore respondeu! Documentos encontrados:", snap.docs.length);
+                
+                if (snap.docs.length === 0) {
+                    console.warn("⚠️ [DEBUG] Atenção: A coleção existe, mas está VAZIA.");
+                }
+    
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
+    
+                // 3. Renderiza
                 if (this.modoVisualizacao === 'abas') {
                     this.renderizarAbaAtual();
                 } else {
                     this.atualizarListasDoDashboard();
                 }
             },
-            (error) => console.error("Erro no realtime:", error)
+            (error) => {
+                // 4. Loga o erro real (o culpado do travamento)
+                console.error("❌ [DEBUG] ERRO NO FIRESTORE:", error.code, error.message);
+                alert("Erro de Sincronização: " + error.message);
+            }
         );
-    },
+    }
 
     // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
     // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
