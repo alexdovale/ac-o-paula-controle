@@ -119,7 +119,7 @@
         <!-- RODAPÉ -->
         <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
             <span>SIGEP • Mesa Unificada de Trabalho</span>
-            <span class="font-mono text-[9px]">v2.6-2026</span>
+            <span class="font-mono text-[9px]">v2.7-2026</span>
         </div>
     </div>
 
@@ -148,7 +148,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, query, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // Parâmetros de Instância e Configuração conforme especificações de Segurança
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'sigep-mesa-trabalho';
@@ -247,20 +247,25 @@
                 if (isFirebaseActive) {
                     try {
                         const path = collection(db, 'artifacts', appId, 'public', 'data', 'pautas');
-                        const snap = await getDocs(query(path));
-                        if (!snap.empty) {
-                            localState.pautas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                        } else {
-                            // Salva dados iniciais
-                            for (const p of localState.pautas) {
-                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', p.id), p);
+                        
+                        // INCLUSÃO DO ONSNAPSHOT EM TEMPO REAL CONFORME O ATENDIMENTOEXTERNOSERVICE.JS ORIGINAL
+                        onSnapshot(path, (snap) => {
+                            if (!snap.empty) {
+                                localState.pautas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                                tocarAlerta();
                             }
-                        }
+                            this.renderCards();
+                        }, (err) => {
+                            console.error("Falha no tempo real do Firestore:", err);
+                        });
+
                     } catch (err) {
-                        console.error("Falha ao puxar do Firestore:", err);
+                        console.error("Falha ao configurar Listener do Firestore:", err);
+                        this.renderCards();
                     }
+                } else {
+                    this.renderCards();
                 }
-                this.renderCards();
             },
 
             renderCards() {
