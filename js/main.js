@@ -2409,6 +2409,86 @@ window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 window.app = new SIGEPApp();
 
+// ============================================================
+// FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO INDIVIDUAL
+// ============================================================
+window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+    console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
+    
+    try {
+        // 1. Esconde o dashboard e mostra a view de atendimento
+        const viewDashboard = document.getElementById('view-dashboard');
+        const viewAtendimento = document.getElementById('view-atendimento');
+        const btnVoltar = document.getElementById('btn-voltar-dashboard');
+        const areaColaborador = document.getElementById('area-colaborador');
+        
+        if (viewDashboard) viewDashboard.classList.add('hidden');
+        if (viewAtendimento) viewAtendimento.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.remove('hidden');
+        if (areaColaborador) areaColaborador.classList.remove('hidden');
+        
+        // 2. Atualiza o header
+        const nomeEl = document.getElementById('assistido-nome');
+        const assuntoEl = document.getElementById('assistido-assunto');
+        
+        if (nomeEl) nomeEl.textContent = nomeAssistido || 'Assistido';
+        if (assuntoEl) assuntoEl.textContent = `Em atendimento • Pauta: ${pautaId}`;
+        
+        // 3. Carrega os dados do assistido no serviço
+        if (window.AtendimentoExternoService) {
+            window.AtendimentoExternoService.assistidoId = assistidoId;
+            window.AtendimentoExternoService.pautaId = pautaId;
+            
+            // Chama o método para carregar o assistido individual
+            if (typeof window.AtendimentoExternoService.carregarAssistidoIndividual === 'function') {
+                window.AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
+            } else {
+                console.warn("⚠️ Método carregarAssistidoIndividual não encontrado no serviço!");
+                // Fallback: tenta usar o método existente
+                if (typeof window.AtendimentoExternoService.iniciarAtendimentoIndividual === 'function') {
+                    const token = window.AtendimentoExternoService.assistidoData?.delegationToken || '';
+                    window.AtendimentoExternoService.iniciarAtendimentoIndividual(token);
+                }
+            }
+        } else {
+            console.error("❌ AtendimentoExternoService não encontrado!");
+            alert("Erro: Serviço de atendimento externo não carregado.");
+        }
+        
+    } catch (error) {
+        console.error("❌ Erro ao abrir mesa:", error);
+        alert("Erro ao abrir atendimento: " + error.message);
+    }
+};
+
+// ============================================================
+// BOTÃO VOLTAR DO ATENDIMENTO INDIVIDUAL
+// ============================================================
+document.addEventListener('DOMContentLoaded', function() {
+    const btnVoltar = document.getElementById('btn-voltar-dashboard');
+    if (btnVoltar) {
+        btnVoltar.addEventListener('click', function() {
+            // Volta para o dashboard
+            document.getElementById('view-atendimento')?.classList.add('hidden');
+            document.getElementById('view-dashboard')?.classList.remove('hidden');
+            document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
+            document.getElementById('area-colaborador')?.classList.add('hidden');
+            
+            // Reseta o header
+            document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
+            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${localStorage.getItem('lastColabName') || 'Colaborador'}`;
+            
+            // Reseta o serviço
+            if (window.AtendimentoExternoService) {
+                window.AtendimentoExternoService.assistidoId = null;
+                // Volta para o dashboard unificado
+                window.AtendimentoExternoService.iniciarDashboardUnificado();
+            }
+        });
+    }
+});
+
+
 window.renderEstruturaAtual = renderEstruturaAtual;
 window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
 window.abrirGerenciarUnidades = abrirGerenciarUnidadesUsuario;
