@@ -37,6 +37,7 @@ const ALL_SCREEN_IDS = [
     'recepcao-central-container',
     'painel-publico-container',
     'meu-perfil-container', // <-- Container do perfil adicionado para não empilhar!
+    'atendimento-externo-container' // <--- ADICIONE ISSO AQUI
 ];
 
 export class SIGEPRouter {
