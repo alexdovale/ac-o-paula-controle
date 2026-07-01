@@ -3,6 +3,9 @@
 import { escapeHTML } from './utils.js';
 
 export const PainelGeralService = {
+    // Mantém referências privadas de controle de eventos para evitar memory leak
+    _eventHandlers: new Map(),
+
     // ========================================================
     // 1. INJEÇÃO DO BOTÃO NO MENU DE AÇÕES
     // ========================================================
@@ -26,14 +29,12 @@ export const PainelGeralService = {
             
             modal.innerHTML = `
                 <div class="bg-white shadow-2xl w-full max-w-7xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
-                    
                     <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
                         <h2 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
                             <span class="text-emerald-600">📊</span> Monitor da Equipe
                         </h2>
                         <button id="close-painel-geral-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
                     </div>
-                    
                     <div id="painel-monitor-body" class="flex-grow overflow-y-auto p-4 sm:p-6 bg-white scrollable-content">
                         <div id="painel-monitor-conteudo" class="space-y-6">
                             <div class="flex justify-center py-10">
@@ -46,12 +47,14 @@ export const PainelGeralService = {
             
             document.body.appendChild(modal);
 
-            const closeActions = () => { modal.classList.add('hidden'); };
-            document.getElementById('close-painel-geral-modal-btn').onclick = closeActions;
-
-            modal.onclick = (e) => {
+            // Substituição de .onclick por addEventListener seguro
+            const closeBtn = document.getElementById('close-painel-geral-modal-btn');
+            const closeActions = () => this.fecharPainel();
+            
+            closeBtn.addEventListener('click', closeActions);
+            modal.addEventListener('click', (e) => {
                 if (e.target === modal) closeActions();
-            };
+            });
         }
 
         modal.classList.remove('hidden');
@@ -71,24 +74,24 @@ export const PainelGeralService = {
         
         setTimeout(() => {
             const col = document.getElementById(targetId);
-            if (col) {
-                if (col.classList.contains('hidden') && toggleId) {
-                    const chk = document.getElementById(toggleId);
-                    if (chk) {
-                        chk.checked = true;
-                        if (app && typeof app.saveColumnPreferences === 'function') {
-                            app.saveColumnPreferences();
-                        }
+            if (!col) return;
+
+            if (col.classList.contains('hidden') && toggleId) {
+                const chk = document.getElementById(toggleId);
+                if (chk) {
+                    chk.checked = true;
+                    if (app && typeof app.saveColumnPreferences === 'function') {
+                        app.saveColumnPreferences();
                     }
                 }
-                
-                col.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
-                
-                col.classList.add('ring-4', 'ring-emerald-400', 'transition-all', 'duration-500');
-                setTimeout(() => {
-                    col.classList.remove('ring-4', 'ring-emerald-400');
-                }, 1500);
             }
+            
+            col.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
+            
+            col.classList.add('ring-4', 'ring-emerald-400', 'transition-all', 'duration-500');
+            setTimeout(() => {
+                col.classList.remove('ring-4', 'ring-emerald-400');
+            }, 1500);
         }, 300);
     },
 
@@ -102,13 +105,23 @@ export const PainelGeralService = {
         const todos = app.allAssisted || [];
         const colaboradoresDb = app.colaboradores || [];
         
-        const emMesa = todos.filter(a => a.status === 'emAtendimento' && a.delegationToken); 
-        const distrib = todos.filter(a => a.status === 'aguardandoDistribuicao');
-        const correcao = todos.filter(a => a.status === 'aguardandoCorrecao');
-        const finalizados = todos.filter(a => a.status === 'atendido' && a.finalizadoPeloColaborador);
+        // OTIMIZAÇÃO: Único loop (Reduce) para categorizar os assistidos
+        const categorias = todos.reduce((acc, curr) => {
+            if (curr.status === 'emAtendimento' && curr.delegationToken) acc.emMesa.push(curr);
+            else if (curr.status === 'aguardandoDistribuicao') acc.distrib.push(curr);
+            else if (curr.status === 'aguardandoCorrecao') acc.correcao.push(curr);
+            else if (curr.status === 'atendido' && curr.finalizadoPeloColaborador) acc.finalizados.push(curr);
+            return acc;
+        }, { emMesa: [], distrib: [], correcao: [], finalizados: [] });
 
-        const defensores = colaboradoresDb.filter(c => c.cargo?.toLowerCase().includes('defensor'));
-        const servidores = colaboradoresDb.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
+        // Separação de cargos sem duplicar checagens .toLowerCase()
+        const defensores = [];
+        const servidores = [];
+        colaboradoresDb.forEach(c => {
+            const isDefensor = c.cargo?.toLowerCase().includes('defensor');
+            if (isDefensor) defensores.push(c);
+            else servidores.push(c);
+        });
 
         const getBadges = (a) => {
             let badges = '';
@@ -127,7 +140,7 @@ export const PainelGeralService = {
             countDefensores[d.nome] = { distrib: [], correcao: [], dataObj: d }; 
         });
 
-        [...distrib, ...correcao].forEach(a => {
+        [...categorias.distrib, ...categorias.correcao].forEach(a => {
             const def = a.defensorResponsavel || 'Não Atribuído';
             if(!countDefensores[def]) countDefensores[def] = { distrib: [], correcao: [], dataObj: { nome: def, cargo: 'Defensor(a)' } };
             
@@ -154,8 +167,8 @@ export const PainelGeralService = {
                 stats.distrib.forEach(a => {
                     detalhesHtml += `
                         <div class="flex justify-between items-start text-xs bg-gray-50 p-2 rounded border border-gray-200">
-                            <div class="flex flex-col gap-0.5">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                            <div class="flex flex-col gap-0.5 w-full overflow-hidden">
+                                <span class="font-bold text-gray-800 truncate">${escapeHTML(a.name)}</span>
                                 <span class="text-[10px] text-gray-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
                             </div>
@@ -166,8 +179,8 @@ export const PainelGeralService = {
                 stats.correcao.forEach(a => {
                     detalhesHtml += `
                         <div class="flex justify-between items-start text-xs bg-gray-50 p-2 rounded border border-gray-200">
-                            <div class="flex flex-col gap-0.5">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                            <div class="flex flex-col gap-0.5 w-full overflow-hidden">
+                                <span class="font-bold text-gray-800 truncate">${escapeHTML(a.name)}</span>
                                 <span class="text-[10px] text-gray-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                                 ${a.enviadoPor ? `<span class="text-[9px] font-semibold text-amber-600 mt-0.5">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
@@ -179,8 +192,7 @@ export const PainelGeralService = {
             }
 
             const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
-            // Captura o e-mail cadastrado do Defensor para exibição rápida
-            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
+            const emailExibicao = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             defensoresHtml += `
                 <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
@@ -188,7 +200,7 @@ export const PainelGeralService = {
                         <div>
                             <h3 class="font-bold text-gray-800 text-sm flex items-center">👨‍⚖️ ${escapeHTML(def)} ${presenca}</h3>
                             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
-                            ${emailExibição}
+                            ${emailExibicao}
                         </div>
                         ${statusVisual}
                     </div>
@@ -202,7 +214,7 @@ export const PainelGeralService = {
         const countServidores = {};
         servidores.forEach(s => { countServidores[s.nome] = { mesa: [], dataObj: s }; });
 
-        emMesa.forEach(a => {
+        categorias.emMesa.forEach(a => {
             const serv = a.assignedCollaborator?.name || 'Não Atribuído';
             if(!countServidores[serv]) countServidores[serv] = { mesa: [], dataObj: { nome: serv, cargo: 'Servidor' } };
             countServidores[serv].mesa.push(a);
@@ -224,8 +236,8 @@ export const PainelGeralService = {
                     const hora = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
                     detalhesHtml += `
                         <div class="flex justify-between items-start text-xs bg-gray-50 p-2 rounded border border-gray-200">
-                            <div class="flex flex-col gap-0.5">
-                                <span class="font-bold text-gray-800">${escapeHTML(a.name)}</span>
+                            <div class="flex flex-col gap-0.5 w-full overflow-hidden">
+                                <span class="font-bold text-gray-800 truncate">${escapeHTML(a.name)}</span>
                                 <span class="text-[10px] text-gray-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
                             </div>
@@ -236,8 +248,7 @@ export const PainelGeralService = {
             }
 
             const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-gray-300 ml-1 text-xs" title="Ausente">●</span>';
-            // Captura o e-mail cadastrado do Servidor para exibição rápida
-            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
+            const emailExibicao = stats.dataObj.email ? `<p class="text-[10px] font-mono text-gray-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             servidoresHtml += `
                 <div class="bg-white border border-gray-200 rounded-lg p-3 shadow-sm hover:shadow transition-shadow">
@@ -245,7 +256,7 @@ export const PainelGeralService = {
                         <div>
                             <h3 class="font-bold text-gray-800 text-sm flex items-center">🧑‍💻 ${escapeHTML(serv)} ${presenca}</h3>
                             <p class="text-[9px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
-                            ${emailExibição}
+                            ${emailExibicao}
                         </div>
                         ${statusVisual}
                     </div>
@@ -256,7 +267,7 @@ export const PainelGeralService = {
         if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-gray-400 italic text-center py-4 bg-gray-50 rounded-lg border border-dashed border-gray-300">Nenhum servidor cadastrado.</p>';
 
         // PROCESSA FINALIZADOS
-        const finalizadosOrdenados = finalizados.sort((a, b) => new Date(b.attendedAt || 0) - new Date(a.attendedAt || 0));
+        const finalizadosOrdenados = categorias.finalizados.sort((a, b) => new Date(b.attendedAt || 0) - new Date(a.attendedAt || 0));
         let finalizadosHtml = '';
         
         if (finalizadosOrdenados.length === 0) {
@@ -267,7 +278,7 @@ export const PainelGeralService = {
                 const hora = a.attendedAt ? new Date(a.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
                 return `
                     <div class="flex justify-between items-center p-2 border-b border-gray-100 last:border-0 hover:bg-gray-50 transition-colors">
-                        <div class="flex flex-col truncate pr-2">
+                        <div class="flex flex-col truncate pr-2 w-full overflow-hidden">
                             <span class="font-bold text-xs text-gray-800 truncate">${escapeHTML(a.name)}</span>
                             <span class="text-[9px] text-gray-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                             <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
@@ -283,33 +294,31 @@ export const PainelGeralService = {
             finalizadosHtml += `</div>`;
         }
 
-        // ====================================================
-        // MONTAGEM DO HTML COM OS CARDS CLICÁVEIS (IR P/ TABELA)
-        // ====================================================
+        // MONTAGEM DO HTML GLOBAL
         conteudo.innerHTML = `
             <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
                 <button data-target="em-atendimento-column" data-toggle="toggle-em-atendimento" class="card-metrica bg-white hover:bg-indigo-50 rounded-lg border border-gray-200 hover:border-indigo-300 p-4 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
                     <div class="absolute top-0 left-0 w-1 h-full bg-indigo-500 group-hover:w-1.5 transition-all"></div>
                     <p class="text-[10px] font-bold text-gray-400 group-hover:text-indigo-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Em Mesa <span class="text-indigo-400 ml-1">↗</span></p>
-                    <p class="text-3xl font-black text-gray-700 group-hover:text-indigo-700 pl-1 transition-colors">${emMesa.length}</p>
+                    <p class="text-3xl font-black text-gray-700 group-hover:text-indigo-700 pl-1 transition-colors">${categorias.emMesa.length}</p>
                 </button>
                 
                 <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-cyan-50 rounded-lg border border-gray-200 hover:border-cyan-300 p-4 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
                     <div class="absolute top-0 left-0 w-1 h-full bg-cyan-500 group-hover:w-1.5 transition-all"></div>
                     <p class="text-[10px] font-bold text-gray-400 group-hover:text-cyan-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Assinaturas <span class="text-cyan-400 ml-1">↗</span></p>
-                    <p class="text-3xl font-black text-gray-700 group-hover:text-cyan-700 pl-1 transition-colors">${distrib.length}</p>
+                    <p class="text-3xl font-black text-gray-700 group-hover:text-cyan-700 pl-1 transition-colors">${categorias.distrib.length}</p>
                 </button>
 
                 <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-amber-50 rounded-lg border border-gray-200 hover:border-amber-300 p-4 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
                     <div class="absolute top-0 left-0 w-1 h-full bg-amber-500 group-hover:w-1.5 transition-all"></div>
                     <p class="text-[10px] font-bold text-gray-400 group-hover:text-amber-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Avaliações <span class="text-amber-400 ml-1">↗</span></p>
-                    <p class="text-3xl font-black text-gray-700 group-hover:text-amber-700 pl-1 transition-colors">${correcao.length}</p>
+                    <p class="text-3xl font-black text-gray-700 group-hover:text-amber-700 pl-1 transition-colors">${categorias.correcao.length}</p>
                 </button>
 
                 <button data-target="atendidos-column" class="card-metrica bg-white hover:bg-emerald-50 rounded-lg border border-gray-200 hover:border-emerald-300 p-4 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
                     <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500 group-hover:w-1.5 transition-all"></div>
                     <p class="text-[10px] font-bold text-gray-400 group-hover:text-emerald-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Protocolados <span class="text-emerald-400 ml-1">↗</span></p>
-                    <p class="text-3xl font-black text-gray-700 group-hover:text-emerald-700 pl-1 transition-colors">${finalizados.length}</p>
+                    <p class="text-3xl font-black text-gray-700 group-hover:text-emerald-700 pl-1 transition-colors">${categorias.finalizados.length}</p>
                 </button>
             </div>
 
@@ -351,12 +360,13 @@ export const PainelGeralService = {
             </div>
         `;
 
-        document.querySelectorAll('.card-metrica').forEach(card => {
-            card.onclick = () => {
+        // Atribuição limpa dos cartões clicáveis utilizando Closures inline seguras
+        conteudo.querySelectorAll('.card-metrica').forEach(card => {
+            card.addEventListener('click', () => {
                 const targetId = card.getAttribute('data-target');
                 const toggleId = card.getAttribute('data-toggle');
                 this.irParaColuna(app, targetId, toggleId);
-            };
+            });
         });
     }
 };
