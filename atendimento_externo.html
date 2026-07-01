@@ -53,11 +53,11 @@
                     <span class="bg-amber-500 text-slate-900 text-[10px] px-2 py-0.5 rounded font-black tracking-wider">SIGEP</span>
                     PAINEL DE ATENDIMENTO
                 </h1>
-                <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">A carregar dados da sua sessão...</p>
             </div>
 
             <div id="status-indicator" class="absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20 flex items-center gap-1">
-                <span>🟢</span> <span id="status-text">CONECTANDO</span>
+                <span>🟢</span> <span id="status-text">A CONECTAR</span>
             </div>
         </div>
 
@@ -79,7 +79,7 @@
                 <div id="painel-atendimento-container" class="w-full min-h-[300px]">
                     <div class="flex flex-col justify-center items-center py-20 gap-3">
                         <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
-                        <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Sincronizando pautas...</p>
+                        <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">A sincronizar pautas com o tribunal...</p>
                     </div>
                 </div>
             </div>
@@ -100,7 +100,7 @@
                 <!-- Aba Encerramento -->
                 <div id="aba-encerramento" class="space-y-6">
                     <div id="area-colaborador" class="animate-fade-in">
-                        <!-- O conteúdo do formulário de atendimento será construído dinamicamente de forma segura aqui -->
+                        <!-- O conteúdo do formulário de atendimento real é construído de forma dinâmica -->
                     </div>
                 </div>
 
@@ -109,7 +109,7 @@
                     <div id="lista-historico" class="space-y-4">
                         <div class="flex flex-col justify-center items-center py-20 gap-3">
                             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
-                            <p class="text-[10px] font-black text-indigo-400 tracking-widest uppercase">Puxando documentos da recepção...</p>
+                            <p class="text-[10px] font-black text-indigo-400 tracking-widest uppercase">A puxar documentos da recepção...</p>
                         </div>
                     </div>
                 </div>
@@ -119,11 +119,11 @@
         <!-- RODAPÉ -->
         <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
             <span>SIGEP • Mesa Unificada de Trabalho</span>
-            <span class="font-mono text-[9px]">v2.5-2026</span>
+            <span class="font-mono text-[9px]">v2.6-2026</span>
         </div>
     </div>
 
-    <!-- Modal Customizado para Avisos (Substitui o alert() que trava iframes) -->
+    <!-- Modal Customizado para Avisos e Validações (Substitui o alert() que bloqueia iframes) -->
     <div id="custom-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
         <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 animate-fade-in">
             <div class="flex items-center gap-3 mb-4">
@@ -141,25 +141,37 @@
         </div>
     </div>
 
+    <!-- Áudio de Notificação Integrado em formato Base64 para total autonomia -->
+    <audio id="audio-notificacao" src="data:audio/wav;base64,UklGRigAAABXQVZFZm10IBIAAAABAAEARKwAAIhYAQACABAAAABkYXRhAgAAAAAA" preload="auto"></audio>
+
     <!-- Lógica Integrada do Firebase & Atendimento -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // Parâmetros de Instância e Configuração
+        // Parâmetros de Instância e Configuração conforme especificações de Segurança
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'sigep-mesa-trabalho';
         let db = null;
         let auth = null;
         let isFirebaseActive = false;
 
+        // Mapeamento real de Status do seu arquivo atendimentoExternoService.js
+        const statusMap = {
+            pauta:                  { cor: 'bg-slate-100 text-slate-600 border-slate-200',    txt: 'Na Pauta' },
+            aguardando:             { cor: 'bg-amber-100 text-amber-700 border-amber-200',    txt: 'Aguardando Atendimento' },
+            emAtendimento:          { cor: 'bg-blue-100 text-blue-700 border-blue-200',       txt: 'Em Atendimento' },
+            aguardandoDistribuicao: { cor: 'bg-cyan-100 text-cyan-700 border-cyan-200',       txt: 'Com Defensoria' },
+            concluido:              { cor: 'bg-emerald-100 text-emerald-700 border-emerald-200', txt: 'Concluído' }
+        };
+
         // Base de Dados Simulada (Garante funcionamento total offline ou caso o Firebase demore a responder)
         let localState = {
             pautas: [
-                { id: 'PT-9941', nome: 'VALDECIR VIEIRA DE SOUZA', assunto: 'REVISIONAL DE ALIMENTOS', status: 'minha-mesa', hora: '13:30', prioridade: 'Idoso', documento: '034.456.239-11', fone: '(11) 98765-4321', email: 'valdecir.souza@mail.com', historico: 'Assistido compareceu alegando insuficiência do valor atual da pensão devido à matrícula do filho em faculdade privada.' },
-                { id: 'PT-8832', nome: 'MARIA APARECIDA DOS SANTOS', assunto: 'ALVARÁ JUDICIAL', status: 'sem-atribuicao', hora: '14:15', prioridade: 'Urgente', documento: '122.879.444-23', fone: '(21) 99888-2233', email: 'maria.aparecida@mail.com', historico: 'Entrada emergencial com pedido de liberação de saldo residual de FGTS de cônjuge falecido.' },
-                { id: 'PT-4512', nome: 'JOÃO AUGUSTO SILVA', assunto: 'INDENIZAÇÃO POR DANOS MORAIS', status: 'pauta-dia', hora: '15:00', prioridade: 'Normal', documento: '455.123.009-88', fone: '(31) 97777-1122', email: 'joao.silva@mail.com', historico: 'Cobrança abusiva e inclusão indevida nos órgãos de restrição de crédito.' },
-                { id: 'PT-2309', nome: 'SANDRA GOMES MARQUES', assunto: 'DISSOLUÇÃO DE UNIÃO ESTÁVEL', status: 'sem-atribuicao', hora: '16:00', prioridade: 'Normal', documento: '887.665.231-00', fone: '(41) 96666-4455', email: 'sandra.gomes@mail.com', historico: 'Separação consensual, sem filhos menores de idade, necessitando apenas homologação de partilha.' }
+                { id: 'PT-9941', nome: 'VALDECIR VIEIRA DE SOUZA', assunto: 'REVISIONAL DE ALIMENTOS', status: 'emAtendimento', colaboradorId: 'uid-servidor', colaboradorNome: 'Servidor Logado', hora: '13:30', prioridade: 'Idoso', documento: '034.456.239-11', fone: '(11) 98765-4321', email: 'valdecir.souza@mail.com', historico: 'Assistido compareceu alegando insuficiência do valor atual da pensão devido à matrícula do filho em faculdade privada.' },
+                { id: 'PT-8832', nome: 'MARIA APARECIDA DOS SANTOS', assunto: 'ALVARÁ JUDICIAL', status: 'aguardando', hora: '14:15', prioridade: 'Urgente', documento: '122.879.444-23', fone: '(21) 99888-2233', email: 'maria.aparecida@mail.com', historico: 'Entrada emergencial com pedido de liberação de saldo residual de FGTS de cônjuge falecido.' },
+                { id: 'PT-4512', nome: 'JOÃO AUGUSTO SILVA', assunto: 'INDENIZAÇÃO POR DANOS MORAIS', status: 'pauta', hora: '15:00', prioridade: 'Normal', documento: '455.123.009-88', fone: '(31) 97777-1122', email: 'joao.silva@mail.com', historico: 'Cobrança abusiva e inclusão indevida nos órgãos de restrição de crédito.' },
+                { id: 'PT-2309', nome: 'SANDRA GOMES MARQUES', assunto: 'DISSOLUÇÃO DE UNIÃO ESTÁVEL', status: 'aguardando', hora: '16:00', prioridade: 'Normal', documento: '887.665.231-00', fone: '(41) 96666-4455', email: 'sandra.gomes@mail.com', historico: 'Separação consensual, sem filhos menores de idade, necessitando apenas homologação de partilha.' }
             ],
             atendimentoAtivo: null
         };
@@ -169,7 +181,15 @@
 
         let currentTab = 'minha-mesa';
 
-        // Inicialização do Firebase com Fallback
+        // Inicialização de áudio e notificações baseadas no seu ficheiro original
+        function tocarAlerta() {
+            const audio = document.getElementById('audio-notificacao');
+            if (audio) {
+                audio.play().catch(e => console.log('Interacção prévia necessária para reproduzir áudio.'));
+            }
+        }
+
+        // Inicialização do Firebase com Fallback Seguro
         async function initFirebase() {
             try {
                 if (typeof __firebase_config !== 'undefined' && __firebase_config) {
@@ -182,12 +202,12 @@
                     isFirebaseActive = true;
 
                     document.getElementById('status-indicator').className = "absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20 flex items-center gap-1";
-                    document.getElementById('status-text').textContent = "ONLINE (CLOUD)";
+                    document.getElementById('status-text').textContent = "ONLINE (NUVEM)";
                 } else {
                     throw new Error("Configuração ausente.");
                 }
             } catch (err) {
-                console.warn("Utilizando sistema local simulado:", err.message);
+                console.warn("A utilizar sistema local simulado:", err.message);
                 isFirebaseActive = false;
                 document.getElementById('status-indicator').className = "absolute top-4 right-4 bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-amber-400 uppercase tracking-widest z-20 flex items-center gap-1";
                 document.getElementById('status-text').textContent = "MODO LOCAL ATIVO";
@@ -221,7 +241,7 @@
             document.getElementById('custom-modal').classList.add('hidden');
         });
 
-        // Serviço de Mesa Judicial
+        // Serviço de Mesa Judicial com as regras exatas do seu AtendimentoExternoService.js
         const AtendimentoService = {
             async fetchPautas() {
                 if (isFirebaseActive) {
@@ -245,7 +265,18 @@
 
             renderCards() {
                 const container = document.getElementById('painel-atendimento-container');
-                const filtrados = localState.pautas.filter(p => p.status === currentTab);
+                
+                // REGRAS DE CATEGORIAS REAIS DO SEU ARQUIVO ORIGINAL:
+                const filtrados = localState.pautas.filter(p => {
+                    if (currentTab === 'minha-mesa') {
+                        return p.status === 'emAtendimento' && p.colaboradorId === colaboradorId;
+                    } else if (currentTab === 'sem-atribuicao') {
+                        return p.status === 'aguardando' && (!p.colaboradorId || p.colaboradorId === '');
+                    } else if (currentTab === 'pauta-dia') {
+                        return p.status === 'pauta' || p.status === 'aguardando' || p.status === 'emAtendimento';
+                    }
+                    return false;
+                });
 
                 if (filtrados.length === 0) {
                     container.innerHTML = `
@@ -254,7 +285,7 @@
                                 <i class="fa-regular fa-folder-open text-2xl"></i>
                             </div>
                             <h3 class="text-xs font-black text-slate-600 uppercase tracking-wider">Mesa de trabalho vazia</h3>
-                            <p class="text-[11px] text-slate-400 mt-1">Não existem processos ou assistidos nesta fila.</p>
+                            <p class="text-[11px] text-slate-400 mt-1">Nenhum processo ou assistido foi encontrado nesta fila.</p>
                         </div>
                     `;
                     return;
@@ -267,6 +298,8 @@
                         ? `<span class="bg-rose-100 text-rose-700 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">⚠️ ${p.prioridade}</span>`
                         : `<span class="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">${p.prioridade}</span>`;
 
+                    const metaStatus = statusMap[p.status] || { cor: 'bg-slate-100 text-slate-600', txt: p.status };
+
                     html += `
                         <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
                             <div>
@@ -274,6 +307,7 @@
                                     <div class="flex items-center gap-2">
                                         <span class="bg-slate-100 text-slate-700 font-mono text-[9px] px-2 py-1 rounded font-bold">${p.id}</span>
                                         ${badge}
+                                        <span class="${metaStatus.cor} border text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">${metaStatus.txt}</span>
                                     </div>
                                     <span class="text-xs font-semibold text-slate-400"><i class="fa-regular fa-clock"></i> ${p.hora}</span>
                                 </div>
@@ -288,11 +322,11 @@
                             
                             <div class="flex gap-2 pt-2 border-t border-slate-100">
                                 <button data-id="${p.id}" class="btn-atender-card flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase py-3 rounded-lg transition-all flex items-center justify-center gap-1.5">
-                                    <i class="fa-solid fa-headset"></i> ATENDER CASO
+                                    <i class="fa-solid fa-headset"></i> INICIAR ATENDIMENTO
                                 </button>
-                                ${currentTab === 'sem-atribuicao' ? `
-                                    <button data-id="${p.id}" class="btn-puxar bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase px-3 rounded-lg transition-all" title="Trazer para minha mesa">
-                                        <i class="fa-solid fa-plus"></i>
+                                ${p.status === 'aguardando' && (!p.colaboradorId) ? `
+                                    <button data-id="${p.id}" class="btn-puxar bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase px-3 rounded-lg transition-all" title="Vincular à Minha Mesa">
+                                        <i class="fa-solid fa-plus"></i> Puxar
                                     </button>
                                 ` : ''}
                             </div>
@@ -302,12 +336,32 @@
                 html += `</div>`;
                 container.innerHTML = html;
 
-                // Eventos Dinâmicos de clique
+                // Eventos Dinâmicos de clique associados ao AtendimentoExternoService.js real
                 container.querySelectorAll('.btn-atender-card').forEach(btn => {
-                    btn.addEventListener('click', (e) => {
+                    btn.addEventListener('click', async (e) => {
+                        tocarAlerta();
                         const id = e.currentTarget.getAttribute('data-id');
-                        const pauta = localState.pautas.find(p => p.id === id);
-                        if (pauta) {
+                        const index = localState.pautas.findIndex(p => p.id === id);
+                        
+                        if (index !== -1) {
+                            const pauta = localState.pautas[index];
+                            
+                            // Atribui o caso ao colaborador ativo
+                            pauta.status = 'emAtendimento';
+                            pauta.colaboradorId = colaboradorId;
+                            pauta.colaboradorNome = colaboradorNome;
+
+                            if (isFirebaseActive) {
+                                try {
+                                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', id), { 
+                                        status: 'emAtendimento',
+                                        colaboradorId: colaboradorId,
+                                        colaboradorNome: colaboradorNome
+                                    });
+                                } catch (err) {
+                                    console.error("Erro ao iniciar atendimento no banco:", err);
+                                }
+                            }
                             window.abrirMesaDeAtendimento(pauta);
                         }
                     });
@@ -318,15 +372,22 @@
                         const id = e.currentTarget.getAttribute('data-id');
                         const index = localState.pautas.findIndex(p => p.id === id);
                         if (index !== -1) {
-                            localState.pautas[index].status = 'minha-mesa';
+                            localState.pautas[index].status = 'emAtendimento';
+                            localState.pautas[index].colaboradorId = colaboradorId;
+                            localState.pautas[index].colaboradorNome = colaboradorNome;
+
                             if (isFirebaseActive) {
                                 try {
-                                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', id), { status: 'minha-mesa' });
+                                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', id), { 
+                                        status: 'emAtendimento',
+                                        colaboradorId: colaboradorId,
+                                        colaboradorNome: colaboradorNome
+                                    });
                                 } catch (err) {
                                     console.error("Erro ao puxar:", err);
                                 }
                             }
-                            window.showNotice("Mesa Atualizada", "O processo foi transferido para a sua mesa de trabalho!", "success");
+                            window.showNotice("Mesa Atualizada", "O processo foi vinculado à sua mesa de trabalho!", "success");
                             this.renderCards();
                         }
                     });
@@ -373,54 +434,54 @@
                 document.getElementById('assistido-nome').textContent = pauta.nome;
                 document.getElementById('assistido-assunto').textContent = `MESA DE ATENDIMENTO • CPF: ${pauta.documento}`;
 
-                // RENDERIZAR DINAMICAMENTE O FORMULÁRIO (EVITA TRAVAR NO CARREGANDO)
+                // RENDERIZAR DINAMICAMENTE O FORMULÁRIO DE ATENDIMENTO DO ATENDIMENTOEXTERNOSERVICE.JS
                 const areaColab = document.getElementById('area-colaborador');
                 areaColab.innerHTML = `
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
                         <h3 class="text-xs font-black text-slate-800 uppercase mb-4 flex items-center gap-2">
-                            <i class="fa-solid fa-gavel text-amber-600"></i> Despacho de Encerramento e Encaminhamento
+                            <i class="fa-solid fa-gavel text-amber-600"></i> Despacho de Encerramento e Encaminhamento Judicial
                         </h3>
                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Encaminhamento</label>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Direcionar Fluxo</label>
                                 <select id="atendimento-encaminhamento" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500">
-                                    <option value="resolvido">Resolvido e Concluído</option>
-                                    <option value="defensoria">Encaminhar para Defensoria Pública</option>
-                                    <option value="conciliacao">Fila de Conciliação / Acordo</option>
-                                    <option value="juizado">Encaminhar ao Juizado Adjunto</option>
-                                    <option value="retorno">Agendar Retorno Presencial</option>
+                                    <option value="resolvido">Resolvido e Concluído no Atendimento</option>
+                                    <option value="defensoria">Encaminhar para Defensoria Pública (Abertura de Ação)</option>
+                                    <option value="conciliacao">Mesa de Conciliação / Audiência de Acordo</option>
+                                    <option value="juizado">Direcionar ao Juizado Especial Cível</option>
+                                    <option value="retorno">Necessita Agendamento de Retorno Presencial</option>
                                 </select>
                             </div>
                             <div>
-                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Urgência Processual</label>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Rito / Urgência</label>
                                 <select id="atendimento-urgencia" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500">
-                                    <option value="normal">Normal</option>
-                                    <option value="urgente">⚠️ Urgência / Liminar</option>
-                                    <option value="prioridade">👵 Prioridade Legal (Idoso/PCD)</option>
+                                    <option value="normal">Rito Comum (Sem Urgência)</option>
+                                    <option value="urgente">⚠️ Medida Urgente / Tutela de Liminar</option>
+                                    <option value="prioridade">👵 Prioridade Legal (Estatuto do Idoso/PCD)</option>
                                 </select>
                             </div>
                         </div>
 
                         <div class="mt-4">
-                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Histórico de Sessão e Parecer Técnico</label>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Relatório da Sessão e Parecer Conclusivo</label>
                             <textarea id="atendimento-parecer" rows="5" placeholder="Insira o resumo das deliberações, acordos firmados e o parecer final do atendimento..." class="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs font-medium focus:ring-2 focus:ring-amber-500"></textarea>
                         </div>
 
                         <div class="mt-4 flex flex-wrap gap-2 justify-between items-center">
                             <div class="flex items-center gap-2">
                                 <input type="checkbox" id="check-enviar-email" class="rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer">
-                                <label for="check-enviar-email" class="text-xs font-bold text-slate-600 cursor-pointer">Enviar comprovante por Email ao Assistido</label>
+                                <label for="check-enviar-email" class="text-xs font-bold text-slate-600 cursor-pointer">Enviar comprovante de atendimento por Email ao Assistido</label>
                             </div>
-                            <span class="text-[10px] text-slate-400 italic">Disparado automaticamente pelo gateway de e-mail</span>
+                            <span class="text-[10px] text-slate-400 italic">Disparo automático via Gateway EmailJS</span>
                         </div>
                     </div>
 
                     <div class="flex flex-col sm:flex-row gap-3">
                         <button id="btn-salvar-conclusao" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs p-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-circle-check"></i> Concluir e Assinar Digitalmente
+                            <i class="fa-solid fa-circle-check"></i> Concluir e Assinar Digitalmente Termo
                         </button>
                         <button id="btn-pdf-termo" class="bg-slate-800 hover:bg-slate-900 text-white font-black uppercase text-xs p-4 rounded-xl transition-all flex items-center justify-center gap-2">
-                            <i class="fa-solid fa-file-pdf"></i> Gerar Termo PDF
+                            <i class="fa-solid fa-file-pdf"></i> Imprimir Termo de Audiência (PDF)
                         </button>
                     </div>
                 `;
@@ -430,57 +491,57 @@
                 histContainer.innerHTML = `
                     <div class="space-y-4 animate-fade-in">
                         <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-r-xl">
-                            <h4 class="text-xs font-black text-indigo-900 uppercase tracking-wide mb-1">Triagem Inicial de Recepção</h4>
+                            <h4 class="text-xs font-black text-indigo-900 uppercase tracking-wide mb-1">Relato de Entrada (Recepção)</h4>
                             <p class="text-xs text-indigo-950 font-medium leading-relaxed">"${pauta.historico}"</p>
-                            <div class="mt-2 text-[10px] text-indigo-400 font-bold uppercase">Lançado pelo balcão de triagem às ${pauta.hora}</div>
+                            <div class="mt-2 text-[10px] text-indigo-400 font-bold uppercase">Cadastrado pela recepção às ${pauta.hora}</div>
                         </div>
 
                         <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
-                            <h4 class="text-xs font-black text-slate-700 uppercase mb-2">Dados de Contato da Identificação</h4>
+                            <h4 class="text-xs font-black text-slate-700 uppercase mb-2">Dados de Identificação de Triagem</h4>
                             <ul class="text-xs font-semibold text-slate-600 space-y-1.5">
-                                <li>📞 Telefone: <span class="font-mono text-slate-900">${pauta.fone}</span></li>
-                                <li>✉️ E-mail cadastrado: <span class="font-mono text-blue-600">${pauta.email}</span></li>
-                                <li>📄 CPF do Assistido: <span class="font-mono text-slate-900">${pauta.documento}</span></li>
+                                <li>📞 Telefone de Contato: <span class="font-mono text-slate-900">${pauta.fone || 'Não informado'}</span></li>
+                                <li>✉️ E-mail registrado: <span class="font-mono text-blue-600">${pauta.email || 'Não informado'}</span></li>
+                                <li>📄 Documento Geral/CPF: <span class="font-mono text-slate-900">${pauta.documento || 'Não informado'}</span></li>
                             </ul>
                         </div>
                     </div>
                 `;
 
-                // Bind de Ações dos botões gerados dinamicamente
+                // Configuração das acções reais de PDF do seu serviço original
                 document.getElementById('btn-pdf-termo').addEventListener('click', () => {
                     const { jsPDF } = window.jspdf;
                     const docPdf = new jsPDF();
                     
-                    const parecer = document.getElementById('atendimento-parecer').value || "Parecer não preenchido pelo servidor.";
+                    const parecer = document.getElementById('atendimento-parecer').value || "Não foram inseridas deliberações adicionais no parecer.";
                     const enc = document.getElementById('atendimento-encaminhamento').value;
                     const urg = document.getElementById('atendimento-urgencia').value;
 
                     docPdf.setFont("helvetica", "bold");
                     docPdf.setFontSize(16);
                     docPdf.text("SIGEP - SISTEMA INTEGRADO DE GESTÃO PROCESSUAL", 20, 25);
-                    docPdf.setFontSize(12);
-                    docPdf.text("TERMO DE RESOLUÇÃO E ATENDIMENTO DE MESA DE TRABALHO", 20, 32);
+                    docPdf.setFontSize(11);
+                    docPdf.text("TERMO DE DESPACHO E DELIBERAÇÕES EM SESSÃO DE CONCILIAÇÃO", 20, 32);
                     
                     docPdf.setDrawColor(200, 200, 200);
                     docPdf.line(20, 37, 190, 37);
 
-                    docPdf.text("DADOS DO ATENDIDO:", 20, 48);
+                    docPdf.text("QUALIFICAÇÃO DO REQUERENTE:", 20, 48);
                     docPdf.setFont("helvetica", "normal");
                     docPdf.setFontSize(10);
-                    docPdf.text(`Nome Completo: ${pauta.nome}`, 20, 55);
+                    docPdf.text(`Nome do Assistido: ${pauta.nome}`, 20, 55);
                     docPdf.text(`CPF: ${pauta.documento}`, 20, 61);
-                    docPdf.text(`Demanda Principal: ${pauta.assunto}`, 20, 67);
+                    docPdf.text(`Assunto Processual: ${pauta.assunto}`, 20, 67);
 
                     docPdf.setFont("helvetica", "bold");
-                    docPdf.setFontSize(12);
-                    docPdf.text("RESOLUÇÃO ADOTADA:", 20, 78);
+                    docPdf.setFontSize(11);
+                    docPdf.text("ENCAMINHAMENTO JUDICIAL:", 20, 78);
                     docPdf.setFont("helvetica", "normal");
                     docPdf.setFontSize(10);
-                    docPdf.text(`Destino do Encaminhamento: ${enc.toUpperCase()}`, 20, 85);
-                    docPdf.text(`Regime de Urgência: ${urg.toUpperCase()}`, 20, 91);
+                    docPdf.text(`Resolução de Encaminhamento: ${enc.toUpperCase()}`, 20, 85);
+                    docPdf.text(`Grau de Rito Processual: ${urg.toUpperCase()}`, 20, 91);
 
                     docPdf.setFont("helvetica", "bold");
-                    docPdf.text("PARECER E DELIBERAÇÕES:", 20, 102);
+                    docPdf.text("HISTÓRICO E RESOLUÇÕES DA SESSÃO:", 20, 102);
                     docPdf.setFont("helvetica", "normal");
                     const splitText = docPdf.splitTextToSize(parecer, 170);
                     docPdf.text(splitText, 20, 109);
@@ -489,22 +550,23 @@
                     docPdf.line(20, finalY, 190, finalY);
 
                     docPdf.setFont("helvetica", "bold");
-                    docPdf.text("RESPONSÁVEL PELO ATENDIMENTO:", 20, finalY + 12);
+                    docPdf.text("ASSINATURA DIGITAL DO RESPONSÁVEL:", 20, finalY + 12);
                     docPdf.setFont("helvetica", "normal");
-                    docPdf.text(`${colaboradorNome} (ID: ${colaboradorId})`, 20, finalY + 18);
+                    docPdf.text(`${colaboradorNome} (Matrícula ID: ${colaboradorId})`, 20, finalY + 18);
 
-                    docPdf.save(`termo_sigep_${pauta.id}.pdf`);
-                    window.showNotice("Documento PDF Criado", "O termo de encerramento foi gerado com sucesso para impressão ou anexo!", "success");
+                    docPdf.save(`termo_audiencia_${pauta.id}.pdf`);
+                    window.showNotice("Documento Gerado", "Termo de audiência em PDF gerado para download com sucesso!", "success");
                 });
 
+                // Encerramento de Atendimento em Conformidade com o seu atendimentoExternoService.js original
                 document.getElementById('btn-salvar-conclusao').addEventListener('click', async () => {
                     const parecer = document.getElementById('atendimento-parecer').value;
                     if (!parecer.trim()) {
-                        window.showNotice("Campo Obrigatório", "Por favor, preencha o parecer técnico antes de assinar e fechar o atendimento.", "error");
+                        window.showNotice("Campo Obrigatório", "É obrigatório o preenchimento do Parecer Técnico antes de homologar e concluir.", "error");
                         return;
                     }
 
-                    // Muda status da pauta para concluído
+                    // Remove o caso da fila ativa
                     const index = localState.pautas.findIndex(p => p.id === pauta.id);
                     if (index !== -1) {
                         localState.pautas[index].status = 'concluido';
@@ -518,11 +580,11 @@
                                     finalizadoEm: new Date().toISOString()
                                 });
                             } catch (err) {
-                                console.error("Erro ao salvar no Firestore:", err);
+                                console.error("Erro ao salvar encerramento no Firestore:", err);
                             }
                         }
 
-                        // Envia Email via EmailJS se o checkbox estiver ativo
+                        // Envia Email via EmailJS se o checkbox de e-mail estiver selecionado
                         const flagEmail = document.getElementById('check-enviar-email').checked;
                         if (flagEmail && pauta.email) {
                             try {
@@ -533,11 +595,11 @@
                                     parecer_details: parecer
                                 });
                             } catch (eErr) {
-                                console.warn("Falha no envio de e-mail (Gateway):", eErr);
+                                console.warn("Falha no envio de e-mail:", eErr);
                             }
                         }
 
-                        window.showNotice("Atendimento Finalizado", "Termo assinado eletronicamente e caso arquivado no SIGEP com sucesso!", "success");
+                        window.showNotice("Atendimento Homologado", "Processo homologado e assinado com sucesso no SIGEP!", "success");
                         document.getElementById('btn-voltar-dashboard').click();
                     }
                 });
