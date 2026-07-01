@@ -63,20 +63,23 @@ export const AtendimentoExternoService = {
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado");
-    
-        const urlParams = new URLSearchParams(window.location.search);
+
+        const searchLimpa = window.location.search.replace(/&amp;/g, '&');
+        const urlParams = new URLSearchParams(searchLimpa);
+
+        // TENTA PEGAR DA URL, SE FALHAR, TENTA DO LOCALSTORAGE (Isso salva seu dia!)
+        this.pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
+        this.colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
         
-        // Debug para ver se a URL tem os dados
-        console.log("URL completa:", window.location.href);
-        
-        this.pautaId = urlParams.get('pautaId');
-        this.colaboradorNome = urlParams.get('colab');
-        this.colaboradorId = urlParams.get('colabId') || '';
-        
+        // Se pegou do localStorage, salve na URL para futuras atualizações
+        if (this.pautaId && this.colaboradorNome && !urlParams.get('pautaId')) {
+            console.log("🔄 Recuperando sessão do LocalStorage...");
+        }
+
         console.log("DEBUG - PautaId:", this.pautaId, "ColabNome:", this.colaboradorNome);
-    
+
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Erro de Acesso", "A URL não contém 'pautaId' ou 'colab'. Verifique o link de acesso.");
+            this.showError("Link Incompleto", "Não foi possível identificar a Pauta ou o Colaborador. Tente acessar pelo menu principal.");
             return;
         }
 
@@ -110,6 +113,17 @@ export const AtendimentoExternoService = {
         } catch (error) {
             console.error("Erro na inicialização:", error);
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
+        }
+
+        // Dentro da função init() do AtendimentoExternoService.js
+        console.log("URL Params:", window.location.search); // VERIFIQUE ISSO NO CONSOLE!
+        this.pautaId = urlParams.get('pautaId');
+        this.colaboradorNome = urlParams.get('colab');
+        
+        if (!this.pautaId || !this.colaboradorNome) {
+            console.error("FALTAM PARAMETROS! URL atual:", window.location.href);
+            this.showError("Erro", "Faltam parâmetros na URL (pautaId e colab).");
+            return;
         }
     },
 
