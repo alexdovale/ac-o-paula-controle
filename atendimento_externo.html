@@ -223,15 +223,19 @@
             try {
                 const module = await import('./js/atendimentoExternoService.js');
                 const { AtendimentoExternoService } = module;
-
-                // EXPORTA O SERVIÇO PARA O ESCOPO GLOBAL
+        
+                // 🔹 INJETA O DB E AUTH DO GLOBAL NO SERVIÇO
+                AtendimentoExternoService.db = db;
+                AtendimentoExternoService.auth = auth;
+                
+                // 🔹 EXPORTA O SERVIÇO PARA O ESCOPO GLOBAL
                 window.AtendimentoExternoService = AtendimentoExternoService;
-
+        
                 const urlParams = new URLSearchParams(window.location.search);
                 const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
                 const colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
                 const assistidoId = urlParams.get('assistidoId');
-
+        
                 if (!pautaId || !colaboradorNome) {
                     console.error("Faltam parâmetros: pautaId e colab são obrigatórios");
                     document.getElementById('atendimento-externo-container').innerHTML = `
@@ -243,28 +247,35 @@
                     `;
                     return;
                 }
-
+        
                 localStorage.setItem('lastPautaId', pautaId);
                 localStorage.setItem('lastColabName', colaboradorNome);
-
+        
                 document.querySelector('#assistido-nome').textContent = `👋 Olá, ${colaboradorNome}`;
                 document.querySelector('#assistido-assunto').textContent = `Pauta: ${pautaId} ${assistidoId ? '• Assistido: '+assistidoId : ''}`;
-
+        
                 AtendimentoExternoService.pautaId = pautaId;
                 AtendimentoExternoService.colaboradorNome = colaboradorNome;
                 AtendimentoExternoService.assistidoId = assistidoId || null;
-                AtendimentoExternoService.db = db;
-                AtendimentoExternoService.auth = auth;
-
+        
+                // 🔹 INICIALIZA O SERVIÇO
                 await AtendimentoExternoService.init();
-
+        
                 console.log("✅ Atendimento Externo iniciado com sucesso!");
+                
+                // 🔹 FORÇA A RENDERIZAÇÃO DOS DADOS
+                if (AtendimentoExternoService.todosAtendimentosPauta && AtendimentoExternoService.todosAtendimentosPauta.length > 0) {
+                    console.log("📋 Dados encontrados:", AtendimentoExternoService.todosAtendimentosPauta.length);
+                    AtendimentoExternoService.atualizarListasDoDashboard();
+                } else {
+                    console.warn("⚠️ Nenhum atendimento encontrado na pauta!");
+                }
                 
                 const container = document.getElementById('atendimento-externo-container');
                 if (container.innerHTML && container.innerHTML.trim().length > 0) {
                     document.getElementById('fallback-container').classList.add('hidden');
                 }
-
+        
             } catch (error) {
                 console.error("❌ Erro ao iniciar Atendimento Externo:", error);
                 document.getElementById('atendimento-externo-container').innerHTML = `
