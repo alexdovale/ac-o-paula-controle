@@ -2164,18 +2164,33 @@ class SIGEPApp {
 
     setupRealtimeListener(pautaId) {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        
+        console.log("🔍 [DEBUG] Tentando conectar na coleção de atendimentos...");
         const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+    
         this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            // Log 1: Verifica se chegou alguma coisa
+            console.log("✅ [DEBUG] Snapshot recebido! Total de documentos:", snapshot.docs.length);
+            
+            // Log 2: Verifica os dados
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            console.log("📋 [DEBUG] Dados mapeados:", this.allAssisted);
+    
+            if (this.allAssisted.length === 0) {
+                console.warn("⚠️ [DEBUG] A lista de assistidos está vazia.");
+            }
+    
             UIService.renderAssistedLists(this);
+            
             setTimeout(() => { 
                 if (typeof PautaService.injectRoomSearches === 'function') {
                     PautaService.injectRoomSearches(this); 
                 }
             }, 150);
         }, (error) => {
-            console.error("Erro no snapshot:", error);
-            showNotification("Erro ao carregar dados em tempo real", "error");
+            // Log 3: Captura erro de permissão ou rede
+            console.error("❌ [DEBUG] Erro no Snapshot:", error.code, error.message);
+            showNotification("Erro na sincronização: " + error.message, "error");
         });
     }
 
