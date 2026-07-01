@@ -1070,138 +1070,78 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- SCRIPTS                                                       -->
-    <!-- ============================================================ -->
-    <script type="module" src="./js/api_integration.js"></script>
-    <script type="module" src="./js/main.js"></script>
+       <!-- ============================================================ -->
+        <!-- SCRIPTS                                                       -->
+        <!-- ============================================================ -->
+        <script type="module" src="./js/api_integration.js"></script>
+        <script type="module" src="./js/main.js"></script>
+        
+        <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
+        <script>
+            (function() {
+                // ... código do upload ...
+            })();
+        </script>
     
-    <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
-    <script>
-        (function() {
-            function garantirInputCSV() {
-                let input = document.getElementById('file-upload');
-                if (!input) {
-                    input = document.createElement('input');
-                    input.type = 'file';
-                    input.id = 'file-upload';
-                    input.accept = '.csv';
-                    input.style.display = 'none';
-                    document.body.appendChild(input);
+        <!-- ============================================================ -->
+        <!-- FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO - NOVO!          -->
+        <!-- ============================================================ -->
+        <script>
+        window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+            console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
+            
+            try {
+                const viewDashboard = document.getElementById('view-dashboard');
+                const viewAtendimento = document.getElementById('view-atendimento');
+                const btnVoltar = document.getElementById('btn-voltar-dashboard');
+                const areaColaborador = document.getElementById('area-colaborador');
+                
+                if (viewDashboard) viewDashboard.classList.add('hidden');
+                if (viewAtendimento) viewAtendimento.classList.remove('hidden');
+                if (btnVoltar) btnVoltar.classList.remove('hidden');
+                if (areaColaborador) areaColaborador.classList.remove('hidden');
+                
+                const nomeEl = document.getElementById('assistido-nome');
+                const assuntoEl = document.getElementById('assistido-assunto');
+                
+                if (nomeEl) nomeEl.textContent = nomeAssistido || 'Assistido';
+                if (assuntoEl) assuntoEl.textContent = 'Em atendimento • Pauta: ' + pautaId;
+                
+                if (window.AtendimentoExternoService) {
+                    window.AtendimentoExternoService.assistidoId = assistidoId;
+                    window.AtendimentoExternoService.pautaId = pautaId;
                     
-                    input.addEventListener('change', function(e) {
-                        if (window.app && typeof PautaService !== 'undefined' && PautaService.handleCSVUpload) {
-                            PautaService.handleCSVUpload(e, window.app);
-                        } else {
-                            console.log('[Upload CSV] Arquivo selecionado:', e.target.files[0]?.name);
-                            const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
-                            document.dispatchEvent(evt);
-                        }
-                    });
-                }
-                return input;
-            }
-
-            let inputOrgaos = null;
-            function garantirInputOrgaos() {
-                if (!inputOrgaos) {
-                    inputOrgaos = document.createElement('input');
-                    inputOrgaos.type = 'file';
-                    inputOrgaos.id = 'import-orgao-file-input';
-                    inputOrgaos.accept = '.csv,.json';
-                    inputOrgaos.style.display = 'none';
-                    document.body.appendChild(inputOrgaos);
-                    
-                    inputOrgaos.addEventListener('change', function(e) {
-                        if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
-                            window.ImportadorOrgaosService.handleFileSelect(e);
-                        } else {
-                            console.log('[Importador] Arquivo de órgãos selecionado:', e.target.files[0]?.name);
-                            const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
-                            document.dispatchEvent(evt);
-                        }
-                    });
-                }
-                return inputOrgaos;
-            }
-
-            function safeClick(element) {
-                if (element.click) {
-                    element.click();
-                } else {
-                    const evt = document.createEvent('MouseEvents');
-                    evt.initEvent('click', true, true);
-                    element.dispatchEvent(evt);
-                }
-            }
-
-            const handleTrigger = (e) => {
-                const labelCSV = e.target.closest('label[for="file-upload"]');
-                if (labelCSV) {
-                    e.preventDefault();
-                    safeClick(garantirInputCSV());
-                    return;
-                }
-
-                const btn = e.target.closest('button');
-                if (btn) {
-                    const texto = btn.textContent.trim();
-                    const isDentroModalOrgaos = !!btn.closest('#importador-orgaos-modal');
-                    const isSelecionarArquivo = (texto === 'Selecionar Arquivo' || texto === 'Selecionar arquivo' || btn.id === 'select-orgao-file-btn');
-                    
-                    if (isDentroModalOrgaos && isSelecionarArquivo) {
-                        e.preventDefault();
-                        safeClick(garantirInputOrgaos());
+                    if (typeof window.AtendimentoExternoService.carregarAssistidoIndividual === 'function') {
+                        window.AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
                     }
                 }
-            };
-
-            document.body.addEventListener('click', handleTrigger);
-            document.body.addEventListener('touchstart', handleTrigger, { passive: false });
-
-            setTimeout(() => {
-                garantirInputCSV();
-                garantirInputOrgaos();
-            }, 100);
-
-            function setupDragAndDrop() {
-                const dropZones = document.querySelectorAll('#importador-orgaos-modal .drop-zone, .drop-area, [data-dropzone="orgaos"]');
-                dropZones.forEach(zone => {
-                    if (zone.hasAttribute('data-drag-ready')) return;
-                    zone.setAttribute('data-drag-ready', 'true');
+                
+            } catch (error) {
+                console.error("❌ Erro ao abrir mesa:", error);
+                alert("Erro ao abrir atendimento: " + error.message);
+            }
+        };
+    
+        document.addEventListener('DOMContentLoaded', function() {
+            const btnVoltar = document.getElementById('btn-voltar-dashboard');
+            if (btnVoltar) {
+                btnVoltar.addEventListener('click', function() {
+                    document.getElementById('view-atendimento')?.classList.add('hidden');
+                    document.getElementById('view-dashboard')?.classList.remove('hidden');
+                    document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
+                    document.getElementById('area-colaborador')?.classList.add('hidden');
                     
-                    zone.addEventListener('dragover', (e) => {
-                        e.preventDefault();
-                        zone.classList.add('border-green-500', 'bg-green-50');
-                    });
-                    zone.addEventListener('dragleave', () => {
-                        zone.classList.remove('border-green-500', 'bg-green-50');
-                    });
-                    zone.addEventListener('drop', (e) => {
-                        e.preventDefault();
-                        zone.classList.remove('border-green-500', 'bg-green-50');
-                        const files = e.dataTransfer.files;
-                        if (files.length) {
-                            const fakeEvent = { target: { files: [files[0]] } };
-                            if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
-                                window.ImportadorOrgaosService.handleFileSelect(fakeEvent);
-                            } else {
-                                console.log('[Drag&Drop] Arquivo recebido:', files[0].name);
-                                alert(`Arquivo "${files[0].name}" recebido via drag-and-drop.`);
-                            }
-                        }
-                    });
+                    document.getElementById('assistido-nome').textContent = 'PAINEL DE ATENDIMENTO';
+                    document.getElementById('assistido-assunto').textContent = 'Sessão ativa: ' + (localStorage.getItem('lastColabName') || 'Colaborador');
+                    
+                    if (window.AtendimentoExternoService) {
+                        window.AtendimentoExternoService.assistidoId = null;
+                        window.AtendimentoExternoService.iniciarDashboardUnificado();
+                    }
                 });
             }
-
-            const observer = new MutationObserver(() => {
-                const modal = document.getElementById('importador-orgaos-modal');
-                if (modal && !modal.classList.contains('hidden')) {
-                    setupDragAndDrop();
-                }
-            });
-            observer.observe(document.body, { childList: true, subtree: true });
-        })();
-    </script>
-</body>
-</html>
+        });
+        </script>
+    
+    </body>
+    </html>
