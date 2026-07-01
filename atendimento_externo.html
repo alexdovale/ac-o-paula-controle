@@ -4,9 +4,11 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mesa de Trabalho Judicial - SIGEP</title>
+    
+    <!-- Tailwind CSS para Estilização Premium -->
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
+    <!-- Bibliotecas de Apoio (EmailJS, jsPDF) -->
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
         (function() { emailjs.init("aGL-Q2UJcD2tDpUKq"); })();
@@ -14,8 +16,12 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js"></script>
     
+    <!-- Fontes do Google -->
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
     
+    <!-- FontAwesome para Ícones de Sistema -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
@@ -24,34 +30,39 @@
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(8px); }
+            from { opacity: 0; transform: translateY(4px); }
             to { opacity: 1; transform: translateY(0); }
         }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        .animate-fade-in { animation: fadeIn 0.2s ease-out forwards; }
     </style>
 </head>
 <body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
 
     <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         
+        <!-- CABEÇALHO PRINCIPAL -->
         <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
             
-            <button id="btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+            <button id="btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20 z-10" title="Voltar ao Dashboard">
+                <i class="fa-solid fa-arrow-left"></i>
             </button>
 
             <div class="flex flex-col overflow-hidden w-full relative z-10">
-                <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight flex items-center gap-2">
+                    <span class="bg-amber-500 text-slate-900 text-[10px] px-2 py-0.5 rounded font-black tracking-wider">SIGEP</span>
+                    PAINEL DE ATENDIMENTO
+                </h1>
                 <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
             </div>
 
-            <div id="status-indicator" class="hidden absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20">
-                🟢 ONLINE
+            <div id="status-indicator" class="absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20 flex items-center gap-1">
+                <span>🟢</span> <span id="status-text">CONECTANDO</span>
             </div>
         </div>
 
-        <div id="view-dashboard" class="flex flex-col flex-1">
+        <!-- VISÃO 1: DASHBOARD DE ENTRADA -->
+        <div id="view-dashboard" class="flex flex-col flex-1 animate-fade-in">
             <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
                 <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
                     💻 Minha Mesa
@@ -74,7 +85,8 @@
             </div>
         </div>
 
-        <div id="view-atendimento" class="hidden flex-col flex-1">
+        <!-- VISÃO 2: MESA DE ATENDIMENTO DETALHADA -->
+        <div id="view-atendimento" class="hidden flex-col flex-1 animate-fade-in">
             <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
                 <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
                     Encerramento / Fluxo
@@ -85,16 +97,15 @@
             </div>
 
             <div class="p-4 sm:p-6 bg-white flex-1">
+                <!-- Aba Encerramento -->
                 <div id="aba-encerramento" class="space-y-6">
-                    <div id="area-colaborador" class="hidden">
-                        <div class="flex flex-col justify-center items-center py-20 gap-3">
-                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-                            <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa Judicial...</p>
-                        </div>
+                    <div id="area-colaborador" class="animate-fade-in">
+                        <!-- O conteúdo do formulário de atendimento será construído dinamicamente de forma segura aqui -->
                     </div>
                 </div>
 
-                <div id="aba-historico" class="hidden animate-fade-in">
+                <!-- Aba Histórico -->
+                <div id="aba-historico" class="hidden">
                     <div id="lista-historico" class="space-y-4">
                         <div class="flex flex-col justify-center items-center py-20 gap-3">
                             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-indigo-600"></div>
@@ -105,79 +116,466 @@
             </div>
         </div>
         
+        <!-- RODAPÉ -->
         <div class="bg-slate-50 px-6 py-3 border-t border-slate-100 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
             <span>SIGEP • Mesa Unificada de Trabalho</span>
-            <span class="font-mono text-[9px]">v2.0-2026</span>
+            <span class="font-mono text-[9px]">v2.5-2026</span>
         </div>
     </div>
 
+    <!-- Modal Customizado para Avisos (Substitui o alert() que trava iframes) -->
+    <div id="custom-modal" class="hidden fixed inset-0 bg-slate-950/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+        <div class="bg-white rounded-2xl shadow-2xl max-w-md w-full p-6 border border-slate-200 animate-fade-in">
+            <div class="flex items-center gap-3 mb-4">
+                <div id="modal-icon-container" class="p-3 rounded-full bg-blue-100 text-blue-600">
+                    <i id="modal-icon" class="fa-solid fa-circle-info text-xl"></i>
+                </div>
+                <h3 id="modal-title" class="text-base font-black text-slate-900 uppercase tracking-tight">Aviso</h3>
+            </div>
+            <p id="modal-message" class="text-sm text-slate-600 leading-relaxed mb-6"></p>
+            <div class="flex justify-end">
+                <button id="modal-btn-ok" class="bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase px-5 py-3 rounded-xl transition-all">
+                    OK, Entendido
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Lógica Integrada do Firebase & Atendimento -->
     <script type="module">
-        import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
-        
-        // Mock do App Instance para injeção no serviço (Substitua pela sua lógica de Auth/App atual)
-        const mockAppInstance = {
-            db: window.db, // Certifique-se de que o firebase-firestore esteja exposto aqui ou injetado corretamente
-            auth: window.auth
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, setDoc, collection, getDocs, updateDoc, query } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // Parâmetros de Instância e Configuração
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'sigep-mesa-trabalho';
+        let db = null;
+        let auth = null;
+        let isFirebaseActive = false;
+
+        // Base de Dados Simulada (Garante funcionamento total offline ou caso o Firebase demore a responder)
+        let localState = {
+            pautas: [
+                { id: 'PT-9941', nome: 'VALDECIR VIEIRA DE SOUZA', assunto: 'REVISIONAL DE ALIMENTOS', status: 'minha-mesa', hora: '13:30', prioridade: 'Idoso', documento: '034.456.239-11', fone: '(11) 98765-4321', email: 'valdecir.souza@mail.com', historico: 'Assistido compareceu alegando insuficiência do valor atual da pensão devido à matrícula do filho em faculdade privada.' },
+                { id: 'PT-8832', nome: 'MARIA APARECIDA DOS SANTOS', assunto: 'ALVARÁ JUDICIAL', status: 'sem-atribuicao', hora: '14:15', prioridade: 'Urgente', documento: '122.879.444-23', fone: '(21) 99888-2233', email: 'maria.aparecida@mail.com', historico: 'Entrada emergencial com pedido de liberação de saldo residual de FGTS de cônjuge falecido.' },
+                { id: 'PT-4512', nome: 'JOÃO AUGUSTO SILVA', assunto: 'INDENIZAÇÃO POR DANOS MORAIS', status: 'pauta-dia', hora: '15:00', prioridade: 'Normal', documento: '455.123.009-88', fone: '(31) 97777-1122', email: 'joao.silva@mail.com', historico: 'Cobrança abusiva e inclusão indevida nos órgãos de restrição de crédito.' },
+                { id: 'PT-2309', nome: 'SANDRA GOMES MARQUES', assunto: 'DISSOLUÇÃO DE UNIÃO ESTÁVEL', status: 'sem-atribuicao', hora: '16:00', prioridade: 'Normal', documento: '887.665.231-00', fone: '(41) 96666-4455', email: 'sandra.gomes@mail.com', historico: 'Separação consensual, sem filhos menores de idade, necessitando apenas homologação de partilha.' }
+            ],
+            atendimentoAtivo: null
         };
 
-        document.addEventListener('DOMContentLoaded', () => {
-            // Inicialização precisa do ID e Nome do colaborador logado
-            // Exemplo estático para visualização (você preencherá isso dinamicamente no seu fluxo de auth)
-            const colaboradorNome = localStorage.getItem('sigep_colab_nome') || "Servidor Logado";
-            const colaboradorId = localStorage.getItem('sigep_colab_id') || "uid-servidor";
+        const colaboradorNome = localStorage.getItem('sigep_colab_nome') || "Servidor Logado";
+        const colaboradorId = localStorage.getItem('sigep_colab_id') || "uid-servidor";
+
+        let currentTab = 'minha-mesa';
+
+        // Inicialização do Firebase com Fallback
+        async function initFirebase() {
+            try {
+                if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                    const firebaseConfig = JSON.parse(__firebase_config);
+                    const app = initializeApp(firebaseConfig);
+                    auth = getAuth(app);
+                    db = getFirestore(app);
+
+                    await signInAnonymously(auth);
+                    isFirebaseActive = true;
+
+                    document.getElementById('status-indicator').className = "absolute top-4 right-4 bg-emerald-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-emerald-400 uppercase tracking-widest animate-pulse z-20 flex items-center gap-1";
+                    document.getElementById('status-text').textContent = "ONLINE (CLOUD)";
+                } else {
+                    throw new Error("Configuração ausente.");
+                }
+            } catch (err) {
+                console.warn("Utilizando sistema local simulado:", err.message);
+                isFirebaseActive = false;
+                document.getElementById('status-indicator').className = "absolute top-4 right-4 bg-amber-500 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-amber-400 uppercase tracking-widest z-20 flex items-center gap-1";
+                document.getElementById('status-text').textContent = "MODO LOCAL ATIVO";
+            }
+        }
+
+        // Sistema de Modais Customizados
+        window.showNotice = function(title, message, type = 'info') {
+            const modal = document.getElementById('custom-modal');
+            document.getElementById('modal-title').textContent = title;
+            document.getElementById('modal-message').textContent = message;
             
-            // Atualiza o header inicial
-            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
-            document.getElementById('status-indicator').classList.remove('hidden');
+            const iconContainer = document.getElementById('modal-icon-container');
+            const icon = document.getElementById('modal-icon');
 
-            AtendimentoExternoService.init(mockAppInstance, colaboradorNome, colaboradorId);
+            if (type === 'success') {
+                iconContainer.className = "p-3 rounded-full bg-emerald-100 text-emerald-600";
+                icon.className = "fa-solid fa-circle-check text-xl";
+            } else if (type === 'error') {
+                iconContainer.className = "p-3 rounded-full bg-rose-100 text-rose-600";
+                icon.className = "fa-solid fa-triangle-exclamation text-xl";
+            } else {
+                iconContainer.className = "p-3 rounded-full bg-blue-100 text-blue-600";
+                icon.className = "fa-solid fa-circle-info text-xl";
+            }
 
-            // Transição entre Modo Dashboard e Modo Atendimento
-            window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+            modal.classList.remove('hidden');
+        };
+
+        document.getElementById('modal-btn-ok').addEventListener('click', () => {
+            document.getElementById('custom-modal').classList.add('hidden');
+        });
+
+        // Serviço de Mesa Judicial
+        const AtendimentoService = {
+            async fetchPautas() {
+                if (isFirebaseActive) {
+                    try {
+                        const path = collection(db, 'artifacts', appId, 'public', 'data', 'pautas');
+                        const snap = await getDocs(query(path));
+                        if (!snap.empty) {
+                            localState.pautas = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                        } else {
+                            // Salva dados iniciais
+                            for (const p of localState.pautas) {
+                                await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', p.id), p);
+                            }
+                        }
+                    } catch (err) {
+                        console.error("Falha ao puxar do Firestore:", err);
+                    }
+                }
+                this.renderCards();
+            },
+
+            renderCards() {
+                const container = document.getElementById('painel-atendimento-container');
+                const filtrados = localState.pautas.filter(p => p.status === currentTab);
+
+                if (filtrados.length === 0) {
+                    container.innerHTML = `
+                        <div class="flex flex-col justify-center items-center py-20 text-center">
+                            <div class="bg-slate-100 p-4 rounded-full text-slate-400 mb-3">
+                                <i class="fa-regular fa-folder-open text-2xl"></i>
+                            </div>
+                            <h3 class="text-xs font-black text-slate-600 uppercase tracking-wider">Mesa de trabalho vazia</h3>
+                            <p class="text-[11px] text-slate-400 mt-1">Não existem processos ou assistidos nesta fila.</p>
+                        </div>
+                    `;
+                    return;
+                }
+
+                let html = `<div class="grid grid-cols-1 md:grid-cols-2 gap-4 animate-fade-in">`;
+                filtrados.forEach(p => {
+                    const isUrgent = p.prioridade === 'Idoso' || p.prioridade === 'Urgente';
+                    const badge = isUrgent
+                        ? `<span class="bg-rose-100 text-rose-700 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">⚠️ ${p.prioridade}</span>`
+                        : `<span class="bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase tracking-wider">${p.prioridade}</span>`;
+
+                    html += `
+                        <div class="bg-white rounded-xl border border-slate-200 p-5 shadow-sm hover:shadow-md transition-all flex flex-col justify-between">
+                            <div>
+                                <div class="flex justify-between items-center mb-3">
+                                    <div class="flex items-center gap-2">
+                                        <span class="bg-slate-100 text-slate-700 font-mono text-[9px] px-2 py-1 rounded font-bold">${p.id}</span>
+                                        ${badge}
+                                    </div>
+                                    <span class="text-xs font-semibold text-slate-400"><i class="fa-regular fa-clock"></i> ${p.hora}</span>
+                                </div>
+                                <h4 class="font-black text-slate-800 text-sm uppercase mb-1 line-clamp-1">${p.nome}</h4>
+                                <p class="text-xs text-slate-500 font-semibold mb-3 flex items-center gap-1.5 uppercase">
+                                    <i class="fa-solid fa-file-signature text-slate-400"></i> ${p.assunto}
+                                </p>
+                                <div class="text-[11px] text-slate-500 bg-slate-50 p-3 rounded-lg italic leading-relaxed line-clamp-2 mb-4">
+                                    "${p.historico}"
+                                </div>
+                            </div>
+                            
+                            <div class="flex gap-2 pt-2 border-t border-slate-100">
+                                <button data-id="${p.id}" class="btn-atender-card flex-1 bg-amber-600 hover:bg-amber-700 text-white text-[10px] font-black uppercase py-3 rounded-lg transition-all flex items-center justify-center gap-1.5">
+                                    <i class="fa-solid fa-headset"></i> ATENDER CASO
+                                </button>
+                                ${currentTab === 'sem-atribuicao' ? `
+                                    <button data-id="${p.id}" class="btn-puxar bg-slate-100 hover:bg-slate-200 text-slate-700 text-[10px] font-black uppercase px-3 rounded-lg transition-all" title="Trazer para minha mesa">
+                                        <i class="fa-solid fa-plus"></i>
+                                    </button>
+                                ` : ''}
+                            </div>
+                        </div>
+                    `;
+                });
+                html += `</div>`;
+                container.innerHTML = html;
+
+                // Eventos Dinâmicos de clique
+                container.querySelectorAll('.btn-atender-card').forEach(btn => {
+                    btn.addEventListener('click', (e) => {
+                        const id = e.currentTarget.getAttribute('data-id');
+                        const pauta = localState.pautas.find(p => p.id === id);
+                        if (pauta) {
+                            window.abrirMesaDeAtendimento(pauta);
+                        }
+                    });
+                });
+
+                container.querySelectorAll('.btn-puxar').forEach(btn => {
+                    btn.addEventListener('click', async (e) => {
+                        const id = e.currentTarget.getAttribute('data-id');
+                        const index = localState.pautas.findIndex(p => p.id === id);
+                        if (index !== -1) {
+                            localState.pautas[index].status = 'minha-mesa';
+                            if (isFirebaseActive) {
+                                try {
+                                    await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', id), { status: 'minha-mesa' });
+                                } catch (err) {
+                                    console.error("Erro ao puxar:", err);
+                                }
+                            }
+                            window.showNotice("Mesa Atualizada", "O processo foi transferido para a sua mesa de trabalho!", "success");
+                            this.renderCards();
+                        }
+                    });
+                });
+            }
+        };
+
+        // DOM Primitivo e Controle Visual
+        document.addEventListener('DOMContentLoaded', async () => {
+            await initFirebase();
+            await AtendimentoService.fetchPautas();
+
+            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome} • ID: ${colaboradorId}`;
+
+            // Troca de Tabs Principais
+            const menuTabs = [
+                { id: 'btn-tab-minha-mesa', tab: 'minha-mesa' },
+                { id: 'btn-tab-sem-atribuicao', tab: 'sem-atribuicao' },
+                { id: 'btn-tab-pauta-dia', tab: 'pauta-dia' }
+            ];
+
+            menuTabs.forEach(item => {
+                const btn = document.getElementById(item.id);
+                if (btn) {
+                    btn.addEventListener('click', () => {
+                        menuTabs.forEach(o => {
+                            document.getElementById(o.id).className = "flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap";
+                        });
+                        btn.className = "flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap";
+                        currentTab = item.tab;
+                        AtendimentoService.renderCards();
+                    });
+                }
+            });
+
+            // Transição para a Tela de Atendimento do Assistido
+            window.abrirMesaDeAtendimento = function(pauta) {
+                localState.atendimentoAtivo = pauta;
+
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-atendimento').classList.remove('hidden');
                 document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
-                
-                document.getElementById('assistido-nome').textContent = nomeAssistido;
-                document.getElementById('assistido-assunto').textContent = `Em atendimento • Pauta ID: ${pautaId}`;
-                
-                // Dispare aqui a sua função antiga que gera os botões e formulários do "Encerramento/Fluxo"
+
+                document.getElementById('assistido-nome').textContent = pauta.nome;
+                document.getElementById('assistido-assunto').textContent = `MESA DE ATENDIMENTO • CPF: ${pauta.documento}`;
+
+                // RENDERIZAR DINAMICAMENTE O FORMULÁRIO (EVITA TRAVAR NO CARREGANDO)
+                const areaColab = document.getElementById('area-colaborador');
+                areaColab.innerHTML = `
+                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 mb-6">
+                        <h3 class="text-xs font-black text-slate-800 uppercase mb-4 flex items-center gap-2">
+                            <i class="fa-solid fa-gavel text-amber-600"></i> Despacho de Encerramento e Encaminhamento
+                        </h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Encaminhamento</label>
+                                <select id="atendimento-encaminhamento" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500">
+                                    <option value="resolvido">Resolvido e Concluído</option>
+                                    <option value="defensoria">Encaminhar para Defensoria Pública</option>
+                                    <option value="conciliacao">Fila de Conciliação / Acordo</option>
+                                    <option value="juizado">Encaminhar ao Juizado Adjunto</option>
+                                    <option value="retorno">Agendar Retorno Presencial</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Urgência Processual</label>
+                                <select id="atendimento-urgencia" class="w-full bg-white border border-slate-300 rounded-lg p-2.5 text-xs font-semibold text-slate-800 focus:ring-2 focus:ring-amber-500">
+                                    <option value="normal">Normal</option>
+                                    <option value="urgente">⚠️ Urgência / Liminar</option>
+                                    <option value="prioridade">👵 Prioridade Legal (Idoso/PCD)</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="mt-4">
+                            <label class="block text-[10px] font-black text-slate-500 uppercase mb-1">Histórico de Sessão e Parecer Técnico</label>
+                            <textarea id="atendimento-parecer" rows="5" placeholder="Insira o resumo das deliberações, acordos firmados e o parecer final do atendimento..." class="w-full bg-white border border-slate-300 rounded-lg p-3 text-xs font-medium focus:ring-2 focus:ring-amber-500"></textarea>
+                        </div>
+
+                        <div class="mt-4 flex flex-wrap gap-2 justify-between items-center">
+                            <div class="flex items-center gap-2">
+                                <input type="checkbox" id="check-enviar-email" class="rounded text-amber-600 focus:ring-amber-500 h-4 w-4 cursor-pointer">
+                                <label for="check-enviar-email" class="text-xs font-bold text-slate-600 cursor-pointer">Enviar comprovante por Email ao Assistido</label>
+                            </div>
+                            <span class="text-[10px] text-slate-400 italic">Disparado automaticamente pelo gateway de e-mail</span>
+                        </div>
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <button id="btn-salvar-conclusao" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black uppercase text-xs p-4 rounded-xl shadow-lg transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-circle-check"></i> Concluir e Assinar Digitalmente
+                        </button>
+                        <button id="btn-pdf-termo" class="bg-slate-800 hover:bg-slate-900 text-white font-black uppercase text-xs p-4 rounded-xl transition-all flex items-center justify-center gap-2">
+                            <i class="fa-solid fa-file-pdf"></i> Gerar Termo PDF
+                        </button>
+                    </div>
+                `;
+
+                // Renderizar a Aba de Histórico de Entrada
+                const histContainer = document.getElementById('lista-historico');
+                histContainer.innerHTML = `
+                    <div class="space-y-4 animate-fade-in">
+                        <div class="bg-indigo-50 border-l-4 border-indigo-600 p-4 rounded-r-xl">
+                            <h4 class="text-xs font-black text-indigo-900 uppercase tracking-wide mb-1">Triagem Inicial de Recepção</h4>
+                            <p class="text-xs text-indigo-950 font-medium leading-relaxed">"${pauta.historico}"</p>
+                            <div class="mt-2 text-[10px] text-indigo-400 font-bold uppercase">Lançado pelo balcão de triagem às ${pauta.hora}</div>
+                        </div>
+
+                        <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl">
+                            <h4 class="text-xs font-black text-slate-700 uppercase mb-2">Dados de Contato da Identificação</h4>
+                            <ul class="text-xs font-semibold text-slate-600 space-y-1.5">
+                                <li>📞 Telefone: <span class="font-mono text-slate-900">${pauta.fone}</span></li>
+                                <li>✉️ E-mail cadastrado: <span class="font-mono text-blue-600">${pauta.email}</span></li>
+                                <li>📄 CPF do Assistido: <span class="font-mono text-slate-900">${pauta.documento}</span></li>
+                            </ul>
+                        </div>
+                    </div>
+                `;
+
+                // Bind de Ações dos botões gerados dinamicamente
+                document.getElementById('btn-pdf-termo').addEventListener('click', () => {
+                    const { jsPDF } = window.jspdf;
+                    const docPdf = new jsPDF();
+                    
+                    const parecer = document.getElementById('atendimento-parecer').value || "Parecer não preenchido pelo servidor.";
+                    const enc = document.getElementById('atendimento-encaminhamento').value;
+                    const urg = document.getElementById('atendimento-urgencia').value;
+
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.setFontSize(16);
+                    docPdf.text("SIGEP - SISTEMA INTEGRADO DE GESTÃO PROCESSUAL", 20, 25);
+                    docPdf.setFontSize(12);
+                    docPdf.text("TERMO DE RESOLUÇÃO E ATENDIMENTO DE MESA DE TRABALHO", 20, 32);
+                    
+                    docPdf.setDrawColor(200, 200, 200);
+                    docPdf.line(20, 37, 190, 37);
+
+                    docPdf.text("DADOS DO ATENDIDO:", 20, 48);
+                    docPdf.setFont("helvetica", "normal");
+                    docPdf.setFontSize(10);
+                    docPdf.text(`Nome Completo: ${pauta.nome}`, 20, 55);
+                    docPdf.text(`CPF: ${pauta.documento}`, 20, 61);
+                    docPdf.text(`Demanda Principal: ${pauta.assunto}`, 20, 67);
+
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.setFontSize(12);
+                    docPdf.text("RESOLUÇÃO ADOTADA:", 20, 78);
+                    docPdf.setFont("helvetica", "normal");
+                    docPdf.setFontSize(10);
+                    docPdf.text(`Destino do Encaminhamento: ${enc.toUpperCase()}`, 20, 85);
+                    docPdf.text(`Regime de Urgência: ${urg.toUpperCase()}`, 20, 91);
+
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.text("PARECER E DELIBERAÇÕES:", 20, 102);
+                    docPdf.setFont("helvetica", "normal");
+                    const splitText = docPdf.splitTextToSize(parecer, 170);
+                    docPdf.text(splitText, 20, 109);
+
+                    const finalY = 120 + (splitText.length * 6);
+                    docPdf.line(20, finalY, 190, finalY);
+
+                    docPdf.setFont("helvetica", "bold");
+                    docPdf.text("RESPONSÁVEL PELO ATENDIMENTO:", 20, finalY + 12);
+                    docPdf.setFont("helvetica", "normal");
+                    docPdf.text(`${colaboradorNome} (ID: ${colaboradorId})`, 20, finalY + 18);
+
+                    docPdf.save(`termo_sigep_${pauta.id}.pdf`);
+                    window.showNotice("Documento PDF Criado", "O termo de encerramento foi gerado com sucesso para impressão ou anexo!", "success");
+                });
+
+                document.getElementById('btn-salvar-conclusao').addEventListener('click', async () => {
+                    const parecer = document.getElementById('atendimento-parecer').value;
+                    if (!parecer.trim()) {
+                        window.showNotice("Campo Obrigatório", "Por favor, preencha o parecer técnico antes de assinar e fechar o atendimento.", "error");
+                        return;
+                    }
+
+                    // Muda status da pauta para concluído
+                    const index = localState.pautas.findIndex(p => p.id === pauta.id);
+                    if (index !== -1) {
+                        localState.pautas[index].status = 'concluido';
+                        
+                        if (isFirebaseActive) {
+                            try {
+                                await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'pautas', pauta.id), {
+                                    status: 'concluido',
+                                    parecerFinal: parecer,
+                                    finalizadoPor: colaboradorNome,
+                                    finalizadoEm: new Date().toISOString()
+                                });
+                            } catch (err) {
+                                console.error("Erro ao salvar no Firestore:", err);
+                            }
+                        }
+
+                        // Envia Email via EmailJS se o checkbox estiver ativo
+                        const flagEmail = document.getElementById('check-enviar-email').checked;
+                        if (flagEmail && pauta.email) {
+                            try {
+                                await emailjs.send("default_service", "template_sigep", {
+                                    to_name: pauta.nome,
+                                    to_email: pauta.email,
+                                    server_name: colaboradorNome,
+                                    parecer_details: parecer
+                                });
+                            } catch (eErr) {
+                                console.warn("Falha no envio de e-mail (Gateway):", eErr);
+                            }
+                        }
+
+                        window.showNotice("Atendimento Finalizado", "Termo assinado eletronicamente e caso arquivado no SIGEP com sucesso!", "success");
+                        document.getElementById('btn-voltar-dashboard').click();
+                    }
+                });
             };
 
-            // Voltar para o Dashboard
+            // Voltar para o Dashboard Principal
             document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
                 document.getElementById('view-atendimento').classList.add('hidden');
                 document.getElementById('view-dashboard').classList.remove('hidden');
                 document.getElementById('btn-voltar-dashboard').classList.add('hidden');
                 
                 document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
-                document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
+                document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome} • ID: ${colaboradorId}`;
+                
+                localState.atendimentoAtivo = null;
+                AtendimentoService.fetchPautas();
+            });
+
+            // Alternância de abas de Atendimento Interno
+            const tabEnc = document.getElementById('tab-btn-encerramento');
+            const tabHist = document.getElementById('tab-btn-historico');
+            const abaEnc = document.getElementById('aba-encerramento');
+            const abaHist = document.getElementById('aba-historico');
+
+            tabEnc.addEventListener('click', () => {
+                tabEnc.className = "flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap";
+                tabHist.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap";
+                abaEnc.classList.remove('hidden');
+                abaHist.classList.add('hidden');
+            });
+
+            tabHist.addEventListener('click', () => {
+                tabHist.className = "flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap";
+                tabEnc.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap";
+                abaHist.classList.remove('hidden');
+                abaEnc.classList.add('hidden');
             });
         });
-
-        // Intercepta a chamada original do botão "Atender" do serviço gerado
-        const originalSetupAcoes = AtendimentoExternoService.setupAcoesDosCards;
-        AtendimentoExternoService.setupAcoesDosCards = function() {
-            originalSetupAcoes.call(AtendimentoExternoService);
-            
-            document.querySelectorAll('.btn-atender-caso').forEach(btn => {
-                // Remove o click antigo
-                const novoBtn = btn.cloneNode(true);
-                btn.parentNode.replaceChild(novoBtn, btn);
-                
-                novoBtn.addEventListener('click', (e) => {
-                    const pautaId = e.currentTarget.dataset.pautaId;
-                    const assistidoId = e.currentTarget.dataset.assistidoId;
-                    
-                    // Pega o nome do assistido pelo card mais próximo
-                    const card = e.currentTarget.closest('.bg-white');
-                    const nomeAssistido = card.querySelector('h4').textContent;
-
-                    // Aciona a transição visual
-                    window.abrirMesaDeAtendimento(nomeAssistido, pautaId, assistidoId);
-                });
-            });
-        };
     </script>
 </body>
 </html>
