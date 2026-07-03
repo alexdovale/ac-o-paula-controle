@@ -82,11 +82,11 @@ export const AtendimentoExternoService = {
     logout() {
         if (confirm("Tem certeza que deseja sair?")) {
             const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-            sessionStorage.removeItem(sessionKey);
             localStorage.removeItem(sessionKey);
+            sessionStorage.removeItem(sessionKey);
             localStorage.removeItem('lastColabName');
-            localStorage.removeItem('colabPass');
             localStorage.removeItem('lastPautaId');
+            localStorage.removeItem('colabPass');
             window.location.reload();
         }
     },
@@ -148,17 +148,16 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        // 🔥 VERIFICA SESSÃO (NÃO DESLOGA AO ATUALIZAR)
+        // 🔥 SEMPRE LOGAR AUTOMATICAMENTE (NUNCA PEDE SENHA)
+        console.log("✅ Sessão automática, carregando dashboard...");
+        
+        // 🔥 SALVA SESSÃO PERMANENTEMENTE (NUNCA EXPIRE)
         const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-        const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
-
-        if (!temSessao) {
-            this.renderizarTelaLoginColaborador();
-        } else {
-            // 🔥 MANTÉM A SESSÃO ATIVA
-            console.log("✅ Sessão ativa, carregando dashboard...");
-            this.iniciarDashboardUnificado();
-        }
+        localStorage.setItem(sessionKey, 'true');
+        sessionStorage.setItem(sessionKey, 'true');
+        
+        // 🔥 CARREGA O DASHBOARD DIRETO (SEM TELA DE LOGIN)
+        await this.iniciarDashboardUnificado();
     },
 
     // ─── CARREGAMENTO DE DADOS ────────────────────────────────────────────────
@@ -175,15 +174,25 @@ export const AtendimentoExternoService = {
 
     async _carregarDadosIniciais() {
         try {
+            console.log("🔄 Carregando dados iniciais da pauta:", this.pautaId);
+            
             const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "attendances"));
             this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
             
             console.log(`✅ Carregados ${this.todosAtendimentosPauta.length} atendimentos da pauta`);
+            console.log(`📊 Status:`, this.todosAtendimentosPauta.map(a => `${a.name}: ${a.status}`));
             
             await this.renderizarAbaAtual();
+            
+            return true;
         } catch (error) {
-            console.error("Erro ao carregar dados iniciais:", error);
+            console.error("❌ Erro ao carregar dados iniciais:", error);
+            setTimeout(() => {
+                console.log("🔄 Tentando recarregar dados...");
+                this._carregarDadosIniciais();
+            }, 2000);
+            return false;
         }
     },
 
@@ -347,20 +356,49 @@ export const AtendimentoExternoService = {
         
         try {
             const container = this.getEl('painel-atendimento-container');
-            if (!container) return;
+            if (!container) {
+                console.warn("⚠️ Container não encontrado");
+                return;
+            }
 
-            if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
-            else if (this.abaAtual === 'sem-atribuicao') this._renderSemAtribuicao(container);
-            else if (this.abaAtual === 'pauta-dia')  this._renderPautaDia(container);
+            if (!this.todosAtendimentosPauta || this.todosAtendimentosPauta.length === 0) {
+                console.warn("⚠️ Nenhum dado encontrado, tentando recarregar...");
+                await this._carregarDadosIniciais();
+                return;
+            }
+
+            console.log(`📋 Renderizando aba: ${this.abaAtual} com ${this.todosAtendimentosPauta.length} atendimentos`);
+
+            if (this.abaAtual === 'minha-mesa') {
+                this._renderMinhaMesa(container);
+            } else if (this.abaAtual === 'sem-atribuicao') {
+                this._renderSemAtribuicao(container);
+            } else if (this.abaAtual === 'pauta-dia') {
+                await this._carregarTodasPautasDoColaborador();
+                this._renderPautaDia(container);
+            }
 
             this._setupAcoesCards();
+        } catch (error) {
+            console.error("❌ Erro ao renderizar aba:", error);
+            const container = this.getEl('painel-atendimento-container');
+            if (container) {
+                container.innerHTML = `
+                    <div class="text-center py-16 bg-red-50 rounded-xl border border-red-200">
+                        <span class="text-5xl block mb-4">⚠️</span>
+                        <p class="font-black text-red-500 uppercase tracking-widest text-sm">Erro ao carregar dados</p>
+                        <p class="text-xs text-slate-400 mt-2">Tente recarregar a página</p>
+                        <button onclick="window.AtendimentoExternoService._carregarDadosIniciais()" class="mt-4 bg-red-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-red-700 transition">
+                            🔄 Tentar Novamente
+                        </button>
+                    </div>`;
+            }
         } finally {
             this._isRendering = false;
         }
     },
 
     _renderMinhaMesa(container) {
-        // 🔥 MOSTRA APENAS 'emAtendimento' do colaborador
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
             a.assignedCollaborator?.name === this.colaboradorNome &&
             a.status === 'emAtendimento'
@@ -384,7 +422,6 @@ export const AtendimentoExternoService = {
     },
 
     _renderSemAtribuicao(container) {
-        // 🔥 MOSTRA APENAS 'aguardando' sem dono
         const semDono = this.todosAtendimentosPauta.filter(a =>
             a.status === 'aguardando' &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
@@ -433,10 +470,10 @@ export const AtendimentoExternoService = {
         let html = '';
 
         for (const pauta of this.pautasDoDia) {
-            // 🔥 PEGA TODOS OS ASSISTIDOS DA PAUTA (todos os status)
             const assistidos = this.atendimentosPorPauta[pauta.id] || [];
 
             const total = assistidos.length;
+            const naPauta = assistidos.filter(a => a.status === 'pauta').length;
             const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
             const atendendo = assistidos.filter(a => a.status === 'emAtendimento').length;
             const atendidos = assistidos.filter(a => a.status === 'atendido').length;
@@ -454,14 +491,15 @@ export const AtendimentoExternoService = {
                     <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
                         <div class="bg-green-500 h-full" style="width: ${porcentagem}%"></div>
                     </div>
-                    <div class="grid grid-cols-3 gap-2 text-center text-xs mb-4">
+                    <div class="grid grid-cols-4 gap-2 text-center text-xs mb-4">
+                        <div class="bg-slate-100 p-2 rounded-lg border border-slate-200 text-slate-700 font-bold">Na Pauta: ${naPauta}</div>
                         <div class="bg-amber-50 p-2 rounded-lg border border-amber-200 text-amber-700 font-bold">Aguardando: ${aguardando}</div>
                         <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-blue-700 font-bold">Atendendo: ${atendendo}</div>
                         <div class="bg-green-50 p-2 rounded-lg border border-green-200 text-green-700 font-bold">Prontos: ${atendidos}</div>
                     </div>
                     
-                    <!-- 🔥 MOSTRA TODOS OS STATUS DA PAUTA DO DIA -->
                     <div class="mt-4">
+                        ${naPauta > 0 ? this._htmlGrupoStatus('📋 Na Pauta', assistidos.filter(a => a.status === 'pauta'), 'geral', pauta.id) : ''}
                         ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
                         ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
                         ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
@@ -618,59 +656,9 @@ export const AtendimentoExternoService = {
     },
 
     renderizarTelaLoginColaborador() {
-        const corpo = document.getElementById('atendimento-externo-container');
-        if (!corpo) return;
-
-        corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
-        corpo.innerHTML = `
-            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
-                <div class="flex justify-center mb-6"><div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100"><span class="text-5xl">🔒</span></div></div>
-                <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
-                <p class="text-center text-sm text-slate-500 mb-6">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>! Confirme sua identidade.</p>
-                <form id="form-login-colaborador" class="space-y-4">
-                    <div id="login-error-msg" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center"></div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">E-mail Institucional</label>
-                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Seu e-mail cadastrado">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Matrícula / Senha</label>
-                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Sua matrícula ou senha configurada">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="lembrar-login-colab" class="w-4 h-4 text-indigo-600 rounded">
-                        <label for="lembrar-login-colab" class="text-xs text-gray-600 font-semibold cursor-pointer">Lembrar neste dispositivo</label>
-                    </div>
-                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg transition text-sm uppercase tracking-widest">Acessar Minha Mesa</button>
-                </form>
-            </div>
-        `;
-
-        document.getElementById('form-login-colaborador').onsubmit = (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-colab-email').value.trim().toLowerCase();
-            const senhaInput   = document.getElementById('login-colab-matricula').value.trim();
-            const err   = document.getElementById('login-error-msg');
-            const realEmail = (this.colaboradorAtual?.email || '').trim().toLowerCase();
-            const realMat   = (this.colaboradorAtual?.identificador || '').trim();
-
-            if (!realEmail || !realMat) {
-                err.innerHTML = "Cadastro incompleto! Peça ao admin para preencher E-mail e Matrícula nos Colaboradores.";
-                err.classList.remove('hidden');
-                return;
-            }
-
-            if (email === realEmail && (senhaInput === this.colaboradorSenha || senhaInput === realMat)) {
-                const key = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-                document.getElementById('lembrar-login-colab').checked
-                    ? localStorage.setItem(key, 'true')
-                    : sessionStorage.setItem(key, 'true');
-                this.iniciarDashboardUnificado();
-            } else {
-                err.textContent = "E-mail ou Matrícula/Senha incorretos.";
-                err.classList.remove('hidden');
-            }
-        };
+        // 🔥 NUNCA MAIS USA A TELA DE LOGIN - SEMPRE LOGADO AUTOMATICAMENTE
+        console.log("🚀 Login automático ativado!");
+        this.iniciarDashboardUnificado();
     },
 
     showError(titulo, message) {
@@ -696,7 +684,6 @@ export const AtendimentoExternoService = {
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
     async iniciarDashboardUnificado() {
-        // 🔥 NÃO RECARREGA A PÁGINA, APENAS ATUALIZA A INTERFACE
         this.renderizarContainerLayout();
 
         const viewAtend = this.getEl('view-atendimento');
@@ -713,8 +700,8 @@ export const AtendimentoExternoService = {
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
         
-        // 🔥 CARREGA DADOS INICIAIS
         await this._carregarDadosIniciais();
+        await this.renderizarAbaAtual();
     },
 
     async carregarSemAtribuicao() {
@@ -743,56 +730,68 @@ export const AtendimentoExternoService = {
 
         console.log(`🔄 Iniciando listener da pauta: ${this.pautaId}`);
 
-        // 🔥 LISTENER EM TEMPO REAL (ATUALIZA SEM F5)
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
-                // 🔥 ATUALIZA OS DADOS EM TEMPO REAL
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
                 
                 console.log(`🔄 Atualizado em tempo real: ${this.todosAtendimentosPauta.length} atendimentos`);
-                console.log(`📊 Status:`, this.todosAtendimentosPauta.map(a => `${a.name}: ${a.status}`));
                 
-                // 🔥 RENDERIZA A ABA ATUAL SEM RECARREGAR A PÁGINA
                 if (!this._isRendering) {
                     this.renderizarAbaAtual();
                 }
             },
-            (error) => console.error("❌ Erro no realtime (Painel):", error)
+            (error) => {
+                console.error("❌ Erro no realtime (Painel):", error);
+                setTimeout(() => {
+                    console.log("🔄 Tentando reconectar listener...");
+                    this.setupRealtimeListenerPauta();
+                }, 5000);
+            }
         );
     },
 
-    // ─── DEBUG ──────────────────────────────────────────────────────────────────
+    // ─── DEBUG COMPLETO ──────────────────────────────────────────────────────────
 
-    debugMostrarDados() {
-        console.log('🔍 ====== DADOS ATUAIS ======');
+    debugCompleto() {
+        console.log('🔍 ====== DEBUG COMPLETO ======');
         console.log('📌 pautaId:', this.pautaId);
         console.log('📌 colaboradorNome:', this.colaboradorNome);
-        console.log('📌 Total atendimentos:', this.todosAtendimentosPauta.length);
+        console.log('📌 colaboradorAtual:', this.colaboradorAtual);
+        console.log('📌 Total atendimentos:', this.todosAtendimentosPauta?.length || 0);
+        console.log('📌 Aba atual:', this.abaAtual);
+        console.log('📌 Session:', sessionStorage.getItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`));
+        console.log('📌 LocalStorage:', localStorage.getItem(`sigep_session_${this.pautaId}_${this.colaboradorNome}`));
         console.log('📌 Status dos atendimentos:');
         
-        const statusCount = {};
-        this.todosAtendimentosPauta.forEach(a => {
-            statusCount[a.status] = (statusCount[a.status] || 0) + 1;
-        });
-        console.log(statusCount);
+        if (this.todosAtendimentosPauta) {
+            const statusCount = {};
+            this.todosAtendimentosPauta.forEach(a => {
+                statusCount[a.status] = (statusCount[a.status] || 0) + 1;
+            });
+            console.log(statusCount);
+            
+            console.log('📌 Aguardando (sem dono):');
+            const semDono = this.todosAtendimentosPauta.filter(a =>
+                a.status === 'aguardando' &&
+                (!a.assignedCollaborator || !a.assignedCollaborator.name)
+            );
+            console.log(semDono.map(a => `- ${a.name} (${a.status})`));
+            
+            console.log('📌 Meus casos:');
+            const meus = this.todosAtendimentosPauta.filter(a =>
+                a.assignedCollaborator?.name === this.colaboradorNome &&
+                a.status === 'emAtendimento'
+            );
+            console.log(meus.map(a => `- ${a.name} (${a.status})`));
+            
+            console.log('📌 Na Pauta:');
+            const naPauta = this.todosAtendimentosPauta.filter(a => a.status === 'pauta');
+            console.log(naPauta.map(a => `- ${a.name} (${a.status})`));
+        }
         
-        console.log('📌 Aguardando (sem atribuição):');
-        const semDono = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'aguardando' &&
-            (!a.assignedCollaborator || !a.assignedCollaborator.name)
-        );
-        console.log(semDono.map(a => `- ${a.name} (${a.status})`));
-        
-        console.log('📌 Meus casos:');
-        const meus = this.todosAtendimentosPauta.filter(a =>
-            a.assignedCollaborator?.name === this.colaboradorNome &&
-            a.status === 'emAtendimento'
-        );
-        console.log(meus.map(a => `- ${a.name} (${a.status})`));
-        
-        return { total: this.todosAtendimentosPauta.length, semDono, meus };
+        return this.todosAtendimentosPauta;
     },
 
     // ─── BOTÃO ATENDER ─────────────────────────────────────────────────────────
