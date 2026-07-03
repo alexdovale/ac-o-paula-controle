@@ -50,7 +50,10 @@ export const AtendimentoExternoService = {
     abaAtual: 'minha-mesa',         
     modoVisualizacao: 'dashboard',  
     pautasDoDia: [],                
-    atendimentosPorPauta: {},       
+    atendimentosPorPauta: {},
+    
+    // Flag para evitar loop de renderização
+    _isRendering: false,
 
     // Instâncias Dinâmicas do Firebase V11
     _dbInstance: null,
@@ -253,17 +256,25 @@ export const AtendimentoExternoService = {
             const btn = this.getEl(`btn-tab-${tab}`);
             if (btn) {
                 btn.onclick = async (e) => {
-                    tabs.forEach(t => {
-                        const b = this.getEl(`btn-tab-${t}`);
-                        if (b) b.className = 'flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap';
-                    });
-                    e.currentTarget.className = 'flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap';
-                    this.abaAtual = tab;
+                    // Prevenir múltiplos cliques rápidos
+                    if (this._isRendering) return;
+                    this._isRendering = true;
                     
-                    const container = this.getEl('painel-atendimento-container');
-                    if (container) container.innerHTML = '<div class="flex justify-center items-center py-20"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>';
-                    
-                    await this.renderizarAbaAtual();
+                    try {
+                        tabs.forEach(t => {
+                            const b = this.getEl(`btn-tab-${t}`);
+                            if (b) b.className = 'flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap';
+                        });
+                        e.currentTarget.className = 'flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap';
+                        this.abaAtual = tab;
+                        
+                        const container = this.getEl('painel-atendimento-container');
+                        if (container) container.innerHTML = '<div class="flex justify-center items-center py-20"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>';
+                        
+                        await this.renderizarAbaAtual();
+                    } finally {
+                        this._isRendering = false;
+                    }
                 };
             }
         });
@@ -404,7 +415,10 @@ export const AtendimentoExternoService = {
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
-                this.renderizarAbaAtual();
+                // Evitar renderização duplicada em cascata
+                if (!this._isRendering) {
+                    this.renderizarAbaAtual();
+                }
             },
             (error) => console.error("❌ Erro no realtime (Painel):", error)
         );
@@ -438,7 +452,9 @@ export const AtendimentoExternoService = {
                             collection(this.db, "pautas", pauta.id, "attendances"),
                             (snap) => {
                                 this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                                if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
+                                if (this.abaAtual === 'pauta-dia' && !this._isRendering) {
+                                    this.renderizarAbaAtual();
+                                }
                             }
                         );
                         this.unsubscribesPautasExtras.push(unsub);
@@ -455,14 +471,22 @@ export const AtendimentoExternoService = {
     },
 
     async renderizarAbaAtual() {
-        const container = this.getEl('painel-atendimento-container');
-        if (!container) return;
+        // Evitar renderizações concorrentes
+        if (this._isRendering) return;
+        this._isRendering = true;
+        
+        try {
+            const container = this.getEl('painel-atendimento-container');
+            if (!container) return;
 
-        if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
-        else if (this.abaAtual === 'sem-atribuicao') this._renderSemAtribuicao(container);
-        else if (this.abaAtual === 'pauta-dia')  this._renderPautaDia(container);
+            if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
+            else if (this.abaAtual === 'sem-atribuicao') this._renderSemAtribuicao(container);
+            else if (this.abaAtual === 'pauta-dia')  this._renderPautaDia(container);
 
-        this._setupAcoesCards();
+            this._setupAcoesCards();
+        } finally {
+            this._isRendering = false;
+        }
     },
 
     _renderMinhaMesa(container) {
