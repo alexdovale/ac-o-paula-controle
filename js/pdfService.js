@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA HÍBRIDA
+// js/pdfService.js - VERSÃO COMPLETA HÍBRIDA (CORRIGIDA)
 // Mantém compatibilidade com chamadas antigas E suporta nova versão dinâmica
 
 const ensureJsPDF = async () => {
@@ -84,6 +84,12 @@ const LOGO_DEFENSORIA_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-c
 
 // ⭐ FUNÇÃO MELHORADA: Carrega imagem driblando o bloqueio de CORS do Firebase
 const loadImageBase64 = async (url) => {
+    // Se a URL já estiver codificada, usa ela, senão codifica
+    let finalUrl = url;
+    if (!url.includes('%20') && url.includes(' ')) {
+        finalUrl = encodeURI(url);
+    }
+    
     const fetchImage = (src) => new Promise((resolve, reject) => {
         const img = new Image();
         img.crossOrigin = 'Anonymous';
@@ -99,11 +105,11 @@ const loadImageBase64 = async (url) => {
     });
 
     try {
-        return await fetchImage(url); // Tenta direto no Firebase
+        return await fetchImage(finalUrl);
     } catch (e) {
+        console.warn("Erro ao carregar logo diretamente, tentando proxy...", e);
         try {
-            // Se o Firebase bloquear por CORS, usa um Proxy seguro como plano B
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
+            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
             return await fetchImage(proxyUrl);
         } catch (e2) {
             console.warn("Erro ao carregar logo mesmo com proxy", e2);
@@ -134,7 +140,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// Lógica principal de geração da Ata (apenas logo da Defensoria, SEM logo do SIGEP)
+// ⭐ FUNÇÃO CORRIGIDA: buildAtaAcaoSocialPDF - Com logo da Defensoria
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
@@ -148,11 +154,16 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐ APENAS LOGO DA DEFENSORIA (centralizada superior) - SEM LOGO DO SIGEP
+    // ⭐ LOGO DA DEFENSORIA - CARREGADA CORRETAMENTE
     const logoDefensoria = await loadImageBase64(LOGO_DEFENSORIA_URL);
+    
     if (logoDefensoria) {
         try { 
-            doc.addImage(logoDefensoria, 'PNG', 52, 8, 106, 25); 
+            const pageWidth = doc.internal.pageSize.getWidth();
+            const logoWidth = 106;
+            const logoHeight = 25;
+            const xPos = (pageWidth - logoWidth) / 2;
+            doc.addImage(logoDefensoria, 'PNG', xPos, 8, logoWidth, logoHeight); 
         } catch(e) { 
             console.warn("Erro ao inserir logo Defensoria na Ata", e); 
         }
@@ -273,7 +284,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 
 // ⭐ NOVA FUNÇÃO AUXILIAR - GERAÇÃO DINÂMICA DE TABELA DE COLABORADORES
 const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) => {
-    // Mapeamento configurável dos campos
     const colMap = {
         'nome': { label: 'Membro', getData: (c) => c.nome || 'N/A' },
         'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
@@ -290,7 +300,6 @@ const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) =>
 
     const header = [campos.map(key => colMap[key]?.label || key)];
     
-    // Ordenação padrão
     const sortedColaboradores = [...colaboradores].sort((a, b) => {
         const equipeA = a.equipe || 'Sem Equipe';
         const equipeB = b.equipe || 'Sem Equipe';
@@ -340,7 +349,7 @@ const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) =>
     });
 };
 
-/// ========================================================
+// ========================================================
 // PDF SERVICE - EXPORT (VERSÃO HÍBRIDA COMPLETA)
 // ========================================================
 
@@ -563,31 +572,25 @@ export const PDFService = {
 
             await addLogoHeader(docPDF, 15);
 
-            // Variáveis que vão receber os dados de forma segura
             let colaboradores = [];
             let pautaNome = 'Geral';
             let colunas = ['nome', 'cargo', 'equipe', 'transporte'];
 
-            // 🛡️ ADAPTAÇÃO BLINDADA: Aceita tanto o jeito NOVO quanto o VELHO
             if (arg1 && !Array.isArray(arg1) && arg1.colaboradores) {
-                // Se veio do botão novo (formato de Objeto)
                 colaboradores = arg1.colaboradores || [];
                 pautaNome = arg1.pautaNome || 'Geral';
                 colunas = arg1.colunas || ['nome', 'cargo', 'equipe', 'transporte'];
             } else if (Array.isArray(arg1)) {
-                // Se veio do botão vermelho antigo (Variáveis soltas)
                 colaboradores = arg1;
                 if (typeof arg2 === 'string') pautaNome = arg2;
                 if (Array.isArray(arg3)) colunas = arg3;
             }
 
-            // Validação final antes de gerar
             if (!colaboradores || colaboradores.length === 0) {
                 console.warn("Nenhum colaborador na lista para gerar PDF.");
                 return false;
             }
 
-            // Mapeamento dos campos disponíveis
             const colMap = {
                 'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
                 'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
@@ -604,7 +607,6 @@ export const PDFService = {
                 }}
             };
 
-            // Ordenação
             const sortedColaboradores = [...colaboradores].sort((a, b) => {
                 const equipeA = a.equipe || 'Sem Equipe';
                 const equipeB = b.equipe || 'Sem Equipe';
@@ -624,7 +626,6 @@ export const PDFService = {
                 return (a.nome || '').localeCompare(b.nome || '');
             });
 
-            // Monta o cabeçalho baseando-se apenas no que está ativo
             const header = [colunas.map(key => colMap[key] ? colMap[key].label : key)];
             const tableData = [];
             let currentEquipe = null;
@@ -646,7 +647,6 @@ export const PDFService = {
                 tableData.push(colunas.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
             });
 
-            // Títulos do PDF
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); 
             docPDF.text("Lista de Presença da Equipe", 14, 40);
@@ -654,7 +654,6 @@ export const PDFService = {
             docPDF.setFontSize(10);
             docPDF.text(`Pauta: ${pautaNome}`, 14, 55);
 
-            // Tabela
             docPDF.autoTable({
                 head: header,
                 body: tableData,
@@ -685,7 +684,6 @@ export const PDFService = {
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            // ⭐ Logo SIGEP no topo
             const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
             if (logoSigep) {
                 try {
@@ -779,7 +777,6 @@ export const PDFService = {
                 y += 20;
             }
 
-            // DADOS DO RÉU
             if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
                 const r = checklistData.reuData;
                 addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
@@ -832,7 +829,6 @@ export const PDFService = {
                     if (cidComStr) addText(cidComStr, false, 10, 20);
                 }
 
-                // DADOS SOCIOECONÔMICOS DO RÉU
                 let temDadosReuSocio = false;
                 const dadosReuSocio = [];
                 
@@ -892,7 +888,6 @@ export const PDFService = {
                 }
             }
 
-            // ⭐ Rodapé na última página
             const totalPages = doc.internal.getNumberOfPages();
             for (let i = 1; i <= totalPages; i++) {
                 doc.setPage(i);
@@ -914,6 +909,4 @@ export const generateChecklistPDF = (assistedName, actionTitle, checklistData, d
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
 export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
 
-window.PDFService = PDFService;
-// Export para window (uso global)
 window.PDFService = PDFService;
