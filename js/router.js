@@ -1,5 +1,6 @@
+
 // router.js
-// Sistema de roteamento SPA para o SIGEP App
+// Sistema de roteamento SPA para o SIGEP App - Versão Completa
 
 export const ROUTES = {
     LOGIN:            'login',
@@ -11,6 +12,7 @@ export const ROUTES = {
     RECEPCAO_CENTRAL: 'recepcao-central',
     PAINEL_PUBLICO:   'painel-publico',
     MEU_PERFIL:       'meu-perfil',
+    ATENDIMENTO_EXTERNO: 'atendimento-externo'
 };
 
 const ROUTE_GUARDS = {
@@ -20,13 +22,12 @@ const ROUTE_GUARDS = {
     [ROUTES.APP]:               { requiresAuth: true },
     [ROUTES.DASHBOARD]:         { requiresAuth: true },
     [ROUTES.ADMIN]:             { requiresAuth: true, roles: ['admin', 'superadmin'] },
-    // 🟢 CORREÇÃO AQUI: Removida a restrição "roles: ['apoio', 'admin', 'superadmin']"
     [ROUTES.RECEPCAO_CENTRAL]:  { requiresAuth: true }, 
     [ROUTES.PAINEL_PUBLICO]:    { requiresAuth: false },
+    [ROUTES.ATENDIMENTO_EXTERNO]: { requiresAuth: true },
+    [ROUTES.MEU_PERFIL]:        { requiresAuth: true }
 };
 
-// 🔴 CORREÇÃO AQUI: Todos os IDs de container que existem no index.html
-// Se o ID da sua tela de perfil for diferente no HTML, altere o 'meu-perfil-container' abaixo.
 const ALL_SCREEN_IDS = [
     'login-container',
     'modo-selection-screen',
@@ -36,8 +37,8 @@ const ALL_SCREEN_IDS = [
     'admin-container',
     'recepcao-central-container',
     'painel-publico-container',
-    'meu-perfil-container', // <-- Container do perfil adicionado para não empilhar!
-    'atendimento-externo-container' // <--- ADICIONE ISSO AQUI
+    'meu-perfil-container',
+    'atendimento-externo-container'
 ];
 
 export class SIGEPRouter {
@@ -96,15 +97,12 @@ export class SIGEPRouter {
     get currentRoute()  { return this._currentRoute; }
     get currentParams() { return this._currentParams; }
 
-    // ── ESCONDE TODAS AS TELAS ────────────────────────────────────────
     _hideAllScreens() {
         ALL_SCREEN_IDS.forEach(id => {
-            // Isso garante que qualquer tela na lista anterior perca a visibilidade
             document.getElementById(id)?.classList.add('hidden');
         });
     }
 
-    // ── GUARD ─────────────────────────────────────────────────────────
     _guard(route, params = {}) {
         const guard = ROUTE_GUARDS[route];
         if (!guard) return null;
@@ -119,24 +117,6 @@ export class SIGEPRouter {
         if (guard.roles && !guard.roles.includes(user?.role)) {
             this._deps.showNotification('Acesso não permitido para seu perfil.', 'error');
             return ROUTES.PAUTA_SELECTION;
-        }
-
-        if (route === ROUTES.APP) {
-            const modoAtual   = app.currentMode;
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
-
-            const pautaTipo = params.pautaTipo
-                           || localStorage.getItem('lastPautaTipo')
-                           || '';
-            const pautaType = params.pautaType
-                           || localStorage.getItem('lastPautaType')
-                           || 'normal';
-
-            const isEvento = tiposEvento.includes(String(pautaTipo).toLowerCase())
-                          || tiposEvento.includes(String(pautaType).toLowerCase());
-
-            if (modoAtual === 'normal' && isEvento)  return ROUTES.PAUTA_SELECTION;
-            if (modoAtual === 'evento' && !isEvento) return ROUTES.PAUTA_SELECTION;
         }
 
         return null;
@@ -155,7 +135,6 @@ export class SIGEPRouter {
         ['painel', 'r'].forEach(k => qs.delete(k));
         qs.set('r', route);
         if (params.pautaId) qs.set('pautaId', params.pautaId);
-        else qs.delete('pautaId');
         return `${base}?${qs.toString()}`;
     }
 
@@ -169,11 +148,7 @@ export class SIGEPRouter {
         try {
             await handler(params);
         } catch (error) {
-            console.error(`[SIGEPRouter] Falha crítica na rota ${route}:`, error);
-            if (this._deps?.showNotification) {
-                this._deps.showNotification("Erro na interface: " + (error.message || "Erro desconhecido"), "error");
-            }
-            console.trace("Stacktrace da falha na rota " + route);
+            console.error(`[SIGEPRouter] Falha na rota ${route}:`, error);
         }
     }
 
@@ -188,12 +163,6 @@ export class SIGEPRouter {
             [ROUTES.RECEPCAO_CENTRAL]: 'recepcao-central',
         };
         if (screenMap[route]) localStorage.setItem('sigep_active_screen', screenMap[route]);
-        if (route === ROUTES.APP && params.pautaId) {
-            localStorage.setItem('lastPautaId',   params.pautaId);
-            localStorage.setItem('lastPautaName', params.pautaName || '');
-            localStorage.setItem('lastPautaType', params.pautaType || 'normal');
-            localStorage.setItem('lastPautaTipo', params.pautaTipo || '');
-        }
     }
 
     _buildHandlers() {
@@ -201,96 +170,64 @@ export class SIGEPRouter {
         const deps = this._deps;
 
         return {
-            // ── LOGIN ──────────────────────────────────────────────────
             [ROUTES.LOGIN]: async () => {
                 this._hideAllScreens();
                 document.getElementById('login-container')?.classList.remove('hidden');
-                document.getElementById('admin-panel-btn')?.classList.add('hidden');
-                document.getElementById('admin-btn-main')?.classList.add('hidden');
             },
-
-            // ── MODO SELECTION ─────────────────────────────────────────
             [ROUTES.MODO_SELECTION]: async () => {
                 this._hideAllScreens();
                 document.getElementById('modo-selection-screen')?.classList.remove('hidden');
-                app.applyRoleBasedUI();
             },
-
-            // ── PAUTA SELECTION ────────────────────────────────────────
             [ROUTES.PAUTA_SELECTION]: async () => {
-                if (app.currentPauta) app._teardownPauta();
-
                 this._hideAllScreens();
                 document.getElementById('pauta-selection-container')?.classList.remove('hidden');
-
-                if (deps.UIService?.renderPautaFilters) {
-                    deps.UIService.renderPautaFilters(
-                        'filters-container',
-                        app.currentPautaFilter || 'all',
-                        (val) => { app.currentPautaFilter = val; app.loadPautasWithFilter(); },
-                        app
-                    );
-                }
-
                 await app.loadPautasWithFilter();
-                app.applyRoleBasedUI();
             },
-
-            // ── APP (pauta aberta) ─────────────────────────────────────
-            [ROUTES.APP]: async ({ pautaId, pautaName, pautaType, pautaTipo } = {}) => {
+            [ROUTES.APP]: async ({ pautaId, pautaName, pautaType } = {}) => {
                 const id   = pautaId   || localStorage.getItem('lastPautaId');
                 const name = pautaName || localStorage.getItem('lastPautaName');
                 const type = pautaType || localStorage.getItem('lastPautaType');
-
-                if (id && name) {
-                    if (!app.currentPauta || app.currentPauta.id !== id) {
-                        await app.loadPauta(id, name, type);
-                    }
-
+                if (id) {
+                    await app.loadPauta(id, name, type);
                     this._hideAllScreens();
                     document.getElementById('app-container')?.classList.remove('hidden');
                 } else {
                     await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
                 }
             },
-
-            // ── DASHBOARD ──────────────────────────────────────────────
             [ROUTES.DASHBOARD]: async () => {
                 this._hideAllScreens();
                 deps.DashboardService.showDashboardScreen();
-                localStorage.setItem('sigep_active_screen', 'dashboard');
             },
-
-            // ── ADMIN ──────────────────────────────────────────────────
             [ROUTES.ADMIN]: async () => {
                 this._hideAllScreens();
                 document.getElementById('admin-container')?.classList.remove('hidden');
                 app.renderAdminContent();
             },
-
-            // ── RECEPÇÃO CENTRAL ───────────────────────────────────────
             [ROUTES.RECEPCAO_CENTRAL]: async () => {
                 this._hideAllScreens();
                 await deps.RecepçãoCentralService.abrir(app);
             },
-
-            // ── PAINEL PÚBLICO ─────────────────────────────────────────
             [ROUTES.PAINEL_PUBLICO]: async () => {
                 this._hideAllScreens();
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(app);
             },
-
-            // ── MEU PERFIL ───────────────────────────────────────────────
             [ROUTES.MEU_PERFIL]: async () => {
                 this._hideAllScreens();
                 document.getElementById('meu-perfil-container')?.classList.remove('hidden');
-                
-                // Se você já tiver importado o serviço de perfil, inicializamos a tela:
-                if (deps.PerfilService) {
-                    await deps.PerfilService.carregarDados(app);
-                }
+                if (deps.PerfilService) await deps.PerfilService.carregarDados(app);
             },
+            [ROUTES.ATENDIMENTO_EXTERNO]: async (params) => {
+                this._hideAllScreens();
+                document.getElementById('atendimento-externo-container')?.classList.remove('hidden');
+                const { AtendimentoExternoService } = await import('./atendimentoExternoService.js');
+                AtendimentoExternoService.db = app.db;
+                AtendimentoExternoService.auth = app.auth;
+                AtendimentoExternoService.pautaId = params.pautaId || localStorage.getItem('lastPautaId');
+                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName');
+                await AtendimentoExternoService.init();
+            }
         };
     }
 }
