@@ -27,6 +27,24 @@ window.addEventListener('beforeinstallprompt', (e) => {
     deferredPrompt = e;
 });
 
+// 🔹 CONEXÃO INTERNA E ISOLADA DO FIREBASE (RESOLVE CONFLITO V8/V11)
+let localDb = null;
+let localAuth = null;
+
+try {
+    const cfg = (typeof window !== 'undefined' && window.firebaseConfig) ? window.firebaseConfig : firebaseConfig;
+    if (cfg && cfg.projectId && cfg.projectId !== "SEU_PROJECT_ID") {
+        const app = getApps().length === 0 ? initializeApp(cfg) : getApp();
+        localDb = getFirestore(app);
+        localAuth = getAuth(app);
+        console.log("✅ Conexão Firebase V11 independente iniciada com sucesso.");
+    } else {
+        console.error("❌ Erro grave: firebaseConfig inválido ou ausente no config.js.");
+    }
+} catch (e) {
+    console.error("❌ Falha ao inicializar a base de dados local:", e);
+}
+
 export const AtendimentoExternoService = {
 
     // Estado do Serviço
@@ -48,57 +66,30 @@ export const AtendimentoExternoService = {
     pautasDoDia: [],                
     atendimentosPorPauta: {},       
 
-    // Instâncias Dinâmicas do Firebase V11
-    _dbInstance: null,
-    _authInstance: null,
-
-    // 🔹 PROTEÇÃO: Ignora a injeção do HTML (V8) e usa as instâncias internas seguras (V11)
+    // 🔹 PROTEÇÃO ABSOLUTA CONTRA INJEÇÃO EXTERNA QUEBRADA
+    // Sempre usamos a conexão `localDb` e `localAuth` que configuramos aqui, ignorando o que vem do HTML
     get db() {
-        return this._dbInstance;
+        if (!localDb) console.error("CRÍTICO: O banco de dados (localDb) falhou ao carregar.");
+        return localDb;
     },
     set db(val) {
-        console.log("🛡️ Proteção: Ignorando injeção externa do DB para evitar conflitos V8 vs V11.");
+        console.warn("🛡️ Bloqueando injeção externa do DB para forçar a versão V11 correta.");
     },
 
     get auth() {
-        return this._authInstance;
+        return localAuth;
     },
     set auth(val) {
-        console.log("🛡️ Proteção: Ignorando injeção externa do Auth para evitar conflitos V8 vs V11.");
-    },
-
-    // 🔹 ESTABELECE A CONEXÃO CORRETA V11 BASEADA NO SEU HTML
-    async garantirConexaoFirebase() {
-        if (this._dbInstance && this._authInstance) return;
-
-        // Pega as chaves reais que você configurou no window do HTML
-        const cfg = (typeof window !== 'undefined' && window.firebaseConfig) ? window.firebaseConfig : firebaseConfig;
-
-        if (!cfg || !cfg.projectId || cfg.projectId === "SEU_PROJECT_ID") {
-            console.error("❌ Configuração do Firebase ausente ou inválida.");
-            this.showError("Erro de Configuração", "Chaves do Firebase não encontradas.");
-            return;
-        }
-
-        try {
-            const app = getApps().length === 0 ? initializeApp(cfg) : getApp();
-            this._dbInstance = getFirestore(app);
-            this._authInstance = getAuth(app);
-            console.log("✅ Conexão Firebase V11 estabelecida de forma independente.");
-            
-            if (!this._authInstance.currentUser) {
-                console.log("👤 Iniciando login anônimo interno...");
-                await signInAnonymously(this._authInstance);
-            }
-        } catch (error) {
-            console.error("❌ Falha grave ao inicializar Firebase interno:", error);
-        }
+        console.warn("🛡️ Bloqueando injeção externa do Auth para forçar a versão V11 correta.");
     },
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
         
-        await this.garantirConexaoFirebase();
+        if (!this.db || !this.auth) {
+            this.showError("Erro de Sistema", "Falha de conexão com o servidor. Verifique o arquivo js/config.js");
+            return;
+        }
 
         const obterParametrosURL = () => {
             const params = {};
@@ -137,6 +128,11 @@ export const AtendimentoExternoService = {
         }
 
         try {
+            if (!this.auth.currentUser) {
+                console.log("👤 Tentando login anônimo interno...");
+                await signInAnonymously(this.auth);
+            }
+
             console.log("👥 Carregando colaboradores da pauta...");
             await this.carregarColaboradoresGerais();
 
@@ -170,12 +166,10 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── ATENDIMENTO INDIVIDUAL (CORREÇÃO DO TRAVAMENTO DO BOTÃO) ─────────────
+    // ─── ATENDIMENTO INDIVIDUAL ─────────────
 
     async carregarAssistidoIndividual(pautaId, assistidoId) {
         console.log("⚡ Botão ATENDER clicado! Carregando assistido:", assistidoId);
-        
-        await this.garantirConexaoFirebase(); // Garante conexão segura antes de tentar ler
         
         this.pautaId = pautaId;
         this.assistidoId = assistidoId;
@@ -189,7 +183,6 @@ export const AtendimentoExternoService = {
                 this.assistidoData = assistido;
                 this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
                 
-                // Desenha a tela com as opções
                 this.renderizarInterface(assistido, pautaDoc.data());
                 this.setupListeners();
                 this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
@@ -198,7 +191,7 @@ export const AtendimentoExternoService = {
             }
         } catch (error) {
             console.error("❌ Erro ao carregar assistido via botão Atender:", error);
-            this.showError("Erro de Conexão", "Falha na leitura (V8 vs V11 resolvida?): " + error.message);
+            this.showError("Erro de Conexão", error.message);
         }
     },
 
@@ -229,6 +222,11 @@ export const AtendimentoExternoService = {
 
     async iniciarDashboardUnificado() {
         console.log("📋 Inicializando Dashboard Unificado...");
+        
+        // Remove a tela de loading forçadamente antes mesmo de carregar os dados
+        const fallback = document.getElementById('fallback-container');
+        if (fallback) fallback.classList.add('hidden');
+
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
         this.renderizarContainerDashboard();
