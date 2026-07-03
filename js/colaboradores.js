@@ -21,6 +21,7 @@ const CollaboratorService = {
     editId: null,
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
+    LOGO_URL: 'https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7',
 
     // ⭐ FUNÇÃO DE EXPORTAR PDF PERSONALIZADO ⭐
     async exportarPDFCustomizado(app) {
@@ -108,7 +109,6 @@ const CollaboratorService = {
                     return;
                 }
 
-                // -> MUDANÇA AQUI TAMBÉM: Enviando como um objeto {}
                 await window.PDFService.generateCollaboratorsPDF({
                     colaboradores: app.colaboradores, 
                     pautaNome: app.currentPauta.name, 
@@ -118,7 +118,7 @@ const CollaboratorService = {
                 modal.classList.add('hidden');
             };
         }
-    }, // <-- AQUI ESTÁ A VÍRGULA QUE FALTAVA!
+    },
 
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
@@ -230,6 +230,7 @@ const CollaboratorService = {
             ataData: document.getElementById('ata-data')?.value || '',
             ataTotalManual: document.getElementById('ata-total')?.value || '',
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
+            ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
         };
 
@@ -241,6 +242,9 @@ const CollaboratorService = {
                 app.currentPautaData = { ...app.currentPautaData, ...data };
             }
 
+            // Atualiza a logo no modal se estiver aberto
+            this.atualizarLogoAta();
+
             showNotification("Dados do evento salvos com sucesso! 💾", "success");
             const modal = document.getElementById('ata-social-modal');
             if (modal) modal.classList.add('hidden');
@@ -249,6 +253,19 @@ const CollaboratorService = {
             showNotification("Erro ao salvar dados no banco.", "error");
         } finally {
             if (btnSave) btnSave.disabled = false;
+        }
+    },
+
+    atualizarLogoAta() {
+        const logoImg = document.getElementById('logo-ata-social');
+        if (logoImg) {
+            logoImg.src = this.LOGO_URL;
+            logoImg.onerror = function() {
+                console.warn('Erro ao carregar logo, usando fallback');
+                this.style.display = 'none';
+                const fallback = document.getElementById('logo-fallback-ata');
+                if (fallback) fallback.style.display = 'block';
+            };
         }
     },
 
@@ -274,6 +291,9 @@ const CollaboratorService = {
                 
                 const orgaoEl = document.getElementById('ata-orgao');
                 if (orgaoEl) orgaoEl.value = data.ataOrgao || '';
+
+                // Atualiza a logo
+                this.atualizarLogoAta();
             }
         } catch (error) {
             console.error("Erro ao carregar dados da ata:", error);
@@ -425,7 +445,7 @@ const CollaboratorService = {
                         <div class="font-black text-violet-900 text-[10px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
                             <span>📁</span> Equipe ${escapeHTML(ultimoGrupo)}
                         </div>
-                    </table>
+                    </td>
                 `;
                 tbody.appendChild(trGrupo);
             }
@@ -523,6 +543,9 @@ const CollaboratorService = {
                 this.loadAtaData(app);
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
+                
+                // Garante que a logo seja carregada
+                setTimeout(() => this.atualizarLogoAta(), 100);
             };
         }
 
@@ -532,6 +555,16 @@ const CollaboratorService = {
                 const identificador = document.getElementById('collaborator-identificador-modal')?.value;
                 if(identificador) this.buscarColaboradorMaster(app, identificador);
             };
+        }
+
+        // Fechar modal ao clicar fora
+        const modal = document.getElementById('ata-social-modal');
+        if (modal) {
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.classList.add('hidden');
+                }
+            });
         }
     },
 
@@ -582,14 +615,42 @@ const CollaboratorService = {
         const filtrados = this.filtrarParaAta(app.colaboradores);
         if (filtrados.length === 0) return null;
 
-        let html = `<div style="font-family: sans-serif;"><h3>LISTA DE PRESENÇA - SIGEP</h3><table border="1" style="width:100%; border-collapse: collapse;">`;
-        html += `<thead><tr><th>Nome</th><th>Cargo</th><th>Equipe</th><th>Horário</th></tr></thead><tbody>`;
+        let html = `
+            <div style="font-family: sans-serif; max-width: 100%;">
+                <div style="text-align: center; margin-bottom: 20px; padding: 10px; border-bottom: 3px solid #1a56db;">
+                    <img src="${this.LOGO_URL}" alt="Logo Defensoria" style="max-height: 80px; width: auto; margin: 0 auto; display: block;" onerror="this.style.display='none'">
+                    <h3 style="margin-top: 10px; color: #1a56db;">LISTA DE PRESENÇA - SIGEP</h3>
+                    <p style="font-size: 12px; color: #666;">Sistema Integrado de Gestão de Pautas</p>
+                </div>
+                <table border="1" style="width:100%; border-collapse: collapse; font-size: 12px;">
+                    <thead>
+                        <tr style="background-color: #1a56db; color: white;">
+                            <th style="padding: 8px;">Nome</th>
+                            <th style="padding: 8px;">Cargo</th>
+                            <th style="padding: 8px;">Equipe</th>
+                            <th style="padding: 8px;">Horário</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+        `;
         
         this.ordenarColaboradores(filtrados).forEach(c => {
-            html += `<tr><td>${c.nome}</td><td>${c.cargo}</td><td>${c.equipe}</td><td>${c.horario}</td></tr>`;
+            html += `<tr>
+                <td style="padding: 6px;">${escapeHTML(c.nome)}</td>
+                <td style="padding: 6px;">${escapeHTML(c.cargo)}</td>
+                <td style="padding: 6px;">${escapeHTML(c.equipe)}</td>
+                <td style="padding: 6px; text-align: center;">${c.horario || '--:--'}</td>
+            </tr>`;
         });
         
-        html += `</tbody></table><p style="font-size:10px; text-align:center;">Gerado automaticamente pelo SIGEP</p></div>`;
+        html += `
+                    </tbody>
+                </table>
+                <div style="margin-top: 15px; font-size: 10px; text-align: center; color: #888; border-top: 1px solid #ddd; padding-top: 10px;">
+                    <p>Gerado automaticamente pelo SIGEP em ${new Date().toLocaleString('pt-BR')}</p>
+                </div>
+            </div>
+        `;
         return html;
     },
 
