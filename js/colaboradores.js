@@ -22,10 +22,10 @@ const CollaboratorService = {
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
     LOGO_URL: 'https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7',
+    ataAutoSaveTimer: null, // Timer para autosave
 
     // ⭐ FUNÇÃO DE EXPORTAR PDF PERSONALIZADO ⭐
     async exportarPDFCustomizado(app) {
-        // 1. CAPTURA OS CHECKBOXES DA TELA
         const checks = document.querySelectorAll('.pdf-col-selector:checked');
         const camposEscolhidos = Array.from(checks).map(el => el.value);
         
@@ -34,7 +34,6 @@ const CollaboratorService = {
             return;
         }
 
-        // 2. CHAMA O PDF COM A LISTA FILTRADA (USANDO O FORMATO DE OBJETO)
         await window.PDFService.generateCollaboratorsPDF({
             colaboradores: app.colaboradores, 
             pautaNome: app.currentPauta.name, 
@@ -72,7 +71,6 @@ const CollaboratorService = {
             document.body.appendChild(modal);
         }
 
-        // Renderiza os checkboxes no modal
         const container = document.getElementById('pdf-field-selector-modal');
         if (container) {
             const campos = [
@@ -97,7 +95,6 @@ const CollaboratorService = {
             `).join('');
         }
 
-        // Configura o botão de confirmação
         const confirmBtn = document.getElementById('confirm-export-pdf-btn');
         if (confirmBtn) {
             confirmBtn.onclick = async () => {
@@ -214,6 +211,77 @@ const CollaboratorService = {
         }
     },
 
+    // ⭐ FUNÇÃO PARA SALVAR AUTOMATICAMENTE OS DADOS DA ATA ⭐
+    async autoSaveAtaData(app) {
+        if (!app?.currentPauta?.id) return;
+
+        // Limpa o timer anterior
+        if (this.ataAutoSaveTimer) {
+            clearTimeout(this.ataAutoSaveTimer);
+            this.ataAutoSaveTimer = null;
+        }
+
+        // Pega os dados atuais do formulário
+        const data = {
+            ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
+            ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
+            ataData: document.getElementById('ata-data')?.value || '',
+            ataTotalManual: document.getElementById('ata-total')?.value || '',
+            ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
+            ataLogoURL: this.LOGO_URL,
+            ataLastUpdate: new Date().toISOString()
+        };
+
+        try {
+            const pautaRef = doc(app.db, "pautas", app.currentPauta.id);
+            await updateDoc(pautaRef, data);
+            
+            if (app.currentPautaData) {
+                app.currentPautaData = { ...app.currentPautaData, ...data };
+            }
+
+            // Mostra indicador de salvamento (opcional)
+            const indicator = document.getElementById('ata-save-indicator');
+            if (indicator) {
+                indicator.textContent = '💾 Salvo';
+                indicator.className = 'text-green-600 text-xs font-semibold';
+                setTimeout(() => {
+                    indicator.textContent = '';
+                }, 2000);
+            }
+
+        } catch (error) {
+            console.error("Erro ao salvar dados da ata:", error);
+            const indicator = document.getElementById('ata-save-indicator');
+            if (indicator) {
+                indicator.textContent = '⚠️ Erro ao salvar';
+                indicator.className = 'text-red-600 text-xs font-semibold';
+            }
+        }
+    },
+
+    // ⭐ FUNÇÃO QUE DISPARA O AUTOSAVE COM DEBOUNCE ⭐
+    triggerAutoSave(app) {
+        if (!app?.currentPauta?.id) return;
+
+        // Cancela o timer anterior
+        if (this.ataAutoSaveTimer) {
+            clearTimeout(this.ataAutoSaveTimer);
+        }
+
+        // Mostra indicador de "Salvando..."
+        const indicator = document.getElementById('ata-save-indicator');
+        if (indicator) {
+            indicator.textContent = '💾 Salvando...';
+            indicator.className = 'text-amber-600 text-xs font-semibold';
+        }
+
+        // Aguarda 1 segundo sem novas alterações para salvar (debounce)
+        this.ataAutoSaveTimer = setTimeout(() => {
+            this.autoSaveAtaData(app);
+        }, 1000);
+    },
+
     // ⭐ ATA PERSISTENTE E FUNCIONAL ⭐
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
@@ -242,9 +310,7 @@ const CollaboratorService = {
                 app.currentPautaData = { ...app.currentPautaData, ...data };
             }
 
-            // Atualiza a logo no modal se estiver aberto
             this.atualizarLogoAta();
-
             showNotification("Dados do evento salvos com sucesso! 💾", "success");
             const modal = document.getElementById('ata-social-modal');
             if (modal) modal.classList.add('hidden');
@@ -292,11 +358,40 @@ const CollaboratorService = {
                 const orgaoEl = document.getElementById('ata-orgao');
                 if (orgaoEl) orgaoEl.value = data.ataOrgao || '';
 
-                // Atualiza a logo
                 this.atualizarLogoAta();
             }
         } catch (error) {
             console.error("Erro ao carregar dados da ata:", error);
+        }
+    },
+
+    // ⭐ CONFIGURA O AUTOSAVE PARA OS CAMPOS DA ATA ⭐
+    configurarAutoSaveAta(app) {
+        const campos = ['ata-acao-nome', 'ata-endereco', 'ata-data', 'ata-total', 'ata-orgao'];
+        
+        campos.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) {
+                // Remove listeners antigos para evitar duplicação
+                el.removeEventListener('input', this._boundAutoSave);
+                el.removeEventListener('change', this._boundAutoSave);
+                
+                // Adiciona os listeners
+                el.addEventListener('input', () => this.triggerAutoSave(app));
+                el.addEventListener('change', () => this.triggerAutoSave(app));
+            }
+        });
+
+        // Botão de salvar manual (opcional)
+        const btnSave = document.getElementById('save-ata-data-btn');
+        if (btnSave) {
+            btnSave.removeEventListener('click', btnSave.onclickBackup);
+            const handler = (e) => {
+                e.preventDefault();
+                this.saveAtaData(app);
+            };
+            btnSave.addEventListener('click', handler);
+            btnSave.onclickBackup = handler;
         }
     },
 
@@ -484,7 +579,6 @@ const CollaboratorService = {
             tbody.appendChild(row);
         });
 
-        // Initialize Styles
         if (!document.getElementById('toggle-css-colaboradores')) {
             const style = document.createElement('style');
             style.id = 'toggle-css-colaboradores';
@@ -526,17 +620,7 @@ const CollaboratorService = {
             };
         });
 
-        const btnSaveAta = document.getElementById('save-ata-data-btn');
-        if (btnSaveAta) {
-            btnSaveAta.removeEventListener('click', btnSaveAta.onclickBackup);
-            const handler = (e) => {
-                e.preventDefault();
-                this.saveAtaData(app);
-            };
-            btnSaveAta.addEventListener('click', handler);
-            btnSaveAta.onclickBackup = handler;
-        }
-
+        // ⭐ CONFIGURA O AUTOSAVE AO ABRIR O MODAL DA ATA ⭐
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
             btnOpenAtaModal.onclick = () => {
@@ -544,8 +628,11 @@ const CollaboratorService = {
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
                 
-                // Garante que a logo seja carregada
-                setTimeout(() => this.atualizarLogoAta(), 100);
+                // Configura o autosave após carregar os dados
+                setTimeout(() => {
+                    this.configurarAutoSaveAta(app);
+                    this.atualizarLogoAta();
+                }, 100);
             };
         }
 
@@ -557,7 +644,6 @@ const CollaboratorService = {
             };
         }
 
-        // Fechar modal ao clicar fora
         const modal = document.getElementById('ata-social-modal');
         if (modal) {
             modal.addEventListener('click', (e) => {
