@@ -487,8 +487,9 @@ export const AtendimentoExternoService = {
     },
 
     _renderSemAtribuicao(container) {
+        // Incluímos 'aguardando' no filtro
         const semDono = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' &&
+            (a.status === 'emAtendimento' || a.status === 'aguardando') &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
         );
 
@@ -496,18 +497,16 @@ export const AtendimentoExternoService = {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">✅</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso aguardando atribuição.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso sem atribuição (Aguardando ou Em Atendimento).</p>
                 </div>`;
             return;
         }
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso. Ele irá para sua mesa automaticamente.
+                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso.
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                ${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}
-            </div>`;
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}</div>`;
     },
 
     _renderPautaDia(container) {
