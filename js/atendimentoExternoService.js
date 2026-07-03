@@ -23,7 +23,7 @@ const statusMap = {
     faltoso:                { cor: 'bg-red-100 text-red-700 border-red-200',          txt: 'Faltoso' },
 };
 
-// ─── FIREBASE ─────────────────────────────────────────────────────────────────
+// ─── FIREBASE LOCAL FALLBACK ──────────────────────────────────────────────────
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -57,6 +57,24 @@ export const AtendimentoExternoService = {
     modoVisualizacao: 'dashboard',  // 'dashboard' | 'abas'
     pautasDoDia: [],                // todas as pautas do colaborador hoje
     atendimentosPorPauta: {},       // { [pautaId]: [assistidos] } para a aba Pauta do Dia
+
+    // Instâncias Dinâmicas do Firebase (Injetadas pelo HTML)
+    _dbInstance: null,
+    _authInstance: null,
+
+    get db() {
+        return this._dbInstance || db;
+    },
+    set db(val) {
+        this._dbInstance = val;
+    },
+
+    get auth() {
+        return this._authInstance || auth;
+    },
+    set auth(val) {
+        this._authInstance = val;
+    },
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
@@ -104,7 +122,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            if (!auth.currentUser) await signInAnonymously(auth);
+            if (!this.auth.currentUser) await signInAnonymously(this.auth);
 
             await this.carregarColaboradoresGerais();
 
@@ -146,13 +164,13 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
+        const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
         if (!pautaDoc.exists()) {
             this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
             return;
         }
 
-        const docSnap = await getDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId));
+        const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
         if (!docSnap.exists()) {
             this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
             return;
@@ -204,7 +222,7 @@ export const AtendimentoExternoService = {
         }
 
         this.unsubscribeDashboard = onSnapshot(
-            collection(db, "pautas", this.pautaId, "attendances"),
+            collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
@@ -224,7 +242,7 @@ export const AtendimentoExternoService = {
         const hoje = new Date().toISOString().split('T')[0];
 
         try {
-            const pautasSnap = await getDocs(collection(db, "pautas"));
+            const pautasSnap = await getDocs(collection(this.db, "pautas"));
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
@@ -239,13 +257,13 @@ export const AtendimentoExternoService = {
                     continue;
                 }
                 try {
-                    const colabsSnap = await getDocs(collection(db, "pautas", pauta.id, "collaborators"));
+                    const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
                     const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
                     if (estaNessa) {
                         resultado.push(pauta);
                         // Listener real-time para esta pauta extra
                         const unsub = onSnapshot(
-                            collection(db, "pautas", pauta.id, "attendances"),
+                            collection(this.db, "pautas", pauta.id, "attendances"),
                             (snap) => {
                                 this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                                 if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
@@ -703,7 +721,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: {
                     id: this.colaboradorId || this.colaboradorAtual?.id || '',
                     name: this.colaboradorNome
@@ -718,7 +736,7 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'ocupado',
                     currentAttendance: assistidoId
                 }).catch(() => {});
@@ -746,7 +764,7 @@ export const AtendimentoExternoService = {
         if (!confirm("Devolver este caso para a fila Sem Atribuição? Outros colaboradores poderão assumí-lo.")) return;
 
         try {
-            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
                 inAttendanceTime: null,
                 history: arrayUnion({
@@ -758,7 +776,7 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'disponivel',
                     currentAttendance: null
                 }).catch(() => {});
@@ -802,7 +820,7 @@ export const AtendimentoExternoService = {
                         <div class="min-w-0 flex-1">
                             <h3 class="font-black text-slate-800 text-base truncate">${escapeHTML(item.name)}</h3>
                             <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
-                            ${numCNP} ${notas}
+                            ${numCNP} ${textosWrapper || notas}
                         </div>
                         <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</a>
                     </div>`;
@@ -912,7 +930,7 @@ export const AtendimentoExternoService = {
 
     async carregarColaboradoresGerais() {
         try {
-            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
+            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
         } catch { this.todosColaboradores = []; }
@@ -1093,7 +1111,7 @@ export const AtendimentoExternoService = {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
                         try {
                             if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                                const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
+                                const colabDocRef = doc(this.db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
                                 await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
                                 this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
@@ -1384,11 +1402,11 @@ export const AtendimentoExternoService = {
         };
 
         try {
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaIdSeguro));
             const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
             const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
 
-            const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
+            const docRef = doc(this.db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
@@ -1426,7 +1444,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
                         status: 'disponivel',
                         currentAttendance: null
@@ -1467,7 +1485,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1504,7 +1522,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1540,7 +1558,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1575,7 +1593,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1600,7 +1618,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
