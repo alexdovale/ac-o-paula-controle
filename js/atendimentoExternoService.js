@@ -1,4 +1,3 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -64,16 +63,38 @@ export const AtendimentoExternoService = {
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
 
-        const searchLimpa = window.location.search.replace(/&amp;/g, '&');
-        const urlParams = new URLSearchParams(searchLimpa);
+        // 🔹 CORREÇÃO DO ROUTER: Função robusta para extrair parâmetros de busca tradicionais ou pós-hash (#)
+        const obterParametrosURL = () => {
+            const params = {};
+            // 1. Extração tradicional (?pautaId=...)
+            if (window.location.search) {
+                const searchLimpa = window.location.search.replace(/&amp;/g, '&');
+                new URLSearchParams(searchLimpa).forEach((val, key) => {
+                    params[key] = val;
+                });
+            }
+            // 2. Extração de rotas em hash (/#/atendimento_externo?pautaId=...)
+            if (window.location.hash && window.location.hash.includes('?')) {
+                const hashQuery = window.location.hash.split('?')[1].replace(/&amp;/g, '&');
+                new URLSearchParams(hashQuery).forEach((val, key) => {
+                    params[key] = val;
+                });
+            }
+            return params;
+        };
 
-        this.pautaId        = urlParams.get('pautaId')   || urlParams.get('amp;pautaId');
-        this.assistidoId    = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
-        this.colaboradorNome = urlParams.get('colab')    || urlParams.get('amp;colab');
-        this.colaboradorId  = urlParams.get('colabId')   || urlParams.get('amp;colabId') || '';
-        const tokenRecebido = urlParams.get('token')     || urlParams.get('amp;token');
-        const telaAtual     = urlParams.get('view')      || urlParams.get('amp;view');
-        const modo          = urlParams.get('modo')      || urlParams.get('amp;modo');
+        const urlParams = obterParametrosURL();
+
+        // 🔹 CORREÇÃO DE SOBRESCRITA CRÍTICA:
+        // Se as variáveis já foram injetadas externamente (pelo HTML), nós as preservamos (usando '|| this.[Propriedade]')
+        // impedindo que uma URL sem parâmetros clássicos zere o estado do serviço.
+        this.pautaId        = urlParams['pautaId']        || urlParams['amp;pautaId']        || this.pautaId;
+        this.assistidoId    = urlParams['assistidoId']    || urlParams['amp;assistidoId']    || this.assistidoId;
+        this.colaboradorNome = urlParams['colab']          || urlParams['amp;colab']          || this.colaboradorNome;
+        this.colaboradorId  = urlParams['colabId']        || urlParams['amp;colabId']        || this.colaboradorId || '';
+        const tokenRecebido = urlParams['token']          || urlParams['amp;token'];
+        const telaAtual     = urlParams['view']           || urlParams['amp;view'];
+        const modo          = urlParams['modo']           || urlParams['amp;modo'];
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
@@ -118,6 +139,13 @@ export const AtendimentoExternoService = {
     // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
 
     async iniciarAtendimentoIndividual(tokenRecebido) {
+        // 🔹 PROTEÇÃO EXTRA: Impede requisição nula caso as propriedades estejam vazias
+        if (!this.pautaId || !this.assistidoId) {
+            console.error("❌ IDs ausentes para carregamento individual:", { pautaId: this.pautaId, assistidoId: this.assistidoId });
+            this.showError("Parâmetros Ausentes", "Não foi possível carregar os dados individuais porque a pauta ou o assistido não foram definidos.");
+            return;
+        }
+
         const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
         if (!pautaDoc.exists()) {
             this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
@@ -168,6 +196,13 @@ export const AtendimentoExternoService = {
 
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
+
+        // 🔹 PROTEÇÃO EXTRA: Garante que não inicia listener com PautaId nulo
+        if (!this.pautaId) {
+            console.error("❌ pautaId nulo detectado! Pulando a criação de listener em tempo real.");
+            return;
+        }
+
         this.unsubscribeDashboard = onSnapshot(
             collection(db, "pautas", this.pautaId, "attendances"),
             (snap) => {
@@ -184,7 +219,6 @@ export const AtendimentoExternoService = {
     },
 
     // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
-    // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
 
     async _carregarTodasPautasDoColaborador() {
         const hoje = new Date().toISOString().split('T')[0];
@@ -201,7 +235,6 @@ export const AtendimentoExternoService = {
             const resultado = [];
             for (const pauta of pautasHoje) {
                 if (pauta.id === this.pautaId) {
-                    // Já temos listener ativo para esta
                     resultado.push(pauta);
                     continue;
                 }
@@ -320,7 +353,6 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // MELHORIA 4: botão de alternar modo
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
             this._cancelarListeners();
@@ -434,7 +466,7 @@ export const AtendimentoExternoService = {
         const container = document.getElementById('painel-atendimento-container');
         if (!container) return;
 
-        if (this.abaAtual === 'minha-mesa')     this._renderMinhaMesa(container);
+        if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
         else if (this.abaAtual === 'sem-atribuicao') this._renderSemAtribuicao(container);
         else if (this.abaAtual === 'pauta-dia')  this._renderPautaDia(container);
 
@@ -490,7 +522,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ── ABA 3: PAUTA DO DIA (MELHORIA 1 + 3) ─────────────────────────────────
+    // ── ABA 3: PAUTA DO DIA ───────────────────────────────────────────────────
 
     _renderPautaDia(container) {
         if (this.pautasDoDia.length === 0) {
@@ -516,7 +548,6 @@ export const AtendimentoExternoService = {
             const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
             const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
-            // MELHORIA 1: Sumário por pauta
             html += `
                 <div class="mb-8">
                     <!-- Header da pauta -->
@@ -609,7 +640,7 @@ export const AtendimentoExternoService = {
         } else if (modo === 'mesa') {
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center">📋 Atender</a>
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</a>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
@@ -656,10 +687,9 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── PUXAR PARA MIM (MELHORIA 2) ───────────────────────────────────────────
+    // ─── PUXAR PARA MIM ────────────────────────────────────────────────────────
 
     async puxarParaMim(pautaId, assistidoId) {
-        // MELHORIA 2: verifica se já tem caso em andamento
         const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
             a.assignedCollaborator?.name === this.colaboradorNome
@@ -747,7 +777,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── DASHBOARD TRADICIONAL (preservado do código original) ────────────────
+    // ─── DASHBOARD TRADICIONAL ────────────────────────────────────────────────
 
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
@@ -774,7 +804,7 @@ export const AtendimentoExternoService = {
                             <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
                             ${numCNP} ${notas}
                         </div>
-                        <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition">ABRIR</a>
+                        <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</a>
                     </div>`;
             }
 
@@ -987,7 +1017,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL (preservado) ────────────────────
+    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ─────────────────────────────────
 
     renderizarInterface(assistido, pautaData) {
         // Remove listener do dashboard se existir
@@ -1019,10 +1049,6 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        // Criar estrutura da interface individual (similar ao original)
-        // Por brevidade, assumimos que o HTML da interface individual já existe no DOM
-        // ou será injetado. O código original tem essa estrutura.
-        
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
@@ -1724,7 +1750,7 @@ export const AtendimentoExternoService = {
 
         if (chk.expenseData && chk.expenseData.checkExibirGastos) {
             const g = chk.expenseData;
-            const categorias = [
+            const categories = [
                 { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
                 { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
                 { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
@@ -1734,7 +1760,7 @@ export const AtendimentoExternoService = {
             let totalGastos = 0;
             let gastosHtml = '';
             
-            categorias.forEach(c => {
+            categories.forEach(c => {
                 if (g[c.id] && g[c.id] !== 'R$ 0,00') {
                     gastosHtml += `<div class="flex justify-between text-xs mb-1.5"><span class="text-emerald-700 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900">${g[c.id]}</span></div>`;
                     const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
