@@ -1,107 +1,23 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Mesa de Trabalho Judicial - SIGEP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Painel de Atendimento</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
-    <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
-        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .animate-fade-in { animation: fadeIn 0.3s ease-out forwards; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
-    </style>
 </head>
-<body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
+<body class="bg-slate-100 p-4">
 
-    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
-        
-        <!-- HEADER -->
-        <div id="header-bg" class="bg-slate-800 p-5 text-white flex items-center gap-4 relative">
-            <button id="btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 p-2 rounded-lg transition-colors">
-                <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-            </button>
-            <div class="flex flex-col w-full">
-                <h1 id="assistido-nome" class="font-black text-xl uppercase tracking-tight">PAINEL DE ATENDIMENTO</h1>
-                <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 mt-1 font-semibold uppercase">Carregando...</p>
-            </div>
-        </div>
-
-        <!-- DASHBOARD -->
-        <div id="view-dashboard" class="flex flex-col flex-1">
-            <div class="flex border-b bg-slate-50 font-semibold text-xs uppercase overflow-x-auto">
-                <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center border-b-2 bg-amber-600 text-white border-amber-600">Minha Mesa</button>
-                <button id="btn-tab-sem-atribuicao" class="flex-1 p-4 text-center border-b-2 border-transparent text-slate-500 hover:bg-slate-100">Sem Atribuição</button>
-                <button id="btn-tab-pauta-dia" class="flex-1 p-4 text-center border-b-2 border-transparent text-slate-500 hover:bg-slate-100">Pauta do Dia</button>
-            </div>
-            <div class="p-6 flex-1 min-h-[400px]" id="painel-atendimento-container">
-                <div class="flex justify-center items-center h-40"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>
-            </div>
-        </div>
-
-        <!-- TELA DE ATENDIMENTO -->
-        <div id="view-atendimento" class="hidden flex flex-col flex-1 p-6">
-            <div id="aba-encerramento" class="space-y-4">
-                <!-- Conteúdo injetado pelo Serviço -->
-            </div>
-        </div>
-    </div>
+    <!-- Container onde o serviço renderiza tudo -->
+    <div id="atendimento-externo-container" class="max-w-6xl mx-auto"></div>
 
     <script type="module">
         import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
-        
         window.AtendimentoExternoService = AtendimentoExternoService;
 
-        // Navegação entre abas
-        const tabs = ['minha-mesa', 'sem-atribuicao', 'pauta-dia'];
-        tabs.forEach(tab => {
-            document.getElementById(`btn-tab-${tab}`).addEventListener('click', async (e) => {
-                // Reset visual
-                document.querySelectorAll('button[id^="btn-tab-"]').forEach(b => {
-                    b.classList.remove('bg-amber-600', 'text-white', 'border-amber-600');
-                    b.classList.add('border-transparent', 'text-slate-500');
-                });
-                e.currentTarget.classList.add('bg-amber-600', 'text-white', 'border-amber-600');
-                
-                // Ação do Serviço
-                document.getElementById('painel-atendimento-container').innerHTML = '<div class="text-center">Sincronizando...</div>';
-                if (tab === 'minha-mesa') await AtendimentoExternoService.iniciarDashboardUnificado();
-                if (tab === 'sem-atribuicao') await AtendimentoExternoService.carregarSemAtribuicao();
-                if (tab === 'pauta-dia') await AtendimentoExternoService.carregarPautaDoDia();
-            });
-        });
-
-        // Função de Atendimento
-        window.abrirMesaDeAtendimento = (nome, pautaId, assistidoId) => {
-            document.getElementById('view-dashboard').classList.add('hidden');
-            document.getElementById('view-atendimento').classList.remove('hidden');
-            document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
-            document.getElementById('assistido-nome').textContent = nome;
-            document.getElementById('assistido-assunto').textContent = "EM ATENDIMENTO";
-            AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
-        };
-
-        // Botão Voltar
-        document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
-            document.getElementById('view-atendimento').classList.add('hidden');
-            document.getElementById('view-dashboard').classList.remove('hidden');
-            document.getElementById('btn-voltar-dashboard').classList.add('hidden');
-            document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
-            AtendimentoExternoService.iniciarDashboardUnificado();
-        });
-
-        // Inicialização
+        // Inicialização global
         document.addEventListener('DOMContentLoaded', async () => {
-            try {
-                const params = new URLSearchParams(window.location.search);
-                AtendimentoExternoService.pautaId = params.get('pautaId') || localStorage.getItem('lastPautaId');
-                await AtendimentoExternoService.init();
-            } catch (e) {
-                document.getElementById('painel-atendimento-container').innerHTML = `<p class="text-red-500 text-center">Erro ao iniciar: ${e.message}</p>`;
-            }
+            await AtendimentoExternoService.init();
         });
     </script>
 </body>
