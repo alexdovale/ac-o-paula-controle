@@ -23,12 +23,6 @@ const statusMap = {
     faltoso:                { cor: 'bg-red-100 text-red-700 border-red-200',          txt: 'Faltoso' },
 };
 
-let deferredPrompt;
-window.addEventListener('beforeinstallprompt', (e) => {
-    e.preventDefault();
-    deferredPrompt = e;
-});
-
 // ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
 
 export const AtendimentoExternoService = {
@@ -37,12 +31,13 @@ export const AtendimentoExternoService = {
     assistidoId: null,
     colaboradorNome: null,
     colaboradorId: null,
+    colaboradorSenha: localStorage.getItem('colabPass') || null,
     fluxoSelecionado: null,
     assistidoData: null,
     todosColaboradores: [],
     colaboradorAtual: null,
     isProcessing: false,
-    isLoadingPautas: false, // <-- Controle de loading da aba Pautas
+    isLoadingPautas: false,
     todosAtendimentosPauta: [],
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
@@ -51,177 +46,61 @@ export const AtendimentoExternoService = {
     modoVisualizacao: 'dashboard',  
     pautasDoDia: [],                
     atendimentosPorPauta: {},
-    colaboradorSenha: localStorage.getItem('colabPass') || '', // Senha local
-    
-    // Flag para evitar loop de renderização
     _isRendering: false,
 
-    // Instâncias Dinâmicas do Firebase V11
     _dbInstance: null,
     _authInstance: null,
 
-    get db() {
-        if (!this._dbInstance) console.warn("⚠️ Acessando DB antes da inicialização. Pode gerar erro de 'collection'.");
-        return this._dbInstance;
-    },
-    set db(val) {
-        if (val && typeof val.collection === 'function') {
-            console.warn("🛡️ Injeção V8 (antiga) barrada. Usando Firebase Modular V11 nativo.");
-            return;
-        }
-        this._dbInstance = val;
-    },
+    get db() { return this._dbInstance; },
+    set db(val) { this._dbInstance = val; },
 
-    get auth() {
-        return this._authInstance;
-    },
-    set auth(val) {
-        this._authInstance = val;
-    },
+    get auth() { return this._authInstance; },
+    set auth(val) { this._authInstance = val; },
 
-    // ── SELETOR ROBUSTO DE DOM (Element Resolver) ──────────────────────────────
     getEl(id) {
-        return document.getElementById(`ext-${id}`) || 
-               document.getElementById(id) || 
-               document.getElementById(`btn-${id}`) || 
-               document.getElementById(`view-${id}`);
+        return document.getElementById(`ext-${id}`) || document.getElementById(id) || document.getElementById(`btn-${id}`) || document.getElementById(`view-${id}`);
     },
 
     async garantirConexaoFirebase() {
         if (this._dbInstance && this._authInstance) return;
-
         let cfg = null;
-
-        if (typeof firebaseConfig !== 'undefined' && firebaseConfig.projectId && firebaseConfig.projectId !== "SEU_PROJECT_ID") {
-            cfg = firebaseConfig;
-        } else if (window.firebaseConfig && window.firebaseConfig.projectId) {
-            cfg = window.firebaseConfig;
-        } else if (window.firebase && window.firebase.app) {
-            try { 
-                cfg = window.firebase.app().options; 
-                console.log("🔥 Configuração Firebase resgatada com sucesso da instância V8!");
-            } catch(e) {}
-        }
-
-        if (!cfg) {
-            console.error("❌ ERRO CRÍTICO: Nenhuma configuração válida do Firebase foi encontrada.");
-            this.showError("Erro de Conexão", "Não foi possível resgatar as chaves da base de dados do Router.");
-            return;
-        }
-
+        if (typeof firebaseConfig !== 'undefined' && firebaseConfig.projectId) cfg = firebaseConfig;
+        else if (window.firebaseConfig && window.firebaseConfig.projectId) cfg = window.firebaseConfig;
+        
         try {
             let appV11;
             const appsExistentes = getApps();
-            const appIsolado = appsExistentes.find(a => a.name === "SIGEP_V11_ISOLADO");
-            
-            if (appIsolado) {
-                appV11 = appIsolado;
-            } else {
-                appV11 = initializeApp(cfg, "SIGEP_V11_ISOLADO");
-            }
-            
-            this._dbInstance = getFirestore(appV11);
-            this._authInstance = getAuth(appV11);
-            console.log("✅ Conexão V11 nativa estabelecida!");
-
-            if (!this._authInstance.currentUser) {
-                await signInAnonymously(this._authInstance);
-            }
-        } catch (error) {
-            console.error("❌ Erro ao inicializar V11:", error);
-            this.showError("Erro de Inicialização", "Falha interna no Firebase Modular.");
-        }
+            const appIsolado = appsExistentes.find(a => a.name === "SIGEP_V11_ISOLADO") || initializeApp(cfg, "SIGEP_V11_ISOLADO");
+            this._dbInstance = getFirestore(appIsolado);
+            this._authInstance = getAuth(appIsolado);
+            if (!this._authInstance.currentUser) await signInAnonymously(this._authInstance);
+        } catch (error) { console.error("Firebase Init Error:", error); }
     },
 
-    // ─── INIT ─────────────────────────────────────────────────────────────────
-
-    async init() {
-        console.log("⚡ Atendimento Externo Inicializado (SPA Ready)");
-
-        await this.garantirConexaoFirebase();
-
-        const obterParametrosURL = () => {
-            const params = {};
-            if (window.location.search) {
-                const searchLimpa = window.location.search.replace(/&amp;/g, '&');
-                new URLSearchParams(searchLimpa).forEach((val, key) => { params[key] = val; });
-            }
-            if (window.location.hash && window.location.hash.includes('?')) {
-                const hashQuery = window.location.hash.split('?')[1].replace(/&amp;/g, '&');
-                new URLSearchParams(hashQuery).forEach((val, key) => { params[key] = val; });
-            }
-            return params;
-        };
-
-        const urlParams = obterParametrosURL();
-
-        this.pautaId        = urlParams['pautaId']        || urlParams['amp;pautaId']        || this.pautaId;
-        this.assistidoId    = urlParams['assistidoId']    || urlParams['amp;assistidoId']    || this.assistidoId;
-        this.colaboradorNome = urlParams['colab']          || urlParams['amp;colab']          || this.colaboradorNome;
-        this.colaboradorId  = urlParams['colabId']        || urlParams['amp;colabId']        || this.colaboradorId || '';
-        const tokenRecebido = urlParams['token']          || urlParams['amp;token'];
-        const telaAtual     = urlParams['view']           || urlParams['amp;view'];
-        const modo          = urlParams['modo']           || urlParams['amp;modo'];
-
-        this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
-
-        if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
-            return;
-        }
-
-        try {
-            this.renderizarContainerLayout();
-            await this.carregarColaboradoresGerais();
-
-            if (!this.colaboradorAtual) {
-                this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
-                return;
-            }
-
-            if (this.assistidoId && !telaAtual) {
-                await this.iniciarAtendimentoIndividual(tokenRecebido);
-                return;
-            }
-
-            const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-            const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
-
-            if (!temSessao && this.modoVisualizacao === 'dashboard') {
-                this.renderizarTelaLoginColaborador();
-                return;
-            }
-
-            await this.iniciarDashboardUnificado();
-
-        } catch (error) {
-            this.showError("Erro Fatal", "Falha geral no carregamento: " + error.message);
-        }
-    },
-
-    // ─── FUNCIONALIDADES DE ACESSO E LINK ──────────────────────────────────────
+    // ─── GESTÃO DE ACESSO E SEGURANÇA ──────────────────────────────────────────
 
     logout() {
-        if (confirm("Tem a certeza que deseja sair da sua sessão?")) {
+        if (confirm("Tem certeza que deseja sair?")) {
             const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
             sessionStorage.removeItem(sessionKey);
             localStorage.removeItem(sessionKey);
             localStorage.removeItem('lastColabName');
-            localStorage.removeItem('colabPass'); // Opcional: remover a senha local
-            window.location.reload(); 
+            localStorage.removeItem('colabPass');
+            localStorage.removeItem('lastPautaId');
+            window.location.reload();
         }
     },
 
     alterarSenhaPrompt() {
-        const nova = prompt("Digite a sua nova senha (mínimo 4 caracteres):");
+        const nova = prompt("Digite a nova senha (mínimo 4 caracteres):");
         if (nova) {
-            if (nova.length < 4) {
-                alert("A senha deve ter pelo menos 4 caracteres.");
-                return;
+            if (nova.length < 4) { 
+                alert("Senha muito curta! Mínimo 4 caracteres."); 
+                return; 
             }
             localStorage.setItem('colabPass', nova);
             this.colaboradorSenha = nova;
-            alert("Senha alterada com sucesso! Use-a no próximo login.");
+            alert("Senha alterada com sucesso!");
         }
     },
 
@@ -241,11 +120,103 @@ export const AtendimentoExternoService = {
             alert("Link da pauta copiado para a área de transferência:\n" + link);
         } catch (err) {
             console.error("Erro ao copiar link: ", err);
-            prompt("Copie o link abaixo:", link); // Fallback caso a API do clipboard falhe
+            prompt("Copie o link abaixo:", link);
         }
     },
 
-    // ─── RENDERIZAÇÃO LAYOUT ──────────────────────────────────────────────────
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+
+    async init() {
+        await this.garantirConexaoFirebase();
+        
+        const params = new URLSearchParams(window.location.search);
+        this.pautaId = params.get('pautaId') || localStorage.getItem('lastPautaId');
+        this.colaboradorNome = params.get('colab') || localStorage.getItem('lastColabName');
+
+        if (!this.pautaId || !this.colaboradorNome) {
+            this.showError("Link Incompleto", "Não foi possível identificar a pauta ou o usuário.");
+            return;
+        }
+
+        localStorage.setItem('lastPautaId', this.pautaId);
+        localStorage.setItem('lastColabName', this.colaboradorNome);
+
+        this.renderizarContainerLayout();
+        await this.carregarColaboradoresGerais();
+
+        if (!this.colaboradorAtual) {
+            this.showError("Acesso Negado", "Colaborador não cadastrado nesta pauta.");
+            return;
+        }
+
+        const precisaLogin = !sessionStorage.getItem(`session_${this.pautaId}`) && !localStorage.getItem(`session_${this.pautaId}`);
+
+        if (precisaLogin) {
+            this.renderizarTelaLoginColaborador();
+        } else {
+            this.iniciarDashboardUnificado();
+        }
+    },
+
+    // ─── CARREGAMENTO DE DADOS ────────────────────────────────────────────────
+
+    async carregarColaboradoresGerais() {
+        try {
+            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
+            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
+        } catch (e) { 
+            console.error("Erro ao carregar colaboradores:", e); 
+        }
+    },
+
+    async _carregarTodasPautasDoColaborador() {
+        this.isLoadingPautas = true;
+        if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
+
+        const hoje = new Date().toISOString().split('T')[0];
+        try {
+            const pautasSnap = await getDocs(collection(this.db, "pautas"));
+            const pautasHoje = pautasSnap.docs
+                .map(d => ({ id: d.id, ...d.data() }))
+                .filter(p => {
+                    const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
+                    return dataOp === hoje && !p.isClosed;
+                });
+
+            const resultado = [];
+            for (const pauta of pautasHoje) {
+                if (pauta.id === this.pautaId) {
+                    resultado.push(pauta);
+                    continue;
+                }
+                try {
+                    const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
+                    if (colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome)) {
+                        resultado.push(pauta);
+                        const unsub = onSnapshot(
+                            collection(this.db, "pautas", pauta.id, "attendances"),
+                            (snap) => {
+                                this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                                if (this.abaAtual === 'pauta-dia' && !this._isRendering) {
+                                    this.renderizarAbaAtual();
+                                }
+                            }
+                        );
+                        this.unsubscribesPautasExtras.push(unsub);
+                    }
+                } catch {}
+            }
+            this.pautasDoDia = resultado;
+        } catch (err) {
+            console.warn("Regras de segurança podem ter bloqueado a leitura total de pautas.", err);
+        } finally {
+            this.isLoadingPautas = false;
+            if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
+        }
+    },
+
+    // ─── RENDERIZAÇÃO E INTERFACE ─────────────────────────────────────────────
 
     renderizarContainerLayout() {
         const parent = document.getElementById('atendimento-externo-container');
@@ -327,7 +298,6 @@ export const AtendimentoExternoService = {
             const btn = this.getEl(`btn-tab-${tab}`);
             if (btn) {
                 btn.onclick = async (e) => {
-                    // Prevenir múltiplos cliques rápidos
                     if (this._isRendering) return;
                     this._isRendering = true;
                     
@@ -342,6 +312,9 @@ export const AtendimentoExternoService = {
                         const container = this.getEl('painel-atendimento-container');
                         if (container) container.innerHTML = '<div class="flex justify-center items-center py-20"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>';
                         
+                        if (tab === 'pauta-dia') {
+                            await this._carregarTodasPautasDoColaborador();
+                        }
                         await this.renderizarAbaAtual();
                     } finally {
                         this._isRendering = false;
@@ -358,190 +331,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── BOTÃO ATENDER (CORRIGIDO) ────────────────────────────────────────────
-
-    async carregarAssistidoIndividual(pautaId, assistidoId) {
-        console.log("⚡ Botão ATENDER clicado para o SPA! Processando...", {pautaId, assistidoId});
-        
-        // 1. FORÇA MUDANÇA VISUAL IMEDIATA
-        const viewDash = this.getEl('view-dashboard');
-        const viewAtend = this.getEl('view-atendimento');
-        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
-
-        if (viewDash) viewDash.classList.add('hidden');
-        if (viewAtend) viewAtend.classList.remove('hidden');
-        if (btnVoltar) btnVoltar.classList.remove('hidden');
-
-        try {
-            const abaEncerramento = document.getElementById('aba-encerramento');
-            if (abaEncerramento) {
-                abaEncerramento.innerHTML = `<div class="flex flex-col items-center justify-center py-24"><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600"></div><p class="mt-4 font-black text-slate-400 tracking-widest text-sm uppercase">Buscando dados no servidor...</p></div>`;
-            }
-
-            await this.garantirConexaoFirebase();
-
-            if (!this.db) throw new Error("A Base de dados não foi inicializada.");
-
-            this.pautaId = pautaId;
-            this.assistidoId = assistidoId;
-
-            // PREVINE TRAVAMENTO SILENCIOSO NO FIREBASE (Promise Race de 8 segundos)
-            const timeoutProm = new Promise((_, reject) => setTimeout(() => reject(new Error("O servidor demorou muito para responder.")), 8000));
-            const fetchProm = Promise.all([
-                getDoc(doc(this.db, "pautas", this.pautaId)),
-                getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId))
-            ]);
-
-            const [pautaDoc, docSnap] = await Promise.race([fetchProm, timeoutProm]);
-
-            if (docSnap.exists() && pautaDoc.exists()) {
-                const assistido = docSnap.data();
-                this.assistidoData = assistido;
-                this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
-                
-                const labelNome = this.getEl('ext-assistido-nome') || this.getEl('assistido-nome');
-                const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
-                if (labelNome) labelNome.textContent = assistido.name || 'Assistido';
-                if (labelSub) labelSub.textContent = `Em atendimento • Pauta: ${pautaDoc.data().name}`;
-
-                this.renderizarInterface(assistido, pautaDoc.data());
-                this.setupListeners();
-                this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
-            } else {
-                this.showError("Processo Não Encontrado", "O ID do assistido fornecido não existe nesta pauta.");
-            }
-
-        } catch (error) {
-            console.error("❌ Ocorreu um erro no momento de carregar o Assistido:", error);
-            this.showError("Erro de Conexão", error.message);
-        }
-    },
-
-    async iniciarAtendimentoIndividual(tokenRecebido) {
-        if (!this.pautaId || !this.assistidoId) return this.showError("Parâmetros Ausentes", "Faltam IDs para carregar.");
-
-        const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
-        if (!pautaDoc.exists()) return this.showError("Pauta não localizada", "A pauta não existe.");
-
-        const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
-        if (!docSnap.exists()) return this.showError("Processo não encontrado", "Assistido não existe.");
-
-        const assistido = docSnap.data();
-        this.assistidoData = assistido;
-        this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
-
-        if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            return this.showError("Acesso Seguro", "Token de acesso inválido.");
-        }
-
-        this.renderizarInterface(assistido, pautaDoc.data());
-        this.setupListeners();
-        this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
-    },
-
-    // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
-
-    async iniciarDashboardUnificado() {
-        this.renderizarContainerLayout();
-
-        const viewAtend = this.getEl('view-atendimento');
-        const viewDash = this.getEl('view-dashboard');
-        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
-        
-        if (viewAtend) viewAtend.classList.add('hidden');
-        if (viewDash) viewDash.classList.remove('hidden');
-        if (btnVoltar) btnVoltar.classList.add('hidden');
-
-        const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
-        if (labelSub) labelSub.textContent = `Sessão Ativa • ${this.colaboradorNome}`;
-
-        this._cancelarListeners();
-        this.setupRealtimeListenerPauta();
-    },
-
-    async carregarSemAtribuicao() {
-        this.abaAtual = 'sem-atribuicao';
-        await this.renderizarAbaAtual();
-    },
-
-    async carregarPautaDoDia() {
-        this.abaAtual = 'pauta-dia';
-        await this._carregarTodasPautasDoColaborador();
-        await this.renderizarAbaAtual();
-    },
-
-    _cancelarListeners() {
-        if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
-        this.unsubscribesPautasExtras.forEach(u => u && u());
-        this.unsubscribesPautasExtras = [];
-    },
-
-    setupRealtimeListenerPauta() {
-        this._cancelarListeners();
-        if (!this.pautaId || !this.db) return;
-
-        this.unsubscribeDashboard = onSnapshot(
-            collection(this.db, "pautas", this.pautaId, "attendances"),
-            (snap) => {
-                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
-                // Evitar renderização duplicada em cascata
-                if (!this._isRendering) {
-                    this.renderizarAbaAtual();
-                }
-            },
-            (error) => console.error("❌ Erro no realtime (Painel):", error)
-        );
-    },
-
-    async _carregarTodasPautasDoColaborador() {
-        this.isLoadingPautas = true;
-        if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-
-        const hoje = new Date().toISOString().split('T')[0];
-        try {
-            const pautasSnap = await getDocs(collection(this.db, "pautas"));
-            const pautasHoje = pautasSnap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(p => {
-                    const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
-                    return dataOp === hoje && !p.isClosed;
-                });
-
-            const resultado = [];
-            for (const pauta of pautasHoje) {
-                if (pauta.id === this.pautaId) {
-                    resultado.push(pauta);
-                    continue;
-                }
-                try {
-                    const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
-                    if (colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome)) {
-                        resultado.push(pauta);
-                        const unsub = onSnapshot(
-                            collection(this.db, "pautas", pauta.id, "attendances"),
-                            (snap) => {
-                                this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                                if (this.abaAtual === 'pauta-dia' && !this._isRendering) {
-                                    this.renderizarAbaAtual();
-                                }
-                            }
-                        );
-                        this.unsubscribesPautasExtras.push(unsub);
-                    }
-                } catch {}
-            }
-            this.pautasDoDia = resultado;
-        } catch (err) {
-            console.warn("Regras de segurança podem ter bloqueado a leitura total de pautas.", err);
-        } finally {
-            this.isLoadingPautas = false;
-            if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-        }
-    },
-
     async renderizarAbaAtual() {
-        // Evitar renderizações concorrentes
         if (this._isRendering) return;
         this._isRendering = true;
         
@@ -581,7 +371,6 @@ export const AtendimentoExternoService = {
     },
 
     _renderSemAtribuicao(container) {
-        // Incluímos 'aguardando' no filtro
         const semDono = this.todosAtendimentosPauta.filter(a =>
             (a.status === 'emAtendimento' || a.status === 'aguardando') &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
@@ -591,14 +380,14 @@ export const AtendimentoExternoService = {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">✅</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso sem atribuição (Aguardando ou Em Atendimento).</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso sem atribuição.</p>
                 </div>`;
             return;
         }
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso. Ele irá para sua mesa automaticamente.
+                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso.
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 ${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}
@@ -619,7 +408,7 @@ export const AtendimentoExternoService = {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta do dia encontrada para você.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta do dia encontrada.</p>
                 </div>`;
             return;
         }
@@ -754,7 +543,10 @@ export const AtendimentoExternoService = {
             this.abaAtual = 'minha-mesa';
             this.getEl('btn-tab-minha-mesa')?.click();
             if (typeof showNotification === 'function') showNotification("Caso puxado para a sua mesa!", "success");
-        } catch (error) {}
+        } catch (error) {
+            console.error("Erro ao puxar caso:", error);
+            if (typeof showNotification === 'function') showNotification("Erro ao puxar caso.", "error");
+        }
     },
 
     async devolverParaFila(pautaId, assistidoId) {
@@ -768,15 +560,9 @@ export const AtendimentoExternoService = {
             if (this.colaboradorAtual?.id) {
                 await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
             }
-        } catch (error) {}
-    },
-
-    async carregarColaboradoresGerais() {
-        try {
-            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
-            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
-        } catch {}
+        } catch (error) {
+            console.error("Erro ao devolver caso:", error);
+        }
     },
 
     atualizarBadgeHeader() {
@@ -849,7 +635,6 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            // Verifica primeiro se a senha armazenada localmente corresponde, senão tenta a matrícula (primeiro acesso)
             if (email === realEmail && (senhaInput === this.colaboradorSenha || senhaInput === realMat)) {
                 const key = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
                 document.getElementById('lembrar-login-colab').checked
@@ -881,6 +666,119 @@ export const AtendimentoExternoService = {
                     <button onclick="window.location.reload()" class="mt-8 bg-slate-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-700 transition">TENTAR NOVAMENTE</button>
                 </div>
             </div>`;
+    },
+
+    // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
+
+    async iniciarDashboardUnificado() {
+        this.renderizarContainerLayout();
+
+        const viewAtend = this.getEl('view-atendimento');
+        const viewDash = this.getEl('view-dashboard');
+        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
+        
+        if (viewAtend) viewAtend.classList.add('hidden');
+        if (viewDash) viewDash.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.add('hidden');
+
+        const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
+        if (labelSub) labelSub.textContent = `Sessão Ativa • ${this.colaboradorNome}`;
+
+        this._cancelarListeners();
+        this.setupRealtimeListenerPauta();
+    },
+
+    async carregarSemAtribuicao() {
+        this.abaAtual = 'sem-atribuicao';
+        await this.renderizarAbaAtual();
+    },
+
+    async carregarPautaDoDia() {
+        this.abaAtual = 'pauta-dia';
+        await this._carregarTodasPautasDoColaborador();
+        await this.renderizarAbaAtual();
+    },
+
+    _cancelarListeners() {
+        if (this.unsubscribeDashboard) { 
+            this.unsubscribeDashboard(); 
+            this.unsubscribeDashboard = null; 
+        }
+        this.unsubscribesPautasExtras.forEach(u => u && u());
+        this.unsubscribesPautasExtras = [];
+    },
+
+    setupRealtimeListenerPauta() {
+        this._cancelarListeners();
+        if (!this.pautaId || !this.db) return;
+
+        this.unsubscribeDashboard = onSnapshot(
+            collection(this.db, "pautas", this.pautaId, "attendances"),
+            (snap) => {
+                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+                this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
+                if (!this._isRendering) {
+                    this.renderizarAbaAtual();
+                }
+            },
+            (error) => console.error("❌ Erro no realtime (Painel):", error)
+        );
+    },
+
+    // ─── BOTÃO ATENDER ─────────────────────────────────────────────────────────
+
+    async carregarAssistidoIndividual(pautaId, assistidoId) {
+        console.log("⚡ Botão ATENDER clicado!", {pautaId, assistidoId});
+        
+        const viewDash = this.getEl('view-dashboard');
+        const viewAtend = this.getEl('view-atendimento');
+        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
+
+        if (viewDash) viewDash.classList.add('hidden');
+        if (viewAtend) viewAtend.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.remove('hidden');
+
+        try {
+            const abaEncerramento = document.getElementById('aba-encerramento');
+            if (abaEncerramento) {
+                abaEncerramento.innerHTML = `<div class="flex flex-col items-center justify-center py-24"><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600"></div><p class="mt-4 font-black text-slate-400 tracking-widest text-sm uppercase">Buscando dados...</p></div>`;
+            }
+
+            await this.garantirConexaoFirebase();
+            if (!this.db) throw new Error("Base de dados não inicializada.");
+
+            this.pautaId = pautaId;
+            this.assistidoId = assistidoId;
+
+            const timeoutProm = new Promise((_, reject) => setTimeout(() => reject(new Error("O servidor demorou muito para responder.")), 8000));
+            const fetchProm = Promise.all([
+                getDoc(doc(this.db, "pautas", this.pautaId)),
+                getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId))
+            ]);
+
+            const [pautaDoc, docSnap] = await Promise.race([fetchProm, timeoutProm]);
+
+            if (docSnap.exists() && pautaDoc.exists()) {
+                const assistido = docSnap.data();
+                this.assistidoData = assistido;
+                this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
+                
+                const labelNome = this.getEl('ext-assistido-nome') || this.getEl('assistido-nome');
+                const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
+                if (labelNome) labelNome.textContent = assistido.name || 'Assistido';
+                if (labelSub) labelSub.textContent = `Em atendimento • Pauta: ${pautaDoc.data().name}`;
+
+                this.renderizarInterface(assistido, pautaDoc.data());
+                this.setupListeners();
+                this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
+            } else {
+                this.showError("Processo Não Encontrado", "O ID do assistido não existe nesta pauta.");
+            }
+
+        } catch (error) {
+            console.error("❌ Erro ao carregar Assistido:", error);
+            this.showError("Erro de Conexão", error.message);
+        }
     },
 
     // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ─────────────────────────────────
