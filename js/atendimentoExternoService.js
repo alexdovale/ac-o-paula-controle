@@ -1,4 +1,3 @@
-
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -60,8 +59,29 @@ export const AtendimentoExternoService = {
         if (!this._dbInstance) console.warn("⚠️ Acessando DB antes da inicialização. Pode gerar erro de 'collection'.");
         return this._dbInstance;
     },
+    set db(val) {
+        // Ignoramos a injeção manual se for incompatível para proteger contra erros de V8 vs V11
+        if (val && typeof val.collection === 'function') {
+            console.warn("🛡️ Injeção V8 (antiga) barrada. Usando Firebase Modular V11 nativo.");
+            return;
+        }
+        this._dbInstance = val;
+    },
+
     get auth() {
         return this._authInstance;
+    },
+    set auth(val) {
+        this._authInstance = val;
+    },
+
+    // ── SELETOR ROBUSTO DE DOM (Element Resolver) ──────────────────────────────
+    // Resolve conflitos de IDs quando o arquivo é carregado dinamicamente no SPA
+    getEl(id) {
+        return document.getElementById(`ext-${id}`) || 
+               document.getElementById(id) || 
+               document.getElementById(`btn-${id}`) || 
+               document.getElementById(`view-${id}`);
     },
 
     // 🔹 O HACK DEFINITIVO: Extrai a configuração de qualquer lugar para forçar o V11 a conectar!
@@ -155,6 +175,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
+            this.renderizarContainerLayout();
             await this.carregarColaboradoresGerais();
 
             if (!this.colaboradorAtual) {
@@ -179,6 +200,87 @@ export const AtendimentoExternoService = {
 
         } catch (error) {
             this.showError("Erro Fatal", "Falha geral no carregamento: " + error.message);
+        }
+    },
+
+    // ─── CONSTRUTOR DE INTERFACE PRINCIPAL (Anti-Esmagamento de SPA) ───────────
+    renderizarContainerLayout() {
+        const parent = document.getElementById('atendimento-externo-container');
+        if (!parent) return;
+
+        // Injeta a casca se o HTML estiver vazio (SPA mode)
+        if (!document.getElementById('view-dashboard')) {
+            parent.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in flex flex-col border border-slate-200 bg-white rounded-2xl shadow-2xl overflow-hidden";
+            parent.innerHTML = `
+                <!-- HEADER PRINCIPAL -->
+                <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex items-center gap-4 relative overflow-hidden shrink-0">
+                    <button id="ext-btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+                    <div class="flex flex-col overflow-hidden w-full relative z-10">
+                        <h1 id="ext-assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                        <p id="ext-assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                    </div>
+                </div>
+
+                <!-- VIEW 1: DASHBOARD -->
+                <div id="view-dashboard" class="flex flex-col flex-1">
+                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                        <button id="ext-btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">💻 Minha Mesa</button>
+                        <button id="ext-btn-tab-sem-atribuicao" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">📥 Sem Atribuição</button>
+                        <button id="ext-btn-tab-pauta-dia" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">📅 Pauta do Dia</button>
+                    </div>
+                    <div class="p-4 sm:p-6 bg-slate-50/50 flex-1">
+                        <div id="painel-atendimento-container" class="w-full min-h-[300px]">
+                            <div class="flex justify-center items-center py-20"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- VIEW 2: TELA INDIVIDUAL -->
+                <div id="view-atendimento" class="hidden flex-col flex-1">
+                    <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
+                        <button id="ext-tab-btn-recording" class="ext-sub-tab flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">Encerramento / Fluxo</button>
+                        <button id="ext-tab-btn-historico" class="ext-tab-btn flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">Histórico Recepção</button>
+                    </div>
+                    <div class="p-4 sm:p-6 bg-white flex-1">
+                        <div id="aba-encerramento" class="space-y-6"></div>
+                        <div id="aba-historico" class="hidden">
+                            <div id="lista-historico" class="space-y-4"></div>
+                        </div>
+                    </div>
+                </div>
+            `;
+            this.setupAbasNavegacaoInterna();
+        }
+    },
+
+    setupAbasNavegacaoInterna() {
+        const tabs = ['minha-mesa', 'sem-atribuicao', 'pauta-dia'];
+        tabs.forEach(tab => {
+            const btn = this.getEl(`btn-tab-${tab}`);
+            if (btn) {
+                btn.onclick = async (e) => {
+                    tabs.forEach(t => {
+                        const b = this.getEl(`btn-tab-${t}`);
+                        if (b) b.className = 'flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap';
+                    });
+                    e.currentTarget.className = 'flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap';
+                    this.abaAtual = tab;
+                    
+                    const container = this.getEl('painel-atendimento-container');
+                    if (container) container.innerHTML = '<div class="flex justify-center items-center py-20"><div class="animate-spin h-8 w-8 border-b-2 border-amber-600 rounded-full"></div></div>';
+                    
+                    await this.renderizarAbaAtual();
+                };
+            }
+        });
+
+        const btnVoltar = this.getEl('btn-voltar-dashboard');
+        if (btnVoltar) {
+            btnVoltar.onclick = () => {
+                this.iniciarDashboardUnificado();
+            };
         }
     },
 
@@ -209,6 +311,11 @@ export const AtendimentoExternoService = {
                 this.assistidoData = assistido;
                 this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
                 
+                const labelNome = this.getEl('assistido-nome');
+                const labelSub = this.getEl('assistido-assunto');
+                if (labelNome) labelNome.textContent = assistido.name || 'Assistido';
+                if (labelSub) labelSub.textContent = `Em atendimento • Pauta: ${pautaDoc.data().name}`;
+
                 this.renderizarInterface(assistido, pautaDoc.data());
                 this.setupListeners();
                 this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
@@ -247,16 +354,26 @@ export const AtendimentoExternoService = {
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
     async iniciarDashboardUnificado() {
+        this.getEl('view-atendimento')?.classList.add('hidden');
+        this.getEl('view-dashboard')?.classList.remove('hidden');
+        this.getEl('btn-voltar-dashboard')?.classList.add('hidden');
+
+        const labelSub = this.getEl('assistido-assunto');
+        if (labelSub) labelSub.textContent = `Sessão Ativa • ${this.colaboradorNome}`;
+
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
-        this.renderizarContainerDashboard();
+    },
 
-        if (this.modoVisualizacao === 'abas') {
-            this.setupAbasNavegacao();
-            this._carregarTodasPautasDoColaborador();
-        } else {
-            this.atualizarListasDoDashboard();
-        }
+    async carregarSemAtribuicao() {
+        this.abaAtual = 'sem-atribuicao';
+        await this.renderizarAbaAtual();
+    },
+
+    async carregarPautaDoDia() {
+        this.abaAtual = 'pauta-dia';
+        await this._carregarTodasPautasDoColaborador();
+        await this.renderizarAbaAtual();
     },
 
     _cancelarListeners() {
@@ -274,11 +391,7 @@ export const AtendimentoExternoService = {
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
-                if (this.modoVisualizacao === 'abas') {
-                    this.renderizarAbaAtual();
-                } else {
-                    this.atualizarListasDoDashboard();
-                }
+                this.renderizarAbaAtual();
             },
             (error) => console.error("❌ Erro no realtime (Painel):", error)
         );
@@ -321,181 +434,8 @@ export const AtendimentoExternoService = {
         } catch (err) {}
     },
 
-    renderizarContainerDashboard() {
-        const corpo = document.querySelector('#atendimento-externo-container .w-full.max-w-2xl') || document.querySelector('#atendimento-externo-container .w-full.max-w-4xl') || document.querySelector('.w-full.max-w-6xl') || document.getElementById('atendimento-externo-container');
-        if(!corpo) return;
-
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const tituloPainel = this.modoVisualizacao === 'abas' ? 'Painel SIGEP' : (isDefensor ? 'Mesa do Defensor' : 'Mesa de Trabalho');
-        const subtituloPainel = `${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
-
-        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
-        const colorMap = { slate: 'bg-slate-800', indigo: 'bg-indigo-700', emerald: 'bg-emerald-700', rose: 'bg-rose-700', blue: 'bg-blue-700' };
-        const headerColorClass = colorMap[prefs.color] || colorMap.slate;
-
-        corpo.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in";
-        corpo.innerHTML = `
-            <div id="header-bg" class="${headerColorClass} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500">
-                <div class="absolute top-0 right-0 w-64 h-64 bg-white opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
-                <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 relative z-10 w-full justify-between">
-                    <div class="flex items-center gap-4">
-                        <div class="bg-white/10 p-2.5 rounded-xl border border-white/20 shadow-inner flex-shrink-0">
-                            <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-10 w-auto object-contain">
-                        </div>
-                        <div>
-                            <h1 class="text-white font-black text-xl sm:text-2xl uppercase tracking-widest flex items-center gap-2">
-                                ${tituloPainel}
-                            </h1>
-                            <p class="text-white/80 text-xs sm:text-sm font-bold mt-1 tracking-wide">${subtituloPainel}</p>
-                        </div>
-                    </div>
-                    <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end items-center">
-                        <span id="badge-status-header" class="bg-white/20 text-white/80 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider">⏳</span>
-                        
-                        ${this.modoVisualizacao === 'abas' ? `
-                        <button id="btn-voltar-dashboard" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition" title="Voltar ao modo Mesa">
-                            ← Mesa
-                        </button>` : `
-                        <button id="btn-ir-abas" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition" title="Ver pauta completa">
-                            📋 Pauta
-                        </button>`}
-
-                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm">⚙️</button>
-
-                        <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
-                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Layout da Tela</h4>
-                            <div class="flex gap-2 mb-5 bg-gray-50 p-1.5 rounded-lg border">
-                                <button data-mode="tabs" class="mode-btn flex-1 py-2 text-xs font-bold rounded transition-all ${prefs.mode === 'tabs' ? 'bg-white text-gray-800 border shadow-sm' : 'text-gray-400 hover:bg-gray-100'}">Abas</button>
-                                <button data-mode="list" class="mode-btn flex-1 py-2 text-xs font-bold rounded transition-all ${prefs.mode === 'list' ? 'bg-white text-gray-800 border shadow-sm' : 'text-gray-400 hover:bg-gray-100'}">Tudo na Tela</button>
-                            </div>
-                            <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Cor do Cabeçalho</h4>
-                            <div class="flex gap-2 justify-between px-1">
-                                ${['slate','blue','indigo','emerald','rose'].map(c => `
-                                    <button data-color="${c}" class="color-btn w-6 h-6 rounded-full bg-${c === 'slate' ? 'slate-800' : c+'-700'} ring-offset-2 transition-transform hover:scale-110 ${prefs.color === c ? 'ring-2 ring-offset-2 scale-110 shadow-md' : ''}"></button>
-                                `).join('')}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div id="dash-body" class="bg-slate-50 p-4 sm:p-6 rounded-b-2xl shadow-lg border border-slate-300 min-h-[500px] transition-colors duration-500">
-                ${this.modoVisualizacao === 'abas' ? this._htmlAbasNavegacao() : this._htmlDashboardTradicional()}
-            </div>
-        `;
-
-        this._setupHeaderInteracoes(colorMap, prefs);
-        this.atualizarBadgeHeader();
-
-        document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
-            this.modoVisualizacao = 'dashboard';
-            this._cancelarListeners();
-            this.iniciarDashboardUnificado();
-        });
-        document.getElementById('btn-ir-abas')?.addEventListener('click', () => {
-            this.modoVisualizacao = 'abas';
-            this._cancelarListeners();
-            this.iniciarDashboardUnificado();
-        });
-    },
-
-    _setupHeaderInteracoes(colorMap, prefs) {
-        const btnSettings = document.getElementById('btn-dash-settings');
-        const menuSettings = document.getElementById('dash-settings-menu');
-
-        btnSettings?.addEventListener('click', (e) => { e.stopPropagation(); menuSettings.classList.toggle('hidden'); });
-        document.addEventListener('click', (e) => {
-            if (menuSettings && !menuSettings.contains(e.target) && !btnSettings.contains(e.target)) {
-                menuSettings.classList.add('hidden');
-            }
-        });
-
-        document.querySelectorAll('.color-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const c = e.target.dataset.color;
-                prefs.color = c;
-                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
-                const hdr = document.getElementById('header-bg');
-                if (hdr) hdr.className = `${colorMap[c]} p-6 sm:p-8 rounded-t-2xl shadow-xl flex items-center justify-between relative overflow-visible border-b border-white/10 transition-colors duration-500`;
-            });
-        });
-
-        document.querySelectorAll('.mode-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                prefs.mode = e.target.dataset.mode;
-                localStorage.setItem('dashboard_prefs', JSON.stringify(prefs));
-                menuSettings?.classList.add('hidden');
-                if (this.modoVisualizacao === 'abas') this.renderizarAbaAtual();
-                else this.atualizarListasDoDashboard();
-            });
-        });
-    },
-
-    _htmlAbasNavegacao() {
-        return `
-            <div class="mb-4 border-b border-slate-200">
-                <div class="flex gap-1 sm:gap-2 overflow-x-auto">
-                    <button id="btn-tab-minha-mesa" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-amber-600 text-white shadow-md">
-                        🖥️ Minha Mesa
-                    </button>
-                    <button id="btn-tab-sem-atribuicao" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        👥 Sem Atribuição
-                    </button>
-                    <button id="btn-tab-pauta-dia" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        📋 Pauta do Dia
-                    </button>
-                </div>
-            </div>
-            <div id="painel-atendimento-container" class="min-h-[400px]">
-                <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
-            </div>
-        `;
-    },
-
-    _htmlDashboardTradicional() {
-        return `
-            <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
-                <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar...">
-            </div>
-            <div id="tabs-container-wrapper" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6">
-                <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
-            </div>
-            <div id="lista-dashboard-conteudo" class="space-y-3 sm:space-y-4">
-                <div class="flex justify-center py-20"><div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div></div>
-            </div>
-        `;
-    },
-
-    setupAbasNavegacao() {
-        const abas = [
-            { id: 'minha-mesa',      btnId: 'btn-tab-minha-mesa',      cor: 'bg-amber-600' },
-            { id: 'sem-atribuicao',  btnId: 'btn-tab-sem-atribuicao',  cor: 'bg-blue-600' },
-            { id: 'pauta-dia',       btnId: 'btn-tab-pauta-dia',       cor: 'bg-slate-700' },
-        ];
-
-        const ativarAba = (abaId) => {
-            this.abaAtual = abaId;
-            abas.forEach(aba => {
-                const btn = document.getElementById(aba.btnId);
-                if (!btn) return;
-                if (aba.id === abaId) {
-                    btn.className = `tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all ${aba.cor} text-white shadow-md`;
-                } else {
-                    btn.className = 'tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200';
-                }
-            });
-            this.renderizarAbaAtual();
-        };
-
-        document.getElementById('btn-tab-minha-mesa')?.addEventListener('click', () => ativarAba('minha-mesa'));
-        document.getElementById('btn-tab-sem-atribuicao')?.addEventListener('click', () => ativarAba('sem-atribuicao'));
-        document.getElementById('btn-tab-pauta-dia')?.addEventListener('click', () => ativarAba('pauta-dia'));
-
-        this.renderizarAbaAtual();
-    },
-
-    renderizarAbaAtual() {
-        const container = document.getElementById('painel-atendimento-container');
+    async renderizarAbaAtual() {
+        const container = this.getEl('painel-atendimento-container');
         if (!container) return;
 
         if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
@@ -574,53 +514,40 @@ export const AtendimentoExternoService = {
             const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
             html += `
-                <div class="mb-8">
-                    <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <h3 class="font-black text-slate-800 text-base">${escapeHTML(pauta.name)}</h3>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-wider">${pauta.type || 'agendamento'} · ${total} registros</p>
-                        </div>
-                        <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
+                <div class="mb-8 border p-4 bg-white rounded-2xl shadow-sm">
+                    <div class="flex justify-between items-center mb-2">
+                        <h4 class="font-black text-slate-800 uppercase text-sm">${escapeHTML(pauta.name)}</h4>
+                        <span class="text-xs font-bold text-green-600">${porcentagem}% Concluído</span>
                     </div>
-
-                    <div class="h-1.5 bg-slate-100 rounded-full mb-3">
-                        <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
+                    <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
+                        <div class="bg-green-500 h-full" style="width: ${porcentagem}%"></div>
                     </div>
-
-                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
-                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-amber-600">${aguardando}</div>
-                            <div class="text-[9px] text-amber-500 font-bold uppercase">Aguard.</div>
-                        </div>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-blue-600">${atendendo}</div>
-                            <div class="text-[9px] text-blue-500 font-bold uppercase">Atend.</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-green-600">${atendidos}</div>
-                            <div class="text-[9px] text-green-500 font-bold uppercase">Prontos</div>
-                        </div>
-                        <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-red-500">${faltosos}</div>
-                            <div class="text-[9px] text-red-400 font-bold uppercase">Faltosos</div>
-                        </div>
-                        ${dist > 0 ? `
-                        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-cyan-600">${dist}</div>
-                            <div class="text-[9px] text-cyan-500 font-bold uppercase">Distrib.</div>
-                        </div>` : ''}
+                    <div class="grid grid-cols-3 gap-2 text-center text-xs mb-4">
+                        <div class="bg-amber-50 p-2 rounded-lg border border-amber-200 text-amber-700 font-bold">Aguardando: ${aguardando}</div>
+                        <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-blue-700 font-bold">Atendendo: ${atendendo}</div>
+                        <div class="bg-green-50 p-2 rounded-lg border border-green-200 text-green-700 font-bold">Prontos: ${atendidos}</div>
                     </div>
-
+                    <button onclick="window.AtendimentoExternoService.mudarPautaFoco('${pauta.id}')" class="w-full text-center bg-slate-800 text-white font-bold py-2 rounded-xl text-xs hover:bg-slate-900 transition">🔍 Abrir esta Pauta</button>
+                    
+                    <div class="mt-4">
                     ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
                     ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
                     ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
                     ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', pauta.id)}
+                    </div>
                 </div>
-                <hr class="border-slate-200 mb-6">
             `;
         }
 
         container.innerHTML = html;
+    },
+
+    mudarPautaFoco(pautaId) {
+        this.pautaId = pautaId;
+        localStorage.setItem('lastPautaId', pautaId);
+        this.abaAtual = 'minha-mesa';
+        const tabMinhaMesa = this.getEl('btn-tab-minha-mesa');
+        if (tabMinhaMesa) tabMinhaMesa.click();
     },
 
     _htmlGrupoStatus(titulo, lista, modo, pautaId) {
@@ -642,21 +569,18 @@ export const AtendimentoExternoService = {
         const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: assistido.status };
         const donoLabel = assistido.assignedCollaborator?.name ? `👤 ${escapeHTML(assistido.assignedCollaborator.name)}` : '⚠️ Sem dono';
         const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse">🚨</span>` : '';
-        const baseUrl = window.location.href.split('?')[0];
-        const linkIndividual = `${baseUrl}?pautaId=${pid}&assistidoId=${assistido.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${assistido.delegationToken || ''}`;
 
         let botoesHtml = '';
         if (modo === 'puxar') {
             botoesHtml = `<button class="btn-puxar-caso w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2 rounded-lg transition shadow-sm" data-pauta-id="${pid}" data-assistido-id="${assistido.id}">👇 Puxar para mim</button>`;
         } else if (modo === 'mesa') {
-            // 🔹 CHAMADA DIRETA PARA O SERVIÇO, sem depender do global que foi ocultado pelo router
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
                     <button onclick="window.AtendimentoExternoService.carregarAssistidoIndividual('${pid}', '${assistido.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</button>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition" data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
         } else {
-            botoesHtml = `<a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center">🔍 Ver Detalhes</a>`;
+            botoesHtml = `<button onclick="window.AtendimentoExternoService.carregarAssistidoIndividual('${pid}', '${assistido.id}')" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center">🔍 Ver Detalhes</button>`;
         }
 
         return `
@@ -704,7 +628,7 @@ export const AtendimentoExternoService = {
             }
 
             this.abaAtual = 'minha-mesa';
-            document.getElementById('btn-tab-minha-mesa')?.click();
+            this.getEl('btn-tab-minha-mesa')?.click();
             if (typeof showNotification === 'function') showNotification("Caso puxado para a sua mesa!", "success");
         } catch (error) {}
     },
@@ -721,130 +645,6 @@ export const AtendimentoExternoService = {
                 await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
             }
         } catch (error) {}
-    },
-
-    atualizarListasDoDashboard() {
-        const container = document.getElementById('lista-dashboard-conteudo');
-        const tabsDiv   = document.getElementById('tabs-dashboard');
-        const wrapperBusca = document.getElementById('wrapper-busca-historico');
-        if (!container) return;
-
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const prefs = JSON.parse(localStorage.getItem('dashboard_prefs')) || { mode: 'tabs', color: 'slate' };
-        const baseUrl = window.location.href.split('?')[0];
-
-        const desenharCard = (item, isAberto) => {
-            const st = statusMap[item.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: item.status };
-            const notas = item.notesRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">⚠️ ${escapeHTML(item.notesRevisao)}</div>` : '';
-            const numCNP = item.numeroProcesso ? `<span class="font-mono text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
-            const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
-            
-            if (isAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
-                return `
-                    <div class="border-2 ${urgencia} bg-white border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
-                        <div class="min-w-0 flex-1">
-                            <h3 class="font-black text-slate-800 text-base truncate">${escapeHTML(item.name)}</h3>
-                            <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
-                            ${numCNP} ${notas}
-                        </div>
-                        <button onclick="window.AtendimentoExternoService.carregarAssistidoIndividual('${this.pautaId}', '${item.id}')" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</button>
-                    </div>`;
-            }
-
-            const hora = item.attendedAt ? new Date(item.attendedAt).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
-            return `
-                <div class="border ${urgencia} border-slate-200 bg-white p-3 rounded-xl shadow-sm flex justify-between items-center gap-3 mb-2">
-                    <div class="min-w-0 flex-1">
-                        <h3 class="font-black text-slate-800 text-sm truncate">${escapeHTML(item.name)}</h3>
-                        <p class="text-[10px] text-slate-400 truncate">${escapeHTML(item.subject || '')}</p>
-                        ${numCNP}
-                    </div>
-                    <div class="shrink-0 text-right">
-                        <span class="text-[9px] font-black px-2 py-1 rounded border ${st.cor}">${st.txt}</span>
-                        <p class="text-[9px] text-slate-400 mt-1">${hora}</p>
-                    </div>
-                </div>`;
-        };
-
-        const renderLista = (lista, isAberto, aviso) => {
-            if (lista.length === 0) {
-                container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${aviso}</p></div>`;
-                return;
-            }
-            container.innerHTML = lista.map(i => desenharCard(i, isAberto)).join('');
-        };
-
-        const resetTabs = () => {
-            if (wrapperBusca) wrapperBusca.classList.add('hidden');
-            document.querySelectorAll('.tab-btn').forEach(b => {
-                b.className = b.className.replace(/bg-slate-800|bg-emerald-600|bg-indigo-600|text-white|shadow|mode-btn-active/g, '').trim();
-                b.classList.add('bg-white', 'text-slate-500', 'hover:bg-slate-100', 'tab-btn');
-            });
-        };
-
-        if (isDefensor) {
-            const pendentes   = this.todosAtendimentosPauta.filter(a => ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) || (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome));
-            const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-            const historico    = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-            if (prefs.mode === 'list') {
-                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, false)).join('');
-                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            } else {
-                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                tabsDiv.innerHTML = `
-                    <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
-                    <button id="tab-assinados" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">Distribuídos <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${distribuidos.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">🔍 Buscar</button>
-                `;
-
-                document.getElementById('tab-pendentes')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-pendentes').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(pendentes, true, 'Mesa limpa.'); });
-                document.getElementById('tab-assinados')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-assinados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(distribuidos, false, 'Nenhuma distribuição.'); });
-                document.getElementById('tab-historico-busca')?.addEventListener('click', () => {
-                    resetTabs(); wrapperBusca?.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active');
-                    renderLista(historico, true, 'Sem histórico.');
-                    document.getElementById('input-busca-local')?.addEventListener('input', e => {
-                        const t = e.target.value.toLowerCase();
-                        renderLista(historico.filter(i => (i.name||'').toLowerCase().includes(t) || (i.subject||'').toLowerCase().includes(t) || (i.numeroProcesso||'').includes(t)), true, 'Nada encontrado.');
-                    });
-                });
-
-                renderLista(pendentes, true, 'Mesa limpa.');
-            }
-
-        } else {
-            const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-            const enviados    = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
-            const finalizados = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.attendedBy === this.colaboradorNome || a.enviadoPor === this.colaboradorNome));
-            const historico   = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
-
-            if (prefs.mode === 'list') {
-                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, false)).join('');
-                if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
-            } else {
-                if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                tabsDiv.innerHTML = `
-                    <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
-                    <button id="tab-enviados" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">No Defensor <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
-                    <button id="tab-finalizados" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">Prontos <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">🔍</button>
-                `;
-
-                document.getElementById('tab-em-mesa')?.addEventListener('click',    () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(emAndamento, true, 'Mesa limpa.'); });
-                document.getElementById('tab-enviados')?.addEventListener('click',   () => { resetTabs(); document.getElementById('tab-enviados').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active'); renderLista(enviados, true, 'Nada no Defensor.'); });
-                document.getElementById('tab-finalizados')?.addEventListener('click',() => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(finalizados, false, 'Nada finalizado.'); });
-                document.getElementById('tab-historico-busca')?.addEventListener('click', () => {
-                    resetTabs(); wrapperBusca?.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active');
-                    renderLista(historico, true, 'Sem histórico.');
-                    document.getElementById('input-busca-local')?.addEventListener('input', e => {
-                        const t = e.target.value.toLowerCase();
-                        renderLista(historico.filter(i => (i.name||'').toLowerCase().includes(t) || (i.subject||'').toLowerCase().includes(t) || (i.numeroProcesso||'').includes(t)), true, 'Nada encontrado.');
-                    });
-                });
-
-                renderLista(emAndamento, true, 'Mesa limpa.');
-            }
-        }
     },
 
     async carregarColaboradoresGerais() {
@@ -967,23 +767,7 @@ export const AtendimentoExternoService = {
         const fallback = document.getElementById('fallback-container');
         if (fallback) fallback.classList.add('hidden');
 
-        // 🔹 ALTERA AS VIEWS (Esconde a lista, Mostra a aba de atendimento)
-        const viewDashboard = document.getElementById('view-dashboard');
-        const viewAtendimento = document.getElementById('view-atendimento');
-        const btnVoltar = document.getElementById('btn-voltar-dashboard');
-        
-        if (viewDashboard) viewDashboard.classList.add('hidden');
-        if (viewAtendimento) viewAtendimento.classList.remove('hidden');
-        if (btnVoltar) btnVoltar.classList.remove('hidden');
-
-        this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
-
-        const url = new URL(window.location.href);
-        url.searchParams.delete('view');
-        url.searchParams.delete('modo');
-        window.history.pushState({}, '', url);
-
-        const headerBg = document.getElementById('header-bg');
+        const headerBg = this.getEl('header-bg');
         if (headerBg && !document.getElementById('logo-header-main')) {
             const textosWrapper = document.createElement('div');
             textosWrapper.className = "overflow-hidden w-full";
@@ -999,9 +783,6 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
-        document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
-        
         const areaColaborador = document.getElementById('area-colaborador');
         if (areaColaborador) areaColaborador.classList.remove('hidden');
 
@@ -1777,8 +1558,8 @@ export const AtendimentoExternoService = {
     },
 
     setupListeners() {
-        document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
-        document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
+        document.getElementById('ext-tab-btn-recording')?.addEventListener('click', () => this.switchTab('encerramento'));
+        document.getElementById('ext-tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
 
         setTimeout(() => {
             const btnBaixarPlanilha = document.getElementById('btn-baixar-planilha');
@@ -1793,19 +1574,19 @@ export const AtendimentoExternoService = {
     },
 
     switchTab(tab) {
-        const btnEncerramento = document.getElementById('tab-btn-encerramento');
-        const btnHistorico = document.getElementById('tab-btn-historico');
+        const btnEncerramento = document.getElementById('ext-tab-btn-recording');
+        const btnHistorico = document.getElementById('ext-tab-btn-historico');
         const abaEncerramento = document.getElementById('aba-encerramento');
         const abaHistorico = document.getElementById('aba-historico');
 
         if (tab === 'encerramento') {
-            btnEncerramento.className = "flex-1 py-3 text-center font-black text-[11px] uppercase tracking-widest text-slate-800 border-b-2 border-slate-800 transition-colors";
-            btnHistorico.className = "flex-1 py-3 text-center font-bold text-[11px] uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
+            btnEncerramento.className = "flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap";
+            btnHistorico.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap";
             abaEncerramento.classList.remove('hidden');
             abaHistorico.classList.add('hidden');
         } else {
-            btnHistorico.className = "flex-1 py-3 text-center font-black text-[11px] uppercase tracking-widest text-indigo-600 border-b-2 border-indigo-600 transition-colors";
-            btnEncerramento.className = "flex-1 py-3 text-center font-bold text-[11px] uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors";
+            btnHistorico.className = "flex-1 p-4 text-center font-black uppercase text-indigo-600 border-b-2 border-indigo-600 transition-colors focus:outline-none whitespace-nowrap";
+            btnEncerramento.className = "flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap";
             abaHistorico.classList.remove('hidden');
             abaEncerramento.classList.add('hidden');
         }
