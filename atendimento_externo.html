@@ -6,11 +6,6 @@
     <title>Mesa de Trabalho Judicial - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     
-    <!-- Firebase Módulos -->
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore-compat.js"></script>
-    
     <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
     <script type="text/javascript">
@@ -37,13 +32,7 @@
 </head>
 <body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
 
-    <!-- CONTAINER PRINCIPAL QUE O SERVIÇO USA -->
-    <div id="atendimento-externo-container" class="w-full max-w-6xl mx-auto my-4">
-        <!-- O serviço vai renderizar aqui -->
-    </div>
-
-    <!-- BACKUP: Se o serviço não renderizar, mostra uma interface simples -->
-    <div id="fallback-container" class="hidden w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
+    <div class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         
         <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
             <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
@@ -122,176 +111,73 @@
         </div>
     </div>
 
-    <script>
-        // ============================================================
-        // CONFIGURAÇÃO FIREBASE
-        // ============================================================
-        const firebaseConfig = {
-            apiKey: "SUA_API_KEY",
-            authDomain: "SEU_AUTH_DOMAIN",
-            projectId: "SEU_PROJECT_ID",
-            storageBucket: "SEU_STORAGE_BUCKET",
-            messagingSenderId: "SEU_MESSAGING_SENDER_ID",
-            appId: "SEU_APP_ID"
+    <script type="module">
+        import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
+        
+        // Mock do App Instance para injeção no serviço (Substitua pela sua lógica de Auth/App atual)
+        const mockAppInstance = {
+            db: window.db, // Certifique-se de que o firebase-firestore esteja exposto aqui ou injetado corretamente
+            auth: window.auth
         };
-
-        firebase.initializeApp(firebaseConfig);
-        const db = firebase.firestore();
-        const auth = firebase.auth();
-
-        window.db = db;
-        window.auth = auth;
-        window.firebaseConfig = firebaseConfig;
-
-        // ============================================================
-        // FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO
-        // ============================================================
-        window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
-            console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
-            
-            try {
-                // 1. Esconde o dashboard e mostra a view de atendimento
-                const viewDashboard = document.getElementById('view-dashboard');
-                const viewAtendimento = document.getElementById('view-atendimento');
-                const btnVoltar = document.getElementById('btn-voltar-dashboard');
-                const areaColaborador = document.getElementById('area-colaborador');
-                
-                if (viewDashboard) viewDashboard.classList.add('hidden');
-                if (viewAtendimento) viewAtendimento.classList.remove('hidden');
-                if (btnVoltar) btnVoltar.classList.remove('hidden');
-                if (areaColaborador) areaColaborador.classList.remove('hidden');
-                
-                // 2. Atualiza o header
-                const nomeEl = document.getElementById('assistido-nome');
-                const assuntoEl = document.getElementById('assistido-assunto');
-                
-                if (nomeEl) nomeEl.textContent = nomeAssistido || 'Assistido';
-                if (assuntoEl) assuntoEl.textContent = `Em atendimento • Pauta: ${pautaId}`;
-                
-                // 3. Carrega os dados do assistido no serviço
-                if (window.AtendimentoExternoService) {
-                    window.AtendimentoExternoService.assistidoId = assistidoId;
-                    window.AtendimentoExternoService.pautaId = pautaId;
-                    
-                    // Chama o método para carregar o assistido individual
-                    if (typeof window.AtendimentoExternoService.carregarAssistidoIndividual === 'function') {
-                        window.AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
-                    } else {
-                        console.warn("⚠️ Método carregarAssistidoIndividual não encontrado!");
-                        // Fallback
-                        const token = window.AtendimentoExternoService.assistidoData?.delegationToken || '';
-                        window.AtendimentoExternoService.iniciarAtendimentoIndividual(token);
-                    }
-                } else {
-                    console.error("❌ AtendimentoExternoService não encontrado!");
-                    alert("Erro: Serviço de atendimento externo não carregado.");
-                }
-                
-            } catch (error) {
-                console.error("❌ Erro ao abrir mesa:", error);
-                alert("Erro ao abrir atendimento: " + error.message);
-            }
-        };
-
-        // ============================================================
-        // BOTÃO VOLTAR DO ATENDIMENTO INDIVIDUAL
-        // ============================================================
-        document.addEventListener('DOMContentLoaded', function() {
-            const btnVoltar = document.getElementById('btn-voltar-dashboard');
-            if (btnVoltar) {
-                btnVoltar.addEventListener('click', function() {
-                    document.getElementById('view-atendimento')?.classList.add('hidden');
-                    document.getElementById('view-dashboard')?.classList.remove('hidden');
-                    document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
-                    document.getElementById('area-colaborador')?.classList.add('hidden');
-                    
-                    document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
-                    document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${localStorage.getItem('lastColabName') || 'Colaborador'}`;
-                    
-                    if (window.AtendimentoExternoService) {
-                        window.AtendimentoExternoService.assistidoId = null;
-                        window.AtendimentoExternoService.iniciarDashboardUnificado();
-                    }
-                });
-            }
-        });
-
-        // ============================================================
-        // INICIAR ATENDIMENTO EXTERNO
-        // ============================================================
-        async function iniciarAtendimentoExterno() {
-            try {
-                const module = await import('./js/atendimentoExternoService.js');
-                const { AtendimentoExternoService } = module;
-        
-                // 🔹 INJETA O DB E AUTH DO GLOBAL NO SERVIÇO
-                AtendimentoExternoService.db = db;
-                AtendimentoExternoService.auth = auth;
-                
-                // 🔹 EXPORTA O SERVIÇO PARA O ESCOPO GLOBAL
-                window.AtendimentoExternoService = AtendimentoExternoService;
-        
-                const urlParams = new URLSearchParams(window.location.search);
-                const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
-                const colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
-                const assistidoId = urlParams.get('assistidoId');
-        
-                if (!pautaId || !colaboradorNome) {
-                    console.error("Faltam parâmetros: pautaId e colab são obrigatórios");
-                    document.getElementById('atendimento-externo-container').innerHTML = `
-                        <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg text-center">
-                            <p class="font-bold">Erro: Parâmetros ausentes</p>
-                            <p class="text-sm">URL deve conter ?pautaId=XXX&colab=NOME</p>
-                            <p class="text-xs mt-2">Exemplo: ?pautaId=123&colab=João</p>
-                        </div>
-                    `;
-                    return;
-                }
-        
-                localStorage.setItem('lastPautaId', pautaId);
-                localStorage.setItem('lastColabName', colaboradorNome);
-        
-                document.querySelector('#assistido-nome').textContent = `👋 Olá, ${colaboradorNome}`;
-                document.querySelector('#assistido-assunto').textContent = `Pauta: ${pautaId} ${assistidoId ? '• Assistido: '+assistidoId : ''}`;
-        
-                AtendimentoExternoService.pautaId = pautaId;
-                AtendimentoExternoService.colaboradorNome = colaboradorNome;
-                AtendimentoExternoService.assistidoId = assistidoId || null;
-        
-                // 🔹 INICIALIZA O SERVIÇO
-                await AtendimentoExternoService.init();
-        
-                console.log("✅ Atendimento Externo iniciado com sucesso!");
-                
-                // 🔹 FORÇA A RENDERIZAÇÃO DOS DADOS
-                if (AtendimentoExternoService.todosAtendimentosPauta && AtendimentoExternoService.todosAtendimentosPauta.length > 0) {
-                    console.log("📋 Dados encontrados:", AtendimentoExternoService.todosAtendimentosPauta.length);
-                    AtendimentoExternoService.atualizarListasDoDashboard();
-                } else {
-                    console.warn("⚠️ Nenhum atendimento encontrado na pauta!");
-                }
-                
-                const container = document.getElementById('atendimento-externo-container');
-                if (container.innerHTML && container.innerHTML.trim().length > 0) {
-                    document.getElementById('fallback-container').classList.add('hidden');
-                }
-        
-            } catch (error) {
-                console.error("❌ Erro ao iniciar Atendimento Externo:", error);
-                document.getElementById('atendimento-externo-container').innerHTML = `
-                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-6 rounded-lg text-center">
-                        <p class="font-bold text-lg">❌ Erro ao carregar</p>
-                        <p class="text-sm">${error.message}</p>
-                        <p class="text-xs mt-4 text-gray-500">Verifique se o arquivo atendimentoExternoService.js existe na pasta /js/</p>
-                    </div>
-                `;
-            }
-        }
 
         document.addEventListener('DOMContentLoaded', () => {
-            document.getElementById('fallback-container').classList.remove('hidden');
-            iniciarAtendimentoExterno();
+            // Inicialização precisa do ID e Nome do colaborador logado
+            // Exemplo estático para visualização (você preencherá isso dinamicamente no seu fluxo de auth)
+            const colaboradorNome = localStorage.getItem('sigep_colab_nome') || "Servidor Logado";
+            const colaboradorId = localStorage.getItem('sigep_colab_id') || "uid-servidor";
+            
+            // Atualiza o header inicial
+            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
+            document.getElementById('status-indicator').classList.remove('hidden');
+
+            AtendimentoExternoService.init(mockAppInstance, colaboradorNome, colaboradorId);
+
+            // Transição entre Modo Dashboard e Modo Atendimento
+            window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
+                document.getElementById('view-dashboard').classList.add('hidden');
+                document.getElementById('view-atendimento').classList.remove('hidden');
+                document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
+                
+                document.getElementById('assistido-nome').textContent = nomeAssistido;
+                document.getElementById('assistido-assunto').textContent = `Em atendimento • Pauta ID: ${pautaId}`;
+                
+                // Dispare aqui a sua função antiga que gera os botões e formulários do "Encerramento/Fluxo"
+            };
+
+            // Voltar para o Dashboard
+            document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
+                document.getElementById('view-atendimento').classList.add('hidden');
+                document.getElementById('view-dashboard').classList.remove('hidden');
+                document.getElementById('btn-voltar-dashboard').classList.add('hidden');
+                
+                document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
+                document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${colaboradorNome}`;
+            });
         });
+
+        // Intercepta a chamada original do botão "Atender" do serviço gerado
+        const originalSetupAcoes = AtendimentoExternoService.setupAcoesDosCards;
+        AtendimentoExternoService.setupAcoesDosCards = function() {
+            originalSetupAcoes.call(AtendimentoExternoService);
+            
+            document.querySelectorAll('.btn-atender-caso').forEach(btn => {
+                // Remove o click antigo
+                const novoBtn = btn.cloneNode(true);
+                btn.parentNode.replaceChild(novoBtn, btn);
+                
+                novoBtn.addEventListener('click', (e) => {
+                    const pautaId = e.currentTarget.dataset.pautaId;
+                    const assistidoId = e.currentTarget.dataset.assistidoId;
+                    
+                    // Pega o nome do assistido pelo card mais próximo
+                    const card = e.currentTarget.closest('.bg-white');
+                    const nomeAssistido = card.querySelector('h4').textContent;
+
+                    // Aciona a transição visual
+                    window.abrirMesaDeAtendimento(nomeAssistido, pautaId, assistidoId);
+                });
+            });
+        };
     </script>
 </body>
 </html>
