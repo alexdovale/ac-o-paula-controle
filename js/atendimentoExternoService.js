@@ -528,9 +528,11 @@ export const AtendimentoExternoService = {
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso.
+                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso. Ele irá para sua mesa automaticamente.
             </div>
-            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}</div>`;
+            <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                ${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}
+            </div>`;
     },
 
     _renderPautaDia(container) {
