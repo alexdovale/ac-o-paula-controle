@@ -169,6 +169,20 @@ export const AtendimentoExternoService = {
         }
     },
 
+    async _carregarDadosIniciais() {
+        try {
+            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "attendances"));
+            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+            this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
+            
+            console.log(`✅ Carregados ${this.todosAtendimentosPauta.length} atendimentos da pauta`);
+            
+            await this.renderizarAbaAtual();
+        } catch (error) {
+            console.error("Erro ao carregar dados iniciais:", error);
+        }
+    },
+
     async _carregarTodasPautasDoColaborador() {
         this.isLoadingPautas = true;
         if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
@@ -225,8 +239,8 @@ export const AtendimentoExternoService = {
         
         if (!document.getElementById('view-dashboard')) {
             parent.innerHTML = `
-                <!-- HEADER PRINCIPAL COM OPÇÕES DE CONTA -->
-                <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex justify-between items-center relative overflow-hidden shrink-0">
+                <!-- HEADER PRINCIPAL COM BOTÕES DIRETOS -->
+                <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex justify-between items-center relative overflow-visible shrink-0" style="z-index: 9999;">
                     <div class="flex items-center gap-4 relative z-10 w-full">
                         <button id="ext-btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
                             <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
@@ -237,22 +251,18 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                     
-                    <!-- MENU DE CONTA (APENAS SENHA E SAIR) -->
-                    <div class="relative z-20 flex gap-2 shrink-0">
-                         <div class="relative group">
-                            <button class="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg transition shadow-sm border border-slate-600 flex items-center gap-2">
-                                ⚙️ <span class="hidden sm:inline text-xs font-bold uppercase">Opções</span>
-                            </button>
-                            <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block transition-all z-[9999]">
-                                <button onclick="window.AtendimentoExternoService.alterarSenhaPrompt()" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2">
-                                    🔑 Trocar Senha Local
-                                </button>
-                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
-                                <button onclick="window.AtendimentoExternoService.logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold flex items-center gap-2">
-                                    🚪 Sair do Painel
-                                </button>
-                            </div>
-                         </div>
+                    <!-- BOTÕES DIRETOS (SEM MENU) -->
+                    <div class="flex items-center gap-2 shrink-0" style="z-index: 99999;">
+                        
+                        <!-- BOTÃO TROCAR SENHA -->
+                        <button onclick="window.AtendimentoExternoService.alterarSenhaPrompt()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-2 rounded-lg transition shadow-sm border border-indigo-500 flex items-center gap-1.5 text-xs font-bold uppercase">
+                            🔑 Senha
+                        </button>
+                        
+                        <!-- BOTÃO SAIR -->
+                        <button onclick="window.AtendimentoExternoService.logout()" class="bg-red-600 hover:bg-red-700 text-white px-3 py-2 rounded-lg transition shadow-sm border border-red-500 flex items-center gap-1.5 text-xs font-bold uppercase">
+                            🚪 Sair
+                        </button>
                     </div>
                 </div>
 
@@ -260,7 +270,7 @@ export const AtendimentoExternoService = {
                 <div id="view-dashboard" class="flex flex-col flex-1">
                     <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar">
                         <button id="ext-btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">💻 Minha Mesa</button>
-                        <button id="ext-btn-tab-sem-atribuicao" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">📥 Sem Atribuição</button>
+                        <button id="ext-btn-tab-sem-atribuicao" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">📥 Aguardando</button>
                         <button id="ext-btn-tab-pauta-dia" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">📅 Pauta do Dia</button>
                     </div>
                     <div class="p-4 sm:p-6 bg-slate-50/50 flex-1">
@@ -347,16 +357,18 @@ export const AtendimentoExternoService = {
 
     _renderMinhaMesa(container) {
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' &&
-            a.assignedCollaborator?.name === this.colaboradorNome
+            a.assignedCollaborator?.name === this.colaboradorNome &&
+            (a.status === 'emAtendimento' || a.status === 'aguardando')
         );
+
+        console.log(`💻 Minha mesa: ${meusCasos.length} casos`);
 
         if (meusCasos.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">🖥️</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Mesa limpa. Nenhum caso atribuído a você.</p>
-                    <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Sem Atribuição</strong> para puxar casos.</p>
+                    <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Aguardando</strong> para puxar casos.</p>
                 </div>`;
             return;
         }
@@ -368,22 +380,25 @@ export const AtendimentoExternoService = {
 
     _renderSemAtribuicao(container) {
         const semDono = this.todosAtendimentosPauta.filter(a =>
-            (a.status === 'emAtendimento' || a.status === 'aguardando') &&
+            (a.status === 'emAtendimento' || a.status === 'aguardando' || a.status === 'pauta') &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
         );
+
+        console.log(`📥 Aguardando: ${semDono.length} casos`);
 
         if (semDono.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">✅</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso sem atribuição.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso aguardando atribuição.</p>
+                    <p class="text-xs text-slate-400 mt-2">Todos os casos já foram puxados ou estão em andamento.</p>
                 </div>`;
             return;
         }
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso.
+                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso. (${semDono.length} disponíveis)
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 ${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}
@@ -546,7 +561,7 @@ export const AtendimentoExternoService = {
     },
 
     async devolverParaFila(pautaId, assistidoId) {
-        if (!confirm("Devolver este caso para a fila Sem Atribuição?")) return;
+        if (!confirm("Devolver este caso para a fila?")) return;
         try {
             await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
@@ -682,6 +697,9 @@ export const AtendimentoExternoService = {
 
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
+        
+        // 🔥 FORÇA CARREGAMENTO INICIAL DOS DADOS
+        await this._carregarDadosIniciais();
     },
 
     async carregarSemAtribuicao() {
@@ -708,17 +726,53 @@ export const AtendimentoExternoService = {
         this._cancelarListeners();
         if (!this.pautaId || !this.db) return;
 
+        console.log(`🔄 Iniciando listener da pauta: ${this.pautaId}`);
+
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
+                
+                console.log(`🔄 Atualizado: ${this.todosAtendimentosPauta.length} atendimentos`);
+                
                 if (!this._isRendering) {
                     this.renderizarAbaAtual();
                 }
             },
             (error) => console.error("❌ Erro no realtime (Painel):", error)
         );
+    },
+
+    // ─── DEBUG ──────────────────────────────────────────────────────────────────
+
+    debugMostrarDados() {
+        console.log('🔍 ====== DADOS ATUAIS ======');
+        console.log('📌 pautaId:', this.pautaId);
+        console.log('📌 colaboradorNome:', this.colaboradorNome);
+        console.log('📌 Total atendimentos:', this.todosAtendimentosPauta.length);
+        console.log('📌 Status dos atendimentos:');
+        
+        const statusCount = {};
+        this.todosAtendimentosPauta.forEach(a => {
+            statusCount[a.status] = (statusCount[a.status] || 0) + 1;
+        });
+        console.log(statusCount);
+        
+        console.log('📌 Aguardando (sem atribuição):');
+        const semDono = this.todosAtendimentosPauta.filter(a =>
+            (a.status === 'aguardando' || a.status === 'emAtendimento') &&
+            (!a.assignedCollaborator || !a.assignedCollaborator.name)
+        );
+        console.log(semDono.map(a => `- ${a.name} (${a.status})`));
+        
+        console.log('📌 Meus casos:');
+        const meus = this.todosAtendimentosPauta.filter(a =>
+            a.assignedCollaborator?.name === this.colaboradorNome
+        );
+        console.log(meus.map(a => `- ${a.name} (${a.status})`));
+        
+        return { total: this.todosAtendimentosPauta.length, semDono, meus };
     },
 
     // ─── BOTÃO ATENDER ─────────────────────────────────────────────────────────
