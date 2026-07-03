@@ -42,6 +42,7 @@ export const AtendimentoExternoService = {
     todosColaboradores: [],
     colaboradorAtual: null,
     isProcessing: false,
+    isLoadingPautas: false, // <-- Controle de loading da aba Pautas
     todosAtendimentosPauta: [],
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
@@ -60,7 +61,6 @@ export const AtendimentoExternoService = {
         return this._dbInstance;
     },
     set db(val) {
-        // Ignoramos a injeção manual se for incompatível para proteger contra erros de V8 vs V11
         if (val && typeof val.collection === 'function') {
             console.warn("🛡️ Injeção V8 (antiga) barrada. Usando Firebase Modular V11 nativo.");
             return;
@@ -76,7 +76,6 @@ export const AtendimentoExternoService = {
     },
 
     // ── SELETOR ROBUSTO DE DOM (Element Resolver) ──────────────────────────────
-    // Resolve conflitos de IDs quando o arquivo é carregado dinamicamente no SPA
     getEl(id) {
         return document.getElementById(`ext-${id}`) || 
                document.getElementById(id) || 
@@ -84,22 +83,16 @@ export const AtendimentoExternoService = {
                document.getElementById(`view-${id}`);
     },
 
-    // 🔹 O HACK DEFINITIVO: Extrai a configuração de qualquer lugar para forçar o V11 a conectar!
     async garantirConexaoFirebase() {
         if (this._dbInstance && this._authInstance) return;
 
         let cfg = null;
 
-        // 1. Tenta pegar a config local
         if (typeof firebaseConfig !== 'undefined' && firebaseConfig.projectId && firebaseConfig.projectId !== "SEU_PROJECT_ID") {
             cfg = firebaseConfig;
-        }
-        // 2. Tenta pegar a config global (injetada pelo HTML)
-        else if (window.firebaseConfig && window.firebaseConfig.projectId) {
+        } else if (window.firebaseConfig && window.firebaseConfig.projectId) {
             cfg = window.firebaseConfig;
-        }
-        // 3. O SEGREDO: Hackeia a instância V8 que o router iniciou no index.html!
-        else if (window.firebase && window.firebase.app) {
+        } else if (window.firebase && window.firebase.app) {
             try { 
                 cfg = window.firebase.app().options; 
                 console.log("🔥 Configuração Firebase resgatada com sucesso da instância V8!");
@@ -107,13 +100,12 @@ export const AtendimentoExternoService = {
         }
 
         if (!cfg) {
-            console.error("❌ ERRO CRÍTICO: Nenhuma configuração válida do Firebase foi encontrada no sistema.");
+            console.error("❌ ERRO CRÍTICO: Nenhuma configuração válida do Firebase foi encontrada.");
             this.showError("Erro de Conexão", "Não foi possível resgatar as chaves da base de dados do Router.");
             return;
         }
 
         try {
-            // Inicializa um app V11 NOMEADO e ISOLADO para não conflitar com a V8 do router
             let appV11;
             const appsExistentes = getApps();
             const appIsolado = appsExistentes.find(a => a.name === "SIGEP_V11_ISOLADO");
@@ -126,13 +118,13 @@ export const AtendimentoExternoService = {
             
             this._dbInstance = getFirestore(appV11);
             this._authInstance = getAuth(appV11);
-            console.log("✅ Conexão V11 nativa estabelecida de forma independente e isolada!");
+            console.log("✅ Conexão V11 nativa estabelecida!");
 
             if (!this._authInstance.currentUser) {
                 await signInAnonymously(this._authInstance);
             }
         } catch (error) {
-            console.error("❌ Erro grave ao inicializar V11:", error);
+            console.error("❌ Erro ao inicializar V11:", error);
             this.showError("Erro de Inicialização", "Falha interna no Firebase Modular.");
         }
     },
@@ -203,14 +195,14 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── CONSTRUTOR DE INTERFACE PRINCIPAL (Anti-Esmagamento de SPA) ───────────
     renderizarContainerLayout() {
         const parent = document.getElementById('atendimento-externo-container');
         if (!parent) return;
 
-        // Injeta a casca se o HTML estiver vazio (SPA mode)
+        // Reset da classe de layout caso tenha vindo da tela de login
+        parent.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in flex flex-col border border-slate-200 bg-white rounded-2xl shadow-2xl overflow-hidden";
+        
         if (!document.getElementById('view-dashboard')) {
-            parent.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in flex flex-col border border-slate-200 bg-white rounded-2xl shadow-2xl overflow-hidden";
             parent.innerHTML = `
                 <!-- HEADER PRINCIPAL -->
                 <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex items-center gap-4 relative overflow-hidden shrink-0">
@@ -276,7 +268,7 @@ export const AtendimentoExternoService = {
             }
         });
 
-        const btnVoltar = this.getEl('btn-voltar-dashboard');
+        const btnVoltar = this.getEl('btn-voltar-dashboard') || document.getElementById('ext-btn-voltar-dashboard');
         if (btnVoltar) {
             btnVoltar.onclick = () => {
                 this.iniciarDashboardUnificado();
@@ -284,35 +276,49 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── BOTÃO ATENDER ────────────────────────────────────────────────────────
+    // ─── BOTÃO ATENDER (CORRIGIDO) ────────────────────────────────────────────
 
     async carregarAssistidoIndividual(pautaId, assistidoId) {
         console.log("⚡ Botão ATENDER clicado para o SPA! Processando...", {pautaId, assistidoId});
         
+        // 1. FORÇA MUDANÇA VISUAL IMEDIATA
+        const viewDash = this.getEl('view-dashboard');
+        const viewAtend = this.getEl('view-atendimento');
+        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
+
+        if (viewDash) viewDash.classList.add('hidden');
+        if (viewAtend) viewAtend.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.remove('hidden');
+
         try {
-            // Mostra o spinner e remove ocultação da aba encerramento
             const abaEncerramento = document.getElementById('aba-encerramento');
             if (abaEncerramento) {
-                abaEncerramento.innerHTML = `<div class="flex flex-col items-center justify-center py-24"><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600"></div><p class="mt-4 font-black text-slate-400 tracking-widest text-sm uppercase">Carregando processo...</p></div>`;
+                abaEncerramento.innerHTML = `<div class="flex flex-col items-center justify-center py-24"><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600"></div><p class="mt-4 font-black text-slate-400 tracking-widest text-sm uppercase">Buscando dados no servidor...</p></div>`;
             }
 
             await this.garantirConexaoFirebase();
 
-            if (!this.db) throw new Error("A Base de dados não foi inicializada. A extração de configuração falhou.");
+            if (!this.db) throw new Error("A Base de dados não foi inicializada.");
 
             this.pautaId = pautaId;
             this.assistidoId = assistidoId;
 
-            const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
-            const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
+            // PREVINE TRAVAMENTO SILENCIOSO NO FIREBASE (Promise Race de 8 segundos)
+            const timeoutProm = new Promise((_, reject) => setTimeout(() => reject(new Error("O servidor demorou muito para responder.")), 8000));
+            const fetchProm = Promise.all([
+                getDoc(doc(this.db, "pautas", this.pautaId)),
+                getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId))
+            ]);
+
+            const [pautaDoc, docSnap] = await Promise.race([fetchProm, timeoutProm]);
 
             if (docSnap.exists() && pautaDoc.exists()) {
                 const assistido = docSnap.data();
                 this.assistidoData = assistido;
                 this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
                 
-                const labelNome = this.getEl('assistido-nome');
-                const labelSub = this.getEl('assistido-assunto');
+                const labelNome = this.getEl('ext-assistido-nome') || this.getEl('assistido-nome');
+                const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
                 if (labelNome) labelNome.textContent = assistido.name || 'Assistido';
                 if (labelSub) labelSub.textContent = `Em atendimento • Pauta: ${pautaDoc.data().name}`;
 
@@ -325,7 +331,7 @@ export const AtendimentoExternoService = {
 
         } catch (error) {
             console.error("❌ Ocorreu um erro no momento de carregar o Assistido:", error);
-            this.showError("Erro Crítico", error.message);
+            this.showError("Erro de Conexão", error.message);
         }
     },
 
@@ -354,11 +360,18 @@ export const AtendimentoExternoService = {
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
     async iniciarDashboardUnificado() {
-        this.getEl('view-atendimento')?.classList.add('hidden');
-        this.getEl('view-dashboard')?.classList.remove('hidden');
-        this.getEl('btn-voltar-dashboard')?.classList.add('hidden');
+        // Reconstrói as divs caso o formulário de login as tenha apagado
+        this.renderizarContainerLayout();
 
-        const labelSub = this.getEl('assistido-assunto');
+        const viewAtend = this.getEl('view-atendimento');
+        const viewDash = this.getEl('view-dashboard');
+        const btnVoltar = document.getElementById('ext-btn-voltar-dashboard') || document.getElementById('btn-voltar-dashboard');
+        
+        if (viewAtend) viewAtend.classList.add('hidden');
+        if (viewDash) viewDash.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.add('hidden');
+
+        const labelSub = this.getEl('ext-assistido-assunto') || this.getEl('assistido-assunto');
         if (labelSub) labelSub.textContent = `Sessão Ativa • ${this.colaboradorNome}`;
 
         this._cancelarListeners();
@@ -398,6 +411,9 @@ export const AtendimentoExternoService = {
     },
 
     async _carregarTodasPautasDoColaborador() {
+        this.isLoadingPautas = true;
+        if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
+
         const hoje = new Date().toISOString().split('T')[0];
         try {
             const pautasSnap = await getDocs(collection(this.db, "pautas"));
@@ -430,8 +446,12 @@ export const AtendimentoExternoService = {
                 } catch {}
             }
             this.pautasDoDia = resultado;
+        } catch (err) {
+            console.warn("Regras de segurança podem ter bloqueado a leitura total de pautas.", err);
+        } finally {
+            this.isLoadingPautas = false;
             if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-        } catch (err) {}
+        }
     },
 
     async renderizarAbaAtual() {
@@ -491,11 +511,20 @@ export const AtendimentoExternoService = {
     },
 
     _renderPautaDia(container) {
+        if (this.isLoadingPautas) {
+            container.innerHTML = `
+                <div class="flex flex-col justify-center items-center py-16 text-slate-500">
+                    <div class="animate-spin h-10 w-10 border-b-4 border-amber-600 rounded-full mb-4"></div>
+                    <p class="font-black uppercase tracking-widest text-sm">Buscando pautas ativas...</p>
+                </div>`;
+            return;
+        }
+
         if (this.pautasDoDia.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Carregando pautas do dia...</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta do dia encontrada para você.</p>
                 </div>`;
             return;
         }
@@ -683,7 +712,9 @@ export const AtendimentoExternoService = {
     },
 
     renderizarTelaLoginColaborador() {
-        const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
+        const corpo = document.getElementById('atendimento-externo-container');
+        if (!corpo) return;
+
         corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
         corpo.innerHTML = `
             <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
