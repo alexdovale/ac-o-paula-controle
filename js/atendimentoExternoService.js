@@ -1,4 +1,4 @@
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
@@ -20,10 +20,6 @@ const statusMap = {
     aguardandoNumero:       { cor: 'bg-amber-100 text-amber-700 border-amber-200',    txt: 'Aguard. CNP' },
     faltoso:                { cor: 'bg-red-100 text-red-700 border-red-200',          txt: 'Faltoso' },
 };
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
 
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -52,41 +48,57 @@ export const AtendimentoExternoService = {
     pautasDoDia: [],                
     atendimentosPorPauta: {},       
 
-    // Instâncias Dinâmicas do Firebase (Injetadas pelo HTML)
+    // Instâncias Dinâmicas do Firebase V11
     _dbInstance: null,
     _authInstance: null,
 
-    _isInstanceValid(instance) {
-        if (!instance) return false;
-        const conf = instance.app?.options;
-        if (conf && (conf.apiKey === "SUA_API_KEY" || conf.projectId === "SEU_PROJECT_ID")) {
-            return false;
-        }
-        return true;
-    },
-
+    // 🔹 PROTEÇÃO: Ignora a injeção do HTML (V8) e usa as instâncias internas seguras (V11)
     get db() {
-        if (this._dbInstance && this._isInstanceValid(this._dbInstance)) {
-            return this._dbInstance;
-        }
-        return db;
+        return this._dbInstance;
     },
     set db(val) {
-        this._dbInstance = val;
+        console.log("🛡️ Proteção: Ignorando injeção externa do DB para evitar conflitos V8 vs V11.");
     },
 
     get auth() {
-        if (this._authInstance && this._isInstanceValid(this._authInstance)) {
-            return this._authInstance;
-        }
-        return auth;
+        return this._authInstance;
     },
     set auth(val) {
-        this._authInstance = val;
+        console.log("🛡️ Proteção: Ignorando injeção externa do Auth para evitar conflitos V8 vs V11.");
+    },
+
+    // 🔹 ESTABELECE A CONEXÃO CORRETA V11 BASEADA NO SEU HTML
+    async garantirConexaoFirebase() {
+        if (this._dbInstance && this._authInstance) return;
+
+        // Pega as chaves reais que você configurou no window do HTML
+        const cfg = (typeof window !== 'undefined' && window.firebaseConfig) ? window.firebaseConfig : firebaseConfig;
+
+        if (!cfg || !cfg.projectId || cfg.projectId === "SEU_PROJECT_ID") {
+            console.error("❌ Configuração do Firebase ausente ou inválida.");
+            this.showError("Erro de Configuração", "Chaves do Firebase não encontradas.");
+            return;
+        }
+
+        try {
+            const app = getApps().length === 0 ? initializeApp(cfg) : getApp();
+            this._dbInstance = getFirestore(app);
+            this._authInstance = getAuth(app);
+            console.log("✅ Conexão Firebase V11 estabelecida de forma independente.");
+            
+            if (!this._authInstance.currentUser) {
+                console.log("👤 Iniciando login anônimo interno...");
+                await signInAnonymously(this._authInstance);
+            }
+        } catch (error) {
+            console.error("❌ Falha grave ao inicializar Firebase interno:", error);
+        }
     },
 
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
+        
+        await this.garantirConexaoFirebase();
 
         const obterParametrosURL = () => {
             const params = {};
@@ -117,40 +129,24 @@ export const AtendimentoExternoService = {
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
-        console.log("🔍 Parâmetros processados:", {
-            pautaId: this.pautaId,
-            colab: this.colaboradorNome,
-            assistidoId: this.assistidoId
-        });
+        console.log("🔍 Parâmetros processados:", { pautaId: this.pautaId, colab: this.colaboradorNome, assistidoId: this.assistidoId });
 
         if (!this.pautaId || !this.colaboradorNome) {
-            console.error("❌ Parâmetros obrigatórios ausentes!");
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
         try {
-            console.log("👤 Verificando estado de login anônimo...");
-            if (!this.auth.currentUser) {
-                console.log("👤 Iniciando login anônimo...");
-                await signInAnonymously(this.auth);
-                console.log("👤 Login anônimo efetuado!");
-            } else {
-                console.log("👤 Usuário já estava logado anonimamente:", this.auth.currentUser.uid);
-            }
-
             console.log("👥 Carregando colaboradores da pauta...");
             await this.carregarColaboradoresGerais();
-            console.log(`👥 Colaboradores carregados: ${this.todosColaboradores.length} encontrados.`);
 
             if (!this.colaboradorAtual) {
                 console.error(`❌ Colaborador atual "${this.colaboradorNome}" não localizado na pauta.`);
                 this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
                 return;
             }
-            console.log("✅ Colaborador atual autenticado com sucesso:", this.colaboradorAtual);
 
-            // Atendimento individual (peça específica)
+            // Atendimento individual (peça específica carregada direto do link)
             if (this.assistidoId && !telaAtual) {
                 console.log("🎯 Redirecionando para o atendimento individual de ID:", this.assistidoId);
                 await this.iniciarAtendimentoIndividual(tokenRecebido);
@@ -162,20 +158,25 @@ export const AtendimentoExternoService = {
             const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
 
             if (!temSessao && this.modoVisualizacao === 'dashboard') {
-                console.log("🔒 Nenhuma sessão ativa encontrada. Renderizando tela de login de colaboradores.");
                 this.renderizarTelaLoginColaborador();
                 return;
             }
 
-            console.log("🏁 Carregando Painel unificado...");
             await this.iniciarDashboardUnificado();
 
         } catch (error) {
-    // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
+            console.error("❌ Erro na inicialização:", error);
+            this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados. Motivo: " + error.message);
+        }
+    },
 
-    // ✅ MÉTODO ADICIONADO PARA CORRIGIR O TRAVAMENTO DO BOTÃO "ATENDER"
+    // ─── ATENDIMENTO INDIVIDUAL (CORREÇÃO DO TRAVAMENTO DO BOTÃO) ─────────────
+
     async carregarAssistidoIndividual(pautaId, assistidoId) {
-        console.log("⚡ Carregando assistido de forma direta via Router:", assistidoId);
+        console.log("⚡ Botão ATENDER clicado! Carregando assistido:", assistidoId);
+        
+        await this.garantirConexaoFirebase(); // Garante conexão segura antes de tentar ler
+        
         this.pautaId = pautaId;
         this.assistidoId = assistidoId;
 
@@ -196,37 +197,29 @@ export const AtendimentoExternoService = {
                 this.showError("Processo não encontrado", "Não foi possível resgatar o assistido no Firestore.");
             }
         } catch (error) {
-            console.error("❌ Erro ao carregar assistido via router:", error);
-            this.showError("Erro de Conexão", "Não foi possível resgatar o assistido no Firestore: " + error.message);
+            console.error("❌ Erro ao carregar assistido via botão Atender:", error);
+            this.showError("Erro de Conexão", "Falha na leitura (V8 vs V11 resolvida?): " + error.message);
         }
     },
 
     async iniciarAtendimentoIndividual(tokenRecebido) {
         if (!this.pautaId || !this.assistidoId) {
-            console.error("❌ IDs ausentes para carregamento individual:", { pautaId: this.pautaId, assistidoId: this.assistidoId });
-            this.showError("Parâmetros Ausentes", "Não foi possível carregar os dados individuais porque a pauta ou o assistido não foram definidos.");
+            this.showError("Parâmetros Ausentes", "Faltam IDs para carregar.");
             return;
         }
 
         const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
-        if (!pautaDoc.exists()) {
-            this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-            return;
-        }
+        if (!pautaDoc.exists()) return this.showError("Pauta não localizada", "A pauta não existe.");
 
         const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
-        if (!docSnap.exists()) {
-            this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
-            return;
-        }
+        if (!docSnap.exists()) return this.showError("Processo não encontrado", "Assistido não existe.");
 
         const assistido = docSnap.data();
         this.assistidoData = assistido;
         this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
 
         if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            this.showError("Acesso Seguro Necessário", "O token de segurança é inválido ou expirou.");
-            return;
+            return this.showError("Acesso Seguro Necessário", "Token inválido.");
         }
 
         this.renderizarInterface(assistido, pautaDoc.data());
@@ -256,17 +249,11 @@ export const AtendimentoExternoService = {
 
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
+        if (!this.pautaId) return;
 
-        if (!this.pautaId) {
-            console.error("❌ pautaId nulo detectado! Pulando a criação de listener em tempo real.");
-            return;
-        }
-
-        console.log("🔌 Iniciando Listener em Tempo Real para Pauta:", this.pautaId);
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
-                console.log(`🔌 Atualização recebida do banco: ${snap.size} registros encontrados.`);
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
                 if (this.modoVisualizacao === 'abas') {
@@ -275,15 +262,12 @@ export const AtendimentoExternoService = {
                     this.atualizarListasDoDashboard();
                 }
             },
-            (error) => {
-                console.error("❌ Erro de leitura em tempo real:", error);
-            }
+            (error) => console.error("❌ Erro no realtime (Painel):", error)
         );
     },
 
     async _carregarTodasPautasDoColaborador() {
         const hoje = new Date().toISOString().split('T')[0];
-
         try {
             const pautasSnap = await getDocs(collection(this.db, "pautas"));
             const pautasHoje = pautasSnap.docs
@@ -301,8 +285,7 @@ export const AtendimentoExternoService = {
                 }
                 try {
                     const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
-                    const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
-                    if (estaNessa) {
+                    if (colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome)) {
                         resultado.push(pauta);
                         const unsub = onSnapshot(
                             collection(this.db, "pautas", pauta.id, "attendances"),
@@ -313,16 +296,11 @@ export const AtendimentoExternoService = {
                         );
                         this.unsubscribesPautasExtras.push(unsub);
                     }
-                } catch { /* pauta sem colaboradores */ }
+                } catch {}
             }
-
             this.pautasDoDia = resultado;
-
             if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-
-        } catch (err) {
-            console.error("Erro ao buscar pautas do colaborador:", err);
-        }
+        } catch (err) {}
     },
 
     renderizarContainerDashboard() {
@@ -683,7 +661,6 @@ export const AtendimentoExternoService = {
                     👇 Puxar para mim
                 </button>`;
         } else if (modo === 'mesa') {
-            // 🔹 INTERFACE CORRIGIDA: Se clicado em Atender, chama o abrirMesaDeAtendimento nativo do HTML para evitar recarregar a tela!
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
                     <button onclick="if(window.abrirMesaDeAtendimento){ window.abrirMesaDeAtendimento('${escapeHTML(assistido.name)}', '${pid}', '${assistido.id}'); } else { window.location.href='${linkIndividual}'; }" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</button>
@@ -1042,17 +1019,26 @@ export const AtendimentoExternoService = {
 
     showError(titulo, message) {
         const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
+        
+        // 🔹 CORREÇÃO DE TRAVAMENTO: Se houver um erro grave, esconde a tela de loading para mostrar a mensagem
+        const fallback = document.getElementById('fallback-container');
+        if (fallback) fallback.classList.add('hidden');
+        
         corpo.innerHTML = `
             <div class="w-full max-w-2xl mx-auto my-4">
                 <div class="bg-red-600 p-8 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
                     <div class="bg-white p-3 rounded-2xl mb-4"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-12 w-auto"></div>
-                    <h1 class="text-white font-black text-3xl uppercase tracking-widest">ACESSO NEGADO</h1>
+                    <h1 class="text-white font-black text-3xl uppercase tracking-widest">ACESSO NEGADO / ERRO</h1>
                 </div>
                 <div class="p-10 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
-                    <span class="text-6xl block mb-6">🔒</span>
+                    <span class="text-6xl block mb-6">⚠️</span>
                     <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
                     <p class="text-gray-500 font-semibold">${message}</p>
+                    <button onclick="window.location.reload()" class="mt-8 bg-slate-800 text-white font-bold py-3 px-6 rounded-lg hover:bg-slate-700 transition">TENTAR NOVAMENTE</button>
                 </div>
+            </div>`;
+    },
+
     // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ─────────────────────────────────
 
     renderizarInterface(assistido, pautaData) {
