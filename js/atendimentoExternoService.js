@@ -148,11 +148,15 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        const precisaLogin = !sessionStorage.getItem(`session_${this.pautaId}`) && !localStorage.getItem(`session_${this.pautaId}`);
+        // 🔥 VERIFICA SESSÃO (NÃO DESLOGA AO ATUALIZAR)
+        const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+        const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
 
-        if (precisaLogin) {
+        if (!temSessao) {
             this.renderizarTelaLoginColaborador();
         } else {
+            // 🔥 MANTÉM A SESSÃO ATIVA
+            console.log("✅ Sessão ativa, carregando dashboard...");
             this.iniciarDashboardUnificado();
         }
     },
@@ -356,9 +360,10 @@ export const AtendimentoExternoService = {
     },
 
     _renderMinhaMesa(container) {
+        // 🔥 MOSTRA APENAS 'emAtendimento' do colaborador
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
             a.assignedCollaborator?.name === this.colaboradorNome &&
-            (a.status === 'emAtendimento' || a.status === 'aguardando')
+            a.status === 'emAtendimento'
         );
 
         console.log(`💻 Minha mesa: ${meusCasos.length} casos`);
@@ -367,7 +372,7 @@ export const AtendimentoExternoService = {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">🖥️</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Mesa limpa. Nenhum caso atribuído a você.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Mesa limpa. Nenhum caso em atendimento.</p>
                     <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Aguardando</strong> para puxar casos.</p>
                 </div>`;
             return;
@@ -379,8 +384,9 @@ export const AtendimentoExternoService = {
     },
 
     _renderSemAtribuicao(container) {
+        // 🔥 MOSTRA APENAS 'aguardando' sem dono
         const semDono = this.todosAtendimentosPauta.filter(a =>
-            (a.status === 'emAtendimento' || a.status === 'aguardando' || a.status === 'pauta') &&
+            a.status === 'aguardando' &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
         );
 
@@ -427,14 +433,16 @@ export const AtendimentoExternoService = {
         let html = '';
 
         for (const pauta of this.pautasDoDia) {
+            // 🔥 PEGA TODOS OS ASSISTIDOS DA PAUTA (todos os status)
             const assistidos = this.atendimentosPorPauta[pauta.id] || [];
 
-            const total     = assistidos.length;
+            const total = assistidos.length;
             const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
-            const atendendo  = assistidos.filter(a => a.status === 'emAtendimento').length;
-            const atendidos  = assistidos.filter(a => a.status === 'atendido').length;
-            const faltosos   = assistidos.filter(a => a.status === 'faltoso').length;
-            const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
+            const atendendo = assistidos.filter(a => a.status === 'emAtendimento').length;
+            const atendidos = assistidos.filter(a => a.status === 'atendido').length;
+            const faltosos = assistidos.filter(a => a.status === 'faltoso').length;
+            const dist = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
+            const aguardandoNumero = assistidos.filter(a => a.status === 'aguardandoNumero').length;
             const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
             html += `
@@ -451,14 +459,18 @@ export const AtendimentoExternoService = {
                         <div class="bg-blue-50 p-2 rounded-lg border border-blue-200 text-blue-700 font-bold">Atendendo: ${atendendo}</div>
                         <div class="bg-green-50 p-2 rounded-lg border border-green-200 text-green-700 font-bold">Prontos: ${atendidos}</div>
                     </div>
-                    <button onclick="window.AtendimentoExternoService.mudarPautaFoco('${pauta.id}')" class="w-full text-center bg-slate-800 text-white font-bold py-2 rounded-xl text-xs hover:bg-slate-900 transition">🔍 Abrir esta Pauta</button>
                     
+                    <!-- 🔥 MOSTRA TODOS OS STATUS DA PAUTA DO DIA -->
                     <div class="mt-4">
-                    ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
-                    ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
-                    ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
-                    ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', pauta.id)}
+                        ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
+                        ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
+                        ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
+                        ${aguardandoNumero > 0 ? this._htmlGrupoStatus('📄 Aguard. CNP', assistidos.filter(a => a.status === 'aguardandoNumero'), 'geral', pauta.id) : ''}
+                        ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', pauta.id)}
+                        ${faltosos > 0 ? this._htmlGrupoStatus('❌ Faltosos', assistidos.filter(a => a.status === 'faltoso'), 'geral', pauta.id) : ''}
                     </div>
+                    
+                    <button onclick="window.AtendimentoExternoService.mudarPautaFoco('${pauta.id}')" class="w-full mt-4 text-center bg-slate-800 hover:bg-slate-900 text-white font-bold py-2 rounded-xl text-xs transition">🔍 Abrir esta Pauta</button>
                 </div>
             `;
         }
@@ -544,6 +556,7 @@ export const AtendimentoExternoService = {
             await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: { id: this.colaboradorId || this.colaboradorAtual?.id || '', name: this.colaboradorNome },
                 inAttendanceTime: new Date().toISOString(),
+                status: 'emAtendimento',
                 history: arrayUnion({ action: 'PUXADO_PARA_MESA', by: this.colaboradorNome, msg: `Caso assumido por ${this.colaboradorNome}`, at: new Date().toISOString() })
             });
 
@@ -566,6 +579,7 @@ export const AtendimentoExternoService = {
             await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
                 inAttendanceTime: null,
+                status: 'aguardando',
                 history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
             });
             if (this.colaboradorAtual?.id) {
@@ -682,6 +696,7 @@ export const AtendimentoExternoService = {
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
     async iniciarDashboardUnificado() {
+        // 🔥 NÃO RECARREGA A PÁGINA, APENAS ATUALIZA A INTERFACE
         this.renderizarContainerLayout();
 
         const viewAtend = this.getEl('view-atendimento');
@@ -698,7 +713,7 @@ export const AtendimentoExternoService = {
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
         
-        // 🔥 FORÇA CARREGAMENTO INICIAL DOS DADOS
+        // 🔥 CARREGA DADOS INICIAIS
         await this._carregarDadosIniciais();
     },
 
@@ -728,14 +743,18 @@ export const AtendimentoExternoService = {
 
         console.log(`🔄 Iniciando listener da pauta: ${this.pautaId}`);
 
+        // 🔥 LISTENER EM TEMPO REAL (ATUALIZA SEM F5)
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
+                // 🔥 ATUALIZA OS DADOS EM TEMPO REAL
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
                 
-                console.log(`🔄 Atualizado: ${this.todosAtendimentosPauta.length} atendimentos`);
+                console.log(`🔄 Atualizado em tempo real: ${this.todosAtendimentosPauta.length} atendimentos`);
+                console.log(`📊 Status:`, this.todosAtendimentosPauta.map(a => `${a.name}: ${a.status}`));
                 
+                // 🔥 RENDERIZA A ABA ATUAL SEM RECARREGAR A PÁGINA
                 if (!this._isRendering) {
                     this.renderizarAbaAtual();
                 }
@@ -761,14 +780,15 @@ export const AtendimentoExternoService = {
         
         console.log('📌 Aguardando (sem atribuição):');
         const semDono = this.todosAtendimentosPauta.filter(a =>
-            (a.status === 'aguardando' || a.status === 'emAtendimento') &&
+            a.status === 'aguardando' &&
             (!a.assignedCollaborator || !a.assignedCollaborator.name)
         );
         console.log(semDono.map(a => `- ${a.name} (${a.status})`));
         
         console.log('📌 Meus casos:');
         const meus = this.todosAtendimentosPauta.filter(a =>
-            a.assignedCollaborator?.name === this.colaboradorNome
+            a.assignedCollaborator?.name === this.colaboradorNome &&
+            a.status === 'emAtendimento'
         );
         console.log(meus.map(a => `- ${a.name} (${a.status})`));
         
