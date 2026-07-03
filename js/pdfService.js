@@ -1,5 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA HÍBRIDA (CORRIGIDA)
-// Mantém compatibilidade com chamadas antigas E suporta nova versão dinâmica
+// js/pdfService.js - VERSÃO COMPLETA HÍBRIDA (COM LOGO CORRIGIDA)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -76,62 +75,107 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGO DO SIGEP (Firebase Storage - Usada em todos os PDFs, exceto Ata Social)
+// ⭐ LOGO DO SIGEP
 const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
 
-// ⭐ LOGO DA DEFENSORIA (Firebase Storage - Usada APENAS na Ata Social)
+// ⭐ LOGO DA DEFENSORIA - VERSÃO CORRIGIDA (sem espaços na URL)
 const LOGO_DEFENSORIA_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7";
 
-// ⭐ FUNÇÃO MELHORADA: Carrega imagem driblando o bloqueio de CORS do Firebase
+// ⭐ FUNÇÃO CORRIGIDA: Carrega imagem com múltiplas tentativas
 const loadImageBase64 = async (url) => {
-    // Se a URL já estiver codificada, usa ela, senão codifica
-    let finalUrl = url;
-    if (!url.includes('%20') && url.includes(' ')) {
-        finalUrl = encodeURI(url);
-    }
+    // Lista de URLs para tentar (com e sem encoding)
+    const urlsToTry = [
+        url,
+        url.replace(/%20/g, ' '), // tenta com espaço
+        url.replace(/ /g, '%20'), // tenta com %20
+        encodeURI(url) // tenta com encodeURI
+    ];
     
-    const fetchImage = (src) => new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'Anonymous';
-        img.onload = () => {
-            const canvas = document.createElement('canvas');
-            canvas.width = img.width;
-            canvas.height = img.height;
-            canvas.getContext('2d').drawImage(img, 0, 0);
-            resolve(canvas.toDataURL('image/png'));
-        };
-        img.onerror = reject;
-        img.src = src;
-    });
-
-    try {
-        return await fetchImage(finalUrl);
-    } catch (e) {
-        console.warn("Erro ao carregar logo diretamente, tentando proxy...", e);
+    // Remove duplicatas
+    const uniqueUrls = [...new Set(urlsToTry)];
+    
+    for (const tryUrl of uniqueUrls) {
         try {
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(finalUrl);
-            return await fetchImage(proxyUrl);
-        } catch (e2) {
-            console.warn("Erro ao carregar logo mesmo com proxy", e2);
-            return null;
+            const result = await fetchImageWithRetry(tryUrl);
+            if (result) return result;
+        } catch (e) {
+            console.warn(`Tentativa falhou para: ${tryUrl}`, e);
         }
     }
+    
+    console.error("Todas as tentativas de carregar a logo falharam.");
+    return null;
 };
 
-// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP (EXCETO na Ata Social)
+// Função auxiliar para tentar carregar imagem com retry
+const fetchImageWithRetry = (src, retries = 3) => {
+    return new Promise((resolve, reject) => {
+        const img = new Image();
+        img.crossOrigin = 'anonymous';
+        
+        let attempts = 0;
+        let timeoutId = null;
+        
+        const loadImage = () => {
+            attempts++;
+            img.src = src + (src.includes('?') ? '&' : '?') + 't=' + Date.now() + '&attempt=' + attempts;
+        };
+        
+        img.onload = () => {
+            if (timeoutId) clearTimeout(timeoutId);
+            try {
+                const canvas = document.createElement('canvas');
+                canvas.width = img.width;
+                canvas.height = img.height;
+                const ctx = canvas.getContext('2d');
+                ctx.drawImage(img, 0, 0);
+                resolve(canvas.toDataURL('image/png'));
+            } catch (e) {
+                reject(e);
+            }
+        };
+        
+        img.onerror = () => {
+            if (attempts < retries) {
+                console.warn(`Tentativa ${attempts} falhou, tentando novamente...`);
+                setTimeout(loadImage, 500 * attempts);
+            } else {
+                if (timeoutId) clearTimeout(timeoutId);
+                reject(new Error(`Falha ao carregar imagem após ${retries} tentativas`));
+            }
+        };
+        
+        // Timeout de segurança
+        timeoutId = setTimeout(() => {
+            if (attempts < retries) {
+                console.warn(`Timeout na tentativa ${attempts}, tentando novamente...`);
+                loadImage();
+            } else {
+                reject(new Error('Timeout ao carregar imagem'));
+            }
+        }, 10000);
+        
+        loadImage();
+    });
+};
+
+// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP
 const addLogoHeader = async (doc, startY = 20) => {
     const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
     if (logoBase64) {
         try {
-            doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - 30, startY, 20, 20);
+            const pageWidth = doc.internal.pageSize.getWidth();
+            doc.addImage(logoBase64, 'PNG', pageWidth - 30, startY, 20, 20);
+            return true;
         } catch(e) {
             console.warn("Erro ao inserir logo SIGEP no PDF", e);
+            return false;
         }
     }
-    return logoBase64 !== null;
+    return false;
 };
 
-// ⭐ FUNÇÃO: Adiciona rodapé padrão com data/hora e página
+// ⭐ FUNÇÃO: Adiciona rodapé padrão
 const addFooter = (doc, pageNumber, totalPages) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
@@ -140,7 +184,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// ⭐ FUNÇÃO CORRIGIDA: buildAtaAcaoSocialPDF - Com logo da Defensoria
+// ⭐ FUNÇÃO CORRIGIDA: buildAtaAcaoSocialPDF
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
@@ -154,19 +198,23 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐ LOGO DA DEFENSORIA - CARREGADA CORRETAMENTE
+    // ⭐ LOGO DA DEFENSORIA - CARREGADA COM MÚLTIPLAS TENTATIVAS
+    console.log("Tentando carregar logo da Defensoria...");
     const logoDefensoria = await loadImageBase64(LOGO_DEFENSORIA_URL);
     
     if (logoDefensoria) {
         try { 
             const pageWidth = doc.internal.pageSize.getWidth();
-            const logoWidth = 106;
+            const logoWidth = 90;
             const logoHeight = 25;
             const xPos = (pageWidth - logoWidth) / 2;
-            doc.addImage(logoDefensoria, 'PNG', xPos, 8, logoWidth, logoHeight); 
+            doc.addImage(logoDefensoria, 'PNG', xPos, 8, logoWidth, logoHeight);
+            console.log("Logo da Defensoria inserida com sucesso!");
         } catch(e) { 
             console.warn("Erro ao inserir logo Defensoria na Ata", e); 
         }
+    } else {
+        console.warn("Não foi possível carregar a logo da Defensoria, continuando sem logo.");
     }
 
     doc.setFont("helvetica", "bold");
@@ -903,7 +951,7 @@ export const PDFService = {
     }
 };
 
-// ⭐ EXPORTS AVULSOS (mantém compatibilidade com chamadas antigas)
+// ⭐ EXPORTS AVULSOS
 export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
 export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
