@@ -1,8 +1,9 @@
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
-    getDocs, query, arrayUnion, onSnapshot, where
+    getDocs, query, arrayUnion, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
@@ -25,13 +26,9 @@ const statusMap = {
 
 // ─── FIREBASE ─────────────────────────────────────────────────────────────────
 
-// 🔹 REMOVA A CRIAÇÃO DO DB AQUI - SERÁ INJETADO PELO HTML
-// const app = initializeApp(firebaseConfig);
-// const auth = getAuth(app);
-// const db = getFirestore(app);
-
-let auth = null;
-let db = null;
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
 
 let deferredPrompt;
 window.addEventListener('beforeinstallprompt', (e) => {
@@ -44,8 +41,6 @@ window.addEventListener('beforeinstallprompt', (e) => {
 export const AtendimentoExternoService = {
 
     // Estado
-    db: null,  // ← SERÁ INJETADO PELO HTML
-    auth: null, // ← SERÁ INJETADO PELO HTML
     pautaId: null,
     assistidoId: null,
     colaboradorNome: null,
@@ -58,50 +53,37 @@ export const AtendimentoExternoService = {
     todosAtendimentosPauta: [],
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
-    unsubscribesPautasExtras: [],
-    abaAtual: 'minha-mesa',
-    modoVisualizacao: 'dashboard',
-    pautasDoDia: [],
-    atendimentosPorPauta: {},
+    unsubscribesPautasExtras: [],   // listeners das outras pautas do colaborador
+    abaAtual: 'minha-mesa',         // 'minha-mesa' | 'sem-atribuicao' | 'pauta-dia'
+    modoVisualizacao: 'dashboard',  // 'dashboard' | 'abas'
+    pautasDoDia: [],                // todas as pautas do colaborador hoje
+    atendimentosPorPauta: {},       // { [pautaId]: [assistidos] } para a aba Pauta do Dia
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado");
-
-        // 🔹 USA O DB INJETADO
-        if (!this.db) {
-            console.error("❌ db não foi injetado! Verifique o HTML.");
-            this.showError("Erro de Conexão", "Banco de dados não inicializado.");
-            return;
-        }
+        console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
 
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
 
-        this.pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
-        this.colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
-        
-        if (this.pautaId && this.colaboradorNome && !urlParams.get('pautaId')) {
-            console.log("🔄 Recuperando sessão do LocalStorage...");
-        }
+        this.pautaId        = urlParams.get('pautaId')   || urlParams.get('amp;pautaId');
+        this.assistidoId    = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
+        this.colaboradorNome = urlParams.get('colab')    || urlParams.get('amp;colab');
+        this.colaboradorId  = urlParams.get('colabId')   || urlParams.get('amp;colabId') || '';
+        const tokenRecebido = urlParams.get('token')     || urlParams.get('amp;token');
+        const telaAtual     = urlParams.get('view')      || urlParams.get('amp;view');
+        const modo          = urlParams.get('modo')      || urlParams.get('amp;modo');
 
-        console.log("DEBUG - PautaId:", this.pautaId, "ColabNome:", this.colaboradorNome);
+        this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
         if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Não foi possível identificar a Pauta ou o Colaborador. Tente acessar pelo menu principal.");
+            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
         try {
-            // 🔹 USA O AUTH INJETADO
-            if (!this.auth) {
-                console.error("❌ auth não foi injetado! Verifique o HTML.");
-                this.showError("Erro de Conexão", "Autenticação não inicializada.");
-                return;
-            }
-            
-            if (!this.auth.currentUser) await signInAnonymously(this.auth);
+            if (!auth.currentUser) await signInAnonymously(auth);
 
             await this.carregarColaboradoresGerais();
 
@@ -110,6 +92,13 @@ export const AtendimentoExternoService = {
                 return;
             }
 
+            // Atendimento individual (peça específica)
+            if (this.assistidoId && !telaAtual) {
+                await this.iniciarAtendimentoIndividual(tokenRecebido);
+                return;
+            }
+
+            // Verificar sessão
             const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
             const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
 
@@ -126,47 +115,16 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── CARREGAR ASSISTIDO INDIVIDUAL ──────────────────────────────────────────
-
-    async carregarAssistidoIndividual(pautaId, assistidoId) {
-        try {
-            console.log("🔍 Carregando assistido:", assistidoId, "da pauta:", pautaId);
-            
-            const docSnap = await getDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId));
-            if (!docSnap.exists()) {
-                this.showError("Processo não encontrado", "Este assistido não está mais na pauta.");
-                return;
-            }
-
-            const assistido = docSnap.data();
-            this.assistidoData = assistido;
-            this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
-            this.pautaId = pautaId;
-            this.assistidoId = assistidoId;
-
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            const pautaData = pautaDoc.exists() ? pautaDoc.data() : {};
-
-            this.renderizarInterface(assistido, pautaData);
-            this.setupListeners();
-            this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
-
-        } catch (error) {
-            console.error("Erro ao carregar assistido:", error);
-            this.showError("Erro", "Falha ao carregar dados do assistido.");
-        }
-    },
-
     // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
 
     async iniciarAtendimentoIndividual(tokenRecebido) {
-        const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
+        const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
         if (!pautaDoc.exists()) {
             this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
             return;
         }
 
-        const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
+        const docSnap = await getDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId));
         if (!docSnap.exists()) {
             this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
             return;
@@ -195,6 +153,7 @@ export const AtendimentoExternoService = {
 
         if (this.modoVisualizacao === 'abas') {
             this.setupAbasNavegacao();
+            // Pré-carrega pautas do dia para a aba "Pauta do Dia"
             this._carregarTodasPautasDoColaborador();
         } else {
             this.atualizarListasDoDashboard();
@@ -210,7 +169,7 @@ export const AtendimentoExternoService = {
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
         this.unsubscribeDashboard = onSnapshot(
-            collection(this.db, "pautas", this.pautaId, "attendances"),
+            collection(db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
@@ -225,13 +184,13 @@ export const AtendimentoExternoService = {
     },
 
     // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
+    // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
 
     async _carregarTodasPautasDoColaborador() {
         const hoje = new Date().toISOString().split('T')[0];
 
         try {
-            const q = query(collection(this.db, "pautas"), where("isPublic", "==", true));
-            const pautasSnap = await getDocs(q);
+            const pautasSnap = await getDocs(collection(db, "pautas"));
             const pautasHoje = pautasSnap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(p => {
@@ -242,16 +201,18 @@ export const AtendimentoExternoService = {
             const resultado = [];
             for (const pauta of pautasHoje) {
                 if (pauta.id === this.pautaId) {
+                    // Já temos listener ativo para esta
                     resultado.push(pauta);
                     continue;
                 }
                 try {
-                    const colabsSnap = await getDocs(collection(this.db, "pautas", pauta.id, "collaborators"));
+                    const colabsSnap = await getDocs(collection(db, "pautas", pauta.id, "collaborators"));
                     const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
                     if (estaNessa) {
                         resultado.push(pauta);
+                        // Listener real-time para esta pauta extra
                         const unsub = onSnapshot(
-                            collection(this.db, "pautas", pauta.id, "attendances"),
+                            collection(db, "pautas", pauta.id, "attendances"),
                             (snap) => {
                                 this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                                 if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
@@ -263,6 +224,8 @@ export const AtendimentoExternoService = {
             }
 
             this.pautasDoDia = resultado;
+
+            // Atualiza a aba se já estiver aberta
             if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
 
         } catch (err) {
@@ -273,12 +236,7 @@ export const AtendimentoExternoService = {
     // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
 
     renderizarContainerDashboard() {
-        const corpo = document.getElementById('atendimento-externo-container');
-        if (!corpo) {
-            console.warn("⚠️ Container 'atendimento-externo-container' não encontrado!");
-            return;
-        }
-        corpo.classList.remove('hidden');
+        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
 
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
@@ -350,6 +308,7 @@ export const AtendimentoExternoService = {
         this._setupHeaderInteracoes(colorMap, prefs);
         this.atualizarBadgeHeader();
 
+        // PWA
         if (deferredPrompt) {
             const btn = document.getElementById('btn-install-pwa');
             btn.classList.remove('hidden');
@@ -361,6 +320,7 @@ export const AtendimentoExternoService = {
             });
         }
 
+        // MELHORIA 4: botão de alternar modo
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
             this._cancelarListeners();
@@ -530,7 +490,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ── ABA 3: PAUTA DO DIA ─────────────────────────────────────────────────
+    // ── ABA 3: PAUTA DO DIA (MELHORIA 1 + 3) ─────────────────────────────────
 
     _renderPautaDia(container) {
         if (this.pautasDoDia.length === 0) {
@@ -547,6 +507,7 @@ export const AtendimentoExternoService = {
         for (const pauta of this.pautasDoDia) {
             const assistidos = this.atendimentosPorPauta[pauta.id] || [];
 
+            // Contadores
             const total     = assistidos.length;
             const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
             const atendendo  = assistidos.filter(a => a.status === 'emAtendimento').length;
@@ -555,8 +516,10 @@ export const AtendimentoExternoService = {
             const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
             const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
+            // MELHORIA 1: Sumário por pauta
             html += `
                 <div class="mb-8">
+                    <!-- Header da pauta -->
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="font-black text-slate-800 text-base">${escapeHTML(pauta.name)}</h3>
@@ -565,10 +528,12 @@ export const AtendimentoExternoService = {
                         <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
                     </div>
 
+                    <!-- Barra de progresso -->
                     <div class="h-1.5 bg-slate-100 rounded-full mb-3">
                         <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
                     </div>
 
+                    <!-- Sumário compacto -->
                     <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
                         <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
                             <div class="text-lg font-black text-amber-600">${aguardando}</div>
@@ -593,6 +558,7 @@ export const AtendimentoExternoService = {
                         </div>` : ''}
                     </div>
 
+                    <!-- Cards agrupados por status -->
                     ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
                     ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
                     ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
@@ -643,12 +609,7 @@ export const AtendimentoExternoService = {
         } else if (modo === 'mesa') {
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <button class="btn-atender-caso flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center"
-                        data-pauta-id="${pid}" 
-                        data-assistido-id="${assistido.id}"
-                        data-nome="${escapeHTML(assistido.name)}">
-                        📋 Atender
-                    </button>
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center">📋 Atender</a>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
@@ -693,29 +654,12 @@ export const AtendimentoExternoService = {
                 await this.devolverParaFila(b.dataset.pautaId, b.dataset.assistidoId);
             });
         });
-
-        // Atender caso (abrir mesa de atendimento)
-        document.querySelectorAll('.btn-atender-caso').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const pautaId = e.currentTarget.dataset.pautaId;
-                const assistidoId = e.currentTarget.dataset.assistidoId;
-                const nome = e.currentTarget.dataset.nome || 'Assistido';
-                
-                console.log("🖱️ Botão Atender clicado:", nome, pautaId, assistidoId);
-                
-                if (typeof window.abrirMesaDeAtendimento === 'function') {
-                    window.abrirMesaDeAtendimento(nome, pautaId, assistidoId);
-                } else {
-                    console.error("❌ window.abrirMesaDeAtendimento não está definida!");
-                    alert("Erro: Função de abertura não encontrada. Verifique se o main.js foi carregado.");
-                }
-            });
-        });
     },
 
-    // ─── PUXAR PARA MIM ───────────────────────────────────────────────────────────
+    // ─── PUXAR PARA MIM (MELHORIA 2) ───────────────────────────────────────────
 
     async puxarParaMim(pautaId, assistidoId) {
+        // MELHORIA 2: verifica se já tem caso em andamento
         const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
             a.assignedCollaborator?.name === this.colaboradorNome
@@ -729,7 +673,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: {
                     id: this.colaboradorId || this.colaboradorAtual?.id || '',
                     name: this.colaboradorNome
@@ -744,12 +688,13 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'ocupado',
                     currentAttendance: assistidoId
                 }).catch(() => {});
             }
 
+            // Muda para a aba Minha Mesa automaticamente
             this.abaAtual = 'minha-mesa';
             document.getElementById('btn-tab-minha-mesa')?.click();
 
@@ -771,7 +716,7 @@ export const AtendimentoExternoService = {
         if (!confirm("Devolver este caso para a fila Sem Atribuição? Outros colaboradores poderão assumí-lo.")) return;
 
         try {
-            await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
+            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
                 inAttendanceTime: null,
                 history: arrayUnion({
@@ -783,7 +728,7 @@ export const AtendimentoExternoService = {
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
+                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
                     status: 'disponivel',
                     currentAttendance: null
                 }).catch(() => {});
@@ -802,7 +747,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── DASHBOARD TRADICIONAL ────────────────────────────────────────────────
+    // ─── DASHBOARD TRADICIONAL (preservado do código original) ────────────────
 
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
@@ -874,6 +819,7 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
@@ -906,6 +852,7 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
+                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
 
                 tabsDiv.innerHTML = `
                     <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
@@ -935,7 +882,7 @@ export const AtendimentoExternoService = {
 
     async carregarColaboradoresGerais() {
         try {
-            const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
+            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
         } catch { this.todosColaboradores = []; }
@@ -1040,9 +987,10 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ────────────────────────────────────
+    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL (preservado) ────────────────────
 
     renderizarInterface(assistido, pautaData) {
+        // Remove listener do dashboard se existir
         if (this.unsubscribeDashboard) {
             this.unsubscribeDashboard();
             this.unsubscribeDashboard = null;
@@ -1071,11 +1019,15 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
+        // Criar estrutura da interface individual (similar ao original)
+        // Por brevidade, assumimos que o HTML da interface individual já existe no DOM
+        // ou será injetado. O código original tem essa estrutura.
+        
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
         const areaColaborador = document.getElementById('area-colaborador');
-        if (areaColaborador) areaColaborador.classList.remove('hidden');
+        areaColaborador.classList.remove('hidden');
 
         document.getElementById('banner-transferencia')?.remove();
         document.getElementById('banner-atendido-trava')?.remove();
@@ -1115,7 +1067,7 @@ export const AtendimentoExternoService = {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
                         try {
                             if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                                const colabDocRef = doc(this.db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
+                                const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
                                 await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
                                 this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
                             }
@@ -1406,11 +1358,11 @@ export const AtendimentoExternoService = {
         };
 
         try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaIdSeguro));
+            const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
             const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
             const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
 
-            const docRef = doc(this.db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
+            const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
@@ -1448,7 +1400,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, {
                         status: 'disponivel',
                         currentAttendance: null
@@ -1489,7 +1441,7 @@ export const AtendimentoExternoService = {
                 });
                 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1526,7 +1478,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1562,7 +1514,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1597,7 +1549,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
@@ -1622,7 +1574,7 @@ export const AtendimentoExternoService = {
                 });
 
                 if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(this.db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
+                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
                     await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
                 }
 
