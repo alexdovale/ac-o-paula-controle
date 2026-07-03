@@ -10,8 +10,6 @@ import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 
-// ─── HELPERS ──────────────────────────────────────────────────────────────────
-
 const statusMap = {
     pauta:                  { cor: 'bg-slate-100 text-slate-600 border-slate-200',    txt: 'Na Pauta' },
     aguardando:             { cor: 'bg-amber-100 text-amber-700 border-amber-200',    txt: 'Aguardando' },
@@ -23,8 +21,6 @@ const statusMap = {
     faltoso:                { cor: 'bg-red-100 text-red-700 border-red-200',          txt: 'Faltoso' },
 };
 
-// ─── FIREBASE LOCAL FALLBACK ──────────────────────────────────────────────────
-
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
@@ -35,11 +31,9 @@ window.addEventListener('beforeinstallprompt', (e) => {
     deferredPrompt = e;
 });
 
-// ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
-
 export const AtendimentoExternoService = {
 
-    // Estado
+    // Estado do Serviço
     pautaId: null,
     assistidoId: null,
     colaboradorNome: null,
@@ -52,46 +46,56 @@ export const AtendimentoExternoService = {
     todosAtendimentosPauta: [],
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
-    unsubscribesPautasExtras: [],   // listeners das outras pautas do colaborador
-    abaAtual: 'minha-mesa',         // 'minha-mesa' | 'sem-atribuicao' | 'pauta-dia'
-    modoVisualizacao: 'dashboard',  // 'dashboard' | 'abas'
-    pautasDoDia: [],                // todas as pautas do colaborador hoje
-    atendimentosPorPauta: {},       // { [pautaId]: [assistidos] } para a aba Pauta do Dia
+    unsubscribesPautasExtras: [],   
+    abaAtual: 'minha-mesa',         
+    modoVisualizacao: 'dashboard',  
+    pautasDoDia: [],                
+    atendimentosPorPauta: {},       
 
     // Instâncias Dinâmicas do Firebase (Injetadas pelo HTML)
     _dbInstance: null,
     _authInstance: null,
 
+    _isInstanceValid(instance) {
+        if (!instance) return false;
+        const conf = instance.app?.options;
+        if (conf && (conf.apiKey === "SUA_API_KEY" || conf.projectId === "SEU_PROJECT_ID")) {
+            return false;
+        }
+        return true;
+    },
+
     get db() {
-        return this._dbInstance || db;
+        if (this._dbInstance && this._isInstanceValid(this._dbInstance)) {
+            return this._dbInstance;
+        }
+        return db;
     },
     set db(val) {
         this._dbInstance = val;
     },
 
     get auth() {
-        return this._authInstance || auth;
+        if (this._authInstance && this._isInstanceValid(this._authInstance)) {
+            return this._authInstance;
+        }
+        return auth;
     },
     set auth(val) {
         this._authInstance = val;
     },
 
-    // ─── INIT ─────────────────────────────────────────────────────────────────
-
     async init() {
         console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
 
-        // 🔹 CORREÇÃO DO ROUTER: Função robusta para extrair parâmetros de busca tradicionais ou pós-hash (#)
         const obterParametrosURL = () => {
             const params = {};
-            // 1. Extração tradicional (?pautaId=...)
             if (window.location.search) {
                 const searchLimpa = window.location.search.replace(/&amp;/g, '&');
                 new URLSearchParams(searchLimpa).forEach((val, key) => {
                     params[key] = val;
                 });
             }
-            // 2. Extração de rotas em hash (/#/atendimento_externo?pautaId=...)
             if (window.location.hash && window.location.hash.includes('?')) {
                 const hashQuery = window.location.hash.split('?')[1].replace(/&amp;/g, '&');
                 new URLSearchParams(hashQuery).forEach((val, key) => {
@@ -103,9 +107,6 @@ export const AtendimentoExternoService = {
 
         const urlParams = obterParametrosURL();
 
-        // 🔹 CORREÇÃO DE SOBRESCRITA CRÍTICA:
-        // Se as variáveis já foram injetadas externamente (pelo HTML), nós as preservamos (usando '|| this.[Propriedade]')
-        // impedindo que uma URL sem parâmetros clássicos zere o estado do serviço.
         this.pautaId        = urlParams['pautaId']        || urlParams['amp;pautaId']        || this.pautaId;
         this.assistidoId    = urlParams['assistidoId']    || urlParams['amp;assistidoId']    || this.assistidoId;
         this.colaboradorNome = urlParams['colab']          || urlParams['amp;colab']          || this.colaboradorNome;
@@ -116,23 +117,42 @@ export const AtendimentoExternoService = {
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
+        console.log("🔍 Parâmetros processados:", {
+            pautaId: this.pautaId,
+            colab: this.colaboradorNome,
+            assistidoId: this.assistidoId
+        });
+
         if (!this.pautaId || !this.colaboradorNome) {
+            console.error("❌ Parâmetros obrigatórios ausentes!");
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
         try {
-            if (!this.auth.currentUser) await signInAnonymously(this.auth);
+            console.log("👤 Verificando estado de login anônimo...");
+            if (!this.auth.currentUser) {
+                console.log("👤 Iniciando login anônimo...");
+                await signInAnonymously(this.auth);
+                console.log("👤 Login anônimo efetuado!");
+            } else {
+                console.log("👤 Usuário já estava logado anonimamente:", this.auth.currentUser.uid);
+            }
 
+            console.log("👥 Carregando colaboradores da pauta...");
             await this.carregarColaboradoresGerais();
+            console.log(`👥 Colaboradores carregados: ${this.todosColaboradores.length} encontrados.`);
 
             if (!this.colaboradorAtual) {
+                console.error(`❌ Colaborador atual "${this.colaboradorNome}" não localizado na pauta.`);
                 this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
                 return;
             }
+            console.log("✅ Colaborador atual autenticado com sucesso:", this.colaboradorAtual);
 
             // Atendimento individual (peça específica)
             if (this.assistidoId && !telaAtual) {
+                console.log("🎯 Redirecionando para o atendimento individual de ID:", this.assistidoId);
                 await this.iniciarAtendimentoIndividual(tokenRecebido);
                 return;
             }
@@ -142,22 +162,46 @@ export const AtendimentoExternoService = {
             const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
 
             if (!temSessao && this.modoVisualizacao === 'dashboard') {
+                console.log("🔒 Nenhuma sessão ativa encontrada. Renderizando tela de login de colaboradores.");
                 this.renderizarTelaLoginColaborador();
                 return;
             }
 
+            console.log("🏁 Carregando Painel unificado...");
             await this.iniciarDashboardUnificado();
 
         } catch (error) {
-            console.error("Erro na inicialização:", error);
-            this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
+    // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
+
+    // ✅ MÉTODO ADICIONADO PARA CORRIGIR O TRAVAMENTO DO BOTÃO "ATENDER"
+    async carregarAssistidoIndividual(pautaId, assistidoId) {
+        console.log("⚡ Carregando assistido de forma direta via Router:", assistidoId);
+        this.pautaId = pautaId;
+        this.assistidoId = assistidoId;
+
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
+            const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
+
+            if (docSnap.exists() && pautaDoc.exists()) {
+                const assistido = docSnap.data();
+                this.assistidoData = assistido;
+                this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
+                
+                // Desenha a tela com as opções
+                this.renderizarInterface(assistido, pautaDoc.data());
+                this.setupListeners();
+                this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
+            } else {
+                this.showError("Processo não encontrado", "Não foi possível resgatar o assistido no Firestore.");
+            }
+        } catch (error) {
+            console.error("❌ Erro ao carregar assistido via router:", error);
+            this.showError("Erro de Conexão", "Não foi possível resgatar o assistido no Firestore: " + error.message);
         }
     },
 
-    // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
-
     async iniciarAtendimentoIndividual(tokenRecebido) {
-        // 🔹 PROTEÇÃO EXTRA: Impede requisição nula caso as propriedades estejam vazias
         if (!this.pautaId || !this.assistidoId) {
             console.error("❌ IDs ausentes para carregamento individual:", { pautaId: this.pautaId, assistidoId: this.assistidoId });
             this.showError("Parâmetros Ausentes", "Não foi possível carregar os dados individuais porque a pauta ou o assistido não foram definidos.");
@@ -190,16 +234,14 @@ export const AtendimentoExternoService = {
         this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
     },
 
-    // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
-
     async iniciarDashboardUnificado() {
+        console.log("📋 Inicializando Dashboard Unificado...");
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
         this.renderizarContainerDashboard();
 
         if (this.modoVisualizacao === 'abas') {
             this.setupAbasNavegacao();
-            // Pré-carrega pautas do dia para a aba "Pauta do Dia"
             this._carregarTodasPautasDoColaborador();
         } else {
             this.atualizarListasDoDashboard();
@@ -215,15 +257,16 @@ export const AtendimentoExternoService = {
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
 
-        // 🔹 PROTEÇÃO EXTRA: Garante que não inicia listener com PautaId nulo
         if (!this.pautaId) {
             console.error("❌ pautaId nulo detectado! Pulando a criação de listener em tempo real.");
             return;
         }
 
+        console.log("🔌 Iniciando Listener em Tempo Real para Pauta:", this.pautaId);
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
             (snap) => {
+                console.log(`🔌 Atualização recebida do banco: ${snap.size} registros encontrados.`);
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
                 if (this.modoVisualizacao === 'abas') {
@@ -232,11 +275,11 @@ export const AtendimentoExternoService = {
                     this.atualizarListasDoDashboard();
                 }
             },
-            (error) => console.error("Erro no realtime:", error)
+            (error) => {
+                console.error("❌ Erro de leitura em tempo real:", error);
+            }
         );
     },
-
-    // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
 
     async _carregarTodasPautasDoColaborador() {
         const hoje = new Date().toISOString().split('T')[0];
@@ -261,7 +304,6 @@ export const AtendimentoExternoService = {
                     const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
                     if (estaNessa) {
                         resultado.push(pauta);
-                        // Listener real-time para esta pauta extra
                         const unsub = onSnapshot(
                             collection(this.db, "pautas", pauta.id, "attendances"),
                             (snap) => {
@@ -276,15 +318,12 @@ export const AtendimentoExternoService = {
 
             this.pautasDoDia = resultado;
 
-            // Atualiza a aba se já estiver aberta
             if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
 
         } catch (err) {
             console.error("Erro ao buscar pautas do colaborador:", err);
         }
     },
-
-    // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
 
     renderizarContainerDashboard() {
         const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
@@ -359,7 +398,6 @@ export const AtendimentoExternoService = {
         this._setupHeaderInteracoes(colorMap, prefs);
         this.atualizarBadgeHeader();
 
-        // PWA
         if (deferredPrompt) {
             const btn = document.getElementById('btn-install-pwa');
             btn.classList.remove('hidden');
@@ -450,8 +488,6 @@ export const AtendimentoExternoService = {
         `;
     },
 
-    // ─── ABAS ─────────────────────────────────────────────────────────────────
-
     setupAbasNavegacao() {
         const abas = [
             { id: 'minha-mesa',      btnId: 'btn-tab-minha-mesa',      cor: 'bg-amber-600' },
@@ -491,8 +527,6 @@ export const AtendimentoExternoService = {
         this._setupAcoesCards();
     },
 
-    // ── ABA 1: MINHA MESA ─────────────────────────────────────────────────────
-
     _renderMinhaMesa(container) {
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
@@ -513,8 +547,6 @@ export const AtendimentoExternoService = {
             ${meusCasos.map(a => this._htmlCardAba(a, 'mesa')).join('')}
         </div>`;
     },
-
-    // ── ABA 2: SEM ATRIBUIÇÃO ─────────────────────────────────────────────────
 
     _renderSemAtribuicao(container) {
         const semDono = this.todosAtendimentosPauta.filter(a =>
@@ -540,8 +572,6 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ── ABA 3: PAUTA DO DIA ───────────────────────────────────────────────────
-
     _renderPautaDia(container) {
         if (this.pautasDoDia.length === 0) {
             container.innerHTML = `
@@ -557,7 +587,6 @@ export const AtendimentoExternoService = {
         for (const pauta of this.pautasDoDia) {
             const assistidos = this.atendimentosPorPauta[pauta.id] || [];
 
-            // Contadores
             const total     = assistidos.length;
             const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
             const atendendo  = assistidos.filter(a => a.status === 'emAtendimento').length;
@@ -634,8 +663,6 @@ export const AtendimentoExternoService = {
         `;
     },
 
-    // ── CARD DAS ABAS ─────────────────────────────────────────────────────────
-
     _htmlCardAba(assistido, modo, pautaIdOverride = null) {
         const pid = pautaIdOverride || this.pautaId;
         const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: assistido.status };
@@ -656,9 +683,10 @@ export const AtendimentoExternoService = {
                     👇 Puxar para mim
                 </button>`;
         } else if (modo === 'mesa') {
+            // 🔹 INTERFACE CORRIGIDA: Se clicado em Atender, chama o abrirMesaDeAtendimento nativo do HTML para evitar recarregar a tela!
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</a>
+                    <button onclick="if(window.abrirMesaDeAtendimento){ window.abrirMesaDeAtendimento('${escapeHTML(assistido.name)}', '${pid}', '${assistido.id}'); } else { window.location.href='${linkIndividual}'; }" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</button>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
@@ -686,7 +714,6 @@ export const AtendimentoExternoService = {
     },
 
     _setupAcoesCards() {
-        // Puxar para mim
         document.querySelectorAll('.btn-puxar-caso').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
@@ -696,7 +723,6 @@ export const AtendimentoExternoService = {
             });
         });
 
-        // Devolver para fila
         document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
@@ -704,8 +730,6 @@ export const AtendimentoExternoService = {
             });
         });
     },
-
-    // ─── PUXAR PARA MIM ────────────────────────────────────────────────────────
 
     async puxarParaMim(pautaId, assistidoId) {
         const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
@@ -742,7 +766,6 @@ export const AtendimentoExternoService = {
                 }).catch(() => {});
             }
 
-            // Muda para a aba Minha Mesa automaticamente
             this.abaAtual = 'minha-mesa';
             document.getElementById('btn-tab-minha-mesa')?.click();
 
@@ -795,8 +818,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── DASHBOARD TRADICIONAL ────────────────────────────────────────────────
-
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
         const tabsDiv   = document.getElementById('tabs-dashboard');
@@ -809,7 +830,7 @@ export const AtendimentoExternoService = {
 
         const desenharCard = (item, isAberto) => {
             const st = statusMap[item.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: item.status };
-            const notas = item.notasRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">⚠️ ${escapeHTML(item.notasRevisao)}</div>` : '';
+            const notas = item.notesRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">⚠️ ${escapeHTML(item.notesRevisao)}</div>` : '';
             const numCNP = item.numeroProcesso ? `<span class="font-mono text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
             const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
@@ -820,9 +841,9 @@ export const AtendimentoExternoService = {
                         <div class="min-w-0 flex-1">
                             <h3 class="font-black text-slate-800 text-base truncate">${escapeHTML(item.name)}</h3>
                             <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
-                            ${numCNP} ${textosWrapper || notas}
+                            ${numCNP} ${notas}
                         </div>
-                        <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</a>
+                        <button onclick="if(window.abrirMesaDeAtendimento){ window.abrirMesaDeAtendimento('${escapeHTML(item.name)}', '${this.pautaId}', '${item.id}'); } else { window.location.href='${link}'; }" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</button>
                     </div>`;
             }
 
@@ -1032,9 +1053,6 @@ export const AtendimentoExternoService = {
                     <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
                     <p class="text-gray-500 font-semibold">${message}</p>
                 </div>
-            </div>`;
-    },
-
     // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ─────────────────────────────────
 
     renderizarInterface(assistido, pautaData) {
@@ -1042,6 +1060,12 @@ export const AtendimentoExternoService = {
         if (this.unsubscribeDashboard) {
             this.unsubscribeDashboard();
             this.unsubscribeDashboard = null;
+        }
+
+        // 🔹 CORREÇÃO DE TRAVAMENTO: Oculta o loading screen ("Sincronizando pautas...") se ele estiver na tela
+        const fallback = document.getElementById('fallback-container');
+        if (fallback) {
+            fallback.classList.add('hidden');
         }
 
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
