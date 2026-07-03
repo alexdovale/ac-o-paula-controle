@@ -104,24 +104,20 @@ export const AtendimentoExternoService = {
         }
     },
 
-    gerarLinkPautaAtual() {
-        const baseUrl = window.location.origin + window.location.pathname;
-        return `${baseUrl}?pautaId=${this.pautaId}`;
-    },
+    // ─── DEBUG: VERIFICAR ID DA PAUTA ──────────────────────────────────────────
 
-    async copiarLinkPauta() {
-        if (!this.pautaId) {
-            alert("Nenhuma pauta selecionada para copiar o link.");
-            return;
-        }
-        const link = this.gerarLinkPautaAtual();
-        try {
-            await navigator.clipboard.writeText(link);
-            alert("Link da pauta copiado para a área de transferência:\n" + link);
-        } catch (err) {
-            console.error("Erro ao copiar link: ", err);
-            prompt("Copie o link abaixo:", link);
-        }
+    verificarIdPauta() {
+        console.log("🔍 ====== VERIFICANDO ID DA PAUTA ======");
+        console.log("📌 pautaId atual:", this.pautaId);
+        console.log("📌 colaboradorNome:", this.colaboradorNome);
+        console.log("📌 colaboradorAtual:", this.colaboradorAtual);
+        console.log("📌 URL atual:", window.location.href);
+        
+        const params = new URLSearchParams(window.location.search);
+        console.log("📌 pautaId da URL:", params.get('pautaId'));
+        console.log("📌 localStorage lastPautaId:", localStorage.getItem('lastPautaId'));
+        
+        return this.pautaId;
     },
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
@@ -132,6 +128,9 @@ export const AtendimentoExternoService = {
         const params = new URLSearchParams(window.location.search);
         this.pautaId = params.get('pautaId') || localStorage.getItem('lastPautaId');
         this.colaboradorNome = params.get('colab') || localStorage.getItem('lastColabName');
+
+        // 🔍 DEBUG: Verificar ID
+        this.verificarIdPauta();
 
         if (!this.pautaId || !this.colaboradorNome) {
             this.showError("Link Incompleto", "Não foi possível identificar a pauta ou o usuário.");
@@ -216,7 +215,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── RENDERIZAÇÃO E INTERFACE ─────────────────────────────────────────────
+    // ─── RENDERIZAÇÃO LAYOUT ──────────────────────────────────────────────────
 
     renderizarContainerLayout() {
         const parent = document.getElementById('atendimento-externo-container');
@@ -238,11 +237,8 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                     
-                    <!-- MENU DE CONTA (SAIR / SENHA / LINK) -->
+                    <!-- MENU DE CONTA (APENAS SENHA E SAIR) -->
                     <div class="relative z-20 flex gap-2 shrink-0">
-                         <button onclick="window.AtendimentoExternoService.copiarLinkPauta()" title="Copiar Link da Pauta" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition shadow-sm border border-indigo-500">
-                             🔗 Link
-                         </button>
                          <div class="relative group">
                             <button class="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg transition shadow-sm border border-slate-600 flex items-center gap-2">
                                 ⚙️ <span class="hidden sm:inline text-xs font-bold uppercase">Opções</span>
