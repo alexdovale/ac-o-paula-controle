@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA COM BASE64 (PONTO CODOC)
+// js/pdfService.js - VERSÃO DEFINITIVA COM BASE64 (SOMENTE ATA)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,23 +75,13 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGO ÚNICA PARA TODOS OS PDFs (PONTO CODOC) - COLE O BASE64 AQUI
-// Basta colar a string que começa com "data:image/png;base64,..." dentro das aspas abaixo
-const LOGO_PADRAO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
+// ⭐ LOGO ÚNICA PARA A ATA - COLE O BASE64 AQUI
+// Substitua o texto abaixo pela string gigante do conversor
+const LOGO_PADRAO_BASE64 = "COLE_O_SEU_BASE64_AQUI_DENTRO_DESTAS_ASPAS";
 
-// ⭐ FUNÇÃO: Adiciona cabeçalho com logo para os relatórios auxiliares (Canto Direito)
+// ⭐ FUNÇÃO: Desativada para não aparecer nos outros relatórios
 const addLogoHeader = (doc, startY = 20) => {
-    try {
-        if (LOGO_PADRAO_BASE64 && LOGO_PADRAO_BASE64.startsWith("data:image")) {
-            const pageWidth = doc.internal.pageSize.getWidth();
-            // Ajustado para 35x35 no canto direito
-            doc.addImage(LOGO_PADRAO_BASE64, 'PNG', pageWidth - 45, startY, 35, 35);
-            return true;
-        }
-    } catch(e) {
-        console.warn("Erro ao inserir logo no PDF", e);
-    }
-    return false;
+    return false; // Retorna falso para não renderizar nos demais PDFs
 };
 
 // ⭐ FUNÇÃO: Adiciona rodapé padrão
