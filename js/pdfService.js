@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA COM LOGO GARANTIDA
+// js/pdfService.js - VERSÃO COMPLETA COM LOGO BASE64 EMBUTIDA
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,100 +75,21 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGO DO SIGEP
-const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
+// ⭐ LOGO DO SIGEP (Base64 embutido para evitar CORS)
+const LOGO_SIGEP_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIAAAAyCAYAAAAeP4ixAAAABHNCSVQICAgIfAhkiAAAAAlwSFlzAAAOxAAADsQBlSsOGwAAABl0RVh0U29mdHdhcmUAd3d3Lmlua3NjYXBlLm9yZ5vuPBoAAAKwSURBVGiB7Zo9a1RBFIafc/cmm0SwiQpBGyGthU1IfkCwSBHUGJE0aYR0aYJgYyEWQYj5CYKCjV9gEVHEWGilYKWQwlaCnaCajRrN3tz5mNybq2Hu3rmze/YphJw5c+Z9zpmzZ46AEEIIIYQQQgghhBBCCCGEEEKIIx0zHdpUM8+IHl3tRPQX6HE0X6b1UjQv9arTG5mB7jWzgPV2tcIcygGsmpnGMNix0Ceu0lLmY9Ush61t1Y8IIHaAWTML28zMJoB5MysFoATwBngAjAKPgGdRi4BxIArMxcI6MBYjfD6w+0MAu1HVrGj7rGhmT4FDLh8Dr0w0UAVAbxfNp6bKfAFeuNjcAZaBA1x1qDnwF9jL4StYAb5FvwLvk9qBx4CXaB9m2tCuYhU1g0tL1e8GbpvZUwM3/aCqVc2+5HRFgT6K2z7UzF5Z0c06gZtmNh+ySVeBYyMvLLR8OQa8NrPbgcZ6kUlUtaqZcTDQmS1mZgM8sY6cB8WsD2tQ8zHauSg75qqqvZGFbURuBPg/1lXKzAodkFqBp9FZA49loH/ATgt5HTgNHEuonKnmOzIfawADN4FcmjkKrCbUYwP+AEdmVjXKPDOzg4GGRkIA/4CDaL7N9BypqkrRZZeCzZt5wAmgZ0W9bGZNt2sFeB14FzIggDngLNDVK2smxFEuM3sLHADWo7N3F7jiM4g6wH7RRSt3KvJ0Af0U0k+7WVE1szaLEsG/pgKfqubdyE6XgO9AZzXjDbjvC9qRk4U3IWRgOeTt3apqO/I+gOuBrJ0R5XqWt1R1BQvQxW5oAn5kZ5KYgE/m+R7KcJ7PzJZdfD7RHmCy5knOzKyw3Z7h9vV5tOfsIQQqD4YQQgghhBBCCCGEEEIIIYQQosB/AIIQ3sh3rK8HAAAAAElFTkSuQmCC";
 
-// ⭐ LOGO DA DEFENSORIA - URL CORRIGIDA
-const LOGO_DEFENSORIA_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7";
+// ⭐ LOGO DA DEFENSORIA (Base64 embutido - GARANTIDO!)
+const LOGO_DEFENSORIA_BASE64 = "data:image/png;base64,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";
 
-// ⭐ FUNÇÃO GARANTIDA: Carrega imagem com fetch + base64
-const loadImageBase64 = async (url) => {
-    try {
-        console.log(`🖼️ Tentando carregar logo: ${url}`);
-        
-        // Tenta via fetch primeiro (mais confiável)
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const blob = await response.blob();
-        
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result;
-                console.log("✅ Logo carregada com sucesso via fetch!");
-                resolve(base64data);
-            };
-            reader.onerror = (err) => {
-                console.warn("❌ Erro no FileReader, tentando método alternativo...", err);
-                // Fallback: método alternativo
-                loadImageViaCanvas(url).then(resolve).catch(reject);
-            };
-            reader.readAsDataURL(blob);
-        });
-    } catch (fetchError) {
-        console.warn("⚠️ Fetch falhou, tentando método alternativo (canvas)...", fetchError);
-        return loadImageViaCanvas(url);
-    }
-};
-
-// ⭐ MÉTODO ALTERNATIVO: Via Canvas (com crossOrigin)
-const loadImageViaCanvas = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.referrerPolicy = 'no-referrer';
-        
-        let timeoutId = setTimeout(() => {
-            reject(new Error('Timeout ao carregar imagem via canvas'));
-        }, 15000);
-        
-        img.onload = () => {
-            clearTimeout(timeoutId);
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                const base64 = canvas.toDataURL('image/png');
-                console.log("✅ Logo carregada via canvas!");
-                resolve(base64);
-            } catch (e) {
-                reject(e);
-            }
-        };
-        
-        img.onerror = () => {
-            clearTimeout(timeoutId);
-            reject(new Error('Erro ao carregar imagem via canvas'));
-        };
-        
-        // Tenta com diferentes variações da URL
-        let src = url;
-        if (!src.includes('?')) {
-            src += '?t=' + Date.now();
-        } else {
-            src += '&t=' + Date.now();
-        }
-        img.src = src;
-    });
-};
-
-// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP
+// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP (Base64)
 const addLogoHeader = async (doc, startY = 20) => {
     try {
-        const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
-        if (logoBase64) {
-            const pageWidth = doc.internal.pageSize.getWidth();
-            doc.addImage(logoBase64, 'PNG', pageWidth - 35, startY, 25, 25);
-            return true;
-        }
+        doc.addImage(LOGO_SIGEP_BASE64, 'PNG', doc.internal.pageSize.getWidth() - 35, startY, 25, 25);
+        return true;
     } catch(e) {
         console.warn("Erro ao inserir logo SIGEP no PDF", e);
+        return false;
     }
-    return false;
 };
 
 // ⭐ FUNÇÃO: Adiciona rodapé padrão
@@ -180,7 +101,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// ⭐ FUNÇÃO GARANTIDA: buildAtaAcaoSocialPDF - COM LOGO OBRIGATÓRIA
+// ⭐ FUNÇÃO GARANTIDA: buildAtaAcaoSocialPDF - COM LOGO BASE64
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     console.log("📄 Iniciando geração da Ata Social...");
     
@@ -196,44 +117,22 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐⭐⭐ LOGO DA DEFENSORIA - OBRIGATÓRIA ⭐⭐⭐
-    console.log("🖼️ Carregando logo da Defensoria...");
-    let logoDefensoria = null;
-    
-    try {
-        logoDefensoria = await loadImageBase64(LOGO_DEFENSORIA_URL);
-    } catch (e) {
-        console.error("❌ Erro ao carregar logo da Defensoria:", e);
-    }
-    
-    // ⭐ SE A LOGO NÃO CARREGAR, USA UMA LOGO BASE64 EMBUTIDA (FALLBACK) ⭐
-    if (!logoDefensoria) {
-        console.warn("⚠️ Logo não carregou, usando logo base64 embutida de emergência...");
-        // Esta é uma logo genérica da Defensoria Pública em base64 (minimalista)
-        // Você pode substituir por uma logo real em base64 se preferir
-        logoDefensoria = "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='50'%3E%3Crect width='200' height='50' fill='%231a56db'/%3E%3Ctext x='10' y='35' font-family='Arial' font-size='20' fill='white' font-weight='bold'%3EDEFENSORIA PÚBLICA%3C/text%3E%3C/svg%3E";
-    }
-    
-    // Insere a logo no centro superior
-    if (logoDefensoria) {
-        try { 
-            const pageWidth = doc.internal.pageSize.getWidth();
-            const logoWidth = 90;
-            const logoHeight = 25;
-            const xPos = (pageWidth - logoWidth) / 2;
-            doc.addImage(logoDefensoria, 'PNG', xPos, 8, logoWidth, logoHeight);
-            console.log("✅ Logo da Defensoria inserida com sucesso no PDF!");
-        } catch(e) { 
-            console.error("❌ Erro ao inserir logo no PDF:", e); 
-        }
-    } else {
-        console.error("❌ Logo não disponível para inserção!");
+    // ⭐⭐⭐ LOGO DA DEFENSORIA - BASE64 EMBUTIDO (GARANTIDO!) ⭐⭐⭐
+    try { 
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const logoWidth = 90;
+        const logoHeight = 30;
+        const xPos = (pageWidth - logoWidth) / 2;
+        doc.addImage(LOGO_DEFENSORIA_BASE64, 'PNG', xPos, 8, logoWidth, logoHeight);
+        console.log("✅ Logo da Defensoria inserida com sucesso via Base64!");
+    } catch(e) { 
+        console.error("❌ Erro ao inserir logo no PDF:", e); 
     }
 
     // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
-    doc.text("ATA AÇÃO SOCIAL", 105, 45, { align: "center" });
+    doc.text("ATA AÇÃO SOCIAL", 105, 48, { align: "center" });
 
     // Texto introdutório
     doc.setFont("helvetica", "normal");
@@ -242,9 +141,9 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
     
     const splitIntro = doc.splitTextToSize(introText, 170);
-    doc.text(splitIntro, 20, 55);
+    doc.text(splitIntro, 20, 58);
     
-    let currentY = 55 + (splitIntro.length * 4.5);
+    let currentY = 58 + (splitIntro.length * 4.5);
 
     // Ordena colaboradores
     const sortedColaboradores = [...colaboradores].sort((a, b) => {
@@ -352,7 +251,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     console.log("✅ Ata Social gerada com sucesso!");
 };
 
-// ⭐ NOVA FUNÇÃO AUXILIAR - GERAÇÃO DINÂMICA DE TABELA DE COLABORADORES
+// ⭐ FUNÇÃO AUXILIAR - GERAÇÃO DINÂMICA DE TABELA DE COLABORADORES
 const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) => {
     const colMap = {
         'nome': { label: 'Membro', getData: (c) => c.nome || 'N/A' },
@@ -754,7 +653,7 @@ export const PDFService = {
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
+            const logoSigep = LOGO_SIGEP_BASE64;
             if (logoSigep) {
                 try {
                     doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 45, 15, 35, 35);
