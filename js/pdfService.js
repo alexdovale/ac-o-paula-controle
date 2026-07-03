@@ -77,7 +77,7 @@ const getAttendantNameForPDF = (item) => {
 
 // ⭐ LOGO ÚNICA PARA TODOS OS PDFs (PONTO CODOC) - COLE O BASE64 AQUI
 // Basta colar a string que começa com "data:image/png;base64,..." dentro das aspas abaixo
-const LOGO_PADRAO_BASE64 = "COLE_AQUI_O_SEU_BASE64_GERADO";
+const LOGO_PADRAO_BASE64 = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==";
 
 // ⭐ FUNÇÃO: Adiciona cabeçalho com logo para os relatórios auxiliares (Canto Direito)
 const addLogoHeader = (doc, startY = 20) => {
