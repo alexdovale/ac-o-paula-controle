@@ -1,3 +1,4 @@
+
 import { initializeApp, getApps, getApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
@@ -9,6 +10,8 @@ import { documentsData } from './detalhes.js';
 import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
+
+// ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 const statusMap = {
     pauta:                  { cor: 'bg-slate-100 text-slate-600 border-slate-200',    txt: 'Na Pauta' },
@@ -27,27 +30,10 @@ window.addEventListener('beforeinstallprompt', (e) => {
     deferredPrompt = e;
 });
 
-// 🔹 CONEXÃO INTERNA E ISOLADA DO FIREBASE (RESOLVE CONFLITO V8/V11)
-let localDb = null;
-let localAuth = null;
-
-try {
-    const cfg = (typeof window !== 'undefined' && window.firebaseConfig) ? window.firebaseConfig : firebaseConfig;
-    if (cfg && cfg.projectId && cfg.projectId !== "SEU_PROJECT_ID") {
-        const app = getApps().length === 0 ? initializeApp(cfg) : getApp();
-        localDb = getFirestore(app);
-        localAuth = getAuth(app);
-        console.log("✅ Conexão Firebase V11 independente iniciada com sucesso.");
-    } else {
-        console.error("❌ Erro grave: firebaseConfig inválido ou ausente no config.js.");
-    }
-} catch (e) {
-    console.error("❌ Falha ao inicializar a base de dados local:", e);
-}
+// ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
 
 export const AtendimentoExternoService = {
 
-    // Estado do Serviço
     pautaId: null,
     assistidoId: null,
     colaboradorNome: null,
@@ -66,44 +52,87 @@ export const AtendimentoExternoService = {
     pautasDoDia: [],                
     atendimentosPorPauta: {},       
 
-    // 🔹 PROTEÇÃO ABSOLUTA CONTRA INJEÇÃO EXTERNA QUEBRADA
-    // Sempre usamos a conexão `localDb` e `localAuth` que configuramos aqui, ignorando o que vem do HTML
+    // Instâncias Dinâmicas do Firebase V11
+    _dbInstance: null,
+    _authInstance: null,
+
     get db() {
-        if (!localDb) console.error("CRÍTICO: O banco de dados (localDb) falhou ao carregar.");
-        return localDb;
+        if (!this._dbInstance) console.warn("⚠️ Acessando DB antes da inicialização. Pode gerar erro de 'collection'.");
+        return this._dbInstance;
     },
-    set db(val) {
-        console.warn("🛡️ Bloqueando injeção externa do DB para forçar a versão V11 correta.");
-    },
-
     get auth() {
-        return localAuth;
-    },
-    set auth(val) {
-        console.warn("🛡️ Bloqueando injeção externa do Auth para forçar a versão V11 correta.");
+        return this._authInstance;
     },
 
-    async init() {
-        console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
-        
-        if (!this.db || !this.auth) {
-            this.showError("Erro de Sistema", "Falha de conexão com o servidor. Verifique o arquivo js/config.js");
+    // 🔹 O HACK DEFINITIVO: Extrai a configuração de qualquer lugar para forçar o V11 a conectar!
+    async garantirConexaoFirebase() {
+        if (this._dbInstance && this._authInstance) return;
+
+        let cfg = null;
+
+        // 1. Tenta pegar a config local
+        if (typeof firebaseConfig !== 'undefined' && firebaseConfig.projectId && firebaseConfig.projectId !== "SEU_PROJECT_ID") {
+            cfg = firebaseConfig;
+        }
+        // 2. Tenta pegar a config global (injetada pelo HTML)
+        else if (window.firebaseConfig && window.firebaseConfig.projectId) {
+            cfg = window.firebaseConfig;
+        }
+        // 3. O SEGREDO: Hackeia a instância V8 que o router iniciou no index.html!
+        else if (window.firebase && window.firebase.app) {
+            try { 
+                cfg = window.firebase.app().options; 
+                console.log("🔥 Configuração Firebase resgatada com sucesso da instância V8!");
+            } catch(e) {}
+        }
+
+        if (!cfg) {
+            console.error("❌ ERRO CRÍTICO: Nenhuma configuração válida do Firebase foi encontrada no sistema.");
+            this.showError("Erro de Conexão", "Não foi possível resgatar as chaves da base de dados do Router.");
             return;
         }
+
+        try {
+            // Inicializa um app V11 NOMEADO e ISOLADO para não conflitar com a V8 do router
+            let appV11;
+            const appsExistentes = getApps();
+            const appIsolado = appsExistentes.find(a => a.name === "SIGEP_V11_ISOLADO");
+            
+            if (appIsolado) {
+                appV11 = appIsolado;
+            } else {
+                appV11 = initializeApp(cfg, "SIGEP_V11_ISOLADO");
+            }
+            
+            this._dbInstance = getFirestore(appV11);
+            this._authInstance = getAuth(appV11);
+            console.log("✅ Conexão V11 nativa estabelecida de forma independente e isolada!");
+
+            if (!this._authInstance.currentUser) {
+                await signInAnonymously(this._authInstance);
+            }
+        } catch (error) {
+            console.error("❌ Erro grave ao inicializar V11:", error);
+            this.showError("Erro de Inicialização", "Falha interna no Firebase Modular.");
+        }
+    },
+
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+
+    async init() {
+        console.log("⚡ Atendimento Externo Inicializado (SPA Ready)");
+
+        await this.garantirConexaoFirebase();
 
         const obterParametrosURL = () => {
             const params = {};
             if (window.location.search) {
                 const searchLimpa = window.location.search.replace(/&amp;/g, '&');
-                new URLSearchParams(searchLimpa).forEach((val, key) => {
-                    params[key] = val;
-                });
+                new URLSearchParams(searchLimpa).forEach((val, key) => { params[key] = val; });
             }
             if (window.location.hash && window.location.hash.includes('?')) {
                 const hashQuery = window.location.hash.split('?')[1].replace(/&amp;/g, '&');
-                new URLSearchParams(hashQuery).forEach((val, key) => {
-                    params[key] = val;
-                });
+                new URLSearchParams(hashQuery).forEach((val, key) => { params[key] = val; });
             }
             return params;
         };
@@ -120,36 +149,24 @@ export const AtendimentoExternoService = {
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
-        console.log("🔍 Parâmetros processados:", { pautaId: this.pautaId, colab: this.colaboradorNome, assistidoId: this.assistidoId });
-
         if (!this.pautaId || !this.colaboradorNome) {
             this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
             return;
         }
 
         try {
-            if (!this.auth.currentUser) {
-                console.log("👤 Tentando login anônimo interno...");
-                await signInAnonymously(this.auth);
-            }
-
-            console.log("👥 Carregando colaboradores da pauta...");
             await this.carregarColaboradoresGerais();
 
             if (!this.colaboradorAtual) {
-                console.error(`❌ Colaborador atual "${this.colaboradorNome}" não localizado na pauta.`);
                 this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
                 return;
             }
 
-            // Atendimento individual (peça específica carregada direto do link)
             if (this.assistidoId && !telaAtual) {
-                console.log("🎯 Redirecionando para o atendimento individual de ID:", this.assistidoId);
                 await this.iniciarAtendimentoIndividual(tokenRecebido);
                 return;
             }
 
-            // Verificar sessão
             const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
             const temSessao = sessionStorage.getItem(sessionKey) || localStorage.getItem(sessionKey);
 
@@ -161,20 +178,29 @@ export const AtendimentoExternoService = {
             await this.iniciarDashboardUnificado();
 
         } catch (error) {
-            console.error("❌ Erro na inicialização:", error);
-            this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados. Motivo: " + error.message);
+            this.showError("Erro Fatal", "Falha geral no carregamento: " + error.message);
         }
     },
 
-    // ─── ATENDIMENTO INDIVIDUAL ─────────────
+    // ─── BOTÃO ATENDER ────────────────────────────────────────────────────────
 
     async carregarAssistidoIndividual(pautaId, assistidoId) {
-        console.log("⚡ Botão ATENDER clicado! Carregando assistido:", assistidoId);
+        console.log("⚡ Botão ATENDER clicado para o SPA! Processando...", {pautaId, assistidoId});
         
-        this.pautaId = pautaId;
-        this.assistidoId = assistidoId;
-
         try {
+            // Mostra o spinner e remove ocultação da aba encerramento
+            const abaEncerramento = document.getElementById('aba-encerramento');
+            if (abaEncerramento) {
+                abaEncerramento.innerHTML = `<div class="flex flex-col items-center justify-center py-24"><div class="animate-spin rounded-full h-12 w-12 border-b-4 border-emerald-600"></div><p class="mt-4 font-black text-slate-400 tracking-widest text-sm uppercase">Carregando processo...</p></div>`;
+            }
+
+            await this.garantirConexaoFirebase();
+
+            if (!this.db) throw new Error("A Base de dados não foi inicializada. A extração de configuração falhou.");
+
+            this.pautaId = pautaId;
+            this.assistidoId = assistidoId;
+
             const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
             const docSnap = await getDoc(doc(this.db, "pautas", this.pautaId, "attendances", this.assistidoId));
 
@@ -187,19 +213,17 @@ export const AtendimentoExternoService = {
                 this.setupListeners();
                 this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
             } else {
-                this.showError("Processo não encontrado", "Não foi possível resgatar o assistido no Firestore.");
+                this.showError("Processo Não Encontrado", "O ID do assistido fornecido não existe nesta pauta.");
             }
+
         } catch (error) {
-            console.error("❌ Erro ao carregar assistido via botão Atender:", error);
-            this.showError("Erro de Conexão", error.message);
+            console.error("❌ Ocorreu um erro no momento de carregar o Assistido:", error);
+            this.showError("Erro Crítico", error.message);
         }
     },
 
     async iniciarAtendimentoIndividual(tokenRecebido) {
-        if (!this.pautaId || !this.assistidoId) {
-            this.showError("Parâmetros Ausentes", "Faltam IDs para carregar.");
-            return;
-        }
+        if (!this.pautaId || !this.assistidoId) return this.showError("Parâmetros Ausentes", "Faltam IDs para carregar.");
 
         const pautaDoc = await getDoc(doc(this.db, "pautas", this.pautaId));
         if (!pautaDoc.exists()) return this.showError("Pauta não localizada", "A pauta não existe.");
@@ -212,7 +236,7 @@ export const AtendimentoExternoService = {
         this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
 
         if (assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            return this.showError("Acesso Seguro Necessário", "Token inválido.");
+            return this.showError("Acesso Seguro", "Token de acesso inválido.");
         }
 
         this.renderizarInterface(assistido, pautaDoc.data());
@@ -220,13 +244,9 @@ export const AtendimentoExternoService = {
         this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
     },
 
-    async iniciarDashboardUnificado() {
-        console.log("📋 Inicializando Dashboard Unificado...");
-        
-        // Remove a tela de loading forçadamente antes mesmo de carregar os dados
-        const fallback = document.getElementById('fallback-container');
-        if (fallback) fallback.classList.add('hidden');
+    // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
+    async iniciarDashboardUnificado() {
         this._cancelarListeners();
         this.setupRealtimeListenerPauta();
         this.renderizarContainerDashboard();
@@ -247,7 +267,7 @@ export const AtendimentoExternoService = {
 
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
-        if (!this.pautaId) return;
+        if (!this.pautaId || !this.db) return;
 
         this.unsubscribeDashboard = onSnapshot(
             collection(this.db, "pautas", this.pautaId, "attendances"),
@@ -302,12 +322,8 @@ export const AtendimentoExternoService = {
     },
 
     renderizarContainerDashboard() {
-        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
-
-        const url = new URL(window.location.href);
-        url.searchParams.set('view', 'dashboard');
-        if (this.modoVisualizacao === 'abas') url.searchParams.set('modo', 'abas');
-        window.history.pushState({}, '', url);
+        const corpo = document.querySelector('#atendimento-externo-container .w-full.max-w-2xl') || document.querySelector('#atendimento-externo-container .w-full.max-w-4xl') || document.querySelector('.w-full.max-w-6xl') || document.getElementById('atendimento-externo-container');
+        if(!corpo) return;
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
         const tituloPainel = this.modoVisualizacao === 'abas' ? 'Painel SIGEP' : (isDefensor ? 'Mesa do Defensor' : 'Mesa de Trabalho');
@@ -344,9 +360,6 @@ export const AtendimentoExternoService = {
                             📋 Pauta
                         </button>`}
 
-                        <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2">
-                            <span>📱</span><span class="hidden sm:inline">Instalar App</span>
-                        </button>
                         <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm">⚙️</button>
 
                         <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
@@ -373,17 +386,6 @@ export const AtendimentoExternoService = {
 
         this._setupHeaderInteracoes(colorMap, prefs);
         this.atualizarBadgeHeader();
-
-        if (deferredPrompt) {
-            const btn = document.getElementById('btn-install-pwa');
-            btn.classList.remove('hidden');
-            btn.addEventListener('click', async () => {
-                deferredPrompt.prompt();
-                const { outcome } = await deferredPrompt.userChoice;
-                if (outcome === 'accepted') btn.classList.add('hidden');
-                deferredPrompt = null;
-            });
-        }
 
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
@@ -573,7 +575,6 @@ export const AtendimentoExternoService = {
 
             html += `
                 <div class="mb-8">
-                    <!-- Header da pauta -->
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h3 class="font-black text-slate-800 text-base">${escapeHTML(pauta.name)}</h3>
@@ -582,12 +583,10 @@ export const AtendimentoExternoService = {
                         <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
                     </div>
 
-                    <!-- Barra de progresso -->
                     <div class="h-1.5 bg-slate-100 rounded-full mb-3">
                         <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
                     </div>
 
-                    <!-- Sumário compacto -->
                     <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
                         <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
                             <div class="text-lg font-black text-amber-600">${aguardando}</div>
@@ -612,7 +611,6 @@ export const AtendimentoExternoService = {
                         </div>` : ''}
                     </div>
 
-                    <!-- Cards agrupados por status -->
                     ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
                     ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
                     ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
@@ -642,46 +640,34 @@ export const AtendimentoExternoService = {
     _htmlCardAba(assistido, modo, pautaIdOverride = null) {
         const pid = pautaIdOverride || this.pautaId;
         const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: assistido.status };
-        const donoLabel = assistido.assignedCollaborator?.name
-            ? `👤 ${escapeHTML(assistido.assignedCollaborator.name)}`
-            : '⚠️ Sem dono';
-        const badgeUrgencia = assistido.priority === 'URGENTE'
-            ? `<span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse">🚨</span>`
-            : '';
+        const donoLabel = assistido.assignedCollaborator?.name ? `👤 ${escapeHTML(assistido.assignedCollaborator.name)}` : '⚠️ Sem dono';
+        const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse">🚨</span>` : '';
         const baseUrl = window.location.href.split('?')[0];
         const linkIndividual = `${baseUrl}?pautaId=${pid}&assistidoId=${assistido.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${assistido.delegationToken || ''}`;
 
         let botoesHtml = '';
         if (modo === 'puxar') {
-            botoesHtml = `
-                <button class="btn-puxar-caso w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2 rounded-lg transition shadow-sm"
-                    data-pauta-id="${pid}" data-assistido-id="${assistido.id}">
-                    👇 Puxar para mim
-                </button>`;
+            botoesHtml = `<button class="btn-puxar-caso w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2 rounded-lg transition shadow-sm" data-pauta-id="${pid}" data-assistido-id="${assistido.id}">👇 Puxar para mim</button>`;
         } else if (modo === 'mesa') {
+            // 🔹 CHAMADA DIRETA PARA O SERVIÇO, sem depender do global que foi ocultado pelo router
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <button onclick="if(window.abrirMesaDeAtendimento){ window.abrirMesaDeAtendimento('${escapeHTML(assistido.name)}', '${pid}', '${assistido.id}'); } else { window.location.href='${linkIndividual}'; }" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</button>
-                    <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
-                        data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
+                    <button onclick="window.AtendimentoExternoService.carregarAssistidoIndividual('${pid}', '${assistido.id}')" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</button>
+                    <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition" data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
         } else {
-            botoesHtml = `
-                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center">🔍 Ver Detalhes</a>`;
+            botoesHtml = `<a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center">🔍 Ver Detalhes</a>`;
         }
 
         return `
             <div class="bg-white border border-slate-200 rounded-xl p-4 shadow-sm flex flex-col hover:border-amber-300 transition-colors">
                 <div class="flex justify-between items-start mb-2 gap-2">
-                    <h4 class="font-bold text-slate-800 text-sm truncate flex-1 flex items-center gap-1">
-                        ${escapeHTML(assistido.name)} ${badgeUrgencia}
-                    </h4>
+                    <h4 class="font-bold text-slate-800 text-sm truncate flex-1 flex items-center gap-1">${escapeHTML(assistido.name)} ${badgeUrgencia}</h4>
                     <span class="text-[9px] font-black uppercase px-2 py-1 rounded border ${st.cor} shrink-0">${st.txt}</span>
                 </div>
                 <div class="bg-slate-50 p-2 rounded border border-slate-100 flex-grow text-xs text-slate-600 space-y-1">
                     <p class="truncate">📄 ${escapeHTML(assistido.subject || 'Assunto não informado')}</p>
                     ${modo === 'geral' ? `<p class="${assistido.assignedCollaborator ? 'text-blue-600' : 'text-red-500'} font-bold">${donoLabel}</p>` : ''}
-                    ${assistido.scheduledTime ? `<p class="text-slate-400">🕐 ${assistido.scheduledTime}</p>` : ''}
                     ${assistido.numeroProcesso ? `<p class="font-mono text-slate-400">CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : ''}
                 </div>
                 ${botoesHtml}
@@ -697,7 +683,6 @@ export const AtendimentoExternoService = {
                 await this.puxarParaMim(b.dataset.pautaId, b.dataset.assistidoId);
             });
         });
-
         document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
@@ -707,90 +692,35 @@ export const AtendimentoExternoService = {
     },
 
     async puxarParaMim(pautaId, assistidoId) {
-        const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' &&
-            a.assignedCollaborator?.name === this.colaboradorNome
-        );
-
-        if (casosEmAndamento.length >= 3) {
-            const continuar = confirm(
-                `Você já tem ${casosEmAndamento.length} caso(s) em andamento na sua mesa.\n\nDeseja puxar mais este caso mesmo assim?`
-            );
-            if (!continuar) return;
-        }
-
         try {
             await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
-                assignedCollaborator: {
-                    id: this.colaboradorId || this.colaboradorAtual?.id || '',
-                    name: this.colaboradorNome
-                },
+                assignedCollaborator: { id: this.colaboradorId || this.colaboradorAtual?.id || '', name: this.colaboradorNome },
                 inAttendanceTime: new Date().toISOString(),
-                history: arrayUnion({
-                    action: 'PUXADO_PARA_MESA',
-                    by: this.colaboradorNome,
-                    msg: `Caso assumido por ${this.colaboradorNome}`,
-                    at: new Date().toISOString()
-                })
+                history: arrayUnion({ action: 'PUXADO_PARA_MESA', by: this.colaboradorNome, msg: `Caso assumido por ${this.colaboradorNome}`, at: new Date().toISOString() })
             });
 
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
-                    status: 'ocupado',
-                    currentAttendance: assistidoId
-                }).catch(() => {});
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), { status: 'ocupado', currentAttendance: assistidoId }).catch(() => {});
             }
 
             this.abaAtual = 'minha-mesa';
             document.getElementById('btn-tab-minha-mesa')?.click();
-
-            if (typeof showNotification === 'function') {
-                showNotification("Caso puxado para a sua mesa!", "success");
-            }
-
-        } catch (error) {
-            console.error("Erro ao puxar caso:", error);
-            if (typeof showNotification === 'function') {
-                showNotification("Erro ao atribuir caso.", "error");
-            } else {
-                alert("Erro ao atribuir caso. Tente novamente.");
-            }
-        }
+            if (typeof showNotification === 'function') showNotification("Caso puxado para a sua mesa!", "success");
+        } catch (error) {}
     },
 
     async devolverParaFila(pautaId, assistidoId) {
-        if (!confirm("Devolver este caso para a fila Sem Atribuição? Outros colaboradores poderão assumí-lo.")) return;
-
+        if (!confirm("Devolver este caso para a fila Sem Atribuição?")) return;
         try {
             await updateDoc(doc(this.db, "pautas", pautaId, "attendances", assistidoId), {
                 assignedCollaborator: null,
                 inAttendanceTime: null,
-                history: arrayUnion({
-                    action: 'DEVOLVIDO_PARA_FILA',
-                    by: this.colaboradorNome,
-                    msg: `Devolvido para a fila por ${this.colaboradorNome}`,
-                    at: new Date().toISOString()
-                })
+                history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
             });
-
             if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
-                    status: 'disponivel',
-                    currentAttendance: null
-                }).catch(() => {});
+                await updateDoc(doc(this.db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
             }
-
-            if (typeof showNotification === 'function') {
-                showNotification("Caso devolvido para a fila.", "info");
-            }
-        } catch (error) {
-            console.error("Erro ao devolver caso:", error);
-            if (typeof showNotification === 'function') {
-                showNotification("Erro ao devolver caso.", "error");
-            } else {
-                alert("Erro ao devolver caso.");
-            }
-        }
+        } catch (error) {}
     },
 
     atualizarListasDoDashboard() {
@@ -808,8 +738,7 @@ export const AtendimentoExternoService = {
             const notas = item.notesRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">⚠️ ${escapeHTML(item.notesRevisao)}</div>` : '';
             const numCNP = item.numeroProcesso ? `<span class="font-mono text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
-            const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
-
+            
             if (isAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
                 return `
                     <div class="border-2 ${urgencia} bg-white border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
@@ -818,7 +747,7 @@ export const AtendimentoExternoService = {
                             <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
                             ${numCNP} ${notas}
                         </div>
-                        <button onclick="if(window.abrirMesaDeAtendimento){ window.abrirMesaDeAtendimento('${escapeHTML(item.name)}', '${this.pautaId}', '${item.id}'); } else { window.location.href='${link}'; }" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</button>
+                        <button onclick="window.AtendimentoExternoService.carregarAssistidoIndividual('${this.pautaId}', '${item.id}')" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center">ABRIR</button>
                     </div>`;
             }
 
@@ -863,8 +792,6 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
-                
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">Distribuídos <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${distribuidos.length}</span></button>
@@ -896,8 +823,6 @@ export const AtendimentoExternoService = {
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
-
                 tabsDiv.innerHTML = `
                     <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
                     <button id="tab-enviados" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">No Defensor <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
@@ -922,14 +847,12 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── MÉTODOS AUXILIARES ───────────────────────────────────────────────────
-
     async carregarColaboradoresGerais() {
         try {
             const snap = await getDocs(collection(this.db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.colaboradorAtual = this.todosColaboradores.find(c => c.nome === this.colaboradorNome);
-        } catch { this.todosColaboradores = []; }
+        } catch {}
     },
 
     atualizarBadgeHeader() {
@@ -955,9 +878,7 @@ export const AtendimentoExternoService = {
     },
 
     _gerarTokenSeguro() {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
-            return crypto.randomUUID().substring(0, 8);
-        }
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID().substring(0, 8);
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
     },
 
@@ -1017,8 +938,6 @@ export const AtendimentoExternoService = {
 
     showError(titulo, message) {
         const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
-        
-        // 🔹 CORREÇÃO DE TRAVAMENTO: Se houver um erro grave, esconde a tela de loading para mostrar a mensagem
         const fallback = document.getElementById('fallback-container');
         if (fallback) fallback.classList.add('hidden');
         
@@ -1040,17 +959,22 @@ export const AtendimentoExternoService = {
     // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL ─────────────────────────────────
 
     renderizarInterface(assistido, pautaData) {
-        // Remove listener do dashboard se existir
         if (this.unsubscribeDashboard) {
             this.unsubscribeDashboard();
             this.unsubscribeDashboard = null;
         }
 
-        // 🔹 CORREÇÃO DE TRAVAMENTO: Oculta o loading screen ("Sincronizando pautas...") se ele estiver na tela
         const fallback = document.getElementById('fallback-container');
-        if (fallback) {
-            fallback.classList.add('hidden');
-        }
+        if (fallback) fallback.classList.add('hidden');
+
+        // 🔹 ALTERA AS VIEWS (Esconde a lista, Mostra a aba de atendimento)
+        const viewDashboard = document.getElementById('view-dashboard');
+        const viewAtendimento = document.getElementById('view-atendimento');
+        const btnVoltar = document.getElementById('btn-voltar-dashboard');
+        
+        if (viewDashboard) viewDashboard.classList.add('hidden');
+        if (viewAtendimento) viewAtendimento.classList.remove('hidden');
+        if (btnVoltar) btnVoltar.classList.remove('hidden');
 
         this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
 
@@ -1079,7 +1003,7 @@ export const AtendimentoExternoService = {
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
         const areaColaborador = document.getElementById('area-colaborador');
-        areaColaborador.classList.remove('hidden');
+        if (areaColaborador) areaColaborador.classList.remove('hidden');
 
         document.getElementById('banner-transferencia')?.remove();
         document.getElementById('banner-atendido-trava')?.remove();
@@ -1096,7 +1020,7 @@ export const AtendimentoExternoService = {
                     </div>
                 </div>
             `;
-            areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
+            if(areaColaborador) areaColaborador.insertAdjacentHTML('afterbegin', bannerHtml);
         }
 
         this.renderHistorico(assistido);
