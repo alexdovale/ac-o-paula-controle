@@ -1,6 +1,5 @@
-
 // router.js
-// Sistema de roteamento SPA para o SIGEP App - Versão Completa
+// Sistema de roteamento SPA para o SIGEP App - Versão Completa e Integrada
 
 export const ROUTES = {
     LOGIN:            'login',
@@ -119,6 +118,24 @@ export class SIGEPRouter {
             return ROUTES.PAUTA_SELECTION;
         }
 
+        if (route === ROUTES.APP) {
+            const modoAtual   = app.currentMode;
+            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
+
+            const pautaTipo = params.pautaTipo
+                           || localStorage.getItem('lastPautaTipo')
+                           || '';
+            const pautaType = params.pautaType
+                           || localStorage.getItem('lastPautaType')
+                           || 'normal';
+
+            const isEvento = tiposEvento.includes(String(pautaTipo).toLowerCase())
+                          || tiposEvento.includes(String(pautaType).toLowerCase());
+
+            if (modoAtual === 'normal' && isEvento)  return ROUTES.PAUTA_SELECTION;
+            if (modoAtual === 'evento' && !isEvento) return ROUTES.PAUTA_SELECTION;
+        }
+
         return null;
     }
 
@@ -135,6 +152,7 @@ export class SIGEPRouter {
         ['painel', 'r'].forEach(k => qs.delete(k));
         qs.set('r', route);
         if (params.pautaId) qs.set('pautaId', params.pautaId);
+        else qs.delete('pautaId');
         return `${base}?${qs.toString()}`;
     }
 
@@ -149,6 +167,9 @@ export class SIGEPRouter {
             await handler(params);
         } catch (error) {
             console.error(`[SIGEPRouter] Falha na rota ${route}:`, error);
+            if (this._deps?.showNotification) {
+                this._deps.showNotification("Erro na interface: " + (error.message || "Erro desconhecido"), "error");
+            }
         }
     }
 
@@ -161,8 +182,15 @@ export class SIGEPRouter {
             [ROUTES.DASHBOARD]:        'dashboard',
             [ROUTES.ADMIN]:            'admin',
             [ROUTES.RECEPCAO_CENTRAL]: 'recepcao-central',
+            [ROUTES.ATENDIMENTO_EXTERNO]: 'atendimento-externo'
         };
         if (screenMap[route]) localStorage.setItem('sigep_active_screen', screenMap[route]);
+        if (route === ROUTES.APP && params.pautaId) {
+            localStorage.setItem('lastPautaId',   params.pautaId);
+            localStorage.setItem('lastPautaName', params.pautaName || '');
+            localStorage.setItem('lastPautaType', params.pautaType || 'normal');
+            localStorage.setItem('lastPautaTipo', params.pautaTipo || '');
+        }
     }
 
     _buildHandlers() {
@@ -173,22 +201,37 @@ export class SIGEPRouter {
             [ROUTES.LOGIN]: async () => {
                 this._hideAllScreens();
                 document.getElementById('login-container')?.classList.remove('hidden');
+                document.getElementById('admin-panel-btn')?.classList.add('hidden');
+                document.getElementById('admin-btn-main')?.classList.add('hidden');
             },
             [ROUTES.MODO_SELECTION]: async () => {
                 this._hideAllScreens();
                 document.getElementById('modo-selection-screen')?.classList.remove('hidden');
+                app.applyRoleBasedUI();
             },
             [ROUTES.PAUTA_SELECTION]: async () => {
+                if (app.currentPauta) app._teardownPauta();
                 this._hideAllScreens();
                 document.getElementById('pauta-selection-container')?.classList.remove('hidden');
+                if (deps.UIService?.renderPautaFilters) {
+                    deps.UIService.renderPautaFilters(
+                        'filters-container',
+                        app.currentPautaFilter || 'all',
+                        (val) => { app.currentPautaFilter = val; app.loadPautasWithFilter(); },
+                        app
+                    );
+                }
                 await app.loadPautasWithFilter();
+                app.applyRoleBasedUI();
             },
             [ROUTES.APP]: async ({ pautaId, pautaName, pautaType } = {}) => {
                 const id   = pautaId   || localStorage.getItem('lastPautaId');
                 const name = pautaName || localStorage.getItem('lastPautaName');
                 const type = pautaType || localStorage.getItem('lastPautaType');
-                if (id) {
-                    await app.loadPauta(id, name, type);
+                if (id && name) {
+                    if (!app.currentPauta || app.currentPauta.id !== id) {
+                        await app.loadPauta(id, name, type);
+                    }
                     this._hideAllScreens();
                     document.getElementById('app-container')?.classList.remove('hidden');
                 } else {
@@ -198,6 +241,7 @@ export class SIGEPRouter {
             [ROUTES.DASHBOARD]: async () => {
                 this._hideAllScreens();
                 deps.DashboardService.showDashboardScreen();
+                localStorage.setItem('sigep_active_screen', 'dashboard');
             },
             [ROUTES.ADMIN]: async () => {
                 this._hideAllScreens();
@@ -225,7 +269,9 @@ export class SIGEPRouter {
                 AtendimentoExternoService.db = app.db;
                 AtendimentoExternoService.auth = app.auth;
                 AtendimentoExternoService.pautaId = params.pautaId || localStorage.getItem('lastPautaId');
-                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName');
+                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName') || localStorage.getItem('sigep_colab_nome');
+                AtendimentoExternoService.colaboradorId = params.colabId || localStorage.getItem('sigep_colab_id') || '';
+                AtendimentoExternoService.modoVisualizacao = params.modo || 'abas';
                 await AtendimentoExternoService.init();
             }
         };
