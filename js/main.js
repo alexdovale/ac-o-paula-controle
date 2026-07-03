@@ -27,9 +27,7 @@ import {
 } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
-import { PainelGeralService } from './painelGeralService.js';
-import { AtendimentoExternoService } from './atendimentoExternoService.js'; // ← ADICIONE ESTA LINHA
-
+import { PainelGeralService } from './painelGeralService.js'; 
 
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
@@ -74,7 +72,7 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
     
-            // ── Inicializa o router ──
+            // ── Inicializa o router antes de qualquer verificação de URL ──
             this.router = new SIGEPRouter(this, {
                 UIService,
                 DashboardService,
@@ -87,19 +85,7 @@ class SIGEPApp {
             DashboardService.init(this);
             await this.setupOfflinePersistence();
             this.setupEventListeners();
-            
-            // 🔹 PRIMEIRO: Verifica se é um link de atendimento externo
-            const isAtendimentoExterno = this._verificarAtendimentoExterno();
-            
-            if (isAtendimentoExterno) {
-                // 🔹 Se for atendimento externo, inicia direto sem esperar auth
-                await this.iniciarAtendimentoExterno();
-                this.hideLoadingScreen();
-                return;
-            }
-    
-            // 🔹 Se NÃO for atendimento externo, segue fluxo normal com auth
-            this.setupAuthListener(); // dispara resolveInitialRoute() internamente
+            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -422,26 +408,29 @@ class SIGEPApp {
     setupAuthListener() {
         onAuthStateChanged(this.auth, async (user) => {
             try {
-                // 🔹 SE JÁ ESTIVER EM ATENDIMENTO EXTERNO, NÃO FAZ NADA
-                if (this._verificarAtendimentoExterno()) {
-                    console.log("⏩ Atendimento Externo já iniciado. Ignorando auth state.");
-                    this.hideLoadingScreen();
-                    return;
-                }
-    
                 if (user) {
+                    // 1. Primeiro, autentica o estado global
                     await AuthService.handleAuthState(this, user);
+                    
+                    // 2. Carrega as preferências e o perfil do Firestore
                     await this.loadUserPreferences();
+                    
+                    // 3. Só agora, com o currentUser populado, aplicamos a UI
                     this.applyRoleBasedUI();
+        
+                    // 4. Resolve a rota apenas após garantir que o usuário está carregado
                     await this.router.resolveInitialRoute();
                 } else {
+                    // Caso não logado
                     this.currentUser = null;
                     await this.router.navigate(ROUTES.LOGIN, {}, true);
                 }
             } catch (error) {
                 console.error("Erro crítico na verificação de autenticação:", error);
+                // Se der erro (ex: falha de rede ou no Firestore), joga para o login por segurança
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
             } finally {
+                // 🔴 AQUI ESTÁ A MÁGICA: Independente de sucesso ou erro, removemos o Loading!
                 this.hideLoadingScreen();
             }
         });
@@ -467,93 +456,6 @@ class SIGEPApp {
             }
         });
     }
-
-    // Adicione este método após o método `loadPautasWithFilter()`
-
-
-    // Adicione este método dentro da classe SIGEPApp
-
-_verificarAtendimentoExterno() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const pautaId = urlParams.get('pautaId');
-    const colab = urlParams.get('colab');
-    
-    // Se tem pautaId E colab na URL, é atendimento externo
-    if (pautaId && colab) {
-        console.log("🔍 Link de Atendimento Externo detectado!");
-        return true;
-    }
-    
-    // Verifica se tem no localStorage (sessão anterior)
-    if (localStorage.getItem('lastPautaId') && localStorage.getItem('lastColabName')) {
-        console.log("🔍 Sessão de Atendimento Externo recuperada do localStorage!");
-        return true;
-    }
-    
-    return false;
-}
-
-// ============================================================
-// ATENDIMENTO EXTERNO - INTEGRAÇÃO
-// ============================================================
-async iniciarAtendimentoExterno() {
-    console.log("🔍 Iniciando Atendimento Externo...");
-    
-    try {
-        // Verifica se o serviço foi importado
-        if (typeof AtendimentoExternoService === 'undefined') {
-            console.error("❌ AtendimentoExternoService não encontrado!");
-            return false;
-        }
-
-        // Pega parâmetros da URL
-        const urlParams = new URLSearchParams(window.location.search);
-        const pautaId = urlParams.get('pautaId') || localStorage.getItem('lastPautaId');
-        const colaboradorNome = urlParams.get('colab') || localStorage.getItem('lastColabName');
-        const assistidoId = urlParams.get('assistidoId') || null;
-
-        if (!pautaId || !colaboradorNome) {
-            console.log("ℹ️ Nenhum parâmetro de atendimento externo encontrado.");
-            return false;
-        }
-
-        // Salva no localStorage para reconexão
-        localStorage.setItem('lastPautaId', pautaId);
-        localStorage.setItem('lastColabName', colaboradorNome);
-
-        // Atribui ao serviço
-        AtendimentoExternoService.pautaId = pautaId;
-        AtendimentoExternoService.colaboradorNome = colaboradorNome;
-        AtendimentoExternoService.assistidoId = assistidoId;
-        AtendimentoExternoService.db = this.db;
-        AtendimentoExternoService.auth = this.auth;
-
-        // Inicializa
-        await AtendimentoExternoService.init();
-
-        // Esconde outros containers e mostra o de atendimento externo
-        document.getElementById('pauta-selection-container')?.classList.add('hidden');
-        document.getElementById('app-container')?.classList.add('hidden');
-        document.getElementById('dashboard-container')?.classList.add('hidden');
-        document.getElementById('admin-container')?.classList.add('hidden');
-        document.getElementById('modo-selection-screen')?.classList.add('hidden');
-        
-        const container = document.getElementById('atendimento-externo-container');
-        if (container) {
-            container.classList.remove('hidden');
-        } else {
-            console.warn("⚠️ Container 'atendimento-externo-container' não encontrado!");
-        }
-
-        showNotification(`Atendimento Externo iniciado - ${colaboradorNome}`, "info", 3000);
-        return true;
-
-    } catch (error) {
-        console.error("❌ Erro ao iniciar atendimento externo:", error);
-        showNotification("Erro ao carregar atendimento externo: " + error.message, "error");
-        return false;
-    }
-}
 
     async setupOfflinePersistence() {
         try {
@@ -2262,33 +2164,18 @@ async iniciarAtendimentoExterno() {
 
     setupRealtimeListener(pautaId) {
         if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-        
-        console.log("🔍 [DEBUG] Tentando conectar na coleção de atendimentos...");
         const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-    
         this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-            // Log 1: Verifica se chegou alguma coisa
-            console.log("✅ [DEBUG] Snapshot recebido! Total de documentos:", snapshot.docs.length);
-            
-            // Log 2: Verifica os dados
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            console.log("📋 [DEBUG] Dados mapeados:", this.allAssisted);
-    
-            if (this.allAssisted.length === 0) {
-                console.warn("⚠️ [DEBUG] A lista de assistidos está vazia.");
-            }
-    
             UIService.renderAssistedLists(this);
-            
             setTimeout(() => { 
                 if (typeof PautaService.injectRoomSearches === 'function') {
                     PautaService.injectRoomSearches(this); 
                 }
             }, 150);
         }, (error) => {
-            // Log 3: Captura erro de permissão ou rede
-            console.error("❌ [DEBUG] Erro no Snapshot:", error.code, error.message);
-            showNotification("Erro na sincronização: " + error.message, "error");
+            console.error("Erro no snapshot:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
         });
     }
 
@@ -2408,86 +2295,6 @@ async iniciarAtendimentoExterno() {
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 window.app = new SIGEPApp();
-
-// ============================================================
-// FUNÇÃO GLOBAL PARA ABRIR MESA DE ATENDIMENTO INDIVIDUAL
-// ============================================================
-window.abrirMesaDeAtendimento = function(nomeAssistido, pautaId, assistidoId) {
-    console.log("🔍 Abrindo atendimento para:", nomeAssistido, pautaId, assistidoId);
-    
-    try {
-        // 1. Esconde o dashboard e mostra a view de atendimento
-        const viewDashboard = document.getElementById('view-dashboard');
-        const viewAtendimento = document.getElementById('view-atendimento');
-        const btnVoltar = document.getElementById('btn-voltar-dashboard');
-        const areaColaborador = document.getElementById('area-colaborador');
-        
-        if (viewDashboard) viewDashboard.classList.add('hidden');
-        if (viewAtendimento) viewAtendimento.classList.remove('hidden');
-        if (btnVoltar) btnVoltar.classList.remove('hidden');
-        if (areaColaborador) areaColaborador.classList.remove('hidden');
-        
-        // 2. Atualiza o header
-        const nomeEl = document.getElementById('assistido-nome');
-        const assuntoEl = document.getElementById('assistido-assunto');
-        
-        if (nomeEl) nomeEl.textContent = nomeAssistido || 'Assistido';
-        if (assuntoEl) assuntoEl.textContent = `Em atendimento • Pauta: ${pautaId}`;
-        
-        // 3. Carrega os dados do assistido no serviço
-        if (window.AtendimentoExternoService) {
-            window.AtendimentoExternoService.assistidoId = assistidoId;
-            window.AtendimentoExternoService.pautaId = pautaId;
-            
-            // Chama o método para carregar o assistido individual
-            if (typeof window.AtendimentoExternoService.carregarAssistidoIndividual === 'function') {
-                window.AtendimentoExternoService.carregarAssistidoIndividual(pautaId, assistidoId);
-            } else {
-                console.warn("⚠️ Método carregarAssistidoIndividual não encontrado no serviço!");
-                // Fallback: tenta usar o método existente
-                if (typeof window.AtendimentoExternoService.iniciarAtendimentoIndividual === 'function') {
-                    const token = window.AtendimentoExternoService.assistidoData?.delegationToken || '';
-                    window.AtendimentoExternoService.iniciarAtendimentoIndividual(token);
-                }
-            }
-        } else {
-            console.error("❌ AtendimentoExternoService não encontrado!");
-            alert("Erro: Serviço de atendimento externo não carregado.");
-        }
-        
-    } catch (error) {
-        console.error("❌ Erro ao abrir mesa:", error);
-        alert("Erro ao abrir atendimento: " + error.message);
-    }
-};
-
-// ============================================================
-// BOTÃO VOLTAR DO ATENDIMENTO INDIVIDUAL
-// ============================================================
-document.addEventListener('DOMContentLoaded', function() {
-    const btnVoltar = document.getElementById('btn-voltar-dashboard');
-    if (btnVoltar) {
-        btnVoltar.addEventListener('click', function() {
-            // Volta para o dashboard
-            document.getElementById('view-atendimento')?.classList.add('hidden');
-            document.getElementById('view-dashboard')?.classList.remove('hidden');
-            document.getElementById('btn-voltar-dashboard')?.classList.add('hidden');
-            document.getElementById('area-colaborador')?.classList.add('hidden');
-            
-            // Reseta o header
-            document.getElementById('assistido-nome').textContent = "PAINEL DE ATENDIMENTO";
-            document.getElementById('assistido-assunto').textContent = `Sessão ativa: ${localStorage.getItem('lastColabName') || 'Colaborador'}`;
-            
-            // Reseta o serviço
-            if (window.AtendimentoExternoService) {
-                window.AtendimentoExternoService.assistidoId = null;
-                // Volta para o dashboard unificado
-                window.AtendimentoExternoService.iniciarDashboardUnificado();
-            }
-        });
-    }
-});
-
 
 window.renderEstruturaAtual = renderEstruturaAtual;
 window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
