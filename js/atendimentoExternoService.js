@@ -51,6 +51,7 @@ export const AtendimentoExternoService = {
     modoVisualizacao: 'dashboard',  
     pautasDoDia: [],                
     atendimentosPorPauta: {},
+    colaboradorSenha: localStorage.getItem('colabPass') || '', // Senha local
     
     // Flag para evitar loop de renderização
     _isRendering: false,
@@ -198,23 +199,93 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ─── FUNCIONALIDADES DE ACESSO E LINK ──────────────────────────────────────
+
+    logout() {
+        if (confirm("Tem a certeza que deseja sair da sua sessão?")) {
+            const sessionKey = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+            sessionStorage.removeItem(sessionKey);
+            localStorage.removeItem(sessionKey);
+            localStorage.removeItem('lastColabName');
+            localStorage.removeItem('colabPass'); // Opcional: remover a senha local
+            window.location.reload(); 
+        }
+    },
+
+    alterarSenhaPrompt() {
+        const nova = prompt("Digite a sua nova senha (mínimo 4 caracteres):");
+        if (nova) {
+            if (nova.length < 4) {
+                alert("A senha deve ter pelo menos 4 caracteres.");
+                return;
+            }
+            localStorage.setItem('colabPass', nova);
+            this.colaboradorSenha = nova;
+            alert("Senha alterada com sucesso! Use-a no próximo login.");
+        }
+    },
+
+    gerarLinkPautaAtual() {
+        const baseUrl = window.location.origin + window.location.pathname;
+        return `${baseUrl}?pautaId=${this.pautaId}`;
+    },
+
+    async copiarLinkPauta() {
+        if (!this.pautaId) {
+            alert("Nenhuma pauta selecionada para copiar o link.");
+            return;
+        }
+        const link = this.gerarLinkPautaAtual();
+        try {
+            await navigator.clipboard.writeText(link);
+            alert("Link da pauta copiado para a área de transferência:\n" + link);
+        } catch (err) {
+            console.error("Erro ao copiar link: ", err);
+            prompt("Copie o link abaixo:", link); // Fallback caso a API do clipboard falhe
+        }
+    },
+
+    // ─── RENDERIZAÇÃO LAYOUT ──────────────────────────────────────────────────
+
     renderizarContainerLayout() {
         const parent = document.getElementById('atendimento-externo-container');
         if (!parent) return;
 
-        // Reset da classe de layout caso tenha vindo da tela de login
         parent.className = "w-full max-w-6xl mx-auto my-4 transition-all animate-fade-in flex flex-col border border-slate-200 bg-white rounded-2xl shadow-2xl overflow-hidden";
         
         if (!document.getElementById('view-dashboard')) {
             parent.innerHTML = `
-                <!-- HEADER PRINCIPAL -->
-                <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex items-center gap-4 relative overflow-hidden shrink-0">
-                    <button id="ext-btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                    </button>
-                    <div class="flex flex-col overflow-hidden w-full relative z-10">
-                        <h1 id="ext-assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
-                        <p id="ext-assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                <!-- HEADER PRINCIPAL COM OPÇÕES DE CONTA -->
+                <div id="ext-header-bg" class="bg-slate-800 p-5 text-white flex justify-between items-center relative overflow-hidden shrink-0">
+                    <div class="flex items-center gap-4 relative z-10 w-full">
+                        <button id="ext-btn-voltar-dashboard" class="hidden shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20">
+                            <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        </button>
+                        <div class="flex flex-col overflow-hidden">
+                            <h1 id="ext-assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                            <p id="ext-assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                        </div>
+                    </div>
+                    
+                    <!-- MENU DE CONTA (SAIR / SENHA / LINK) -->
+                    <div class="relative z-20 flex gap-2 shrink-0">
+                         <button onclick="window.AtendimentoExternoService.copiarLinkPauta()" title="Copiar Link da Pauta" class="bg-indigo-600 hover:bg-indigo-700 text-white p-2 rounded-lg transition shadow-sm border border-indigo-500">
+                             🔗 Link
+                         </button>
+                         <div class="relative group">
+                            <button class="bg-slate-700 hover:bg-slate-600 text-white p-2 rounded-lg transition shadow-sm border border-slate-600 flex items-center gap-2">
+                                ⚙️ <span class="hidden sm:inline text-xs font-bold uppercase">Opções</span>
+                            </button>
+                            <div class="absolute right-0 mt-2 w-48 bg-white rounded-xl shadow-xl border border-slate-200 py-2 hidden group-hover:block transition-all z-[9999]">
+                                <button onclick="window.AtendimentoExternoService.alterarSenhaPrompt()" class="w-full text-left px-4 py-2 text-sm text-slate-700 hover:bg-slate-100 font-semibold flex items-center gap-2">
+                                    🔑 Trocar Senha Local
+                                </button>
+                                <div class="h-px bg-slate-100 my-1 mx-2"></div>
+                                <button onclick="window.AtendimentoExternoService.logout()" class="w-full text-left px-4 py-2 text-sm text-red-600 hover:bg-red-50 font-bold flex items-center gap-2">
+                                    🚪 Sair do Painel
+                                </button>
+                            </div>
+                         </div>
                     </div>
                 </div>
 
@@ -371,7 +442,6 @@ export const AtendimentoExternoService = {
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
 
     async iniciarDashboardUnificado() {
-        // Reconstrói as divs caso o formulário de login as tenha apagado
         this.renderizarContainerLayout();
 
         const viewAtend = this.getEl('view-atendimento');
@@ -753,8 +823,8 @@ export const AtendimentoExternoService = {
                         <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Seu e-mail cadastrado">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Matrícula / ID</label>
-                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Sua matrícula">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Matrícula / Senha</label>
+                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Sua matrícula ou senha configurada">
                     </div>
                     <div class="flex items-center gap-2">
                         <input type="checkbox" id="lembrar-login-colab" class="w-4 h-4 text-indigo-600 rounded">
@@ -768,7 +838,7 @@ export const AtendimentoExternoService = {
         document.getElementById('form-login-colaborador').onsubmit = (e) => {
             e.preventDefault();
             const email = document.getElementById('login-colab-email').value.trim().toLowerCase();
-            const mat   = document.getElementById('login-colab-matricula').value.trim();
+            const senhaInput   = document.getElementById('login-colab-matricula').value.trim();
             const err   = document.getElementById('login-error-msg');
             const realEmail = (this.colaboradorAtual?.email || '').trim().toLowerCase();
             const realMat   = (this.colaboradorAtual?.identificador || '').trim();
@@ -779,14 +849,15 @@ export const AtendimentoExternoService = {
                 return;
             }
 
-            if (email === realEmail && mat === realMat) {
+            // Verifica primeiro se a senha armazenada localmente corresponde, senão tenta a matrícula (primeiro acesso)
+            if (email === realEmail && (senhaInput === this.colaboradorSenha || senhaInput === realMat)) {
                 const key = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
                 document.getElementById('lembrar-login-colab').checked
                     ? localStorage.setItem(key, 'true')
                     : sessionStorage.setItem(key, 'true');
                 this.iniciarDashboardUnificado();
             } else {
-                err.textContent = "E-mail ou Matrícula incorretos.";
+                err.textContent = "E-mail ou Matrícula/Senha incorretos.";
                 err.classList.remove('hidden');
             }
         };
