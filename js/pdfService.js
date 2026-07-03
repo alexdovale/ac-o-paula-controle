@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO COMPLETA COM LOGO DO GITHUB GARANTIDA
+// js/pdfService.js - VERSÃO DEFINITIVA COM BASE64 (PONTO CODOC)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,96 +75,21 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGO DO SIGEP
-const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
+// ⭐ LOGO ÚNICA PARA TODOS OS PDFs (PONTO CODOC) - COLE O BASE64 AQUI
+// Basta colar a string que começa com "data:image/png;base64,..." dentro das aspas abaixo
+const LOGO_PADRAO_BASE64 = "COLE_AQUI_O_SEU_BASE64_GERADO";
 
-// ⭐ LOGO HOSPEDADA NO SEU GITHUB (Calculadora de Acervo)
-// O domínio raw.githubusercontent.com permite CORS nativamente.
-const LOGO_GITHUB_URL = "https://raw.githubusercontent.com/alexdovale/Calculadora-de-Acervo-Documental/main/logo%20(2).png";
-
-// ⭐ FUNÇÃO GARANTIDA: Carrega imagem com fetch + base64 (usada para logos externas)
-const loadImageBase64 = async (url) => {
+// ⭐ FUNÇÃO: Adiciona cabeçalho com logo para os relatórios auxiliares (Canto Direito)
+const addLogoHeader = (doc, startY = 20) => {
     try {
-        console.log(`🖼️ Tentando carregar logo: ${url}`);
-        
-        const response = await fetch(url);
-        if (!response.ok) {
-            throw new Error(`HTTP ${response.status}`);
-        }
-        const blob = await response.blob();
-        
-        return new Promise((resolve, reject) => {
-            const reader = new FileReader();
-            reader.onloadend = () => {
-                const base64data = reader.result;
-                console.log("✅ Logo carregada com sucesso via fetch!");
-                resolve(base64data);
-            };
-            reader.onerror = (err) => {
-                console.warn("❌ Erro no FileReader, tentando método alternativo...", err);
-                loadImageViaCanvas(url).then(resolve).catch(reject);
-            };
-            reader.readAsDataURL(blob);
-        });
-    } catch (fetchError) {
-        console.warn("⚠️ Fetch falhou, tentando método alternativo (canvas)...", fetchError);
-        return loadImageViaCanvas(url);
-    }
-};
-
-// ⭐ MÉTODO ALTERNATIVO: Via Canvas (com crossOrigin)
-const loadImageViaCanvas = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = 'anonymous';
-        img.referrerPolicy = 'no-referrer';
-        
-        let timeoutId = setTimeout(() => {
-            reject(new Error('Timeout ao carregar imagem via canvas'));
-        }, 15000);
-        
-        img.onload = () => {
-            clearTimeout(timeoutId);
-            try {
-                const canvas = document.createElement('canvas');
-                canvas.width = img.width;
-                canvas.height = img.height;
-                const ctx = canvas.getContext('2d');
-                ctx.drawImage(img, 0, 0);
-                const base64 = canvas.toDataURL('image/png');
-                console.log("✅ Logo carregada via canvas!");
-                resolve(base64);
-            } catch (e) {
-                reject(e);
-            }
-        };
-        
-        img.onerror = () => {
-            clearTimeout(timeoutId);
-            reject(new Error('Erro ao carregar imagem via canvas'));
-        };
-        
-        let src = url;
-        if (!src.includes('?')) {
-            src += '?t=' + Date.now();
-        } else {
-            src += '&t=' + Date.now();
-        }
-        img.src = src;
-    });
-};
-
-// ⭐ FUNÇÃO: Adiciona cabeçalho com logo do SIGEP
-const addLogoHeader = async (doc, startY = 20) => {
-    try {
-        const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
-        if (logoBase64) {
+        if (LOGO_PADRAO_BASE64 && LOGO_PADRAO_BASE64.startsWith("data:image")) {
             const pageWidth = doc.internal.pageSize.getWidth();
-            doc.addImage(logoBase64, 'PNG', pageWidth - 35, startY, 25, 25);
+            // Ajustado para 35x35 no canto direito
+            doc.addImage(LOGO_PADRAO_BASE64, 'PNG', pageWidth - 45, startY, 35, 35);
             return true;
         }
     } catch(e) {
-        console.warn("Erro ao inserir logo SIGEP no PDF", e);
+        console.warn("Erro ao inserir logo no PDF", e);
     }
     return false;
 };
@@ -178,7 +103,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// ⭐ FUNÇÃO GARANTIDA: buildAtaAcaoSocialPDF - AGORA COM A LOGO DO GITHUB
+// ⭐ FUNÇÃO GARANTIDA: buildAtaAcaoSocialPDF - APENAS LOGO CENTRAL
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     console.log("📄 Iniciando geração da Ata Social...");
     
@@ -194,26 +119,23 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐⭐⭐ LOGO DO GITHUB RENDERIZADA DINAMICAMENTE ⭐⭐⭐
+    // ⭐⭐⭐ LOGO RENDERIZADA CENTRALIZADA (ÚNICA NA ATA) ⭐⭐⭐
     try {
-        const logoBase64 = await loadImageBase64(LOGO_GITHUB_URL);
-        if (logoBase64) {
+        if (LOGO_PADRAO_BASE64 && LOGO_PADRAO_BASE64.startsWith("data:image")) {
             const pageWidth = doc.internal.pageSize.getWidth();
             
-            // Ajuste aqui a largura e altura desejadas para a logo da calculadora (em mm)
-            // Se a imagem parecer achatada ou esticada, altere os valores para manter a proporção real dela.
             const logoWidth = 40; 
             const logoHeight = 40; 
             const xPos = (pageWidth - logoWidth) / 2;
             
-            doc.addImage(logoBase64, 'PNG', xPos, 8, logoWidth, logoHeight);
-            console.log("✅ Logo do GitHub inserida com sucesso no PDF da Ata!");
+            doc.addImage(LOGO_PADRAO_BASE64, 'PNG', xPos, 8, logoWidth, logoHeight);
+            console.log("✅ Logo inserida com sucesso no PDF da Ata!");
         }
     } catch(e) { 
-        console.error("❌ Erro ao inserir logo do GitHub no PDF:", e); 
+        console.error("❌ Erro ao inserir logo no PDF:", e); 
     }
 
-    // Título (Ajustei o Y para 52 para evitar sobreposição com a logo quadrada)
+    // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
     doc.text("ATA AÇÃO SOCIAL", 105, 52, { align: "center" });
@@ -335,7 +257,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     console.log("✅ Ata Social gerada com sucesso!");
 };
 
-// ⭐ NOVA FUNÇÃO AUXILIAR - GERAÇÃO DINÂMICA DE TABELA DE COLABORADORES
 const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) => {
     const colMap = {
         'nome': { label: 'Membro', getData: (c) => c.nome || 'N/A' },
@@ -403,7 +324,7 @@ const generateCollaboratorsTable = (docPDF, colaboradores, pautaNome, campos) =>
 };
 
 // ========================================================
-// PDF SERVICE - EXPORT (VERSÃO HÍBRIDA COMPLETA)
+// PDF SERVICE - EXPORT
 // ========================================================
 
 export const PDFService = {
@@ -489,7 +410,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            await addLogoHeader(docPDF, 20);
+            addLogoHeader(docPDF, 20);
 
             const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
@@ -561,7 +482,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            await addLogoHeader(docPDF, 20);
+            addLogoHeader(docPDF, 20);
 
             const faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
@@ -623,7 +544,7 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
 
-            await addLogoHeader(docPDF, 15);
+            addLogoHeader(docPDF, 15);
 
             let colaboradores = [];
             let pautaNome = 'Geral';
@@ -737,14 +658,7 @@ export const PDFService = {
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            const logoSigep = await loadImageBase64(LOGO_SIGEP_URL);
-            if (logoSigep) {
-                try {
-                    doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 45, 15, 35, 35);
-                } catch(e) {
-                    console.warn("Erro ao inserir logo SIGEP no PDF", e);
-                }
-            }
+            addLogoHeader(doc, 15);
 
             const checkPage = (heightToAdd = 20) => {
                 if (y + heightToAdd >= pageHeight - 50) {
@@ -752,11 +666,7 @@ export const PDFService = {
                     addFooter(doc, pageNumber, 1);
                     doc.addPage();
                     y = 60;
-                    if (logoSigep) {
-                        try {
-                            doc.addImage(logoSigep, 'PNG', doc.internal.pageSize.getWidth() - 45, 15, 35, 35);
-                        } catch(e) {}
-                    }
+                    addLogoHeader(doc, 15);
                 }
             };
 
