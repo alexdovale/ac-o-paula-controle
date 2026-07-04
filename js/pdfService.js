@@ -591,19 +591,7 @@ export const PDFService = {
 
             addFooter(docPDF, 1, 1);
 
-            // Captura o ID da pauta se ele vier no objeto arg1
-            let pautaId = '';
-            if (arg1 && !Array.isArray(arg1)) {
-                pautaId = arg1.id || arg1.idPauta || arg1.id_pauta || arg1.codigo || '';
-            }
-            
-            // Monta o nome do arquivo incluindo o ID se ele existir (ex: equipe_ID123_Nome_da_Pauta.pdf)
-            const prefixoId = pautaId ? `${pautaId}_` : '';
-            const nomeArquivoValido = `${prefixoId}${pautaName}`.replace(/\s+/g, '_');
-
-            docPDF.save(`equipe_${nomeArquivoValido}.pdf`);
-            return true;
-            
+            docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
