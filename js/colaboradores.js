@@ -162,7 +162,9 @@ const CollaboratorService = {
             return [...colaboradores].sort((a, b) => {
                 const grupoA = a.equipe || '';
                 const grupoB = b.equipe || '';
-                if (grupoA !== groupB) return grupoA.localeCompare(grupoB);
+                
+                // CORRIGIDO: grupoB em vez de groupB
+                if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
                 
                 const getCargoWeight = (cargo) => {
                     const c = (cargo || '').toLowerCase();
