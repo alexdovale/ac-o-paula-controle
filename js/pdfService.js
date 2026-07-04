@@ -615,10 +615,10 @@ export const PDFService = {
 
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); 
-            docPDF.text("Lista de Presença da Equipe", 14, 40);
+            docPDF.text("LISTA DAS EQUIPES", 14, 40);
             
             docPDF.setFontSize(10);
-            docPDF.text(`Pauta: ${pautaNome}`, 14, 55);
+            docPDF.text(`PAUTA: ${pautaNome.toUpperCase()}`, 14, 55);
 
             docPDF.autoTable({
                 head: header,
