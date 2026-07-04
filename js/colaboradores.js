@@ -21,7 +21,8 @@ const CollaboratorService = {
     editId: null,
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
-    LOGO_URL: 'https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7',
+    LOGO_URL: 'https://raw.githubusercontent.com/alexdovale/ponto.codoc/main/imagem.png',
+
     ataAutoSaveTimer: null, // Timer para autosave
 
     // ⭐ FUNÇÃO DE EXPORTAR PDF PERSONALIZADO ⭐
