@@ -161,7 +161,7 @@ const CollaboratorService = {
             return [...colaboradores].sort((a, b) => {
                 const grupoA = a.equipe || '';
                 const grupoB = b.equipe || '';
-                if (grupoA !== grupoB) return grupoA.localeCompare(grupoB);
+                if (grupoA !== groupB) return grupoA.localeCompare(grupoB);
                 
                 const getCargoWeight = (cargo) => {
                     const c = (cargo || '').toLowerCase();
@@ -474,8 +474,12 @@ const CollaboratorService = {
         };
     },
 
+    // ⭐ CORRIGIDO: SALVAMENTO SEGURO DE TRANSPORTE ⭐
     async saveCollaborator(app) {
         if (!app?.currentPauta?.id) return;
+
+        // Captura explícita do valor marcado no radio button para transporte
+        const transporteSelecionado = document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios';
 
         const data = {
             nome: document.getElementById('collaborator-name-modal')?.value?.trim() || '',
@@ -484,7 +488,7 @@ const CollaboratorService = {
             equipe: document.getElementById('collaborator-team-modal')?.value || '',
             telefone: document.getElementById('collaborator-phone-modal')?.value?.trim() || '',
             email: document.getElementById('collaborator-email-modal')?.value?.trim() || '',
-            transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios',
+            transporte: transporteSelecionado, 
             tipo_id: (document.getElementById('collaborator-role-modal')?.value === "Defensor(a)") ? "Matrícula" : "ID",
             updatedAt: new Date().toISOString()
         };
@@ -504,9 +508,10 @@ const CollaboratorService = {
             
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
-            showNotification("Membro atualizado/salvo com sucesso!", "success");
+            showNotification("Membro atualizado/salvo com sucesso! 💾", "success");
             this.resetForm();
         } catch (error) {
+            console.error("Erro ao salvar colaborador:", error);
             showNotification("Erro ao salvar no banco de dados.", "error");
         }
     },
@@ -654,6 +659,7 @@ const CollaboratorService = {
         }
     },
 
+    // ⭐ CORRIGIDO: SELEÇÃO VISUAL DA EDIÇÃO DO TRANSPORTE ⭐
     async editCollaborator(app, id) {
         const snap = await getDoc(doc(app.db, "pautas", app.currentPauta.id, "collaborators", id));
         if (snap.exists()) {
@@ -677,6 +683,10 @@ const CollaboratorService = {
             
             const emailInput = document.getElementById('collaborator-email-modal');
             if (emailInput) emailInput.value = c.email || '';
+
+            // Marca o radio button correspondente ao valor salvo
+            const rTransp = document.querySelector(`input[name="transporte-colaborador"][value="${c.transporte || 'Meios Próprios'}"]`);
+            if (rTransp) rTransp.checked = true;
 
             const btnSubmit = document.getElementById('add-collaborator-btn-modal');
             if (btnSubmit) {
