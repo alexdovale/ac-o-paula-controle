@@ -97,8 +97,16 @@ const loadImage = (url) => {
 const addLogoHeader = async (doc, startY = 20) => {
     try {
         const img = await loadImage(LOGO_DEMAIS_PDF_RAW);
-        // Ajuste a posição (X, Y) e tamanho (Largura, Altura) conforme achar melhor para os demais relatórios
-        doc.addImage(img, 'PNG', 40, startY, 45, 45 / LOGO_DEFENSORIA_RATIO);
+        
+        // 1. Define a largura desejada para a logo no cabeçalho (ex: 45pt)
+        const larguraDesejada = 45; 
+        
+        // 2. Calcula a altura proporcional exata baseada no arquivo original
+        const proporcaoReal = img.width / img.height;
+        const alturaProporcional = larguraDesejada / proporcaoReal;
+        
+        // 3. Renderiza sem achatar
+        doc.addImage(img, 'PNG', 40, startY, larguraDesejada, alturaProporcional);
         return true;
     } catch (e) {
         console.error("❌ Erro ao renderizar a logo nos demais PDFs:", e);
