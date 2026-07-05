@@ -1268,7 +1268,7 @@ class SIGEPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
-        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+                document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
             const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
@@ -1279,7 +1279,9 @@ class SIGEPApp {
                 return;
             }
 
-            const isSilentMode = document.getElementById('toggle-silent-mode')?.checked || false;
+            // CORREÇÃO: Captura o ID correto do Switch de modo silencioso (Garante compatibilidade de ID)
+            const isSilentMode = (document.getElementById('toggle-silent-mode')?.checked || 
+                                  document.getElementById('silent-mode-toggle')?.checked) || false;
 
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
@@ -1331,7 +1333,9 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                if (collaboratorName && !isSilentMode) {
+                // CORREÇÃO: O token SEMPRE deve ser gerado se houver colaborador atribuído, 
+                // para não quebrar o link de acesso no painel dele.
+                if (collaboratorName) {
                     updatePayload.delegationToken = novoToken; 
                 }
 
@@ -1343,6 +1347,7 @@ class SIGEPApp {
                     this.currentUserName
                 );
                 
+                // CORREÇÃO: Condicional de envio baseada no Modo Silencioso
                 if (emailDestino && !isSilentMode) {
                     showNotification("Disparando notificação para o e-mail cadastrado...", "info");
                     try {
@@ -1359,7 +1364,8 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    showNotification(`Card movido para ${collaboratorName} silenciosamente.`, "info");
+                    // Notifica em tela que foi feito de forma silenciosa, sem disparar o EmailService
+                    showNotification(`Card movido para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
                 }
@@ -1370,7 +1376,7 @@ class SIGEPApp {
             window.assistedNameToHandle = null;
             window.assistedTipoAcao = null;
             window.assistedTipoDescricao = null;
-            window.selectedCollaboratorId = null;   // ← mude de undefined para null
+            window.selectedCollaboratorId = null; 
             window.selectedCollaboratorName = null;
         });
 
