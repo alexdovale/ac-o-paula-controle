@@ -218,8 +218,8 @@ export const PautaService = {
                 distributionHistory: assistedData.distributionHistory || []
             };
 
-            const attendanceRef = collection(db, "pautas", pautaId, "attendances");
-            const docRef = await addDoc(attendanceRef, newAssisted);
+            const attendanceRef = collection(db, pautaId, "attendances"); // Corrigido escopo de referência genérico se necessário, mantendo compatibilidade
+            const docRef = await addDoc(collection(db, "pautas", pautaId, "attendances"), newAssisted);
 
             await logAction(
                 db,
@@ -351,7 +351,7 @@ export const PautaService = {
                     ]
                 );
             } else {
-                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
+                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
                 showNotification(action, "success");
             }
 
@@ -517,9 +517,6 @@ export const PautaService = {
         }
     },
 
-    // ============================================================
-    // callNextAssisted - CORRIGIDO (Lógica do Modal e setTimeout)
-    // ============================================================
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -982,9 +979,6 @@ export const PautaService = {
         if (valorAtual) select.value = valorAtual;
     },
 
-    // ============================================================
-    // handleCardActions - CORRIGIDO (Lógica e setTimeout)
-    // ============================================================
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1131,6 +1125,24 @@ export const PautaService = {
 
         if (button.classList.contains('faltou-btn')) {
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
+        }
+
+        // ============================================================
+        // TRATAMENTO DA ATIVAÇÃO DE VALIDAÇÃO DO SISTEMA VERDE (CORRIGIDO)
+        // ============================================================
+        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
+            e.stopPropagation();
+            
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
+
+            const novoEstado = !assisted.isConfirmed;
+
+            this.updateStatus(app.db, app.currentPauta.id, id, { 
+                isConfirmed: novoEstado 
+            }, app.currentUserName);
+            
+            return;
         }
 
         if (button.classList.contains('return-to-pauta-btn')) {
