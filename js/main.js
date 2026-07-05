@@ -1001,6 +1001,21 @@ class SIGEPApp {
                 }
             }
         });
+        
+        // PERSISTÊNCIA DO MODO SILENCIOSO NO REFRESH
+        const silentModeCheckbox = document.getElementById('toggle-silent-mode') || document.getElementById('silent-mode-toggle');
+        if (silentModeCheckbox) {
+            // Carrega o estado salvo assim que mapeia o elemento
+            const savedSilentState = localStorage.getItem('sigep_silent_mode') === 'true';
+            silentModeCheckbox.checked = savedSilentState;
+        
+            // Escuta as mudanças do usuário para salvar no localStorage
+            silentModeCheckbox.addEventListener('change', (e) => {
+                localStorage.setItem('sigep_silent_mode', e.target.checked);
+                showNotification(e.target.checked ? "Modo silencioso ativado." : "Modo silencioso desativado.", "info");
+            });
+        }
+
 
         document.getElementById('file-upload')?.addEventListener('change', (e) => {
             PautaService.handleCSVUpload(e, this);
@@ -1268,7 +1283,7 @@ class SIGEPApp {
             document.getElementById('edit-attendant-modal')?.classList.add('hidden');
         });
 
-                document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const collaboratorId = window.selectedCollaboratorId;
             const collaboratorName = window.selectedCollaboratorName || null;
             const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
@@ -1280,8 +1295,11 @@ class SIGEPApp {
             }
 
             // CORREÇÃO: Captura o ID correto do Switch de modo silencioso (Garante compatibilidade de ID)
-            const isSilentMode = (document.getElementById('toggle-silent-mode')?.checked || 
-                                  document.getElementById('silent-mode-toggle')?.checked) || false;
+            // CORREÇÃO: Lê o estado persistido ou o valor do elemento de forma segura
+            const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || 
+                      (document.getElementById('toggle-silent-mode')?.checked || 
+                       document.getElementById('silent-mode-toggle')?.checked) || false;
+
 
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
