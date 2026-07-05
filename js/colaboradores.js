@@ -117,6 +117,88 @@ const CollaboratorService = {
         }
     },
 
+    // ⭐ NOVO: ABRE MODAL COM LISTA COMPLETA DOS COLABORADORES DA BASE MASTER ⭐
+    async abrirModalListagemMaster(app) {
+        let modal = document.getElementById('master-list-modal');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'master-list-modal';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[80vh]">
+                    <div class="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
+                        <h3 class="text-white font-bold text-lg">👥 Base Geral de Colaboradores</h3>
+                        <button onclick="document.getElementById('master-list-modal').classList.add('hidden')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                    </div>
+                    <div class="p-4 bg-slate-50 border-b border-slate-200">
+                        <input type="text" id="search-master-list" placeholder="Filtrar por nome ou matrícula..." class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm">
+                    </div>
+                    <div class="overflow-y-auto p-4 flex-1" id="master-list-container">
+                        <p class="text-center text-sm text-slate-500 py-4">Carregando colaboradores...</p>
+                    </div>
+                </div>
+            `;
+            document.body.appendChild(modal);
+
+            // Evento de busca/filtro em tempo real
+            document.getElementById('search-master-list').oninput = (e) => {
+                const termo = e.target.value.toLowerCase();
+                const itens = document.querySelectorAll('.master-item-row');
+                itens.forEach(item => {
+                    const texto = item.textContent.toLowerCase();
+                    item.style.display = texto.includes(termo) ? 'flex' : 'none';
+                });
+            };
+        }
+
+        modal.classList.remove('hidden');
+        const container = document.getElementById('master-list-container');
+
+        try {
+            const querySnapshot = await getDocs(collection(app.db, "colaboradores_gerais"));
+            if (querySnapshot.empty) {
+                container.innerHTML = `<p class="text-center text-sm text-slate-500 py-4">Nenhum colaborador cadastrado na base master.</p>`;
+                return;
+            }
+
+            let listaHtml = [];
+            querySnapshot.forEach((docSnap) => {
+                const dados = docSnap.data();
+                listaHtml.push(`
+                    <div class="master-item-row flex justify-between items-center p-3 border-b border-slate-100 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors" 
+                         data-id="${docSnap.id}">
+                        <div>
+                            <div class="font-bold text-sm text-slate-800">${escapeHTML(dados.nome || '')}</div>
+                            <div class="text-[11px] text-slate-500 uppercase">${dados.cargo || 'Membro'} • ${dados.tipo_id || 'ID'}: ${docSnap.id}</div>
+                        </div>
+                        <button class="bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
+                            Selecionar
+                        </button>
+                    </div>
+                `);
+            });
+
+            container.innerHTML = listaHtml.join('');
+
+            // Adiciona evento de clique para preencher o formulário
+            container.querySelectorAll('.master-item-row').forEach(row => {
+                row.onclick = async () => {
+                    const id = row.dataset.id;
+                    modal.classList.add('hidden');
+                    const inputIdentificador = document.getElementById('collaborator-identificador-modal');
+                    if (inputIdentificador) {
+                        inputIdentificador.value = id;
+                        await this.buscarColaboradorMaster(app, id);
+                    }
+                };
+            });
+
+        } catch (error) {
+            console.error("Erro ao listar master:", error);
+            container.innerHTML = `<p class="text-center text-sm text-red-500 py-4">Erro ao carregar dados.</p>`;
+        }
+    },
+
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
         if (!idLimpo || idLimpo.length < 3) return;
@@ -226,7 +308,7 @@ const CollaboratorService = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            ataTotalManual: document.getElementById('ata-total')?.value || '',
+            ataTotalManual: document.getElementById('ata-total')?.value || '', // Vazio é aceito aqui
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
@@ -296,7 +378,7 @@ const CollaboratorService = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            ataTotalManual: document.getElementById('ata-total')?.value || '',
+            ataTotalManual: document.getElementById('ata-total')?.value || '', // Removida obrigatoriedade
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
@@ -642,6 +724,12 @@ const CollaboratorService = {
                 const identificador = document.getElementById('collaborator-identificador-modal')?.value;
                 if(identificador) this.buscarColaboradorMaster(app, identificador);
             };
+        }
+
+        // ⭐ NOVO: SE CLICAR NO LADO DO CAMPO OU SE QUISER ACIONAR A LISTAGEM MASTER ⭐
+        const btnListarMaster = document.getElementById('listar-master-btn');
+        if (btnListarMaster) {
+            btnListarMaster.onclick = () => this.abrirModalListagemMaster(app);
         }
 
         const modal = document.getElementById('ata-social-modal');
