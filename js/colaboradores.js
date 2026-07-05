@@ -229,7 +229,7 @@ const CollaboratorService = {
                 if (rTransp) rTransp.checked = true;
 
                 this.configurarLogicaCargo(); 
-                showNotification("Dados recuperados da base master! ✅", "success");
+                showNotification("Dados recuperados da base geral! ✅", "success");
             }
         } catch (e) {
             console.error("Erro ao buscar master:", e);
@@ -308,7 +308,8 @@ const CollaboratorService = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            ataTotalManual: document.getElementById('ata-total')?.value || '', // Vazio é aceito aqui
+            // Opcional agora: Vazio é aceito sem problemas!
+            ataTotalManual: document.getElementById('ata-total')?.value || '', 
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
@@ -374,11 +375,12 @@ const CollaboratorService = {
         const btnSave = document.getElementById('save-ata-data-btn');
         if (btnSave) btnSave.disabled = true;
 
+        // Sem validações obrigatórias para o Total de Atendidos
         const data = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            ataTotalManual: document.getElementById('ata-total')?.value || '', // Removida obrigatoriedade
+            ataTotalManual: document.getElementById('ata-total')?.value || '', // Total opcional
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
@@ -393,7 +395,7 @@ const CollaboratorService = {
             }
 
             this.atualizarLogoAta();
-            showNotification("Dados do evento salvos com sucesso! 💾", "success");
+            showNotification("Dados da ata salvos com sucesso! 💾", "success");
             const modal = document.getElementById('ata-social-modal');
             if (modal) modal.classList.add('hidden');
         } catch (error) {
@@ -584,6 +586,7 @@ const CollaboratorService = {
                 await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
             }
             
+            // Atualiza a master database
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
             showNotification("Membro atualizado/salvo com sucesso!", "success");
@@ -718,6 +721,7 @@ const CollaboratorService = {
             };
         }
 
+        // Buscar manualmente pelo ID/Matrícula
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
         if (btnBuscarMaster) {
             btnBuscarMaster.onclick = () => {
@@ -726,7 +730,7 @@ const CollaboratorService = {
             };
         }
 
-        // ⭐ NOVO: SE CLICAR NO LADO DO CAMPO OU SE QUISER ACIONAR A LISTAGEM MASTER ⭐
+        // ⭐ LISTAR TODOS DA BASE MASTER ⭐
         const btnListarMaster = document.getElementById('listar-master-btn');
         if (btnListarMaster) {
             btnListarMaster.onclick = () => this.abrirModalListagemMaster(app);
