@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA COM LOGOS EM RAW GITHUB
+// js/pdfService.js - VERSÃO DEFINITIVA ATUALIZADA
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,7 +75,18 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// ⭐ LOGOS TRANSFORMADAS EM RAW GITHUB
+// Função auxiliar para ordenar por horário de agendamento (Ex: "09:00", "13:30")
+const sortByScheduledTime = (a, b) => {
+    const timeA = a.scheduledTime || '';
+    const timeB = b.scheduledTime || '';
+    
+    if (timeA === '---' || timeA.toLowerCase() === 'avulso' || !timeA) return 1;
+    if (timeB === '---' || timeB.toLowerCase() === 'avulso' || !timeB) return -1;
+    
+    return timeA.localeCompare(timeB);
+};
+
+// LOGOS TRANSFORMADAS EM RAW GITHUB
 const LOGO_ATA_RAW = "https://raw.githubusercontent.com/alexdovale/Calculadora-de-Acervo-Documental/main/logo%20(2).png";
 const LOGO_DEMAIS_PDF_RAW = "https://raw.githubusercontent.com/alexdovale/ponto.codoc/main/imagem.png";
 
@@ -93,28 +104,23 @@ const loadImage = (url) => {
     });
 };
 
-// ⭐ FUNÇÃO: Adiciona a logo nos demais relatórios (Exceção da Ata)
+// FUNÇÃO: Adiciona a logo nos demais relatórios/estatísticas (Exceção da Ata)
 const addLogoHeader = async (doc, startY = 20) => {
     try {
         const img = await loadImage(LOGO_DEMAIS_PDF_RAW);
-        
-        // 1. Define a largura desejada para a logo no cabeçalho (ex: 45pt)
         const larguraDesejada = 45; 
-        
-        // 2. Calcula a altura proporcional exata baseada no arquivo original
         const proporcaoReal = img.width / img.height;
         const alturaProporcional = larguraDesejada / proporcaoReal;
         
-        // 3. Renderiza sem achatar
         doc.addImage(img, 'PNG', 40, startY, larguraDesejada, alturaProporcional);
         return true;
     } catch (e) {
-        console.error("❌ Erro ao renderizar a logo nos demais PDFs:", e);
+        console.error("❌ Erro ao renderizar a logo do SIGEP:", e);
         return false;
     }
 };
 
-// ⭐ FUNÇÃO: Adiciona rodapé padrão
+// FUNÇÃO: Adiciona rodapé padrão
 const addFooter = (doc, pageNumber, totalPages) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
@@ -123,7 +129,7 @@ const addFooter = (doc, pageNumber, totalPages) => {
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// ⭐ FUNÇÃO: buildAtaAcaoSocialPDF - EXCLUSIVA COM LOGO DA ATA CENTRALIZADA
+// FUNÇÃO: buildAtaAcaoSocialPDF - EXCLUSIVA COM LOGO DA ATA CENTRALIZADA
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     console.log("📄 Iniciando geração da Ata Social...");
     
@@ -139,7 +145,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         ? dadosExtras.totalAtendimentos 
         : atendidos.length;
 
-    // ⭐⭐⭐ LOGO RENDERIZADA CENTRALIZADA (EXCLUSIVA DA ATA) ⭐⭐⭐
     try {
         const img = await loadImage(LOGO_ATA_RAW);
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -153,12 +158,10 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         console.error("❌ Erro ao inserir logo RAW no PDF da Ata:", e); 
     }
 
-    // Título
     doc.setFont("helvetica", "bold");
     doc.setFontSize(13);
     doc.text("ATA AÇÃO SOCIAL", 105, 52, { align: "center" });
 
-    // Texto introdutório
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     
@@ -169,7 +172,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     
     let currentY = 62 + (splitIntro.length * 4.5);
 
-    // Ordena colaboradores
     const sortedColaboradores = [...colaboradores].sort((a, b) => {
         const eqA = a.equipe || '';
         const eqB = b.equipe || '';
@@ -184,7 +186,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     const larguraIdentificador = 30;
     const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
 
-    // Tabela de Defensores
     if (defensores.length > 0) {
         doc.autoTable({
             startY: currentY + 1,
@@ -210,7 +211,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         currentY = doc.lastAutoTable.finalY + 2;
     }
 
-    // Tabela de Servidores
     if (servidores.length > 0) {
         doc.autoTable({
             startY: currentY,
@@ -236,7 +236,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         currentY = doc.lastAutoTable.finalY + 2;
     }
 
-    // Órgão e Total
     doc.autoTable({
         startY: currentY,
         body: [
@@ -257,7 +256,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     
     currentY = doc.lastAutoTable.finalY + 6;
 
-    // Observações
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text("OBSERVAÇÕES:", 20, currentY);
@@ -364,8 +362,11 @@ export const PDFService = {
 
             await addLogoHeader(docPDF, 20);
 
-            const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
+            let atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
+
+            // ⭐ ORDENAÇÃO POR HORÁRIO DE AGENDAMENTO
+            atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74); 
@@ -377,7 +378,8 @@ export const PDFService = {
             docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
             docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 83);
 
-            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente", "Validado Verde"]];
+            // ⭐ REMOÇÃO DA COLUNA VALIDADO VERDE
+            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente"]];
 
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
@@ -401,12 +403,11 @@ export const PDFService = {
                     attStr,
                     duration,
                     cleanString(item.subject),
-                    cleanString(atendente),
-                    item.isConfirmed ? "CONCLUÍDO" : "PENDENTE"
+                    cleanString(atendente)
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 9, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 8, styles: { halign: 'center', fontStyle: 'italic' } }]);
 
             docPDF.autoTable({
                 head: head,
@@ -415,7 +416,7 @@ export const PDFService = {
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
-                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 110 }, 6: { cellWidth: 150 } }
+                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 120 }, 6: { cellWidth: 170 } }
             });
 
             addFooter(docPDF, 1, 1);
@@ -436,8 +437,11 @@ export const PDFService = {
 
             await addLogoHeader(docPDF, 20);
 
-            const faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
+            let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
+
+            // ⭐ ORDENAÇÃO POR HORÁRIO DE AGENDAMENTO
+            faltososList = [...faltososList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74);
@@ -448,7 +452,8 @@ export const PDFService = {
             docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
             docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, 83);
 
-            const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às", "Verde"]];
+            // ⭐ REMOÇÃO DA COLUNA VERDE
+            const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às"]];
 
             const body = faltososList.map((item, index) => {
                 const logTime = getSafeDate(item.lastActionTimestamp);
@@ -459,12 +464,11 @@ export const PDFService = {
                     cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
                     cleanString(item.subject).toUpperCase(), 
-                    faltaStr,
-                    item.isConfirmed ? "OK" : "PEND"
+                    faltaStr
                 ];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 6, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic' } }]);
 
             docPDF.autoTable({
                 head: head,
@@ -474,9 +478,8 @@ export const PDFService = {
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
-                    1: { halign: 'left', cellWidth: 140 }, 
-                    3: { halign: 'left', cellWidth: 160 }, 
-                    5: { fontStyle: 'bold' } 
+                    1: { halign: 'left', cellWidth: 160 }, 
+                    3: { halign: 'left', cellWidth: 180 }
                 }
             });
 
@@ -818,7 +821,7 @@ export const PDFService = {
     }
 };
 
-// ⭐ EXPORTS AVULSOS
+// EXPORTS AVULSOS
 export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
 export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
