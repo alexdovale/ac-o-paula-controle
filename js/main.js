@@ -732,8 +732,9 @@ class SIGEPApp {
             const orgaoNome = document.getElementById('ata-orgao')?.value.trim();
             const totalManual = document.getElementById('ata-total')?.value;
             
-            if (!acaoNome || !endereco || !dataAcao || !orgaoNome || !totalManual || totalManual < 0) {
-                showNotification("Preencha todos os campos corretamente.", "error");
+            // Aqui nós removemos o '!totalManual' e o 'totalManual < 0' da checagem
+            if (!acaoNome || !endereco || !dataAcao || !orgaoNome) {
+                showNotification("Preencha todos os campos obrigatórios.", "error");
                 return;
             }
             
