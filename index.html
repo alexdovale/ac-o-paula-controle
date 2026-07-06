@@ -900,7 +900,7 @@
                                 <div class="flex gap-1.5">
                                     <input type="text" id="collaborator-identificador-modal" placeholder="Digite o ID ou Matrícula" class="flex-1 p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
                                     <button type="button" id="buscar-master-btn" class="bg-slate-200 hover:bg-slate-300 p-2.5 rounded-lg text-sm transition-colors" title="Buscar Direto">🔍</button>
-                                    <button type="button" id="listar-master-btn" class="bg-violet-100 text-violet-700 hover:bg-violet-200 px-3 rounded-lg font-bold text-xs transition-colors flex items-center gap-1" title="Ver todos existentes no sistema">
+                                    <button type="button" id="listar-master-btn" onclick="window.CollaboratorService.abrirModalListagemMaster(window.app)" class="bg-violet-100 text-violet-700 hover:bg-violet-200 px-3 rounded-lg font-bold text-xs transition-colors flex items-center gap-1" title="Ver todos existentes no sistema">
                                         📋 <span>Todos</span>
                                     </button>
                                 </div>
