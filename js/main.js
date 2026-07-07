@@ -1615,8 +1615,11 @@ class SIGEPApp {
         });
 
         document.body.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('remove-member-btn')) {
-                const email = e.target.dataset.email;
+            // CORREÇÃO: Usa .closest para garantir a captura mesmo clicando no texto do botão
+            const removeBtn = e.target.closest('.remove-member-btn');
+            
+            if (removeBtn) {
+                const email = removeBtn.dataset.email;
                 
                 // Validação de segurança preventiva baseada no e-mail
                 if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
