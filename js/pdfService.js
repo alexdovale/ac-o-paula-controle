@@ -105,18 +105,32 @@ const loadImage = (url) => {
 };
 
 // FUNÇÃO: Adiciona a logo nos demais relatórios/estatísticas (Exceção da Ata)
-const addLogoHeader = async (doc, startY = 20) => {
+// Agora SEMPRE fixada na parte de cima (startY pequeno) e com altura máxima
+// limitada, retornando a altura real ocupada (bottomY) para que cada relatório
+// posicione o título/conteúdo abaixo da logo, evitando qualquer sobreposição.
+const addLogoHeader = async (doc, startY = 15) => {
+    const larguraDesejada = 45;
+    const alturaMaxima = 35; // trava de segurança contra logos com proporção diferente
+
     try {
         const img = await loadImage(LOGO_DEMAIS_PDF_RAW);
-        const larguraDesejada = 45; 
         const proporcaoReal = img.width / img.height;
-        const alturaProporcional = larguraDesejada / proporcaoReal;
-        
+        let alturaProporcional = larguraDesejada / proporcaoReal;
+
+        if (alturaProporcional > alturaMaxima) {
+            alturaProporcional = alturaMaxima;
+        }
+
         doc.addImage(img, 'PNG', 40, startY, larguraDesejada, alturaProporcional);
-        return true;
+
+        return {
+            success: true,
+            height: alturaProporcional,
+            bottomY: startY + alturaProporcional
+        };
     } catch (e) {
         console.error("❌ Erro ao renderizar a logo do SIGEP:", e);
-        return false;
+        return { success: false, height: 0, bottomY: startY };
     }
 };
 
@@ -360,7 +374,10 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            await addLogoHeader(docPDF, 20);
+            // Logo fixada no topo. bottomY indica onde ela termina, para o
+            // título nunca ser desenhado por cima da imagem.
+            const logoInfo = await addLogoHeader(docPDF, 20);
+            const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
             let atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
@@ -370,13 +387,13 @@ export const PDFService = {
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74); 
-            docPDF.text(`Relatório de Atendidos - ${pautaNome}`, 40, 55);
+            docPDF.text(`Relatório de Atendidos - ${pautaNome}`, 40, tituloY);
 
             docPDF.setFontSize(10);
             docPDF.setTextColor(100);
             const totalAssuntos = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
-            docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, 83);
+            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
+            docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, tituloY + 28);
 
             // ⭐ REMOÇÃO DA COLUNA VALIDADO VERDE
             const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente"]];
@@ -412,7 +429,7 @@ export const PDFService = {
             docPDF.autoTable({
                 head: head,
                 body: body,
-                startY: 100,
+                startY: tituloY + 45,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
@@ -435,7 +452,8 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            await addLogoHeader(docPDF, 20);
+            const logoInfo = await addLogoHeader(docPDF, 20);
+            const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
@@ -445,12 +463,12 @@ export const PDFService = {
 
             docPDF.setFontSize(18);
             docPDF.setTextColor(22, 163, 74);
-            docPDF.text(`Relatório de Faltosos - ${pautaNome}`, 40, 55);
+            docPDF.text(`Relatório de Faltosos - ${pautaNome}`, 40, tituloY);
 
             docPDF.setFontSize(10);
             docPDF.setTextColor(100);
-            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, 70);
-            docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, 83);
+            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
+            docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, tituloY + 28);
 
             // ⭐ REMOÇÃO DA COLUNA VERDE
             const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às"]];
@@ -473,7 +491,7 @@ export const PDFService = {
             docPDF.autoTable({
                 head: head,
                 body: body,
-                startY: 100,
+                startY: tituloY + 45,
                 theme: 'grid',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
@@ -499,7 +517,8 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF();
 
-            await addLogoHeader(docPDF, 15);
+            const logoInfo = await addLogoHeader(docPDF, 15);
+            const tituloY = Math.max(40, logoInfo.bottomY + 20);
 
             let colaboradores = [];
             let pautaNome = 'Geral';
@@ -578,15 +597,15 @@ export const PDFService = {
 
             docPDF.setFontSize(16);
             docPDF.setTextColor(22, 163, 74); 
-            docPDF.text("LISTA DAS EQUIPES", 14, 40);
+            docPDF.text("LISTA DAS EQUIPES", 14, tituloY);
             
             docPDF.setFontSize(10);
-            docPDF.text(`PAUTA: ${pautaNome.toUpperCase()}`, 14, 55);
+            docPDF.text(`PAUTA: ${pautaNome.toUpperCase()}`, 14, tituloY + 15);
 
             docPDF.autoTable({
                 head: header,
                 body: tableData,
-                startY: 70,
+                startY: tituloY + 30,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
                 styles: { fontSize: 9, halign: 'center', valign: 'middle' }
@@ -608,12 +627,14 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            let y = 60; 
             const marginX = 50; 
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            await addLogoHeader(doc, 15);
+            // Logo desenhada primeiro; título/texto só começam depois do
+            // ponto onde ela termina (bottomY), garantindo zero sobreposição.
+            const logoInfo = await addLogoHeader(doc, 15);
+            let y = Math.max(60, logoInfo.bottomY + 20);
 
             const checkPage = (heightToAdd = 20) => {
                 if (y + heightToAdd >= pageHeight - 50) {
