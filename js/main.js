@@ -33,7 +33,7 @@ import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
-import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { abrirModalNovaRecepcao = abrirModalNovaRecepcao;
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { SIGEPRouter, ROUTES } from './router.js';
 import { PerfilService } from './perfilService.js';
@@ -171,7 +171,6 @@ class SIGEPApp {
                 </button>
             </div>
             
-            <!-- Seção de Usuários Pendentes -->
             <div class="mb-8">
                 <div class="mb-4">
                     <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -181,7 +180,6 @@ class SIGEPApp {
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Usuários do Sistema (APENAS UMA VEZ) -->
             <div class="mt-8">
                 <div class="mb-4">
                     <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -203,7 +201,6 @@ class SIGEPApp {
                 <div id="pagination-usuarios" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Auditoria -->
             <div class="mt-8 pt-4 border-t">
                 <div class="flex flex-wrap gap-3 mb-4">
                     <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
@@ -925,6 +922,48 @@ class SIGEPApp {
             }
         });
 
+        // ─── PROTEÇÃO EXTRA: Escuta direta no container da lista de membros ───
+        document.getElementById('members-list-container')?.addEventListener('click', async (e) => {
+            const removeBtn = e.target.closest('.remove-member-btn');
+            if (!removeBtn) return;
+            
+            e.stopPropagation(); // Impede interferência de fechar o modal
+            const email = removeBtn.dataset.email;
+            
+            if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
+                showNotification("O dono da pauta não pode ser removido!", "error");
+                return;
+            }
+
+            if (confirm(`Remover ${email} da pauta?`)) {
+                try {
+                    const usersRef = collection(this.db, "users");
+                    const q = query(usersRef, where("email", "==", email));
+                    const querySnapshot = await getDocs(q);
+                    
+                    if (!querySnapshot.empty) {
+                        const userId = querySnapshot.docs[0].id;
+                        
+                        if (userId === this.currentPautaOwnerId) {
+                            showNotification("O dono da pauta não pode ser removido!", "error");
+                            return;
+                        }
+
+                        const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                        await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
+                        showNotification(`Membro ${email} removido com sucesso.`, "success");
+                        
+                        if (typeof ModalService?.openMembersModal === 'function') {
+                            await ModalService.openMembersModal(this);
+                        }
+                    }
+                } catch (error) {
+                    console.error("Erro ao remover membro:", error);
+                    showNotification("Erro ao remover membro", "error");
+                }
+            }
+        });
+
         document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
             CollaboratorService.openModal(this);
         });
@@ -1295,8 +1334,6 @@ class SIGEPApp {
                 return;
             }
 
-            // CORREÇÃO: Captura o ID correto do Switch de modo silencioso (Garante compatibilidade de ID)
-            // CORREÇÃO: Lê o estado persistido ou o valor do elemento de forma segura
             const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || 
                       (document.getElementById('toggle-silent-mode')?.checked || 
                        document.getElementById('silent-mode-toggle')?.checked) || false;
@@ -1352,8 +1389,6 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                // CORREÇÃO: O token SEMPRE deve ser gerado se houver colaborador atribuído, 
-                // para não quebrar o link de acesso no painel dele.
                 if (collaboratorName) {
                     updatePayload.delegationToken = novoToken; 
                 }
@@ -1366,7 +1401,6 @@ class SIGEPApp {
                     this.currentUserName
                 );
                 
-                // CORREÇÃO: Condicional de envio baseada no Modo Silencioso
                 if (emailDestino && !isSilentMode) {
                     showNotification("Disparando notificação para o e-mail cadastrado...", "info");
                     try {
@@ -1383,8 +1417,7 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    // Notifica em tela que foi feito de forma silenciosa, sem disparar o EmailService
-                    showNotification(`Card movido para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
+                    showNotification(`Card moved para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
                 }
@@ -1614,50 +1647,6 @@ class SIGEPApp {
             document.getElementById('delegate-email-modal')?.classList.add('hidden');
         });
 
-        document.body.addEventListener('click', async (e) => {
-            // CORREÇÃO: Usa .closest para garantir a captura mesmo clicando no texto do botão
-            const removeBtn = e.target.closest('.remove-member-btn');
-            
-            if (removeBtn) {
-                const email = removeBtn.dataset.email;
-                
-                // Validação de segurança preventiva baseada no e-mail
-                if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
-                    showNotification("O dono da pauta não pode ser removido!", "error");
-                    return;
-                }
-
-                if (confirm(`Remover ${email} da pauta?`)) {
-                    try {
-                        const usersRef = collection(this.db, "users");
-                        const q = query(usersRef, where("email", "==", email));
-                        const querySnapshot = await getDocs(q);
-                        
-                        if (!querySnapshot.empty) {
-                            const userId = querySnapshot.docs[0].id;
-                            
-                            // Bloqueio duplo de segurança por ID do proprietário
-                            if (userId === this.currentPautaOwnerId) {
-                                showNotification("O dono da pauta não pode ser removido!", "error");
-                                return;
-                            }
-
-                            const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                            await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
-                            showNotification(`Membro ${email} removido com sucesso.`, "success");
-                            
-                            if (typeof ModalService?.openMembersModal === 'function') {
-                                await ModalService.openMembersModal(this);
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Erro ao remover membro:", error);
-                        showNotification("Erro ao remover membro", "error");
-                    }
-                }
-            }
-        });
-        
         document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
             this.router.navigate(ROUTES.MEU_PERFIL);
         });
@@ -2170,7 +2159,7 @@ class SIGEPApp {
             this.iniciarMonitorEnvelopes();
 
             // FAILSAFE: Garantir a exibição da tela principal do app.
-            // Se a chamada de loadPauta() vier diretamente de um clique no card em vez do router,
+            // Se a chamada de loadPauta() ver diretamente de um clique no card em vez do router,
             // a tela não transicionaria sozinha porque o comando antigo foi removido.
             // Este bloco força as outras telas a sumirem e a tela da pauta a aparecer.
             const appContainer = document.getElementById('app-container');
