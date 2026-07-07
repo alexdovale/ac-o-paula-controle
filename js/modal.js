@@ -254,6 +254,9 @@ export const ModalService = {
     /**
      * Abre o modal de gerenciar membros (Compartilhar)
      */
+    /**
+     * Abre o modal de gerenciar membros (Compartilhar)
+     */
     async openMembersModal(app) {
         console.log("openMembersModal chamado");
         
@@ -348,7 +351,7 @@ export const ModalService = {
             };
         }
     },
-
+    
     /**
      * Abre o modal de editar nome da pauta
      */
