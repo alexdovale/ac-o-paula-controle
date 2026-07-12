@@ -916,7 +916,7 @@ export const PautaService = {
         return classes[priority] || '';
     },
 
-    setupManualSort(app) {
+        setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
         if (!el) return;
 
@@ -927,6 +927,12 @@ export const PautaService = {
             
             window.sortableAguardando = new Sortable(el, {
                 animation: isMobile ? 200 : 300,
+                
+                // --- AJUSTE PARA DISPOSITIVOS MÓVEIS ---
+                delay: isMobile ? 250 : 0, // Exige segurar por 250ms no celular para poder arrastar
+                delayOnTouchOnly: true,    // Garante que no computador o clique e arraste continue instantâneo
+                // ---------------------------------------
+
                 ghostClass: 'opacity-20',
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
@@ -972,6 +978,7 @@ export const PautaService = {
             });
         }
     },
+
 
     preencherSelectColaboradores(app, selectId) {
         const select = document.getElementById(selectId);
