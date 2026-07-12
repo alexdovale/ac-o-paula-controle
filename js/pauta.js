@@ -833,7 +833,7 @@ export const PautaService = {
         return 'Média';
     },
 
-    sortAguardando(list, orderType) {
+        sortAguardando(list, orderType) {
         if (!list || !list.length) return [];
         
         if (orderType === 'manual') {
@@ -846,9 +846,19 @@ export const PautaService = {
 
         const TOLERANCIA_MINUTOS = 15;
 
-        const isPontual = (item) => {
-            if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return true;
+        // Nova lógica: Calcula o "Horário Efetivo" na fila para resolver o Starvation
+        const getHorarioEfetivo = (item) => {
+            // Se não tem hora de chegada, vai para o fim
+            if (!item.arrivalTime) return "23:59";
             
+            // Se for avulso, o horário efetivo é a própria hora que ele pisou na Defensoria
+            if (item.type !== 'agendamento' || !item.scheduledTime) {
+                const arr = new Date(item.arrivalTime);
+                const hh = String(arr.getHours()).padStart(2, '0');
+                const mm = String(arr.getMinutes()).padStart(2, '0');
+                return `${hh}:${mm}`;
+            }
+
             try {
                 const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
                 const schedDate = new Date(item.arrivalTime);
@@ -856,36 +866,45 @@ export const PautaService = {
                 schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
 
                 const arrDate = new Date(item.arrivalTime);
-                return arrDate <= schedDate;
+
+                if (arrDate <= schedDate) {
+                    // PONTUAL: O lugar dele na fila é o horário da agenda (ex: "09:00")
+                    return item.scheduledTime;
+                } else {
+                    // ATRASADO: Perde a agenda. O lugar dele na fila é a hora real que chegou (Encaixe - ex: "09:30")
+                    const hh = String(arrDate.getHours()).padStart(2, '0');
+                    const mm = String(arrDate.getMinutes()).padStart(2, '0');
+                    return `${hh}:${mm}`;
+                }
             } catch (e) {
-                return true;
+                return item.scheduledTime || "23:59";
             }
         };
 
         return [...list].sort((a, b) => {
+            // 1. Urgência sempre no topo
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
+            // 2. Agendamento tem preferência sobre Avulso
             if (a.type === 'agendamento' && b.type === 'avulso') return -1;
             if (a.type === 'avulso' && b.type === 'agendamento') return 1;
 
-            const pontualA = isPontual(a);
-            const pontualB = isPontual(b);
+            // 3. A mágica acontece aqui: Comparação pelo Horário Efetivo
+            const horarioEfetivoA = getHorarioEfetivo(a);
+            const horarioEfetivoB = getHorarioEfetivo(b);
 
-            if (pontualA && !pontualB) return -1;
-            if (!pontualA && pontualB) return 1;
-
-            if (pontualA && pontualB) {
-                if (a.scheduledTime && b.scheduledTime && a.scheduledTime !== b.scheduledTime) {
-                    return a.scheduledTime.localeCompare(b.scheduledTime);
-                }
+            if (horarioEfetivoA !== horarioEfetivoB) {
+                return horarioEfetivoA.localeCompare(horarioEfetivoB);
             }
 
+            // 4. Desempate final: Quem você clicou para marcar presença primeiro (`checkInOrder`)
             const arrivalA = a.checkInOrder || 0;
             const arrivalB = b.checkInOrder || 0;
             return arrivalA - arrivalB;
         });
     },
+
 
     getPriorityClass(priority) {
         const classes = {
