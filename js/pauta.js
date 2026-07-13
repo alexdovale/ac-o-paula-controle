@@ -6,1492 +6,1467 @@ import { logAction } from './admin.js';
 import { EmailService } from './emailService.js';
 
 export const PautaService = {
-    currentListeners: new Map(),
-    actionCooldown: new Map(),
-
-    // LÓGICA DE DESTINO INTELIGENTE
-    getDestinoRetorno(app) {
-        if (app.currentPautaData?.useDelegationFlow === true) {
-            return 'emAtendimento';
-        }
-        return 'aguardando';
-    },
-
-    isMobileDevice() {
-        return window.innerWidth <= 768;
-    },
-
-    closeAllQuickMenus(excludeMenuId = null) {
-        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
-            if (excludeMenuId === null || menu.id !== excludeMenuId) {
-                menu.classList.add('hidden');
-                const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
-                const toggle = document.getElementById(toggleId);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
-        });
-    },
-
-    canPerformAction(actionId, cooldownMs = 500) {
-        const lastAction = this.actionCooldown.get(actionId);
-        const now = Date.now();
-        if (lastAction && now - lastAction < cooldownMs) return false;
-        this.actionCooldown.set(actionId, now);
-        return true;
-    },
-
-    setupAttendancesListener(db, pautaId, callback) {
-        if (this.currentListeners.has(pautaId)) this.currentListeners.get(pautaId)();
-        const attendanceRef = collection(db, "pautas", pautaId, "attendances");
-        const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
-            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            callback(data);
-        }, (error) => {
-            console.error("Erro no listener:", error);
-            showNotification("Erro ao carregar dados em tempo real", "error");
-        });
-        this.currentListeners.set(pautaId, unsubscribe);
-        return unsubscribe;
-    },
-
-    injectRoomSearches(app) { },
-
-    populateRoomSelects(app) {
-        const arrivalSelect = document.getElementById('arrival-room-select');
-        const editSelect = document.getElementById('edit-room-select');
-        const arrivalContainer = document.getElementById('arrival-room-container');
-        
-        const rooms = app.currentPautaData?.customRooms || app.currentPautaData?.rooms || [];
-
-        if (app.currentPautaData?.type === 'multisala' && rooms.length > 0) {
-            const optionsHtml = rooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
-            
-            if (arrivalSelect) {
-                arrivalSelect.innerHTML = optionsHtml;
-                if (arrivalContainer) arrivalContainer.classList.remove('hidden');
-            }
-            if (editSelect) {
-                editSelect.innerHTML = optionsHtml;
-                if (editSelect.parentElement) editSelect.parentElement.classList.remove('hidden');
-            }
-        } else {
-            if (arrivalContainer) arrivalContainer.classList.add('hidden');
-            if (editSelect && editSelect.parentElement) editSelect.parentElement.classList.add('hidden');
-        }
-    },
-
-    async addAssistedManual(app, assistedData) {
-        return this.addAssistedProgrammatic(app.db, app.currentPauta.id, assistedData, app.currentUserName || 'Sistema');
-    },
-
-    async addAssisted(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) {
-            showNotification("Selecione uma pauta primeiro", "error");
-            playSound('error');
-            return;
-        }
-
-        const nameInput = document.getElementById('assisted-name');
-        const name = nameInput?.value.trim();
-        if (!name) {
-            showNotification("Nome do assistido é obrigatório", "error");
-            playSound('error');
-            return;
-        }
-
-        const cpfInput = document.getElementById('assisted-cpf');
-        const cpf = cpfInput?.value.trim() || '';
-        const numAgendamento = document.getElementById('assisted-num-agendamento')?.value.trim() || '';
-        const subjectInput = document.getElementById('assisted-subject');
-        const subject = subjectInput?.value.trim() || '';
-
-        const isScheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
-        const isScheduled = isScheduledRadio && isScheduledRadio.value === 'yes';
-        let scheduledTime = null;
-        if (isScheduled) {
-            scheduledTime = document.getElementById('scheduled-time')?.value || null;
-        }
-
-        const hasArrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
-        const hasArrived = hasArrivedRadio ? hasArrivedRadio.value : 'no';
-
-        let arrivalTime = null;
-        let room = null;
-        let status = 'pauta';
-
-        if (hasArrived === 'yes') {
-            const timeStr = document.getElementById('arrival-time')?.value;
-            if (timeStr) {
-                const [hours, minutes] = timeStr.split(':');
-                const arrivalDate = new Date();
-                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-                arrivalTime = arrivalDate.toISOString();
-            }
-            const roomSelect = document.getElementById('manual-room-select');
-            if (roomSelect && !roomSelect.classList.contains('hidden')) {
-                room = roomSelect.value || null;
-            }
-            status = 'aguardando';
-        }
-
-        const assistedData = {
-            name: name,
-            cpf: cpf,
-            numAgendamento: numAgendamento,
-            subject: subject,
-            status: status,
-            type: 'agendamento',
-            createdAt: new Date().toISOString(),
-            createdBy: app.currentUserName || app.auth.currentUser?.email,
-            scheduledTime: scheduledTime,
-            arrivalTime: arrivalTime,
-            room: room,
-            checkInOrder: hasArrived === 'yes' ? Date.now() : null,
-            priority: null,
-            priorityReason: null,
-            lastActionBy: app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        };
-
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        if (tabAgendamento && !tabAgendamento.classList.contains('tab-active')) {
-            assistedData.type = 'avulso';
-        }
-
-        try {
-            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
-            const docRef = await addDoc(attendanceRef, assistedData);
-
-            await logAction(
-                app.db,
-                app.auth,
-                app.currentUserName || 'Sistema',
-                app.currentPauta.id,
-                'ADD_ASSISTED',
-                `Adicionou assistido: ${name}`,
-                docRef.id
-            );
-
-            const mensagem = status === 'aguardando' 
-                ? `"${name}" adicionado à fila de aguardando!` 
-                : `"${name}" adicionado à pauta. Registre a chegada quando o assistido chegar.`;
-            showNotification(mensagem, 'success');
-            playSound('notification');
-
-            if(nameInput) nameInput.value = '';
-            if(cpfInput) cpfInput.value = '';
-            document.getElementById('assisted-num-agendamento').value = '';
-            if(subjectInput) subjectInput.value = '';
-            document.getElementById('scheduled-time').value = '';
-            document.getElementById('arrival-time').value = '';
-            const roomSelect = document.getElementById('manual-room-select');
-            if (roomSelect) roomSelect.value = '';
-
-            if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
-
-            if(nameInput) nameInput.focus();
-
-        } catch (error) {
-            console.error(error);
-            showNotification("Erro ao adicionar assistido", "error");
-            playSound('error');
-        }
-    },
-
-    async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
-        if (!pautaId || !assistedData || !userName) {
-            showNotification("Dados incompletos para adicionar assistido.", "error");
-            return false;
-        }
-
-        try {
-            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
-
-            const newAssisted = {
-                ...assistedData,
-                room: isMultisala ? (assistedData.room || null) : null,
-                status: assistedData.status || 'pauta', 
-                createdAt: new Date().toISOString(),
-                lastActionBy: userName,
-                lastActionTimestamp: new Date().toISOString(),
-                distributionHistory: assistedData.distributionHistory || []
-            };
-
-            const attendanceRef = collection(db, pautaId, "attendances"); // Corrigido escopo de referência genérico se necessário, mantendo compatibilidade
-            const docRef = await addDoc(collection(db, "pautas", pautaId, "attendances"), newAssisted);
-
-            await logAction(
-                db,
-                window.app && window.app.auth,
-                userName,
-                pautaId,
-                'ADD_ASSISTED',
-                `Adicionou assistido: ${assistedData.name || 'Novo Assistido'}`,
-                docRef.id
-            );
-
-            showNotification(`Assistido "${assistedData.name || 'Novo Assistido'}" adicionado com sucesso!`, "success");
-            return true;
-
-        } catch (error) {
-            console.error("Erro ao adicionar assistido:", error);
-            showNotification("Erro ao adicionar assistido: " + error.message, "error");
-            return false;
-        }
-    },
-
-    async updateStatus(db, pautaId, assistedId, updates, userName) {
-        if (!pautaId || !assistedId) return;
-        
-        try {
-            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-            const docSnap = await getDoc(docRef);
-            const currentData = docSnap.exists() ? docSnap.data() : {};
-            
-            const finalUpdates = { 
-                ...updates,
-                lastActionBy: userName || 'Sistema',
-                lastActionTimestamp: new Date().toISOString()
-            };
-
-            let novoNomeAtendente = undefined;
-            if (updates.attendedBy !== undefined) {
-                novoNomeAtendente = updates.attendedBy;
-            } else if (updates.assignedCollaborator !== undefined) {
-                novoNomeAtendente = updates.assignedCollaborator ? updates.assignedCollaborator.name : null;
-            } else if (updates.attendant !== undefined) {
-                novoNomeAtendente = updates.attendant;
-            }
-
-            if (novoNomeAtendente !== undefined) {
-                if (novoNomeAtendente) {
-                    const nomeStr = typeof novoNomeAtendente === 'object' ? (novoNomeAtendente.nome || novoNomeAtendente.name) : novoNomeAtendente;
-                    finalUpdates.assignedCollaborator = { id: currentData.assignedCollaborator?.id || 'manual', name: nomeStr };
-                    finalUpdates.attendant = nomeStr;
-                    finalUpdates.attendedBy = nomeStr;
-                } else {
-                    finalUpdates.assignedCollaborator = null;
-                    finalUpdates.attendant = null;
-                    finalUpdates.attendedBy = null;
-                }
-            }
-
-            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
-            if (!isMultisala && finalUpdates.room !== undefined) {
-                finalUpdates.room = null;
-            }
-            
-            if (updates.status === 'aguardando') {
-                if (!updates.checkInOrder) {
-                    finalUpdates.checkInOrder = Date.now(); 
-                } else {
-                    finalUpdates.checkInOrder = updates.checkInOrder;
-                }
-                
-                if (updates.arrivalTime) {
-                    const arrivalDate = new Date(updates.arrivalTime);
-                    if (isNaN(arrivalDate.getTime())) {
-                        finalUpdates.arrivalTime = null;
-                        showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning");
-                        playSound('warning');
-                    } else {
-                        finalUpdates.arrivalTime = arrivalDate.toISOString();
-                    }
-                } else if (currentData.arrivalTime && updates.arrivalTime === null) {
-                    finalUpdates.arrivalTime = null;
-                } else if (currentData.arrivalTime && !updates.arrivalTime) {
-                    finalUpdates.arrivalTime = currentData.arrivalTime;
-                }
-
-            } else if (updates.status === 'pauta') {
-                finalUpdates.checkInOrder = null;
-                finalUpdates.arrivalTime = null;
-            } else if (updates.status !== 'aguardando' && updates.status !== 'pauta') {
-                 if (!updates.checkInOrder && currentData.checkInOrder) {
-                     finalUpdates.checkInOrder = currentData.checkInOrder;
-                 }
-                 if (!updates.arrivalTime && currentData.arrivalTime) {
-                     finalUpdates.arrivalTime = currentData.arrivalTime;
-                 }
-            }
-            
-            await updateDoc(docRef, finalUpdates);
-            
-            if (updates.isConfirmed !== undefined) {
-                const textoConfirmacao = updates.isConfirmed ? "Confirmado" : "Não Confirmado";
-                showNotification(`Status de Marcado Presença no Verde atualizado para ${textoConfirmacao}.`, 'info');
-            } else if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
-                const currentAssisted = window.app?.allAssisted?.find(a => a.id === assistedId) || { name: 'Assistido' };
-                const name = currentAssisted.name || currentData.name;
-                
-                showNotification(
-                    `"${name}" entrou na fila de espera!`,
-                    'info',
-                    10000,
-                    [
-                        {
-                            label: "Chamar Próximo",
-                            callback: () => {
-                                if (window.app?.PautaService?.callNextAssisted) {
-                                    window.app.PautaService.callNextAssisted(window.app);
-                                }
-                            }
-                        },
-                        {
-                            label: "Ver Detalhes",
-                            callback: () => {
-                                if (window.openDetailsModal) {
-                                    window.openDetailsModal({
-                                        assistedId, pautaId, allAssisted: window.app?.allAssisted, db: window.app?.db
-                                    });
-                                }
-                            }
-                        }
-                    ]
-                );
-            } else {
-                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
-                showNotification(action, "success");
-            }
-
-            const logActionText = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
-            await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${logActionText} - ${currentData.name || 'Assistido'}`, assistedId);
-            
-        } catch (error) {
-            console.error("Erro ao atualizar status:", error);
-            showNotification("Erro ao atualizar", "error");
-        }
-    },
-
-    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
-        if (!assistedId || (!collaboratorName && collaboratorId !== 'null')) {
-            showNotification("Selecione um colaborador!", "error");
-            return false;
-        }
-
-        try {
-            const assisted = app.allAssisted.find(a => a.id === assistedId);
-
-            if (!assisted) {
-                showNotification("Erro: Assistido não encontrado no sistema.", "error");
-                return false;
-            }
-
-            if (collaboratorId === 'null') {
-                await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
-                    assignedCollaborator: null,
-                    delegatedBy: null,
-                    delegatedAt: null,
-                    delegationToken: null
-                }, app.currentUserName);
-                
-                showNotification("Atribuição removida. O card não está mais delegado a ninguém.", "info");
-                return true;
-            }
-
-            const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
-
-            const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
-                ? crypto.randomUUID().substring(0, 8) 
-                : Math.random().toString(36).substring(2, 10);
-
-            await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
-                status: 'emAtendimento',
-                assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
-                delegatedBy: app.currentUserName,
-                delegatedAt: new Date().toISOString(),
-                delegationToken: tokenSeguro 
-            }, app.currentUserName);
-
-            if (colab && colab.email) {
-                showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
-                
-                await EmailService.sendDelegationEmail(
-                    colab.email,        
-                    collaboratorName,      
-                    assisted.name,        
-                    app.currentUserName,  
-                    app.currentPauta.id,  
-                    assistedId,            
-                    tokenSeguro            
-                );
-            } else {
-                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status updated apenas no painel.");
-                showNotification("Colaborador sem e-mail. Notificação digital não enviada.", "warning");
-            }
-
-            return true;
-        } catch (error) {
-            console.error("❌ Erro crítico na delegação:", error);
-            showNotification("Falha ao delegar atendimento.", "error");
-            return false;
-        }
-    },
-
-    async finishAttendance(app, assistedId, attendedBy, demands = []) {
-        if (!app || !app.currentPauta || !app.currentPauta.id || !assistedId) {
-            showNotification("Dados incompletos para finalizar atendimento", "error");
-            return false;
-        }
-
-        try {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === assistedId);
-            if (!assisted) {
-                showNotification("Assistido não encontrado", "error");
-                return false;
-            }
-
-            const updates = {
-                status: 'atendido',
-                attendedBy: attendedBy || app.currentUserName,
-                attendedAt: new Date().toISOString(),
-                inAttendanceTime: new Date().toISOString(),
-                finalizadoPeloColaborador: true,
-                distributionStatus: 'completed'
-            };
-
-            if (assisted.assignedCollaborator) {
-                updates.finalizedBy = app.currentUserName;
-                updates.finalizedAt = new Date().toISOString();
-            }
-
-            if (demands && demands.length > 0) {
-                updates.demandas = {
-                    descricoes: demands,
-                    registeredBy: app.currentUserName,
-                    registeredAt: new Date().toISOString()
-                };
-            }
-
-            const distributionHistory = assisted.distributionHistory || [];
-            distributionHistory.push({
-                type: 'attendance',
-                attendedBy: attendedBy || app.currentUserName,
-                timestamp: new Date().toISOString(),
-                action: 'completed',
-                demands: demands.length > 0 ? demands : []
-            });
-            updates.distributionHistory = distributionHistory;
-
-            await this.updateStatus(
-                app.db, 
-                app.currentPauta.id, 
-                assistedId, 
-                updates, 
-                app.currentUserName
-            );
-
-            if (assisted.assignedCollaborator && assisted.assignedCollaborator.id && assisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
-                    await updateDoc(colabDocRef, {
-                        status: 'disponivel',
-                        currentAttendance: null
-                    });
-                } catch (e) {
-                    console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre.", e);
-                }
-            }
-
-            const quemAtendeu = attendedBy || app.currentUserName;
-            const quemDelegou = assisted.delegatedBy ? ` (delegado por ${assisted.delegatedBy})` : '';
-            
-            showNotification(`Atendimento finalizado com sucesso!`, "success");
-            
-            await logAction(
-                app.db,
-                app.auth,
-                app.currentUserName,
-                app.currentPauta.id,
-                'FINISH_ATTENDANCE',
-                `Finalizou atendimento de ${assisted.name}. Atendido por: ${quemAtendeu}${quemDelegou}. Demandas: ${demands.length}`,
-                assistedId
-            );
-
-            return true;
-        } catch (error) {
-            console.error("Erro ao finalizar atendimento:", error);
-            showNotification("Erro ao finalizar atendimento", "error");
-            return false;
-        }
-    },
-
-    async callNextAssisted(app) {
-        if (!app || !app.currentPauta || !app.currentPauta.id) {
-            showNotification("Nenhuma pauta selecionada!", "error");
-            return;
-        }
-
-        const aguardandoList = app.allAssisted.filter(a => a.status === 'aguardando');
-        if (aguardandoList.length === 0) {
-            showNotification("A fila de aguardando está vazia.", "info");
-            return;
-        }
-
-        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento);
-        const nextAssisted = orderedList[0];
-
-        if (!nextAssisted) {
-            showNotification("Não foi possível identificar o próximo assistido.", "error");
-            return;
-        }
-
-        window.assistedIdToHandle = nextAssisted.id;
-        window.assistedNameToHandle = nextAssisted.name || '';
-        window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
-
-        const nameElement = document.getElementById('assisted-to-attend-name');
-        if (nameElement) {
-            nameElement.textContent = nextAssisted.name;
-        }
-
-        const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
-        if (selectCollaboratorModal) {
-            selectCollaboratorModal.classList.remove('hidden');
-            showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
-            playSound('chime');
-            
-            setTimeout(() => {
-                const searchInput = document.getElementById('collaborator-search-input');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-
-                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                    UIService.preencherListaColaboradoresModal(app);
-                } else {
-                    console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                }
-                
-                if (searchInput) searchInput.focus();
-            }, 150);
-        }
-    },
-
-    async deleteAssisted(db, pautaId, assistedId, userName) {
-        if (!pautaId || !assistedId) return;
-        
-        try {
-            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-            const docSnap = await getDoc(docRef);
-            const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
-            
-            await deleteDoc(docRef);
-            
-            await logAction(
-                db,
-                window.app && window.app.auth,
-                userName || 'Sistema',
-                pautaId,
-                'DELETE_ASSISTED',
-                `Removeu assistido: ${assistedData.name}`,
-                assistedId
-            );
-            
-            showNotification("Registro apagado.");
-        } catch (error) {
-            console.error("Erro ao deletar:", error);
-            showNotification("Erro ao deletar", "error");
-        }
-    },
-
-    async reorderQueue(db, pautaId, items, userName) {
-        if (!pautaId || !items || !items.length) return;
-        
-        try {
-            const batch = writeBatch(db);
-            items.forEach((item, index) => {
-                const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
-                batch.update(docRef, { 
-                    manualIndex: index,
-                    lastActionBy: userName || 'Sistema',
-                    lastActionTimestamp: new Date().toISOString()
-                });
-            });
-            await batch.commit();
-            
-            await logAction(
-                db,
-                window.app && window.app.auth,
-                userName || 'Sistema',
-                pautaId,
-                'REORDER_QUEUE',
-                'Fila reordenada manualmente'
-            );
-            
-            showNotification("Fila Reordenada!");
-        } catch (error) {
-            console.error("Erro ao reordenar:", error);
-            showNotification("Erro ao reordenar", "error");
-        }
-    },
-
-    async deletePauta(db, auth, pautaId, pautaName, userName) {
-        if (!confirm(`Tem certeza que deseja apagar a pauta "${pautaName}"?\n\nEsta ação não pode ser desfeita!`)) {
-            return false;
-        }
-
-        try {
-            const pautaRef = doc(db, "pautas", pautaId);
-            const pautaDoc = await getDoc(pautaRef);
-            
-            if (!pautaDoc.exists()) {
-                showNotification("Pauta não encontrada", "error");
-                return false;
-            }
-
-            const pautaData = pautaDoc.data();
-            const user = auth.currentUser;
-            
-            if (!user) {
-                showNotification("Usuário não autenticado", "error");
-                return false;
-            }
-            
-            const userDoc = await getDoc(doc(db, "users", user.uid));
-            const userData = userDoc.data();
-            const isAdmin = (userData && userData.role === 'admin') || (userData && userData.role === 'superadmin');
-            
-            if (pautaData.owner !== user.uid && !isAdmin) {
-                showNotification("Você não tem permissão para apagar esta pauta", "error");
-                return false;
-            }
-
-            const attendanceRef = collection(db, "pautas", pautaId, "attendances");
-            const attendanceSnapshot = await getDocs(attendanceRef);
-            
-            const batch = writeBatch(db);
-            attendanceSnapshot.docs.forEach(doc => {
-                batch.delete(doc.ref);
-            });
-            
-            batch.delete(pautaRef);
-            await batch.commit();
-            
-            await logAction(
-                db,
-                auth,
-                userName || (user && user.email),
-                pautaId,
-                'DELETE_PAUTA',
-                `Apagou a pauta "${pautaName}"`,
-                pautaId
-            );
-            
-            showNotification("Pauta apagada com sucesso!");
-            return true;
-            
-        } catch (error) {
-            console.error("Erro ao apagar pauta:", error);
-            showNotification("Erro ao apagar pauta: " + error.message, "error");
-            return false;
-        }
-    },
-
-    filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
-        if (!pautas || !Array.isArray(pautas)) return [];
-        
-        const now = new Date();
-        let pautasFiltradas = [...pautas];
-        
-        switch(filterType) {
-            case 'my':
-                pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
-                break;
-                
-            case 'shared':
-                pautasFiltradas = pautasFiltradas.filter(p => 
-                    p.owner !== currentUserId && 
-                    ((p.members && p.members.includes(currentUserId)) || (p.memberEmails && p.memberEmails.includes(currentUserEmail)))
-                );
-                break;
-                
-            case 'active':
-                pautasFiltradas = pautasFiltradas.filter(p => {
-                    if (!p.createdAt) return true;
-                    const creationDate = new Date(p.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    return now <= expirationDate;
-                });
-                break;
-                
-            case 'expired':
-                pautasFiltradas = pautasFiltradas.filter(p => {
-                    if (!p.createdAt) return false;
-                    const creationDate = new Date(p.createdAt);
-                    const expirationDate = new Date(creationDate);
-                    expirationDate.setDate(creationDate.getDate() + 7);
-                    return now > expirationDate;
-                });
-                break;
-                
-            case 'periodo':
-                if (filtrosAdicionais.dataInicial) {
-                    const dataInicial = new Date(filtrosAdicionais.dataInicial);
-                    pautasFiltradas = pautasFiltradas.filter(p => {
-                        if (!p.createdAt) return true;
-                        return new Date(p.createdAt) >= dataInicial;
-                    });
-                }
-                
-                if (filtrosAdicionais.dataFinal) {
-                    const dataFinal = new Date(filtrosAdicionais.dataFinal);
-                    dataFinal.setHours(23, 59, 59, 999);
-                    pautasFiltradas = pautasFiltradas.filter(p => {
-                        if (!p.createdAt) return true;
-                        return new Date(p.createdAt) <= dataFinal;
-                    });
-                }
-                
-                if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos') {
-                    pautasFiltradas = pautasFiltradas.filter(p => p.type === filtrosAdicionais.tipo);
-                }
-                break;
-                
-            case 'all':
-            default:
-                break;
-        }
-        
-        return pautasFiltradas;
-    },
-
-    async handleCSVUpload(event, app) {
-        const file = event.target.files[0];
-        if (!file) return;
-
-        try {
-            const { parsePautaCSV } = await import('./csvHandler.js');
-            const assistidos = await parsePautaCSV(file);
-
-            if (!app.currentPauta || !app.currentPauta.id) {
-                showNotification("Nenhuma pauta selecionada", "error");
-                return;
-            }
-
-            const isMultisala = app.currentPautaData?.type === 'multisala';
-
-            let successCount = 0;
-            for (const assistido of assistidos) {
-                const assistedToSave = { ...assistido, type: 'agendamento' };
-                if (!isMultisala) {
-                    assistedToSave.room = null;
-                }
-
-                const added = await this.addAssistedProgrammatic(
-                    app.db,
-                    app.currentPauta.id,
-                    assistedToSave, 
-                    app.currentUserName || 'Sistema'
-                );
-                if (added) successCount++;
-            }
-
-            await logAction( 
-                app.db,
-                app.auth,
-                app.currentUserName || 'Sistema',
-                app.currentPauta.id,
-                'IMPORT_CSV',
-                `Importou ${successCount} de ${assistidos.length} registros via CSV`,
-                null
-            );
-
-            showNotification(`${successCount} de ${assistidos.length} registros importados!`);
-        } catch (error) {
-            showNotification(error.message || "Erro ao importar", "error");
-        } finally {
-            event.target.value = '';
-        }
-    },
-
-    getPriorityLevel(assisted) {
-        if (!assisted || assisted.status !== 'aguardando') return 'N/A';
-        
-        if (assisted.priority === 'URGENTE') return 'URGENTE';
-
-        if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
-            try {
-                const [h, m] = assisted.scheduledTime.split(':').map(Number);
-                const agendado = new Date();
-                agendado.setHours(h, m, 0, 0);
-
-                const chegada = new Date(assisted.arrivalTime);
-                const diffMinutos = (chegada - agendado) / (1000 * 60);
-
-                if (diffMinutos <= 5) return 'Máxima'; 
-                if (diffMinutos <= 15) return 'Média';
-                return 'Mínima';
-            } catch (e) {
-                return 'Média';
-            }
-        }
-
-        return 'Média';
-    },
-
-        sortAguardando(list, orderType) {
-        if (!list || !list.length) return [];
-        
-        if (orderType === 'manual') {
-            return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        }
-        
-        if (orderType === 'chegada') {
-            return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        }
-
-        const TOLERANCIA_MINUTOS = 15;
-
-        // Nova lógica: Calcula o "Horário Efetivo" na fila para resolver o Starvation
-        const getHorarioEfetivo = (item) => {
-            // Se não tem hora de chegada, vai para o fim
-            if (!item.arrivalTime) return "23:59";
-            
-            // Se for avulso, o horário efetivo é a própria hora que ele pisou na Defensoria
-            if (item.type !== 'agendamento' || !item.scheduledTime) {
-                const arr = new Date(item.arrivalTime);
-                const hh = String(arr.getHours()).padStart(2, '0');
-                const mm = String(arr.getMinutes()).padStart(2, '0');
-                return `${hh}:${mm}`;
-            }
-
-            try {
-                const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
-                const schedDate = new Date(item.arrivalTime);
-                schedDate.setHours(sHours, sMins, 0, 0);
-                schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
-
-                const arrDate = new Date(item.arrivalTime);
-
-                if (arrDate <= schedDate) {
-                    // PONTUAL: O lugar dele na fila é o horário da agenda (ex: "09:00")
-                    return item.scheduledTime;
-                } else {
-                    // ATRASADO: Perde a agenda. O lugar dele na fila é a hora real que chegou (Encaixe - ex: "09:30")
-                    const hh = String(arrDate.getHours()).padStart(2, '0');
-                    const mm = String(arrDate.getMinutes()).padStart(2, '0');
-                    return `${hh}:${mm}`;
-                }
-            } catch (e) {
-                return item.scheduledTime || "23:59";
-            }
-        };
-
-        return [...list].sort((a, b) => {
-            // 1. Urgência sempre no topo
-            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-
-            // 2. Agendamento tem preferência sobre Avulso
-            if (a.type === 'agendamento' && b.type === 'avulso') return -1;
-            if (a.type === 'avulso' && b.type === 'agendamento') return 1;
-
-            // 3. A mágica acontece aqui: Comparação pelo Horário Efetivo
-            const horarioEfetivoA = getHorarioEfetivo(a);
-            const horarioEfetivoB = getHorarioEfetivo(b);
-
-            if (horarioEfetivoA !== horarioEfetivoB) {
-                return horarioEfetivoA.localeCompare(horarioEfetivoB);
-            }
-
-            // 4. Desempate final: Quem você clicou para marcar presença primeiro (`checkInOrder`)
-            const arrivalA = a.checkInOrder || 0;
-            const arrivalB = b.checkInOrder || 0;
-            return arrivalA - arrivalB;
-        });
-    },
-
-
-    getPriorityClass(priority) {
-        const classes = {
-            'URGENTE': 'priority-urgente', 
-            'Máxima': 'priority-maxima',   
-            'Média': 'priority-media',     
-            'Mínima': 'priority-minima'    
-        };
-        return classes[priority] || '';
-    },
-
-        setupManualSort(app) {
-        const el = document.getElementById('aguardando-list');
-        if (!el) return;
-
-        if (app.currentPautaData && app.currentPautaData.ordemAtendimento === 'manual' && !app.isPautaClosed) {
-            if (window.sortableAguardando) window.sortableAguardando.destroy();
-
-            const isMobile = this.isMobileDevice();
-            
-            window.sortableAguardando = new Sortable(el, {
-                animation: isMobile ? 200 : 300,
-                
-                // --- AJUSTE PARA DISPOSITIVOS MÓVEIS ---
-                delay: isMobile ? 250 : 0, // Exige segurar por 250ms no celular para poder arrastar
-                delayOnTouchOnly: true,    // Garante que no computador o clique e arraste continue instantâneo
-                // ---------------------------------------
-
-                ghostClass: 'opacity-20',
-                chosenClass: 'ring-2',
-                dragClass: 'scale-95',
-                handle: '.relative',
-                filter: 'button, svg, p, span, input', 
-                preventOnFilter: false,
-                forceFallback: isMobile,
-                fallbackClass: 'sortable-fallback',
-                fallbackOnBody: true,
-                onEnd: async function () {
-                    const items = el.querySelectorAll('[data-id]');
-                    if (!items.length) return;
-                    
-                    const batch = writeBatch(app.db);
-                    items.forEach((item, index) => {
-                        const docId = item.getAttribute('data-id');
-                        const docRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", docId);
-                        batch.update(docRef, { 
-                            manualIndex: index,
-                            lastActionBy: app.currentUserName || 'Sistema',
-                            lastActionTimestamp: new Date().toISOString()
-                        });
-                    });
-
-                    try {
-                        await batch.commit();
-                        
-                        await logAction(
-                            app.db,
-                            app.auth,
-                            app.currentUserName || 'Sistema',
-                            app.currentPauta.id,
-                            'REORDER_QUEUE',
-                            'Fila reordenada manualmente via drag & drop'
-                        );
-                        
-                        showNotification("Fila Reordenada!");
-                    } catch (e) {
-                        console.error("Erro ao reordenar:", e);
-                        showNotification("Erro ao reordenar", "error");
-                    }
-                }
-            });
-        }
-    },
-
-
-    preencherSelectColaboradores(app, selectId) {
-        const select = document.getElementById(selectId);
-        if (!select) return;
-        
-        const valorAtual = select.value;
-        select.innerHTML = '<option value="">Selecione um profissional...</option>';
-        
-        const optNaoAtribuir = document.createElement('option');
-        optNaoAtribuir.value = "null";
-        optNaoAtribuir.textContent = "🚫 Não Atribuir a ninguém";
-        select.appendChild(optNaoAtribuir);
-        
-        const colaboradores = app.colaboradores || [];
-        
-        colaboradores.forEach(colab => {
-            const opt = document.createElement('option');
-            opt.value = colab.nome;
-            const statusText = colab.presente ? ' (Online)' : '';
-            opt.textContent = `${colab.nome} - ${colab.cargo || 'Membro'}${statusText}`;
-            select.appendChild(opt);
-        });
-        
-        if (valorAtual) select.value = valorAtual;
-    },
-
-    handleCardActions(e, app) {
-        const button = e.target.closest('button');
-        if (!button) return;
-
-        const id = button.dataset.id;
-        if (!id) return;
-
-        const currentUserRole = app.currentUser?.role;
-        const isApoio = currentUserRole === 'apoio';
-
-        const acoesProibidasApoio = [
-            'return-to-pauta-btn',
-            'return-to-pauta-from-faltoso-btn',
-            'return-to-aguardando-btn',
-            'return-to-aguardando-from-emAtendimento-btn',
-            'return-to-aguardando-from-dist-btn',
-            'return-from-atendido-btn',
-            'delete-btn',
-            'select-collaborator-btn',
-            'attend-directly-from-aguardando-btn',
-            'delegate-finalization-btn',
-            'edit-assisted-btn',
-            'edit-attendant-btn',
-            'manage-demands-btn',
-            'toggle-confirmed-atendido',
-            'toggle-confirmed-faltoso'
-        ];
-
-        const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
-        if (isApoio && acaoAtual) {
-            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação administrativa.", "warning");
-            playSound('warning');
-            return;
-        }
-
-        if (button.classList.contains('quick-action-toggle')) {
-            e.stopPropagation();
-            const menuId = `quick-menu-${id}`;
-            const menu = document.getElementById(menuId);
-            
-            if (!menu) return;
-            
-            this.closeAllQuickMenus(menuId);
-            
-            const isHidden = menu.classList.contains('hidden');
-            menu.classList.toggle('hidden');
-            
-            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-            
-            if (!menu.classList.contains('hidden')) {
-                setTimeout(() => {
-                    const firstItem = menu.querySelector('.quick-action-item');
-                    if (firstItem) firstItem.focus();
-                }, 100);
-                
-                setTimeout(() => {
-                    const clickOutsideHandler = (event) => {
-                        if (!menu.contains(event.target) && !button.contains(event.target)) {
-                            menu.classList.add('hidden');
-                            button.setAttribute('aria-expanded', 'false');
-                            document.removeEventListener('click', clickOutsideHandler);
-                        }
-                    };
-                    document.addEventListener('click', clickOutsideHandler);
-                }, 0);
-            }
-        }
-
-        if (button.classList.contains('quick-action-item')) {
-            e.stopPropagation();
-            
-            if (isApoio) {
-                showNotification("Acesso restrito: Ações rápidas de encerramento são bloqueadas para Apoio.", "warning");
-                return;
-            }
-
-            const actionKey = `${id}-${button.dataset.tipo}`;
-            if (!this.canPerformAction(actionKey)) return;
-            
-            const tipoAcao = button.dataset.tipo;
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            if (!assisted) {
-                showNotification("Erro: Assistido não encontrado", "error");
-                return;
-            }
-            
-            const menu = document.getElementById(`quick-menu-${id}`);
-            if (menu) {
-                menu.classList.add('hidden');
-                const toggle = document.getElementById(`quick-toggle-${id}`);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
-            
-            const tipoMap = {
-                'reagendar': 'Reagendamento',
-                'agendar': 'Agendamento',
-                'consulta': 'Consulta Processual',
-                'outros': 'Outros Assuntos'
-            };
-            
-            const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = tipoAcao;
-            window.assistedTipoDescricao = tipoDescricao;
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) {
-                nameElement.textContent = assisted.name || '';
-            }
-            
-            showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) {
-                        searchInput.value = '';
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-
-                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                        UIService.preencherListaColaboradoresModal(app);
-                    }
-                    
-                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
-                    if (firstInput) firstInput.focus();
-                }, 150);
-            }
-        }
-
-        if (button.classList.contains('check-in-btn')) {
-            window.assistedIdToHandle = id;
-            const modal = document.getElementById('arrival-modal');
-            if (modal) {
-                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
-                modal.classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('faltou-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
-        }
-
-        // ============================================================
-        // TRATAMENTO DA ATIVAÇÃO DE VALIDAÇÃO DO SISTEMA VERDE (CORRIGIDO)
-        // ============================================================
-        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
-            e.stopPropagation();
-            
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-
-            const novoEstado = !assisted.isConfirmed;
-
-            this.updateStatus(app.db, app.currentPauta.id, id, { 
-                isConfirmed: novoEstado 
-            }, app.currentUserName);
-            
-            return;
-        }
-
-        if (button.classList.contains('return-to-pauta-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta',
-                arrivalTime: null,
-                priority: null,
-                assignedCollaborator: null,
-                inAttendanceTime: null,
-                room: null,
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            }, app.currentUserName);
-            
-            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
-                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                } catch (e) {
-                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
-                }
-            }
-            
-            if (assisted && assisted.assignedCollaborator) {
-                showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
-            }
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('delete-btn')) {
-            if (confirm("Tem certeza?")) {
-                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
-            }
-        }
-
-        if (button.classList.contains('priority-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted && assisted.priority === 'URGENTE') {
-                if (confirm("Remover urgência?")) {
-                    this.updateStatus(app.db, app.currentPauta.id, id, {
-                        priority: null,
-                        priorityReason: null
-                    }, app.currentUserName);
-                }
-            } else {
-                window.assistedIdToHandle = id;
-                const modal = document.getElementById('priority-reason-modal');
-                if (modal) {
-                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-                    document.getElementById('priority-reason-input').value = '';
-                    modal.classList.remove('hidden');
-                }
-            }
-        }
-
-        if (button.classList.contains('select-collaborator-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'delegar';
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) {
-                nameElement.textContent = assisted.name || '';
-            }
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) {
-                        searchInput.value = '';
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-
-                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                        UIService.preencherListaColaboradoresModal(app);
-                    }
-                    
-                    if (searchInput) searchInput.focus();
-                }, 150);
-            }
-        }
-
-        if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            const useDist = app.currentPautaData?.useDistributionFlow === true;
-            const timestampIso = new Date().toISOString();
-
-            if (useDist) {
-                this.updateStatus(app.db, app.currentPauta.id, id, {
-                    status: 'aguardandoDistribuicao',
-                    distributionStatus: 'pending',
-                    inAttendanceTime: timestampIso
-                }, app.currentUserName);
-                showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
-            } else {
-                window.assistedIdToHandle = id;
-                this.preencherSelectColaboradores(app, 'attendant-select');
-                document.getElementById('attendant-modal')?.classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('delegate-finalization-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdToHandle = id;
-            const processInput = document.getElementById('dist-process-number');
-            if (processInput) processInput.value = assisted.numeroProcesso || '';
-            
-            const modal = document.getElementById('distribution-finish-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                
-                document.getElementById('confirm-dist-finish-btn').onclick = async () => {
-                    const cnpDigitado = processInput.value.trim();
-                    const timestampIso = new Date().toISOString();
-                    
-                    const servidorResponsavel = assisted.enviadoPor || app.currentUserName || "Servidor";
-                    const defensorResponsavel = assisted.attendedBy || assisted.defensorResponsavel || app.currentUserName || "Defensor";
-
-                    const mapaProdutividadeBI = {};
-                    mapaProdutividadeBI[servidorResponsavel] = 1;
-                    mapaProdutividadeBI[defensorResponsavel] = 1;
-
-                    await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id), {
-                        status: 'atendido',
-                        numeroProcesso: cnpDigitado,
-                        trabalhosPorUsuario: mapaProdutividadeBI,
-                        finalizadoPeloColaborador: true,
-                        distributionStatus: 'completed',
-                        attendedAt: timestampIso
-                    });
-                    
-                    modal.classList.add('hidden');
-                    showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
-                };
-            }
-        }
-
-        if (button.classList.contains('edit-assisted-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                document.getElementById('edit-assisted-name').value = assisted.name || '';
-                document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
-                document.getElementById('edit-assisted-num-agendamento').value = assisted.numAgendamento || '';
-                document.getElementById('edit-assisted-subject').value = assisted.subject || '';
-                document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
-                
-                const roomSelect = document.getElementById('edit-room-select');
-                if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
-                    roomSelect.value = assisted.room;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('edit-attendant-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                this.preencherSelectColaboradores(app, 'edit-attendant-select');
-                
-                const select = document.getElementById('edit-attendant-select');
-                if (select) {
-                    let nomeAtendente = '';
-                    if (assisted.attendedBy) {
-                        nomeAtendente = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
-                    } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
-                        nomeAtendente = assisted.assignedCollaborator.name;
-                    } else if (assisted.attendant) {
-                        nomeAtendente = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
-                    }
-                    const options = Array.from(select.options).map(opt => opt.value);
-                    if (options.includes(nomeAtendente)) select.value = nomeAtendente;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-attendant-modal')) document.getElementById('edit-attendant-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('manage-demands-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                window.assistedIdToHandle = id;
-                document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
-                
-                const infoDiv = document.createElement('div');
-                infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
-                
-                let infoHtml = '';
-                
-                let atendenteNome = 'Não informado';
-                if (assisted.attendedBy) {
-                    atendenteNome = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
-                } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
-                    atendenteNome = assisted.assignedCollaborator.name;
-                } else if (assisted.attendant) {
-                    atendenteNome = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
-                }
-                
-                if (atendenteNome !== 'Não informado') {
-                    infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${escapeHTML(atendenteNome)}</p>`;
-                }
-                
-                if (assisted.delegatedBy) {
-                    infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${escapeHTML(assisted.delegatedBy)}`;
-                    if (atendenteNome !== 'Não informado' && atendenteNome !== assisted.delegatedBy) {
-                        infoHtml += ` para ${escapeHTML(atendenteNome)}`;
-                    }
-                    infoHtml += `</p>`;
-                }
-                if (assisted.demandas && assisted.demandas.descricoes && assisted.demandas.descricoes.length > 0) {
-                    infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
-                }
-                
-                if (infoHtml) {
-                    infoDiv.innerHTML = infoHtml;
-                    const modal = document.getElementById('demands-modal');
-                    const existingInfo = modal.querySelector('.attendance-info');
-                    if (existingInfo) existingInfo.remove();
-                    infoDiv.classList.add('attendance-info');
-                    const demandsListContainer = modal.querySelector('.demands-list-container');
-                    if (demandsListContainer) modal.insertBefore(infoDiv, demandsListContainer);
-                }
-                
-                const container = document.getElementById('demands-modal-list-container');
-                if (container) {
-                    container.innerHTML = '';
-                    const demands = (assisted.demandas && assisted.demandas.descricoes) || [];
-                    if (demands.length === 0) {
-                        container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-                    } else {
-                        demands.forEach(demand => {
-                            const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
-                            li.innerHTML = `<span>${escapeHTML(demand)}</span><button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>`;
-                            container.appendChild(li);
-                        });
-                    }
-                }
-                if (document.getElementById('demands-modal')) document.getElementById('demands-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('view-details-btn')) {
-            if (window.openDetailsModal) {
-                window.openDetailsModal({
-                    assistedId: id,
-                    pautaId: app.currentPauta && app.currentPauta.id,
-                    allAssisted: app.allAssisted
-                });
-            } else {
-                showNotification("Erro ao abrir detalhes", "error");
-            }
-        }
-
-        if (button.classList.contains('return-from-atendido-btn')) {
-            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            const statusDestino = this.getDestinoRetorno(app);
-
-            let updateData = {
-                status: statusDestino,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
-            };
-
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-            
-            if (currentAssisted?.assignedCollaborator?.id && currentAssisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
-                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                } catch (e) {
-                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
-                }
-            }
-            showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
-        }
-    }
+    currentListeners: new Map(),
+    actionCooldown: new Map(),
+
+    // LÓGICA DE DESTINO INTELIGENTE
+    getDestinoRetorno(app) {
+        if (app.currentPautaData?.useDelegationFlow === true) {
+            return 'emAtendimento';
+        }
+        return 'aguardando';
+    },
+
+    isMobileDevice() {
+        return window.innerWidth <= 768;
+    },
+
+    closeAllQuickMenus(excludeMenuId = null) {
+        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+            if (excludeMenuId === null || menu.id !== excludeMenuId) {
+                menu.classList.add('hidden');
+                const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
+                const toggle = document.getElementById(toggleId);
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    },
+
+    canPerformAction(actionId, cooldownMs = 500) {
+        const lastAction = this.actionCooldown.get(actionId);
+        const now = Date.now();
+        if (lastAction && now - lastAction < cooldownMs) return false;
+        this.actionCooldown.set(actionId, now);
+        return true;
+    },
+
+    setupAttendancesListener(db, pautaId, callback) {
+        if (this.currentListeners.has(pautaId)) this.currentListeners.get(pautaId)();
+        const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+        const unsubscribe = onSnapshot(attendanceRef, (snapshot) => {
+            const data = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            callback(data);
+        }, (error) => {
+            console.error("Erro no listener:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
+        });
+        this.currentListeners.set(pautaId, unsubscribe);
+        return unsubscribe;
+    },
+
+    injectRoomSearches(app) { },
+
+    populateRoomSelects(app) {
+        const arrivalSelect = document.getElementById('arrival-room-select');
+        const editSelect = document.getElementById('edit-room-select');
+        const arrivalContainer = document.getElementById('arrival-room-container');
+        
+        const rooms = app.currentPautaData?.customRooms || app.currentPautaData?.rooms || [];
+
+        if (app.currentPautaData?.type === 'multisala' && rooms.length > 0) {
+            const optionsHtml = rooms.map(r => `<option value="${escapeHTML(r)}">${escapeHTML(r)}</option>`).join('');
+            
+            if (arrivalSelect) {
+                arrivalSelect.innerHTML = optionsHtml;
+                if (arrivalContainer) arrivalContainer.classList.remove('hidden');
+            }
+            if (editSelect) {
+                editSelect.innerHTML = optionsHtml;
+                if (editSelect.parentElement) editSelect.parentElement.classList.remove('hidden');
+            }
+        } else {
+            if (arrivalContainer) arrivalContainer.classList.add('hidden');
+            if (editSelect && editSelect.parentElement) editSelect.parentElement.classList.add('hidden');
+        }
+    },
+
+    async addAssistedManual(app, assistedData) {
+        return this.addAssistedProgrammatic(app.db, app.currentPauta.id, assistedData, app.currentUserName || 'Sistema');
+    },
+
+    async addAssisted(app) {
+        if (!app || !app.currentPauta || !app.currentPauta.id) {
+            showNotification("Selecione uma pauta primeiro", "error");
+            playSound('error');
+            return;
+        }
+
+        const nameInput = document.getElementById('assisted-name');
+        const name = nameInput?.value.trim();
+        if (!name) {
+            showNotification("Nome do assistido é obrigatório", "error");
+            playSound('error');
+            return;
+        }
+
+        const cpfInput = document.getElementById('assisted-cpf');
+        const cpf = cpfInput?.value.trim() || '';
+        const numAgendamento = document.getElementById('assisted-num-agendamento')?.value.trim() || '';
+        const subjectInput = document.getElementById('assisted-subject');
+        const subject = subjectInput?.value.trim() || '';
+
+        const isScheduledRadio = document.querySelector('input[name="is-scheduled"]:checked');
+        const isScheduled = isScheduledRadio && isScheduledRadio.value === 'yes';
+        let scheduledTime = null;
+        if (isScheduled) {
+            scheduledTime = document.getElementById('scheduled-time')?.value || null;
+        }
+
+        const hasArrivedRadio = document.querySelector('input[name="has-arrived"]:checked');
+        const hasArrived = hasArrivedRadio ? hasArrivedRadio.value : 'no';
+
+        let arrivalTime = null;
+        let room = null;
+        let status = 'pauta';
+
+        if (hasArrived === 'yes') {
+            const timeStr = document.getElementById('arrival-time')?.value;
+            if (timeStr) {
+                const [hours, minutes] = timeStr.split(':');
+                const arrivalDate = new Date();
+                arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
+                arrivalTime = arrivalDate.toISOString();
+            }
+            const roomSelect = document.getElementById('manual-room-select');
+            if (roomSelect && !roomSelect.classList.contains('hidden')) {
+                room = roomSelect.value || null;
+            }
+            status = 'aguardando';
+        }
+
+        const assistedData = {
+            name: name,
+            cpf: cpf,
+            numAgendamento: numAgendamento,
+            subject: subject,
+            status: status,
+            type: 'agendamento',
+            createdAt: new Date().toISOString(),
+            createdBy: app.currentUserName || app.auth.currentUser?.email,
+            scheduledTime: scheduledTime,
+            arrivalTime: arrivalTime,
+            room: room,
+            checkInOrder: hasArrived === 'yes' ? Date.now() : null,
+            priority: null,
+            priorityReason: null,
+            lastActionBy: app.currentUserName || 'Sistema',
+            lastActionTimestamp: new Date().toISOString()
+        };
+
+        const tabAgendamento = document.getElementById('tab-agendamento');
+        if (tabAgendamento && !tabAgendamento.classList.contains('tab-active')) {
+            assistedData.type = 'avulso';
+        }
+
+        try {
+            const attendanceRef = collection(app.db, "pautas", app.currentPauta.id, "attendances");
+            const docRef = await addDoc(attendanceRef, assistedData);
+
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName || 'Sistema',
+                app.currentPauta.id,
+                'ADD_ASSISTED',
+                `Adicionou assistido: ${name}`,
+                docRef.id
+            );
+
+            const mensagem = status === 'aguardando' 
+                ? `"${name}" adicionado à fila de aguardando!` 
+                : `"${name}" adicionado à pauta. Registre a chegada quando o assistido chegar.`;
+            showNotification(mensagem, 'success');
+            playSound('notification');
+
+            if(nameInput) nameInput.value = '';
+            if(cpfInput) cpfInput.value = '';
+            document.getElementById('assisted-num-agendamento').value = '';
+            if(subjectInput) subjectInput.value = '';
+            document.getElementById('scheduled-time').value = '';
+            document.getElementById('arrival-time').value = '';
+            const roomSelect = document.getElementById('manual-room-select');
+            if (roomSelect) roomSelect.value = '';
+
+            if (document.getElementById('scheduled-time-wrapper')) document.getElementById('scheduled-time-wrapper').classList.add('hidden');
+            if (document.getElementById('arrival-time-wrapper')) document.getElementById('arrival-time-wrapper').classList.add('hidden');
+
+            if(nameInput) nameInput.focus();
+
+        } catch (error) {
+            console.error(error);
+            showNotification("Erro ao adicionar assistido", "error");
+            playSound('error');
+        }
+    },
+
+    async addAssistedProgrammatic(db, pautaId, assistedData, userName) {
+        if (!pautaId || !assistedData || !userName) {
+            showNotification("Dados incompletos para adicionar assistido.", "error");
+            return false;
+        }
+
+        try {
+            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
+
+            const newAssisted = {
+                ...assistedData,
+                room: isMultisala ? (assistedData.room || null) : null,
+                status: assistedData.status || 'pauta', 
+                createdAt: new Date().toISOString(),
+                lastActionBy: userName,
+                lastActionTimestamp: new Date().toISOString(),
+                distributionHistory: assistedData.distributionHistory || []
+            };
+
+            // O caminho aqui precisa ter 3 partes (pautas -> pautaId -> attendances)
+            const attendanceRef = collection(db, "pautas", pautaId, "attendances"); 
+            const docRef = await addDoc(attendanceRef, newAssisted);
+
+            await logAction(
+                db,
+                window.app && window.app.auth,
+                userName,
+                pautaId,
+                'ADD_ASSISTED',
+                `Adicionou assistido: ${assistedData.name || 'Novo Assistido'}`,
+                docRef.id
+            );
+
+            showNotification(`Assistido "${assistedData.name || 'Novo Assistido'}" adicionado com sucesso!`, "success");
+            return true;
+
+        } catch (error) {
+            console.error("Erro ao adicionar assistido:", error);
+            showNotification("Erro ao adicionar assistido: " + error.message, "error");
+            return false;
+        }
+    },
+
+    async updateStatus(db, pautaId, assistedId, updates, userName) {
+        if (!pautaId || !assistedId) return;
+        
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            const docSnap = await getDoc(docRef);
+            const currentData = docSnap.exists() ? docSnap.data() : {};
+            
+            const finalUpdates = { 
+                ...updates,
+                lastActionBy: userName || 'Sistema',
+                lastActionTimestamp: new Date().toISOString()
+            };
+
+            let novoNomeAtendente = undefined;
+            if (updates.attendedBy !== undefined) {
+                novoNomeAtendente = updates.attendedBy;
+            } else if (updates.assignedCollaborator !== undefined) {
+                novoNomeAtendente = updates.assignedCollaborator ? updates.assignedCollaborator.name : null;
+            } else if (updates.attendant !== undefined) {
+                novoNomeAtendente = updates.attendant;
+            }
+
+            if (novoNomeAtendente !== undefined) {
+                if (novoNomeAtendente) {
+                    const nomeStr = typeof novoNomeAtendente === 'object' ? (novoNomeAtendente.nome || novoNomeAtendente.name) : novoNomeAtendente;
+                    finalUpdates.assignedCollaborator = { id: currentData.assignedCollaborator?.id || 'manual', name: nomeStr };
+                    finalUpdates.attendant = nomeStr;
+                    finalUpdates.attendedBy = nomeStr;
+                } else {
+                    finalUpdates.assignedCollaborator = null;
+                    finalUpdates.attendant = null;
+                    finalUpdates.attendedBy = null;
+                }
+            }
+
+            const isMultisala = window.app && window.app.currentPautaData && window.app.currentPautaData.type === 'multisala';
+            if (!isMultisala && finalUpdates.room !== undefined) {
+                finalUpdates.room = null;
+            }
+            
+            if (updates.status === 'aguardando') {
+                if (!updates.checkInOrder) {
+                    finalUpdates.checkInOrder = Date.now(); 
+                } else {
+                    finalUpdates.checkInOrder = updates.checkInOrder;
+                }
+                
+                if (updates.arrivalTime) {
+                    const arrivalDate = new Date(updates.arrivalTime);
+                    if (isNaN(arrivalDate.getTime())) {
+                        finalUpdates.arrivalTime = null;
+                        showNotification("Data/Hora de chegada inválida. Campo limpo.", "warning");
+                        playSound('warning');
+                    } else {
+                        finalUpdates.arrivalTime = arrivalDate.toISOString();
+                    }
+                } else if (currentData.arrivalTime && updates.arrivalTime === null) {
+                    finalUpdates.arrivalTime = null;
+                } else if (currentData.arrivalTime && !updates.arrivalTime) {
+                    finalUpdates.arrivalTime = currentData.arrivalTime;
+                }
+
+            } else if (updates.status === 'pauta') {
+                finalUpdates.checkInOrder = null;
+                finalUpdates.arrivalTime = null;
+            } else if (updates.status !== 'aguardando' && updates.status !== 'pauta') {
+                 if (!updates.checkInOrder && currentData.checkInOrder) {
+                     finalUpdates.checkInOrder = currentData.checkInOrder;
+                 }
+                 if (!updates.arrivalTime && currentData.arrivalTime) {
+                     finalUpdates.arrivalTime = currentData.arrivalTime;
+                 }
+            }
+            
+            await updateDoc(docRef, finalUpdates);
+            
+            if (updates.isConfirmed !== undefined) {
+                const textoConfirmacao = updates.isConfirmed ? "Confirmado" : "Não Confirmado";
+                showNotification(`Status de Marcado Presença no Verde atualizado para ${textoConfirmacao}.`, 'info');
+            } else if (updates.status === 'aguardando' && currentData.status !== 'aguardando') {
+                const currentAssisted = window.app?.allAssisted?.find(a => a.id === assistedId) || { name: 'Assistido' };
+                const name = currentAssisted.name || currentData.name;
+                
+                showNotification(
+                    `"${name}" entrou na fila de espera!`,
+                    'info',
+                    10000,
+                    [
+                        {
+                            label: "Chamar Próximo",
+                            callback: () => {
+                                if (window.app?.PautaService?.callNextAssisted) {
+                                    window.app.PautaService.callNextAssisted(window.app);
+                                }
+                            }
+                        },
+                        {
+                            label: "Ver Detalhes",
+                            callback: () => {
+                                if (window.openDetailsModal) {
+                                    window.openDetailsModal({
+                                        assistedId, pautaId, allAssisted: window.app?.allAssisted, db: window.app?.db
+                                    });
+                                }
+                            }
+                        }
+                    ]
+                );
+            } else {
+                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
+                showNotification(action, "success");
+            }
+
+            const logActionText = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
+            await logAction(db, window.app?.auth, userName || 'Sistema', pautaId, 'UPDATE_ASSISTED', `${logActionText} - ${currentData.name || 'Assistido'}`, assistedId);
+            
+        } catch (error) {
+            console.error("Erro ao atualizar status:", error);
+            showNotification("Erro ao atualizar", "error");
+        }
+    },
+
+    async delegateAttendance(app, assistedId, collaboratorName, collaboratorId) {
+        if (!assistedId || (!collaboratorName && collaboratorId !== 'null')) {
+            showNotification("Selecione um colaborador!", "error");
+            return false;
+        }
+
+        try {
+            const assisted = app.allAssisted.find(a => a.id === assistedId);
+
+            if (!assisted) {
+                showNotification("Erro: Assistido não encontrado no sistema.", "error");
+                return false;
+            }
+
+            if (collaboratorId === 'null') {
+                await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
+                    assignedCollaborator: null,
+                    delegatedBy: null,
+                    delegatedAt: null,
+                    delegationToken: null
+                }, app.currentUserName);
+                
+                showNotification("Atribuição removida. O card não está mais delegado a ninguém.", "info");
+                return true;
+            }
+
+            const colab = app.colaboradores.find(c => c.id === collaboratorId || c.nome === collaboratorName);
+
+            const tokenSeguro = (typeof crypto !== 'undefined' && crypto.randomUUID) 
+                ? crypto.randomUUID().substring(0, 8) 
+                : Math.random().toString(36).substring(2, 10);
+
+            await this.updateStatus(app.db, app.currentPauta.id, assistedId, {
+                status: 'emAtendimento',
+                assignedCollaborator: { id: collaboratorId || 'manual', name: collaboratorName },
+                delegatedBy: app.currentUserName,
+                delegatedAt: new Date().toISOString(),
+                delegationToken: tokenSeguro 
+            }, app.currentUserName);
+
+            if (colab && colab.email) {
+                showNotification(`Enviando e-mail para ${collaboratorName}...`, "info");
+                
+                await EmailService.sendDelegationEmail(
+                    colab.email,        
+                    collaboratorName,      
+                    assisted.name,        
+                    app.currentUserName,  
+                    app.currentPauta.id,  
+                    assistedId,            
+                    tokenSeguro            
+                );
+            } else {
+                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status updated apenas no painel.");
+                showNotification("Colaborador sem e-mail. Notificação digital não enviada.", "warning");
+            }
+
+            return true;
+        } catch (error) {
+            console.error("❌ Erro crítico na delegação:", error);
+            showNotification("Falha ao delegar atendimento.", "error");
+            return false;
+        }
+    },
+
+    async finishAttendance(app, assistedId, attendedBy, demands = []) {
+        if (!app || !app.currentPauta || !app.currentPauta.id || !assistedId) {
+            showNotification("Dados incompletos para finalizar atendimento", "error");
+            return false;
+        }
+
+        try {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === assistedId);
+            if (!assisted) {
+                showNotification("Assistido não encontrado", "error");
+                return false;
+            }
+
+            const updates = {
+                status: 'atendido',
+                attendedBy: attendedBy || app.currentUserName,
+                attendedAt: new Date().toISOString(),
+                inAttendanceTime: new Date().toISOString(),
+                finalizadoPeloColaborador: true,
+                distributionStatus: 'completed'
+            };
+
+            if (assisted.assignedCollaborator) {
+                updates.finalizedBy = app.currentUserName;
+                updates.finalizedAt = new Date().toISOString();
+            }
+
+            if (demands && demands.length > 0) {
+                updates.demandas = {
+                    descricoes: demands,
+                    registeredBy: app.currentUserName,
+                    registeredAt: new Date().toISOString()
+                };
+            }
+
+            const distributionHistory = assisted.distributionHistory || [];
+            distributionHistory.push({
+                type: 'attendance',
+                attendedBy: attendedBy || app.currentUserName,
+                timestamp: new Date().toISOString(),
+                action: 'completed',
+                demands: demands.length > 0 ? demands : []
+            });
+            updates.distributionHistory = distributionHistory;
+
+            await this.updateStatus(
+                app.db, 
+                app.currentPauta.id, 
+                assistedId, 
+                updates, 
+                app.currentUserName
+            );
+
+            if (assisted.assignedCollaborator && assisted.assignedCollaborator.id && assisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                    await updateDoc(colabDocRef, {
+                        status: 'disponivel',
+                        currentAttendance: null
+                    });
+                } catch (e) {
+                    console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre.", e);
+                }
+            }
+
+            const quemAtendeu = attendedBy || app.currentUserName;
+            const quemDelegou = assisted.delegatedBy ? ` (delegado por ${assisted.delegatedBy})` : '';
+            
+            showNotification(`Atendimento finalizado com sucesso!`, "success");
+            
+            await logAction(
+                app.db,
+                app.auth,
+                app.currentUserName,
+                app.currentPauta.id,
+                'FINISH_ATTENDANCE',
+                `Finalizou atendimento de ${assisted.name}. Atendido por: ${quemAtendeu}${quemDelegou}. Demandas: ${demands.length}`,
+                assistedId
+            );
+
+            return true;
+        } catch (error) {
+            console.error("Erro ao finalizar atendimento:", error);
+            showNotification("Erro ao finalizar atendimento", "error");
+            return false;
+        }
+    },
+
+    async callNextAssisted(app) {
+        if (!app || !app.currentPauta || !app.currentPauta.id) {
+            showNotification("Nenhuma pauta selecionada!", "error");
+            return;
+        }
+
+        const aguardandoList = app.allAssisted.filter(a => a.status === 'aguardando');
+        if (aguardandoList.length === 0) {
+            showNotification("A fila de aguardando está vazia.", "info");
+            return;
+        }
+
+        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento);
+        const nextAssisted = orderedList[0];
+
+        if (!nextAssisted) {
+            showNotification("Não foi possível identificar o próximo assistido.", "error");
+            return;
+        }
+
+        window.assistedIdToHandle = nextAssisted.id;
+        window.assistedNameToHandle = nextAssisted.name || '';
+        window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
+
+        const nameElement = document.getElementById('assisted-to-attend-name');
+        if (nameElement) {
+            nameElement.textContent = nextAssisted.name;
+        }
+
+        const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
+        if (selectCollaboratorModal) {
+            selectCollaboratorModal.classList.remove('hidden');
+            showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
+            playSound('chime');
+            
+            setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+
+                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                    UIService.preencherListaColaboradoresModal(app);
+                } else {
+                    console.error('UIService.preencherListaColaboradoresModal não está disponível');
+                }
+                
+                if (searchInput) searchInput.focus();
+            }, 150);
+        }
+    },
+
+    async deleteAssisted(db, pautaId, assistedId, userName) {
+        if (!pautaId || !assistedId) return;
+        
+        try {
+            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+            const docSnap = await getDoc(docRef);
+            const assistedData = docSnap.exists() ? docSnap.data() : { name: 'Desconhecido' };
+            
+            await deleteDoc(docRef);
+            
+            await logAction(
+                db,
+                window.app && window.app.auth,
+                userName || 'Sistema',
+                pautaId,
+                'DELETE_ASSISTED',
+                `Removeu assistido: ${assistedData.name}`,
+                assistedId
+            );
+            
+            showNotification("Registro apagado.");
+        } catch (error) {
+            console.error("Erro ao deletar:", error);
+            showNotification("Erro ao deletar", "error");
+        }
+    },
+
+    async reorderQueue(db, pautaId, items, userName) {
+        if (!pautaId || !items || !items.length) return;
+        
+        try {
+            const batch = writeBatch(db);
+            items.forEach((item, index) => {
+                const docRef = doc(db, "pautas", pautaId, "attendances", item.id);
+                batch.update(docRef, { 
+                    manualIndex: index,
+                    lastActionBy: userName || 'Sistema',
+                    lastActionTimestamp: new Date().toISOString()
+                });
+            });
+            await batch.commit();
+            
+            await logAction(
+                db,
+                window.app && window.app.auth,
+                userName || 'Sistema',
+                pautaId,
+                'REORDER_QUEUE',
+                'Fila reordenada manualmente'
+            );
+            
+            showNotification("Fila Reordenada!");
+        } catch (error) {
+            console.error("Erro ao reordenar:", error);
+            showNotification("Erro ao reordenar", "error");
+        }
+    },
+
+    async deletePauta(db, auth, pautaId, pautaName, userName) {
+        if (!confirm(`Tem certeza que deseja apagar a pauta "${pautaName}"?\n\nEsta ação não pode ser desfeita!`)) {
+            return false;
+        }
+
+        try {
+            const pautaRef = doc(db, "pautas", pautaId);
+            const pautaDoc = await getDoc(pautaRef);
+            
+            if (!pautaDoc.exists()) {
+                showNotification("Pauta não encontrada", "error");
+                return false;
+            }
+
+            const pautaData = pautaDoc.data();
+            const user = auth.currentUser;
+            
+            if (!user) {
+                showNotification("Usuário não autenticado", "error");
+                return false;
+            }
+            
+            const userDoc = await getDoc(doc(db, "users", user.uid));
+            const userData = userDoc.data();
+            const isAdmin = (userData && userData.role === 'admin') || (userData && userData.role === 'superadmin');
+            
+            if (pautaData.owner !== user.uid && !isAdmin) {
+                showNotification("Você não tem permissão para apagar esta pauta", "error");
+                return false;
+            }
+
+            const attendanceRef = collection(db, "pautas", pautaId, "attendances");
+            const attendanceSnapshot = await getDocs(attendanceRef);
+            
+            const batch = writeBatch(db);
+            attendanceSnapshot.docs.forEach(doc => {
+                batch.delete(doc.ref);
+            });
+            
+            batch.delete(pautaRef);
+            await batch.commit();
+            
+            await logAction(
+                db,
+                auth,
+                userName || (user && user.email),
+                pautaId,
+                'DELETE_PAUTA',
+                `Apagou a pauta "${pautaName}"`,
+                pautaId
+            );
+            
+            showNotification("Pauta apagada com sucesso!");
+            return true;
+            
+        } catch (error) {
+            console.error("Erro ao apagar pauta:", error);
+            showNotification("Erro ao apagar pauta: " + error.message, "error");
+            return false;
+        }
+    },
+
+    filterPautas(pautas, filterType, currentUserId, currentUserEmail, filtrosAdicionais = {}) {
+        if (!pautas || !Array.isArray(pautas)) return [];
+        
+        const now = new Date();
+        let pautasFiltradas = [...pautas];
+        
+        switch(filterType) {
+            case 'my':
+                pautasFiltradas = pautasFiltradas.filter(p => p.owner === currentUserId);
+                break;
+                
+            case 'shared':
+                pautasFiltradas = pautasFiltradas.filter(p => 
+                    p.owner !== currentUserId && 
+                    ((p.members && p.members.includes(currentUserId)) || (p.memberEmails && p.memberEmails.includes(currentUserEmail)))
+                );
+                break;
+                
+            case 'active':
+                pautasFiltradas = pautasFiltradas.filter(p => {
+                    if (!p.createdAt) return true;
+                    const creationDate = new Date(p.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    return now <= expirationDate;
+                });
+                break;
+                
+            case 'expired':
+                pautasFiltradas = pautasFiltradas.filter(p => {
+                    if (!p.createdAt) return false;
+                    const creationDate = new Date(p.createdAt);
+                    const expirationDate = new Date(creationDate);
+                    expirationDate.setDate(creationDate.getDate() + 7);
+                    return now > expirationDate;
+                });
+                break;
+                
+            case 'periodo':
+                if (filtrosAdicionais.dataInicial) {
+                    const dataInicial = new Date(filtrosAdicionais.dataInicial);
+                    pautasFiltradas = pautasFiltradas.filter(p => {
+                        if (!p.createdAt) return true;
+                        return new Date(p.createdAt) >= dataInicial;
+                    });
+                }
+                
+                if (filtrosAdicionais.dataFinal) {
+                    const dataFinal = new Date(filtrosAdicionais.dataFinal);
+                    dataFinal.setHours(23, 59, 59, 999);
+                    pautasFiltradas = pautasFiltradas.filter(p => {
+                        if (!p.createdAt) return true;
+                        return new Date(p.createdAt) <= dataFinal;
+                    });
+                }
+                
+                if (filtrosAdicionais.tipo && filtrosAdicionais.tipo !== 'todos') {
+                    pautasFiltradas = pautasFiltradas.filter(p => p.type === filtrosAdicionais.tipo);
+                }
+                break;
+                
+            case 'all':
+            default:
+                break;
+        }
+        
+        return pautasFiltradas;
+    },
+
+    async handleCSVUpload(event, app) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        try {
+            const { parsePautaCSV } = await import('./csvHandler.js');
+            const assistidos = await parsePautaCSV(file);
+
+            if (!app.currentPauta || !app.currentPauta.id) {
+                showNotification("Nenhuma pauta selecionada", "error");
+                return;
+            }
+
+            const isMultisala = app.currentPautaData?.type === 'multisala';
+
+            let successCount = 0;
+            for (const assistido of assistidos) {
+                const assistedToSave = { ...assistido, type: 'agendamento' };
+                if (!isMultisala) {
+                    assistedToSave.room = null;
+                }
+
+                const added = await this.addAssistedProgrammatic(
+                    app.db,
+                    app.currentPauta.id,
+                    assistedToSave, 
+                    app.currentUserName || 'Sistema'
+                );
+                if (added) successCount++;
+            }
+
+            await logAction( 
+                app.db,
+                app.auth,
+                app.currentUserName || 'Sistema',
+                app.currentPauta.id,
+                'IMPORT_CSV',
+                `Importou ${successCount} de ${assistidos.length} registros via CSV`,
+                null
+            );
+
+            showNotification(`${successCount} de ${assistidos.length} registros importados!`);
+        } catch (error) {
+            showNotification(error.message || "Erro ao importar", "error");
+        } finally {
+            event.target.value = '';
+        }
+    },
+
+    getPriorityLevel(assisted) {
+        if (!assisted || assisted.status !== 'aguardando') return 'N/A';
+        
+        if (assisted.priority === 'URGENTE') return 'URGENTE';
+
+        if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
+            try {
+                const [h, m] = assisted.scheduledTime.split(':').map(Number);
+                const agendado = new Date();
+                agendado.setHours(h, m, 0, 0);
+
+                const chegada = new Date(assisted.arrivalTime);
+                const diffMinutos = (chegada - agendado) / (1000 * 60);
+
+                if (diffMinutos <= 5) return 'Máxima'; 
+                if (diffMinutos <= 15) return 'Média';
+                return 'Mínima';
+            } catch (e) {
+                return 'Média';
+            }
+        }
+
+        return 'Média';
+    },
+
+    sortAguardando(list, orderType) {
+        if (!list || !list.length) return [];
+        
+        if (orderType === 'manual') {
+            return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+        }
+        
+        if (orderType === 'chegada') {
+            return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
+        }
+
+        const TOLERANCIA_MINUTOS = 15;
+
+        const isPontual = (item) => {
+            if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return true;
+            
+            try {
+                const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
+                const schedDate = new Date(item.arrivalTime);
+                schedDate.setHours(sHours, sMins, 0, 0);
+                schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
+
+                const arrDate = new Date(item.arrivalTime);
+                return arrDate <= schedDate;
+            } catch (e) {
+                return true;
+            }
+        };
+
+        return [...list].sort((a, b) => {
+            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+
+            if (a.type === 'agendamento' && b.type === 'avulso') return -1;
+            if (a.type === 'avulso' && b.type === 'agendamento') return 1;
+
+            const pontualA = isPontual(a);
+            const pontualB = isPontual(b);
+
+            if (pontualA && !pontualB) return -1;
+            if (!pontualA && pontualB) return 1;
+
+            if (pontualA && pontualB) {
+                if (a.scheduledTime && b.scheduledTime && a.scheduledTime !== b.scheduledTime) {
+                    return a.scheduledTime.localeCompare(b.scheduledTime);
+                }
+            }
+
+            const arrivalA = a.checkInOrder || 0;
+            const arrivalB = b.checkInOrder || 0;
+            return arrivalA - arrivalB;
+        });
+    },
+
+    getPriorityClass(priority) {
+        const classes = {
+            'URGENTE': 'priority-urgente', 
+            'Máxima': 'priority-maxima',   
+            'Média': 'priority-media',     
+            'Mínima': 'priority-minima'    
+        };
+        return classes[priority] || '';
+    },
+
+    setupManualSort(app) {
+        const el = document.getElementById('aguardando-list');
+        if (!el) return;
+
+        if (app.currentPautaData && app.currentPautaData.ordemAtendimento === 'manual' && !app.isPautaClosed) {
+            if (window.sortableAguardando) window.sortableAguardando.destroy();
+
+            const isMobile = this.isMobileDevice();
+            
+            window.sortableAguardando = new Sortable(el, {
+                animation: isMobile ? 200 : 300,
+                ghostClass: 'opacity-20',
+                chosenClass: 'ring-2',
+                dragClass: 'scale-95',
+                handle: '.relative',
+                filter: 'button, svg, p, span, input', 
+                preventOnFilter: false,
+                forceFallback: isMobile,
+                fallbackClass: 'sortable-fallback',
+                fallbackOnBody: true,
+                onEnd: async function () {
+                    const items = el.querySelectorAll('[data-id]');
+                    if (!items.length) return;
+                    
+                    const batch = writeBatch(app.db);
+                    items.forEach((item, index) => {
+                        const docId = item.getAttribute('data-id');
+                        const docRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", docId);
+                        batch.update(docRef, { 
+                            manualIndex: index,
+                            lastActionBy: app.currentUserName || 'Sistema',
+                            lastActionTimestamp: new Date().toISOString()
+                        });
+                    });
+
+                    try {
+                        await batch.commit();
+                        
+                        await logAction(
+                            app.db,
+                            app.auth,
+                            app.currentUserName || 'Sistema',
+                            app.currentPauta.id,
+                            'REORDER_QUEUE',
+                            'Fila reordenada manualmente via drag & drop'
+                        );
+                        
+                        showNotification("Fila Reordenada!");
+                    } catch (e) {
+                        console.error("Erro ao reordenar:", e);
+                        showNotification("Erro ao reordenar", "error");
+                    }
+                }
+            });
+        }
+    },
+
+    preencherSelectColaboradores(app, selectId) {
+        const select = document.getElementById(selectId);
+        if (!select) return;
+        
+        const valorAtual = select.value;
+        select.innerHTML = '<option value="">Selecione um profissional...</option>';
+        
+        const optNaoAtribuir = document.createElement('option');
+        optNaoAtribuir.value = "null";
+        optNaoAtribuir.textContent = "🚫 Não Atribuir a ninguém";
+        select.appendChild(optNaoAtribuir);
+        
+        const colaboradores = app.colaboradores || [];
+        
+        colaboradores.forEach(colab => {
+            const opt = document.createElement('option');
+            opt.value = colab.nome;
+            const statusText = colab.presente ? ' (Online)' : '';
+            opt.textContent = `${colab.nome} - ${colab.cargo || 'Membro'}${statusText}`;
+            select.appendChild(opt);
+        });
+        
+        if (valorAtual) select.value = valorAtual;
+    },
+
+    handleCardActions(e, app) {
+        const button = e.target.closest('button');
+        if (!button) return;
+
+        const id = button.dataset.id;
+        if (!id) return;
+
+        const currentUserRole = app.currentUser?.role;
+        const isApoio = currentUserRole === 'apoio';
+
+        const acoesProibidasApoio = [
+            'return-to-pauta-btn',
+            'return-to-pauta-from-faltoso-btn',
+            'return-to-aguardando-btn',
+            'return-to-aguardando-from-emAtendimento-btn',
+            'return-to-aguardando-from-dist-btn',
+            'return-from-atendido-btn',
+            'delete-btn',
+            'select-collaborator-btn',
+            'attend-directly-from-aguardando-btn',
+            'delegate-finalization-btn',
+            'edit-assisted-btn',
+            'edit-attendant-btn',
+            'manage-demands-btn',
+            'toggle-confirmed-atendido',
+            'toggle-confirmed-faltoso'
+        ];
+
+        const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
+        if (isApoio && acaoAtual) {
+            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação administrativa.", "warning");
+            playSound('warning');
+            return;
+        }
+
+        if (button.classList.contains('quick-action-toggle')) {
+            e.stopPropagation();
+            const menuId = `quick-menu-${id}`;
+            const menu = document.getElementById(menuId);
+            
+            if (!menu) return;
+            
+            this.closeAllQuickMenus(menuId);
+            
+            const isHidden = menu.classList.contains('hidden');
+            menu.classList.toggle('hidden');
+            
+            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+            
+            if (!menu.classList.contains('hidden')) {
+                setTimeout(() => {
+                    const firstItem = menu.querySelector('.quick-action-item');
+                    if (firstItem) firstItem.focus();
+                }, 100);
+                
+                setTimeout(() => {
+                    const clickOutsideHandler = (event) => {
+                        if (!menu.contains(event.target) && !button.contains(event.target)) {
+                            menu.classList.add('hidden');
+                            button.setAttribute('aria-expanded', 'false');
+                            document.removeEventListener('click', clickOutsideHandler);
+                        }
+                    };
+                    document.addEventListener('click', clickOutsideHandler);
+                }, 0);
+            }
+        }
+
+        if (button.classList.contains('quick-action-item')) {
+            e.stopPropagation();
+            
+            if (isApoio) {
+                showNotification("Acesso restrito: Ações rápidas de encerramento são bloqueadas para Apoio.", "warning");
+                return;
+            }
+
+            const actionKey = `${id}-${button.dataset.tipo}`;
+            if (!this.canPerformAction(actionKey)) return;
+            
+            const tipoAcao = button.dataset.tipo;
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            if (!assisted) {
+                showNotification("Erro: Assistido não encontrado", "error");
+                return;
+            }
+            
+            const menu = document.getElementById(`quick-menu-${id}`);
+            if (menu) {
+                menu.classList.add('hidden');
+                const toggle = document.getElementById(`quick-toggle-${id}`);
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
+            
+            const tipoMap = {
+                'reagendar': 'Reagendamento',
+                'agendar': 'Agendamento',
+                'consulta': 'Consulta Processual',
+                'outros': 'Outros Assuntos'
+            };
+            
+            const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
+            
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted.name || '';
+            window.assistedTipoAcao = tipoAcao;
+            window.assistedTipoDescricao = tipoDescricao;
+            
+            const nameElement = document.getElementById('assisted-to-attend-name');
+            if (nameElement) {
+                nameElement.textContent = assisted.name || '';
+            }
+            
+            showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
+            
+            const modal = document.getElementById('select-collaborator-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) {
+                        searchInput.value = '';
+                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                        UIService.preencherListaColaboradoresModal(app);
+                    }
+                    
+                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
+                    if (firstInput) firstInput.focus();
+                }, 150);
+            }
+        }
+
+        if (button.classList.contains('check-in-btn')) {
+            window.assistedIdToHandle = id;
+            const modal = document.getElementById('arrival-modal');
+            if (modal) {
+                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+                modal.classList.remove('hidden');
+            }
+        }
+
+        if (button.classList.contains('faltou-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
+        }
+
+        // ============================================================
+        // TRATAMENTO DA ATIVAÇÃO DE VALIDAÇÃO DO SISTEMA VERDE (CORRIGIDO)
+        // ============================================================
+        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
+            e.stopPropagation();
+            
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
+
+            const novoEstado = !assisted.isConfirmed;
+
+            this.updateStatus(app.db, app.currentPauta.id, id, { 
+                isConfirmed: novoEstado 
+            }, app.currentUserName);
+            
+            return;
+        }
+
+        if (button.classList.contains('return-to-pauta-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'pauta',
+                arrivalTime: null,
+                priority: null,
+                assignedCollaborator: null,
+                inAttendanceTime: null,
+                room: null,
+                distributionStatus: null
+            }, app.currentUserName);
+        }
+
+        if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'pauta'
+            }, app.currentUserName);
+        }
+
+        if (button.classList.contains('return-to-aguardando-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                attendant: null,
+                attendedTime: null
+            }, app.currentUserName);
+        }
+
+        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                assignedCollaborator: null,
+                delegatedBy: null,
+                delegatedAt: null,
+                inAttendanceTime: null,
+                distributionStatus: null
+            }, app.currentUserName);
+            
+            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                } catch (e) {
+                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+                }
+            }
+            
+            if (assisted && assisted.assignedCollaborator) {
+                showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
+            }
+        }
+
+        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                distributionStatus: null
+            }, app.currentUserName);
+        }
+
+        if (button.classList.contains('delete-btn')) {
+            if (confirm("Tem certeza?")) {
+                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
+            }
+        }
+
+        if (button.classList.contains('priority-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted && assisted.priority === 'URGENTE') {
+                if (confirm("Remover urgência?")) {
+                    this.updateStatus(app.db, app.currentPauta.id, id, {
+                        priority: null,
+                        priorityReason: null
+                    }, app.currentUserName);
+                }
+            } else {
+                window.assistedIdToHandle = id;
+                const modal = document.getElementById('priority-reason-modal');
+                if (modal) {
+                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                    document.getElementById('priority-reason-input').value = '';
+                    modal.classList.remove('hidden');
+                }
+            }
+        }
+
+        if (button.classList.contains('select-collaborator-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
+            
+            window.assistedIdToHandle = id;
+            window.assistedNameToHandle = assisted.name || '';
+            window.assistedTipoAcao = 'delegar';
+            
+            const nameElement = document.getElementById('assisted-to-attend-name');
+            if (nameElement) {
+                nameElement.textContent = assisted.name || '';
+            }
+            
+            const modal = document.getElementById('select-collaborator-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                setTimeout(() => {
+                    const searchInput = document.getElementById('collaborator-search-input');
+                    if (searchInput) {
+                        searchInput.value = '';
+                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                    }
+
+                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                        UIService.preencherListaColaboradoresModal(app);
+                    }
+                    
+                    if (searchInput) searchInput.focus();
+                }, 150);
+            }
+        }
+
+        if (button.classList.contains('attend-directly-from-aguardando-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
+            
+            const useDist = app.currentPautaData?.useDistributionFlow === true;
+            const timestampIso = new Date().toISOString();
+
+            if (useDist) {
+                this.updateStatus(app.db, app.currentPauta.id, id, {
+                    status: 'aguardandoDistribuicao',
+                    distributionStatus: 'pending',
+                    inAttendanceTime: timestampIso
+                }, app.currentUserName);
+                showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+            } else {
+                window.assistedIdToHandle = id;
+                this.preencherSelectColaboradores(app, 'attendant-select');
+                document.getElementById('attendant-modal')?.classList.remove('hidden');
+            }
+        }
+
+        if (button.classList.contains('delegate-finalization-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (!assisted) return;
+            
+            window.assistedIdToHandle = id;
+            const processInput = document.getElementById('dist-process-number');
+            if (processInput) processInput.value = assisted.numeroProcesso || '';
+            
+            const modal = document.getElementById('distribution-finish-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                document.getElementById('confirm-dist-finish-btn').onclick = async () => {
+                    const cnpDigitado = processInput.value.trim();
+                    const timestampIso = new Date().toISOString();
+                    
+                    const servidorResponsavel = assisted.enviadoPor || app.currentUserName || "Servidor";
+                    const defensorResponsavel = assisted.attendedBy || assisted.defensorResponsavel || app.currentUserName || "Defensor";
+
+                    const mapaProdutividadeBI = {};
+                    mapaProdutividadeBI[servidorResponsavel] = 1;
+                    mapaProdutividadeBI[defensorResponsavel] = 1;
+
+                    await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id), {
+                        status: 'atendido',
+                        numeroProcesso: cnpDigitado,
+                        trabalhosPorUsuario: mapaProdutividadeBI,
+                        finalizadoPeloColaborador: true,
+                        distributionStatus: 'completed',
+                        attendedAt: timestampIso
+                    });
+                    
+                    modal.classList.add('hidden');
+                    showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
+                };
+            }
+        }
+
+        if (button.classList.contains('edit-assisted-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted) {
+                document.getElementById('edit-assisted-name').value = assisted.name || '';
+                document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
+                document.getElementById('edit-assisted-num-agendamento').value = assisted.numAgendamento || '';
+                document.getElementById('edit-assisted-subject').value = assisted.subject || '';
+                document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
+                
+                const roomSelect = document.getElementById('edit-room-select');
+                if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
+                    roomSelect.value = assisted.room;
+                }
+                
+                window.assistedIdToHandle = id;
+                if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
+            }
+        }
+
+        if (button.classList.contains('edit-attendant-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted) {
+                this.preencherSelectColaboradores(app, 'edit-attendant-select');
+                
+                const select = document.getElementById('edit-attendant-select');
+                if (select) {
+                    let nomeAtendente = '';
+                    if (assisted.attendedBy) {
+                        nomeAtendente = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
+                    } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
+                        nomeAtendente = assisted.assignedCollaborator.name;
+                    } else if (assisted.attendant) {
+                        nomeAtendente = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
+                    }
+                    const options = Array.from(select.options).map(opt => opt.value);
+                    if (options.includes(nomeAtendente)) select.value = nomeAtendente;
+                }
+                
+                window.assistedIdToHandle = id;
+                if (document.getElementById('edit-attendant-modal')) document.getElementById('edit-attendant-modal').classList.remove('hidden');
+            }
+        }
+
+        if (button.classList.contains('manage-demands-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted) {
+                window.assistedIdToHandle = id;
+                document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
+                
+                const infoDiv = document.createElement('div');
+                infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
+                
+                let infoHtml = '';
+                
+                let atendenteNome = 'Não informado';
+                if (assisted.attendedBy) {
+                    atendenteNome = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
+                } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
+                    atendenteNome = assisted.assignedCollaborator.name;
+                } else if (assisted.attendant) {
+                    atendenteNome = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
+                }
+                
+                if (atendenteNome !== 'Não informado') {
+                    infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${escapeHTML(atendenteNome)}</p>`;
+                }
+                
+                if (assisted.delegatedBy) {
+                    infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${escapeHTML(assisted.delegatedBy)}`;
+                    if (atendenteNome !== 'Não informado' && atendenteNome !== assisted.delegatedBy) {
+                        infoHtml += ` para ${escapeHTML(atendenteNome)}`;
+                    }
+                    infoHtml += `</p>`;
+                }
+                if (assisted.demandas && assisted.demandas.descricoes && assisted.demandas.descricoes.length > 0) {
+                    infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
+                }
+                
+                if (infoHtml) {
+                    infoDiv.innerHTML = infoHtml;
+                    const modal = document.getElementById('demands-modal');
+                    const existingInfo = modal.querySelector('.attendance-info');
+                    if (existingInfo) existingInfo.remove();
+                    infoDiv.classList.add('attendance-info');
+                    const demandsListContainer = modal.querySelector('.demands-list-container');
+                    if (demandsListContainer) modal.insertBefore(infoDiv, demandsListContainer);
+                }
+                
+                const container = document.getElementById('demands-modal-list-container');
+                if (container) {
+                    container.innerHTML = '';
+                    const demands = (assisted.demandas && assisted.demandas.descricoes) || [];
+                    if (demands.length === 0) {
+                        container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+                    } else {
+                        demands.forEach(demand => {
+                            const li = document.createElement('li');
+                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
+                            li.innerHTML = `<span>${escapeHTML(demand)}</span><button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>`;
+                            container.appendChild(li);
+                        });
+                    }
+                }
+                if (document.getElementById('demands-modal')) document.getElementById('demands-modal').classList.remove('hidden');
+            }
+        }
+
+        if (button.classList.contains('view-details-btn')) {
+            if (window.openDetailsModal) {
+                window.openDetailsModal({
+                    assistedId: id,
+                    pautaId: app.currentPauta && app.currentPauta.id,
+                    allAssisted: app.allAssisted
+                });
+            } else {
+                showNotification("Erro ao abrir detalhes", "error");
+            }
+        }
+
+        if (button.classList.contains('return-from-atendido-btn')) {
+            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            const statusDestino = this.getDestinoRetorno(app);
+
+            let updateData = {
+                status: statusDestino,
+                attendedBy: null,
+                attendedAt: null,
+                finalizadoPeloColaborador: false,
+                distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
+            };
+
+            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+            
+            if (currentAssisted?.assignedCollaborator?.id && currentAssisted.assignedCollaborator.id !== 'manual') {
+                try {
+                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
+                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+                } catch (e) {
+                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+                }
+            }
+            showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
+        }
+    }
 };
 
 export default PautaService;
