@@ -1,15 +1,14 @@
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
-    getDocs, query, arrayUnion, onSnapshot
+    getDocs, arrayUnion, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
 import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
-import { showNotification, playSound, escapeHTML } from './utils.js';
+import { showNotification, escapeHTML } from './utils.js';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -42,6 +41,8 @@ export const AtendimentoExternoService = {
 
     // Estado
     pautaId: null,
+    pautaNome: 'Pauta Atual',
+    pautaTipo: '',
     assistidoId: null,
     colaboradorNome: null,
     colaboradorId: null,
@@ -53,27 +54,24 @@ export const AtendimentoExternoService = {
     todosAtendimentosPauta: [],
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
-    unsubscribesPautasExtras: [],   // listeners das outras pautas do colaborador
-    abaAtual: 'minha-mesa',         // 'minha-mesa' | 'sem-atribuicao' | 'pauta-dia'
+    abaAtual: 'minha-mesa',         // 'minha-mesa' | 'aguardando' | 'pauta-atual'
     modoVisualizacao: 'dashboard',  // 'dashboard' | 'abas'
-    pautasDoDia: [],                // todas as pautas do colaborador hoje
-    atendimentosPorPauta: {},       // { [pautaId]: [assistidos] } para a aba Pauta do Dia
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (SIGEP Unificado)");
+        console.log("⚡ Atendimento Externo Inicializado (Focado no Link)");
 
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
 
-        this.pautaId        = urlParams.get('pautaId')   || urlParams.get('amp;pautaId');
-        this.assistidoId    = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
-        this.colaboradorNome = urlParams.get('colab')    || urlParams.get('amp;colab');
-        this.colaboradorId  = urlParams.get('colabId')   || urlParams.get('amp;colabId') || '';
-        const tokenRecebido = urlParams.get('token')     || urlParams.get('amp;token');
-        const telaAtual     = urlParams.get('view')      || urlParams.get('amp;view');
-        const modo          = urlParams.get('modo')      || urlParams.get('amp;modo');
+        this.pautaId         = urlParams.get('pautaId')    || urlParams.get('amp;pautaId');
+        this.assistidoId     = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
+        this.colaboradorNome = urlParams.get('colab')      || urlParams.get('amp;colab');
+        this.colaboradorId   = urlParams.get('colabId')    || urlParams.get('amp;colabId') || '';
+        const tokenRecebido  = urlParams.get('token')      || urlParams.get('amp;token');
+        const telaAtual      = urlParams.get('view')       || urlParams.get('amp;view');
+        const modo           = urlParams.get('modo')       || urlParams.get('amp;modo');
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
@@ -85,6 +83,15 @@ export const AtendimentoExternoService = {
         try {
             if (!auth.currentUser) await signInAnonymously(auth);
 
+            // Busca os dados da pauta específica do link
+            const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
+            if (!pautaDoc.exists()) {
+                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
+                return;
+            }
+            this.pautaNome = pautaDoc.data().name || 'Pauta';
+            this.pautaTipo = pautaDoc.data().type || 'agendamento';
+
             await this.carregarColaboradoresGerais();
 
             if (!this.colaboradorAtual) {
@@ -94,7 +101,7 @@ export const AtendimentoExternoService = {
 
             // Atendimento individual (peça específica)
             if (this.assistidoId && !telaAtual) {
-                await this.iniciarAtendimentoIndividual(tokenRecebido);
+                await this.iniciarAtendimentoIndividual(tokenRecebido, pautaDoc.data());
                 return;
             }
 
@@ -117,13 +124,7 @@ export const AtendimentoExternoService = {
 
     // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
 
-    async iniciarAtendimentoIndividual(tokenRecebido) {
-        const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
-        if (!pautaDoc.exists()) {
-            this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-            return;
-        }
-
+    async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
         const docSnap = await getDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId));
         if (!docSnap.exists()) {
             this.showError("Processo não encontrado", "Este assistido não está mais na pauta ou o link está quebrado.");
@@ -139,9 +140,9 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        this.renderizarInterface(assistido, pautaDoc.data());
+        this.renderizarInterface(assistido, pautaData);
         this.setupListeners();
-        this.atualizarIndicadorDeStatus(pautaDoc.data(), this.colaboradorAtual?.status, this.colaboradorNome);
+        this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
     },
 
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
@@ -153,17 +154,16 @@ export const AtendimentoExternoService = {
 
         if (this.modoVisualizacao === 'abas') {
             this.setupAbasNavegacao();
-            // Pré-carrega pautas do dia para a aba "Pauta do Dia"
-            this._carregarTodasPautasDoColaborador();
         } else {
             this.atualizarListasDoDashboard();
         }
     },
 
     _cancelarListeners() {
-        if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
-        this.unsubscribesPautasExtras.forEach(u => u && u());
-        this.unsubscribesPautasExtras = [];
+        if (this.unsubscribeDashboard) { 
+            this.unsubscribeDashboard(); 
+            this.unsubscribeDashboard = null; 
+        }
     },
 
     setupRealtimeListenerPauta() {
@@ -172,7 +172,7 @@ export const AtendimentoExternoService = {
             collection(db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                this.atendimentosPorPauta[this.pautaId] = this.todosAtendimentosPauta;
+                
                 if (this.modoVisualizacao === 'abas') {
                     this.renderizarAbaAtual();
                 } else {
@@ -181,56 +181,6 @@ export const AtendimentoExternoService = {
             },
             (error) => console.error("Erro no realtime:", error)
         );
-    },
-
-    // ─── CARREGAR TODAS AS PAUTAS DO COLABORADOR HOJE ─────────────────────────
-    // MELHORIA 3: busca não só a pauta atual, mas todas onde o colaborador está
-
-    async _carregarTodasPautasDoColaborador() {
-        const hoje = new Date().toISOString().split('T')[0];
-
-        try {
-            const pautasSnap = await getDocs(collection(db, "pautas"));
-            const pautasHoje = pautasSnap.docs
-                .map(d => ({ id: d.id, ...d.data() }))
-                .filter(p => {
-                    const dataOp = p.dataOperacao || (p.createdAt || '').split('T')[0];
-                    return dataOp === hoje && !p.isClosed;
-                });
-
-            const resultado = [];
-            for (const pauta of pautasHoje) {
-                if (pauta.id === this.pautaId) {
-                    // Já temos listener ativo para esta
-                    resultado.push(pauta);
-                    continue;
-                }
-                try {
-                    const colabsSnap = await getDocs(collection(db, "pautas", pauta.id, "collaborators"));
-                    const estaNessa = colabsSnap.docs.some(c => c.data().nome === this.colaboradorNome);
-                    if (estaNessa) {
-                        resultado.push(pauta);
-                        // Listener real-time para esta pauta extra
-                        const unsub = onSnapshot(
-                            collection(db, "pautas", pauta.id, "attendances"),
-                            (snap) => {
-                                this.atendimentosPorPauta[pauta.id] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                                if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-                            }
-                        );
-                        this.unsubscribesPautasExtras.push(unsub);
-                    }
-                } catch { /* pauta sem colaboradores */ }
-            }
-
-            this.pautasDoDia = resultado;
-
-            // Atualiza a aba se já estiver aberta
-            if (this.abaAtual === 'pauta-dia') this.renderizarAbaAtual();
-
-        } catch (err) {
-            console.error("Erro ao buscar pautas do colaborador:", err);
-        }
     },
 
     // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
@@ -320,15 +270,13 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // MELHORIA 4: botão de alternar modo
+        // Alternar modo
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
-            this._cancelarListeners();
             this.iniciarDashboardUnificado();
         });
         document.getElementById('btn-ir-abas')?.addEventListener('click', () => {
             this.modoVisualizacao = 'abas';
-            this._cancelarListeners();
             this.iniciarDashboardUnificado();
         });
     },
@@ -372,11 +320,11 @@ export const AtendimentoExternoService = {
                     <button id="btn-tab-minha-mesa" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-amber-600 text-white shadow-md">
                         🖥️ Minha Mesa
                     </button>
-                    <button id="btn-tab-sem-atribuicao" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        👥 Sem Atribuição
+                    <button id="btn-tab-aguardando" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        👥 Aguardando Atendimento
                     </button>
-                    <button id="btn-tab-pauta-dia" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        📋 Pauta do Dia
+                    <button id="btn-tab-pauta-atual" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
+                        📋 Pauta Atual
                     </button>
                 </div>
             </div>
@@ -404,9 +352,9 @@ export const AtendimentoExternoService = {
 
     setupAbasNavegacao() {
         const abas = [
-            { id: 'minha-mesa',      btnId: 'btn-tab-minha-mesa',      cor: 'bg-amber-600' },
-            { id: 'sem-atribuicao',  btnId: 'btn-tab-sem-atribuicao',  cor: 'bg-blue-600' },
-            { id: 'pauta-dia',       btnId: 'btn-tab-pauta-dia',       cor: 'bg-slate-700' },
+            { id: 'minha-mesa',  btnId: 'btn-tab-minha-mesa',  cor: 'bg-amber-600' },
+            { id: 'aguardando',  btnId: 'btn-tab-aguardando',  cor: 'bg-blue-600' },
+            { id: 'pauta-atual', btnId: 'btn-tab-pauta-atual', cor: 'bg-slate-700' },
         ];
 
         const ativarAba = (abaId) => {
@@ -424,8 +372,8 @@ export const AtendimentoExternoService = {
         };
 
         document.getElementById('btn-tab-minha-mesa')?.addEventListener('click', () => ativarAba('minha-mesa'));
-        document.getElementById('btn-tab-sem-atribuicao')?.addEventListener('click', () => ativarAba('sem-atribuicao'));
-        document.getElementById('btn-tab-pauta-dia')?.addEventListener('click', () => ativarAba('pauta-dia'));
+        document.getElementById('btn-tab-aguardando')?.addEventListener('click', () => ativarAba('aguardando'));
+        document.getElementById('btn-tab-pauta-atual')?.addEventListener('click', () => ativarAba('pauta-atual'));
 
         this.renderizarAbaAtual();
     },
@@ -434,9 +382,9 @@ export const AtendimentoExternoService = {
         const container = document.getElementById('painel-atendimento-container');
         if (!container) return;
 
-        if (this.abaAtual === 'minha-mesa')     this._renderMinhaMesa(container);
-        else if (this.abaAtual === 'sem-atribuicao') this._renderSemAtribuicao(container);
-        else if (this.abaAtual === 'pauta-dia')  this._renderPautaDia(container);
+        if (this.abaAtual === 'minha-mesa')      this._renderMinhaMesa(container);
+        else if (this.abaAtual === 'aguardando') this._renderAguardando(container);
+        else if (this.abaAtual === 'pauta-atual') this._renderPautaAtual(container);
 
         this._setupAcoesCards();
     },
@@ -454,7 +402,7 @@ export const AtendimentoExternoService = {
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">🖥️</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Mesa limpa. Nenhum caso atribuído a você.</p>
-                    <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Sem Atribuição</strong> para puxar casos.</p>
+                    <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Aguardando Atendimento</strong> para puxar casos.</p>
                 </div>`;
             return;
         }
@@ -464,109 +412,101 @@ export const AtendimentoExternoService = {
         </div>`;
     },
 
-    // ── ABA 2: SEM ATRIBUIÇÃO ─────────────────────────────────────────────────
+    // ── ABA 2: AGUARDANDO ATENDIMENTO ─────────────────────────────────────────
 
-    _renderSemAtribuicao(container) {
-        const semDono = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' &&
-            (!a.assignedCollaborator || !a.assignedCollaborator.name)
-        );
+    _renderAguardando(container) {
+        // Agora busca exatamente pelo status "aguardando"
+        const aguardando = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
 
-        if (semDono.length === 0) {
+        if (aguardando.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">✅</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum caso aguardando atribuição.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum assistido na fila de espera.</p>
                 </div>`;
             return;
         }
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso. Ele irá para sua mesa automaticamente.
+                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso da fila.
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                ${semDono.map(a => this._htmlCardAba(a, 'puxar')).join('')}
+                ${aguardando.map(a => this._htmlCardAba(a, 'puxar')).join('')}
             </div>`;
     },
 
-    // ── ABA 3: PAUTA DO DIA (MELHORIA 1 + 3) ─────────────────────────────────
+    // ── ABA 3: PAUTA ATUAL (Exclusivo do Link) ────────────────────────────────
 
-    _renderPautaDia(container) {
-        if (this.pautasDoDia.length === 0) {
+    _renderPautaAtual(container) {
+        const assistidos = this.todosAtendimentosPauta;
+
+        if (assistidos.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Carregando pautas do dia...</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum atendimento registrado nesta pauta.</p>
                 </div>`;
             return;
         }
 
-        let html = '';
+        const total      = assistidos.length;
+        const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
+        const atendendo  = assistidos.filter(a => a.status === 'emAtendimento').length;
+        const atendidos  = assistidos.filter(a => a.status === 'atendido').length;
+        const faltosos   = assistidos.filter(a => a.status === 'faltoso').length;
+        const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
+        const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
 
-        for (const pauta of this.pautasDoDia) {
-            const assistidos = this.atendimentosPorPauta[pauta.id] || [];
-
-            // Contadores
-            const total     = assistidos.length;
-            const aguardando = assistidos.filter(a => a.status === 'aguardando').length;
-            const atendendo  = assistidos.filter(a => a.status === 'emAtendimento').length;
-            const atendidos  = assistidos.filter(a => a.status === 'atendido').length;
-            const faltosos   = assistidos.filter(a => a.status === 'faltoso').length;
-            const dist       = assistidos.filter(a => a.status === 'aguardandoDistribuicao').length;
-            const porcentagem = total > 0 ? Math.round((atendidos / total) * 100) : 0;
-
-            // MELHORIA 1: Sumário por pauta
-            html += `
-                <div class="mb-8">
-                    <!-- Header da pauta -->
-                    <div class="flex items-center justify-between mb-3">
-                        <div>
-                            <h3 class="font-black text-slate-800 text-base">${escapeHTML(pauta.name)}</h3>
-                            <p class="text-[10px] text-slate-400 uppercase tracking-wider">${pauta.type || 'agendamento'} · ${total} registros</p>
-                        </div>
-                        <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
+        let html = `
+            <div class="mb-8">
+                <!-- Header da pauta -->
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h3 class="font-black text-slate-800 text-base">${escapeHTML(this.pautaNome)}</h3>
+                        <p class="text-[10px] text-slate-400 uppercase tracking-wider">${this.pautaTipo} · ${total} registros</p>
                     </div>
-
-                    <!-- Barra de progresso -->
-                    <div class="h-1.5 bg-slate-100 rounded-full mb-3">
-                        <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
-                    </div>
-
-                    <!-- Sumário compacto -->
-                    <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
-                        <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-amber-600">${aguardando}</div>
-                            <div class="text-[9px] text-amber-500 font-bold uppercase">Aguard.</div>
-                        </div>
-                        <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-blue-600">${atendendo}</div>
-                            <div class="text-[9px] text-blue-500 font-bold uppercase">Atend.</div>
-                        </div>
-                        <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-green-600">${atendidos}</div>
-                            <div class="text-[9px] text-green-500 font-bold uppercase">Prontos</div>
-                        </div>
-                        <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-red-500">${faltosos}</div>
-                            <div class="text-[9px] text-red-400 font-bold uppercase">Faltosos</div>
-                        </div>
-                        ${dist > 0 ? `
-                        <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-2 text-center">
-                            <div class="text-lg font-black text-cyan-600">${dist}</div>
-                            <div class="text-[9px] text-cyan-500 font-bold uppercase">Distrib.</div>
-                        </div>` : ''}
-                    </div>
-
-                    <!-- Cards agrupados por status -->
-                    ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', pauta.id)}
-                    ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', pauta.id)}
-                    ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', pauta.id) : ''}
-                    ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', pauta.id)}
+                    <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
                 </div>
-                <hr class="border-slate-200 mb-6">
-            `;
-        }
+
+                <!-- Barra de progresso -->
+                <div class="h-1.5 bg-slate-100 rounded-full mb-3">
+                    <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
+                </div>
+
+                <!-- Sumário compacto -->
+                <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
+                    <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
+                        <div class="text-lg font-black text-amber-600">${aguardando}</div>
+                        <div class="text-[9px] text-amber-500 font-bold uppercase">Aguard.</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
+                        <div class="text-lg font-black text-blue-600">${atendendo}</div>
+                        <div class="text-[9px] text-blue-500 font-bold uppercase">Atend.</div>
+                    </div>
+                    <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
+                        <div class="text-lg font-black text-green-600">${atendidos}</div>
+                        <div class="text-[9px] text-green-500 font-bold uppercase">Prontos</div>
+                    </div>
+                    <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
+                        <div class="text-lg font-black text-red-500">${faltosos}</div>
+                        <div class="text-[9px] text-red-400 font-bold uppercase">Faltosos</div>
+                    </div>
+                    ${dist > 0 ? `
+                    <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-2 text-center">
+                        <div class="text-lg font-black text-cyan-600">${dist}</div>
+                        <div class="text-[9px] text-cyan-500 font-bold uppercase">Distrib.</div>
+                    </div>` : ''}
+                </div>
+
+                <!-- Cards agrupados por status -->
+                ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', this.pautaId)}
+                ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', this.pautaId)}
+                ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', this.pautaId) : ''}
+                ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', this.pautaId)}
+            </div>
+            <hr class="border-slate-200 mb-6">
+        `;
 
         container.innerHTML = html;
     },
@@ -609,13 +549,14 @@ export const AtendimentoExternoService = {
         } else if (modo === 'mesa') {
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center">📋 Atender</a>
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</a>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
         } else {
+            // No modo 'geral', o botão de Ver Detalhes sempre aparece, inclusive para Atendidos
             botoesHtml = `
-                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center">🔍 Ver Detalhes</a>`;
+                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">🔍 Ver Detalhes</a>`;
         }
 
         return `
@@ -656,10 +597,9 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── PUXAR PARA MIM (MELHORIA 2) ───────────────────────────────────────────
+    // ─── PUXAR PARA MIM E DEVOLVER ─────────────────────────────────────────────
 
     async puxarParaMim(pautaId, assistidoId) {
-        // MELHORIA 2: verifica se já tem caso em andamento
         const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
             a.assignedCollaborator?.name === this.colaboradorNome
@@ -674,6 +614,7 @@ export const AtendimentoExternoService = {
 
         try {
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+                status: 'emAtendimento', // <- Atualizando para Em Atendimento
                 assignedCollaborator: {
                     id: this.colaboradorId || this.colaboradorAtual?.id || '',
                     name: this.colaboradorNome
@@ -682,7 +623,7 @@ export const AtendimentoExternoService = {
                 history: arrayUnion({
                     action: 'PUXADO_PARA_MESA',
                     by: this.colaboradorNome,
-                    msg: `Caso assumido por ${this.colaboradorNome}`,
+                    msg: `Caso retirado da fila e assumido por ${this.colaboradorNome}`,
                     at: new Date().toISOString()
                 })
             });
@@ -694,7 +635,6 @@ export const AtendimentoExternoService = {
                 }).catch(() => {});
             }
 
-            // Muda para a aba Minha Mesa automaticamente
             this.abaAtual = 'minha-mesa';
             document.getElementById('btn-tab-minha-mesa')?.click();
 
@@ -713,16 +653,17 @@ export const AtendimentoExternoService = {
     },
 
     async devolverParaFila(pautaId, assistidoId) {
-        if (!confirm("Devolver este caso para a fila Sem Atribuição? Outros colaboradores poderão assumí-lo.")) return;
+        if (!confirm("Devolver este caso para a fila de Aguardando? Outros colaboradores poderão assumí-lo.")) return;
 
         try {
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+                status: 'aguardando', // <- Retornando para Fila de Espera
                 assignedCollaborator: null,
                 inAttendanceTime: null,
                 history: arrayUnion({
                     action: 'DEVOLVIDO_PARA_FILA',
                     by: this.colaboradorNome,
-                    msg: `Devolvido para a fila por ${this.colaboradorNome}`,
+                    msg: `Devolvido para a fila de Aguardando por ${this.colaboradorNome}`,
                     at: new Date().toISOString()
                 })
             });
@@ -747,7 +688,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── DASHBOARD TRADICIONAL (preservado do código original) ────────────────
+    // ─── DASHBOARD TRADICIONAL ─────────────────────────────────────────────────
 
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
@@ -766,7 +707,8 @@ export const AtendimentoExternoService = {
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
             const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
 
-            if (isAberto && item.status !== 'atendido' && item.status !== 'aguardandoNumero') {
+            // Agora o botão ABRIR/VER DETALHES sempre aparece no modo expandido, inclusive para atendidos
+            if (isAberto) {
                 return `
                     <div class="border-2 ${urgencia} bg-white border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
                         <div class="min-w-0 flex-1">
@@ -774,7 +716,9 @@ export const AtendimentoExternoService = {
                             <p class="text-xs text-slate-500 truncate mt-0.5">${escapeHTML(item.subject || '')}</p>
                             ${numCNP} ${notas}
                         </div>
-                        <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition">ABRIR</a>
+                        <a href="${link}" class="shrink-0 bg-slate-800 hover:bg-slate-900 text-white font-black py-2.5 px-5 rounded-xl text-[10px] uppercase tracking-widest transition text-center flex items-center justify-center">
+                            ${item.status === 'atendido' ? 'VER DETALHES' : 'ABRIR'}
+                        </a>
                     </div>`;
             }
 
@@ -815,11 +759,10 @@ export const AtendimentoExternoService = {
             const historico    = this.todosAtendimentosPauta.filter(a => a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
-                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, false)).join('');
+                container.innerHTML = pendentes.map(item => desenharCard(item, true)).join('') + distribuidos.map(item => desenharCard(item, true)).join('');
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-pendentes';
                 
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
@@ -828,7 +771,7 @@ export const AtendimentoExternoService = {
                 `;
 
                 document.getElementById('tab-pendentes')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-pendentes').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(pendentes, true, 'Mesa limpa.'); });
-                document.getElementById('tab-assinados')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-assinados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(distribuidos, false, 'Nenhuma distribuição.'); });
+                document.getElementById('tab-assinados')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-assinados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(distribuidos, true, 'Nenhuma distribuição.'); });
                 document.getElementById('tab-historico-busca')?.addEventListener('click', () => {
                     resetTabs(); wrapperBusca?.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active');
                     renderLista(historico, true, 'Sem histórico.');
@@ -848,11 +791,10 @@ export const AtendimentoExternoService = {
             const historico   = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
-                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, false)).join('');
+                container.innerHTML = emAndamento.map(item => desenharCard(item, true)).join('') + enviados.map(item => desenharCard(item, true)).join('') + finalizados.map(item => desenharCard(item, true)).join('');
                 if (tabsDiv) tabsDiv.parentElement.classList.add('hidden');
             } else {
                 if (tabsDiv) tabsDiv.parentElement.classList.remove('hidden');
-                const abaAtivaId = document.querySelector('.mode-btn-active')?.id || 'tab-em-mesa';
 
                 tabsDiv.innerHTML = `
                     <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
@@ -863,7 +805,7 @@ export const AtendimentoExternoService = {
 
                 document.getElementById('tab-em-mesa')?.addEventListener('click',    () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(emAndamento, true, 'Mesa limpa.'); });
                 document.getElementById('tab-enviados')?.addEventListener('click',   () => { resetTabs(); document.getElementById('tab-enviados').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active'); renderLista(enviados, true, 'Nada no Defensor.'); });
-                document.getElementById('tab-finalizados')?.addEventListener('click',() => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(finalizados, false, 'Nada finalizado.'); });
+                document.getElementById('tab-finalizados')?.addEventListener('click',() => { resetTabs(); document.getElementById('tab-finalizados').classList.add('bg-emerald-600','text-white','shadow','mode-btn-active'); renderLista(finalizados, true, 'Nada finalizado.'); });
                 document.getElementById('tab-historico-busca')?.addEventListener('click', () => {
                     resetTabs(); wrapperBusca?.classList.remove('hidden'); document.getElementById('tab-historico-busca').classList.add('bg-indigo-600','text-white','shadow','mode-btn-active');
                     renderLista(historico, true, 'Sem histórico.');
@@ -878,7 +820,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── MÉTODOS AUXILIARES ───────────────────────────────────────────────────
+    // ─── MÉTODOS AUXILIARES E O RESTANTE DO CÓDIGO (Inalterado, preservado) ──
 
     async carregarColaboradoresGerais() {
         try {
@@ -987,10 +929,7 @@ export const AtendimentoExternoService = {
             </div>`;
     },
 
-    // ─── RENDERIZAÇÃO DA INTERFACE INDIVIDUAL (preservado) ────────────────────
-
     renderizarInterface(assistido, pautaData) {
-        // Remove listener do dashboard se existir
         if (this.unsubscribeDashboard) {
             this.unsubscribeDashboard();
             this.unsubscribeDashboard = null;
@@ -1019,10 +958,6 @@ export const AtendimentoExternoService = {
             headerBg.appendChild(textosWrapper);
         }
 
-        // Criar estrutura da interface individual (similar ao original)
-        // Por brevidade, assumimos que o HTML da interface individual já existe no DOM
-        // ou será injetado. O código original tem essa estrutura.
-        
         document.getElementById('assistido-nome').textContent = assistido.name || 'Nome não informado';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Assunto não informado';
         
@@ -1162,7 +1097,7 @@ export const AtendimentoExternoService = {
             <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-slate-300 group">
                 <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">⏸️</span>
                 <span class="block font-bold text-slate-800">Pausar Atendimento</span>
-                <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Voltar para Fila Geral</span>
+                <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Voltar para Fila de Aguardando</span>
             </button>
         </div>`;
 
@@ -1558,7 +1493,7 @@ export const AtendimentoExternoService = {
             } 
             else if (this.fluxoSelecionado === 'pausar') {
                 await updateDoc(docRef, {
-                    status: 'aguardando',
+                    status: 'aguardando', // Voltando diretamente para a fila de espera
                     assignedCollaborator: null,
                     delegatedBy: null,
                     delegatedAt: null,
@@ -1568,7 +1503,7 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: 'ATENDIMENTO_PAUSADO',
                         by: colabSeguro,
-                        msg: 'Atendimento pausado pelo colaborador. Retornado para a fila de espera geral.',
+                        msg: 'Atendimento pausado pelo colaborador. Retornado para a fila de Aguardando.',
                         at: timestampIso
                     })
                 });
