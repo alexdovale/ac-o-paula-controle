@@ -494,23 +494,35 @@ export const AtendimentoExternoService = {
                     <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
                 </div>
 
-                <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
+                <!-- Sumário compacto híbrido -->
+                <div class="grid grid-cols-3 sm:grid-cols-5 gap-2 mb-4">
+                    
+                    <!-- Sempre visível -->
                     <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-amber-600">${aguardando}</div>
                         <div class="text-[9px] text-amber-500 font-bold uppercase">Aguard.</div>
                     </div>
+                    
+                    <!-- Sempre visível -->
                     <div class="bg-blue-50 border border-blue-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-blue-600">${atendendo}</div>
                         <div class="text-[9px] text-blue-500 font-bold uppercase">Atend.</div>
                     </div>
+                    
+                    <!-- Sempre visível -->
                     <div class="bg-green-50 border border-green-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-green-600">${atendidos}</div>
                         <div class="text-[9px] text-green-500 font-bold uppercase">Prontos</div>
                     </div>
+                    
+                    <!-- Dinâmico: Só aparece se houver faltosos -->
+                    ${faltosos > 0 ? `
                     <div class="bg-red-50 border border-red-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-red-500">${faltosos}</div>
                         <div class="text-[9px] text-red-400 font-bold uppercase">Faltosos</div>
-                    </div>
+                    </div>` : ''}
+
+                    <!-- Dinâmico: Só aparece se houver distribuição pendente -->
                     ${dist > 0 ? `
                     <div class="bg-cyan-50 border border-cyan-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-cyan-600">${dist}</div>
