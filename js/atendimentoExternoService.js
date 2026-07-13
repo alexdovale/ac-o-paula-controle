@@ -8,7 +8,7 @@ import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
 import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
-import { showNotification, escapeHTML } from './utils.js';
+import { showNotification, playSound, escapeHTML } from './utils.js';
 
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
@@ -142,7 +142,9 @@ export const AtendimentoExternoService = {
 
         this.renderizarInterface(assistido, pautaData);
         this.setupListeners();
-        this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
+        
+        // Garante que dentro do atendimento ele conste como Ocupado
+        this.atualizarBadgeHeader();
     },
 
     // ─── DASHBOARD UNIFICADO ──────────────────────────────────────────────────
@@ -168,11 +170,32 @@ export const AtendimentoExternoService = {
 
     setupRealtimeListenerPauta() {
         this._cancelarListeners();
+        let isInitialRender = true;
+
         this.unsubscribeDashboard = onSnapshot(
             collection(db, "pautas", this.pautaId, "attendances"),
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 
+                // NOTIFICAÇÃO: Dispara apenas a mensagem para os logados de novos casos na fila
+                if (!isInitialRender) {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added') {
+                            const novoCaso = change.doc.data();
+                            if (novoCaso.status === 'aguardando') {
+                                if (typeof showNotification === 'function') {
+                                    showNotification(`🚨 Novo assistido na fila: ${novoCaso.name}`, "info");
+                                }
+                                if (typeof playSound === 'function') playSound();
+                            }
+                        }
+                    });
+                }
+                isInitialRender = false;
+
+                // Atualiza o Status LIVRE/OCUPADO automaticamente de acordo com a mesa
+                this.atualizarBadgeHeader();
+
                 if (this.modoVisualizacao === 'abas') {
                     this.renderizarAbaAtual();
                 } else {
@@ -218,7 +241,7 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                     <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end items-center">
-                        <span id="badge-status-header" class="bg-white/20 text-white/80 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider">⏳</span>
+                        <span id="badge-status-header" class="bg-white/20 text-white/80 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300">⏳</span>
                         
                         ${this.modoVisualizacao === 'abas' ? `
                         <button id="btn-voltar-dashboard" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition" title="Voltar ao modo Mesa">
@@ -321,7 +344,7 @@ export const AtendimentoExternoService = {
                         🖥️ Minha Mesa
                     </button>
                     <button id="btn-tab-aguardando" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        👥 Aguardando Atendimento
+                        📥 Aguardando Atendimento
                     </button>
                     <button id="btn-tab-pauta-atual" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
                         📋 Pauta Atual
@@ -401,8 +424,8 @@ export const AtendimentoExternoService = {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
                     <span class="text-5xl block mb-4">🖥️</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Mesa limpa. Nenhum caso atribuído a você.</p>
-                    <p class="text-xs text-slate-400 mt-2">Veja a aba <strong>Aguardando Atendimento</strong> para puxar casos.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Sua mesa está limpa.</p>
+                    <p class="text-xs text-slate-400 mt-2">Clique na aba <strong>Aguardando Atendimento</strong> para iniciar novos casos.</p>
                 </div>`;
             return;
         }
@@ -415,7 +438,6 @@ export const AtendimentoExternoService = {
     // ── ABA 2: AGUARDANDO ATENDIMENTO ─────────────────────────────────────────
 
     _renderAguardando(container) {
-        // Agora busca exatamente pelo status "aguardando"
         const aguardando = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
 
         if (aguardando.length === 0) {
@@ -429,14 +451,14 @@ export const AtendimentoExternoService = {
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Clique em <strong>"Puxar para mim"</strong> para assumir um caso da fila.
+                👇 Os casos abaixo estão aguardando. Clique em <strong>"Atender"</strong> para abrir o processo.
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 ${aguardando.map(a => this._htmlCardAba(a, 'puxar')).join('')}
             </div>`;
     },
 
-    // ── ABA 3: PAUTA ATUAL (Exclusivo do Link) ────────────────────────────────
+    // ── ABA 3: PAUTA ATUAL ────────────────────────────────────────────────────
 
     _renderPautaAtual(container) {
         const assistidos = this.todosAtendimentosPauta;
@@ -460,7 +482,6 @@ export const AtendimentoExternoService = {
 
         let html = `
             <div class="mb-8">
-                <!-- Header da pauta -->
                 <div class="flex items-center justify-between mb-3">
                     <div>
                         <h3 class="font-black text-slate-800 text-base">${escapeHTML(this.pautaNome)}</h3>
@@ -469,12 +490,10 @@ export const AtendimentoExternoService = {
                     <span class="text-sm font-black text-slate-500">${porcentagem}%</span>
                 </div>
 
-                <!-- Barra de progresso -->
                 <div class="h-1.5 bg-slate-100 rounded-full mb-3">
                     <div class="h-full bg-green-500 rounded-full transition-all" style="width:${porcentagem}%"></div>
                 </div>
 
-                <!-- Sumário compacto -->
                 <div class="grid grid-cols-4 sm:grid-cols-5 gap-2 mb-4">
                     <div class="bg-amber-50 border border-amber-200 rounded-lg p-2 text-center">
                         <div class="text-lg font-black text-amber-600">${aguardando}</div>
@@ -499,7 +518,6 @@ export const AtendimentoExternoService = {
                     </div>` : ''}
                 </div>
 
-                <!-- Cards agrupados por status -->
                 ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', this.pautaId)}
                 ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', this.pautaId)}
                 ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', this.pautaId) : ''}
@@ -541,20 +559,19 @@ export const AtendimentoExternoService = {
 
         let botoesHtml = '';
         if (modo === 'puxar') {
+            // Removido o "Puxar para mim". Agora só vai ter o link direto para o atendimento
             botoesHtml = `
-                <button class="btn-puxar-caso w-full mt-3 bg-amber-500 hover:bg-amber-600 text-white font-black text-xs py-2 rounded-lg transition shadow-sm"
-                    data-pauta-id="${pid}" data-assistido-id="${assistido.id}">
-                    👇 Puxar para mim
-                </button>`;
+                <a href="${linkIndividual}" class="block w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">
+                    📋 Atender
+                </a>`;
         } else if (modo === 'mesa') {
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Atender</a>
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Continuar</a>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
         } else {
-            // No modo 'geral', o botão de Ver Detalhes sempre aparece, inclusive para Atendidos
             botoesHtml = `
                 <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">🔍 Ver Detalhes</a>`;
         }
@@ -569,7 +586,7 @@ export const AtendimentoExternoService = {
                 </div>
                 <div class="bg-slate-50 p-2 rounded border border-slate-100 flex-grow text-xs text-slate-600 space-y-1">
                     <p class="truncate">📄 ${escapeHTML(assistido.subject || 'Assunto não informado')}</p>
-                    ${modo === 'geral' ? `<p class="${assistido.assignedCollaborator ? 'text-blue-600' : 'text-red-500'} font-bold">${donoLabel}</p>` : ''}
+                    ${modo === 'geral' || modo === 'mesa' ? `<p class="${assistido.assignedCollaborator ? 'text-blue-600' : 'text-red-500'} font-bold">${donoLabel}</p>` : ''}
                     ${assistido.scheduledTime ? `<p class="text-slate-400">🕐 ${assistido.scheduledTime}</p>` : ''}
                     ${assistido.numeroProcesso ? `<p class="font-mono text-slate-400">CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : ''}
                 </div>
@@ -578,17 +595,7 @@ export const AtendimentoExternoService = {
     },
 
     _setupAcoesCards() {
-        // Puxar para mim
-        document.querySelectorAll('.btn-puxar-caso').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const b = e.currentTarget;
-                b.disabled = true;
-                b.textContent = 'Puxando...';
-                await this.puxarParaMim(b.dataset.pautaId, b.dataset.assistidoId);
-            });
-        });
-
-        // Devolver para fila
+        // Ação de Devolver para a Fila da Minha Mesa
         document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
@@ -597,67 +604,14 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── PUXAR PARA MIM E DEVOLVER ─────────────────────────────────────────────
-
-    async puxarParaMim(pautaId, assistidoId) {
-        const casosEmAndamento = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' &&
-            a.assignedCollaborator?.name === this.colaboradorNome
-        );
-
-        if (casosEmAndamento.length >= 3) {
-            const continuar = confirm(
-                `Você já tem ${casosEmAndamento.length} caso(s) em andamento na sua mesa.\n\nDeseja puxar mais este caso mesmo assim?`
-            );
-            if (!continuar) return;
-        }
-
-        try {
-            await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
-                status: 'emAtendimento', // <- Atualizando para Em Atendimento
-                assignedCollaborator: {
-                    id: this.colaboradorId || this.colaboradorAtual?.id || '',
-                    name: this.colaboradorNome
-                },
-                inAttendanceTime: new Date().toISOString(),
-                history: arrayUnion({
-                    action: 'PUXADO_PARA_MESA',
-                    by: this.colaboradorNome,
-                    msg: `Caso retirado da fila e assumido por ${this.colaboradorNome}`,
-                    at: new Date().toISOString()
-                })
-            });
-
-            if (this.colaboradorAtual?.id) {
-                await updateDoc(doc(db, "pautas", pautaId, "collaborators", this.colaboradorAtual.id), {
-                    status: 'ocupado',
-                    currentAttendance: assistidoId
-                }).catch(() => {});
-            }
-
-            this.abaAtual = 'minha-mesa';
-            document.getElementById('btn-tab-minha-mesa')?.click();
-
-            if (typeof showNotification === 'function') {
-                showNotification("Caso puxado para a sua mesa!", "success");
-            }
-
-        } catch (error) {
-            console.error("Erro ao puxar caso:", error);
-            if (typeof showNotification === 'function') {
-                showNotification("Erro ao atribuir caso.", "error");
-            } else {
-                alert("Erro ao atribuir caso. Tente novamente.");
-            }
-        }
-    },
+    // ─── DEVOLVER (O Puxar agora ocorre ao "Atender / Finalizar") ──────────────
 
     async devolverParaFila(pautaId, assistidoId) {
         if (!confirm("Devolver este caso para a fila de Aguardando? Outros colaboradores poderão assumí-lo.")) return;
 
         try {
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
-                status: 'aguardando', // <- Retornando para Fila de Espera
+                status: 'aguardando',
                 assignedCollaborator: null,
                 inAttendanceTime: null,
                 history: arrayUnion({
@@ -688,6 +642,40 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ─── STATUS INTELIGENTE E AUTOMATIZADO ─────────────────────────────────────
+    
+    atualizarBadgeHeader() {
+        const badge = document.getElementById('badge-status-header');
+        if (!badge) return;
+
+        // Se há assistidoId na URL, ele está na tela de atendimento, ou seja, OCUPADO
+        const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
+        const isNaTelaIndividual = !!urlParams.get('assistidoId');
+
+        // Conta quantos casos da pauta estão atribuídos e ativos com esse colaborador
+        const meusCasos = this.todosAtendimentosPauta.filter(a =>
+            a.status === 'emAtendimento' &&
+            a.assignedCollaborator?.name === this.colaboradorNome
+        );
+
+        // A regra do LIVRE: Mesa vazia E não está lendo a tela individual de um caso
+        const livre = meusCasos.length === 0 && !isNaTelaIndividual;
+
+        badge.textContent = livre ? "🟢 LIVRE" : "🔴 OCUPADO";
+        badge.className = `bg-white/20 ${livre ? 'text-emerald-300' : 'text-red-300'} text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300`;
+
+        // Se houver colaborador real no banco, também atualizamos o status geral dele online
+        if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
+            const novoStatus = livre ? 'disponivel' : 'ocupado';
+            if (this.colaboradorAtual.status !== novoStatus) {
+                this.colaboradorAtual.status = novoStatus; 
+                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                    status: novoStatus
+                }).catch(()=>{});
+            }
+        }
+    },
+
     // ─── DASHBOARD TRADICIONAL ─────────────────────────────────────────────────
 
     atualizarListasDoDashboard() {
@@ -707,7 +695,6 @@ export const AtendimentoExternoService = {
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
             const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
 
-            // Agora o botão ABRIR/VER DETALHES sempre aparece no modo expandido, inclusive para atendidos
             if (isAberto) {
                 return `
                     <div class="border-2 ${urgencia} bg-white border-slate-200 p-4 rounded-xl shadow-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-3">
@@ -820,7 +807,7 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── MÉTODOS AUXILIARES E O RESTANTE DO CÓDIGO (Inalterado, preservado) ──
+    // ─── MÉTODOS AUXILIARES ───────────────────────────────────────────────────
 
     async carregarColaboradoresGerais() {
         try {
@@ -830,26 +817,8 @@ export const AtendimentoExternoService = {
         } catch { this.todosColaboradores = []; }
     },
 
-    atualizarBadgeHeader() {
-        const badge = document.getElementById('badge-status-header');
-        if (!badge) return;
-        const livre = this.colaboradorAtual?.status === 'disponivel' || !this.colaboradorAtual?.status;
-        badge.textContent = livre ? "🟢 LIVRE" : "🔴 OCUPADO";
-        badge.className = `bg-white/20 ${livre ? 'text-emerald-300' : 'text-red-300'} text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider`;
-    },
-
     atualizarIndicadorDeStatus(pautaData, statusAtual, colaboradorNome) {
-        const badge = document.getElementById('status-indicator');
-        if (!badge) return;
-        if (pautaData?.useDelegationFlow) {
-            badge.textContent = `👤 ${colaboradorNome}`;
-            badge.className = "absolute top-4 right-4 bg-blue-600 text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border border-blue-400 uppercase tracking-widest z-20";
-        } else {
-            const livre = statusAtual === 'disponivel';
-            badge.textContent = livre ? "🟢 LIVRE" : "🔴 OCUPADO";
-            badge.className = `absolute top-4 right-4 ${livre ? 'bg-emerald-500 border-emerald-400 animate-pulse' : 'bg-red-500 border-red-400'} text-white text-[9px] font-black px-2 py-1 rounded-full shadow-lg border uppercase tracking-widest z-20`;
-        }
-        badge.classList.remove('hidden');
+        // Obsoleto mas mantido por compatibilidade. O cabeçalho agora rege o visual global com a função atualizarBadgeHeader()
     },
 
     _gerarTokenSeguro() {
@@ -935,8 +904,6 @@ export const AtendimentoExternoService = {
             this.unsubscribeDashboard = null;
         }
 
-        this.atualizarIndicadorDeStatus(pautaData, this.colaboradorAtual?.status, this.colaboradorNome);
-
         const url = new URL(window.location.href);
         url.searchParams.delete('view');
         url.searchParams.delete('modo');
@@ -994,20 +961,14 @@ export const AtendimentoExternoService = {
                     </div>
 
                     <button id="btn-marcar-livre" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
-                        <span>👋</span> ESTOU LIVRE / IR PARA MESA
+                        <span>👋</span> IR PARA MESA
                     </button>
                 `;
 
                 setTimeout(() => {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
-                        try {
-                            if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                                const colabDocRef = doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id);
-                                await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                                this.atualizarIndicadorDeStatus(pautaData, 'disponivel', this.colaboradorNome);
-                            }
-                        } catch (e) { console.error(e); }
-                        this.iniciarDashboardUnificado();
+                        // Como agora a saída depende de voltar para o Dashboard:
+                        document.getElementById('btn-voltar-dashboard')?.click();
                     };
                 }, 100);
             }
@@ -1301,6 +1262,14 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
+            // Puxa para si (no banco) de forma implícita ao salvar
+            const atualizacaoDeResponsavel = {
+                assignedCollaborator: {
+                    id: this.colaboradorId || this.colaboradorAtual?.id || '',
+                    name: this.colaboradorNome
+                }
+            };
+
             if (this.fluxoSelecionado === 'direto') {
                 const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
                 
@@ -1316,6 +1285,7 @@ export const AtendimentoExternoService = {
                 }
 
                 await updateDoc(docRef, {
+                    ...atualizacaoDeResponsavel,
                     status: statusDestinoFinal,
                     attendedBy: colabSeguro,                    
                     enviadoPor: enviadoPorServidor,               
@@ -1333,14 +1303,6 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
-                
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, {
-                        status: 'disponivel',
-                        currentAttendance: null
-                    }).catch(e => console.warn("Erro ao atualizar status do colaborador para disponível", e));
-                }
 
                 tituloSucesso = "Atendimento Finalizado!";
                 subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
@@ -1359,6 +1321,7 @@ export const AtendimentoExternoService = {
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
                 await updateDoc(docRef, {
+                    ...atualizacaoDeResponsavel,
                     status: 'aguardandoDistribuicao',
                     defensorResponsavel: def,
                     notasRevisao: nota,
@@ -1374,11 +1337,6 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
-                
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
-                }
 
                 tituloSucesso = "Enviado à Distribuição!";
                 subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
@@ -1397,6 +1355,7 @@ export const AtendimentoExternoService = {
                 colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
 
                 await updateDoc(docRef, { 
+                    ...atualizacaoDeResponsavel,
                     status: 'aguardandoCorrecao', 
                     defensorResponsavel: def, 
                     notasRevisao: nota, 
@@ -1411,11 +1370,6 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
-
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
-                }
 
                 tituloSucesso = "Enviado p/ Avaliação!";
                 subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
@@ -1448,11 +1402,6 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
-                }
-
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
             }
@@ -1483,17 +1432,12 @@ export const AtendimentoExternoService = {
                     })
                 });
 
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
-                }
-
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
             } 
             else if (this.fluxoSelecionado === 'pausar') {
                 await updateDoc(docRef, {
-                    status: 'aguardando', // Voltando diretamente para a fila de espera
+                    status: 'aguardando', 
                     assignedCollaborator: null,
                     delegatedBy: null,
                     delegatedAt: null,
@@ -1507,11 +1451,6 @@ export const AtendimentoExternoService = {
                         at: timestampIso
                     })
                 });
-
-                if (this.colaboradorAtual && this.colaboradorAtual.id && this.colaboradorAtual.id !== 'manual') {
-                    const colabDocRef = doc(db, "pautas", pautaIdSeguro, "collaborators", this.colaboradorAtual.id);
-                    await updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null }).catch(e => {});
-                }
 
                 tituloSucesso = "Pausa Registrada";
                 subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
@@ -1538,7 +1477,8 @@ export const AtendimentoExternoService = {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
             
-            this.iniciarDashboardUnificado();
+            // Retorna ao Dashboard após ação
+            document.getElementById('btn-voltar-dashboard')?.click();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
