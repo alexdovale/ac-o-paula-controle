@@ -1,5 +1,5 @@
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getAuth, signInAnonymously, signInWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
     getDocs, arrayUnion, onSnapshot
@@ -81,9 +81,9 @@ export const AtendimentoExternoService = {
         }
 
         try {
+            // Busca os dados da pauta específica do link (pode ler sem estar 100% autenticado por causa da regra externa ou signInAnonymously)
             if (!auth.currentUser) await signInAnonymously(auth);
-
-            // Busca os dados da pauta específica do link
+            
             const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
             if (!pautaDoc.exists()) {
                 this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
@@ -571,7 +571,6 @@ export const AtendimentoExternoService = {
 
         let botoesHtml = '';
         if (modo === 'puxar') {
-            // Removido o "Puxar para mim". Agora só vai ter o link direto para o atendimento
             botoesHtml = `
                 <a href="${linkIndividual}" class="block w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">
                     📋 Atender
@@ -607,7 +606,6 @@ export const AtendimentoExternoService = {
     },
 
     _setupAcoesCards() {
-        // Ação de Devolver para a Fila da Minha Mesa
         document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
@@ -616,7 +614,7 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── DEVOLVER (O Puxar agora ocorre ao "Atender / Finalizar") ──────────────
+    // ─── DEVOLVER ─────────────────────────────────────────────────────────────
 
     async devolverParaFila(pautaId, assistidoId) {
         if (!confirm("Devolver este caso para a fila de Aguardando? Outros colaboradores poderão assumí-lo.")) return;
@@ -660,23 +658,19 @@ export const AtendimentoExternoService = {
         const badge = document.getElementById('badge-status-header');
         if (!badge) return;
 
-        // Se há assistidoId na URL, ele está na tela de atendimento, ou seja, OCUPADO
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         const isNaTelaIndividual = !!urlParams.get('assistidoId');
 
-        // Conta quantos casos da pauta estão atribuídos e ativos com esse colaborador
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
             a.assignedCollaborator?.name === this.colaboradorNome
         );
 
-        // A regra do LIVRE: Mesa vazia E não está lendo a tela individual de um caso
         const livre = meusCasos.length === 0 && !isNaTelaIndividual;
 
         badge.textContent = livre ? "🟢 LIVRE" : "🔴 OCUPADO";
         badge.className = `bg-white/20 ${livre ? 'text-emerald-300' : 'text-red-300'} text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300`;
 
-        // Se houver colaborador real no banco, também atualizamos o status geral dele online
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
             if (this.colaboradorAtual.status !== novoStatus) {
@@ -819,6 +813,183 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // ─── TELA DE LOGIN INTELIGENTE (Híbrido) ─────────────────────────────────
+
+    renderizarTelaLoginColaborador() {
+        const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
+        corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
+        
+        const temSenha = !!this.colaboradorAtual?.senhaMesa;
+        const labelSenha = temSenha ? "Sua Senha" : "Senha (Do sistema ou sua Matrícula)";
+        const placeholderSenha = temSenha ? "Senha do SIGEP ou Senha da Mesa" : "Sua senha oficial ou Matrícula";
+
+        corpo.innerHTML = `
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
+                <div class="flex justify-center mb-6"><div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100"><span class="text-5xl">🔒</span></div></div>
+                <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
+                <p class="text-center text-sm text-slate-500 mb-6">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>!</p>
+                <form id="form-login-colaborador" class="space-y-4">
+                    <div id="login-error-msg" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center"></div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">E-mail Institucional</label>
+                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Seu e-mail cadastrado">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">${labelSenha}</label>
+                        <input type="password" id="login-colab-senha" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="${placeholderSenha}">
+                    </div>
+                    <div class="flex items-center gap-2">
+                        <input type="checkbox" id="lembrar-login-colab" class="w-4 h-4 text-indigo-600 rounded">
+                        <label for="lembrar-login-colab" class="text-xs text-gray-600 font-semibold cursor-pointer">Lembrar neste dispositivo</label>
+                    </div>
+                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg transition text-sm uppercase tracking-widest flex justify-center items-center">
+                        <span>Acessar Minha Mesa</span>
+                    </button>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('form-login-colaborador').onsubmit = async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('login-colab-email').value.trim().toLowerCase();
+            const senhaInput = document.getElementById('login-colab-senha').value.trim();
+            const err = document.getElementById('login-error-msg');
+            const btnSubmit = e.target.querySelector('button[type="submit"]');
+            
+            const realEmail = (this.colaboradorAtual?.email || '').trim().toLowerCase();
+            const realMat   = (this.colaboradorAtual?.identificador || '').trim();
+            const senhaMesa = this.colaboradorAtual?.senhaMesa; 
+
+            if (!realEmail || !realMat) {
+                err.innerHTML = "Cadastro incompleto! Peça ao admin para preencher E-mail e Matrícula na aba de Colaboradores.";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            if (email !== realEmail) {
+                err.textContent = "E-mail incorreto para este colaborador.";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            const textoOriginalBtn = btnSubmit.innerHTML;
+            btnSubmit.disabled = true;
+            btnSubmit.innerHTML = `<span class="animate-pulse">Verificando...</span>`;
+            err.classList.add('hidden');
+
+            try {
+                // TENTATIVA 1: Login Oficial do Sistema (Firebase Auth)
+                await signInWithEmailAndPassword(auth, email, senhaInput);
+                
+                const manterLogado = document.getElementById('lembrar-login-colab').checked;
+                this.salvarSessaoEIniciar(manterLogado);
+
+            } catch (error) {
+                // TENTATIVA 2: Senha da Mesa ou Matrícula
+                let loginValido = false;
+                let precisaCriarSenha = false;
+
+                if (senhaMesa) {
+                    if (senhaInput === senhaMesa) loginValido = true;
+                } else {
+                    if (senhaInput === realMat) {
+                        loginValido = true;
+                        precisaCriarSenha = true;
+                    }
+                }
+
+                if (loginValido) {
+                    if (!auth.currentUser) await signInAnonymously(auth);
+
+                    const manterLogado = document.getElementById('lembrar-login-colab').checked;
+                    
+                    if (precisaCriarSenha) {
+                        this.renderizarTelaCriarSenha(manterLogado);
+                    } else {
+                        this.salvarSessaoEIniciar(manterLogado);
+                    }
+                } else {
+                    err.textContent = senhaMesa ? "Senha incorreta." : "Senha do sistema ou Matrícula inválidas.";
+                    err.classList.remove('hidden');
+                    
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = textoOriginalBtn;
+                }
+            }
+        };
+    },
+
+    renderizarTelaCriarSenha(manterLogado) {
+        const corpo = document.querySelector('.w-full.max-w-md');
+        corpo.innerHTML = `
+            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100 animate-fade-in">
+                <div class="flex justify-center mb-6"><div class="bg-emerald-50 p-5 rounded-full border-4 border-emerald-100"><span class="text-5xl">🔑</span></div></div>
+                <h2 class="text-xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Crie sua Senha</h2>
+                <p class="text-center text-xs text-slate-500 mb-6">Como você ainda não tem uma conta no sistema principal, crie uma senha segura para acessar sua mesa nas próximas vezes.</p>
+                <form id="form-criar-senha" class="space-y-4">
+                    <div id="criar-senha-error" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center"></div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Nova Senha</label>
+                        <input type="password" id="nova-senha-1" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required placeholder="Digite sua nova senha">
+                    </div>
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Confirme a Senha</label>
+                        <input type="password" id="nova-senha-2" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-emerald-500 outline-none" required placeholder="Repita a senha">
+                    </div>
+                    <button type="submit" id="btn-salvar-senha" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-xl shadow-lg transition text-sm uppercase tracking-widest">Salvar e Acessar</button>
+                </form>
+            </div>
+        `;
+
+        document.getElementById('form-criar-senha').onsubmit = async (e) => {
+            e.preventDefault();
+            const s1 = document.getElementById('nova-senha-1').value.trim();
+            const s2 = document.getElementById('nova-senha-2').value.trim();
+            const err = document.getElementById('criar-senha-error');
+            const btn = document.getElementById('btn-salvar-senha');
+
+            if (s1.length < 4) {
+                err.textContent = "A senha deve ter pelo menos 4 caracteres.";
+                err.classList.remove('hidden');
+                return;
+            }
+            if (s1 !== s2) {
+                err.textContent = "As senhas não coincidem. Digite novamente.";
+                err.classList.remove('hidden');
+                return;
+            }
+
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-pulse">SALVANDO...</span>`;
+
+            try {
+                await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                    senhaMesa: s1
+                });
+                
+                this.colaboradorAtual.senhaMesa = s1;
+                this.salvarSessaoEIniciar(manterLogado);
+
+            } catch (error) {
+                console.error("Erro ao salvar senha:", error);
+                err.textContent = "Erro ao salvar a senha. Tente novamente.";
+                err.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = "Salvar e Acessar";
+            }
+        };
+    },
+
+    salvarSessaoEIniciar(manterLogado) {
+        const key = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
+        if (manterLogado) {
+            localStorage.setItem(key, 'true');
+        } else {
+            sessionStorage.setItem(key, 'true');
+        }
+        this.iniciarDashboardUnificado();
+    },
+
     // ─── MÉTODOS AUXILIARES ───────────────────────────────────────────────────
 
     async carregarColaboradoresGerais() {
@@ -829,69 +1000,11 @@ export const AtendimentoExternoService = {
         } catch { this.todosColaboradores = []; }
     },
 
-    atualizarIndicadorDeStatus(pautaData, statusAtual, colaboradorNome) {
-        // Obsoleto mas mantido por compatibilidade. O cabeçalho agora rege o visual global com a função atualizarBadgeHeader()
-    },
-
     _gerarTokenSeguro() {
         if (typeof crypto !== 'undefined' && crypto.randomUUID) {
             return crypto.randomUUID().substring(0, 8);
         }
         return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
-    },
-
-    renderizarTelaLoginColaborador() {
-        const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
-        corpo.className = "w-full max-w-md mx-auto my-10 px-4 animate-fade-in";
-        corpo.innerHTML = `
-            <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
-                <div class="flex justify-center mb-6"><div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100"><span class="text-5xl">🔒</span></div></div>
-                <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
-                <p class="text-center text-sm text-slate-500 mb-6">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>! Confirme sua identidade.</p>
-                <form id="form-login-colaborador" class="space-y-4">
-                    <div id="login-error-msg" class="hidden bg-red-50 text-red-700 p-4 rounded-xl text-xs font-bold border border-red-200 text-center"></div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">E-mail Institucional</label>
-                        <input type="email" id="login-colab-email" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Seu e-mail cadastrado">
-                    </div>
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1">Matrícula / ID</label>
-                        <input type="password" id="login-colab-matricula" class="w-full p-4 border border-slate-300 rounded-xl bg-slate-50 text-sm focus:ring-2 focus:ring-indigo-500 outline-none" required placeholder="Sua matrícula">
-                    </div>
-                    <div class="flex items-center gap-2">
-                        <input type="checkbox" id="lembrar-login-colab" class="w-4 h-4 text-indigo-600 rounded">
-                        <label for="lembrar-login-colab" class="text-xs text-gray-600 font-semibold cursor-pointer">Lembrar neste dispositivo</label>
-                    </div>
-                    <button type="submit" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg transition text-sm uppercase tracking-widest">Acessar Minha Mesa</button>
-                </form>
-            </div>
-        `;
-
-        document.getElementById('form-login-colaborador').onsubmit = (e) => {
-            e.preventDefault();
-            const email = document.getElementById('login-colab-email').value.trim().toLowerCase();
-            const mat   = document.getElementById('login-colab-matricula').value.trim();
-            const err   = document.getElementById('login-error-msg');
-            const realEmail = (this.colaboradorAtual?.email || '').trim().toLowerCase();
-            const realMat   = (this.colaboradorAtual?.identificador || '').trim();
-
-            if (!realEmail || !realMat) {
-                err.innerHTML = "Cadastro incompleto! Peça ao admin para preencher E-mail e Matrícula nos Colaboradores.";
-                err.classList.remove('hidden');
-                return;
-            }
-
-            if (email === realEmail && mat === realMat) {
-                const key = `sigep_session_${this.pautaId}_${this.colaboradorNome}`;
-                document.getElementById('lembrar-login-colab').checked
-                    ? localStorage.setItem(key, 'true')
-                    : sessionStorage.setItem(key, 'true');
-                this.iniciarDashboardUnificado();
-            } else {
-                err.textContent = "E-mail ou Matrícula incorretos.";
-                err.classList.remove('hidden');
-            }
-        };
     },
 
     showError(titulo, message) {
@@ -979,7 +1092,6 @@ export const AtendimentoExternoService = {
 
                 setTimeout(() => {
                     document.getElementById('btn-marcar-livre').onclick = async () => {
-                        // Como agora a saída depende de voltar para o Dashboard:
                         document.getElementById('btn-voltar-dashboard')?.click();
                     };
                 }, 100);
