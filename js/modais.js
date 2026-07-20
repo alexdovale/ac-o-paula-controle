@@ -1,10 +1,5 @@
-O arquivo modais.js precisa conter todos os modais do seu sistema (LGPD, Tipo de Pauta, Criar Pauta, Admin, Editar Configurações, Ordem de Atendimento, Fluxo de Delegação, Compartilhamento, Distribuição, Membros, Equipe, Chegada, Atendimento, etc.).
-Na mensagem anterior, por questão de espaço do painel, eu acabei omitindo alguns modais secundários (como o de Favoritos, Notas, etc.) ou encurtando o bloco, o que fez sumir parte do HTML que o seu app usava.
-Para garantir que absolutamente nada fique faltando no seu modais.js, montei o arquivo completo e blindado abaixo, contendo todas as 6 opções de atendimento nos lugares certos e mantendo cada linha de todos os modais originais do SIGEP.
-Substitua todo o conteúdo do seu js/modais.js por este:
-// js/modais.js - ARQUIVO COMPLETO E DEFINITIVO
-
 const todosOsModaisHTML = `
+    <!-- MODAL DE ACEITE LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Bem-vindo ao SIGEP</h2>
@@ -29,6 +24,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- TIPO DE PAUTA MODAL -->
     <div id="pauta-type-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Tipo de Pauta</h2>
@@ -59,6 +55,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- CRIAR PAUTA MODAL -->
     <div id="create-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Criar Nova Pauta</h2>
@@ -97,6 +94,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- ADMIN MODAL -->
     <div id="admin-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 md:p-4" onclick="this.classList.add('hidden')">
         <div id="admin-window" class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl transition-all duration-300 animate-scale-up" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center bg-slate-50 px-4 py-3 border-b select-none shrink-0 sm:rounded-t-xl">
@@ -256,6 +254,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- EDIT CONFIG MODAL -->
     <div id="edit-pauta-config-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Editar Configurações</h2>
@@ -372,6 +371,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- ORDEM DE ATENDIMENTO MODAL (NOVA PAUTA) -->
     <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Ordem de Atendimento</h2>
@@ -433,6 +433,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- DELEGATION FLOW MODAL -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Fluxo de Atendimento</h2>
@@ -472,6 +473,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- SHARE MODAL -->
     <div id="share-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Compartilhamento Externo</h2>
@@ -509,6 +511,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- DIST FINISH MODAL -->
     <div id="distribution-finish-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-cyan-800">Concluir Distribuição</h2>
@@ -526,6 +529,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- MEMBERS MODAL -->
     <div id="members-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -549,6 +553,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- COLLABORATORS MODAL -->
     <div id="collaborators-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 sm:rounded-t-xl shrink-0">
@@ -659,6 +664,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- ARRIVAL MODAL -->
     <div id="arrival-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Confirmar Chegada</h2>
@@ -677,6 +683,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- ATTENDANT MODAL -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Finalizar Atendimento</h2>
@@ -693,6 +700,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- SELECT COLLABORATOR MODAL -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-3">Atender Assistido</h2>
@@ -715,6 +723,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- EDIT ATTENDANT MODAL -->
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Editar Atendente</h2>
@@ -731,6 +740,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- DELEGATE EMAIL MODAL -->
     <div id="delegate-email-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Delegar Finalização</h2>
@@ -747,6 +757,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- RESET CONFIRM MODAL -->
     <div id="reset-confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg space-y-4 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold text-gray-800">Zerar Pauta no SIGEP</h2>
@@ -763,6 +774,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- EDIT PAUTA MODAL -->
     <div id="edit-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Editar Nome da Pauta</h2>
@@ -775,6 +787,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- CLOSE PAUTA MODAL -->
     <div id="close-pauta-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4" id="close-modal-title">Fechar Pauta</h2>
@@ -788,6 +801,7 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
+    <!-- FORMAT HELP MODAL -->
     <div id="format-help-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-2xl relative flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex-shrink-0 mb-4 pr-8">
@@ -829,6 +843,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- DEMANDS MODAL -->
     <div id="demands-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-lg flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -858,6 +873,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- EDIT ASSISTED MODAL -->
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-6">Editar Assistido</h2>
@@ -877,6 +893,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- PRIORITY REASON MODAL -->
     <div id="priority-reason-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-2 text-gray-800">Prioridade Legal</h2>
@@ -903,6 +920,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- PRIVACY POLICY MODAL -->
     <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -924,6 +942,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- MANUAL MODAL -->
     <div id="manual-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -943,6 +962,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
     
+    <!-- TERMS MODAL -->
     <div id="terms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-6 rounded-xl shadow-xl w-full max-w-2xl flex flex-col" style="max-height: 95vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center mb-4 flex-shrink-0">
@@ -959,6 +979,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- ASSISTED DETAILS MODAL -->
     <div id="assisted-details-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[100] p-0 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;" onclick="event.stopPropagation()">
             
@@ -998,6 +1019,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- USER PREFERENCES MODAL -->
     <div id="user-preferences-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-lg max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-6 text-center text-gray-800 border-b pb-4">Minhas Preferências - SIGEP</h2>
@@ -1064,6 +1086,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- NOTES MODAL -->
     <div id="notes-modal" class="hidden fixed inset-0 bg-black bg-opacity-40 flex justify-center items-center p-2 z-50" onclick="this.classList.add('hidden')">
         <div class="bg-white rounded-xl p-5 sm:p-6 w-full sm:w-96 shadow-lg max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <h2 class="text-lg font-semibold text-gray-700 mb-3 shrink-0">Minhas Anotações</h2>
@@ -1075,6 +1098,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- CONFIRM MODAL -->
     <div id="confirm-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Confirmação</h2>
@@ -1086,6 +1110,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- STATISTICS MODAL -->
     <div id="statistics-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-0 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white shadow-xl w-full max-w-6xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
@@ -1098,6 +1123,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
 
+    <!-- ATA SOCIAL MODAL -->
     <div id="ata-social-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-[200] p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white rounded-xl shadow-2xl w-full max-w-md max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <div class="p-5 sm:p-6 border-b bg-gray-50 rounded-t-xl shrink-0">
@@ -1136,6 +1162,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
     
+    <!-- MANAGE ROOMS MODAL -->
     <div id="manage-rooms-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] flex flex-col" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-gray-800">Gerenciar Salas / Varas</h2>
@@ -1147,6 +1174,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         </div>
     </div>
     
+    <!-- CAPTACAO QR MODAL -->
     <div id="modal-captacao-qr" class="hidden fixed inset-0 bg-black/60 z-[200] flex items-center justify-center backdrop-blur-sm p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 rounded-2xl shadow-2xl max-w-sm w-full text-center relative" onclick="event.stopPropagation()">
             <button onclick="document.getElementById('modal-captacao-qr').classList.add('hidden')" class="absolute top-3 right-3 text-gray-400 hover:text-red-500">
@@ -1193,4 +1221,3 @@ export function injetarModais() {
 }
 
 injetarModais();
-
