@@ -834,67 +834,68 @@ export const PautaService = {
     },
 
     // FUNÇÃO ATUALIZADA: Suporta 4 Modos de Ordenação (Incluindo Encaixe)
-    sortAguardando(list, orderType) {
+   sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
-        
-        // 1. OPÇÃO: MANUAL
-        if (orderType === 'manual') {
-            return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        }
-        
-        // 2. OPÇÃO: ORDEM DE CHEGADA
-        if (orderType === 'chegada') {
-            return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        }
 
+        // 1. MODO MANUAL
+        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+        
+        // 2. MODO ORDEM DE CHEGADA
+        if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
+
+        const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
 
-        // 4. OPÇÃO: AGENDAMENTO FLEXÍVEL (Nova Lógica de Encaixe)
-        if (orderType === 'agendamento_encaixe') {
-            const getHorarioEfetivo = (item) => {
-                if (!item.arrivalTime) return "23:59";
-                if (item.type !== 'agendamento' || !item.scheduledTime) {
-                    const arr = new Date(item.arrivalTime);
-                    return `${String(arr.getHours()).padStart(2, '0')}:${String(arr.getMinutes()).padStart(2, '0')}`;
+        // Função auxiliar para checar se o assistido está atrasado (> 15 min)
+        const isAtrasado = (item) => {
+            if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
+            const [h, m] = item.scheduledTime.split(':').map(Number);
+            const schedDate = new Date(new Date().setHours(h, m, 0, 0));
+            const arrDate = new Date(item.arrivalTime);
+            return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
+        };
+
+        return [...list].sort((a, b) => {
+            // Regra Universal: Prioridade URGENTE sempre fura a fila
+            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+
+            // 3. MODO PROPORCIONAL (3 pontuais : 1 atrasado)
+            if (orderType === 'proporcional') {
+                const atrasadoA = isAtrasado(a);
+                const atrasadoB = isAtrasado(b);
+                if (atrasadoA !== atrasadoB) {
+                    const deveChamarAtrasado = (stats.pontuais % 3 === 0) && stats.pontuais > 0;
+                    return deveChamarAtrasado ? (atrasadoA ? -1 : 1) : (atrasadoA ? 1 : -1);
                 }
-                try {
-                    const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
-                    const schedDate = new Date(item.arrivalTime);
-                    schedDate.setHours(sHours, sMins, 0, 0);
-                    schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
+            }
 
-                    const arrDate = new Date(item.arrivalTime);
-                    if (arrDate <= schedDate) {
-                        return item.scheduledTime; // Pontual: Mantém hora da agenda
-                    } else {
-                        // Atrasado: Pega a hora real do check-in
-                        return `${String(arrDate.getHours()).padStart(2, '0')}:${String(arrDate.getMinutes()).padStart(2, '0')}`;
-                    }
-                } catch (e) {
-                    return item.scheduledTime || "23:59";
-                }
-            };
+            // 4. MODO AGING (Perdão por tempo de espera > 60 min)
+            if (orderType === 'aging') {
+                const esperaA = agora - (a.checkInOrder || agora);
+                const esperaB = agora - (b.checkInOrder || agora);
+                if (esperaA > 3600000) return -1;
+                if (esperaB > 3600000) return 1;
+            }
 
-            return [...list].sort((a, b) => {
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+            // 5. MODO FIM DO TURNO (Protege a troca Manhã/Tarde às 13h)
+            if (orderType === 'fim_turno') {
+                const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
+                const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
+                if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
+            }
 
-                if (a.type === 'agendamento' && b.type === 'avulso') return -1;
-                if (a.type === 'avulso' && b.type === 'agendamento') return 1;
+            // 6. MODO FLEXÍVEL / ENCAIXE (Padrão do Sistema)
+            if (orderType === 'flexivel' || orderType === 'padrao') {
+                const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
+                const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
+                return horaA.localeCompare(horaB);
+            }
 
-                const horarioEfetivoA = getHorarioEfetivo(a);
-                const horarioEfetivoB = getHorarioEfetivo(b);
-
-                if (horarioEfetivoA !== horarioEfetivoB) {
-                    return horarioEfetivoA.localeCompare(horarioEfetivoB);
-                }
-
-                const arrivalA = a.checkInOrder || 0;
-                const arrivalB = b.checkInOrder || 0;
-                return arrivalA - arrivalB;
-            });
-        }
-
+            // Desempate de segurança: Hora da agenda ou ordem de check-in
+            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
+        });
+    },
         // 3. OPÇÃO: AGENDAMENTO RIGOROSO (Lógica Original - Atrasado vai pro fim)
         const isPontual = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return true;
