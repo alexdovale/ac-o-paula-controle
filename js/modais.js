@@ -350,26 +350,38 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
-    <!-- ORDEM DE ATENDIMENTO MODAL -->
+        <!-- ORDEM DE ATENDIMENTO MODAL -->
     <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Ordem de Atendimento</h2>
             <p class="text-sm sm:text-base text-gray-600 mb-6">Como a fila de "Aguardando" será organizada no SIGEP?</p>
             <div id="ordem-atendimento-options" class="space-y-3">
+                
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="padrao" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
                     <span class="ml-3">
-                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Padrão do Sistema</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Prioriza por pontualidade e urgência. Justo e flexível.</span>
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Rigoroso (Padrão)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Respeita horário marcado. Atraso &gt; 15 min joga para o fim da fila geral.</span>
                     </span>
                 </label>
+
+                <!-- NOVA OPÇÃO DE ENCAIXE ADICIONADA AQUI -->
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
+                    <input type="radio" name="ordemAtendimento" value="agendamento_encaixe" class="h-5 w-5 text-blue-600 focus:ring-blue-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Flexível (Encaixe)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Atrasos perdem o horário, mas viram "encaixes" na hora exata em que chegaram.</span>
+                    </span>
+                </label>
+                
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="chegada" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800 text-sm sm:text-base">Ordem de Chegada</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Atende na ordem em que a chegada foi marcada.</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Atende na ordem em que a chegada foi marcada (ignora agenda).</span>
                     </span>
                 </label>
+                
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
@@ -384,6 +396,7 @@ const todosOsModaisHTML = `
             </div>
         </div>
     </div>
+
 
     <!-- DELEGATION FLOW MODAL -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
