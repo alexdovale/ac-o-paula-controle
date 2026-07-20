@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA
+// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com sortAguardando limpa)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -443,7 +443,6 @@ export const PautaService = {
             }
 
             // CONTADOR DA PROPORÇÃO 3x1 
-            // Verifica silenciosamente se esse assistido foi pontual ou não
             let eAtrasado = false;
             if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
                 const [h, m] = assisted.scheduledTime.split(':').map(Number);
@@ -453,13 +452,11 @@ export const PautaService = {
                 eAtrasado = arrDate > new Date(schedDate.getTime() + 15 * 60000); // 15 min de tolerância
             }
 
-            // Atualiza os status no Firebase para que a inteligência da fila saiba quem foi atendido
             try {
                 await updateDoc(doc(app.db, "pautas", app.currentPauta.id), {
                     [`stats.${eAtrasado ? 'atrasados' : 'pontuais'}`]: increment(1)
                 });
                 
-                // Atualiza o cache local
                 if (!app.currentPautaData.stats) app.currentPautaData.stats = { pontuais: 0, atrasados: 0 };
                 if (eAtrasado) app.currentPautaData.stats.atrasados++;
                 else app.currentPautaData.stats.pontuais++;
@@ -554,10 +551,8 @@ export const PautaService = {
             return;
         }
 
-        // Recupera os stats alimentados pelo finishAttendance
         const statsDaPauta = app.currentPautaData?.stats || { pontuais: 0, atrasados: 0 };
         
-        // Passa o stats para a inteligência de ordenação
         const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento, statsDaPauta);
         const nextAssisted = orderedList[0];
 
@@ -862,20 +857,16 @@ export const PautaService = {
         return 'Média';
     },
 
-    // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os 6 Modos de Ordenação (Incluindo Encaixe)
-   sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
+    // FUNÇÃO SORT LIMPA (sem comentários extras)
+    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
-        // 1. MODO MANUAL
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        
-        // 2. MODO ORDEM DE CHEGADA
         if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
 
         const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
 
-        // Função auxiliar para checar se o assistido está atrasado (> 15 min)
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
             const [h, m] = item.scheduledTime.split(':').map(Number);
@@ -885,11 +876,9 @@ export const PautaService = {
         };
 
         return [...list].sort((a, b) => {
-            // Regra Universal: Prioridade URGENTE sempre fura a fila
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            // 3. MODO PROPORCIONAL (3 pontuais : 1 atrasado)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -899,7 +888,6 @@ export const PautaService = {
                 }
             }
 
-            // 4. MODO AGING (Perdão por tempo de espera > 60 min)
             if (orderType === 'aging') {
                 const esperaA = agora - (a.checkInOrder || agora);
                 const esperaB = agora - (b.checkInOrder || agora);
@@ -907,21 +895,18 @@ export const PautaService = {
                 if (esperaB > 3600000) return 1;
             }
 
-            // 5. MODO FIM DO TURNO (Protege a troca Manhã/Tarde às 13h)
             if (orderType === 'fim_turno') {
                 const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
                 const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            // 6. MODO FLEXÍVEL / ENCAIXE (Padrão do Sistema)
             if (orderType === 'flexivel' || orderType === 'padrao') {
                 const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
                 const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
                 return (horaA || '').localeCompare(horaB || '');
             }
 
-            // Desempate de segurança: Hora da agenda ou ordem de check-in
             return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
         });
     },
@@ -936,7 +921,6 @@ export const PautaService = {
         return classes[priority] || '';
     },
 
-    // FUNÇÃO ATUALIZADA: Delay adicionado para não travar a rolagem no celular
     setupManualSort(app) {
         const el = document.getElementById('aguardando-list');
         if (!el) return;
@@ -948,8 +932,8 @@ export const PautaService = {
             
             window.sortableAguardando = new Sortable(el, {
                 animation: isMobile ? 200 : 300,
-                delay: isMobile ? 250 : 0, // Exige segurar por 250ms no celular para poder arrastar
-                delayOnTouchOnly: true,    // Garante que no mouse continue instantâneo
+                delay: isMobile ? 250 : 0,
+                delayOnTouchOnly: true,
                 ghostClass: 'opacity-20',
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
