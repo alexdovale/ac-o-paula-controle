@@ -1,3 +1,8 @@
+Perfeito! Realizei todas as substituições no seu modais.js.
+Agora ele contém as 6 opções completas nos modais de "Criar Pauta" e "Editar Configurações", e a opção Flexível (Encaixe) já está marcada com checked como o padrão do sistema.
+Copie o código inteiro abaixo e substitua o seu modais.js original:
+// js/modais.js - ARQUIVO COMPLETO ATUALIZADO
+
 const todosOsModaisHTML = `
     <!-- MODAL DE ACEITE LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -290,25 +295,46 @@ const todosOsModaisHTML = `
             <div class="mb-4 sm:mb-6">
                 <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Ordem de Atendimento</h3>
                 <div class="space-y-2">
-                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="padrao" class="h-4 w-4 text-green-600">
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
+                        <input type="radio" name="edit-ordem" value="flexivel" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
                         <span class="ml-3">
-                            <span class="font-semibold text-sm sm:text-base">Padrão do Sistema</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Prioriza por pontualidade e urgência</span>
+                            <span class="font-semibold text-sm sm:text-base">Flexível (Encaixe)</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Atrasou vira encaixe na hora que chegou.</span>
                         </span>
                     </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="chegada" class="h-4 w-4 text-green-600">
+                        <input type="radio" name="edit-ordem" value="proporcional" class="h-4 w-4 text-green-600 focus:ring-green-500">
+                        <span class="ml-3">
+                            <span class="font-semibold text-sm sm:text-base">Proporcional (3x1)</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">A cada 3 pontuais, puxa 1 atrasado.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="edit-ordem" value="fim_turno" class="h-4 w-4 text-green-600 focus:ring-green-500">
+                        <span class="ml-3">
+                            <span class="font-semibold text-sm sm:text-base">Proteção de Turno</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Protege a troca de turno (Manhã vs Tarde).</span>
+                        </span>
+                    </label>
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="edit-ordem" value="aging" class="h-4 w-4 text-green-600 focus:ring-green-500">
+                        <span class="ml-3">
+                            <span class="font-semibold text-sm sm:text-base">Perdão por Tempo</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Espera > 60min pula para o topo.</span>
+                        </span>
+                    </label>
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
+                        <input type="radio" name="edit-ordem" value="chegada" class="h-4 w-4 text-green-600 focus:ring-green-500">
                         <span class="ml-3">
                             <span class="font-semibold text-sm sm:text-base">Ordem de Chegada</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atende na ordem em que chegaram</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Atende na ordem do check-in.</span>
                         </span>
                     </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
-                        <input type="radio" name="edit-ordem" value="manual" class="h-4 w-4 text-green-600">
+                        <input type="radio" name="edit-ordem" value="manual" class="h-4 w-4 text-green-600 focus:ring-green-500">
                         <span class="ml-3">
                             <span class="font-semibold text-sm sm:text-base">Ordem Manual</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Permite arrastar e reordenar</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Permite arrastar livremente.</span>
                         </span>
                     </label>
                 </div>
@@ -350,30 +376,50 @@ const todosOsModaisHTML = `
         </div>
     </div>
 
-        <!-- ORDEM DE ATENDIMENTO MODAL -->
+    <!-- ORDEM DE ATENDIMENTO MODAL (NOVA PAUTA) -->
     <div id="ordem-atendimento-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Ordem de Atendimento</h2>
             <p class="text-sm sm:text-base text-gray-600 mb-6">Como a fila de "Aguardando" será organizada no SIGEP?</p>
             <div id="ordem-atendimento-options" class="space-y-3">
                 
-                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
-                    <input type="radio" name="ordemAtendimento" value="padrao" class="h-5 w-5 text-green-600 focus:ring-green-500" checked>
+                <!-- OPÇÃO 1 (FLEXÍVEL - PADRÃO) -->
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
+                    <input type="radio" name="ordemAtendimento" value="flexivel" class="h-5 w-5 text-blue-600 focus:ring-blue-500" checked>
                     <span class="ml-3">
-                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Rigoroso (Padrão)</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Respeita horário marcado. Atraso &gt; 15 min joga para o fim da fila geral.</span>
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Flexível (Encaixe)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Atrasos perdem a vez, mas viram encaixes na hora real da chegada.</span>
                     </span>
                 </label>
 
-                <!-- NOVA OPÇÃO DE ENCAIXE ADICIONADA AQUI -->
-                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
-                    <input type="radio" name="ordemAtendimento" value="agendamento_encaixe" class="h-5 w-5 text-blue-600 focus:ring-blue-500">
+                <!-- OPÇÃO 2 (PROPORCIONAL) -->
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="proporcional" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
-                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Flexível (Encaixe)</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Atrasos perdem o horário, mas viram "encaixes" na hora exata em que chegaram.</span>
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Proporcional (3x1)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">A cada 3 pontuais atendidos, força a chamada de 1 atrasado.</span>
+                    </span>
+                </label>
+
+                <!-- OPÇÃO 3 (TURNO) -->
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="fim_turno" class="h-5 w-5 text-green-600 focus:ring-green-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Proteção de Turno</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Garante que a manhã seja atendida antes da tarde (13h).</span>
+                    </span>
+                </label>
+
+                <!-- OPÇÃO 4 (AGING) -->
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
+                    <input type="radio" name="ordemAtendimento" value="aging" class="h-5 w-5 text-green-600 focus:ring-green-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Perdão por Tempo (Aging)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Atrasados que esperam mais de 60min pulam para o topo.</span>
                     </span>
                 </label>
                 
+                <!-- OPÇÃO 5 (CHEGADA) -->
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="chegada" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
@@ -382,6 +428,7 @@ const todosOsModaisHTML = `
                     </span>
                 </label>
                 
+                <!-- OPÇÃO 6 (MANUAL) -->
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50">
                     <input type="radio" name="ordemAtendimento" value="manual" class="h-5 w-5 text-green-600 focus:ring-green-500">
                     <span class="ml-3">
@@ -396,7 +443,6 @@ const todosOsModaisHTML = `
             </div>
         </div>
     </div>
-
 
     <!-- DELEGATION FLOW MODAL -->
     <div id="delegation-flow-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
@@ -1187,3 +1233,4 @@ export function injetarModais() {
 
 // Injeção imediata
 injetarModais();
+
