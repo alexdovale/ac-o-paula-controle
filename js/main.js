@@ -9,7 +9,7 @@ import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
 import CollaboratorService from './colaboradores.js'; 
 window.CollaboratorService = CollaboratorService;  // ← ADICIONE ESTA LINHA
-import { ModalService } from './modal.js?v=20260313';
+import { ModalService } from './modal.js?v=20260707';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
 import { PDFService } from './pdfService.js?v=novo_pdf_v2';
@@ -1615,8 +1615,18 @@ class SIGEPApp {
         });
 
         document.body.addEventListener('click', async (e) => {
-            if (e.target.classList.contains('remove-member-btn')) {
-                const email = e.target.dataset.email;
+            // CORREÇÃO: Usa .closest para garantir a captura mesmo clicando no texto do botão
+            const removeBtn = e.target.closest('.remove-member-btn');
+            
+            if (removeBtn) {
+                const email = removeBtn.dataset.email;
+                
+                // Validação de segurança preventiva baseada no e-mail
+                if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
+                    showNotification("O dono da pauta não pode ser removido!", "error");
+                    return;
+                }
+
                 if (confirm(`Remover ${email} da pauta?`)) {
                     try {
                         const usersRef = collection(this.db, "users");
@@ -1625,14 +1635,23 @@ class SIGEPApp {
                         
                         if (!querySnapshot.empty) {
                             const userId = querySnapshot.docs[0].id;
+                            
+                            // Bloqueio duplo de segurança por ID do proprietário
+                            if (userId === this.currentPautaOwnerId) {
+                                showNotification("O dono da pauta não pode ser removido!", "error");
+                                return;
+                            }
+
                             const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                             await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
-                            showNotification(`Membro ${email} removido`, "success");
+                            showNotification(`Membro ${email} removido com sucesso.`, "success");
+                            
                             if (typeof ModalService?.openMembersModal === 'function') {
                                 await ModalService.openMembersModal(this);
                             }
                         }
                     } catch (error) {
+                        console.error("Erro ao remover membro:", error);
                         showNotification("Erro ao remover membro", "error");
                     }
                 }

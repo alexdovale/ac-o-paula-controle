@@ -1,5 +1,5 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com todas as funções originais e melhorias para compatibilidade)
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com sortAguardando limpa)
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
@@ -218,8 +218,8 @@ export const PautaService = {
                 distributionHistory: assistedData.distributionHistory || []
             };
 
-            const attendanceRef = collection(db, pautaId, "attendances"); // Corrigido escopo de referência genérico se necessário, mantendo compatibilidade
-            const docRef = await addDoc(collection(db, "pautas", pautaId, "attendances"), newAssisted);
+            const attendanceRef = collection(db, "pautas", pautaId, "attendances"); 
+            const docRef = await addDoc(attendanceRef, newAssisted);
 
             await logAction(
                 db,
@@ -351,7 +351,7 @@ export const PautaService = {
                     ]
                 );
             } else {
-                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados updated';
+                const action = updates.status ? `Status alterado para: ${updates.status}` : 'Dados atualizados';
                 showNotification(action, "success");
             }
 
@@ -417,7 +417,7 @@ export const PautaService = {
                     tokenSeguro            
                 );
             } else {
-                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status updated apenas no painel.");
+                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
                 showNotification("Colaborador sem e-mail. Notificação digital não enviada.", "warning");
             }
 
@@ -440,6 +440,28 @@ export const PautaService = {
             if (!assisted) {
                 showNotification("Assistido não encontrado", "error");
                 return false;
+            }
+
+            // CONTADOR DA PROPORÇÃO 3x1 
+            let eAtrasado = false;
+            if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
+                const [h, m] = assisted.scheduledTime.split(':').map(Number);
+                const schedDate = new Date();
+                schedDate.setHours(h, m, 0, 0);
+                const arrDate = new Date(assisted.arrivalTime);
+                eAtrasado = arrDate > new Date(schedDate.getTime() + 15 * 60000); // 15 min de tolerância
+            }
+
+            try {
+                await updateDoc(doc(app.db, "pautas", app.currentPauta.id), {
+                    [`stats.${eAtrasado ? 'atrasados' : 'pontuais'}`]: increment(1)
+                });
+                
+                if (!app.currentPautaData.stats) app.currentPautaData.stats = { pontuais: 0, atrasados: 0 };
+                if (eAtrasado) app.currentPautaData.stats.atrasados++;
+                else app.currentPautaData.stats.pontuais++;
+            } catch (e) {
+                console.warn("Aviso: Falha ao salvar contador de estatísticas 3x1.", e);
             }
 
             const updates = {
@@ -529,7 +551,9 @@ export const PautaService = {
             return;
         }
 
-        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento);
+        const statsDaPauta = app.currentPautaData?.stats || { pontuais: 0, atrasados: 0 };
+        
+        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento, statsDaPauta);
         const nextAssisted = orderedList[0];
 
         if (!nextAssisted) {
@@ -833,57 +857,57 @@ export const PautaService = {
         return 'Média';
     },
 
-    sortAguardando(list, orderType) {
+    // FUNÇÃO SORT LIMPA (sem comentários extras)
+    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
-        
-        if (orderType === 'manual') {
-            return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        }
-        
-        if (orderType === 'chegada') {
-            return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        }
 
+        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+        if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
+
+        const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
 
-        const isPontual = (item) => {
-            if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return true;
-            
-            try {
-                const [sHours, sMins] = item.scheduledTime.split(':').map(Number);
-                const schedDate = new Date(item.arrivalTime);
-                schedDate.setHours(sHours, sMins, 0, 0);
-                schedDate.setMinutes(schedDate.getMinutes() + TOLERANCIA_MINUTOS);
-
-                const arrDate = new Date(item.arrivalTime);
-                return arrDate <= schedDate;
-            } catch (e) {
-                return true;
-            }
+        const isAtrasado = (item) => {
+            if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
+            const [h, m] = item.scheduledTime.split(':').map(Number);
+            const schedDate = new Date(new Date().setHours(h, m, 0, 0));
+            const arrDate = new Date(item.arrivalTime);
+            return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
         return [...list].sort((a, b) => {
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            if (a.type === 'agendamento' && b.type === 'avulso') return -1;
-            if (a.type === 'avulso' && b.type === 'agendamento') return 1;
-
-            const pontualA = isPontual(a);
-            const pontualB = isPontual(b);
-
-            if (pontualA && !pontualB) return -1;
-            if (!pontualA && pontualB) return 1;
-
-            if (pontualA && pontualB) {
-                if (a.scheduledTime && b.scheduledTime && a.scheduledTime !== b.scheduledTime) {
-                    return a.scheduledTime.localeCompare(b.scheduledTime);
+            if (orderType === 'proporcional') {
+                const atrasadoA = isAtrasado(a);
+                const atrasadoB = isAtrasado(b);
+                if (atrasadoA !== atrasadoB) {
+                    const deveChamarAtrasado = (stats.pontuais % 3 === 0) && stats.pontuais > 0;
+                    return deveChamarAtrasado ? (atrasadoA ? -1 : 1) : (atrasadoA ? 1 : -1);
                 }
             }
 
-            const arrivalA = a.checkInOrder || 0;
-            const arrivalB = b.checkInOrder || 0;
-            return arrivalA - arrivalB;
+            if (orderType === 'aging') {
+                const esperaA = agora - (a.checkInOrder || agora);
+                const esperaB = agora - (b.checkInOrder || agora);
+                if (esperaA > 3600000) return -1;
+                if (esperaB > 3600000) return 1;
+            }
+
+            if (orderType === 'fim_turno') {
+                const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
+                const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
+                if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
+            }
+
+            if (orderType === 'flexivel' || orderType === 'padrao') {
+                const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
+                const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
+                return (horaA || '').localeCompare(horaB || '');
+            }
+
+            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
         });
     },
 
@@ -908,6 +932,8 @@ export const PautaService = {
             
             window.sortableAguardando = new Sortable(el, {
                 animation: isMobile ? 200 : 300,
+                delay: isMobile ? 250 : 0,
+                delayOnTouchOnly: true,
                 ghostClass: 'opacity-20',
                 chosenClass: 'ring-2',
                 dragClass: 'scale-95',
@@ -1127,9 +1153,6 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
         }
 
-        // ============================================================
-        // TRATAMENTO DA ATIVAÇÃO DE VALIDAÇÃO DO SISTEMA VERDE (CORRIGIDO)
-        // ============================================================
         if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
             e.stopPropagation();
             

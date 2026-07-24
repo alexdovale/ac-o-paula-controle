@@ -5,6 +5,7 @@
  * - Logo SIGEP no cabeçalho + Função Anti-CORS
  * - Tabelas inteligentes para não sobrepor textos
  * - Ordenação Hierárquica: Defensores primeiro, Servidores depois.
+ * - Disponibilidade total dos colaboradores (mesmo após 7 dias)
  */
 
 const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
@@ -67,11 +68,9 @@ export const StatisticsService = {
 
     // Função auxiliar para desenhar o Cabeçalho SIGEP com Logo
     async drawSigepHeader(doc, margin, startY) {
-        // Tenta carregar a logo
         const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
         if (logoBase64) {
             try {
-                // Alinha a logo à direita
                 doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - margin - 35, startY - 15, 35, 35);
             } catch(e) {}
         }
@@ -86,7 +85,7 @@ export const StatisticsService = {
         doc.setFont("helvetica", "normal");
         doc.text("Sistema de Gerenciamento de Pauta", margin, startY + 12);
         
-        return startY + 35; // Retorna o novo Y
+        return startY + 35;
     },
 
     showModal(allAssisted, useDelegationFlow, pautaName) {
@@ -111,23 +110,50 @@ export const StatisticsService = {
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // BUSCAR DADOS DOS COLABORADORES DO SISTEMA
+        // BUSCAR DADOS DOS COLABORADORES DE FORMA TOTALMENTE ABRANGENTE
         let todosColaboradores = [];
-        if (window.app && window.app.colaboradores) {
+        
+        // 1. Tenta pegar da pauta atual se estiver armazenada no app
+        if (window.app && window.app.currentPautaData && window.app.currentPautaData.colaboradores) {
+            todosColaboradores = window.app.currentPautaData.colaboradores;
+        } 
+        
+        // 2. Se não achar na pauta, pega do escopo global do app
+        if (todosColaboradores.length === 0 && window.app && window.app.colaboradores) {
             todosColaboradores = window.app.colaboradores;
-        } else {
+        } 
+        
+        // 3. Se ainda estiver vazio, busca no localStorage de segurança
+        if (todosColaboradores.length === 0) {
             const stored = localStorage.getItem('sigap_colaboradores');
             if (stored) {
                 try { todosColaboradores = JSON.parse(stored); } catch (e) {}
             }
         }
+
+        // 4. Fallback final: Extrai dinamicamente todos os atendentes únicos que já apareceram nos atendimentos da pauta
+        atendidos.forEach(a => {
+            const rawAtt = a.attendedBy || a.attendant;
+            if (rawAtt) {
+                const nomeExtraido = typeof rawAtt === 'object' ? (rawAtt.nome || rawAtt.name) : String(rawAtt);
+                if (nomeExtraido && !todosColaboradores.some(c => c.nome.toLowerCase() === nomeExtraido.toLowerCase())) {
+                    todosColaboradores.push({
+                        id: 'extracted_' + Math.random(),
+                        nome: nomeExtraido.trim(),
+                        cargo: 'Atendente',
+                        equipe: rawAtt.equipe || '1'
+                    });
+                }
+            }
+        });
         
         const colaboradoresPorEquipe = {};
         const mapaNomeParaEquipe = {};
         
         todosColaboradores.forEach(col => {
             const equipe = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
-            const nomeNormalizado = col.nome.trim();
+            const nomeNormalizado = (col.nome || '').trim();
+            if (!nomeNormalizado) return;
             
             mapaNomeParaEquipe[nomeNormalizado] = equipe;
             
@@ -135,11 +161,14 @@ export const StatisticsService = {
                 colaboradoresPorEquipe[equipe] = [];
             }
             
-            colaboradoresPorEquipe[equipe].push({
-                nome: nomeNormalizado,
-                cargo: col.cargo || 'Sem cargo',
-                id: col.id
-            });
+            // Evita duplicatas na mesma equipe
+            if (!colaboradoresPorEquipe[equipe].some(c => c.nome.toLowerCase() === nomeNormalizado.toLowerCase())) {
+                colaboradoresPorEquipe[equipe].push({
+                    nome: nomeNormalizado,
+                    cargo: col.cargo || 'Sem cargo',
+                    id: col.id || Math.random()
+                });
+            }
         });
 
         const statsByGroup = {};
@@ -310,7 +339,6 @@ export const StatisticsService = {
                 colaboradoresCompletos.push({ nome: col.nome, atendimentos: atendimentos, cargo: col.cargo });
             });
             
-            // ORDENAÇÃO NA TELA
             const sortedColaboradoresUI = this.sortCollaboratorsByRole(colaboradoresCompletos);
             
             const collaboratorsRows = sortedColaboradoresUI.map(({nome, atendimentos, cargo}) => `
@@ -680,9 +708,6 @@ export const StatisticsService = {
         }
     },
 
-    // =========================================================================
-    // EXPORTAÇÃO COMPLETA POR EQUIPE
-    // =========================================================================
     async exportEquipesPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
@@ -691,7 +716,6 @@ export const StatisticsService = {
         const margin = 40;
 
         let yPos = margin;
-        
         yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
@@ -703,7 +727,6 @@ export const StatisticsService = {
         doc.setFontSize(12);
         doc.setTextColor(100);
         doc.setFont("helvetica", "normal");
-        
         const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
         doc.text(splitTitle, margin, yPos);
         yPos += (splitTitle.length * 15);
@@ -768,9 +791,6 @@ export const StatisticsService = {
         doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
-    // =========================================================================
-    // EXPORTAÇÃO GRUPO (APENAS LISTA DE MEMBROS)
-    // =========================================================================
     async exportGrupoPDF(pautaName, dados) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
@@ -779,7 +799,6 @@ export const StatisticsService = {
         const margin = 40;
 
         let yPos = margin;
-        
         yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
@@ -842,9 +861,6 @@ export const StatisticsService = {
         doc.save(`grupo_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
-    // =========================================================================
-    // EXPORTAÇÃO DETALHADA (LISTA DE ASSISTIDOS POR EQUIPE)
-    // =========================================================================
     async exportDetailedStatisticsPDF(pautaName, detalhesData) {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
@@ -853,7 +869,6 @@ export const StatisticsService = {
         const margin = 40;
 
         let yPos = margin;
-        
         yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
@@ -924,9 +939,6 @@ export const StatisticsService = {
         doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
-    // =========================================================================
-    // EXPORTAÇÃO RESUMO GERAL
-    // =========================================================================
     async exportStatisticsToPDF(pautaName, statsData) {
         const { jsPDF } = window.jspdf;
         
@@ -943,7 +955,6 @@ export const StatisticsService = {
         const margin = 40;
         
         let yPos = margin;
-        
         yPos = await this.drawSigepHeader(doc, margin, yPos);
 
         doc.setFontSize(16);
@@ -1152,4 +1163,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) => {
 
 window.StatisticsService = StatisticsService;
 
-console.log("✅ estatisticas.js carregado com sucesso (Logo SIGEP adicionada e CORS contornado)!");
+console.log("✅ estatisticas.js carregado com sucesso (Colaboradores garantidos mesmo após 7 dias)!");

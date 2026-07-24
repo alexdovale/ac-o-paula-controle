@@ -13,7 +13,7 @@ import { ROUTES } from './router.js';
 const TEMPLATES_KEY = 'sigep_pauta_templates';
 
 const DEFAULTS = {
-    ordemAtendimento: 'padrao',
+    ordemAtendimento: 'flexivel', // <-- AGORA O PADRÃO É O FLEXÍVEL (ENCAIXE)
     useDelegationFlow: false,
     useDistributionFlow: false,
     type: 'agendamento',
