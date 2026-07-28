@@ -858,15 +858,21 @@ export const PautaService = {
     },
 
     // FUNÇÃO SORT LIMPA (sem comentários extras)
+     // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
     sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
+        // 1. MODO MANUAL
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+        
+        // 2. MODO ORDEM DE CHEGADA
         if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
 
         const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
+        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; // 45 minutos de espera na recepção
 
+        // Valida se está atrasado (> 15 min do horário marcado)
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
             const [h, m] = item.scheduledTime.split(':').map(Number);
@@ -875,10 +881,18 @@ export const PautaService = {
             return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
+        // Valida se está esperando muito tempo na recepção
+        const isEsperandoMuito = (item) => {
+            if (!item.checkInOrder) return false;
+            return (agora - item.checkInOrder) > TEMPO_ESPERA_ALERTA_MS;
+        };
+
         return [...list].sort((a, b) => {
+            // Regra Universal: Prioridade URGENTE sempre fura a fila
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
+            // 3. MODO PROPORCIONAL (3x1)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -888,6 +902,7 @@ export const PautaService = {
                 }
             }
 
+            // 4. MODO AGING (Perdão por tempo de espera > 60 min)
             if (orderType === 'aging') {
                 const esperaA = agora - (a.checkInOrder || agora);
                 const esperaB = agora - (b.checkInOrder || agora);
@@ -895,18 +910,30 @@ export const PautaService = {
                 if (esperaB > 3600000) return 1;
             }
 
+            // 5. MODO FIM DO TURNO (Protege a troca Manhã/Tarde às 13h)
             if (orderType === 'fim_turno') {
                 const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
                 const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            if (orderType === 'flexivel' || orderType === 'padrao') {
+            // ==========================================
+            // GERA AS FLAGS DE ALERTA NO ITEM 
+            // (Para o ui.js saber quem pisca em vermelho ou amarelo)
+            // ==========================================
+            a._alertaAtraso = isAtrasado(a);
+            a._alertaEspera = isEsperandoMuito(a);
+            b._alertaAtraso = isAtrasado(b);
+            b._alertaEspera = isEsperandoMuito(b);
+
+            // 6. MODO FLEXÍVEL COM ALERTAS (PISCA-ALERTA) E FLEXÍVEL PADRÃO
+            if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
                 const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
                 const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
                 return (horaA || '').localeCompare(horaB || '');
             }
 
+            // Desempate de segurança: Hora da agenda ou ordem de check-in
             return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
         });
     },
