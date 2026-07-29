@@ -859,32 +859,53 @@ export const PautaService = {
 
     // FUNÇÃO SORT LIMPA (sem comentários extras)
      // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
-    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
+        sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
+
+        const agora = Date.now();
+        const TOLERANCIA_MINUTOS = 15;
+        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; // 45 minutos
+
+        // ==========================================
+        // REGRA UNIVERSAL DE CHEGADA: 
+        // Prioriza 100% a hora digitada na tela (arrivalTime). 
+        // Se não houver, usa a hora do clique.
+        // ==========================================
+        const getTempoChegada = (item) => {
+            if (item.arrivalTime) {
+                return new Date(item.arrivalTime).getTime();
+            }
+            return item.checkInOrder || agora;
+        };
 
         // 1. MODO MANUAL
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         
-        // 2. MODO ORDEM DE CHEGADA
-        if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-
-        const agora = Date.now();
-        const TOLERANCIA_MINUTOS = 15;
-        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; // 45 minutos de espera na recepção
+        // 2. MODO ORDEM DE CHEGADA (Agora respeita a hora digitada e não apenas o botão)
+        if (orderType === 'chegada') {
+            return [...list].sort((a, b) => {
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                return getTempoChegada(a) - getTempoChegada(b);
+            });
+        }
 
         // Valida se está atrasado (> 15 min do horário marcado)
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
+            
             const [h, m] = item.scheduledTime.split(':').map(Number);
-            const schedDate = new Date(new Date().setHours(h, m, 0, 0));
             const arrDate = new Date(item.arrivalTime);
+            
+            const schedDate = new Date(arrDate);
+            schedDate.setHours(h, m, 0, 0);
+
             return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
-        // Valida se está esperando muito tempo na recepção
+        // Valida se está esperando muito tempo na recepção (Usando a regra universal)
         const isEsperandoMuito = (item) => {
-            if (!item.checkInOrder) return false;
-            return (agora - item.checkInOrder) > TEMPO_ESPERA_ALERTA_MS;
+            return (agora - getTempoChegada(item)) > TEMPO_ESPERA_ALERTA_MS;
         };
 
         return [...list].sort((a, b) => {
@@ -902,10 +923,10 @@ export const PautaService = {
                 }
             }
 
-            // 4. MODO AGING (Perdão por tempo de espera > 60 min)
+            // 4. MODO AGING (Perdão por tempo > 60 min, usando a regra universal)
             if (orderType === 'aging') {
-                const esperaA = agora - (a.checkInOrder || agora);
-                const esperaB = agora - (b.checkInOrder || agora);
+                const esperaA = agora - getTempoChegada(a);
+                const esperaB = agora - getTempoChegada(b);
                 if (esperaA > 3600000) return -1;
                 if (esperaB > 3600000) return 1;
             }
@@ -918,8 +939,7 @@ export const PautaService = {
             }
 
             // ==========================================
-            // GERA AS FLAGS DE ALERTA NO ITEM 
-            // (Para o ui.js saber quem pisca em vermelho ou amarelo)
+            // GERA AS FLAGS DE ALERTA NO ITEM
             // ==========================================
             a._alertaAtraso = isAtrasado(a);
             a._alertaEspera = isEsperandoMuito(a);
@@ -933,10 +953,11 @@ export const PautaService = {
                 return (horaA || '').localeCompare(horaB || '');
             }
 
-            // Desempate de segurança: Hora da agenda ou ordem de check-in
-            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
+            // 7. DESEMPATE FINAL: Hora da agenda ou (agora blindado) a HORA REAL DIGITADA da chegada
+            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (getTempoChegada(a) - getTempoChegada(b));
         });
     },
+
 
     getPriorityClass(priority) {
         const classes = {
