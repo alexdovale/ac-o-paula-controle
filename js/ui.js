@@ -684,8 +684,15 @@ export const UIService = {
             }
         }
 
-        setTimeout(() => { if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); }, 100);
+        setTimeout(() => { 
+            if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); 
+            
+            // INICIA OS BOTÕES DE DUAS TELAS
+            this.setupColumnControls(app); 
+            this.applyPopoutMode(); 
+        }, 100);
     },
+
 
     getSearchTerms() {
         return {
