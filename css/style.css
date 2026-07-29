@@ -1820,4 +1820,88 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             animation: piscaAlertaVermelho 1s infinite;
         }
 
+/* ========================================= */
+        /* MODOS DE FOCO: MAXIMIZAR E DESENCAIXAR    */
+        /* ========================================= */
+        
+        /* 1. Estado Maximizado na mesma tela */
+        .column-maximized {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            z-index: 99999 !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            background-color: #e2e8f0 !important; /* Fundo mais escuro para focar nos cards */
+        }
+        
+        .column-maximized > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            height: 100% !important;
+            max-height: none !important;
+            align-content: start;
+        }
+
+        /* 2. Estado Pop-out (Nova Janela na Tela 2) */
+        body.is-popout {
+            background-color: #e2e8f0 !important;
+            overflow: hidden !important;
+        }
+        body.is-popout > *:not(#main-wrapper) { display: none !important; }
+        body.is-popout #main-wrapper { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+        
+        /* Esconde tudo que não for a lista (cabeçalhos, rodapés, botões) */
+        body.is-popout #app-container > header,
+        body.is-popout #form-agendamento,
+        body.is-popout .mt-6.flex.justify-center,
+        body.is-popout #toggle-faltosos-btn,
+        body.is-popout #main-footer,
+        body.is-popout .border-b.overflow-x-auto {
+            display: none !important;
+        }
+        
+        body.is-popout #main-content { display: block !important; height: 100vh !important; }
+        body.is-popout .column-wrapper-base { display: none !important; }
+        
+        /* Estica a coluna escolhida */
+        body.is-popout .column-wrapper-base.popout-active {
+            display: flex !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+        }
+        
+        body.is-popout .column-wrapper-base.popout-active > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            align-content: start;
+        }
+
+        /* Corrige os espaçamentos do Tailwind quando vira Grid */
+        .column-maximized > div.column-content > *,
+        body.is-popout .column-wrapper-base.popout-active > div.column-content > * {
+            margin-top: 0 !important;
+        }
+
+        /* Esconde os botões de maximizar dentro da janela que já está desencaixada */
+        body.is-popout .btn-maximize, 
+        body.is-popout .btn-popout {
+            display: none !important; 
+        }
+
     <style>
