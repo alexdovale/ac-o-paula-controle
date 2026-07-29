@@ -102,6 +102,88 @@
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========================================= */
+        /* MODOS DE FOCO: MAXIMIZAR E DESENCAIXAR    */
+        /* ========================================= */
+        
+        /* 1. Estado Maximizado na mesma tela */
+        .column-maximized {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            z-index: 99999 !important;
+            border-radius: 0 !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+            background-color: #e2e8f0 !important;
+        }
+        
+        .column-maximized > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            height: 100% !important;
+            max-height: none !important;
+            align-content: start;
+        }
+
+        /* 2. Estado Pop-out (Nova Janela na Tela 2) */
+        body.is-popout {
+            background-color: #e2e8f0 !important;
+            overflow: hidden !important;
+        }
+        body.is-popout > *:not(#main-wrapper) { display: none !important; }
+        body.is-popout #main-wrapper { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
+        
+        /* Esconde tudo que não for a lista (cabeçalhos, rodapés, botões) */
+        body.is-popout #app-container > header,
+        body.is-popout #form-agendamento,
+        body.is-popout .mt-6.flex.justify-center,
+        body.is-popout #toggle-faltosos-btn,
+        body.is-popout #main-footer,
+        body.is-popout .border-b.overflow-x-auto {
+            display: none !important;
+        }
+        
+        body.is-popout #main-content { display: block !important; height: 100vh !important; }
+        body.is-popout .column-wrapper-base { display: none !important; }
+        
+        /* Estica a coluna escolhida */
+        body.is-popout .column-wrapper-base.popout-active {
+            display: flex !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            max-height: 100vh !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+            margin: 0 !important;
+            padding: 1.5rem !important;
+        }
+        
+        body.is-popout .column-wrapper-base.popout-active > div.column-content {
+            display: grid !important;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)) !important;
+            gap: 1rem !important;
+            padding: 1rem 0 !important;
+            max-height: none !important;
+            overflow-y: auto !important;
+            align-content: start;
+        }
+
+        .column-maximized > div.column-content > *,
+        body.is-popout .column-wrapper-base.popout-active > div.column-content > * {
+            margin-top: 0 !important;
+        }
+
+        body.is-popout .btn-maximize, 
+        body.is-popout .btn-popout {
+            display: none !important; 
+        }
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -864,120 +946,9 @@
     </div>
 
     <!-- RECIPIENTE DE MODAIS -->
-    <div id="modals-container">
-        <!-- ============================================================ -->
-        <!-- MODAL DE GERENCIAMENTO DE COLABORADORES (INTEGRADO AO SIGEP) -->
-        <!-- ============================================================ -->
-        <div id="collaborators-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl mx-4 overflow-hidden flex flex-col max-h-[90vh]">
-                <!-- Cabeçalho do Modal -->
-                <div class="bg-gradient-to-r from-green-600 to-emerald-600 px-6 py-4 flex justify-between items-center flex-between">
-                    <h3 class="text-white font-bold text-lg flex items-center gap-2">🧑‍💼 Gerenciar Equipe da Pauta</h3>
-                    <button onclick="document.getElementById('collaborators-modal').classList.add('hidden')" class="text-white hover:text-gray-200 text-2xl font-semibold">&times;</button>
-                </div>
+    <div id="modals-container"></div>
 
-                <!-- Corpo do Modal (Scrollable) -->
-                <div class="p-6 overflow-y-auto flex-1 scrollable-content grid grid-cols-1 lg:grid-cols-3 gap-6">
-                    <!-- Formulário de Cadastro/Edição -->
-                    <div class="lg:col-span-1 bg-slate-50 p-4 rounded-xl border border-slate-200 h-fit space-y-4">
-                        <h4 class="font-bold text-slate-700 text-sm uppercase tracking-wide border-b pb-2">Inscrição de Membro</h4>
-                        <form id="collaborator-form-modal" class="space-y-3" onsubmit="event.preventDefault();">
-                            
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Cargo/Função</label>
-                                <select id="collaborator-role-modal" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                                    <option value="Defensor(a)">Defensor(a)</option>
-                                    <option value="Servidor(a)">Servidor(a)</option>
-                                    <option value="Estagiário(a)">Estagiário(a)</option>
-                                    <option value="Residente">Residente</option>
-                                    <option value="Colaborador(a)">Colaborador(a)</option>
-                                </select>
-                            </div>
-
-                            <div>
-                                <label id="label-identificador-modal" class="block text-xs font-semibold text-slate-600 mb-1">Matrícula</label>
-                                <!-- CONTAINER FLEX COM OS BOTÕES DE BUSCA E LISTAGEM MASTER -->
-                                <div class="flex gap-1.5">
-                                    <input type="text" id="collaborator-identificador-modal" placeholder="Digite o ID ou Matrícula" class="flex-1 p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                                    <button type="button" id="buscar-master-btn" class="bg-slate-200 hover:bg-slate-300 p-2.5 rounded-lg text-sm transition-colors" title="Buscar Direto">🔍</button>
-                                    <button type="button" 
-                                            id="listar-master-btn" 
-                                            onclick="window.CollaboratorService.abrirModalListagemMaster(window.app)" 
-                                            class="bg-violet-100 text-violet-700 hover:bg-violet-200 px-3 rounded-lg font-bold text-xs transition-colors flex items-center gap-1" 
-                                            title="Ver todos existentes no sistema">
-                                        📋 <span>Todos</span>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Nome Completo</label>
-                                <input type="text" id="collaborator-name-modal" placeholder="Nome do membro" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Equipe / Setor de Destino</label>
-                                <select id="collaborator-team-modal" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none"></select>
-                            </div>
-
-                            <div class="grid grid-cols-2 gap-2">
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">Telefone</label>
-                                    <input type="text" id="collaborator-phone-modal" placeholder="(21) 9____-____" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                                </div>
-                                <div>
-                                    <label class="block text-xs font-semibold text-slate-600 mb-1">E-mail</label>
-                                    <input type="email" id="collaborator-email-modal" placeholder="nome@dprj.def.br" class="w-full p-2.5 bg-white border border-slate-200 rounded-lg text-sm focus:ring-2 focus:ring-green-500 outline-none">
-                                </div>
-                            </div>
-
-                            <div>
-                                <label class="block text-xs font-semibold text-slate-600 mb-1">Meio de Transporte</label>
-                                <div class="flex items-center gap-4 mt-1 bg-white p-2.5 border border-slate-200 rounded-lg text-xs">
-                                    <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Meios Próprios" checked class="text-green-600 focus:ring-green-500"> Próprio</label>
-                                    <label class="flex items-center gap-1.5 cursor-pointer"><input type="radio" name="transporte-colaborador" value="Van/Carro Oficial" class="text-green-600 focus:ring-green-500"> Oficial</label>
-                                </div>
-                            </div>
-
-                            <button type="button" id="add-collaborator-btn-modal" onclick="CollaboratorService.saveCollaborator(window.app)" class="w-full bg-green-600 text-white font-black py-3.5 rounded-xl hover:bg-green-700 transition shadow-lg uppercase tracking-widest text-xs mt-2">
-                                ➕ Adicionar à Equipe
-                            </button>
-                        </form>
-                    </div>
-
-                    <!-- Listagem Atual dos Membros da Pauta -->
-                    <div class="lg:col-span-2 flex flex-col space-y-3">
-                        <div class="flex flex-wrap justify-between items-center gap-2 bg-slate-100 p-3 rounded-xl border border-slate-200 text-xs text-slate-600 font-medium">
-                            <div>👥 Total: <span id="total-participants-count" class="font-bold text-slate-800">0</span></div>
-                            <div>🚗 Carro Oficial: <span id="company-transport-count" class="font-bold text-slate-800">0</span></div>
-                            <div>🚲 Meios Próprios: <span id="self-transport-count" class="font-bold text-slate-800">0</span></div>
-                        </div>
-
-                        <div id="collaborators-list-table-modal" class="overflow-x-auto rounded-xl border border-slate-200 bg-white">
-                            <table class="w-full text-left border-collapse">
-                                <thead>
-                                    <tr class="bg-slate-50 border-b border-slate-200 text-slate-400 font-bold uppercase tracking-wider text-[10px]">
-                                        <th class="p-3">Membro</th>
-                                        <th class="p-3 text-center">Presença</th>
-                                        <th class="p-3 hidden md:table-cell">Cargo</th>
-                                        <th class="p-3 text-center">Horário</th>
-                                        <th class="p-3 text-center">Ações</th>
-                                    </tr>
-                                </thead>
-                                <tbody class="text-slate-700 text-xs">
-                                    <!-- Injetado dinamicamente -->
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- ============================================================ -->
-    <!-- MODAL DE SELEÇÃO DE COLABORADORES                             -->
-    <!-- ============================================================ -->
+    <!-- SELECT COLLABORATOR MODAL -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-blue-600 to-blue-700">
@@ -1004,9 +975,7 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL DE CONFIRMAÇÃO DE ATENDENTE (para fluxo direto)         -->
-    <!-- ============================================================ -->
+    <!-- MODAL DE CONFIRMAÇÃO DE ATENDENTE -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-green-600 to-green-700">
@@ -1026,9 +995,7 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL DE EDIÇÃO DE ATENDENTE                                  -->
-    <!-- ============================================================ -->
+    <!-- MODAL DE EDIÇÃO DE ATENDENTE -->
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-sm w-full shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-amber-600 to-amber-700">
@@ -1048,9 +1015,7 @@
         </div>
     </div>
 
-    <!-- ============================================================ -->
-    <!-- MODAL DE EDIÇÃO DE ASSISTIDO                                 -->
-    <!-- ============================================================ -->
+    <!-- MODAL DE EDIÇÃO DE ASSISTIDO -->
     <div id="edit-assisted-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
             <div class="p-4 border-b bg-gradient-to-r from-slate-600 to-slate-700">
@@ -1074,9 +1039,6 @@
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
 
-    <!-- ===================================================== -->
-    <!-- CORREÇÃO UNIVERSAL DOS BOTÕES DE UPLOAD (CSV e ÓRGÃOS) -->
-    <!-- ===================================================== -->
     <script>
         (function() {
             function garantirInputCSV() {
