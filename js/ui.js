@@ -1876,4 +1876,106 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     }
 
+    // ============================================================
+    // MODO FOCO: MAXIMIZAR E DESENCAIXAR COLUNAS (DUAS TELAS)
+    // ============================================================
+    applyPopoutMode() {
+        const urlParams = new URLSearchParams(window.location.search);
+        const popoutCol = urlParams.get('popout');
+        
+        if (popoutCol) {
+            document.body.classList.add('is-popout');
+            document.title = `SIGEP - Monitor de Fila: ${popoutCol.toUpperCase()}`;
+
+            setTimeout(() => {
+                const cols = [
+                    document.getElementById('pauta-column'),
+                    document.getElementById('aguardando-count')?.closest('.bg-white.rounded-lg.shadow-md.flex.flex-col'),
+                    document.getElementById('em-atendimento-column'),
+                    document.getElementById('distribuicao-column'),
+                    document.getElementById('atendidos-column'),
+                    document.getElementById('faltosos-column')
+                ];
+                
+                const names = ['pauta', 'aguardando', 'em-atendimento', 'distribuicao', 'atendidos', 'faltosos'];
+                
+                cols.forEach((col, index) => {
+                    if (col) {
+                        col.classList.add('column-wrapper-base');
+                        if (names[index] === popoutCol) {
+                            col.classList.add('popout-active');
+                            col.classList.remove('hidden');
+                        }
+                    }
+                });
+            }, 300);
+        }
+    },
+
+    setupColumnControls(app) {
+        // Se a tela já for a desencaixada, não insere botões de novo
+        if (document.body.classList.contains('is-popout')) return;
+
+        const columns = [
+            { colId: 'pauta-column', titleId: 'pauta-count', popoutId: 'pauta' },
+            { colId: document.getElementById('aguardando-count')?.closest('.bg-white.rounded-lg.shadow-md.flex.flex-col'), titleId: 'aguardando-count', popoutId: 'aguardando' },
+            { colId: 'em-atendimento-column', titleId: 'em-atendimento-count', popoutId: 'em-atendimento' },
+            { colId: 'distribuicao-column', titleId: 'distribuicao-count', popoutId: 'distribuicao' },
+            { colId: 'atendidos-column', titleId: 'atendidos-count', popoutId: 'atendidos' },
+            { colId: 'faltosos-column', titleId: 'faltosos-count', popoutId: 'faltosos' }
+        ];
+
+        columns.forEach(col => {
+            const container = typeof col.colId === 'string' ? document.getElementById(col.colId) : col.colId;
+            const countBadge = document.getElementById(col.titleId);
+            
+            if (container && countBadge && !container.hasAttribute('data-controls-added')) {
+                container.setAttribute('data-controls-added', 'true');
+                container.classList.add('column-wrapper-base');
+                
+                const headerFlex = countBadge.parentElement; 
+                
+                const btnGroup = document.createElement('div');
+                btnGroup.className = 'flex items-center gap-1 ml-auto pl-2 flex-shrink-0';
+                btnGroup.innerHTML = `
+                    <button class="btn-maximize bg-slate-200 hover:bg-slate-300 text-slate-700 p-1.5 rounded-md transition-colors shadow-sm" title="Maximizar na Tela Atual">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>
+                    </button>
+                    <button class="btn-popout bg-blue-100 hover:bg-blue-200 text-blue-700 p-1.5 rounded-md transition-colors shadow-sm" title="Desencaixar (Arraste para Monitor 2)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.5 13A1.5 1.5 0 0 0 3 14.5h8a1.5 1.5 0 0 0 1.5-1.5V9a.5.5 0 0 0-1 0v4a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 0 0-1H3A1.5 1.5 0 0 0 1.5 5v8zm7-11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V2.5H9a.5.5 0 0 1-.5-.5z"/><path fill-rule="evenodd" d="M14.354 1.646a.5.5 0 0 1 0 .708l-8 8a.5.5 0 0 1-.708-.708l8-8a.5.5 0 0 1 .708 0z"/></svg>
+                    </button>
+                `;
+
+                headerFlex.appendChild(btnGroup);
+
+                // Lógica de Maximizar (Tela Cheia local)
+                btnGroup.querySelector('.btn-maximize').onclick = (e) => {
+                    e.stopPropagation();
+                    const isMax = container.classList.contains('column-maximized');
+                    
+                    // Fecha qualquer outra que esteja maximizada
+                    document.querySelectorAll('.column-maximized').forEach(el => el.classList.remove('column-maximized'));
+                    
+                    if (!isMax) {
+                        container.classList.add('column-maximized');
+                        document.body.style.overflow = 'hidden'; 
+                    } else {
+                        container.classList.remove('column-maximized');
+                        document.body.style.overflow = '';
+                    }
+                };
+
+                // Lógica de Desencaixar (Abre Janela Separada)
+                btnGroup.querySelector('.btn-popout').onclick = (e) => {
+                    e.stopPropagation();
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('popout', col.popoutId);
+                    
+                    // Abre a janela limpa e pronta para ser jogada pro Monitor 2
+                    window.open(url.toString(), '_blank', 'width=1200,height=800,left=150,top=100');
+                };
+            }
+        });
+    }
+
 }; // Fim do objeto UIService
