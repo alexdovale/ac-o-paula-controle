@@ -120,6 +120,7 @@
             margin: 0 !important;
             padding: 1.5rem !important;
             background-color: #e2e8f0 !important;
+            box-sizing: border-box !important;
         }
         
         .column-maximized > div.column-content {
@@ -130,15 +131,28 @@
             height: 100% !important;
             max-height: none !important;
             align-content: start;
+            overflow-y: auto !important;
         }
 
         /* 2. Estado Pop-out (Nova Janela na Tela 2) */
         body.is-popout {
             background-color: #e2e8f0 !important;
-            overflow: hidden !important;
+            overflow: hidden !important; 
         }
+        
+        /* CORREÇÃO: Força todos os contêineres a usarem 100% do espaço do monitor */
+        body.is-popout #main-wrapper,
+        body.is-popout #app-container,
+        body.is-popout #main-content {
+            max-width: none !important;
+            width: 100% !important;
+            height: 100vh !important;
+            padding: 0 !important;
+            margin: 0 !important;
+            display: block !important;
+        }
+
         body.is-popout > *:not(#main-wrapper) { display: none !important; }
-        body.is-popout #main-wrapper { padding: 0 !important; margin: 0 !important; max-width: 100% !important; }
         
         /* Esconde tudo que não for a lista (cabeçalhos, rodapés, botões) */
         body.is-popout #app-container > header,
@@ -150,19 +164,20 @@
             display: none !important;
         }
         
-        body.is-popout #main-content { display: block !important; height: 100vh !important; }
         body.is-popout .column-wrapper-base { display: none !important; }
         
         /* Estica a coluna escolhida */
         body.is-popout .column-wrapper-base.popout-active {
             display: flex !important;
-            width: 100vw !important;
+            flex-direction: column !important;
+            width: 100% !important;
             height: 100vh !important;
             max-height: 100vh !important;
             border-radius: 0 !important;
             box-shadow: none !important;
             margin: 0 !important;
             padding: 1.5rem !important;
+            box-sizing: border-box !important;
         }
         
         body.is-popout .column-wrapper-base.popout-active > div.column-content {
@@ -173,6 +188,7 @@
             max-height: none !important;
             overflow-y: auto !important;
             align-content: start;
+            flex-grow: 1 !important;
         }
 
         .column-maximized > div.column-content > *,
@@ -184,6 +200,7 @@
         body.is-popout .btn-popout {
             display: none !important; 
         }
+
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
