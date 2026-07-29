@@ -3,7 +3,7 @@ const todosOsModaisHTML = `
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Bem-vindo ao SIGEP</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Para continuar, precisamos da sua confirmação sobre o uso do sistema.</p>
+            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Para continuing, precisamos da sua confirmação sobre o uso do sistema.</p>
             <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label class="flex items-start cursor-pointer group">
                     <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
@@ -290,6 +290,13 @@ const todosOsModaisHTML = `
             <div class="mb-4 sm:mb-6">
                 <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Ordem de Atendimento</h3>
                 <div class="space-y-2">
+                    <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-orange-500">
+                        <input type="radio" name="edit-ordem" value="flexivel_alerta" class="h-4 w-4 text-orange-600 focus:ring-orange-500">
+                        <span class="ml-3">
+                            <span class="font-semibold text-sm sm:text-base">Flexível c/ Alertas (Pisca-Alerta)</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Avisa visualmente atrasos e esperas longas.</span>
+                        </span>
+                    </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
                         <input type="radio" name="edit-ordem" value="flexivel" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
                         <span class="ml-3">
@@ -378,6 +385,14 @@ const todosOsModaisHTML = `
             <p class="text-sm sm:text-base text-gray-600 mb-6">Como a fila de "Aguardando" será organizada no SIGEP?</p>
             <div id="ordem-atendimento-options" class="space-y-3">
                 
+                <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-orange-500">
+                    <input type="radio" name="ordemAtendimento" value="flexivel_alerta" class="h-5 w-5 text-orange-600 focus:ring-orange-500">
+                    <span class="ml-3">
+                        <span class="font-semibold text-gray-800 text-sm sm:text-base">Flexível c/ Alertas (Pisca-Alerta)</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Destaca quem está atrasado (vermelho) ou esperando há muito tempo (amarelo).</span>
+                    </span>
+                </label>
+
                 <label class="flex items-center p-3 sm:p-4 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
                     <input type="radio" name="ordemAtendimento" value="flexivel" class="h-5 w-5 text-blue-600 focus:ring-blue-500" checked>
                     <span class="ml-3">
@@ -930,7 +945,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <div id="policy-content" class="text-sm sm:text-base text-gray-700 space-y-4 overflow-y-auto pr-2 scrollable-content">
                 <p><strong>1. Natureza do Sistema e Ciclo de Vida dos Dados</strong><br>
                 O Sistema de Gerenciamento de Pauta (SIGEP) é uma interface de controle para a gestão de atendimentos. Ele coleta e armazena os dados pessoais de assistidos, como nome, CPF (opcional), assunto e demanda, por um período de sete dias após a finalização da ação. Após esse prazo, os dados são permanentemente excluídos do SIGEP.<br>
-                Para o armazenamento permanente, todos os dados são enviados e salvos no sistema Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
+                Para o armazenamento permanente, todos os dados são enviados e salvos no system Verde, que é de responsabilidade da Defensoria Pública do Estado do Rio de Janeiro (DPERJ) e está em total conformidade com a LGPD.</p>
                 <p><strong>2. Dados Coletados pelo SIGEP</strong><br>
                 Para permitir o uso da interface, o SIGEP coleta apenas os dados de autenticação dos usuários (profissionais): e-mail e senha.</p>
                 <p><strong>3. Tratamento e Proteção de Dados (dentro do SIGEP)</strong><br>
