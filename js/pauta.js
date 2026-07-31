@@ -858,27 +858,62 @@ export const PautaService = {
     },
 
     // FUNÇÃO SORT LIMPA (sem comentários extras)
-    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
+     // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
+        sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
-
-        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        if (orderType === 'chegada') return [...list].sort((a, b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
 
         const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
+        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; // 45 minutos
 
+        // ==========================================
+        // REGRA UNIVERSAL DE CHEGADA: 
+        // Prioriza 100% a hora digitada na tela (arrivalTime). 
+        // Se não houver, usa a hora do clique.
+        // ==========================================
+        const getTempoChegada = (item) => {
+            if (item.arrivalTime) {
+                return new Date(item.arrivalTime).getTime();
+            }
+            return item.checkInOrder || agora;
+        };
+
+        // 1. MODO MANUAL
+        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+        
+        // 2. MODO ORDEM DE CHEGADA (Agora respeita a hora digitada e não apenas o botão)
+        if (orderType === 'chegada') {
+            return [...list].sort((a, b) => {
+                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                return getTempoChegada(a) - getTempoChegada(b);
+            });
+        }
+
+        // Valida se está atrasado (> 15 min do horário marcado)
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
+            
             const [h, m] = item.scheduledTime.split(':').map(Number);
-            const schedDate = new Date(new Date().setHours(h, m, 0, 0));
             const arrDate = new Date(item.arrivalTime);
+            
+            const schedDate = new Date(arrDate);
+            schedDate.setHours(h, m, 0, 0);
+
             return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
+        // Valida se está esperando muito tempo na recepção (Usando a regra universal)
+        const isEsperandoMuito = (item) => {
+            return (agora - getTempoChegada(item)) > TEMPO_ESPERA_ALERTA_MS;
+        };
+
         return [...list].sort((a, b) => {
+            // Regra Universal: Prioridade URGENTE sempre fura a fila
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
+            // 3. MODO PROPORCIONAL (3x1)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -888,28 +923,41 @@ export const PautaService = {
                 }
             }
 
+            // 4. MODO AGING (Perdão por tempo > 60 min, usando a regra universal)
             if (orderType === 'aging') {
-                const esperaA = agora - (a.checkInOrder || agora);
-                const esperaB = agora - (b.checkInOrder || agora);
+                const esperaA = agora - getTempoChegada(a);
+                const esperaB = agora - getTempoChegada(b);
                 if (esperaA > 3600000) return -1;
                 if (esperaB > 3600000) return 1;
             }
 
+            // 5. MODO FIM DO TURNO (Protege a troca Manhã/Tarde às 13h)
             if (orderType === 'fim_turno') {
                 const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
                 const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            if (orderType === 'flexivel' || orderType === 'padrao') {
+            // ==========================================
+            // GERA AS FLAGS DE ALERTA NO ITEM
+            // ==========================================
+            a._alertaAtraso = isAtrasado(a);
+            a._alertaEspera = isEsperandoMuito(a);
+            b._alertaAtraso = isAtrasado(b);
+            b._alertaEspera = isEsperandoMuito(b);
+
+            // 6. MODO FLEXÍVEL COM ALERTAS (PISCA-ALERTA) E FLEXÍVEL PADRÃO
+            if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
                 const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
                 const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
                 return (horaA || '').localeCompare(horaB || '');
             }
 
-            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (a.checkInOrder - b.checkInOrder);
+            // 7. DESEMPATE FINAL: Hora da agenda ou (agora blindado) a HORA REAL DIGITADA da chegada
+            return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (getTempoChegada(a) - getTempoChegada(b));
         });
     },
+
 
     getPriorityClass(priority) {
         const classes = {
