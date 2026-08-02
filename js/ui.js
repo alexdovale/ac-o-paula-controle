@@ -84,9 +84,6 @@ export const UIService = {
         if (currentVal) select.value = currentVal;
     },
 
-    // ============================================================
-    // PRENCHER LISTA COLABORADORES MODAL - CORRIGIDO E BLINDADO
-    // ============================================================
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list') || document.getElementById('collaborators-list-container');
         const searchInput = document.getElementById('collaborator-search-input');
@@ -98,11 +95,9 @@ export const UIService = {
         
         container.innerHTML = '';
         
-        // Limpa seleções anteriores globais
         window.selectedCollaboratorId = null;
         window.selectedCollaboratorName = null;
         
-        // 1. Botão "Não atribuir" (Estilo da imagem)
         const btnNaoAtribuir = document.createElement('button');
         btnNaoAtribuir.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border-2 border-blue-500 rounded-xl hover:bg-blue-50 transition-all shadow-sm flex items-center gap-3";
         btnNaoAtribuir.dataset.nome = 'nao atribuir';
@@ -121,7 +116,6 @@ export const UIService = {
         };
         container.appendChild(btnNaoAtribuir);
 
-        // 2. Verifica se há colaboradores de forma segura
         const colabs = app?.colaboradores || window.app?.colaboradores || [];
 
         if (colabs.length === 0) {
@@ -134,7 +128,6 @@ export const UIService = {
             `;
             container.appendChild(msg);
         } else {
-            // 3. Lista de colaboradores
             colabs.forEach(c => {
                 try {
                     const btn = document.createElement('button');
@@ -164,7 +157,7 @@ export const UIService = {
                     
                     btn.onclick = (e) => {
                         e.stopPropagation();
-                        window.selectedCollaboratorId = c.id || c.nome; // Fallback para ID ou Nome
+                        window.selectedCollaboratorId = c.id || c.nome; 
                         window.selectedCollaboratorName = nomeSeguro;
                         this.destacarSelecao(container, btn);
                     };
@@ -174,7 +167,6 @@ export const UIService = {
             });
         }
 
-        // 4. Configuração da pesquisa (Filtro)
         if (searchInput) {
             const applyFilter = (term) => {
                 const t = (term || '').toLowerCase().trim();
@@ -186,15 +178,14 @@ export const UIService = {
                 });
             };
 
-            // Remove listeners antigos
             const newSearchInput = searchInput.cloneNode(true);
             if(searchInput.parentNode) {
                  searchInput.parentNode.replaceChild(newSearchInput, searchInput);
             }
             
             newSearchInput.addEventListener('input', (e) => applyFilter(e.target.value));
-            newSearchInput.value = ''; // Limpa filtro anterior
-            applyFilter(''); // Garante que tudo aparece
+            newSearchInput.value = ''; 
+            applyFilter(''); 
         }
     },
 
@@ -210,9 +201,6 @@ export const UIService = {
         btnSelecionado.classList.remove('border-gray-200');
     },
 
-    // ============================================================
-    // RENDERIZAÇÃO DO FILTRO - CORRIGIDO (MODO EVENTO/NORMAL)
-    // ============================================================
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
         const container = document.getElementById(containerId);
         if (!container) return;
@@ -220,17 +208,13 @@ export const UIService = {
         const isPeriodo = activeFilter === 'periodo';
         const isUnidades = activeFilter === 'unidades';
 
-        // Verifica se é administrador
         const isAdmin = app.currentUser?.role === 'admin' || app.currentUser?.role === 'superadmin';
         const userUnidades = app.currentUser?.unidades || [];
 
-        // O botão aparece se tiver unidades ou se for admin
         const hasUnidadesVinculadas = userUnidades.length > 0 || isAdmin;
 
-        // NOVO: detecta modo atual
         const isEventoMode = app?.currentMode === 'evento';
 
-        // HTML do filtro de datas — sem tipo no modo normal, com tipos de evento no modo evento
         const dateFiltersHTML = `
             <div id="periodo-filters-container" class="flex flex-wrap gap-4 mt-4 p-4 bg-gray-50 rounded-lg border border-gray-200 ${isPeriodo ? '' : 'hidden'} animate-fade-in">
                 <div class="flex-1 min-w-[150px]">
@@ -259,7 +243,6 @@ export const UIService = {
             </div>
         `;
 
-        // HTML do filtro de unidades (só aparece em modo normal)
         const unidadesOptions = `<option value="todas">Carregando unidades...</option>`;
 
         const unidadesFiltersHTML = !isEventoMode ? `
@@ -310,7 +293,6 @@ export const UIService = {
             ${unidadesFiltersHTML}
         `;
 
-        // População assíncrona das unidades no Select (só em modo normal)
         if (!isEventoMode) {
             const selectUnidade = document.getElementById('filter-unidade-select');
             if (selectUnidade) {
@@ -353,7 +335,6 @@ export const UIService = {
             }
         }
 
-        // Listeners do filtro Principal
         const filterSelect = document.getElementById('main-pauta-filter');
         const periodoContainer = document.getElementById('periodo-filters-container');
         const unidadesContainer = document.getElementById('unidades-filters-container');
@@ -375,7 +356,6 @@ export const UIService = {
             });
         }
 
-        // Aplicação do Filtro de Período
         const btnAplicarPeriodo = document.getElementById('aplicar-filtro-periodo');
         if (btnAplicarPeriodo) {
             btnAplicarPeriodo.addEventListener('click', () => {
@@ -388,7 +368,6 @@ export const UIService = {
             });
         }
 
-        // Aplicação do Filtro de Unidades (só em modo normal)
         if (!isEventoMode) {
             const btnAplicarUnidades = document.getElementById('aplicar-filtro-unidades');
             if (btnAplicarUnidades) {
@@ -693,7 +672,6 @@ export const UIService = {
         }, 100);
     },
 
-
     getSearchTerms() {
         return {
             pauta: normalizeText(document.getElementById('pauta-search')?.value || ''),
@@ -925,7 +903,17 @@ export const UIService = {
 
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            
+            // LÊ AS ETIQUETAS E APLICA A CLASSE DO PISCA-ALERTA NO CSS
+            let alertaClass = '';
+            if (item._alertaAtraso) {
+                alertaClass = 'card-alerta-atrasado'; // Pisca Vermelho
+            } else if (item._alertaEspera) {
+                alertaClass = 'card-alerta-espera'; // Pisca Amarelo
+            }
+
+            // Injeta o alertaClass junto com as outras classes do Tailwind
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} ${alertaClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
@@ -1456,7 +1444,7 @@ export const UIService = {
                         </h4>
                         <span class="bg-cyan-200 text-cyan-800 text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">${groups[defensor].length}</span>
                     </div>
-                    <button onclick="navigator.clipboard.writeText('${linkPainel}'); showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[11px] font-bold py-2 rounded-lg hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
+                    <button onclick="navigator.clipboard.writeText('${linkPainel}'); window.showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[11px] font-bold py-2 rounded-lg hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
                         <span>📋</span> Copiar Link do Painel
                     </button>
                 </div>
@@ -1750,19 +1738,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 if (window.StatisticsService && typeof window.StatisticsService.showModal === 'function') {
                     window.StatisticsService.showModal(allAssisted, pauta.useDelegationFlow, pauta.name);
                 } else {
-                    showNotification("Módulo de estatísticas não carregado.", "error");
+                    window.showNotification("Módulo de estatísticas não carregado.", "error");
                 }
             } catch (error) {
                 console.error(error);
-                showNotification("Erro ao buscar dados arquivados.", "error");
+                window.showNotification("Erro ao buscar dados arquivados.", "error");
                 modal.remove();
             }
         };
     },
 
-    // ============================================================
-    // renderPautaCards - MANTIDO
-    // ============================================================
     renderPautaCards(pautas, userId, userEmail, app) {
         const container = document.getElementById('pautas-list');
         if (!container) return;
@@ -1883,9 +1868,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     },
 
-    // ============================================================
-    // MODO FOCO: MAXIMIZAR E DESENCAIXAR COLUNAS (DUAS TELAS)
-    // ============================================================
     applyPopoutMode() {
         const urlParams = new URLSearchParams(window.location.search);
         const popoutCol = urlParams.get('popout');
@@ -1920,7 +1902,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     setupColumnControls(app) {
-        // Se a tela já for a desencaixada, não insere botões de novo
         if (document.body.classList.contains('is-popout')) return;
 
         const columns = [
@@ -1955,12 +1936,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 headerFlex.appendChild(btnGroup);
 
-                // Lógica de Maximizar (Tela Cheia local)
                 btnGroup.querySelector('.btn-maximize').onclick = (e) => {
                     e.stopPropagation();
                     const isMax = container.classList.contains('column-maximized');
                     
-                    // Fecha qualquer outra que esteja maximizada
                     document.querySelectorAll('.column-maximized').forEach(el => el.classList.remove('column-maximized'));
                     
                     if (!isMax) {
@@ -1972,13 +1951,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                     }
                 };
 
-                // Lógica de Desencaixar (Abre Janela Separada)
                 btnGroup.querySelector('.btn-popout').onclick = (e) => {
                     e.stopPropagation();
                     const url = new URL(window.location.href);
                     url.searchParams.set('popout', col.popoutId);
-                    
-                    // Abre a janela limpa e pronta para ser jogada pro Monitor 2
                     window.open(url.toString(), '_blank', 'width=1200,height=800,left=150,top=100');
                 };
             }
