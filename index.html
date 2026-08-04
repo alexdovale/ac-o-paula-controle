@@ -204,7 +204,6 @@
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
-
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
         ⚠️ Sem conexão. Trabalhando em Modo Offline no SIGEP.
     </div>
@@ -215,7 +214,6 @@
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
-
         <div id="login-container" class="hidden w-full min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
@@ -338,7 +336,8 @@
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
                 <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
-                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="document.getElementById('logout-btn-app')?.click(); if(!document.getElementById('logout-btn-app')) window.location.reload();">
+                <!-- CORREÇÃO 1 APLICADA: Substituído encadeamento opcional (?.) por verificação via 'if' -->
+                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="var logoutBtn = document.getElementById('logout-btn-app'); if(logoutBtn) logoutBtn.click(); else window.location.reload();">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                         <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
@@ -1072,7 +1071,9 @@
                         if (window.app && typeof PautaService !== 'undefined' && PautaService.handleCSVUpload) {
                             PautaService.handleCSVUpload(e, window.app);
                         } else {
-                            console.log('[Upload CSV] Arquivo selecionado:', e.target.files[0]?.name);
+                            // CORREÇÃO 2 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
+                            var fileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
+                            console.log('[Upload CSV] Arquivo selecionado:', fileName);
                             const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
                             document.dispatchEvent(evt);
                         }
@@ -1095,7 +1096,9 @@
                         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
                             window.ImportadorOrgaosService.handleFileSelect(e);
                         } else {
-                            console.log('[Importador] Arquivo de órgãos selecionado:', e.target.files[0]?.name);
+                            // CORREÇÃO 3 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
+                            var orgaoFileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
+                            console.log('[Importador] Arquivo de órgãos selecionado:', orgaoFileName);
                             const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
                             document.dispatchEvent(evt);
                         }
@@ -1184,3 +1187,4 @@
     </script>
 </body>
 </html>
+
