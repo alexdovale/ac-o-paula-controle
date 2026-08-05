@@ -857,9 +857,8 @@ export const PautaService = {
         return 'Média';
     },
 
-    // FUNÇÃO SORT LIMPA (sem comentários extras)
-     // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
-        sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
+    // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
+    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
         const agora = Date.now();
@@ -868,8 +867,6 @@ export const PautaService = {
 
         // ==========================================
         // REGRA UNIVERSAL DE CHEGADA: 
-        // Prioriza 100% a hora digitada na tela (arrivalTime). 
-        // Se não houver, usa a hora do clique.
         // ==========================================
         const getTempoChegada = (item) => {
             if (item.arrivalTime) {
@@ -881,7 +878,7 @@ export const PautaService = {
         // 1. MODO MANUAL
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         
-        // 2. MODO ORDEM DE CHEGADA (Agora respeita a hora digitada e não apenas o botão)
+        // 2. MODO ORDEM DE CHEGADA
         if (orderType === 'chegada') {
             return [...list].sort((a, b) => {
                 if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
@@ -903,9 +900,34 @@ export const PautaService = {
             return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
-        // Valida se está esperando muito tempo na recepção (Usando a regra universal)
+        // Valida se está esperando muito tempo na recepção
         const isEsperandoMuito = (item) => {
             return (agora - getTempoChegada(item)) > TEMPO_ESPERA_ALERTA_MS;
+        };
+
+        // ==========================================
+        // O SEGREDO DO ENCAIXE JUSTO (HH:MM)
+        // ==========================================
+        const getHoraParaOrdenacao = (item) => {
+            // Se for avulso sem hora marcada, a hora dele na fila é a hora em que fez check-in
+            if (item.type === 'avulso' || !item.scheduledTime) {
+                if (item.arrivalTime) {
+                    const dataArr = new Date(item.arrivalTime);
+                    if (!isNaN(dataArr)) {
+                        return dataArr.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    }
+                }
+                return '23:59'; // Fim da fila se não tiver nada
+            }
+
+            // Se for agendado e ATRASOU muito, ele perde a vaga. O novo "horário" dele é a hora real que chegou!
+            if (isAtrasado(item)) {
+                const dataArr = new Date(item.arrivalTime);
+                return dataArr.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+            }
+
+            // Se chegou NO HORÁRIO (ou antes), ele mantém o "Horário Sagrado" da agenda
+            return item.scheduledTime;
         };
 
         return [...list].sort((a, b) => {
@@ -923,7 +945,7 @@ export const PautaService = {
                 }
             }
 
-            // 4. MODO AGING (Perdão por tempo > 60 min, usando a regra universal)
+            // 4. MODO AGING
             if (orderType === 'aging') {
                 const esperaA = agora - getTempoChegada(a);
                 const esperaB = agora - getTempoChegada(b);
@@ -931,29 +953,32 @@ export const PautaService = {
                 if (esperaB > 3600000) return 1;
             }
 
-            // 5. MODO FIM DO TURNO (Protege a troca Manhã/Tarde às 13h)
+            // 5. MODO FIM DO TURNO
             if (orderType === 'fim_turno') {
                 const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
                 const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            // ==========================================
-            // GERA AS FLAGS DE ALERTA NO ITEM
-            // ==========================================
+            // GERA AS FLAGS DE ALERTA NO ITEM PARA O UI.JS LER E PISCAR
             a._alertaAtraso = isAtrasado(a);
             a._alertaEspera = isEsperandoMuito(a);
             b._alertaAtraso = isAtrasado(b);
             b._alertaEspera = isEsperandoMuito(b);
 
-            // 6. MODO FLEXÍVEL COM ALERTAS (PISCA-ALERTA) E FLEXÍVEL PADRÃO
+            // 6. MODO FLEXÍVEL COM A LÓGICA CORRIGIDA (Mistura Atrasados com Avulsos)
             if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
-                const horaA = isAtrasado(a) ? a.arrivalTime : a.scheduledTime;
-                const horaB = isAtrasado(b) ? b.arrivalTime : b.scheduledTime;
-                return (horaA || '').localeCompare(horaB || '');
+                const horaA = getHoraParaOrdenacao(a);
+                const horaB = getHoraParaOrdenacao(b);
+                
+                if (horaA === horaB) {
+                    // Empate: quem fez o check-in fisicamente primeiro ganha
+                    return getTempoChegada(a) - getTempoChegada(b);
+                }
+                return horaA.localeCompare(horaB);
             }
 
-            // 7. DESEMPATE FINAL: Hora da agenda ou (agora blindado) a HORA REAL DIGITADA da chegada
+            // 7. DESEMPATE FINAL (Segurança)
             return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (getTempoChegada(a) - getTempoChegada(b));
         });
     },
@@ -1348,9 +1373,35 @@ export const PautaService = {
                 }, app.currentUserName);
                 showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
             } else {
+                // ABRE A NOVA LISTA VISUAL EM VEZ DO SELECT ANTIGO
                 window.assistedIdToHandle = id;
-                this.preencherSelectColaboradores(app, 'attendant-select');
-                document.getElementById('attendant-modal')?.classList.remove('hidden');
+                window.assistedNameToHandle = assisted.name || '';
+                window.assistedTipoAcao = 'atender_direto';
+                
+                const nameElement = document.getElementById('assisted-to-attend-name');
+                if (nameElement) {
+                    nameElement.textContent = assisted.name || '';
+                }
+                
+                const modal = document.getElementById('select-collaborator-modal');
+                if (modal) {
+                    modal.classList.remove('hidden');
+                    setTimeout(() => {
+                        const searchInput = document.getElementById('collaborator-search-input');
+                        if (searchInput) {
+                            searchInput.value = '';
+                            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                        }
+
+                        if (typeof window.UIService !== 'undefined' && typeof window.UIService.preencherListaColaboradoresModal === 'function') {
+                            window.UIService.preencherListaColaboradoresModal(app);
+                        } else if (typeof app.UIService !== 'undefined' && typeof app.UIService.preencherListaColaboradoresModal === 'function') {
+                            app.UIService.preencherListaColaboradoresModal(app);
+                        }
+                        
+                        if (searchInput) searchInput.focus();
+                    }, 150);
+                }
             }
         }
 
