@@ -721,6 +721,9 @@ const CollaboratorService = {
             };
         }
 
+        // ⭐ SUBSTITUI O BOTÃO DE BUSCA POR UM SELECT DA BASE MASTER ⭐
+        this.preencherSelectMaster(app);
+
         // Buscar manualmente pelo ID/Matrícula
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
         if (btnBuscarMaster) {
@@ -743,6 +746,61 @@ const CollaboratorService = {
                     modal.classList.add('hidden');
                 }
             });
+        }
+    },
+
+    async preencherSelectMaster(app) {
+        const containerIdentificador = document.getElementById('collaborator-identificador-modal')?.parentElement;
+        if (!containerIdentificador) return;
+
+        // Verifica se o select já existe para não duplicar
+        let selectMaster = document.getElementById('select-master-colaborador');
+        
+        if (!selectMaster) {
+            selectMaster = document.createElement('select');
+            selectMaster.id = 'select-master-colaborador';
+            selectMaster.className = 'mt-2 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-slate-50';
+            selectMaster.innerHTML = `<option value="">Carregando base geral...</option>`;
+            
+            // Insere o select logo após o input de identificador
+            containerIdentificador.appendChild(selectMaster);
+
+            selectMaster.onchange = async (e) => {
+                const idSelecionado = e.target.value;
+                if (idSelecionado) {
+                    const inputIdentificador = document.getElementById('collaborator-identificador-modal');
+                    if (inputIdentificador) {
+                        inputIdentificador.value = idSelecionado;
+                        await this.buscarColaboradorMaster(app, idSelecionado);
+                    }
+                }
+            };
+        }
+
+        try {
+            const querySnapshot = await getDocs(collection(app.db, "colaboradores_gerais"));
+            if (querySnapshot.empty) {
+                selectMaster.innerHTML = `<option value="">Nenhum colaborador na base</option>`;
+                return;
+            }
+
+            // Ordena os colaboradores por nome para facilitar a busca no select
+            const colaboradoresMaster = [];
+            querySnapshot.forEach((doc) => {
+                colaboradoresMaster.push({ id: doc.id, ...doc.data() });
+            });
+            colaboradoresMaster.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+            let optionsHtml = `<option value="">Selecione um colaborador da base...</option>`;
+            colaboradoresMaster.forEach((c) => {
+                optionsHtml += `<option value="${c.id}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')}</option>`;
+            });
+
+            selectMaster.innerHTML = optionsHtml;
+
+        } catch (error) {
+            console.error("Erro ao carregar lista master para o select:", error);
+            selectMaster.innerHTML = `<option value="">Erro ao carregar base</option>`;
         }
     },
 
@@ -842,6 +900,13 @@ const CollaboratorService = {
             btnSubmit.innerHTML = "➕ Adicionar à Equipe";
             btnSubmit.className = "w-full bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
         }
+        
+        // Reseta também o select-master, se existir
+        const selectMaster = document.getElementById('select-master-colaborador');
+        if (selectMaster) {
+            selectMaster.value = '';
+        }
+
         this.configurarLogicaCargo();
     }
 };
