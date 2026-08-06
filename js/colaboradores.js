@@ -749,9 +749,12 @@ const CollaboratorService = {
         }
     },
 
-    async preencherSelectMaster(app) {
-        const containerIdentificador = document.getElementById('collaborator-identificador-modal')?.parentElement;
-        if (!containerIdentificador) return;
+   async preencherSelectMaster(app) {
+        const inputIdentificador = document.getElementById('collaborator-identificador-modal');
+        if (!inputIdentificador) return;
+
+        // Encontra o botão original que o usuário clicaria
+        const btnBuscarOriginal = document.getElementById('buscar-master-btn') || document.getElementById('listar-master-btn');
 
         // Verifica se o select já existe para não duplicar
         let selectMaster = document.getElementById('select-master-colaborador');
@@ -759,20 +762,25 @@ const CollaboratorService = {
         if (!selectMaster) {
             selectMaster = document.createElement('select');
             selectMaster.id = 'select-master-colaborador';
-            selectMaster.className = 'mt-2 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-emerald-500 outline-none text-sm bg-slate-50';
-            selectMaster.innerHTML = `<option value="">Carregando base geral...</option>`;
             
-            // Insere o select logo após o input de identificador
-            containerIdentificador.appendChild(selectMaster);
+            // ESTILO BONITO: Faz a lista suspensa parecer um botãozão destacado
+            selectMaster.className = 'w-full mt-2 p-3 border-2 border-violet-400 rounded-xl focus:ring-2 focus:ring-violet-600 outline-none text-sm bg-violet-50 font-bold text-violet-900 cursor-pointer shadow-md transition-all hover:bg-violet-100';
+            selectMaster.innerHTML = `<option value="">⏳ Carregando base geral de colaboradores...</option>`;
+            
+            // MÁGICA: Substitui o botão original pela Lista Suspensa na interface (Sem mexer no main.js!)
+            if (btnBuscarOriginal && btnBuscarOriginal.parentNode) {
+                btnBuscarOriginal.parentNode.replaceChild(selectMaster, btnBuscarOriginal);
+            } else {
+                // Se não achar o botão por algum motivo, coloca logo abaixo do input
+                inputIdentificador.parentNode.appendChild(selectMaster);
+            }
 
+            // Quando o usuário escolhe um nome na lista suspensa
             selectMaster.onchange = async (e) => {
                 const idSelecionado = e.target.value;
                 if (idSelecionado) {
-                    const inputIdentificador = document.getElementById('collaborator-identificador-modal');
-                    if (inputIdentificador) {
-                        inputIdentificador.value = idSelecionado;
-                        await this.buscarColaboradorMaster(app, idSelecionado);
-                    }
+                    inputIdentificador.value = idSelecionado;
+                    await this.buscarColaboradorMaster(app, idSelecionado);
                 }
             };
         }
@@ -791,7 +799,7 @@ const CollaboratorService = {
             });
             colaboradoresMaster.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-            let optionsHtml = `<option value="">Selecione um colaborador da base...</option>`;
+            let optionsHtml = `<option value="">👇 Clique aqui para selecionar um colaborador...</option>`;
             colaboradoresMaster.forEach((c) => {
                 optionsHtml += `<option value="${c.id}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')}</option>`;
             });
@@ -800,7 +808,7 @@ const CollaboratorService = {
 
         } catch (error) {
             console.error("Erro ao carregar lista master para o select:", error);
-            selectMaster.innerHTML = `<option value="">Erro ao carregar base</option>`;
+            selectMaster.innerHTML = `<option value="">⚠️ Erro ao carregar base</option>`;
         }
     },
 
