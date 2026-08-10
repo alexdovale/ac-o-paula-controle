@@ -71,7 +71,7 @@ class SIGEPApp {
             this.router = new SIGEPRouter(this, {
                 UIService,
                 DashboardService,
-                RecepcaoCentralService,
+                RecepcaoCentralService, // CORRIGIDO AQUI SEM ACENTO
                 PerfilService,
                 showNotification,
             });
