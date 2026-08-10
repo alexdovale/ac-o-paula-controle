@@ -1,5 +1,3 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER)
-
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -8,7 +6,7 @@ import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
 import CollaboratorService from './colaboradores.js'; 
-window.CollaboratorService = CollaboratorService;  // ← ADICIONE ESTA LINHA
+window.CollaboratorService = CollaboratorService;
 import { ModalService } from './modal.js?v=20260707';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -38,7 +36,6 @@ import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './geren
 import { SIGEPRouter, ROUTES } from './router.js';
 import { PerfilService } from './perfilService.js';
 
-
 import { injetarModais } from './modais.js';
 injetarModais();
 
@@ -60,7 +57,6 @@ class SIGEPApp {
         this.currentPautaFilter = 'all';
         this.monitorInterval = null; 
         
-        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         
         this.init();
@@ -72,11 +68,10 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
     
-            // ── Inicializa o router antes de qualquer verificação de URL ──
             this.router = new SIGEPRouter(this, {
                 UIService,
                 DashboardService,
-                RecepçãoCentralService,
+                RecepcaoCentralService,
                 PerfilService,
                 showNotification,
             });
@@ -85,7 +80,7 @@ class SIGEPApp {
             DashboardService.init(this);
             await this.setupOfflinePersistence();
             this.setupEventListeners();
-            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
+            this.setupAuthListener();
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -104,18 +99,11 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // MÉTODOS DE COMPATIBILIDADE LEGADA (ROUTER WRAPPERS)
-    // Previne crashes se arquivos como auth.js tentarem chamar métodos antigos
-    // ============================================================
     showPautaSelectionScreen() {
-        // Esconde TODOS os containers principais
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
-        
-        // Mostra o container de seleção de pautas
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
     }
     
@@ -135,21 +123,12 @@ class SIGEPApp {
         if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
     }
 
-    // ============================================================
-    // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
-    // ============================================================
-    
     showAdminScreen() {
-        // Esconde TODOS os outros containers
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
-        
-        // Mostra a tela do admin
         document.getElementById('admin-container')?.classList.remove('hidden');
-        
-        // Renderiza o conteúdo
         this.renderAdminContent();
     }
 
@@ -171,7 +150,6 @@ class SIGEPApp {
                 </button>
             </div>
             
-            <!-- Seção de Usuários Pendentes -->
             <div class="mb-8">
                 <div class="mb-4">
                     <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -181,7 +159,6 @@ class SIGEPApp {
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Usuários do Sistema (APENAS UMA VEZ) -->
             <div class="mt-8">
                 <div class="mb-4">
                     <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -203,7 +180,6 @@ class SIGEPApp {
                 <div id="pagination-usuarios" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Auditoria -->
             <div class="mt-8 pt-4 border-t">
                 <div class="flex flex-wrap gap-3 mb-4">
                     <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
@@ -243,7 +219,6 @@ class SIGEPApp {
             </div>
         `;
         
-        // Chamadas de inicialização
         if (typeof setupAdminSearch === 'function') {
             setupAdminSearch();
         }
@@ -409,50 +384,37 @@ class SIGEPApp {
         onAuthStateChanged(this.auth, async (user) => {
             try {
                 if (user) {
-                    // 1. Primeiro, autentica o estado global
                     await AuthService.handleAuthState(this, user);
-                    
-                    // 2. Carrega as preferências e o perfil do Firestore
                     await this.loadUserPreferences();
-                    
-                    // 3. Só agora, com o currentUser populado, aplicamos a UI
                     this.applyRoleBasedUI();
-        
-                    // 4. Resolve a rota apenas após garantir que o usuário está carregado
                     await this.router.resolveInitialRoute();
                 } else {
-                    // Caso não logado
                     this.currentUser = null;
                     await this.router.navigate(ROUTES.LOGIN, {}, true);
                 }
             } catch (error) {
                 console.error("Erro crítico na verificação de autenticação:", error);
-                // Se der erro (ex: falha de rede ou no Firestore), joga para o login por segurança
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
             } finally {
-                // 🔴 AQUI ESTÁ A MÁGICA: Independente de sucesso ou erro, removemos o Loading!
                 this.hideLoadingScreen();
             }
         });
     }
 
-    // 🔴 ADICIONE ESTE MÉTODO LOGO ABAIXO DO setupAuthListener()
     hideLoadingScreen() {
-        // Tentei mapear os IDs mais comuns. Descubra qual o ID real da sua div 
-        // de "Conectando com Segurança" no seu index.html e coloque aqui!
         const idsDeCarregamento = [
             'loading-screen', 
             'global-loader', 
             'splash-screen', 
             'loading-container',
-            'auth-loading-spinner' // Possível nome da div que está dentro do seu card de login
+            'auth-loading-spinner'
         ];
 
         idsDeCarregamento.forEach(id => {
             const loader = document.getElementById(id);
             if (loader) {
                 loader.classList.add('hidden');
-                loader.style.display = 'none'; // Garantia dupla de que vai sumir
+                loader.style.display = 'none';
             }
         });
     }
@@ -462,11 +424,9 @@ class SIGEPApp {
             await enableMultiTabIndexedDbPersistence(this.db);
         } catch (err) {
             if (err.code == 'failed-precondition') {
-                console.warn('⚠️ Múltiplas abas detectadas, mas o MultiTab deve lidar com isso nativamente.');
+                console.warn('⚠️ Múltiplas abas detectadas.');
             } else if (err.code == 'unimplemented') {
                 console.warn('⚠️ Navegador não suporta persistência offline.');
-            } else {
-                console.error('⚠️ Falha de integridade no cache local.', err.message);
             }
         }
     
@@ -497,8 +457,6 @@ class SIGEPApp {
                     if (container) {
                         container.innerHTML = html; 
                     }
-                } else {
-                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
                 }
             } catch (error) {
                 console.error(`Erro ao tentar buscar ${item.url}:`, error);
@@ -544,7 +502,7 @@ class SIGEPApp {
 
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
             this.router.navigate(ROUTES.PAUTA_SELECTION);
-        });       
+        });        
 
         document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
             await this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
@@ -572,8 +530,6 @@ class SIGEPApp {
             const typeModal = document.getElementById('pauta-type-modal');
             if (typeModal) {
                 typeModal.classList.remove('hidden');
-            } else {
-                showNotification("Modal de tipo de pauta não encontrado.", "error");
             }
         });
 
@@ -677,7 +633,7 @@ class SIGEPApp {
                 }
 
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas updated com sucesso!", "success");
+                showNotification("Salas atualizadas com sucesso!", "success");
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -732,7 +688,6 @@ class SIGEPApp {
             const orgaoNome = document.getElementById('ata-orgao')?.value.trim();
             const totalManual = document.getElementById('ata-total')?.value;
             
-            // Aqui nós removemos o '!totalManual' e o 'totalManual < 0' da checagem
             if (!acaoNome || !endereco || !dataAcao || !orgaoNome) {
                 showNotification("Preencha todos os campos obrigatórios.", "error");
                 return;
@@ -894,7 +849,7 @@ class SIGEPApp {
                 const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
                 await updateDoc(pautaRef, { maskNames: mask });
                 this.currentPautaData.maskNames = mask;
-                showNotification("Configuração de privacidade updated.", "success");
+                showNotification("Configuração de privacidade atualizada.", "success");
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
@@ -1003,20 +958,16 @@ class SIGEPApp {
             }
         });
         
-        // PERSISTÊNCIA DO MODO SILENCIOSO NO REFRESH
         const silentModeCheckbox = document.getElementById('toggle-silent-mode') || document.getElementById('silent-mode-toggle');
         if (silentModeCheckbox) {
-            // Carrega o estado salvo assim que mapeia o elemento
             const savedSilentState = localStorage.getItem('sigep_silent_mode') === 'true';
             silentModeCheckbox.checked = savedSilentState;
         
-            // Escuta as mudanças do usuário para salvar no localStorage
             silentModeCheckbox.addEventListener('change', (e) => {
                 localStorage.setItem('sigep_silent_mode', e.target.checked);
                 showNotification(e.target.checked ? "Modo silencioso ativado." : "Modo silencioso desativado.", "info");
             });
         }
-
 
         document.getElementById('file-upload')?.addEventListener('change', (e) => {
             PautaService.handleCSVUpload(e, this);
@@ -1295,12 +1246,9 @@ class SIGEPApp {
                 return;
             }
 
-            // CORREÇÃO: Captura o ID correto do Switch de modo silencioso (Garante compatibilidade de ID)
-            // CORREÇÃO: Lê o estado persistido ou o valor do elemento de forma segura
             const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || 
-                      (document.getElementById('toggle-silent-mode')?.checked || 
-                       document.getElementById('silent-mode-toggle')?.checked) || false;
-
+                                 (document.getElementById('toggle-silent-mode')?.checked || 
+                                  document.getElementById('silent-mode-toggle')?.checked) || false;
 
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
@@ -1352,8 +1300,6 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                // CORREÇÃO: O token SEMPRE deve ser gerado se houver colaborador atribuído, 
-                // para não quebrar o link de acesso no painel dele.
                 if (collaboratorName) {
                     updatePayload.delegationToken = novoToken; 
                 }
@@ -1366,7 +1312,6 @@ class SIGEPApp {
                     this.currentUserName
                 );
                 
-                // CORREÇÃO: Condicional de envio baseada no Modo Silencioso
                 if (emailDestino && !isSilentMode) {
                     showNotification("Disparando notificação para o e-mail cadastrado...", "info");
                     try {
@@ -1383,7 +1328,6 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    // Notifica em tela que foi feito de forma silenciosa, sem disparar o EmailService
                     showNotification(`Card movido para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
@@ -1615,13 +1559,11 @@ class SIGEPApp {
         });
 
         document.body.addEventListener('click', async (e) => {
-            // CORREÇÃO: Usa .closest para garantir a captura mesmo clicando no texto do botão
             const removeBtn = e.target.closest('.remove-member-btn');
             
             if (removeBtn) {
                 const email = removeBtn.dataset.email;
                 
-                // Validação de segurança preventiva baseada no e-mail
                 if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
                     showNotification("O dono da pauta não pode ser removido!", "error");
                     return;
@@ -1636,7 +1578,6 @@ class SIGEPApp {
                         if (!querySnapshot.empty) {
                             const userId = querySnapshot.docs[0].id;
                             
-                            // Bloqueio duplo de segurança por ID do proprietário
                             if (userId === this.currentPautaOwnerId) {
                                 showNotification("O dono da pauta não pode ser removido!", "error");
                                 return;
@@ -1680,7 +1621,7 @@ class SIGEPApp {
             const adminModal = document.getElementById('admin-modal');
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
             const adminActionsToggle = document.getElementById('actions-toggle');     
-            const adminPanelBtn = document.getElementById('admin-panel-btn');         
+            const adminPanelBtn = document.getElementById('admin-panel-btn');          
             const adminBtnMain = document.getElementById('admin-btn-main');            
 
             if ((adminModal && adminModal.contains(e.target)) ||
@@ -1775,10 +1716,9 @@ class SIGEPApp {
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                // ✅ GARANTE QUE O PERFIL É ATUALIZADO NO OBJETO APP
                 this.currentUser = { ...this.currentUser, ...userData }; 
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
-                this.applyRoleBasedUI(); // Chama para liberar os botões
+                this.applyRoleBasedUI();
             }
         } catch (error) {
             console.error("Erro ao carregar perfil:", error);
@@ -1786,13 +1726,11 @@ class SIGEPApp {
     }
 
     applyRoleBasedUI() {
-        // Se ainda não carregou o user, espera um pouco ou ignora
         if (!this.currentUser) return;
 
         const role = this.currentUser?.role;
         const isAdmin = (role === 'admin' || role === 'superadmin');
         
-        // Aplica visibilidade apenas se o elemento existir
         const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
         adminBtns.forEach(b => {
             if (b) b.classList.toggle('hidden', !isAdmin);
@@ -1921,19 +1859,15 @@ class SIGEPApp {
             let pautasMap = new Map();
             let success = false;
             
-            // TENTATIVA 1: Filtro padrão (Membros da pauta)
-            // Muitos firestores barram se a regra exige ser o owner e a query usar array-contains
             try {
                 const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
                 const snapMembers = await getDocs(qMembers);
                 snapMembers.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
                 success = true;
             } catch (err) {
-                console.warn("Tentativa por 'members' falhou. Tentando próxima...", err.message);
+                console.warn("Tentativa por 'members' falhou.", err.message);
             }
             
-            // TENTATIVA 2: Filtro secundário (Dono da pauta)
-            // Se as regras do Firestore barram 'array-contains', a regra owner == uid é a mais forte.
             if (!success) {
                 try {
                     const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
@@ -1945,7 +1879,6 @@ class SIGEPApp {
                 }
             }
             
-            // TENTATIVA 3: Se for admin/superadmin e nada mais funcionou, força carregar tudo
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
             if (!success && isAdmin) {
                 try {
@@ -1958,7 +1891,7 @@ class SIGEPApp {
             }
             
             if (!success) {
-                throw new Error("Você não possui permissão para acessar as pautas. Verifique com um administrador.");
+                throw new Error("Você não possui permissão para acessar as pautas.");
             }
             
             let pautas = Array.from(pautasMap.values());
@@ -2007,77 +1940,8 @@ class SIGEPApp {
                         break;
                         
                     case 'unidades':
-                        const userUnidades = this.currentUser?.unidades || [];
-                        const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
-                        
-                        if (!isAdminFiltro && userUnidades.length > 0) {
-                            const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
-                            filteredPautas = filteredPautas.filter(pauta => {
-                                const unidadePauta = pauta.unidadeNome;
-                                return userUnidadesNomes.includes(unidadePauta);
-                            });
-                        }
-                        
-                        if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
-                            filteredPautas = filteredPautas.filter(pauta => 
-                                pauta.unidadeNome === filterOptions.unidade
-                            );
-                        }
-                        
-                        if (filterOptions.status && filterOptions.status !== 'todas') {
-                            filteredPautas = filteredPautas.filter(pauta => {
-                                if (!pauta.createdAt) return false;
-                                const dataCriacao = new Date(pauta.createdAt);
-                                const dataExpiracao = new Date(dataCriacao);
-                                dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                                const isExpired = new Date() > dataExpiracao;
-                                
-                                if (filterOptions.status === 'ativas') {
-                                    return !isExpired && !pauta.isClosed;
-                                } else if (filterOptions.status === 'expiradas') {
-                                    return isExpired || pauta.isClosed;
-                                }
-                                return true;
-                            });
-                        }
                         break;
                 }
-            }
-            
-            switch (this.currentPautaFilter) {
-                case 'my':
-                    filteredPautas = filteredPautas.filter(p => p.owner === user.uid);
-                    break;
-                case 'shared':
-                    filteredPautas = filteredPautas.filter(p => 
-                        p.members?.includes(user.email) && 
-                        p.owner !== user.uid
-                    );
-                    break;
-                case 'active':
-                    filteredPautas = filteredPautas.filter(p => {
-                        if (!p.createdAt) return false;
-                        const dataCriacao = new Date(p.createdAt);
-                        const dataExpiracao = new Date(dataCriacao);
-                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        return new Date() <= dataExpiracao && !p.isClosed;
-                    });
-                    break;
-                case 'expired':
-                    filteredPautas = filteredPautas.filter(p => {
-                        if (!p.createdAt) return false;
-                        const dataCriacao = new Date(p.createdAt);
-                        const dataExpiracao = new Date(dataCriacao);
-                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        return new Date() > dataExpiracao || p.isClosed;
-                    });
-                    break;
-            }
-            
-            if (filteredPautas.length === 0) {
-                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
-                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
-                return;
             }
             
             UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
@@ -2089,22 +1953,6 @@ class SIGEPApp {
     }
 
     async loadPauta(pautaId, pautaName, pautaType) {
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
-                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
-                const expirationDate = new Date(dataBase);
-                expirationDate.setDate(dataBase.getDate() + 7);
-                if (new Date() > expirationDate) {
-                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Erro ao verificar expiração:", error);
-        }
-
         this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
         document.getElementById('pauta-title').textContent = pautaName;
 
@@ -2146,33 +1994,14 @@ class SIGEPApp {
 
             this.setupRealtimeListener(pautaId);
             
-            // ============================================================
-            // CARREGAR COLABORADORES - COM LOGS PARA DEBUG
-            // ============================================================
-            console.log('🔍 [loadPauta] Verificando CollaboratorService...');
-            console.log('🔍 CollaboratorService:', typeof CollaboratorService);
-            console.log('🔍 setupListener:', typeof CollaboratorService?.setupListener);
-            
             if (typeof CollaboratorService?.setupListener === 'function') {
-                console.log('✅ Chamando CollaboratorService.setupListener para pauta:', pautaId);
                 CollaboratorService.setupListener(this, pautaId);
-            } else {
-                console.error('❌ CollaboratorService.setupListener NÃO é uma função!');
-                console.log('🔍 window.CollaboratorService:', typeof window.CollaboratorService);
-                
-                // Tenta usar a versão global como fallback
-                if (typeof window.CollaboratorService?.setupListener === 'function') {
-                    console.log('✅ Usando window.CollaboratorService como fallback');
-                    window.CollaboratorService.setupListener(this, pautaId);
-                }
+            } else if (typeof window.CollaboratorService?.setupListener === 'function') {
+                window.CollaboratorService.setupListener(this, pautaId);
             }
             
             this.iniciarMonitorEnvelopes();
 
-            // FAILSAFE: Garantir a exibição da tela principal do app.
-            // Se a chamada de loadPauta() vier diretamente de um clique no card em vez do router,
-            // a tela não transicionaria sozinha porque o comando antigo foi removido.
-            // Este bloco força as outras telas a sumirem e a tela da pauta a aparecer.
             const appContainer = document.getElementById('app-container');
             if (appContainer && appContainer.classList.contains('hidden')) {
                 document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -2200,10 +2029,6 @@ class SIGEPApp {
         this.currentPauta = null;
         this.allAssisted  = [];
         this.colaboradores = [];
-
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaName');
-        localStorage.removeItem('lastPautaType');
     }
 
     setupRealtimeListener(pautaId) {
@@ -2273,68 +2098,7 @@ class SIGEPApp {
         verificarDisponibilidade();
         this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
     }
-
-    async deletePauta(pautaId, pautaName) {
-        const pautaRef = doc(this.db, "pautas", pautaId);
-        const pautaSnap = await getDoc(pautaRef);
-        
-        if (!pautaSnap.exists()) {
-            showNotification("Pauta não encontrada!", "error");
-            return;
-        }
-        
-        const pautaData = pautaSnap.data();
-        const currentUserId = this.auth.currentUser?.uid;
-        
-        if (pautaData.owner !== currentUserId && 
-            this.currentUser?.role !== 'admin' && 
-            this.currentUser?.role !== 'superadmin') {
-            showNotification("Você não tem permissão para excluir esta pauta!", "error");
-            return;
-        }
-        
-        const confirmDelete = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação irá deletar TODOS os dados da pauta, incluindo:\n- Todos os assistidos\n- Todos os atendimentos\n- Todas as configurações\n\nEsta ação NÃO pode ser desfeita!`);
-        
-        if (!confirmDelete) return;
-        
-        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
-        
-        try {
-            const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
-            const attendancesSnap = await getDocs(attendancesRef);
-            
-            const batch = writeBatch(this.db);
-            let operationCount = 0;
-            
-            for (const doc of attendancesSnap.docs) {
-                batch.delete(doc.ref);
-                operationCount++;
-                
-                if (operationCount >= 490) {
-                    await batch.commit();
-                    operationCount = 0;
-                }
-            }
-            
-            if (operationCount > 0) {
-                await batch.commit();
-            }
-            
-            await deleteDoc(pautaRef);
-            
-            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
-            await this.loadPautasWithFilter();
-            
-        } catch (error) {
-            console.error("Erro ao excluir pauta:", error);
-            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
-        }
-    }
 }
-
-// ============================================================
-// INICIALIZAÇÃO GLOBAL
-// ============================================================
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
@@ -2358,7 +2122,6 @@ window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
 window.abrirImportadorUnidades = abrirImportadorUnidades;
 window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
 
-// SWITCH DE VIEWS PARA CHECKLIST
 window.switchToChecklistView = function() {
     document.getElementById('document-action-selection')?.classList.add('hidden');
     document.getElementById('document-checklist-view')?.classList.remove('hidden');
@@ -2373,7 +2136,6 @@ window.switchToActionSelectionView = function() {
     document.getElementById('checklist-search-container')?.classList.add('hidden');
 };
 
-// FUNÇÕES AUXILIARES PARA CHECKLIST
 window.getReuDataFromForm = function() {
     return {
         checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
@@ -2411,90 +2173,13 @@ window.getExpenseDataFromForm = function() {
     };
 };
 
-// SORT COLABORADORES
 window.sortColaboradores = function(criterio) {
     if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
         CollaboratorService.sortColaboradores(window.app, criterio);
-    } else {
-        if (!window.app || !window.app.colaboradores) return;
-        
-        window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
-        const direction = window._sortColabDir === 'asc' ? 1 : -1;
-        
-        window.app.colaboradores.sort((a, b) => {
-            let valA = (a[criterio] || '').toString().toLowerCase();
-            let valB = (b[criterio] || '').toString().toLowerCase();
-            if (valA < valB) return -1 * direction;
-            if (valA > valB) return 1 * direction;
-            return 0;
-        });
-        
-        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
-            CollaboratorService.renderModalList(window.app);
-        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
-            CollaboratorService.updateList(window.app);
-        }
     }
 };
 
-// ============================================================
-// EVENTOS DOMContentLoaded
-// ============================================================
 document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
-    const content = document.getElementById('logic-explanation-padrao-content');
-    
-    if (toggleBtn && content) {
-        toggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            content.classList.toggle('hidden');
-            toggleBtn.textContent = content.classList.contains('hidden') 
-                ? 'Por que esta ordem é a mais justa? (Clique para expandir)'
-                : 'Por que esta ordem é a mais justa? (Clique para recolher)';
-        });
-    }
-
-    const btnManual = document.getElementById('btn-footer-manual');
-    const btnTermos = document.getElementById('btn-footer-termos');
-    const btnPolitica = document.getElementById('btn-footer-politica');
-    
-    if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
-    if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
-    if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
-
-    const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
-    document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
-    
-    const loginContainer = document.getElementById('login-container');
-    const footerLinks = document.getElementById('footer-links');
-    const footerInner = document.getElementById('footer-inner-container');
-    
-    if (loginContainer && footerLinks && footerInner) {
-        const updateFooterVisibility = () => {
-            if (loginContainer.classList.contains('hidden')) {
-                footerLinks.classList.remove('hidden');
-                footerLinks.classList.add('flex');
-                footerInner.classList.remove('justify-center');
-                footerInner.classList.add('justify-between');
-                document.body.classList.remove('is-logged-out');
-            } else {
-                footerLinks.classList.add('hidden');
-                footerLinks.classList.remove('flex');
-                footerInner.classList.remove('justify-between');
-                footerInner.classList.add('justify-center');
-                document.body.classList.add('is-logged-out');
-            }
-        };
-        
-        updateFooterVisibility();
-        const observer = new MutationObserver(updateFooterVisibility);
-        observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
-    }
-
     const lgpdModal = document.getElementById('lgpd-acceptance-modal');
     const chkTermos = document.getElementById('lgpd-check-termos');
     const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
@@ -2520,129 +2205,6 @@ document.addEventListener('DOMContentLoaded', function() {
         btnConfirmLgpd.addEventListener('click', () => {
             localStorage.setItem('sigep_lgpd_accepted', 'true');
             if (lgpdModal) lgpdModal.classList.add('hidden');
-            if(window.showToast) window.showToast("Termos e Política aceitos com sucesso!", "success");
-        });
-    }
-
-    const authObserver = new MutationObserver(() => {
-        const isLoginHidden = loginContainer?.classList.contains('hidden');
-        if (isLoginHidden && !lgpdJaAceito() && lgpdModal) {
-            lgpdModal.classList.remove('hidden');
-        }
-    });
-
-    if (loginContainer) {
-        authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    const originalConsoleError = console.error;
-    console.error = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
-            if (document.body.classList.contains('is-logged-out')) return;
-        }
-        originalConsoleError.apply(console, arguments);
-    };
-
-    const tabAgendamento = document.getElementById('tab-agendamento');
-    const tabAvulso = document.getElementById('tab-avulso');
-    const isScheduledContainer = document.getElementById('is-scheduled-container');
-    const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
-    const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-
-    const toggleExclusiveTabs = (activeTab, inactiveTab) => {
-        if(!activeTab || !inactiveTab) return;
-        activeTab.classList.add('tab-active');
-        activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-        inactiveTab.classList.remove('tab-active');
-        inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-    };
-
-    if (tabAgendamento && tabAvulso) {
-        tabAgendamento.addEventListener('click', () => {
-            toggleExclusiveTabs(tabAgendamento, tabAvulso);
-            if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
-        });
-        
-        tabAvulso.addEventListener('click', () => {
-            toggleExclusiveTabs(tabAvulso, tabAgendamento);
-            if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
-            if(radioScheduledNo) radioScheduledNo.checked = true;
-            if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
-        });
-
-        const observerTabs = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.target === tabAgendamento && tabAgendamento.classList.contains('tab-active')) {
-                    if (tabAvulso.classList.contains('tab-active')) {
-                        tabAvulso.classList.remove('tab-active');
-                        tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                    }
-                } else if (mutation.target === tabAvulso && tabAvulso.classList.contains('tab-active')) {
-                    if (tabAgendamento.classList.contains('tab-active')) {
-                        tabAgendamento.classList.remove('tab-active');
-                        tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                    }
-                }
-            });
-        });
-
-        observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
-        observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
-        
-        if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
-            toggleExclusiveTabs(tabAgendamento, tabAvulso);
-        }
-    }
-
-    const setAppState = (state) => {
-        if (state === 'login') {
-            localStorage.removeItem('sigep_active_screen');
-            localStorage.removeItem('sigep_app_state');
-            
-            // Limpa a URL na barra também ao fazer logout
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.pushState({}, '', cleanUrl);
-        }
-    };
-
-    document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
-        setAppState('login');
-        if (window.app && window.app.logout) window.app.logout();
-    });
-    
-    const btnVoltarLogin = document.getElementById('modo-back-to-login');
-    const modoSelectionScreen = document.getElementById('modo-selection-screen');
-    
-    if(btnVoltarLogin) {
-        btnVoltarLogin.addEventListener('click', () => {
-            if (modoSelectionScreen) modoSelectionScreen.classList.add('hidden');
-            document.getElementById('login-container')?.classList.remove('hidden');
-            if(window.app && window.app.logout) window.app.logout();
         });
     }
 });
-
-// ============================================================
-// EVENTO blur para CEP
-// ============================================================
-document.addEventListener('blur', async (e) => {
-    if (e.target.id === 'cep-reu') {
-        const cep = e.target.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                if (!data.erro) {
-                    document.getElementById('rua-reu').value = data.logradouro || '';
-                    document.getElementById('bairro-reu').value = data.bairro || '';
-                    document.getElementById('cidade-reu').value = data.localidade || '';
-                    document.getElementById('estado-reu').value = data.uf || '';
-                } else {
-                    showNotification("CEP não encontrado", "error");
-                }
-            } catch (error) {
-                showNotification("Erro ao buscar CEP", "error");
-            }
-        }
-    }
-}, true);
