@@ -1,5 +1,5 @@
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where
+    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -216,13 +216,6 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
-        // 🛑 NOVA REGRA DE NEGÓCIO: Bloquear acesso de Mutirão, Plantão e Ação Social na Recepção Central
-        const tiposBloqueados = ['mutirao', 'mutirão', 'plantao', 'plantão', 'acao_social', 'ação social'];
-        pautas = pautas.filter(p => {
-            const tipoPauta = (p.tipo || p.type || '').toLowerCase().trim();
-            return !tiposBloqueados.includes(tipoPauta);
-        });
-
         // Ordenar da mais nova para a mais velha (Histórico Contínuo)
         pautas.sort((a, b) => {
             const dataA = new Date(a.dataAtuacao || a.data || a.createdAt || 0).getTime();
@@ -331,7 +324,7 @@ export const RecepçãoCentralService = {
                         <p class="text-sm text-slate-500 mt-0.5">Exibindo Histórico Contínuo da Recepção</p>
                         <div class="flex items-center gap-2 mt-2 flex-wrap">
                             <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar por tipo:</span>
-                            ${['todos','agendamento','avulso','multisala'].map(t => `
+                            ${['todos','agendamento','avulso','multisala', 'mutirao', 'plantao', 'acao_social'].map(t => `
                                 <button class="rc-filtro-tipo text-xs px-3 py-1 rounded-full border font-bold transition
                                     ${(this._filtroTipo || 'todos') === t
                                         ? 'bg-slate-800 text-white border-slate-800'
@@ -340,7 +333,10 @@ export const RecepçãoCentralService = {
                                     ${t === 'todos' ? '🔀 Todos'
                                     : t === 'agendamento' ? '📅 Agendamento'
                                     : t === 'avulso' ? '🚶 Avulso'
-                                    : '🏢 Multi-Sala'}
+                                    : t === 'multisala' ? '🏢 Multi-Sala'
+                                    : t === 'mutirao' ? '👥 Mutirão'
+                                    : t === 'plantao' ? '🚨 Plantão'
+                                    : '❤️ Ação Social'}
                                 </button>
                             `).join('')}
                         </div>
@@ -509,13 +505,16 @@ export const RecepçãoCentralService = {
 
                 <div class="px-5 py-3 flex gap-2 mt-auto">
                     <button class="rc-btn-checkin flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
-                        ✅ Check-in Rápido
+                        ✅ Check-in
+                    </button>
+                    <button class="rc-btn-chamar flex-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
+                        📣 Chamar
                     </button>
                     <button class="rc-btn-acomp bg-slate-600 hover:bg-slate-700 text-white font-bold text-xs px-3 py-2 rounded-lg transition" data-pauta-id="${pauta.id}" title="Acompanhamento público desta pauta">
                         🔗
                     </button>
                     <button class="rc-btn-abrir flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
-                        Painel Completo →
+                        Abrir →
                     </button>
                 </div>
             </div>
@@ -643,11 +642,15 @@ export const RecepçãoCentralService = {
                                 : naPautaList.map((a, i) => `
                                     <div class="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition">
                                         <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                            <p class="font-bold text-slate-800 text-sm truncate">
+                                                ${escapeHTML(a.name)} 
+                                                ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                            </p>
                                             <p class="text-[10px] text-slate-500 truncate mt-0.5">
                                                 ${a.scheduledTime ? `<span class="text-slate-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                 📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                             </p>
+                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
                                             ${renderVerificacoesBadge(a)}
                                         </div>
                                         <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
@@ -665,15 +668,27 @@ export const RecepçãoCentralService = {
                             ${aguardando.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
-                                    <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                                        <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
-                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                                ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
-                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                            </p>
-                                            ${renderVerificacoesBadge(a)}
+                                    <div class="flex flex-col bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                        <div class="flex items-start gap-3">
+                                            <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-bold text-slate-800 text-sm truncate">
+                                                    ${escapeHTML(a.name)} 
+                                                    ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                                </p>
+                                                <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                    ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                    📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                                </p>
+                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
+                                                ${renderVerificacoesBadge(a)}
+                                            </div>
+                                        </div>
+                                        <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-amber-200">
+                                             <button class="rc-foco-voltar shrink-0 text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                                data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Voltar p/ Agendados</button>
+                                            <button class="rc-foco-chamar-individual shrink-0 text-[10px] bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1 rounded transition shadow-sm"
+                                                data-id="${a.id}" data-pauta="${pautaId}">📣 Chamar</button>
                                         </div>
                                     </div>
                                 `).join('')
@@ -689,20 +704,26 @@ export const RecepçãoCentralService = {
                                 ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
                                     ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
                                     : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
-                                        <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-3">
-                                            <span class="text-lg mt-1 shrink-0">💬</span>
-                                            <div class="min-w-0 flex-1">
-                                                <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
-                                                <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                                    ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
-                                                    📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                                </p>
-                                                <div class="mt-1">
-                                                    <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
-                                                        🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
-                                                    </span>
+                                        <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex flex-col">
+                                            <div class="flex items-start gap-3">
+                                                <span class="text-lg mt-1 shrink-0">💬</span>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                                    <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                        ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                        📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                                    </p>
+                                                    <div class="mt-1">
+                                                        <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
+                                                            🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
+                                                        </span>
+                                                    </div>
                                                 </div>
                                             </div>
+                                             <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-blue-200">
+                                                 <button class="rc-foco-voltar shrink-0 text-[10px] bg-white hover:bg-blue-100 text-blue-600 border border-blue-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                                    data-id="${a.id}" data-pauta="${pautaId}" data-destino="aguardando">Voltar p/ Fila</button>
+                                             </div>
                                         </div>
                                     `).join('')
                                 }
@@ -754,6 +775,18 @@ export const RecepçãoCentralService = {
                 this._marcarChegada(pautaId, btn.dataset.id);
             });
         });
+        
+        foco.querySelectorAll('.rc-foco-chamar-individual').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._chamarAssistidoEspecifico(pautaId, btn.dataset.id);
+            });
+        });
+
+        foco.querySelectorAll('.rc-foco-voltar').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino);
+            });
+        });
     },
 
     // ── ADICIONAR ASSISTIDO (NOVO MODAL) ───────────────────────────────────────
@@ -786,7 +819,7 @@ export const RecepçãoCentralService = {
                     <button id="rc-modal-add-close" class="text-emerald-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
                 </div>
                 
-                <form id="rc-form-add-assistido" class="p-6 space-y-4">
+                <form id="rc-form-add-assistido" class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome Completo <span class="text-red-500">*</span></label>
                         <input type="text" id="rc-add-nome" required class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Digite o nome completo">
@@ -806,6 +839,17 @@ export const RecepçãoCentralService = {
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assunto / Motivo (Opcional)</label>
                         <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridade</label>
+                        <select id="rc-add-prioridade" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                            <option value="">Nenhuma</option>
+                            <option value="URGENTE" class="font-bold text-red-600">🚨 URGENTE</option>
+                            <option value="Máxima">🔴 Máxima</option>
+                            <option value="Média">🟡 Média</option>
+                            <option value="Mínima">🔵 Mínima</option>
+                        </select>
                     </div>
 
                     <div class="pt-2">
@@ -846,6 +890,7 @@ export const RecepçãoCentralService = {
 
             const statusEscolhido = document.querySelector('input[name="rc_add_status"]:checked').value;
             const isAguardando = statusEscolhido === 'aguardando';
+            const prioridadeSelecionada = document.getElementById('rc-add-prioridade').value;
 
             const assistedData = {
                 name: document.getElementById('rc-add-nome').value.trim(),
@@ -856,7 +901,7 @@ export const RecepçãoCentralService = {
                 type: 'avulso', // Adicionados pela recepção entram como avulsos por padrão
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
-                priority: null
+                priority: prioridadeSelecionada || null
             };
 
             const app = this._app;
@@ -969,6 +1014,48 @@ export const RecepçãoCentralService = {
         playSound('notification');
     },
 
+    async _voltarStatusAssistido(pautaId, assistidoId, destino) {
+        const app = this._app;
+        const msg = destino === 'pauta' ? 'Assistido retornado para Agendados.' : 'Assistido retornado para Fila de Espera.';
+        
+        let updates = { status: destino };
+        
+        if (destino === 'pauta') {
+            updates.arrivalTime = null;
+            updates.checkInOrder = null;
+        } else if (destino === 'aguardando') {
+            updates.assignedCollaborator = null;
+            updates.inAttendanceTime = null;
+        }
+
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            assistidoId,
+            updates,
+            app.currentUserName
+        );
+        showNotification(msg, "info");
+    },
+
+    async _chamarAssistidoEspecifico(pautaId, assistidoId) {
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const assistido = assistidos.find(a => a.id === assistidoId);
+        
+        if (!assistido) return;
+
+        const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
+        
+        if(colaboradores.length > 0) {
+           this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
+        } else {
+             await this._executarChamado(pautaId, assistido, pauta, null);
+        }
+    },
+
     async _chamarProximo(pautaId) {
         const app   = this._app;
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
@@ -990,7 +1077,7 @@ export const RecepçãoCentralService = {
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
         if(colaboradores.length > 0) {
-           this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores);
+           this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
              // Caso não haja colaboradores, executa o fluxo padrão: chama diretamente e atribui.
              await this._executarChamado(pautaId, proximo, pauta, null);
@@ -998,7 +1085,7 @@ export const RecepçãoCentralService = {
     },
     
     // Novo modal de seleção de colaborador para a Central de Recepção
-    _abrirModalSeletorColaborador(pautaId, proximo, colaboradores) {
+    _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
         const existing = document.getElementById('rc-modal-seletor-colaborador');
         if (existing) existing.remove();
 
@@ -1027,7 +1114,7 @@ export const RecepçãoCentralService = {
                 <div class="bg-indigo-700 px-6 py-4 flex justify-between items-center shrink-0">
                     <div>
                         <h3 class="text-white font-black text-lg flex items-center gap-2">📣 Direcionar Atendimento</h3>
-                        <p class="text-indigo-100 text-[10px] uppercase tracking-wider mt-0.5">Assistido: ${escapeHTML(proximo.name)}</p>
+                        <p class="text-indigo-100 text-[10px] uppercase tracking-wider mt-0.5">Assistido: ${escapeHTML(assistido.name)}</p>
                     </div>
                     <button id="rc-modal-colaborador-close" class="text-indigo-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
                 </div>
@@ -1070,9 +1157,7 @@ export const RecepçãoCentralService = {
             }
             
             closeModal();
-            
-            const pauta = estado.pautasHoje.find(p => p.id === pautaId);
-            await this._executarChamado(pautaId, proximo, pauta, colaboradorObj);
+            await this._executarChamado(pautaId, assistido, pauta, colaboradorObj);
         };
     },
     
