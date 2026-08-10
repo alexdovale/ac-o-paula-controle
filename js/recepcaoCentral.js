@@ -7,8 +7,6 @@ import { PautaConfigService } from './pautaConfig.js';
 import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { logAction } from './admin.js';
 
-// ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
-
 const estado = {
     pautasHoje: [],              
     assistidosPorPauta: {},      
@@ -21,8 +19,6 @@ const estado = {
     unidadeAtual: null,
     recepcoesDisponiveis: [],
 };
-
-// ─── HELPERS ───────────────────────────────────────────────────────────────────
 
 function statusLabel(status) {
     const map = {
@@ -39,6 +35,7 @@ function statusLabel(status) {
 function contadores(assistidos) {
     return {
         total:        assistidos.length,
+        naPauta:      assistidos.filter(a => a.status === 'pauta').length,
         aguardando:   assistidos.filter(a => a.status === 'aguardando').length,
         emAtendimento:assistidos.filter(a => a.status === 'emAtendimento').length,
         atendidos:    assistidos.filter(a => a.status === 'atendido').length,
@@ -78,24 +75,11 @@ function renderVerificacoesBadge(a) {
     return htmlLista ? `<div class="mt-1.5 flex flex-wrap gap-0.5">${htmlLista}</div>` : '';
 }
 
-// ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
-
 export const RecepçãoCentralService = {
-
-    // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 
     async init(app) {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
-
-        // 🟢 TRAVA DE ACESSO REMOVIDA PARA TODOS OS USUÁRIOS
-        /*
-        const role = app.currentUser?.role;
-        if (!['apoio', 'admin', 'superadmin'].includes(role)) {
-            showNotification("Acesso restrito à Recepção Central.", "warning");
-            return;
-        }
-        */
 
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
@@ -110,8 +94,6 @@ export const RecepçãoCentralService = {
         );
         return estado.recepcoesDisponiveis;
     },
-
-    // ─── SELETOR DE RECEPÇÃO ──────────────────────────────────────────────────
 
     async _mostrarSelectorRecepcoes() {
         const recepcoes = estado.recepcoesDisponiveis;
@@ -204,20 +186,14 @@ export const RecepçãoCentralService = {
             });
         });
         
-        // Ativa os eventos de pesquisa e filtros do HTML que acabamos de injetar
         RecepcaoConfigService.initSelectorEventos();
-    
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
 
-    // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
-
     async _carregarPautasPorRecepcao() {
         const app = this._app;
-
         this._mostrarLoading();
 
-        // 1. Busca todas as pautas a que o utilizador tem acesso hoje
         let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
@@ -225,23 +201,31 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
-        // 2. Filtro por data de atuação (apenas hoje)
-        const hoje = new Date().toISOString().slice(0, 10); 
+        // 🟢 RESTRIÇÃO DE DATA REMOVIDA
+        // Pautas agora não somem da recepção no dia seguinte (permite histórico constante)
+
+        // 🛑 NOVA REGRA DE NEGÓCIO: Bloquear acesso de Mutirão, Plantão e Ação Social
+        const tiposBloqueados = ['mutirao', 'mutirão', 'plantao', 'plantão', 'acao_social', 'ação social'];
         pautas = pautas.filter(p => {
-            const dataAtuacao = p.dataAtuacao || p.data || p.createdAt || '';
-            if (!dataAtuacao) return true;
-            return dataAtuacao.slice(0, 10) === hoje;
+            const tipoPauta = (p.tipo || p.type || '').toLowerCase().trim();
+            return !tiposBloqueados.includes(tipoPauta);
         });
 
-        // 3. Filtro rápido de UI (Todos, Mutirão, Plantão, etc.)
+        // Ordenar da mais nova para a mais velha (já que exibe histórico)
+        pautas.sort((a, b) => {
+            const dataA = new Date(a.dataAtuacao || a.data || a.createdAt || 0).getTime();
+            const dataB = new Date(b.dataAtuacao || b.data || b.createdAt || 0).getTime();
+            return dataB - dataA;
+        });
+
+        // Filtro rápido de UI (Todos, Agendamento, Avulso, etc.)
         if (this._filtroTipo && this._filtroTipo !== 'todos') {
             pautas = pautas.filter(p =>
                 (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
             );
         }
 
-        // 4. FILTRO ESTRITO DA RECEPÇÃO ATUAL (Agora obrigatório para todos)
-        // Corta as pautas que não pertencem às unidades e/ou aos grupos da receção
+        // Filtro Estrito de Unidades e Grupos da Recepção Atual
         if (this._recepcaoAtual) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
@@ -260,7 +244,7 @@ export const RecepçãoCentralService = {
             <div class="flex justify-center items-center h-64">
                 <div class="text-center">
                     <div class="loader-small mx-auto mb-4"></div>
-                    <p class="text-slate-500">Carregando pautas da recepção...</p>
+                    <p class="text-slate-500">Carregando histórico e pautas da recepção...</p>
                 </div>
             </div>
         `;
@@ -268,7 +252,6 @@ export const RecepçãoCentralService = {
 
     async _iniciarListeners() {
         const app = this._app;
-
         this._cancelarListeners();
 
         for (const pauta of estado.pautasHoje) {
@@ -302,8 +285,6 @@ export const RecepçãoCentralService = {
         estado.unsubscribers = [];
     },
 
-    // ── RENDER TELA PRINCIPAL ─────────────────────────────────────────────────
-
     _renderTelaComContexto() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
@@ -332,10 +313,10 @@ export const RecepçãoCentralService = {
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
-                        <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
+                        <p class="text-sm text-slate-500 mt-0.5">Exibindo Histórico Permanente e Ativas</p>
                         <div class="flex items-center gap-2 mt-2 flex-wrap">
                             <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar por tipo:</span>
-                            ${['todos','agendamento','avulso','multisala','mutirao','plantao','acao_social'].map(t => `
+                            ${['todos','agendamento','avulso','multisala'].map(t => `
                                 <button class="rc-filtro-tipo text-xs px-3 py-1 rounded-full border font-bold transition
                                     ${(this._filtroTipo || 'todos') === t
                                         ? 'bg-slate-800 text-white border-slate-800'
@@ -344,10 +325,7 @@ export const RecepçãoCentralService = {
                                     ${t === 'todos' ? '🔀 Todos'
                                     : t === 'agendamento' ? '📅 Agendamento'
                                     : t === 'avulso' ? '🚶 Avulso'
-                                    : t === 'multisala' ? '🏢 Multi-Sala'
-                                    : t === 'mutirao' ? '👥 Mutirão'
-                                    : t === 'plantao' ? '🚨 Plantão'
-                                    : '❤️ Ação Social'}
+                                    : '🏢 Multi-Sala'}
                                 </button>
                             `).join('')}
                         </div>
@@ -355,7 +333,7 @@ export const RecepçãoCentralService = {
                     <div class="flex gap-2 w-full sm:w-auto flex-wrap">
                         
                         <button id="rc-btn-configurar-tv" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow" title="Configurar e Abrir Painel da TV">
-                            📺 Configurar Painel da TV
+                            📺 Painel da TV
                         </button>
 
                         <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
@@ -379,7 +357,7 @@ export const RecepçãoCentralService = {
                     <div id="rc-resultados-busca" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
                 </div>
 
-                <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+                <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6"></div>
 
                 <div id="rc-grade-pautas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
@@ -399,8 +377,6 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
-
     _renderGrade() {
         const grade = document.getElementById('rc-grade-pautas');
         if (!grade) return;
@@ -409,8 +385,7 @@ export const RecepçãoCentralService = {
             grade.innerHTML = `
                 <div class="col-span-full text-center py-16 opacity-60">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa para esta recepção.</p>
-                    <p class="text-xs text-slate-400 mt-2">Certifique-se que existem pautas vinculadas a esta unidade ou aos grupos corretos.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa ou histórico para esta recepção.</p>
                 </div>
             `;
             return;
@@ -431,13 +406,17 @@ export const RecepçãoCentralService = {
             ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>`
             : '';
 
+        const dataPautaStr = pauta.dataAtuacao || pauta.data || pauta.createdAt 
+            ? new Date(pauta.dataAtuacao || pauta.data || pauta.createdAt).toLocaleDateString('pt-BR') 
+            : '';
+
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
         );
 
         const listaNomes = aguardando.length === 0
-            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila agora.</p>`
+            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila de espera no momento.</p>`
             : aguardando.slice(0, 5).map((a, i) => `
                 <div class="flex items-center gap-2 py-1 border-b border-slate-100 last:border-0">
                     <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
@@ -459,7 +438,7 @@ export const RecepçãoCentralService = {
                     <div class="min-w-0">
                         <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
                         <div class="flex items-center gap-2 mt-1">
-                            <p class="text-slate-400 text-[10px] uppercase tracking-wider">${pauta.type || 'agendamento'}</p>
+                            <p class="text-slate-400 text-[10px] uppercase tracking-wider">${pauta.type || 'agendamento'} ${dataPautaStr ? ` · ${dataPautaStr}` : ''}</p>
                             ${salaBadge}
                         </div>
                     </div>
@@ -470,18 +449,22 @@ export const RecepçãoCentralService = {
                     <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
                 </div>
 
-                <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                <div class="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
+                    <div class="text-center py-3">
+                        <div class="text-xl font-black text-slate-600">${c.naPauta}</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Agendados</div>
+                    </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-amber-600">${c.aguardando}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Aguardando</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Aguardando</div>
                     </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-blue-600">${c.emAtendimento}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendendo</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Atendendo</div>
                     </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-green-600">${c.atendidos}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendidos</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Atendidos</div>
                     </div>
                 </div>
 
@@ -508,7 +491,7 @@ export const RecepçãoCentralService = {
 
                 <div class="px-5 py-3 flex gap-2 mt-auto">
                     <button class="rc-btn-checkin flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
-                        ✅ Check-in
+                        ✅ Check-in Rápido
                     </button>
                     <button class="rc-btn-chamar flex-1 bg-green-50 hover:bg-green-100 border border-green-200 text-green-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
                         📣 Chamar
@@ -517,7 +500,7 @@ export const RecepçãoCentralService = {
                         🔗
                     </button>
                     <button class="rc-btn-abrir flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
-                        Abrir →
+                        Painel Completo →
                     </button>
                 </div>
             </div>
@@ -533,15 +516,14 @@ export const RecepçãoCentralService = {
         this._renderSumario();
     },
 
-    // ── SUMÁRIO GERAL ──────────────────────────────────────────────────────────
-
     _renderSumario() {
         const el = document.getElementById('rc-sumario');
         if (!el) return;
 
-        let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0;
+        let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0, totalNaPauta = 0;
         for (const assistidos of Object.values(estado.assistidosPorPauta)) {
             const c = contadores(assistidos);
+            totalNaPauta += c.naPauta;
             totalAg   += c.aguardando;
             totalAt   += c.atendidos;
             totalEm   += c.emAtendimento;
@@ -550,25 +532,27 @@ export const RecepçãoCentralService = {
 
         el.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-slate-600">${totalNaPauta}</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Agendados</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-amber-600">${totalAg}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Aguardando</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Aguardando</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-blue-600">${totalEm}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Em Atendimento</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Atendimento</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-green-600">${totalAt}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Atendidos</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Atendidos</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-cyan-600">${totalDist}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Distribuição</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Distribuição</div>
             </div>
         `;
     },
-
-    // ── PAINEL DE FOCO ─────────────────────────────────────────────────────────
 
     _abrirFoco(pautaId) {
         estado.pautaFocadaId = pautaId;
@@ -600,8 +584,8 @@ export const RecepçãoCentralService = {
         const assistidos    = estado.assistidosPorPauta[pautaId] || [];
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         const c = contadores(assistidos);
-        const { livres, ocupados } = colaboradoresStatus(colaboradores);
 
+        const naPautaList = assistidos.filter(a => a.status === 'pauta');
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
@@ -612,13 +596,13 @@ export const RecepçãoCentralService = {
 
                 <div class="bg-slate-800 px-6 py-5 flex justify-between items-center">
                     <div>
-                        <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade</button>
+                        <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade geral</button>
                         <h3 class="text-white font-black text-xl">${escapeHTML(pauta.name)}</h3>
-                        <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total</p>
+                        <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total na pauta</p>
                     </div>
                     <div class="flex gap-2">
                         <button id="rc-foco-btn-acomp" class="bg-slate-600 hover:bg-slate-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition" title="Acompanhamento público desta pauta">
-                            🔗 Externo
+                            🔗 Tela Externa
                         </button>
                         <button id="rc-foco-btn-chamar" class="bg-green-600 hover:bg-green-700 text-white font-black px-5 py-2.5 rounded-xl text-sm transition shadow">
                             📣 Chamar Próximo
@@ -628,9 +612,34 @@ export const RecepçãoCentralService = {
 
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
 
-                    <div class="p-5">
+                    <!-- Coluna 1: Agendados / Na Pauta -->
+                    <div class="p-5 flex flex-col">
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">📅 Agendados (${naPautaList.length})</h4>
+                        <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
+                            ${naPautaList.length === 0
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum agendado no momento.</p>`
+                                : naPautaList.map((a, i) => `
+                                    <div class="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                ${a.scheduledTime ? `<span class="text-slate-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                            </p>
+                                            ${renderVerificacoesBadge(a)}
+                                        </div>
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
+                                            data-id="${a.id}" data-pauta="${pautaId}">Fazer Check-in</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Coluna 2: Fila de Espera -->
+                    <div class="p-5 flex flex-col">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">⏳ Fila de Espera (${aguardando.length})</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                             ${aguardando.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
@@ -644,62 +653,62 @@ export const RecepçãoCentralService = {
                                             </p>
                                             ${renderVerificacoesBadge(a)}
                                         </div>
-                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition"
-                                            data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
                                     </div>
                                 `).join('')
                             }
                         </div>
                     </div>
 
-                    <div class="p-5">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
-                            ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
-                                : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
-                                    <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-3">
-                                        <span class="text-lg mt-1 shrink-0">💬</span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
-                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                                ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
-                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                            </p>
-                                            <div class="mt-1">
-                                                <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
-                                                    🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
-                                                </span>
+                    <!-- Coluna 3: Atendimento e Equipe -->
+                    <div class="flex flex-col divide-y divide-slate-100">
+                        <div class="p-5 flex-1">
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1">
+                                ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
+                                    ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
+                                    : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
+                                        <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-3">
+                                            <span class="text-lg mt-1 shrink-0">💬</span>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                                <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                    ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                    📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                                </p>
+                                                <div class="mt-1">
+                                                    <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
+                                                        🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
+                                                    </span>
+                                                </div>
                                             </div>
-                                            ${renderVerificacoesBadge(a)}
                                         </div>
-                                    </div>
-                                `).join('')
-                            }
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                        <div class="p-5 flex-1">
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
+                            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                ${colaboradores.length === 0
+                                    ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador online.</p>`
+                                    : colaboradores.map(col => {
+                                        const livre = col.status === 'disponivel' || !col.status;
+                                        return `
+                                            <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                                <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
+                                                <div class="min-w-0">
+                                                    <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
+                                                    <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
+                                                </div>
+                                                <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
+                                            </div>
+                                        `;
+                                    }).join('')
+                                }
+                            </div>
                         </div>
                     </div>
 
-                    <div class="p-5">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
-                            ${colaboradores.length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador.</p>`
-                                : colaboradores.map(col => {
-                                    const livre = col.status === 'disponivel' || !col.status;
-                                    return `
-                                        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
-                                            <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
-                                            <div class="min-w-0">
-                                                <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
-                                                <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
-                                            </div>
-                                            <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
-                                        </div>
-                                    `;
-                                }).join('')
-                            }
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -720,8 +729,6 @@ export const RecepçãoCentralService = {
             });
         });
     },
-
-    // ── BUSCA GLOBAL ───────────────────────────────────────────────────────────
 
     _setupBuscaGlobal() {
         const input = document.getElementById('rc-input-busca');
@@ -791,8 +798,6 @@ export const RecepçãoCentralService = {
             });
         });
     },
-
-    // ── AÇÕES ──────────────────────────────────────────────────────────────────
 
     async _marcarChegada(pautaId, assistidoId) {
         const app = this._app;
@@ -893,8 +898,6 @@ export const RecepçãoCentralService = {
         }
     },
 
-    // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
-
     _setupInteracoes() {
         document.getElementById('rc-btn-fechar')?.addEventListener('click', () => this.fechar());
 
@@ -945,8 +948,6 @@ export const RecepçãoCentralService = {
             });
         });
     },
-
-    // ── MODAL DE CONFIGURAÇÃO DA TV ────────────────────────────────────────────
 
     _abrirModalConfigTV() {
         const recepcao = this._recepcaoAtual;
@@ -1132,8 +1133,6 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── MODAL CHECK-IN ─────────────────────────────────────────────────────────
-
     _abrirModalCheckin(pautaId) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
@@ -1154,11 +1153,11 @@ export const RecepçãoCentralService = {
                     <button id="rc-modal-checkin-close" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">×</button>
                 </div>
                 <div class="p-5">
-                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..."
+                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome do agendado..."
                         class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     <div id="rc-modal-lista" class="space-y-2 max-h-72 overflow-y-auto">
                         ${naPauta.length === 0
-                            ? `<p class="text-center text-slate-400 py-6 text-sm">Todos já fizeram check-in.</p>`
+                            ? `<p class="text-center text-slate-400 py-6 text-sm">Todos já fizeram check-in ou pauta vazia.</p>`
                             : naPauta.map(a => `
                                 <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
                                     <div>
@@ -1201,24 +1200,15 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── FECHAR ─────────────────────────────────────────────────────────────────
-
     fechar() {
         this._cancelarListeners();
-
-        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
-        
         const app = this._app;
-        
-        // Delega a navegação de volta para o novo Roteador
         if (app && app.router) {
             app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
     },
-
-    // ── ABRIR (chamado pelo main.js) ───────────────────────────────────────────
 
     async abrir(app) {
         const container = document.getElementById('recepcao-central-container');
