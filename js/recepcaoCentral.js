@@ -8,8 +8,6 @@ import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { flatSubjects } from './assuntos.js';
 import { logAction } from './admin.js';
 
-// ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
-
 const estado = {
     pautasHoje: [],              
     assistidosPorPauta: {},      
@@ -22,8 +20,6 @@ const estado = {
     unidadeAtual: null,
     recepcoesDisponiveis: [],
 };
-
-// ─── HELPERS ───────────────────────────────────────────────────────────────────
 
 function statusLabel(status) {
     const map = {
@@ -58,15 +54,12 @@ function colaboradoresStatus(colaboradores) {
 function renderVerificacoesBadge(a) {
     const docs = a.verifications || a.documentos || a.verificacoes || a.customFields?.verifications;
     if (!docs) return '';
-    
     let htmlLista = '';
-    
     if (Array.isArray(docs)) {
         const itens = docs.map(d => typeof d === 'string' ? d : (d.nome || d.name || d.label || 'Doc'));
         if(itens.length === 0) return '';
         htmlLista = itens.map(i => `<span class="inline-block bg-slate-100 text-slate-600 border border-slate-200 text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1 shadow-sm">📄 ${escapeHTML(i)}</span>`).join('');
-    } 
-    else if (typeof docs === 'object') {
+    } else if (typeof docs === 'object') {
         const keys = Object.keys(docs);
         if(keys.length === 0) return '';
         htmlLista = keys.map(k => {
@@ -76,20 +69,19 @@ function renderVerificacoesBadge(a) {
             </span>`;
         }).join('');
     }
-    
     return htmlLista ? `<div class="mt-1.5 flex flex-wrap gap-0.5">${htmlLista}</div>` : '';
 }
 
-// ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
+function getBadgeAgendamento(num) {
+    if (!num) return '';
+    return `<span class="inline-block bg-slate-100 text-slate-600 border border-slate-300 px-1.5 py-0.5 rounded font-mono text-[10px] shadow-sm ml-1" title="Nº do Agendamento">#${escapeHTML(num)}</span>`;
+}
 
 export const RecepçãoCentralService = {
-
-    // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 
     async init(app) {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
-
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
     },
@@ -103,8 +95,6 @@ export const RecepçãoCentralService = {
         );
         return estado.recepcoesDisponiveis;
     },
-
-    // ─── SELETOR DE RECEPÇÃO ──────────────────────────────────────────────────
 
     async _mostrarSelectorRecepcoes() {
         const recepcoes = estado.recepcoesDisponiveis;
@@ -125,7 +115,6 @@ export const RecepçãoCentralService = {
     _renderSemPermissao() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-12 text-center">
                 <div class="bg-amber-50 border border-amber-200 rounded-2xl p-8">
@@ -138,7 +127,6 @@ export const RecepçãoCentralService = {
                 </div>
             </div>
         `;
-
         document.getElementById('rc-voltar-sem-permissao')?.addEventListener('click', () => this.fechar());
     },
 
@@ -148,15 +136,12 @@ export const RecepçãoCentralService = {
     
         container.innerHTML = `
             <div class="max-w-7xl mx-auto px-4 py-8">
-                
                 <div class="flex justify-center mb-4">
                     <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-3 shadow-md">
                         <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-10 w-auto object-contain">
                     </div>
                 </div>
-    
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
-                
                 <div class="max-w-4xl mx-auto mt-12 bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-5">📖 Guia de Tipos de Recepção</h4>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
@@ -176,7 +161,6 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
                 </div>
-    
                 <div class="mt-8 flex justify-center">
                     <button id="rc-voltar-selector" class="bg-slate-600 text-white font-bold px-6 py-2.5 rounded-xl hover:bg-slate-700 transition shadow-sm">
                         ← Voltar para o Início
@@ -189,7 +173,6 @@ export const RecepçãoCentralService = {
             btn.addEventListener('click', async () => {
                 const recepcaoId = btn.dataset.recepcaoId;
                 const recepcaoEncontrada = recepcoes.find(r => r.id === recepcaoId);
-    
                 if (recepcaoEncontrada) {
                     this._recepcaoAtual = recepcaoEncontrada;
                     await this._carregarPautasPorRecepcao();
@@ -198,15 +181,11 @@ export const RecepçãoCentralService = {
         });
         
         RecepcaoConfigService.initSelectorEventos();
-    
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
 
-    // ── CARREGAR PAUTAS POR RECEPÇÃO ───────────────────────────────────────────
-
     async _carregarPautasPorRecepcao() {
         const app = this._app;
-
         this._mostrarLoading();
 
         let pautas = await PautaConfigService.buscarPautasHoje(
@@ -216,21 +195,18 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
-        // Ordenar da mais nova para a mais velha (Histórico Contínuo)
         pautas.sort((a, b) => {
             const dataA = new Date(a.dataAtuacao || a.data || a.createdAt || 0).getTime();
             const dataB = new Date(b.dataAtuacao || b.data || b.createdAt || 0).getTime();
-            return dataB - dataA; // Decrescente
+            return dataB - dataA;
         });
 
-        // Filtro rápido de UI 
         if (this._filtroTipo && this._filtroTipo !== 'todos') {
             pautas = pautas.filter(p =>
                 (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
             );
         }
 
-        // Filtro Estrito da Recepção Atual
         if (this._recepcaoAtual) {
             pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
         }
@@ -244,7 +220,6 @@ export const RecepçãoCentralService = {
     _mostrarLoading() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-
         container.innerHTML = `
             <div class="flex justify-center items-center h-64">
                 <div class="text-center">
@@ -257,7 +232,6 @@ export const RecepçãoCentralService = {
 
     async _iniciarListeners() {
         const app = this._app;
-
         this._cancelarListeners();
 
         for (const pauta of estado.pautasHoje) {
@@ -290,8 +264,6 @@ export const RecepçãoCentralService = {
         estado.unsubscribers.forEach(u => u && u());
         estado.unsubscribers = [];
     },
-
-    // ── RENDER TELA PRINCIPAL ─────────────────────────────────────────────────
 
     _renderTelaComContexto() {
         const container = document.getElementById('recepcao-central-container');
@@ -342,11 +314,9 @@ export const RecepçãoCentralService = {
                         </div>
                     </div>
                     <div class="flex gap-2 w-full sm:w-auto flex-wrap">
-                        
                         <button id="rc-btn-configurar-tv" class="flex-1 sm:flex-none flex items-center justify-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-4 py-2 rounded-lg transition text-sm shadow" title="Configurar e Abrir Painel da TV">
                             📺 Configurar Painel da TV
                         </button>
-
                         <button id="rc-btn-busca-global" class="flex-1 sm:flex-none flex items-center gap-2 bg-white border border-slate-300 text-slate-700 font-semibold px-4 py-2 rounded-lg hover:bg-slate-50 transition text-sm shadow-sm">
                             🔍 Busca Global
                         </button>
@@ -387,8 +357,6 @@ export const RecepçãoCentralService = {
             await this._mostrarSelectorRecepcoes();
         });
     },
-
-    // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
 
     _renderGrade() {
         const grade = document.getElementById('rc-grade-pautas');
@@ -436,7 +404,7 @@ export const RecepçãoCentralService = {
                     <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
                     <span class="text-xs font-semibold text-slate-700 truncate flex-1">
                         ${escapeHTML(a.name)} 
-                        ${a.numAgendamento ? `<span class="text-[9px] text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                        ${getBadgeAgendamento(a.numAgendamento)}
                     </span>
                     <span class="text-[9px] text-slate-400 shrink-0">${a.scheduledTime || ''}</span>
                 </div>
@@ -447,7 +415,6 @@ export const RecepçãoCentralService = {
 
         return `
             <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-md transition-all overflow-hidden flex flex-col" data-pauta-id="${pauta.id}">
-
                 <div class="bg-slate-800 px-5 py-4 flex justify-between items-start gap-2">
                     <div class="min-w-0">
                         <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
@@ -458,11 +425,9 @@ export const RecepçãoCentralService = {
                     </div>
                     <span class="text-white/60 text-xs font-mono shrink-0">${porcentagem}%</span>
                 </div>
-
                 <div class="h-1.5 bg-slate-100">
                     <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
                 </div>
-
                 <div class="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-slate-600">${c.naPauta}</div>
@@ -481,14 +446,12 @@ export const RecepçãoCentralService = {
                         <div class="text-[9px] text-slate-400 uppercase font-bold">Atendidos</div>
                     </div>
                 </div>
-
                 <div class="px-5 pt-3 pb-2 border-b border-slate-100">
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider mb-2">📋 Fila de Espera</p>
                     <div class="space-y-0">
                         ${listaNomes}
                     </div>
                 </div>
-
                 <div class="px-5 py-3 flex items-center gap-3 border-b border-slate-100">
                     <div class="flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-green-500"></span>
@@ -502,7 +465,6 @@ export const RecepçãoCentralService = {
                         ? `<div class="ml-auto"><span class="bg-cyan-100 text-cyan-700 text-[10px] font-black px-2 py-0.5 rounded border border-cyan-200">⚖️ ${c.distribuicao} dist.</span></div>`
                         : ''}
                 </div>
-
                 <div class="px-5 py-3 flex gap-2 mt-auto">
                     <button class="rc-btn-checkin flex-1 bg-amber-50 hover:bg-amber-100 border border-amber-200 text-amber-800 font-bold text-xs py-2 rounded-lg transition" data-pauta-id="${pauta.id}">
                         ✅ Check-in
@@ -529,8 +491,6 @@ export const RecepçãoCentralService = {
         card.outerHTML = this._htmlCardPauta(pauta);
         this._renderSumario();
     },
-
-    // ── SUMÁRIO GERAL ──────────────────────────────────────────────────────────
 
     _renderSumario() {
         const el = document.getElementById('rc-sumario');
@@ -570,17 +530,13 @@ export const RecepçãoCentralService = {
         `;
     },
 
-    // ── PAINEL DE FOCO (VISÃO DETALHADA DA PAUTA) ──────────────────────────────
-
     _abrirFoco(pautaId) {
         estado.pautaFocadaId = pautaId;
         estado.modoVisao     = 'foco';
-
         document.getElementById('rc-grade-pautas').classList.add('hidden');
         document.getElementById('rc-sumario').classList.add('hidden');
         const foco = document.getElementById('rc-painel-foco');
         foco.classList.remove('hidden');
-
         this._renderFoco(pautaId);
     },
 
@@ -611,7 +567,6 @@ export const RecepçãoCentralService = {
 
         foco.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-2xl shadow overflow-hidden">
-
                 <div class="bg-slate-800 px-6 py-5 flex justify-between items-center flex-wrap gap-4">
                     <div>
                         <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade geral</button>
@@ -631,26 +586,34 @@ export const RecepçãoCentralService = {
                     </div>
                 </div>
 
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
+                <div class="p-4 bg-slate-50 border-b border-slate-200">
+                    <div class="relative max-w-lg mx-auto">
+                        <input type="search" id="rc-foco-busca" placeholder="Filtrar por nome, CPF, agendamento ou assunto..." class="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 shadow-sm transition-all">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
+                    </div>
+                </div>
 
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
                     <!-- Coluna 1: Agendados / Na Pauta -->
                     <div class="p-5 flex flex-col">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">📅 Agendados (${naPautaList.length})</h4>
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
+                            <span>📅 Agendados (${naPautaList.length})</span>
+                        </h4>
                         <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                             ${naPautaList.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum agendado no momento.</p>`
                                 : naPautaList.map((a, i) => `
-                                    <div class="flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition">
+                                    <div class="rc-foco-item flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition" data-search="${normalizeText(a.name)} ${a.cpf||''} ${a.numAgendamento||''} ${normalizeText(a.subject||'')}">
                                         <div class="min-w-0 flex-1">
                                             <p class="font-bold text-slate-800 text-sm truncate">
                                                 ${escapeHTML(a.name)} 
-                                                ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                                ${getBadgeAgendamento(a.numAgendamento)}
                                             </p>
                                             <p class="text-[10px] text-slate-500 truncate mt-0.5">
                                                 ${a.scheduledTime ? `<span class="text-slate-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                 📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                             </p>
-                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
+                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm">🚨 ${escapeHTML(a.priority)}</span>` : ''}
                                             ${renderVerificacoesBadge(a)}
                                         </div>
                                         <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
@@ -668,26 +631,26 @@ export const RecepçãoCentralService = {
                             ${aguardando.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
-                                    <div class="flex flex-col bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
+                                    <div class="rc-foco-item flex flex-col bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-search="${normalizeText(a.name)} ${a.cpf||''} ${a.numAgendamento||''} ${normalizeText(a.subject||'')}">
                                         <div class="flex items-start gap-3">
-                                            <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
+                                            <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0 shadow-sm">${i + 1}</span>
                                             <div class="min-w-0 flex-1">
                                                 <p class="font-bold text-slate-800 text-sm truncate">
                                                     ${escapeHTML(a.name)} 
-                                                    ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                                    ${getBadgeAgendamento(a.numAgendamento)}
                                                 </p>
                                                 <p class="text-[10px] text-slate-500 truncate mt-0.5">
                                                     ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                     📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                                 </p>
-                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
+                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
                                                 ${renderVerificacoesBadge(a)}
                                             </div>
                                         </div>
                                         <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-amber-200">
-                                             <button class="rc-foco-voltar shrink-0 text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
-                                                data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Voltar p/ Agendados</button>
-                                            <button class="rc-foco-chamar-individual shrink-0 text-[10px] bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1 rounded transition shadow-sm"
+                                            <button class="rc-foco-voltar shrink-0 text-[9px] sm:text-[10px] bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                                data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Desfazer Check-in</button>
+                                            <button class="rc-foco-chamar-individual shrink-0 text-[10px] bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1 rounded transition shadow-sm flex items-center gap-1"
                                                 data-id="${a.id}" data-pauta="${pautaId}">📣 Chamar</button>
                                         </div>
                                     </div>
@@ -704,11 +667,14 @@ export const RecepçãoCentralService = {
                                 ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
                                     ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
                                     : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
-                                        <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex flex-col">
+                                        <div class="rc-foco-item bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex flex-col" data-search="${normalizeText(a.name)} ${a.cpf||''} ${a.numAgendamento||''} ${normalizeText(a.subject||'')}">
                                             <div class="flex items-start gap-3">
                                                 <span class="text-lg mt-1 shrink-0">💬</span>
                                                 <div class="min-w-0 flex-1">
-                                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                                    <p class="font-bold text-slate-800 text-sm truncate">
+                                                        ${escapeHTML(a.name)} 
+                                                        ${getBadgeAgendamento(a.numAgendamento)}
+                                                    </p>
                                                     <p class="text-[10px] text-slate-500 truncate mt-0.5">
                                                         ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                         📝 ${escapeHTML(a.subject || 'Sem assunto')}
@@ -739,7 +705,7 @@ export const RecepçãoCentralService = {
                                         return `
                                             <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
                                                 <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
-                                                <div class="min-w-0">
+                                                <div class="min-w-0 flex-1">
                                                     <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
                                                     <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
                                                 </div>
@@ -751,45 +717,42 @@ export const RecepçãoCentralService = {
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         `;
 
+        // Event Listeners do Foco
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
+        document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => await this._chamarProximo(pautaId));
+        document.getElementById('rc-foco-btn-acomp')?.addEventListener('click', () => window.open(`?painel=true&pautas=${pautaId}`, '_blank'));
+        document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => this._abrirModalAdicionarAssistido(pautaId, pauta.name));
 
-        document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => {
-            await this._chamarProximo(pautaId);
-        });
-
-        document.getElementById('rc-foco-btn-acomp')?.addEventListener('click', () => {
-            window.open(`?painel=true&pautas=${pautaId}`, '_blank');
-        });
-
-        document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => {
-            this._abrirModalAdicionarAssistido(pautaId, pauta.name);
+        // Event Listener para a Busca Local do Foco
+        document.getElementById('rc-foco-busca')?.addEventListener('input', (e) => {
+            const termo = normalizeText(e.target.value);
+            foco.querySelectorAll('.rc-foco-item').forEach(el => {
+                const searchStr = el.dataset.search || '';
+                el.style.display = searchStr.includes(termo) ? '' : 'none';
+            });
         });
 
         foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._marcarChegada(pautaId, btn.dataset.id);
-            });
+            btn.addEventListener('click', () => this._marcarChegada(pautaId, btn.dataset.id));
         });
         
         foco.querySelectorAll('.rc-foco-chamar-individual').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._chamarAssistidoEspecifico(pautaId, btn.dataset.id);
-            });
+            btn.addEventListener('click', () => this._chamarAssistidoEspecifico(pautaId, btn.dataset.id));
         });
 
         foco.querySelectorAll('.rc-foco-voltar').forEach(btn => {
             btn.addEventListener('click', () => {
-                this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino);
+                const acao = btn.dataset.destino === 'pauta' ? "Desfazer o Check-in e voltar para Agendados?" : "Voltar este atendimento para a Fila de Espera?";
+                if(confirm(acao)) {
+                    this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino);
+                }
             });
         });
     },
-
-    // ── ADICIONAR ASSISTIDO (NOVO MODAL) ───────────────────────────────────────
 
     _abrirModalAdicionarAssistido(pautaId, pautaNome) {
         const existing = document.getElementById('rc-modal-add-assistido');
@@ -810,7 +773,7 @@ export const RecepçãoCentralService = {
         
         modal.innerHTML = `
             ${assuntosDatalistHtml}
-            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
                 <div class="bg-emerald-700 px-6 py-4 flex justify-between items-center shrink-0">
                     <div>
                         <h3 class="text-white font-black text-lg flex items-center gap-2">➕ Adicionar Assistido</h3>
@@ -819,7 +782,7 @@ export const RecepçãoCentralService = {
                     <button id="rc-modal-add-close" class="text-emerald-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
                 </div>
                 
-                <form id="rc-form-add-assistido" class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+                <form id="rc-form-add-assistido" class="p-6 space-y-5 overflow-y-auto max-h-[85vh] scrollable-content">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome Completo <span class="text-red-500">*</span></label>
                         <input type="text" id="rc-add-nome" required class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Digite o nome completo">
@@ -832,24 +795,42 @@ export const RecepçãoCentralService = {
                         </div>
                         <div>
                             <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nº Agendamento</label>
-                            <input type="text" id="rc-add-agendamento" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none font-mono" placeholder="#12345">
+                            <input type="text" id="rc-add-agendamento" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none font-mono text-slate-600" placeholder="#12345">
                         </div>
                     </div>
 
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assunto / Motivo (Opcional)</label>
                         <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
+                        <p class="text-[9px] text-slate-400 mt-1">Comece a digitar para ver sugestões.</p>
                     </div>
 
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridade</label>
-                        <select id="rc-add-prioridade" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
-                            <option value="">Nenhuma</option>
+                    <div class="bg-red-50 border-2 border-red-100 rounded-xl p-4">
+                        <label class="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-3">🚨 Prioridade Legal (Se houver)</label>
+                        <select id="rc-add-prioridade-simples" class="w-full p-3 border border-red-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white font-semibold text-slate-700 mb-3 hidden">
+                            <option value="">Nenhuma Prioridade</option>
                             <option value="URGENTE" class="font-bold text-red-600">🚨 URGENTE</option>
-                            <option value="Máxima">🔴 Máxima</option>
-                            <option value="Média">🟡 Média</option>
-                            <option value="Mínima">🔵 Mínima</option>
+                            <option value="Idoso (60+)">Idoso (60+)</option>
+                            <option value="Idoso (80+)">Idoso (80+)</option>
+                            <option value="Deficiência (PCD)">Deficiência (PCD)</option>
+                            <option value="Autismo (TEA)">Autismo (TEA)</option>
+                            <option value="Gestante">Gestante</option>
+                            <option value="Criança de Colo">Criança de Colo</option>
+                            <option value="Obesidade">Obesidade</option>
+                            <option value="Urgência Médica">Urgência Médica</option>
                         </select>
+                        
+                        <div id="rc-priority-types-grid" class="grid grid-cols-2 gap-2 mb-3">
+                            <button type="button" data-value="Idoso (60+)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">👴 Idoso (60+)</button>
+                            <button type="button" data-value="Idoso (80+)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">🎖️ Idoso (80+)</button>
+                            <button type="button" data-value="Deficiência (PCD)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">♿ Deficiência</button>
+                            <button type="button" data-value="Autismo (TEA)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">🧩 Autismo</button>
+                            <button type="button" data-value="Gestante" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">🤰 Gestante</button>
+                            <button type="button" data-value="Criança de Colo" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">👶 Colo</button>
+                            <button type="button" data-value="Obesidade" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">⚖️ Obesidade</button>
+                            <button type="button" data-value="URGENTE" class="rc-p-chip bg-red-100 border-2 border-red-400 text-red-800 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-black shadow-sm transition">🚨 URGENTE</button>
+                        </div>
+                        <input type="hidden" id="rc-add-prioridade-hidden" value="">
                     </div>
 
                     <div class="pt-2">
@@ -861,7 +842,7 @@ export const RecepçãoCentralService = {
                             </label>
                             <label class="cursor-pointer bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2 hover:bg-amber-100 transition">
                                 <input type="radio" name="rc_add_status" value="aguardando" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
-                                <div class="text-sm font-bold text-amber-800">Fazer Check-in</div>
+                                <div class="text-sm font-bold text-amber-800">Fazer Check-in (Fila)</div>
                             </label>
                         </div>
                     </div>
@@ -875,6 +856,28 @@ export const RecepçãoCentralService = {
         `;
 
         document.body.appendChild(modal);
+
+        // Lógica dos Chips de Prioridade
+        const chips = modal.querySelectorAll('.rc-p-chip');
+        const hiddenInput = document.getElementById('rc-add-prioridade-hidden');
+        chips.forEach(chip => {
+            chip.addEventListener('click', () => {
+                const wasSelected = chip.classList.contains('ring-2');
+                chips.forEach(c => {
+                    c.classList.remove('ring-2', 'ring-red-500', 'bg-red-200');
+                    if (c.dataset.value === 'URGENTE') c.classList.replace('bg-red-300', 'bg-red-100');
+                    else c.classList.replace('bg-red-100', 'bg-white');
+                });
+                if (!wasSelected) {
+                    chip.classList.add('ring-2', 'ring-red-500');
+                    if (chip.dataset.value === 'URGENTE') chip.classList.replace('bg-red-100', 'bg-red-300');
+                    else chip.classList.replace('bg-white', 'bg-red-100');
+                    hiddenInput.value = chip.dataset.value;
+                } else {
+                    hiddenInput.value = '';
+                }
+            });
+        });
 
         const closeModal = () => modal.remove();
         document.getElementById('rc-modal-add-close').onclick = closeModal;
@@ -890,7 +893,7 @@ export const RecepçãoCentralService = {
 
             const statusEscolhido = document.querySelector('input[name="rc_add_status"]:checked').value;
             const isAguardando = statusEscolhido === 'aguardando';
-            const prioridadeSelecionada = document.getElementById('rc-add-prioridade').value;
+            const prioridadeSelecionada = hiddenInput.value;
 
             const assistedData = {
                 name: document.getElementById('rc-add-nome').value.trim(),
@@ -898,7 +901,7 @@ export const RecepçãoCentralService = {
                 numAgendamento: document.getElementById('rc-add-agendamento').value.trim(),
                 subject: document.getElementById('rc-add-assunto').value.trim(),
                 status: statusEscolhido,
-                type: 'avulso', // Adicionados pela recepção entram como avulsos por padrão
+                type: 'avulso', 
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
                 priority: prioridadeSelecionada || null
@@ -914,17 +917,13 @@ export const RecepçãoCentralService = {
 
             if (sucesso) {
                 closeModal();
-                if (isAguardando) {
-                    playSound('notification');
-                }
+                if (isAguardando) playSound('notification');
             } else {
                 btn.disabled = false;
                 btn.innerHTML = 'Tentar Novamente';
             }
         };
     },
-
-    // ── BUSCA GLOBAL ───────────────────────────────────────────────────────────
 
     _setupBuscaGlobal() {
         const input = document.getElementById('rc-input-busca');
@@ -946,7 +945,10 @@ export const RecepçãoCentralService = {
                 for (const a of assistidos) {
                     const matchNome = normalizeText(a.name || '').includes(termo);
                     const matchNum  = (a.numAgendamento || '').includes(input.value.trim());
-                    if (matchNome || matchNum) {
+                    const matchCpf  = (a.cpf || '').includes(input.value.trim());
+                    const matchAssunto = normalizeText(a.subject || '').includes(termo);
+
+                    if (matchNome || matchNum || matchCpf || matchAssunto) {
                         encontrados.push({ pauta, assistido: a });
                     }
                 }
@@ -966,18 +968,18 @@ export const RecepçãoCentralService = {
                             <p class="font-black text-slate-800 text-sm truncate">
                                 ${escapeHTML(a.name)} 
                             </p>
-                            <p class="text-[10px] text-slate-500 truncate">
-                                ${a.numAgendamento ? `<span class="font-mono text-slate-400 mr-1">#${a.numAgendamento}</span>` : ''}
-                                ${a.scheduledTime ? `⏰ ${a.scheduledTime} · ` : ''}
+                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                ${getBadgeAgendamento(a.numAgendamento)}
+                                ${a.scheduledTime ? `⏰ <span class="font-bold">${a.scheduledTime}</span> · ` : ''}
                                 ${escapeHTML(pauta.name)} · ${escapeHTML(a.subject || '')}
                                 ${a.assignedCollaborator?.name || a.attendant ? ` · 🧑‍💻 ${escapeHTML(a.assignedCollaborator?.name || a.attendant)}` : ''}
                             </p>
                         </div>
                         <span class="text-[10px] font-black px-2 py-0.5 rounded ${sl.cor}">${sl.txt}</span>
                         ${podeCheckin ? `
-                            <button class="rc-busca-checkin bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg transition"
+                            <button class="rc-busca-checkin bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg transition shadow-sm"
                                 data-pauta="${pauta.id}" data-id="${a.id}">
-                                Check-in
+                                Fazer Check-in
                             </button>
                         ` : ''}
                     </div>
@@ -994,8 +996,6 @@ export const RecepçãoCentralService = {
             });
         });
     },
-
-    // ── AÇÕES ──────────────────────────────────────────────────────────────────
 
     async _marcarChegada(pautaId, assistidoId) {
         const app = this._app;
@@ -1026,6 +1026,10 @@ export const RecepçãoCentralService = {
         } else if (destino === 'aguardando') {
             updates.assignedCollaborator = null;
             updates.inAttendanceTime = null;
+            updates.attendedBy = null;
+            updates.attendedAt = null;
+            updates.distributionStatus = null;
+            updates.finalizadoPeloColaborador = false;
         }
 
         await PautaService.updateStatus(
@@ -1044,7 +1048,6 @@ export const RecepçãoCentralService = {
 
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const assistido = assistidos.find(a => a.id === assistidoId);
-        
         if (!assistido) return;
 
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
@@ -1072,19 +1075,15 @@ export const RecepçãoCentralService = {
         }
 
         const proximo = aguardando[0];
-        
-        // Verifica se há colaboradores disponíveis para atribuição nesta pauta.
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
         if(colaboradores.length > 0) {
            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
-             // Caso não haja colaboradores, executa o fluxo padrão: chama diretamente e atribui.
              await this._executarChamado(pautaId, proximo, pauta, null);
         }
     },
-    
-    // Novo modal de seleção de colaborador para a Central de Recepção
+
     _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
         const existing = document.getElementById('rc-modal-seletor-colaborador');
         if (existing) existing.remove();
@@ -1093,9 +1092,8 @@ export const RecepçãoCentralService = {
         modal.id = 'rc-modal-seletor-colaborador';
         modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
         
-        let colaboradoresOptions = '<option value="">Sem atribuição direta</option>';
+        let colaboradoresOptions = '<option value="">Não direcionar (Apenas Chamar)</option>';
         
-        // Ordena colaboradores (livres primeiro)
         const colabOrdenados = [...colaboradores].sort((a,b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
             const bLivre = b.status === 'disponivel' || !b.status;
@@ -1105,12 +1103,12 @@ export const RecepçãoCentralService = {
 
         colabOrdenados.forEach(c => {
              const livre = c.status === 'disponivel' || !c.status;
-             const statusTxt = livre ? '(Livre)' : '(Ocupado)';
-             colaboradoresOptions += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')} ${statusTxt}</option>`;
+             const statusTxt = livre ? '🟢 (Livre)' : '🔴 (Ocupado)';
+             colaboradoresOptions += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${statusTxt} ${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')}</option>`;
         });
 
         modal.innerHTML = `
-            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
                 <div class="bg-indigo-700 px-6 py-4 flex justify-between items-center shrink-0">
                     <div>
                         <h3 class="text-white font-black text-lg flex items-center gap-2">📣 Direcionar Atendimento</h3>
@@ -1119,18 +1117,18 @@ export const RecepçãoCentralService = {
                     <button id="rc-modal-colaborador-close" class="text-indigo-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
                 </div>
                 
-                <div class="p-6 space-y-4">
+                <div class="p-6 space-y-4 bg-slate-50">
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Para qual mesa / colaborador?</label>
-                        <select id="rc-select-colaborador-destino" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <select id="rc-select-colaborador-destino" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-semibold text-slate-700">
                             ${colaboradoresOptions}
                         </select>
-                        <p class="text-[10px] text-slate-400 mt-2">Você pode deixar em branco para apenas chamar no painel sem direcionar a uma mesa específica.</p>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">Você pode deixar em branco para apenas chamar no painel da TV sem direcionar a uma mesa específica.</p>
                     </div>
 
                     <div class="pt-4 flex gap-3">
-                        <button type="button" id="rc-btn-colaborador-cancelar" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
-                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Confirmar Chamada</button>
+                        <button type="button" id="rc-btn-colaborador-cancelar" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
+                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2"><span>📣</span> Confirmar Chamada</button>
                     </div>
                 </div>
             </div>
@@ -1163,7 +1161,7 @@ export const RecepçãoCentralService = {
     
     async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj) {
          const app = this._app;
-         this._registrarUltimoChamado(pautaId, assistido, pauta.name);
+         this._registrarUltimoChamado(pautaId, assistido, pauta.name, colaboradorDestinoObj?.name);
 
          const updates = { 
              status: 'emAtendimento', 
@@ -1185,7 +1183,6 @@ export const RecepçãoCentralService = {
              app.currentUserName
          );
          
-         // Atualiza o status do colaborador para Ocupado, se um for selecionado
          if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
              try {
                 const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
@@ -1202,15 +1199,19 @@ export const RecepçãoCentralService = {
          playSound('chime');
     },
 
-    async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
+    async _registrarUltimoChamado(pautaId, assistido, pautaNome, mesaNome = null) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+
+        let salaDisplay = pauta?.sala || assistido.room || '';
+        if (mesaNome && salaDisplay) salaDisplay += ` - ${mesaNome}`;
+        else if (mesaNome) salaDisplay = mesaNome;
 
         const chamado = {
             nome:      assistido.name,
             assunto:   assistido.subject || '',
             local:     pautaNome,
             pautaNome: pautaNome,
-            sala:      pauta?.sala || assistido.room || '',
+            sala:      salaDisplay,
             pautaId,
             hora:      new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             timestamp: Date.now(),
@@ -1253,8 +1254,6 @@ export const RecepçãoCentralService = {
             }
         }
     },
-
-    // ── INTERAÇÕES ─────────────────────────────────────────────────────────────
 
     _setupInteracoes() {
         document.getElementById('rc-btn-fechar')?.addEventListener('click', () => this.fechar());
@@ -1307,8 +1306,6 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── MODAL DE CONFIGURAÇÃO DA TV ────────────────────────────────────────────
-
     _abrirModalConfigTV() {
         const recepcao = this._recepcaoAtual;
         if (!recepcao) return;
@@ -1326,7 +1323,7 @@ export const RecepçãoCentralService = {
         modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
         
         modal.innerHTML = `
-            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
+            <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]" onclick="event.stopPropagation()">
                 <div class="bg-slate-800 px-6 py-5 flex justify-between items-center shrink-0">
                     <div>
                         <h3 class="text-white font-black text-xl flex items-center gap-2">⚙️ Configurar Painel da TV</h3>
@@ -1336,7 +1333,6 @@ export const RecepçãoCentralService = {
                 </div>
                 
                 <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50">
-                    
                     <div>
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Modo de Visualização</label>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
@@ -1399,7 +1395,6 @@ export const RecepçãoCentralService = {
                         <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pré-Visualização do Link Gerado</label>
                         <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 text-[11px] text-slate-500 font-mono resize-none focus:ring-0 p-0 h-12 outline-none"></textarea>
                     </div>
-
                 </div>
 
                 <div class="bg-white border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row gap-3 shrink-0">
@@ -1465,16 +1460,13 @@ export const RecepçãoCentralService = {
         const saveConfig = async () => {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
-            
             localStorage.setItem(`sigep_tv_config_${recepcao.id}`, JSON.stringify(configToSave));
-
             try {
                 await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
                     modoVisualizacao: configToSave.modo,
                     videoUrl: configToSave.video
                 });
             } catch(e) { }
-
             return data.link;
         };
 
@@ -1493,8 +1485,6 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── MODAL CHECK-IN ─────────────────────────────────────────────────────────
-
     _abrirModalCheckin(pautaId) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
@@ -1509,21 +1499,24 @@ export const RecepçãoCentralService = {
         modal.id        = 'rc-modal-checkin';
         modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4';
         modal.innerHTML = `
-            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden">
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                 <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-                    <h3 class="text-white font-black">Check-in — ${escapeHTML(pauta.name)}</h3>
+                    <h3 class="text-white font-black">Check-in Rápido</h3>
                     <button id="rc-modal-checkin-close" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">×</button>
                 </div>
                 <div class="p-5">
-                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..."
+                    <input type="search" id="rc-modal-busca" placeholder="Buscar por nome ou nº agendamento..."
                         class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     <div id="rc-modal-lista" class="space-y-2 max-h-72 overflow-y-auto">
                         ${naPauta.length === 0
-                            ? `<p class="text-center text-slate-400 py-6 text-sm">Todos já fizeram check-in.</p>`
+                            ? `<p class="text-center text-slate-400 py-6 text-sm">Nenhum agendado pendente.</p>`
                             : naPauta.map(a => `
-                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" data-search="${normalizeText(a.name)} ${a.numAgendamento||''}">
                                     <div>
-                                        <p class="font-bold text-slate-800 text-sm">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                        <p class="font-bold text-slate-800 text-sm">
+                                            ${escapeHTML(a.name)} 
+                                            ${getBadgeAgendamento(a.numAgendamento)}
+                                        </p>
                                         <p class="text-[10px] text-slate-500">${a.scheduledTime ? `⏰ ${a.scheduledTime} · ` : ''}${escapeHTML(a.subject || '')}</p>
                                     </div>
                                     <button class="rc-modal-checkin-btn bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
@@ -1547,8 +1540,8 @@ export const RecepçãoCentralService = {
             const t = normalizeText(e.target.value);
             modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
                 const linha = btn.closest('div.flex');
-                const nome  = normalizeText(btn.dataset.nome);
-                linha.style.display = nome.includes(t) ? '' : 'none';
+                const searchStr = linha.dataset.search || '';
+                linha.style.display = searchStr.includes(t) ? '' : 'none';
             });
         });
 
@@ -1562,24 +1555,15 @@ export const RecepçãoCentralService = {
         });
     },
 
-    // ── FECHAR ─────────────────────────────────────────────────────────────────
-
     fechar() {
         this._cancelarListeners();
-
-        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
-        
         const app = this._app;
-        
-        // Delega a navegação de volta para o novo Roteador
         if (app && app.router) {
             app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
     },
-
-    // ── ABRIR (chamado pelo main.js) ───────────────────────────────────────────
 
     async abrir(app) {
         const container = document.getElementById('recepcao-central-container');
