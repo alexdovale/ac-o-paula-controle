@@ -5,6 +5,7 @@ import { showNotification, playSound, escapeHTML, normalizeText } from './utils.
 import { PautaService } from './pauta.js';
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepcaoConfigService } from './recepcaoConfig.js';
+import { flatSubjects } from './assuntos.js';
 import { logAction } from './admin.js';
 
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
@@ -765,7 +766,17 @@ export const RecepçãoCentralService = {
         modal.id = 'rc-modal-add-assistido';
         modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
         
+        let assuntosDatalistHtml = '';
+        if (flatSubjects && flatSubjects.length > 0) {
+            assuntosDatalistHtml = `
+                <datalist id="rc-lista-assuntos">
+                    ${flatSubjects.map(s => `<option value="${escapeHTML(s.value)}">${escapeHTML(s.description || '')}</option>`).join('')}
+                </datalist>
+            `;
+        }
+        
         modal.innerHTML = `
+            ${assuntosDatalistHtml}
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
                 <div class="bg-emerald-700 px-6 py-4 flex justify-between items-center shrink-0">
                     <div>
@@ -794,7 +805,7 @@ export const RecepçãoCentralService = {
 
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assunto / Motivo (Opcional)</label>
-                        <input type="text" id="rc-add-assunto" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
+                        <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
                     </div>
 
                     <div class="pt-2">
@@ -974,18 +985,136 @@ export const RecepçãoCentralService = {
         }
 
         const proximo = aguardando[0];
-        this._registrarUltimoChamado(pautaId, proximo, pauta.name);
+        
+        // Verifica se há colaboradores disponíveis para atribuição nesta pauta.
+        const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
+        
+        if(colaboradores.length > 0) {
+           this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores);
+        } else {
+             // Caso não haja colaboradores, executa o fluxo padrão: chama diretamente e atribui.
+             await this._executarChamado(pautaId, proximo, pauta, null);
+        }
+    },
+    
+    // Novo modal de seleção de colaborador para a Central de Recepção
+    _abrirModalSeletorColaborador(pautaId, proximo, colaboradores) {
+        const existing = document.getElementById('rc-modal-seletor-colaborador');
+        if (existing) existing.remove();
 
-        await PautaService.updateStatus(
-            app.db,
-            pautaId,
-            proximo.id,
-            { status: 'emAtendimento', inAttendanceTime: new Date().toISOString() },
-            app.currentUserName
-        );
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-seletor-colaborador';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
+        
+        let colaboradoresOptions = '<option value="">Sem atribuição direta</option>';
+        
+        // Ordena colaboradores (livres primeiro)
+        const colabOrdenados = [...colaboradores].sort((a,b) => {
+            const aLivre = a.status === 'disponivel' || !a.status;
+            const bLivre = b.status === 'disponivel' || !b.status;
+            if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
+            return aLivre ? -1 : 1;
+        });
 
-        showNotification(`📣 Chamado: ${proximo.name}`, "success");
-        playSound('chime');
+        colabOrdenados.forEach(c => {
+             const livre = c.status === 'disponivel' || !c.status;
+             const statusTxt = livre ? '(Livre)' : '(Ocupado)';
+             colaboradoresOptions += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')} ${statusTxt}</option>`;
+        });
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                <div class="bg-indigo-700 px-6 py-4 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="text-white font-black text-lg flex items-center gap-2">📣 Direcionar Atendimento</h3>
+                        <p class="text-indigo-100 text-[10px] uppercase tracking-wider mt-0.5">Assistido: ${escapeHTML(proximo.name)}</p>
+                    </div>
+                    <button id="rc-modal-colaborador-close" class="text-indigo-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Para qual mesa / colaborador?</label>
+                        <select id="rc-select-colaborador-destino" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            ${colaboradoresOptions}
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-2">Você pode deixar em branco para apenas chamar no painel sem direcionar a uma mesa específica.</p>
+                    </div>
+
+                    <div class="pt-4 flex gap-3">
+                        <button type="button" id="rc-btn-colaborador-cancelar" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
+                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Confirmar Chamada</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-modal-colaborador-close').onclick = closeModal;
+        document.getElementById('rc-btn-colaborador-cancelar').onclick = closeModal;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        document.getElementById('rc-btn-colaborador-confirmar').onclick = async () => {
+            const select = document.getElementById('rc-select-colaborador-destino');
+            const colaboradorId = select.value;
+            let colaboradorObj = null;
+            
+            if(colaboradorId) {
+                const opt = select.options[select.selectedIndex];
+                colaboradorObj = {
+                    id: colaboradorId,
+                    name: opt.getAttribute('data-nome')
+                };
+            }
+            
+            closeModal();
+            
+            const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+            await this._executarChamado(pautaId, proximo, pauta, colaboradorObj);
+        };
+    },
+    
+    async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj) {
+         const app = this._app;
+         this._registrarUltimoChamado(pautaId, assistido, pauta.name);
+
+         const updates = { 
+             status: 'emAtendimento', 
+             inAttendanceTime: new Date().toISOString() 
+         };
+
+         if(colaboradorDestinoObj) {
+             updates.assignedCollaborator = {
+                 id: colaboradorDestinoObj.id,
+                 name: colaboradorDestinoObj.name
+             };
+         }
+
+         await PautaService.updateStatus(
+             app.db,
+             pautaId,
+             assistido.id,
+             updates,
+             app.currentUserName
+         );
+         
+         // Atualiza o status do colaborador para Ocupado, se um for selecionado
+         if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
+             try {
+                const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
+                await updateDoc(colabDocRef, {
+                    status: 'ocupado',
+                    currentAttendance: assistido.id
+                });
+             } catch(e) {
+                 console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
+             }
+         }
+
+         showNotification(`📣 Chamado: ${assistido.name}`, "success");
+         playSound('chime');
     },
 
     async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
