@@ -30,7 +30,7 @@ import { getChecklistHTML } from './checklist.js';
 import { PainelGeralService } from './painelGeralService.js'; 
 
 import { PautaConfigService } from './pautaConfig.js';
-import { RecepçãoCentralService } from './recepcaoCentral.js?v=20260810';
+import { RecepçãoCentralService } from './recepcaoCentral.js';
 import { ImportadorOrgaosService } from './importadorOrgaos.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
