@@ -1,3 +1,4 @@
+// js/recepcaocentral.js - SERVIÇO DE RECEPÇÃO CENTRAL CORRIGIDO
 import {
     collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -84,6 +85,11 @@ export const RecepcaoCentralService = {
         this._filtroTipo = this._filtroTipo || 'todos';
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
+    },
+
+    // ✅ MÉTODO EXIGIDO PELO ROUTER.JS
+    async abrir(app) {
+        await this.init(app);
     },
 
     async _carregarRecepcoesDoUsuario() {
@@ -201,7 +207,6 @@ export const RecepcaoCentralService = {
             return dataB - dataA;
         });
 
-        // BLOQUEIO DE MODOS ESPECIAIS (Mutirão, Plantão, Ação Social)
         pautas = pautas.filter(p => {
             const tipo = (p.tipo || p.type || '').toLowerCase();
             return !['mutirao', 'plantao', 'acao_social'].includes(tipo);
@@ -1267,8 +1272,6 @@ export const RecepcaoCentralService = {
 
         const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${recepcao.id}`) || '{}');
         const modoAtual = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
-        const videoAtual = cacheConfig.video !== undefined ? cacheConfig.video : (recepcao.videoUrl || '');
-        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
 
         const existing = document.getElementById('rc-modal-config-tv');
         if (existing) existing.remove();
@@ -1487,21 +1490,9 @@ export const RecepcaoCentralService = {
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
-    },
-
-    async abrir(app) {
-        const container = document.getElementById('recepcao-central-container');
-        if (!container) {
-            console.error("Container #recepcao-central-container não encontrado no index.html");
-            return;
-        }
-
-        const { UIService } = await import('./ui.js');
-        UIService.showScreen('recepcaoCentral');
-
-        await this.init(app);
     }
 };
 
 export default RecepcaoCentralService;
+window.RecepcaoCentralService = RecepcaoCentralService;
 window.RecepcaoCentralService = RecepcaoCentralService;
