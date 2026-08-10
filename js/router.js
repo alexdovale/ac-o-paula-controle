@@ -15,7 +15,7 @@ export const ROUTES = {
 };
 
 const ROUTE_GUARDS = {
-    [ROUTES.LOGIN]:             { requiresAuth: false },
+    [ROUTES.LOGIN]:               { requiresAuth: false },
     [ROUTES.MODO_SELECTION]:    { requiresAuth: true },
     [ROUTES.PAUTA_SELECTION]:   { requiresAuth: true },
     [ROUTES.APP]:               { requiresAuth: true },
@@ -123,11 +123,11 @@ export class SIGEPRouter {
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
 
             const pautaTipo = params.pautaTipo
-                           || localStorage.getItem('lastPautaTipo')
-                           || '';
+                        || localStorage.getItem('lastPautaTipo')
+                        || '';
             const pautaType = params.pautaType
-                           || localStorage.getItem('lastPautaType')
-                           || 'normal';
+                        || localStorage.getItem('lastPautaType')
+                        || 'normal';
 
             const isEvento = tiposEvento.includes(String(pautaTipo).toLowerCase())
                           || tiposEvento.includes(String(pautaType).toLowerCase());
@@ -175,7 +175,7 @@ export class SIGEPRouter {
 
     _persistRoute(route, params) {
         const screenMap = {
-            [ROUTES.LOGIN]:            'login',
+            [ROUTES.LOGIN]:             'login',
             [ROUTES.MODO_SELECTION]:   'modo-selection',
             [ROUTES.PAUTA_SELECTION]:  'pauta-selection',
             [ROUTES.APP]:              'app',
@@ -250,7 +250,7 @@ export class SIGEPRouter {
             },
             [ROUTES.RECEPCAO_CENTRAL]: async () => {
                 this._hideAllScreens();
-                await deps.RecepçãoCentralService.abrir(app);
+                await deps.RecepcaoCentralService.abrir(app);
             },
             [ROUTES.PAINEL_PUBLICO]: async () => {
                 this._hideAllScreens();
