@@ -1,6 +1,5 @@
-// js/recepcaocentral.js - SERVIÇO DE RECEPÇÃO CENTRAL CORRIGIDO
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where
+    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -78,18 +77,13 @@ function getBadgeAgendamento(num) {
     return `<span class="inline-block bg-slate-100 text-slate-600 border border-slate-300 px-1.5 py-0.5 rounded font-mono text-[10px] shadow-sm ml-1" title="Nº do Agendamento">#${escapeHTML(num)}</span>`;
 }
 
-export const RecepcaoCentralService = {
+export const RecepçãoCentralService = {
 
     async init(app) {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
-    },
-
-    // ✅ MÉTODO EXIGIDO PELO ROUTER.JS
-    async abrir(app) {
-        await this.init(app);
     },
 
     async _carregarRecepcoesDoUsuario() {
@@ -207,11 +201,6 @@ export const RecepcaoCentralService = {
             return dataB - dataA;
         });
 
-        pautas = pautas.filter(p => {
-            const tipo = (p.tipo || p.type || '').toLowerCase();
-            return !['mutirao', 'plantao', 'acao_social'].includes(tipo);
-        });
-
         if (this._filtroTipo && this._filtroTipo !== 'todos') {
             pautas = pautas.filter(p =>
                 (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
@@ -304,10 +293,10 @@ export const RecepcaoCentralService = {
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
-                        <p class="text-sm text-slate-500 mt-0.5">Histórico Geral de Pautas da Recepção</p>
+                        <p class="text-sm text-slate-500 mt-0.5">Exibindo Histórico Contínuo da Recepção</p>
                         <div class="flex items-center gap-2 mt-2 flex-wrap">
                             <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar por tipo:</span>
-                            ${['todos','agendamento','avulso','multisala'].map(t => `
+                            ${['todos','agendamento','avulso','multisala', 'mutirao', 'plantao', 'acao_social'].map(t => `
                                 <button class="rc-filtro-tipo text-xs px-3 py-1 rounded-full border font-bold transition
                                     ${(this._filtroTipo || 'todos') === t
                                         ? 'bg-slate-800 text-white border-slate-800'
@@ -316,7 +305,10 @@ export const RecepcaoCentralService = {
                                     ${t === 'todos' ? '🔀 Todos'
                                     : t === 'agendamento' ? '📅 Agendamento'
                                     : t === 'avulso' ? '🚶 Avulso'
-                                    : '🏢 Multi-Sala'}
+                                    : t === 'multisala' ? '🏢 Multi-Sala'
+                                    : t === 'mutirao' ? '👥 Mutirão'
+                                    : t === 'plantao' ? '🚨 Plantão'
+                                    : '❤️ Ação Social'}
                                 </button>
                             `).join('')}
                         </div>
@@ -339,7 +331,7 @@ export const RecepcaoCentralService = {
 
                 <div id="rc-busca-global-wrap" class="hidden mb-4 animate-fade-in">
                     <div class="relative">
-                        <input type="search" id="rc-input-busca" placeholder="Digite nome, CPF ou nº de agendamento..."
+                        <input type="search" id="rc-input-busca" placeholder="Digite nome ou nº de agendamento para buscar em todas as pautas..."
                             class="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-green-500 shadow-sm">
                         <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">🔍</span>
                     </div>
@@ -406,7 +398,7 @@ export const RecepcaoCentralService = {
         );
 
         const listaNomes = aguardando.length === 0
-            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila de espera.</p>`
+            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila de espera no momento.</p>`
             : aguardando.slice(0, 5).map((a, i) => `
                 <div class="flex items-center gap-2 py-1 border-b border-slate-100 last:border-0">
                     <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
@@ -436,26 +428,22 @@ export const RecepcaoCentralService = {
                 <div class="h-1.5 bg-slate-100">
                     <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
                 </div>
-                <div class="grid grid-cols-5 divide-x divide-slate-100 border-b border-slate-100">
+                <div class="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
                     <div class="text-center py-3">
-                        <div class="text-lg font-black text-slate-600">${c.naPauta}</div>
-                        <div class="text-[9px] text-slate-400 uppercase font-bold">Na Pauta</div>
+                        <div class="text-xl font-black text-slate-600">${c.naPauta}</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Agendados</div>
                     </div>
                     <div class="text-center py-3">
-                        <div class="text-lg font-black text-amber-600">${c.aguardando}</div>
-                        <div class="text-[9px] text-slate-400 uppercase font-bold">Aguard.</div>
+                        <div class="text-xl font-black text-amber-600">${c.aguardando}</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Aguardando</div>
                     </div>
                     <div class="text-center py-3">
-                        <div class="text-lg font-black text-blue-600">${c.emAtendimento}</div>
+                        <div class="text-xl font-black text-blue-600">${c.emAtendimento}</div>
                         <div class="text-[9px] text-slate-400 uppercase font-bold">Atendendo</div>
                     </div>
                     <div class="text-center py-3">
-                        <div class="text-lg font-black text-green-600">${c.atendidos}</div>
-                        <div class="text-[9px] text-slate-400 uppercase font-bold">Prontos</div>
-                    </div>
-                    <div class="text-center py-3">
-                        <div class="text-lg font-black text-slate-800">${c.total}</div>
-                        <div class="text-[9px] text-slate-400 uppercase font-bold">Total</div>
+                        <div class="text-xl font-black text-green-600">${c.atendidos}</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Atendidos</div>
                     </div>
                 </div>
                 <div class="px-5 pt-3 pb-2 border-b border-slate-100">
@@ -521,7 +509,7 @@ export const RecepcaoCentralService = {
         el.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-slate-600">${totalNaPauta}</div>
-                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Na Pauta</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Agendados</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-amber-600">${totalAg}</div>
@@ -533,7 +521,7 @@ export const RecepcaoCentralService = {
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-green-600">${totalAt}</div>
-                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Prontos</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Atendidos</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-cyan-600">${totalDist}</div>
@@ -609,11 +597,11 @@ export const RecepcaoCentralService = {
                     <!-- Coluna 1: Agendados / Na Pauta -->
                     <div class="p-5 flex flex-col">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3 flex items-center justify-between">
-                            <span>📅 Na Pauta / Agendados (${naPautaList.length})</span>
+                            <span>📅 Agendados (${naPautaList.length})</span>
                         </h4>
                         <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                             ${naPautaList.length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum agendado pendente.</p>`
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum agendado no momento.</p>`
                                 : naPautaList.map((a, i) => `
                                     <div class="rc-foco-item flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition" data-search="${normalizeText(a.name)} ${a.cpf||''} ${a.numAgendamento||''} ${normalizeText(a.subject||'')}">
                                         <div class="min-w-0 flex-1">
@@ -628,8 +616,8 @@ export const RecepcaoCentralService = {
                                             ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm">🚨 ${escapeHTML(a.priority)}</span>` : ''}
                                             ${renderVerificacoesBadge(a)}
                                         </div>
-                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2.5 py-1.5 mt-1 rounded-lg transition shadow-sm"
-                                            data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
+                                            data-id="${a.id}" data-pauta="${pautaId}">Fazer Check-in</button>
                                     </div>
                                 `).join('')
                             }
@@ -641,7 +629,7 @@ export const RecepcaoCentralService = {
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">⏳ Fila de Espera (${aguardando.length})</h4>
                         <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1">
                             ${aguardando.length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Fila de espera vazia.</p>`
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
                                     <div class="rc-foco-item flex flex-col bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-search="${normalizeText(a.name)} ${a.cpf||''} ${a.numAgendamento||''} ${normalizeText(a.subject||'')}">
                                         <div class="flex items-start gap-3">
@@ -655,12 +643,12 @@ export const RecepcaoCentralService = {
                                                     ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                     📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                                 </p>
-                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm">🚨 ${escapeHTML(a.priority)}</span>` : ''}
+                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider shadow-sm">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
                                                 ${renderVerificacoesBadge(a)}
                                             </div>
                                         </div>
-                                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-amber-200">
-                                            <button class="rc-foco-voltar shrink-0 text-[10px] bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                        <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-amber-200">
+                                            <button class="rc-foco-voltar shrink-0 text-[9px] sm:text-[10px] bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
                                                 data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Desfazer Check-in</button>
                                             <button class="rc-foco-chamar-individual shrink-0 text-[10px] bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1 rounded transition shadow-sm flex items-center gap-1"
                                                 data-id="${a.id}" data-pauta="${pautaId}">📣 Chamar</button>
@@ -671,7 +659,7 @@ export const RecepcaoCentralService = {
                         </div>
                     </div>
 
-                    <!-- Coluna 3: Em Atendimento e Equipe -->
+                    <!-- Coluna 3: Atendimento e Equipe -->
                     <div class="flex flex-col divide-y divide-slate-100">
                         <div class="p-5 flex-1">
                             <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
@@ -698,10 +686,9 @@ export const RecepcaoCentralService = {
                                                     </div>
                                                 </div>
                                             </div>
-                                             <div class="flex justify-between items-center mt-2 pt-2 border-t border-blue-200">
+                                             <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-blue-200">
                                                  <button class="rc-foco-voltar shrink-0 text-[10px] bg-white hover:bg-blue-100 text-blue-600 border border-blue-300 font-bold px-2 py-1 rounded transition shadow-sm"
                                                     data-id="${a.id}" data-pauta="${pautaId}" data-destino="aguardando">Voltar p/ Fila</button>
-                                                 <span class="text-[10px] text-slate-400 font-mono">Em andamento</span>
                                              </div>
                                         </div>
                                     `).join('')
@@ -709,10 +696,10 @@ export const RecepcaoCentralService = {
                             </div>
                         </div>
                         <div class="p-5 flex-1">
-                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia (${colaboradores.length})</h4>
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
                             <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
                                 ${colaboradores.length === 0
-                                    ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum membro online.</p>`
+                                    ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador online.</p>`
                                     : colaboradores.map(col => {
                                         const livre = col.status === 'disponivel' || !col.status;
                                         return `
@@ -734,11 +721,13 @@ export const RecepcaoCentralService = {
             </div>
         `;
 
+        // Event Listeners do Foco
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
         document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => await this._chamarProximo(pautaId));
         document.getElementById('rc-foco-btn-acomp')?.addEventListener('click', () => window.open(`?painel=true&pautas=${pautaId}`, '_blank'));
         document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => this._abrirModalAdicionarAssistido(pautaId, pauta.name));
 
+        // Event Listener para a Busca Local do Foco
         document.getElementById('rc-foco-busca')?.addEventListener('input', (e) => {
             const termo = normalizeText(e.target.value);
             foco.querySelectorAll('.rc-foco-item').forEach(el => {
@@ -748,7 +737,7 @@ export const RecepcaoCentralService = {
         });
 
         foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
-            btn.addEventListener('click', () => this._abrirModalConfirmarChegada(pautaId, btn.dataset.id));
+            btn.addEventListener('click', () => this._marcarChegada(pautaId, btn.dataset.id));
         });
         
         foco.querySelectorAll('.rc-foco-chamar-individual').forEach(btn => {
@@ -813,10 +802,24 @@ export const RecepcaoCentralService = {
                     <div>
                         <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assunto / Motivo (Opcional)</label>
                         <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
+                        <p class="text-[9px] text-slate-400 mt-1">Comece a digitar para ver sugestões.</p>
                     </div>
 
                     <div class="bg-red-50 border-2 border-red-100 rounded-xl p-4">
                         <label class="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-3">🚨 Prioridade Legal (Se houver)</label>
+                        <select id="rc-add-prioridade-simples" class="w-full p-3 border border-red-200 rounded-xl text-sm focus:ring-2 focus:ring-red-500 outline-none bg-white font-semibold text-slate-700 mb-3 hidden">
+                            <option value="">Nenhuma Prioridade</option>
+                            <option value="URGENTE" class="font-bold text-red-600">🚨 URGENTE</option>
+                            <option value="Idoso (60+)">Idoso (60+)</option>
+                            <option value="Idoso (80+)">Idoso (80+)</option>
+                            <option value="Deficiência (PCD)">Deficiência (PCD)</option>
+                            <option value="Autismo (TEA)">Autismo (TEA)</option>
+                            <option value="Gestante">Gestante</option>
+                            <option value="Criança de Colo">Criança de Colo</option>
+                            <option value="Obesidade">Obesidade</option>
+                            <option value="Urgência Médica">Urgência Médica</option>
+                        </select>
+                        
                         <div id="rc-priority-types-grid" class="grid grid-cols-2 gap-2 mb-3">
                             <button type="button" data-value="Idoso (60+)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">👴 Idoso (60+)</button>
                             <button type="button" data-value="Idoso (80+)" class="rc-p-chip bg-white border border-red-200 text-red-700 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-bold hover:bg-red-100 transition">🎖️ Idoso (80+)</button>
@@ -854,6 +857,7 @@ export const RecepcaoCentralService = {
 
         document.body.appendChild(modal);
 
+        // Lógica dos Chips de Prioridade
         const chips = modal.querySelectorAll('.rc-p-chip');
         const hiddenInput = document.getElementById('rc-add-prioridade-hidden');
         chips.forEach(chip => {
@@ -882,12 +886,14 @@ export const RecepcaoCentralService = {
 
         document.getElementById('rc-form-add-assistido').onsubmit = async (e) => {
             e.preventDefault();
+            
             const btn = document.getElementById('rc-btn-add-salvar');
             btn.disabled = true;
             btn.innerHTML = '<span class="animate-pulse">Salvando...</span>';
 
             const statusEscolhido = document.querySelector('input[name="rc_add_status"]:checked').value;
             const isAguardando = statusEscolhido === 'aguardando';
+            const prioridadeSelecionada = hiddenInput.value;
 
             const assistedData = {
                 name: document.getElementById('rc-add-nome').value.trim(),
@@ -898,11 +904,16 @@ export const RecepcaoCentralService = {
                 type: 'avulso', 
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
-                priority: hiddenInput.value || null
+                priority: prioridadeSelecionada || null
             };
 
             const app = this._app;
-            const sucesso = await PautaService.addAssistedProgrammatic(app.db, pautaId, assistedData, app.currentUserName || 'Recepção Central');
+            const sucesso = await PautaService.addAssistedProgrammatic(
+                app.db, 
+                pautaId, 
+                assistedData, 
+                app.currentUserName || 'Recepção Central'
+            );
 
             if (sucesso) {
                 closeModal();
@@ -919,7 +930,7 @@ export const RecepcaoCentralService = {
         if (!input) return;
 
         input.addEventListener('input', () => {
-            const termo = normalizeText(input.value.trim());
+            const termo     = normalizeText(input.value.trim());
             const resultados = document.getElementById('rc-resultados-busca');
             if (!resultados) return;
 
@@ -949,24 +960,26 @@ export const RecepcaoCentralService = {
             }
 
             resultados.innerHTML = encontrados.map(({ pauta, assistido: a }) => {
-                const sl = statusLabel(a.status);
+                const sl          = statusLabel(a.status);
                 const podeCheckin = a.status === 'pauta';
                 return `
                     <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
                         <div class="min-w-0 flex-1">
                             <p class="font-black text-slate-800 text-sm truncate">
-                                ${escapeHTML(a.name)} ${getBadgeAgendamento(a.numAgendamento)}
+                                ${escapeHTML(a.name)} 
                             </p>
                             <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                ${getBadgeAgendamento(a.numAgendamento)}
                                 ${a.scheduledTime ? `⏰ <span class="font-bold">${a.scheduledTime}</span> · ` : ''}
                                 ${escapeHTML(pauta.name)} · ${escapeHTML(a.subject || '')}
+                                ${a.assignedCollaborator?.name || a.attendant ? ` · 🧑‍💻 ${escapeHTML(a.assignedCollaborator?.name || a.attendant)}` : ''}
                             </p>
                         </div>
                         <span class="text-[10px] font-black px-2 py-0.5 rounded ${sl.cor}">${sl.txt}</span>
                         ${podeCheckin ? `
                             <button class="rc-busca-checkin bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-black px-3 py-1.5 rounded-lg transition shadow-sm"
                                 data-pauta="${pauta.id}" data-id="${a.id}">
-                                Check-in
+                                Fazer Check-in
                             </button>
                         ` : ''}
                     </div>
@@ -975,8 +988,8 @@ export const RecepcaoCentralService = {
 
             resultados.querySelectorAll('.rc-busca-checkin').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this._abrirModalConfirmarChegada(btn.dataset.pauta, btn.dataset.id);
-                    input.value = '';
+                    this._marcarChegada(btn.dataset.pauta, btn.dataset.id);
+                    input.value        = '';
                     resultados.innerHTML = '';
                     document.getElementById('rc-busca-global-wrap').classList.add('hidden');
                 });
@@ -984,26 +997,19 @@ export const RecepcaoCentralService = {
         });
     },
 
-    async _marcarChegada(pautaId, assistidoId, prioridade = null, horaPersonalizada = null) {
+    async _marcarChegada(pautaId, assistidoId) {
         const app = this._app;
-        
-        let arrivalDate = new Date();
-        if (horaPersonalizada) {
-            const [h, m] = horaPersonalizada.split(':');
-            arrivalDate.setHours(parseInt(h), parseInt(m), 0, 0);
-        }
-
-        let updates = {
-            status: 'aguardando',
-            arrivalTime: arrivalDate.toISOString(),
-            checkInOrder: Date.now(),
-        };
-        
-        if (prioridade) {
-            updates.priority = prioridade;
-        }
-
-        await PautaService.updateStatus(app.db, pautaId, assistidoId, updates, app.currentUserName);
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            assistidoId,
+            {
+                status:       'aguardando',
+                arrivalTime:  new Date().toISOString(),
+                checkInOrder: Date.now(),
+            },
+            app.currentUserName
+        );
         showNotification("Chegada registrada!", "success");
         playSound('notification');
     },
@@ -1022,9 +1028,17 @@ export const RecepcaoCentralService = {
             updates.inAttendanceTime = null;
             updates.attendedBy = null;
             updates.attendedAt = null;
+            updates.distributionStatus = null;
+            updates.finalizadoPeloColaborador = false;
         }
 
-        await PautaService.updateStatus(app.db, pautaId, assistidoId, updates, app.currentUserName);
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            assistidoId,
+            updates,
+            app.currentUserName
+        );
         showNotification(msg, "info");
     },
 
@@ -1038,7 +1052,7 @@ export const RecepcaoCentralService = {
 
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
-        if (colaboradores.length > 0) {
+        if(colaboradores.length > 0) {
            this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
         } else {
              await this._executarChamado(pautaId, assistido, pauta, null);
@@ -1046,7 +1060,7 @@ export const RecepcaoCentralService = {
     },
 
     async _chamarProximo(pautaId) {
-        const app = this._app;
+        const app   = this._app;
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
 
@@ -1063,7 +1077,7 @@ export const RecepcaoCentralService = {
         const proximo = aguardando[0];
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
-        if (colaboradores.length > 0) {
+        if(colaboradores.length > 0) {
            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
              await this._executarChamado(pautaId, proximo, pauta, null);
@@ -1079,7 +1093,8 @@ export const RecepcaoCentralService = {
         modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
         
         let colaboradoresOptions = '<option value="">Não direcionar (Apenas Chamar)</option>';
-        const colabOrdenados = [...colaboradores].sort((a, b) => {
+        
+        const colabOrdenados = [...colaboradores].sort((a,b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
             const bLivre = b.status === 'disponivel' || !b.status;
             if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
@@ -1108,11 +1123,12 @@ export const RecepcaoCentralService = {
                         <select id="rc-select-colaborador-destino" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none bg-white font-semibold text-slate-700">
                             ${colaboradoresOptions}
                         </select>
+                        <p class="text-[10px] text-slate-400 mt-2 leading-relaxed">Você pode deixar em branco para apenas chamar no painel da TV sem direcionar a uma mesa específica.</p>
                     </div>
 
                     <div class="pt-4 flex gap-3">
                         <button type="button" id="rc-btn-colaborador-cancelar" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
-                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Confirmar Chamada</button>
+                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2"><span>📣</span> Confirmar Chamada</button>
                     </div>
                 </div>
             </div>
@@ -1130,9 +1146,12 @@ export const RecepcaoCentralService = {
             const colaboradorId = select.value;
             let colaboradorObj = null;
             
-            if (colaboradorId) {
+            if(colaboradorId) {
                 const opt = select.options[select.selectedIndex];
-                colaboradorObj = { id: colaboradorId, name: opt.getAttribute('data-nome') };
+                colaboradorObj = {
+                    id: colaboradorId,
+                    name: opt.getAttribute('data-nome')
+                };
             }
             
             closeModal();
@@ -1149,20 +1168,31 @@ export const RecepcaoCentralService = {
              inAttendanceTime: new Date().toISOString() 
          };
 
-         if (colaboradorDestinoObj) {
+         if(colaboradorDestinoObj) {
              updates.assignedCollaborator = {
                  id: colaboradorDestinoObj.id,
                  name: colaboradorDestinoObj.name
              };
          }
 
-         await PautaService.updateStatus(app.db, pautaId, assistido.id, updates, app.currentUserName);
+         await PautaService.updateStatus(
+             app.db,
+             pautaId,
+             assistido.id,
+             updates,
+             app.currentUserName
+         );
          
-         if (colaboradorDestinoObj && colaboradorDestinoObj.id) {
+         if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
              try {
                 const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
-                await updateDoc(colabDocRef, { status: 'ocupado', currentAttendance: assistido.id });
-             } catch(e) { }
+                await updateDoc(colabDocRef, {
+                    status: 'ocupado',
+                    currentAttendance: assistido.id
+                });
+             } catch(e) {
+                 console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
+             }
          }
 
          showNotification(`📣 Chamado: ${assistido.name}`, "success");
@@ -1171,18 +1201,19 @@ export const RecepcaoCentralService = {
 
     async _registrarUltimoChamado(pautaId, assistido, pautaNome, mesaNome = null) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+
         let salaDisplay = pauta?.sala || assistido.room || '';
         if (mesaNome && salaDisplay) salaDisplay += ` - ${mesaNome}`;
         else if (mesaNome) salaDisplay = mesaNome;
 
         const chamado = {
-            nome: assistido.name,
-            assunto: assistido.subject || '',
-            local: pautaNome,
+            nome:      assistido.name,
+            assunto:   assistido.subject || '',
+            local:     pautaNome,
             pautaNome: pautaNome,
-            sala: salaDisplay,
+            sala:      salaDisplay,
             pautaId,
-            hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            hora:      new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
             timestamp: Date.now(),
         };
 
@@ -1193,10 +1224,17 @@ export const RecepcaoCentralService = {
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
 
+        localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
+
         try {
             const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
-            await setDoc(painelRef, { atual: chamado, historico: historico }, { merge: true });
-        } catch (error) { }
+            await setDoc(painelRef, {
+                atual: chamado,
+                historico: historico
+            }, { merge: true });
+        } catch (error) {
+            console.error("Erro ao atualizar último chamado no Firebase:", error);
+        }
 
         window.dispatchEvent(new CustomEvent('sigep:chamado', { detail: chamado }));
     },
@@ -1211,7 +1249,9 @@ export const RecepcaoCentralService = {
 
         if (recemChamados.length > 0) {
             const pauta = estado.pautasHoje.find(p => p.id === pautaId);
-            if (pauta) this._registrarUltimoChamado(pautaId, recemChamados[0], pauta.name);
+            if (pauta) {
+                this._registrarUltimoChamado(pautaId, recemChamados[0], pauta.name);
+            }
         }
     },
 
@@ -1272,6 +1312,8 @@ export const RecepcaoCentralService = {
 
         const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${recepcao.id}`) || '{}');
         const modoAtual = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
+        const videoAtual = cacheConfig.video !== undefined ? cacheConfig.video : (recepcao.videoUrl || '');
+        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
 
         const existing = document.getElementById('rc-modal-config-tv');
         if (existing) existing.remove();
@@ -1289,6 +1331,7 @@ export const RecepcaoCentralService = {
                     </div>
                     <button id="rc-modal-tv-close" class="text-slate-400 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
                 </div>
+                
                 <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50">
                     <div>
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Modo de Visualização</label>
@@ -1296,40 +1339,149 @@ export const RecepcaoCentralService = {
                             <label class="tv-modo-card cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'fila' ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600' : ''}">
                                 <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
                                 <span class="text-3xl">📋</span>
-                                <div><p class="font-bold text-slate-800">Fila (Lista)</p></div>
+                                <div>
+                                    <p class="font-bold text-slate-800">Fila (Lista)</p>
+                                    <p class="text-[10px] text-slate-500 mt-1">Cards com fila e chamados</p>
+                                </div>
                             </label>
                             <label class="tv-modo-card cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'tv' ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600' : ''}">
                                 <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
                                 <span class="text-3xl">📺</span>
-                                <div><p class="font-bold text-slate-800">TV Chamados</p></div>
+                                <div>
+                                    <p class="font-bold text-slate-800">TV Chamados</p>
+                                    <p class="text-[10px] text-slate-500 mt-1">Painel verde com histórico</p>
+                                </div>
                             </label>
                             <label class="tv-modo-card cursor-pointer bg-white border-2 border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'video' ? 'border-indigo-600 bg-indigo-50/30 ring-1 ring-indigo-600' : ''}">
                                 <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
                                 <span class="text-3xl">🎬</span>
-                                <div><p class="font-bold text-slate-800">TV + Vídeo</p></div>
+                                <div>
+                                    <p class="font-bold text-slate-800">TV + Vídeo</p>
+                                    <p class="text-[10px] text-slate-500 mt-1">Vídeo + banner de chamado</p>
+                                </div>
                             </label>
                         </div>
                     </div>
+
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link do YouTube ou Vídeo</label>
+                        <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}"
+                            class="w-full bg-white border-2 border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 transition-all text-slate-700 font-mono"
+                            placeholder="https://www.youtube.com/watch?v=...">
+                        <p class="text-[10px] text-slate-400 mt-1.5 font-medium">Funciona com links do YouTube, Shorts, Lives ou arquivos .mp4</p>
+                    </div>
+
+                    <div>
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Som ao Chamar Próximo</label>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <label class="tv-som-card cursor-pointer bg-white border-2 border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-slate-300 transition-all ${somAtual === true ? 'border-slate-600 bg-slate-50' : ''}">
+                                <input type="radio" name="tv_som" value="1" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500" ${somAtual === true ? 'checked' : ''}>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm flex items-center gap-1.5">🔔 Ativado</p>
+                                    <p class="text-[10px] text-slate-500">Toca ding-dong ao chamar</p>
+                                </div>
+                            </label>
+                            <label class="tv-som-card cursor-pointer bg-white border-2 border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-slate-300 transition-all ${somAtual === false ? 'border-slate-600 bg-slate-50' : ''}">
+                                <input type="radio" name="tv_som" value="0" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500" ${somAtual === false ? 'checked' : ''}>
+                                <div>
+                                    <p class="font-bold text-slate-800 text-sm flex items-center gap-1.5">🔇 Desligado</p>
+                                    <p class="text-[10px] text-slate-500">Sem som automático</p>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="bg-slate-100/80 border border-slate-200 rounded-xl p-4">
+                        <label class="block text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">Pré-Visualização do Link Gerado</label>
+                        <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 text-[11px] text-slate-500 font-mono resize-none focus:ring-0 p-0 h-12 outline-none"></textarea>
+                    </div>
                 </div>
-                <div class="bg-white border-t border-slate-200 px-6 py-4 flex gap-3 shrink-0">
-                    <button id="rc-btn-tv-cancelar" class="flex-1 bg-slate-100 text-slate-700 font-bold py-3 rounded-xl">Cancelar</button>
-                    <button id="rc-btn-tv-abrir" class="flex-1 bg-indigo-600 text-white font-bold py-3 rounded-xl shadow">Abrir Painel</button>
+
+                <div class="bg-white border-t border-slate-200 px-6 py-4 flex flex-col sm:flex-row gap-3 shrink-0">
+                    <button id="rc-btn-tv-cancelar" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
+                        Cancelar
+                    </button>
+                    <button id="rc-btn-tv-abrir" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2">
+                        📺 Abrir Painel
+                    </button>
+                    <button id="rc-btn-tv-salvar" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2">
+                        💾 Salvar e Copiar Link
+                    </button>
                 </div>
             </div>
         `;
+
         document.body.appendChild(modal);
+
+        const updatePreview = () => {
+            const modo = document.querySelector('input[name="tv_modo"]:checked').value;
+            const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
+            const som = document.querySelector('input[name="tv_som"]:checked').value;
+            
+            const ids  = estado.pautasHoje.map(p => p.id).join(',');
+            const nome = encodeURIComponent(recepcao.nome || this._unidadeAtual?.nome || 'Recepção');
+            
+            let baseUrl = window.location.href.split('?')[0];
+            const link = `${baseUrl}?painel=true&pautas=${ids}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
+            
+            document.getElementById('tv_preview_link').value = link;
+            return { link, modo, video, som };
+        };
+
+        modal.querySelectorAll('input[name="tv_modo"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                modal.querySelectorAll('.tv-modo-card').forEach(card => {
+                    card.classList.remove('border-indigo-600', 'bg-indigo-50/30', 'ring-1', 'ring-indigo-600');
+                });
+                radio.closest('.tv-modo-card').classList.add('border-indigo-600', 'bg-indigo-50/30', 'ring-1', 'ring-indigo-600');
+                updatePreview();
+            });
+        });
+
+        modal.querySelectorAll('input[name="tv_som"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                modal.querySelectorAll('.tv-som-card').forEach(card => {
+                    card.classList.remove('border-slate-600', 'bg-slate-50');
+                });
+                radio.closest('.tv-som-card').classList.add('border-slate-600', 'bg-slate-50');
+                updatePreview();
+            });
+        });
+
+        document.getElementById('tv_video_url').addEventListener('input', updatePreview);
+
+        updatePreview();
 
         const closeModal = () => modal.remove();
         document.getElementById('rc-modal-tv-close').onclick = closeModal;
         document.getElementById('rc-btn-tv-cancelar').onclick = closeModal;
         modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
-        document.getElementById('rc-btn-tv-abrir').addEventListener('click', () => {
-            const modo = document.querySelector('input[name="tv_modo"]:checked').value;
-            const ids = estado.pautasHoje.map(p => p.id).join(',');
-            const link = `${window.location.href.split('?')[0]}?painel=true&pautas=${ids}&modo=${modo}`;
+        const saveConfig = async () => {
+            const data = updatePreview();
+            const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
+            localStorage.setItem(`sigep_tv_config_${recepcao.id}`, JSON.stringify(configToSave));
+            try {
+                await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
+                    modoVisualizacao: configToSave.modo,
+                    videoUrl: configToSave.video
+                });
+            } catch(e) { }
+            return data.link;
+        };
+
+        document.getElementById('rc-btn-tv-abrir').addEventListener('click', async () => {
+            const link = await saveConfig();
             window.open(link, '_blank');
             closeModal();
+        });
+
+        document.getElementById('rc-btn-tv-salvar').addEventListener('click', async () => {
+            const link = await saveConfig();
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification("Configuração salva e Link copiado com sucesso!", "success");
+                closeModal();
+            }).catch(() => showNotification("Erro ao copiar o link.", "error"));
         });
     },
 
@@ -1338,35 +1490,38 @@ export const RecepcaoCentralService = {
         if (!pauta) return;
 
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
-        const naPauta = assistidos.filter(a => a.status === 'pauta');
+        const naPauta    = assistidos.filter(a => a.status === 'pauta');
 
         const existing = document.getElementById('rc-modal-checkin');
         if (existing) existing.remove();
 
         const modal = document.createElement('div');
-        modal.id = 'rc-modal-checkin';
+        modal.id        = 'rc-modal-checkin';
         modal.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[200] p-4';
         modal.innerHTML = `
             <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
                 <div class="bg-slate-800 px-6 py-4 flex justify-between items-center">
-                    <h3 class="text-white font-black">Check-in — ${escapeHTML(pauta.name)}</h3>
+                    <h3 class="text-white font-black">Check-in Rápido</h3>
                     <button id="rc-modal-checkin-close" class="text-slate-400 hover:text-white text-2xl font-bold leading-none">×</button>
                 </div>
                 <div class="p-5">
-                    <input type="search" id="rc-modal-busca" placeholder="Buscar pelo nome..."
+                    <input type="search" id="rc-modal-busca" placeholder="Buscar por nome ou nº agendamento..."
                         class="w-full border border-slate-300 rounded-xl px-4 py-2.5 text-sm mb-3 focus:outline-none focus:ring-2 focus:ring-amber-400">
                     <div id="rc-modal-lista" class="space-y-2 max-h-72 overflow-y-auto">
                         ${naPauta.length === 0
-                            ? `<p class="text-center text-slate-400 py-6 text-sm">Todos já fizeram check-in.</p>`
+                            ? `<p class="text-center text-slate-400 py-6 text-sm">Nenhum agendado pendente.</p>`
                             : naPauta.map(a => `
-                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3">
+                                <div class="flex items-center justify-between bg-slate-50 border border-slate-200 rounded-xl px-4 py-3" data-search="${normalizeText(a.name)} ${a.numAgendamento||''}">
                                     <div>
-                                        <p class="font-bold text-slate-800 text-sm">${escapeHTML(a.name)} ${getBadgeAgendamento(a.numAgendamento)}</p>
+                                        <p class="font-bold text-slate-800 text-sm">
+                                            ${escapeHTML(a.name)} 
+                                            ${getBadgeAgendamento(a.numAgendamento)}
+                                        </p>
                                         <p class="text-[10px] text-slate-500">${a.scheduledTime ? `⏰ ${a.scheduledTime} · ` : ''}${escapeHTML(a.subject || '')}</p>
                                     </div>
                                     <button class="rc-modal-checkin-btn bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-3 py-1.5 rounded-lg transition"
                                         data-id="${a.id}" data-nome="${escapeHTML(a.name)}">
-                                        Check-in
+                                        Registrar
                                     </button>
                                 </div>
                             `).join('')
@@ -1385,101 +1540,19 @@ export const RecepcaoCentralService = {
             const t = normalizeText(e.target.value);
             modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
                 const linha = btn.closest('div.flex');
-                const nome = normalizeText(btn.dataset.nome);
-                linha.style.display = nome.includes(t) ? '' : 'none';
+                const searchStr = linha.dataset.search || '';
+                linha.style.display = searchStr.includes(t) ? '' : 'none';
             });
         });
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                modal.remove();
-                this._abrirModalConfirmarChegada(pautaId, btn.dataset.id);
+            btn.addEventListener('click', async () => {
+                btn.disabled    = true;
+                btn.textContent = '...';
+                await this._marcarChegada(pautaId, btn.dataset.id);
+                btn.closest('div.flex').remove();
             });
         });
-    },
-
-    _abrirModalConfirmarChegada(pautaId, assistidoId) {
-        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
-        const assistidos = estado.assistidosPorPauta[pautaId] || [];
-        const assistido = assistidos.find(a => a.id === assistidoId);
-
-        if (!pauta || !assistido) return;
-
-        const existing = document.getElementById('rc-modal-confirma-chegada');
-        if (existing) existing.remove();
-
-        const horaAtualStr = new Date().toTimeString().slice(0, 5);
-
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-confirma-chegada';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
-
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden flex flex-col" onclick="event.stopPropagation()">
-                <div class="bg-amber-500 px-6 py-4 flex justify-between items-center shrink-0">
-                    <h3 class="text-white font-black text-lg flex items-center gap-2">✅ Registrar Chegada</h3>
-                    <button id="rc-modal-confirma-close" class="text-amber-200 hover:text-white text-3xl font-bold leading-none">&times;</button>
-                </div>
-                <div class="p-6 space-y-4">
-                    <div>
-                        <p class="text-xs text-slate-500">Assistido:</p>
-                        <p class="font-black text-slate-800 text-base leading-snug">${escapeHTML(assistido.name)} ${getBadgeAgendamento(assistido.numAgendamento)}</p>
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Horário de Chegada</label>
-                        <input type="time" id="rc-checkin-hora-input" value="${horaAtualStr}" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-bold bg-slate-50 outline-none">
-                    </div>
-
-                    <div>
-                        <label class="block text-[10px] font-black text-red-500 uppercase tracking-widest mb-2">🚨 Prioridade Legal (Opcional)</label>
-                        <div id="rc-checkin-priority-grid" class="grid grid-cols-2 gap-2 mb-2">
-                            <button type="button" data-value="Idoso (60+)" class="rc-checkin-chip bg-white border border-red-200 text-red-700 rounded-lg py-2 px-1 text-[10px] font-bold hover:bg-red-100 transition">👴 Idoso (60+)</button>
-                            <button type="button" data-value="Deficiência (PCD)" class="rc-checkin-chip bg-white border border-red-200 text-red-700 rounded-lg py-2 px-1 text-[10px] font-bold hover:bg-red-100 transition">♿ Deficiência</button>
-                            <button type="button" data-value="Gestante" class="rc-checkin-chip bg-white border border-red-200 text-red-700 rounded-lg py-2 px-1 text-[10px] font-bold hover:bg-red-100 transition">🤰 Gestante</button>
-                            <button type="button" data-value="URGENTE" class="rc-checkin-chip bg-red-100 border-2 border-red-400 text-red-800 rounded-lg py-2 px-1 text-[10px] font-black shadow-sm transition">🚨 URGENTE</button>
-                        </div>
-                        <input type="hidden" id="rc-checkin-prioridade-hidden" value="">
-                    </div>
-
-                    <button id="rc-btn-confirmar-chegada-final" class="w-full bg-amber-500 hover:bg-amber-600 text-white font-bold py-3.5 rounded-xl transition text-sm shadow">Confirmar Check-in</button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-
-        const chips = modal.querySelectorAll('.rc-checkin-chip');
-        const hiddenInput = document.getElementById('rc-checkin-prioridade-hidden');
-        chips.forEach(chip => {
-            chip.addEventListener('click', () => {
-                const wasSelected = chip.classList.contains('ring-2');
-                chips.forEach(c => {
-                    c.classList.remove('ring-2', 'ring-red-500', 'bg-red-200');
-                    if (c.dataset.value === 'URGENTE') c.classList.replace('bg-red-300', 'bg-red-100');
-                    else c.classList.replace('bg-red-100', 'bg-white');
-                });
-                if (!wasSelected) {
-                    chip.classList.add('ring-2', 'ring-red-500');
-                    if (chip.dataset.value === 'URGENTE') chip.classList.replace('bg-red-100', 'bg-red-300');
-                    else chip.classList.replace('bg-white', 'bg-red-100');
-                    hiddenInput.value = chip.dataset.value;
-                } else {
-                    hiddenInput.value = '';
-                }
-            });
-        });
-
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-modal-confirma-close').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
-
-        document.getElementById('rc-btn-confirmar-chegada-final').onclick = async () => {
-            const horaEscolhida = document.getElementById('rc-checkin-hora-input').value;
-            const prioridade = hiddenInput.value || null;
-            
-            closeModal();
-            await this._marcarChegada(pautaId, assistidoId, prioridade, horaEscolhida);
-        };
     },
 
     fechar() {
@@ -1490,9 +1563,20 @@ export const RecepcaoCentralService = {
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
+    },
+
+    async abrir(app) {
+        const container = document.getElementById('recepcao-central-container');
+        if (!container) {
+            console.error("Container #recepcao-central-container não encontrado no index.html");
+            return;
+        }
+
+        const { UIService } = await import('./ui.js');
+        UIService.showScreen('recepcaoCentral');
+
+        await this.init(app);
     }
 };
 
-export default RecepcaoCentralService;
-window.RecepcaoCentralService = RecepcaoCentralService;
-window.RecepcaoCentralService = RecepcaoCentralService;
+export default RecepçãoCentralService;
