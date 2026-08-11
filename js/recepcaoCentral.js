@@ -651,7 +651,7 @@ export const RecepcaoCentralService = {
                                                 ${a.scheduledTime ? `<span class="text-slate-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                 📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                             </p>
-                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
+                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
                                             ${renderVerificacoesBadge(a)}
                                         </div>
                                         <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
@@ -681,18 +681,18 @@ export const RecepcaoCentralService = {
                                                     ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
                                                     📝 ${escapeHTML(a.subject || 'Sem assunto')}
                                                 </p>
-                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priority)}</span>` : ''}
+                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
                                                 ${renderVerificacoesBadge(a)}
                                             </div>
                                         </div>
 
-                                        <!-- BOTÕES DE PRIORIDADE RÁPIDA NA FILA -->
-                                        <div class="mt-2 pt-2 border-t border-amber-200/60 flex flex-wrap gap-1 items-center justify-between">
-                                            <div class="flex items-center gap-1">
-                                                <span class="text-[9px] font-bold text-slate-400 uppercase">Prioridade:</span>
-                                                <button class="rc-foco-set-prioridade text-[9px] font-bold px-1.5 py-0.5 rounded ${a.priority === 'URGENTE' ? 'bg-red-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}" data-id="${a.id}" data-pauta="${pautaId}" data-prioridade="URGENTE">🚨 Urg</button>
-                                                <button class="rc-foco-set-prioridade text-[9px] font-bold px-1.5 py-0.5 rounded ${a.priority === 'Idoso (60+)' ? 'bg-amber-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}" data-id="${a.id}" data-pauta="${pautaId}" data-prioridade="Idoso (60+)">👴 Idoso</button>
-                                                <button class="rc-foco-set-prioridade text-[9px] font-bold px-1.5 py-0.5 rounded ${a.priority === 'Deficiência (PCD)' ? 'bg-blue-600 text-white shadow' : 'bg-white text-slate-600 border border-slate-200 hover:bg-slate-100'}" data-id="${a.id}" data-pauta="${pautaId}" data-prioridade="Deficiência (PCD)">♿ PCD</button>
+                                        <!-- BOTÕES DE AÇÃO NA FILA -->
+                                        <div class="mt-2 pt-2 border-t border-amber-200/60 flex flex-wrap gap-2 items-center justify-between">
+                                            <div class="flex items-center gap-1.5">
+                                                <button class="rc-foco-abrir-prioridade text-[9px] font-bold px-2 py-1 rounded bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 shadow-sm transition" data-id="${a.id}" data-pauta="${pautaId}">
+                                                    ⭐️ Definir Prioridade
+                                                </button>
+                                                ${(a.priority || a.priorityReason) ? `<button class="rc-foco-remover-prioridade text-[9px] font-bold px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition" data-id="${a.id}" data-pauta="${pautaId}">❌ Remover</button>` : ''}
                                             </div>
                                         </div>
 
@@ -813,22 +813,110 @@ export const RecepcaoCentralService = {
             });
         });
 
-        foco.querySelectorAll('.rc-foco-set-prioridade').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                const id = btn.dataset.id;
-                const prioridade = btn.dataset.prioridade;
-                const assistido = assistidos.find(a => a.id === id);
-                const novaPrio = assistido?.priority === prioridade ? null : prioridade;
-
-                await PautaService.updateStatus(
-                    this._app.db,
-                    pautaId,
-                    id,
-                    { priority: novaPrio },
-                    this._app.currentUserName
-                );
-                showNotification(novaPrio ? `Prioridade definida para ${novaPrio}` : "Prioridade removida", "info");
+        foco.querySelectorAll('.rc-foco-abrir-prioridade').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._abrirModalDefinirPrioridade(btn.dataset.pauta, btn.dataset.id);
             });
+        });
+
+        foco.querySelectorAll('.rc-foco-remover-prioridade').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if(confirm("Remover urgência?")) {
+                    await PautaService.updateStatus(
+                        this._app.db,
+                        btn.dataset.pauta,
+                        btn.dataset.id,
+                        { priority: null, priorityReason: null },
+                        this._app.currentUserName
+                    );
+                    showNotification("Prioridade removida", "info");
+                }
+            });
+        });
+    },
+
+    // ── MODAL DEFINIR PRIORIDADE ───────────────────────────────────────────────
+
+    _abrirModalDefinirPrioridade(pautaId, assistidoId) {
+        const existing = document.getElementById('rc-modal-prioridade');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-prioridade';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
+        modal.innerHTML = `
+            <div class="bg-white p-5 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <h2 class="text-xl sm:text-2xl font-bold mb-2 text-gray-800">Prioridade Legal</h2>
+                <p class="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500">Selecione uma ou mais categorias:</p>
+                
+                <div id="rc-priority-types-grid" class="grid grid-cols-2 gap-2 mb-4 sm:mb-6">
+                    <button type="button" data-value="Idoso (60+)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">👴 Idoso (60+)</button>
+                    <button type="button" data-value="Idoso (80+)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🎖️ Idoso (80+)</button>
+                    <button type="button" data-value="Deficiência (PCD)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">♿ Deficiência</button>
+                    <button type="button" data-value="Autismo (TEA)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🧩 Autismo</button>
+                    <button type="button" data-value="Gestante" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🤰 Gestante</button>
+                    <button type="button" data-value="Criança de Colo" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">👶 Colo</button>
+                    <button type="button" data-value="Obesidade" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">⚖️ Obesidade</button>
+                    <button type="button" data-value="Urgência Médica" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🚑 Médica</button>
+                </div>
+        
+                <label class="block text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
+                <textarea id="rc-priority-reason-input" placeholder="Ex: Prazo vencendo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-20 text-sm sm:text-base outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4">
+                    <button id="rc-cancel-priority-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                    <button id="rc-confirm-priority-btn" class="w-full sm:w-auto bg-red-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">Confirmar Prioridade</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        // Estilo dinâmico para seleção do chip se não houver a classe global
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .rc-p-chip.selected {
+                background-color: #fef2f2 !important; 
+                border-color: #f87171 !important; 
+                color: #b91c1c !important; 
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            }
+        `;
+        modal.appendChild(style);
+
+        modal.querySelectorAll('.rc-p-chip').forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.classList.toggle('selected');
+            });
+        });
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-cancel-priority-btn').onclick = closeModal;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        document.getElementById('rc-confirm-priority-btn').addEventListener('click', async () => {
+            const selectedChips = Array.from(modal.querySelectorAll('.rc-p-chip.selected')).map(chip => chip.dataset.value);
+            const customReason = document.getElementById('rc-priority-reason-input').value.trim();
+            
+            let finalReason = selectedChips.join(', ');
+            if (customReason) {
+                finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+            }
+
+            if (!finalReason) { 
+                showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                return; 
+            }
+
+            await PautaService.updateStatus(
+                this._app.db, pautaId, assistidoId,
+                { priority: 'URGENTE', priorityReason: finalReason },
+                this._app.currentUserName
+            );
+
+            closeModal();
+            showNotification("Prioridade Ativada!", "success");
         });
     },
 
@@ -941,7 +1029,7 @@ export const RecepcaoCentralService = {
                 numAgendamento: document.getElementById('rc-add-agendamento').value.trim(),
                 subject: document.getElementById('rc-add-assunto').value.trim(),
                 status: statusEscolhido,
-                type: 'avulso',
+                type: 'avulso', // Adicionados pela recepção entram como avulsos por padrão
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
                 priority: prioridadeSelecionada || null
@@ -1170,15 +1258,18 @@ export const RecepcaoCentralService = {
 
         const proximo = aguardando[0];
         
+        // Verifica se há colaboradores disponíveis para atribuição nesta pauta.
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
         if(colaboradores.length > 0) {
            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
+             // Caso não haja colaboradores, executa o fluxo padrão: chama diretamente e atribui.
              await this._executarChamado(pautaId, proximo, pauta, null);
         }
     },
     
+    // Novo modal de seleção de colaborador para a Central de Recepção
     _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
         const existing = document.getElementById('rc-modal-seletor-colaborador');
         if (existing) existing.remove();
@@ -1189,6 +1280,7 @@ export const RecepcaoCentralService = {
         
         let colaboradoresOptions = '<option value="">Sem atribuição direta</option>';
         
+        // Ordena colaboradores (livres primeiro)
         const colabOrdenados = [...colaboradores].sort((a,b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
             const bLivre = b.status === 'disponivel' || !b.status;
@@ -1278,6 +1370,7 @@ export const RecepcaoCentralService = {
              app.currentUserName
          );
          
+         // Atualiza o status do colaborador para Ocupado, se um for selecionado
          if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
              try {
                 const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
@@ -1286,7 +1379,7 @@ export const RecepcaoCentralService = {
                     currentAttendance: assistido.id
                 });
              } catch(e) {
-                console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
+                 console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
              }
          }
 
@@ -1298,8 +1391,8 @@ export const RecepcaoCentralService = {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
 
         const chamado = {
-            nome:     assistido.name,
-            assunto:  assistido.subject || '',
+            nome:      assistido.name,
+            assunto:   assistido.subject || '',
             local:     pautaNome,
             pautaNome: pautaNome,
             sala:      pauta?.sala || assistido.room || '',
@@ -1646,6 +1739,8 @@ export const RecepcaoCentralService = {
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
+                btn.disabled    = true;
+                btn.textContent = '...';
                 modal.remove();
                 this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
             });
@@ -1656,7 +1751,12 @@ export const RecepcaoCentralService = {
 
     fechar() {
         this._cancelarListeners();
+
+        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
+        
         const app = this._app;
+        
+        // Delega a navegação de volta para o novo Roteador
         if (app && app.router) {
             app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
@@ -1680,5 +1780,5 @@ export const RecepcaoCentralService = {
     }
 };
 
-export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
+```eof
