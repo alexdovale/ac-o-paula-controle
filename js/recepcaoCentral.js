@@ -229,7 +229,10 @@ export const RecepcaoCentralService = {
         }
 
         if (this._recepcaoAtual) {
-            pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
+            const pautasFiltradasPorRecepcao = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
+            if (pautasFiltradasPorRecepcao.length > 0) {
+                pautas = pautasFiltradasPorRecepcao;
+            }
         }
 
         estado.pautasHoje = pautas;
@@ -872,7 +875,6 @@ export const RecepcaoCentralService = {
 
         document.body.appendChild(modal);
 
-        // Estilo dinâmico para seleção do chip se não houver a classe global
         const style = document.createElement('style');
         style.innerHTML = `
             .rc-p-chip.selected {
@@ -1029,7 +1031,7 @@ export const RecepcaoCentralService = {
                 numAgendamento: document.getElementById('rc-add-agendamento').value.trim(),
                 subject: document.getElementById('rc-add-assunto').value.trim(),
                 status: statusEscolhido,
-                type: 'avulso', // Adicionados pela recepção entram como avulsos por padrão
+                type: 'avulso',
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
                 priority: prioridadeSelecionada || null
@@ -1258,18 +1260,15 @@ export const RecepcaoCentralService = {
 
         const proximo = aguardando[0];
         
-        // Verifica se há colaboradores disponíveis para atribuição nesta pauta.
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         
         if(colaboradores.length > 0) {
            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
-             // Caso não haja colaboradores, executa o fluxo padrão: chama diretamente e atribui.
              await this._executarChamado(pautaId, proximo, pauta, null);
         }
     },
     
-    // Novo modal de seleção de colaborador para a Central de Recepção
     _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
         const existing = document.getElementById('rc-modal-seletor-colaborador');
         if (existing) existing.remove();
@@ -1280,7 +1279,6 @@ export const RecepcaoCentralService = {
         
         let colaboradoresOptions = '<option value="">Sem atribuição direta</option>';
         
-        // Ordena colaboradores (livres primeiro)
         const colabOrdenados = [...colaboradores].sort((a,b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
             const bLivre = b.status === 'disponivel' || !b.status;
@@ -1370,7 +1368,6 @@ export const RecepcaoCentralService = {
              app.currentUserName
          );
          
-         // Atualiza o status do colaborador para Ocupado, se um for selecionado
          if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
              try {
                 const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
@@ -1739,8 +1736,6 @@ export const RecepcaoCentralService = {
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                btn.disabled    = true;
-                btn.textContent = '...';
                 modal.remove();
                 this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
             });
@@ -1751,12 +1746,7 @@ export const RecepcaoCentralService = {
 
     fechar() {
         this._cancelarListeners();
-
-        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
-        
         const app = this._app;
-        
-        // Delega a navegação de volta para o novo Roteador
         if (app && app.router) {
             app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
@@ -1780,5 +1770,5 @@ export const RecepcaoCentralService = {
     }
 };
 
+export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
-```eof
