@@ -11,6 +11,8 @@ import CollaboratorService from './colaboradores.js';
 window.CollaboratorService = CollaboratorService;  // ← ADICIONE ESTA LINHA
 import { BiEventosService } from './biEventosService.js';
 window.BiEventosService = BiEventosService; // Deixa global para os botões do HTML funcionarem
+import { ColetasBuilderService } from './coletasBuilderService.js';
+window.ColetasBuilderService = ColetasBuilderService; // Deixa disponível globalmente
 import { ModalService } from './modal.js?v=20260707';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
