@@ -1052,6 +1052,28 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIGURAÇÃO DE LINKS EXTERNOS BI -->
+    <div id="bi-links-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-white">🔗 Módulo Estatístico e Multi-eventos</h3>
+                    <p class="text-xs text-indigo-100 mt-1">Gerencie os links externos para coleta de dados na pauta atual</p>
+                </div>
+                <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <!-- AQUI O SEU JAVASCRIPT VAI DESENHAR O PAINEL DE PARCEIROS E SENHAS -->
+                <div id="container-bi-links"></div>
+            </div>
+            
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-md text-sm font-bold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
 
@@ -1187,4 +1209,3 @@
     </script>
 </body>
 </html>
-
