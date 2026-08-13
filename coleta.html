@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SIGEP - Coleta de Dados Estatísticos</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-900 min-h-screen flex items-center justify-center p-4">
+
+    <div id="app-coleta" class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden p-6 sm:p-8">
+        <div class="text-center mb-6">
+            <h1 class="text-xl font-black text-slate-800">🏛️ Portal de Coleta Externa</h1>
+            <p id="subtitulo-orgao" class="text-xs text-slate-500 mt-1">Identifique-se e insira a senha para liberar o formulário.</p>
+        </div>
+
+        <!-- TELA DE LOGIN / AUTENTICAÇÃO DO PARCEIRO -->
+        <div id="auth-box" class="space-y-4">
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Seu Nome / Identificação</label>
+                <input type="text" id="input-colaborador" class="w-full p-3 border border-slate-300 rounded-xl text-sm" placeholder="Ex: João da Silva (Cartório)">
+            </div>
+            <div>
+                <label class="block text-xs font-bold text-slate-600 uppercase mb-1">Senha de Acesso do Órgão</label>
+                <input type="password" id="input-senha" class="w-full p-3 border border-slate-300 rounded-xl text-sm" placeholder="Senha fornecida pelo administrador">
+            </div>
+            <button id="btn-entrar-coleta" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Acessar Formulário</button>
+        </div>
+
+        <!-- FORMULÁRIO DE DADOS ESTATÍSTICOS (A-T) -->
+        <div id="form-box" class="hidden space-y-5">
+            <div class="bg-indigo-50 border border-indigo-100 p-3 rounded-xl flex justify-between items-center text-xs">
+                <span class="font-bold text-indigo-900" id="label-orgao-logado">Órgão: --</span>
+                <span class="text-indigo-600 cursor-pointer underline" onclick="window.location.reload()">Sair</span>
+            </div>
+
+            <form id="form-estatisticas" class="space-y-4 max-h-[60vh] overflow-y-auto pr-2">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 text-xs">
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">b) Reconhecimento Paternidade Biológica COM DNA</label>
+                        <input type="number" min="0" id="d_b" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">c) Reconhecimento Paternidade Biológica SEM DNA</label>
+                        <input type="number" min="0" id="d_c" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">d) Paternidade Sócio-afetiva COM Multiparentalidade</label>
+                        <input type="number" min="0" id="d_d" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">e) Maternidade Sócio-afetiva COM Multiparentalidade</label>
+                        <input type="number" min="0" id="d_e" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">f) Paternidade Sócio-afetiva SEM Multiparentalidade</label>
+                        <input type="number" min="0" id="d_f" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">g) Maternidade Sócio-afetiva SEM Multiparentalidade</label>
+                        <input type="number" min="0" id="d_g" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">h) Paternidade Post Mortem</label>
+                        <input type="number" min="0" id="d_h" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">i) Maternidade Post Mortem</label>
+                        <input type="number" min="0" id="d_i" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">j) Exames de DNA Agendados</label>
+                        <input type="number" min="0" id="d_j" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">k) Exames de DNA Realizados</label>
+                        <input type="number" min="0" id="d_k" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">l) Exames de DNA Positivos</label>
+                        <input type="number" min="0" id="d_l" value="0" class="w-full p-2.5 border rounded-xl font-bold text-green-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">m) Exames de DNA Negativos</label>
+                        <input type="number" min="0" id="d_m" value="0" class="w-full p-2.5 border rounded-xl font-bold text-red-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">n) Exames de DNA Inconclusivos</label>
+                        <input type="number" min="0" id="d_n" value="0" class="w-full p-2.5 border rounded-xl font-bold text-amber-600">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">o) Idade do(a) filho(a)</label>
+                        <input type="text" id="d_o" class="w-full p-2.5 border rounded-xl" placeholder="Ex: 5 anos">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">p) Escolaridade dos participantes</label>
+                        <input type="text" id="d_p" class="w-full p-2.5 border rounded-xl" placeholder="Ex: Ensino Médio">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">q) Já constava genitor(a) no registro?</label>
+                        <select id="d_q" class="w-full p-2.5 border rounded-xl bg-white font-bold">
+                            <option value="">Selecione...</option>
+                            <option value="Sim">Sim</option>
+                            <option value="Não">Não</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">r) Idade do(a) genitor(a) que reconhece</label>
+                        <input type="text" id="d_r" class="w-full p-2.5 border rounded-xl" placeholder="Ex: 30 anos">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">s) Pedidos de homologação</label>
+                        <input type="number" min="0" id="d_s" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                    <div>
+                        <label class="block font-bold text-slate-600 uppercase mb-1">t) Ações ajuizadas</label>
+                        <input type="number" min="0" id="d_t" value="0" class="w-full p-2.5 border rounded-xl font-bold">
+                    </div>
+                </div>
+
+                <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Enviar Dados Estatísticos</button>
+            </form>
+        </div>
+
+        <div id="msg-status" class="text-center text-xs mt-4"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, query, where, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { firebaseConfig } from './js/config.js';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        let pautaEncontradaId = null;
+        let parceiroObj = null;
+
+        document.getElementById('btn-entrar-coleta').addEventListener('click', async () => {
+            const nomeColab = document.getElementById('input-colaborador').value.trim();
+            const senhaDigitada = document.getElementById('input-senha').value.trim();
+            const msg = document.getElementById('msg-status');
+
+            if (!nomeColab || !senhaDigitada) {
+                msg.textContent = "Preencha seu nome e a senha.";
+                msg.className = "text-center text-xs mt-4 text-red-500 font-bold";
+                return;
+            }
+
+            msg.textContent = "Validando acesso...";
+            msg.className = "text-center text-xs mt-4 text-slate-500";
+
+            try {
+                // Varre as pautas para encontrar qual possui este token de parceiro
+                const querySnapshot = await getDocs(collection(db, "pautas"));
+                let pautaAlvo = null;
+                let parceiroAlvo = null;
+
+                querySnapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.parceirosExternos && Array.isArray(data.parceirosExternos)) {
+                        const encontrado = data.parceirosExternos.find(p => p.token === token);
+                        if (encontrado) {
+                            pautaAlvo = docSnap.id;
+                            parceiroAlvo = encontrado;
+                        }
+                    }
+                });
+
+                if (!pautaAlvo || !parceiroAlvo) {
+                    msg.textContent = "Link externo inválido ou desativado.";
+                    msg.className = "text-center text-xs mt-4 text-red-500 font-bold";
+                    return;
+                }
+
+                if (parceiroAlvo.senha !== senhaDigitada) {
+                    msg.textContent = "Senha incorreta.";
+                    msg.className = "text-center text-xs mt-4 text-red-500 font-bold";
+                    return;
+                }
+
+                pautaEncontradaId = pautaAlvo;
+                parceiroObj = parceiroAlvo;
+
+                // Sucesso: Libera o formulário
+                document.getElementById('auth-box').classList.add('hidden');
+                document.getElementById('form-box').classList.remove('hidden');
+                document.getElementById('label-orgao-logado').textContent = `Órgão/Parceiro: ${parceiroAlvo.nome} (${nomeColab})`;
+                msg.textContent = "";
+
+            } catch (e) {
+                console.error(e);
+                msg.textContent = "Erro de conexão com o servidor.";
+                msg.className = "text-center text-xs mt-4 text-red-500 font-bold";
+            }
+        });
+
+        document.getElementById('form-estatisticas').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-enviar-dados');
+            btn.disabled = true;
+            btn.textContent = "Enviando dados...";
+
+            const payloadEstatistico = {
+                atendimentosRealizados: 1, // a
+                b: parseInt(document.getElementById('d_b').value || 0),
+                c: parseInt(document.getElementById('d_c').value || 0),
+                d: parseInt(document.getElementById('d_d').value || 0),
+                e: parseInt(document.getElementById('d_e').value || 0),
+                f: parseInt(document.getElementById('d_f').value || 0),
+                g: parseInt(document.getElementById('d_g').value || 0),
+                h: parseInt(document.getElementById('d_h').value || 0),
+                i: parseInt(document.getElementById('d_i').value || 0),
+                j: parseInt(document.getElementById('d_j').value || 0),
+                k: parseInt(document.getElementById('d_k').value || 0),
+                l: parseInt(document.getElementById('d_l').value || 0),
+                m: parseInt(document.getElementById('d_m').value || 0),
+                n: parseInt(document.getElementById('d_n').value || 0),
+                o: document.getElementById('d_o').value,
+                p: document.getElementById('d_p').value,
+                q: document.getElementById('d_q').value,
+                r: document.getElementById('d_r').value,
+                s: parseInt(document.getElementById('d_s').value || 0),
+                t: parseInt(document.getElementById('d_t').value || 0),
+                origemExterna: parceiroObj.nome,
+                responsavelPreenchimento: document.getElementById('input-colaborador').value.trim(),
+                timestampPreenchimento: new Date().toISOString()
+            };
+
+            try {
+                // Salva como um documento na subcoleção 'attendances' da pauta correspondente
+                await addDoc(collection(db, "pautas", pautaEncontradaId, "attendances"), {
+                    name: `Coleta Externa (${parceiroObj.nome})`,
+                    status: 'atendido',
+                    type: 'externo',
+                    biMetadados: payloadEstatistico,
+                    createdAt: new Date().toISOString()
+                });
+
+                alert("Dados estatísticos enviados com sucesso! ✅");
+                window.location.reload();
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao enviar dados.");
+                btn.disabled = false;
+                btn.textContent = "Enviar Dados Estatísticos";
+            }
+        });
+    </script>
+</body>
+</html>
