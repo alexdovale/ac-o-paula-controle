@@ -362,6 +362,12 @@
                 <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
                     Ver Dashboard
                 </button>
+                
+                <!-- NOVO BOTÃO ADICIONADO AQUI -->
+                <button id="btn-modulo-coletas" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition shadow-md flex items-center gap-2 justify-center">
+                    📊 Módulo Coletas & BI
+                </button>
+
                 <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
                     Meu Perfil
                 </button>
@@ -1064,12 +1070,40 @@
             </div>
             
             <div class="p-6 overflow-y-auto">
-                <!-- AQUI O SEU JAVASCRIPT VAI DESENHAR O PAINEL DE PARCEIROS E SENHAS -->
                 <div id="container-bi-links"></div>
             </div>
             
             <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
                 <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-md text-sm font-bold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL GERENCIADOR DE COLETAS (BI) -->
+    <div id="modal-gerenciador-coletas" class="hidden fixed inset-0 bg-black/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-5xl shadow-2xl flex flex-col max-h-[95vh] overflow-hidden">
+            <div class="p-5 border-b bg-gradient-to-r from-slate-800 to-indigo-900 flex justify-between items-center">
+                <div>
+                    <h3 class="text-xl font-black text-white">📊 Central de Coletas e Relatórios</h3>
+                    <p class="text-xs text-indigo-200 mt-1">Crie matrizes, gere links externos e consolide seus dados estatísticos.</p>
+                </div>
+                <button onclick="document.getElementById('modal-gerenciador-coletas').classList.add('hidden')" class="text-white hover:text-red-400 text-3xl leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 flex-1 overflow-y-auto bg-slate-50">
+                <!-- Ações do Gerenciador -->
+                <div class="flex justify-between items-center mb-6">
+                    <h4 class="font-bold text-slate-700">Minhas Coletas Ativas</h4>
+                    <button id="btn-nova-coleta" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2 rounded-xl font-bold text-sm shadow transition">+ Nova Coleta</button>
+                </div>
+                
+                <!-- Lista de Coletas -->
+                <div id="lista-de-coletas" class="space-y-3">
+                    <p class="text-center text-slate-400 py-10">Carregando coletas...</p>
+                </div>
+
+                <!-- O Construtor será desenhado aqui dentro quando uma coleta for selecionada -->
+                <div id="container-construtor-coleta" class="hidden mt-8 border-t border-slate-200 pt-6"></div>
             </div>
         </div>
     </div>
@@ -1093,7 +1127,6 @@
                         if (window.app && typeof PautaService !== 'undefined' && PautaService.handleCSVUpload) {
                             PautaService.handleCSVUpload(e, window.app);
                         } else {
-                            // CORREÇÃO 2 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
                             var fileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
                             console.log('[Upload CSV] Arquivo selecionado:', fileName);
                             const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
@@ -1118,7 +1151,6 @@
                         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
                             window.ImportadorOrgaosService.handleFileSelect(e);
                         } else {
-                            // CORREÇÃO 3 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
                             var orgaoFileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
                             console.log('[Importador] Arquivo de órgãos selecionado:', orgaoFileName);
                             const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
