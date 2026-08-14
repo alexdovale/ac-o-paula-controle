@@ -2,7 +2,6 @@
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
-// Função utilitária para limpar caracteres que quebram integrações e PDFs
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
@@ -15,6 +14,34 @@ function limparTexto(texto) {
 
 export const ColetasBuilderService = {
     
+    // Função para carregar a explicação de cada campo dinamicamente
+    atualizarDicaExemplo(tipo, containerDicaId, containerOpcoesId) {
+        const dicas = {
+            'numero': 'Apenas números (aceita decimais). Ideal para quantidades (Ex: Qtd de Atendimentos, Renda). O BI calculará Soma, Média e Desvio.',
+            'numero_idade': 'Apenas números inteiros. Específico para IDADES. O BI focará em calcular a Média e a Frequência (Quantas pessoas de cada idade).',
+            'texto_curto': 'Respostas diretas de 1 linha. Ideal para: Nome, Cidade, Profissão, CPF.',
+            'texto_longo': 'Textos longos com quebra de linha. Ideal para: Observações, Resumo do caso, Pareceres.',
+            'data': 'Abre um calendário interativo para o usuário. Ideal para: Data de Nascimento, Data de Agendamento.',
+            'booleano': 'Cria uma escolha rápida, binária e obrigatória entre "Sim" e "Não".',
+            'selecao': 'Menu Dropdown (Lista suspensa). Ideal quando há MUITAS opções (Ex: Estados do Brasil, Cidades, Bairros).',
+            'multipla_escolha': 'Mostra todas as opções na tela como bolhas marcáveis. Ideal para POUCAS opções (Ex: Gênero, Escolaridade).'
+        };
+
+        const elDica = document.getElementById(containerDicaId);
+        if (elDica) {
+            elDica.innerHTML = `<span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br> ${dicas[tipo] || ''}`;
+        }
+
+        const containerOpcoes = document.getElementById(containerOpcoesId);
+        if (containerOpcoes) {
+            if (tipo === 'selecao' || tipo === 'multipla_escolha') {
+                containerOpcoes.classList.remove('hidden');
+            } else {
+                containerOpcoes.classList.add('hidden');
+            }
+        }
+    },
+
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
@@ -157,8 +184,9 @@ export const ColetasBuilderService = {
                             <input type="text" id="novo-campo-label" placeholder="Enunciado da pergunta (Ex: Número de Atendimentos)" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             
                             <div class="flex flex-col md:flex-row gap-3 items-center">
-                                <select id="novo-campo-tipo" class="w-full md:w-1/3 p-3.5 border border-slate-300 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none">
-                                    <option value="numero">Número Estatístico</option>
+                                <select id="novo-campo-tipo" onchange="ColetasBuilderService.atualizarDicaExemplo(this.value, 'dica-novo-campo', 'container-opcoes-extras')" class="w-full md:w-1/3 p-3.5 border border-slate-300 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                                    <option value="numero">Número Estatístico (Somas Gerais)</option>
+                                    <option value="numero_idade">Idade (Apenas Números Inteiros)</option>
                                     <option value="texto_curto">Texto Curto (1 linha)</option>
                                     <option value="texto_longo">Parágrafo (Várias linhas)</option>
                                     <option value="data">Data</option>
@@ -175,6 +203,12 @@ export const ColetasBuilderService = {
                                 <button type="button" id="btn-add-campo" class="w-full md:w-1/3 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3.5 rounded-xl text-sm transition shadow-sm">
                                     Adicionar ao Formulário
                                 </button>
+                            </div>
+                            
+                            <!-- CAIXA DE DICAS AUTOMÁTICA -->
+                            <div id="dica-novo-campo" class="text-xs text-blue-800 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
+                                <span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br>
+                                Apenas números (aceita decimais). Ideal para quantidades (Ex: Qtd de Atendimentos, Renda). O BI calculará Soma, Média e Desvio.
                             </div>
 
                             <div id="container-opcoes-extras" class="hidden mt-1">
@@ -339,6 +373,11 @@ export const ColetasBuilderService = {
                 </div>
             </div>
 
+            <!-- MODAL DE EDIÇÃO DE PERGUNTA (NOVO PADRÃO CORPORATIVO) -->
+            <div id="modal-editar-campo" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+                <!-- Conteúdo Injetado via JS -->
+            </div>
+
             <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
             <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
                 <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
@@ -357,7 +396,7 @@ export const ColetasBuilderService = {
                 </div>
             </div>
 
-            <!-- MODAL DE AJUDA SHEETS (NOVO) -->
+            <!-- MODAL DE AJUDA SHEETS -->
             <div id="modal-ajuda-sheets" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
                 <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
                     <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
@@ -426,28 +465,6 @@ export const ColetasBuilderService = {
             return (letras[num - 1] || num) + ')';
         }
         return num + '.';
-    },
-
-    // ============================================================
-    // MODAL DE AJUDA DO GOOGLE SHEETS
-    // ============================================================
-    abrirModalAjudaSheets() {
-        const modal = document.getElementById('modal-ajuda-sheets');
-        if (modal) modal.classList.remove('hidden');
-    },
-
-    fecharModalAjudaSheets() {
-        const modal = document.getElementById('modal-ajuda-sheets');
-        if (modal) modal.classList.add('hidden');
-    },
-
-    copiarScriptSheets() {
-        const codigo = document.getElementById('codigo-script-sheets').innerText;
-        navigator.clipboard.writeText(codigo).then(() => {
-            showNotification("Script copiado para a área de transferência.", "success");
-        }).catch(() => {
-            showNotification("Falha ao copiar o script. Copie manualmente.", "error");
-        });
     },
 
     // ============================================================
@@ -580,12 +597,12 @@ export const ColetasBuilderService = {
 
             let opcoesDisponiveis = [];
             
-            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
+            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente' || campo.tipo === 'numero_idade') {
                 opcoesDisponiveis = [
-                    { id: 'soma', label: 'Soma Consolidada', default: true },
+                    { id: 'soma', label: 'Soma Consolidada', default: campo.tipo !== 'numero_idade' },
                     { id: 'media', label: 'Média Geral', default: true },
                     { id: 'desvio', label: 'Desvio Padrão', default: false },
-                    { id: 'frequencia', label: 'Frequência Específica', default: false }
+                    { id: 'frequencia', label: 'Frequência Específica', default: campo.tipo === 'numero_idade' }
                 ];
             } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
                 opcoesDisponiveis = [
@@ -792,21 +809,140 @@ export const ColetasBuilderService = {
     },
 
     // ============================================================
-    // MÉTODOS DE AÇÕES DO CONSTRUTOR (MANTIDOS E AJUSTADOS)
+    // MODAL EDITAR CAMPO (NOVO PADRÃO CORPORATIVO)
     // ============================================================
-    initEventos(db, coletaId, coletaData) {
-        const selectTipo = document.getElementById('novo-campo-tipo');
-        const containerOpcoes = document.getElementById('container-opcoes-extras');
-        if (selectTipo && containerOpcoes) {
-            selectTipo.addEventListener('change', (e) => {
-                if (e.target.value === 'selecao' || e.target.value === 'multipla_escolha') {
-                    containerOpcoes.classList.remove('hidden');
-                } else {
-                    containerOpcoes.classList.add('hidden');
-                }
-            });
+    async abrirModalEditarCampo(coletaId, index) {
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            if (!freshSnap.exists()) return;
+
+            let campos = freshSnap.data().dicionarioDeCampos || [];
+            const campo = campos[index];
+            if (!campo) return;
+
+            this._campoEditandoIndex = index;
+            this._coletaIdEditando = coletaId;
+
+            let modal = document.getElementById('modal-editar-campo');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-editar-campo';
+                modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+                document.body.appendChild(modal);
+            }
+
+            const isOpcoesRequired = ['selecao', 'multipla_escolha'].includes(campo.tipo);
+            const opcoesStr = (campo.opcoes || []).join(', ');
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+                    <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Pergunta</h3>
+                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+                    
+                    <div class="p-6 space-y-5 overflow-y-auto">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Enunciado da Pergunta</label>
+                            <input type="text" id="edit-campo-label" value="${escapeHTML(campo.label)}" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Tipo Estrutural</label>
+                            <select id="edit-campo-tipo" onchange="ColetasBuilderService.atualizarDicaExemplo(this.value, 'dica-edit-campo', 'edit-container-opcoes')" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                                <option value="numero" ${campo.tipo === 'numero' ? 'selected' : ''}>Número Estatístico (Somas Gerais)</option>
+                                <option value="numero_idade" ${campo.tipo === 'numero_idade' ? 'selected' : ''}>Idade (Apenas Números Inteiros)</option>
+                                <option value="texto_curto" ${campo.tipo === 'texto_curto' ? 'selected' : ''}>Texto Curto (1 linha)</option>
+                                <option value="texto_longo" ${campo.tipo === 'texto_longo' ? 'selected' : ''}>Parágrafo (Várias linhas)</option>
+                                <option value="data" ${campo.tipo === 'data' ? 'selected' : ''}>Data</option>
+                                <option value="booleano" ${campo.tipo === 'booleano' ? 'selected' : ''}>Sim / Não</option>
+                                <option value="selecao" ${campo.tipo === 'selecao' ? 'selected' : ''}>Lista Suspensa (Dropdown)</option>
+                                <option value="multipla_escolha" ${campo.tipo === 'multipla_escolha' ? 'selected' : ''}>Múltipla Escolha (Bolhas)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- CAIXA DE DICAS AUTOMÁTICA -->
+                        <div id="dica-edit-campo" class="text-xs text-blue-800 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
+                            <span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br>
+                            Mude o tipo da pergunta para ver como ela se comporta no sistema.
+                        </div>
+
+                        <div id="edit-container-opcoes" class="${isOpcoesRequired ? '' : 'hidden'}">
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Opções de Resposta (separadas por vírgula)</label>
+                            <input type="text" id="edit-campo-opcoes" value="${escapeHTML(opcoesStr)}" placeholder="Ex: Fundamental, Médio, Superior" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t border-slate-100 bg-slate-50">
+                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="flex-1 p-3.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                        <button onclick="ColetasBuilderService.salvarEdicaoCampo()" class="flex-1 p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Alterações</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            
+            // Dispara logo de cara para mostrar a dica correta ao abrir
+            this.atualizarDicaExemplo(campo.tipo, 'dica-edit-campo', 'edit-container-opcoes');
+
+        } catch (e) {
+            console.error(e);
+            showNotification("Falha ao abrir modal de edição.", "error");
+        }
+    },
+
+    async salvarEdicaoCampo() {
+        const index = this._campoEditandoIndex;
+        const coletaId = this._coletaIdEditando;
+        
+        if (index === null || !coletaId) return;
+
+        const labelInput = document.getElementById('edit-campo-label').value;
+        const tipoInput = document.getElementById('edit-campo-tipo').value;
+        const opcoesInput = document.getElementById('edit-campo-opcoes').value;
+
+        const labelLimpo = limparTexto(labelInput);
+        if (!labelLimpo) return showNotification("Operação cancelada. Enunciado inválido.", "error");
+
+        let novasOpcoes = [];
+        if (tipoInput === 'selecao' || tipoInput === 'multipla_escolha') {
+            novasOpcoes = opcoesInput.split(',').map(o => limparTexto(o)).filter(o => o !== '');
+            if (novasOpcoes.length === 0) return showNotification("Preencha as opções separadas por vírgula.", "warning");
         }
 
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let campos = snap.data().dicionarioDeCampos || [];
+            if (!campos[index]) return;
+
+            campos[index] = {
+                ...campos[index],
+                label: labelLimpo,
+                tipo: tipoInput,
+                opcoes: novasOpcoes
+            };
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+            
+            document.getElementById('modal-editar-campo').classList.add('hidden');
+            showNotification("Campo atualizado com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao atualizar campo.", "error");
+        }
+    },
+
+    // ============================================================
+    // MÉTODOS DE AÇÕES DO CONSTRUTOR GERAIS
+    // ============================================================
+    initEventos(db, coletaId, coletaData) {
+        // Agora os "change" de select chamam a função de Dica diretamente via "onchange" no HTML.
         const checkRequerSenha = document.getElementById('novo-link-requer-senha');
         const inputSenha = document.getElementById('novo-link-senha');
         if (checkRequerSenha && inputSenha) {
@@ -930,51 +1066,6 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Falha ao alterar modo de envio.", "error");
-        }
-    },
-
-    async abrirModalEditarCampo(coletaId, index) {
-        try {
-            const db = window.app.db;
-            const docRef = doc(db, "formularios_coleta", coletaId);
-            const freshSnap = await getDoc(docRef);
-            if (!freshSnap.exists()) return;
-
-            let campos = freshSnap.data().dicionarioDeCampos || [];
-            const campo = campos[index];
-            if (!campo) return;
-
-            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
-            if (novoLabel === null) return;
-            const labelLimpo = limparTexto(novoLabel);
-            if (!labelLimpo) return showNotification("Operação cancelada. Enunciado inválido.", "error");
-
-            const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
-            const novoTipo = prompt(`Editar Tipo Estrutural:\n(${tiposValidos})`, campo.tipo);
-            if (novoTipo === null) return;
-            const tipoLimpo = novoTipo.trim();
-
-            let novasOpcoes = campo.opcoes || [];
-            if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
-                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
-                if (opcoesStr !== null) {
-                    novasOpcoes = opcoesStr.split(',').map(o => limparTexto(o)).filter(o => o !== '');
-                }
-            }
-
-            campos[index] = {
-                ...campo,
-                label: labelLimpo,
-                tipo: tipoLimpo,
-                opcoes: novasOpcoes
-            };
-
-            await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("Campo atualizado.", "success");
-            window.abrirConstrutor(coletaId);
-        } catch (e) {
-            console.error(e);
-            showNotification("Falha ao editar registro.", "error");
         }
     },
 
@@ -1135,6 +1226,28 @@ export const ColetasBuilderService = {
             document.execCommand('copy');
             document.body.removeChild(textArea);
             showNotification("URL copiada.", "success");
+        });
+    },
+
+    // ============================================================
+    // MODAL DE AJUDA DO GOOGLE SHEETS
+    // ============================================================
+    abrirModalAjudaSheets() {
+        const modal = document.getElementById('modal-ajuda-sheets');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    fecharModalAjudaSheets() {
+        const modal = document.getElementById('modal-ajuda-sheets');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    copiarScriptSheets() {
+        const codigo = document.getElementById('codigo-script-sheets').innerText;
+        navigator.clipboard.writeText(codigo).then(() => {
+            showNotification("Script copiado para a área de transferência.", "success");
+        }).catch(() => {
+            showNotification("Falha ao copiar o script. Copie manualmente.", "error");
         });
     }
 };
