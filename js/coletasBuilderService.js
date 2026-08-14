@@ -272,7 +272,12 @@ export const ColetasBuilderService = {
 
                 <!-- BLOCO 3: INTEGRAÇÃO GOOGLE SHEETS / LOOKER STUDIO -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-4 mb-5">3. Sincronização Externa (Google Sheets)</h3>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
+                        <h3 class="text-lg font-black text-slate-800">3. Sincronização Externa (Google Sheets)</h3>
+                        <button type="button" onclick="ColetasBuilderService.abrirModalAjudaSheets()" class="w-full sm:w-auto text-xs bg-blue-50 hover:bg-blue-100 text-blue-700 font-bold px-4 py-2 rounded-lg border border-blue-200 transition uppercase tracking-wide">
+                            Guia de Integração e Script
+                        </button>
+                    </div>
                     
                     <div class="space-y-4 max-w-3xl">
                         <div>
@@ -336,7 +341,6 @@ export const ColetasBuilderService = {
 
             <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
             <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
-                <!-- Mantido o layout anterior do modal de métricas -->
                 <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
                     <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
                         <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas Analíticas</h3>
@@ -349,6 +353,63 @@ export const ColetasBuilderService = {
                             <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">Cancelar</button>
                             <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition">Salvar Métricas</button>
                         </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- MODAL DE AJUDA SHEETS (NOVO) -->
+            <div id="modal-ajuda-sheets" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+                <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
+                    <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Guia de Integração: Google Sheets</h3>
+                        <button onclick="ColetasBuilderService.fecharModalAjudaSheets()" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+                    
+                    <div class="overflow-y-auto pr-2 space-y-4 text-sm text-slate-700">
+                        <p class="font-medium">O SIGEP pode espelhar todas as respostas automaticamente para uma planilha do Google. Siga os passos abaixo:</p>
+                        
+                        <ol class="list-decimal pl-5 space-y-2 font-medium text-slate-600">
+                            <li>Crie e abra uma nova planilha no Google Sheets.</li>
+                            <li>No menu superior, clique em <span class="font-bold text-slate-800">Extensões > Apps Script</span>.</li>
+                            <li>Apague todo o código existente na tela e cole o script abaixo.</li>
+                            <li>No canto superior direito, clique em <span class="font-bold text-blue-600 bg-blue-50 px-1 rounded">Implantar > Nova implantação</span>.</li>
+                            <li>Selecione o tipo <span class="font-bold text-slate-800">App da Web</span>. No campo "Quem pode acessar", selecione <span class="font-bold text-slate-800">Qualquer pessoa</span>.</li>
+                            <li>Clique em Implantar, autorize os acessos da sua conta Google e copie a <span class="font-bold text-blue-600">URL do Web App</span> gerada.</li>
+                            <li>Cole a URL no campo do Bloco 3 e clique em Salvar Configuração.</li>
+                        </ol>
+                        
+                        <div class="relative bg-slate-800 rounded-xl p-4 mt-4 shadow-inner">
+                            <button onclick="ColetasBuilderService.copiarScriptSheets()" class="absolute top-3 right-3 bg-slate-600 hover:bg-slate-500 text-white text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded transition">Copiar Código</button>
+                            <pre class="overflow-x-auto"><code id="codigo-script-sheets" class="text-green-400 text-xs font-mono whitespace-pre-wrap">function doPost(e) {
+  try {
+    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
+    var data = JSON.parse(e.postData.contents);
+    
+    var linha = [
+      data.timestamp || new Date().toISOString(),
+      data.coletaId || '',
+      data.orgaoOrigem || '',
+      data.responsavel || ''
+    ];
+    
+    if (data.dados) {
+      for (var key in data.dados) {
+        linha.push(data.dados[key].resposta);
+      }
+    }
+    
+    sheet.appendRow(linha);
+    
+    return ContentService.createTextOutput(JSON.stringify({ "status": "sucesso" })).setMimeType(ContentService.MimeType.JSON);
+  } catch (error) {
+    return ContentService.createTextOutput(JSON.stringify({ "status": "erro", "mensagem": error.toString() })).setMimeType(ContentService.MimeType.JSON);
+  }
+}</code></pre>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-5 mt-4 border-t border-slate-100 flex justify-end">
+                        <button onclick="ColetasBuilderService.fecharModalAjudaSheets()" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-2.5 px-6 rounded-lg transition uppercase text-xs tracking-wider">Fechar Guia</button>
                     </div>
                 </div>
             </div>
@@ -365,6 +426,28 @@ export const ColetasBuilderService = {
             return (letras[num - 1] || num) + ')';
         }
         return num + '.';
+    },
+
+    // ============================================================
+    // MODAL DE AJUDA DO GOOGLE SHEETS
+    // ============================================================
+    abrirModalAjudaSheets() {
+        const modal = document.getElementById('modal-ajuda-sheets');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    fecharModalAjudaSheets() {
+        const modal = document.getElementById('modal-ajuda-sheets');
+        if (modal) modal.classList.add('hidden');
+    },
+
+    copiarScriptSheets() {
+        const codigo = document.getElementById('codigo-script-sheets').innerText;
+        navigator.clipboard.writeText(codigo).then(() => {
+            showNotification("Script copiado para a área de transferência.", "success");
+        }).catch(() => {
+            showNotification("Falha ao copiar o script. Copie manualmente.", "error");
+        });
     },
 
     // ============================================================
