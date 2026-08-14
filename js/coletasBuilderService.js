@@ -1,5 +1,5 @@
-// js/coletasBuilderService.js - Construtor Avançado: Padrão Corporativo
-import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// js/coletasBuilderService.js - Construtor Avançado: Padrão Corporativo com Monitoramento
+import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc, orderBy, limit } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
 function limparTexto(texto) {
@@ -14,42 +14,18 @@ function limparTexto(texto) {
 
 export const ColetasBuilderService = {
     
-    // Função para carregar a explicação de cada campo dinamicamente
-    atualizarDicaExemplo(tipo, containerDicaId, containerOpcoesId) {
-        const dicas = {
-            'numero': 'Apenas números (aceita decimais). Ideal para quantidades (Ex: Qtd de Atendimentos, Renda). O BI calculará Soma, Média e Desvio.',
-            'numero_idade': 'Apenas números inteiros. Específico para IDADES. O BI focará em calcular a Média e a Frequência (Quantas pessoas de cada idade).',
-            'texto_curto': 'Respostas diretas de 1 linha. Ideal para: Nome, Cidade, Profissão, CPF.',
-            'texto_longo': 'Textos longos com quebra de linha. Ideal para: Observações, Resumo do caso, Pareceres.',
-            'data': 'Abre um calendário interativo para o usuário. Ideal para: Data de Nascimento, Data de Agendamento.',
-            'booleano': 'Cria uma escolha rápida, binária e obrigatória entre "Sim" e "Não".',
-            'selecao': 'Menu Dropdown (Lista suspensa). Ideal quando há MUITAS opções (Ex: Estados do Brasil, Cidades, Bairros).',
-            'multipla_escolha': 'Mostra todas as opções na tela como bolhas marcáveis. Ideal para POUCAS opções (Ex: Gênero, Escolaridade).'
-        };
-
-        const elDica = document.getElementById(containerDicaId);
-        if (elDica) {
-            elDica.innerHTML = `<span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br> ${dicas[tipo] || ''}`;
-        }
-
-        const containerOpcoes = document.getElementById(containerOpcoesId);
-        if (containerOpcoes) {
-            if (tipo === 'selecao' || tipo === 'multipla_escolha') {
-                containerOpcoes.classList.remove('hidden');
-            } else {
-                containerOpcoes.classList.add('hidden');
-            }
-        }
-    },
-
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
+        const avisos = coletaData.avisos || [];
         const formatoNumeracao = coletaData.formatoNumeracao || 'numero';
         const urlSheets = coletaData.urlSincronizacaoSheets || '';
         const statusFormulario = coletaData.status || 'aberto';
         const dataInicio = coletaData.dataInicio || '';
         const dataFim = coletaData.dataFim || '';
+
+        // Dispara o monitoramento de atividade em segundo plano assim que a tela renderizar
+        setTimeout(() => this._monitorarAtividadeLinks(coletaId, links), 500);
 
         const opcoesCamposHtml = campos.map((c, index) => `
             <label class="campo-checkbox flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
@@ -71,7 +47,7 @@ export const ColetasBuilderService = {
                     </div>
                     <div class="flex flex-wrap gap-2 w-full md:w-auto justify-end">
                         <button type="button" onclick="ColetasBuilderService.abrirModalCompartilhamento('${coletaId}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-sm">
-                            Compartilhar Acesso / Pauta
+                            Compartilhar Edição
                         </button>
                         <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-600">
                             Zerar Base
@@ -132,7 +108,6 @@ export const ColetasBuilderService = {
                         </div>
                     </div>
 
-                    <!-- BUSCA DE PERGUNTAS -->
                     ${campos.length > 5 ? `
                         <div class="mb-4">
                             <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'lista-campos-dicionario', '.campo-card', '.campo-card-texto')" placeholder="Pesquisar perguntas configuradas..." class="w-full p-3 border border-slate-300 rounded-xl text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
@@ -205,7 +180,6 @@ export const ColetasBuilderService = {
                                 </button>
                             </div>
                             
-                            <!-- CAIXA DE DICAS AUTOMÁTICA -->
                             <div id="dica-novo-campo" class="text-xs text-blue-800 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
                                 <span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br>
                                 Apenas números (aceita decimais). Ideal para quantidades (Ex: Qtd de Atendimentos, Renda). O BI calculará Soma, Média e Desvio.
@@ -221,38 +195,68 @@ export const ColetasBuilderService = {
 
                 <!-- BLOCO 2: GERAÇÃO DE LINKS E PERMISSÕES -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
-                        <h3 class="text-lg font-black text-slate-800">2. Distribuição e Acesso</h3>
+                        <h3 class="text-lg font-black text-slate-800">2. Distribuição, Acesso e Monitoramento</h3>
                         ${links.length > 0 ? `
-                            <button type="button" onclick="ColetasBuilderService.apagarTodosLinks('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline">
-                                Revogar Todos os Links
-                            </button>
+                            <div class="flex gap-2 w-full sm:w-auto">
+                                <button type="button" onclick="ColetasBuilderService.abrirModalAviso('${coletaId}', 'todos')" class="text-xs bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-lg border border-indigo-200 transition">
+                                    Enviar Comunicado Global
+                                </button>
+                                <button type="button" onclick="ColetasBuilderService.apagarTodosLinks('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline px-2">
+                                    Revogar Todos os Links
+                                </button>
+                            </div>
                         ` : ''}
                     </div>
+
+                    <!-- CENTRAL DE COMUNICADOS ATIVOS -->
+                    ${avisos.length > 0 ? `
+                        <div class="mb-6 bg-amber-50 p-4 rounded-xl border border-amber-200">
+                            <h4 class="text-[10px] font-black text-amber-800 uppercase tracking-widest mb-3">Comunicados Ativos</h4>
+                            <div class="space-y-2">
+                                ${avisos.map(aviso => `
+                                    <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-amber-100 shadow-sm">
+                                        <div class="truncate pr-4">
+                                            <span class="text-[10px] font-bold text-amber-600 uppercase bg-amber-100 px-2 py-0.5 rounded mr-2">Para: ${aviso.orgaoAlvo === 'todos' ? 'TODOS' : escapeHTML(aviso.orgaoAlvo)}</span>
+                                            <span class="text-xs font-medium text-slate-700">${escapeHTML(aviso.mensagem)}</span>
+                                        </div>
+                                        <button onclick="ColetasBuilderService.apagarAviso('${coletaId}', '${aviso.id}')" class="text-[10px] text-red-500 font-bold uppercase hover:underline whitespace-nowrap">Excluir</button>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    ` : ''}
                     
-                    <div class="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2">
+                    <div class="space-y-4 mb-8 max-h-[400px] overflow-y-auto pr-2">
                         ${links.length === 0 ? '<p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">Nenhum link gerado no momento.</p>' : 
                             links.map((l, index) => `
-                                <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-blue-300 transition">
+                                <div class="bg-white border border-slate-200 p-5 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-blue-300 transition">
                                     <div class="w-full">
-                                        <p class="font-black text-slate-700 text-sm uppercase">${escapeHTML(l.orgao)}</p>
-                                        <div class="flex flex-wrap gap-2 mt-2">
-                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${l.requerSenha ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} uppercase tracking-wide">
-                                                ${l.requerSenha ? 'Acesso Restrito' : 'Acesso Público'}
-                                            </span>
-                                            <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 uppercase tracking-wide">
-                                                Permissões: ${l.camposHabilitados.length} Campos
-                                            </span>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <p class="font-black text-slate-800 text-sm uppercase">${escapeHTML(l.orgao)}</p>
+                                            ${l.requerSenha ? '<span class="text-[10px] bg-slate-100 text-slate-500 font-bold px-1.5 py-0.5 rounded border border-slate-200">Com Senha</span>' : ''}
                                         </div>
+                                        
+                                        <!-- MONITORAMENTO EM TEMPO REAL -->
+                                        <div class="flex items-center gap-2 mt-2">
+                                            <div class="h-2 w-2 rounded-full bg-slate-300" id="status-dot-${index}"></div>
+                                            <span id="status-text-${index}" class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Verificando atividade...</span>
+                                        </div>
+
+                                        <p class="text-[10px] text-slate-400 font-medium mt-1">Escopo de Permissão: ${l.camposHabilitados.length} Campos Liberados</p>
                                     </div>
-                                    <div class="flex flex-wrap w-full md:w-auto gap-2 mt-2 md:mt-0">
-                                        <button type="button" onclick="ColetasBuilderService.copiarLink('${l.token}')" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold px-4 py-2 rounded-lg text-xs transition">
+                                    <div class="flex flex-wrap w-full md:w-auto gap-2 mt-3 md:mt-0">
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalAviso('${coletaId}', '${escapeHTML(l.orgao)}')" class="w-full sm:w-auto bg-white hover:bg-amber-50 text-amber-600 border border-amber-200 font-bold px-3 py-2 rounded-lg text-xs transition">
+                                            Aviso
+                                        </button>
+                                        <button type="button" onclick="ColetasBuilderService.copiarLink('${l.token}')" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold px-3 py-2 rounded-lg text-xs transition">
                                             Copiar URL
                                         </button>
-                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold px-4 py-2 rounded-lg text-xs transition">
-                                            Editar Escopo
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold px-3 py-2 rounded-lg text-xs transition">
+                                            Editar
                                         </button>
-                                        <button type="button" onclick="ColetasBuilderService.removerLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
+                                        <button type="button" onclick="ColetasBuilderService.removerLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-2 rounded-lg text-xs font-bold transition">
                                             Revogar
                                         </button>
                                     </div>
@@ -336,122 +340,39 @@ export const ColetasBuilderService = {
                 </div>
             </div>
 
-            <!-- MODAL COMPARTILHAMENTO E EDIÇÃO CONJUNTA -->
-            <div id="modal-compartilhamento" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+            <!-- MODAL AVISOS / COMUNICADOS -->
+            <div id="modal-comunicado" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
                 <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
                     <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
-                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Compartilhar Acesso / Edição</h3>
-                        <button onclick="document.getElementById('modal-compartilhamento').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Enviar Comunicado</h3>
+                        <button onclick="document.getElementById('modal-comunicado').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
                     </div>
-                    
-                    <div class="space-y-5">
-                        <p class="text-sm text-slate-600 font-medium leading-relaxed">Conceda permissão para que outros usuários ou membros de uma Pauta possam editar e gerenciar este formulário.</p>
-                        
-                        <div class="space-y-3">
-                            <label class="block text-xs font-bold text-slate-500 uppercase">E-mail do Usuário ou ID da Pauta</label>
-                            <input type="text" id="input-compartilhar-alvo" placeholder="exemplo@defensoria.rj.def.br ou ID" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm outline-none focus:border-blue-500">
-                            
-                            <button type="button" onclick="ColetasBuilderService.adicionarCompartilhamento('${coletaId}')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl text-sm transition">
-                                Conceder Acesso de Edição
-                            </button>
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-600 font-medium">O destinatário verá esta mensagem em formato de Pop-up na próxima vez que abrir o formulário.</p>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Destinatário</label>
+                            <input type="text" id="aviso-orgao-alvo" disabled class="w-full p-3 bg-slate-100 border border-slate-200 rounded-xl text-sm font-bold text-slate-700">
                         </div>
-
-                        <div class="pt-4 border-t border-slate-100">
-                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-3">Usuários com Acesso</h4>
-                            <div id="lista-compartilhados" class="space-y-2 max-h-40 overflow-y-auto">
-                                ${ (coletaData.compartilhadoCom || []).length === 0 ? '<p class="text-xs text-slate-400 italic">Restrito apenas ao criador e administradores.</p>' : 
-                                    (coletaData.compartilhadoCom || []).map(email => `
-                                        <div class="flex justify-between items-center p-2 bg-slate-50 border border-slate-200 rounded-lg">
-                                            <span class="text-sm text-slate-700 font-medium">${escapeHTML(email)}</span>
-                                            <button onclick="ColetasBuilderService.removerCompartilhamento('${coletaId}', '${escapeHTML(email)}')" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1">Remover</button>
-                                        </div>
-                                    `).join('')
-                                }
-                            </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Mensagem do Comunicado</label>
+                            <textarea id="aviso-mensagem" rows="4" placeholder="Digite o aviso (ex: Prazo de fechamento alterado para o dia 30...)" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none resize-y"></textarea>
+                        </div>
+                        <div class="flex flex-col sm:flex-row gap-3 pt-3">
+                            <button onclick="document.getElementById('modal-comunicado').classList.add('hidden')" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                            <button onclick="ColetasBuilderService.salvarAviso('${coletaId}')" class="flex-1 p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Publicar Aviso</button>
                         </div>
                     </div>
                 </div>
             </div>
 
             <!-- MODAL DE EDIÇÃO DE PERGUNTA (NOVO PADRÃO CORPORATIVO) -->
-            <div id="modal-editar-campo" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
-                <!-- Conteúdo Injetado via JS -->
-            </div>
-
+            <div id="modal-editar-campo" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
             <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
-            <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
-                <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
-                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas Analíticas</h3>
-                        <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
-                    </div>
-                    <div class="space-y-5">
-                        <p class="text-sm text-slate-600 font-medium">Selecione os indicadores que devem ser processados para este campo no BI:</p>
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3" id="container-metricas-opcoes"></div>
-                        <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">Cancelar</button>
-                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition">Salvar Métricas</button>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
+            <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
+            <!-- MODAL COMPARTILHAMENTO E EDIÇÃO CONJUNTA -->
+            <div id="modal-compartilhamento" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
             <!-- MODAL DE AJUDA SHEETS -->
-            <div id="modal-ajuda-sheets" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
-                <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 flex flex-col max-h-[90vh]">
-                    <div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-4">
-                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Guia de Integração: Google Sheets</h3>
-                        <button onclick="ColetasBuilderService.fecharModalAjudaSheets()" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
-                    </div>
-                    
-                    <div class="overflow-y-auto pr-2 space-y-4 text-sm text-slate-700">
-                        <p class="font-medium">O SIGEP pode espelhar todas as respostas automaticamente para uma planilha do Google. Siga os passos abaixo:</p>
-                        
-                        <ol class="list-decimal pl-5 space-y-2 font-medium text-slate-600">
-                            <li>Crie e abra uma nova planilha no Google Sheets.</li>
-                            <li>No menu superior, clique em <span class="font-bold text-slate-800">Extensões > Apps Script</span>.</li>
-                            <li>Apague todo o código existente na tela e cole o script abaixo.</li>
-                            <li>No canto superior direito, clique em <span class="font-bold text-blue-600 bg-blue-50 px-1 rounded">Implantar > Nova implantação</span>.</li>
-                            <li>Selecione o tipo <span class="font-bold text-slate-800">App da Web</span>. No campo "Quem pode acessar", selecione <span class="font-bold text-slate-800">Qualquer pessoa</span>.</li>
-                            <li>Clique em Implantar, autorize os acessos da sua conta Google e copie a <span class="font-bold text-blue-600">URL do Web App</span> gerada.</li>
-                            <li>Cole a URL no campo do Bloco 3 e clique em Salvar Configuração.</li>
-                        </ol>
-                        
-                        <div class="relative bg-slate-800 rounded-xl p-4 mt-4 shadow-inner">
-                            <button onclick="ColetasBuilderService.copiarScriptSheets()" class="absolute top-3 right-3 bg-slate-600 hover:bg-slate-500 text-white text-[10px] uppercase tracking-wider font-bold px-3 py-1.5 rounded transition">Copiar Código</button>
-                            <pre class="overflow-x-auto"><code id="codigo-script-sheets" class="text-green-400 text-xs font-mono whitespace-pre-wrap">function doPost(e) {
-  try {
-    var sheet = SpreadsheetApp.getActiveSpreadsheet().getActiveSheet();
-    var data = JSON.parse(e.postData.contents);
-    
-    var linha = [
-      data.timestamp || new Date().toISOString(),
-      data.coletaId || '',
-      data.orgaoOrigem || '',
-      data.responsavel || ''
-    ];
-    
-    if (data.dados) {
-      for (var key in data.dados) {
-        linha.push(data.dados[key].resposta);
-      }
-    }
-    
-    sheet.appendRow(linha);
-    
-    return ContentService.createTextOutput(JSON.stringify({ "status": "sucesso" })).setMimeType(ContentService.MimeType.JSON);
-  } catch (error) {
-    return ContentService.createTextOutput(JSON.stringify({ "status": "erro", "mensagem": error.toString() })).setMimeType(ContentService.MimeType.JSON);
-  }
-}</code></pre>
-                        </div>
-                    </div>
-                    
-                    <div class="pt-5 mt-4 border-t border-slate-100 flex justify-end">
-                        <button onclick="ColetasBuilderService.fecharModalAjudaSheets()" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-bold py-2.5 px-6 rounded-lg transition uppercase text-xs tracking-wider">Fechar Guia</button>
-                    </div>
-                </div>
-            </div>
+            <div id="modal-ajuda-sheets" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
         `;
     },
 
@@ -467,8 +388,159 @@ export const ColetasBuilderService = {
         return num + '.';
     },
 
+    atualizarDicaExemplo(tipo, containerDicaId, containerOpcoesId) {
+        const dicas = {
+            'numero': 'Apenas números (aceita decimais). Ideal para quantidades (Ex: Qtd de Atendimentos, Renda). O BI calculará Soma, Média e Desvio.',
+            'numero_idade': 'Apenas números inteiros. Específico para IDADES. O BI focará em calcular a Média e a Frequência (Quantas pessoas de cada idade).',
+            'texto_curto': 'Respostas diretas de 1 linha. Ideal para: Nome, Cidade, Profissão, CPF.',
+            'texto_longo': 'Textos longos com quebra de linha. Ideal para: Observações, Resumo do caso, Pareceres.',
+            'data': 'Abre um calendário interativo para o usuário. Ideal para: Data de Nascimento, Data de Agendamento.',
+            'booleano': 'Cria uma escolha rápida, binária e obrigatória entre "Sim" e "Não".',
+            'selecao': 'Menu Dropdown (Lista suspensa). Ideal quando há MUITAS opções (Ex: Estados do Brasil, Cidades, Bairros).',
+            'multipla_escolha': 'Mostra todas as opções na tela como bolhas marcáveis. Ideal para POUCAS opções (Ex: Gênero, Escolaridade).'
+        };
+
+        const elDica = document.getElementById(containerDicaId);
+        if (elDica) {
+            elDica.innerHTML = `<span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br> ${dicas[tipo] || ''}`;
+        }
+
+        const containerOpcoes = document.getElementById(containerOpcoesId);
+        if (containerOpcoes) {
+            if (tipo === 'selecao' || tipo === 'multipla_escolha') {
+                containerOpcoes.classList.remove('hidden');
+            } else {
+                containerOpcoes.classList.add('hidden');
+            }
+        }
+    },
+
     // ============================================================
-    // FUNÇÕES DE BUSCA E SELEÇÃO (NOVIDADE)
+    // MONITORAMENTO EM TEMPO REAL (NOVIDADE)
+    // ============================================================
+    async _monitorarAtividadeLinks(coletaId, links) {
+        if (links.length === 0) return;
+        
+        try {
+            const db = window.app.db;
+            const q = query(collection(db, "respostas_coleta"), where("coletaId", "==", coletaId));
+            const snap = await getDocs(q);
+            
+            const atividadeOrgao = {};
+            snap.forEach(doc => {
+                const r = doc.data();
+                const org = r.orgaoOrigem;
+                if (org && r.timestamp) {
+                    const dataAtual = new Date(r.timestamp);
+                    if (!atividadeOrgao[org]) {
+                        atividadeOrgao[org] = { maxData: dataAtual, count: 1 };
+                    } else {
+                        atividadeOrgao[org].count += 1;
+                        if (dataAtual > atividadeOrgao[org].maxData) {
+                            atividadeOrgao[org].maxData = dataAtual;
+                        }
+                    }
+                }
+            });
+
+            const agora = new Date();
+
+            links.forEach((l, index) => {
+                const statusDot = document.getElementById(`status-dot-${index}`);
+                const statusText = document.getElementById(`status-text-${index}`);
+                if (!statusDot || !statusText) return;
+
+                const atv = atividadeOrgao[l.orgao];
+                if (!atv) {
+                    statusDot.className = 'h-2.5 w-2.5 rounded-full bg-slate-300';
+                    statusText.textContent = 'Sem registros (Pendente)';
+                    statusText.className = 'text-[10px] font-bold text-slate-500 uppercase tracking-wider';
+                } else {
+                    const diffDias = Math.floor((agora - atv.maxData) / (1000 * 60 * 60 * 24));
+                    const dataStr = atv.maxData.toLocaleDateString('pt-BR');
+                    
+                    if (diffDias <= 2) {
+                        statusDot.className = 'h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse';
+                        statusText.textContent = `Ativo (Último: ${dataStr}) • ${atv.count} Envios`;
+                        statusText.className = 'text-[10px] font-bold text-emerald-600 uppercase tracking-wider';
+                    } else if (diffDias <= 7) {
+                        statusDot.className = 'h-2.5 w-2.5 rounded-full bg-amber-500';
+                        statusText.textContent = `Ocioso (Último: ${dataStr}) • ${atv.count} Envios`;
+                        statusText.className = 'text-[10px] font-bold text-amber-600 uppercase tracking-wider';
+                    } else {
+                        statusDot.className = 'h-2.5 w-2.5 rounded-full bg-red-500';
+                        statusText.textContent = `Inativo há ${diffDias} dias • ${atv.count} Envios`;
+                        statusText.className = 'text-[10px] font-bold text-red-600 uppercase tracking-wider';
+                    }
+                }
+            });
+
+        } catch (e) {
+            console.error("Erro no monitoramento de atividade:", e);
+        }
+    },
+
+    // ============================================================
+    // AVISOS E COMUNICADOS (NOVIDADE)
+    // ============================================================
+    abrirModalAviso(coletaId, orgaoAlvo) {
+        document.getElementById('aviso-orgao-alvo').value = orgaoAlvo;
+        document.getElementById('aviso-mensagem').value = '';
+        document.getElementById('modal-comunicado').classList.remove('hidden');
+    },
+
+    async salvarAviso(coletaId) {
+        const orgaoAlvo = document.getElementById('aviso-orgao-alvo').value;
+        const mensagem = document.getElementById('aviso-mensagem').value.trim();
+
+        if (!mensagem) return showNotification("A mensagem não pode estar vazia.", "warning");
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let avisos = snap.data().avisos || [];
+            avisos.push({
+                id: 'aviso_' + Date.now(),
+                orgaoAlvo: orgaoAlvo,
+                mensagem: mensagem,
+                dataStr: new Date().toLocaleDateString('pt-BR')
+            });
+
+            await updateDoc(docRef, { avisos });
+            document.getElementById('modal-comunicado').classList.add('hidden');
+            showNotification("Comunicado publicado. O órgão será notificado.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao publicar comunicado.", "error");
+        }
+    },
+
+    async apagarAviso(coletaId, avisoId) {
+        if (!confirm("Deseja apagar este comunicado?")) return;
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let avisos = snap.data().avisos || [];
+            avisos = avisos.filter(a => a.id !== avisoId);
+
+            await updateDoc(docRef, { avisos });
+            showNotification("Comunicado removido.", "info");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao excluir comunicado.", "error");
+        }
+    },
+
+    // ============================================================
+    // DEMAIS FUNÇÕES DO BUILDER...
     // ============================================================
     filtrarLista(texto, containerId, containerClass, textClass) {
         const termo = limparTexto(texto).toLowerCase();
@@ -490,16 +562,12 @@ export const ColetasBuilderService = {
         if(!container) return;
         const checkboxes = container.querySelectorAll('input[type="checkbox"]');
         checkboxes.forEach(cb => {
-            // Marca apenas os que estão visíveis após o filtro
             if(cb.closest('label').style.display !== 'none') {
                 cb.checked = checked;
             }
         });
     },
 
-    // ============================================================
-    // VALIDADE E STATUS (NOVIDADE)
-    // ============================================================
     async salvarStatusEValidade(coletaId) {
         try {
             const status = document.getElementById('config-status-form').value;
@@ -519,11 +587,8 @@ export const ColetasBuilderService = {
         }
     },
 
-    // ============================================================
-    // COMPARTILHAMENTO (NOVIDADE)
-    // ============================================================
     abrirModalCompartilhamento(coletaId) {
-        const modal = document.getElementById('modal-compartilhamento');
+        let modal = document.getElementById('modal-compartilhamento');
         if (modal) modal.classList.remove('hidden');
     },
 
@@ -572,12 +637,129 @@ export const ColetasBuilderService = {
         }
     },
 
-    // ============================================================
-    // CONFIGURAÇÃO DE MÉTRICAS BI
-    // ============================================================
-    _campoEditandoIndex: null,
-    _coletaIdEditando: null,
-    _linkEditandoIndex: null,
+    async abrirModalEditarCampo(coletaId, index) {
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            if (!freshSnap.exists()) return;
+
+            let campos = freshSnap.data().dicionarioDeCampos || [];
+            const campo = campos[index];
+            if (!campo) return;
+
+            this._campoEditandoIndex = index;
+            this._coletaIdEditando = coletaId;
+
+            let modal = document.getElementById('modal-editar-campo');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-editar-campo';
+                modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+                document.body.appendChild(modal);
+            }
+
+            const isOpcoesRequired = ['selecao', 'multipla_escolha'].includes(campo.tipo);
+            const opcoesStr = (campo.opcoes || []).join(', ');
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+                    <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Pergunta</h3>
+                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+                    
+                    <div class="p-6 space-y-5 overflow-y-auto">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Enunciado da Pergunta</label>
+                            <input type="text" id="edit-campo-label" value="${escapeHTML(campo.label)}" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Tipo Estrutural</label>
+                            <select id="edit-campo-tipo" onchange="ColetasBuilderService.atualizarDicaExemplo(this.value, 'dica-edit-campo', 'edit-container-opcoes')" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                                <option value="numero" ${campo.tipo === 'numero' ? 'selected' : ''}>Número Estatístico (Somas Gerais)</option>
+                                <option value="numero_idade" ${campo.tipo === 'numero_idade' ? 'selected' : ''}>Idade (Apenas Números Inteiros)</option>
+                                <option value="texto_curto" ${campo.tipo === 'texto_curto' ? 'selected' : ''}>Texto Curto (1 linha)</option>
+                                <option value="texto_longo" ${campo.tipo === 'texto_longo' ? 'selected' : ''}>Parágrafo (Várias linhas)</option>
+                                <option value="data" ${campo.tipo === 'data' ? 'selected' : ''}>Data</option>
+                                <option value="booleano" ${campo.tipo === 'booleano' ? 'selected' : ''}>Sim / Não</option>
+                                <option value="selecao" ${campo.tipo === 'selecao' ? 'selected' : ''}>Lista Suspensa (Dropdown)</option>
+                                <option value="multipla_escolha" ${campo.tipo === 'multipla_escolha' ? 'selected' : ''}>Múltipla Escolha (Bolhas)</option>
+                            </select>
+                        </div>
+                        
+                        <!-- CAIXA DE DICAS AUTOMÁTICA -->
+                        <div id="dica-edit-campo" class="text-xs text-blue-800 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed"></div>
+
+                        <div id="edit-container-opcoes" class="${isOpcoesRequired ? '' : 'hidden'}">
+                            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Opções de Resposta (separadas por vírgula)</label>
+                            <input type="text" id="edit-campo-opcoes" value="${escapeHTML(opcoesStr)}" placeholder="Ex: Fundamental, Médio, Superior" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
+                        </div>
+                    </div>
+                    
+                    <div class="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t border-slate-100 bg-slate-50">
+                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="flex-1 p-3.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                        <button onclick="ColetasBuilderService.salvarEdicaoCampo()" class="flex-1 p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Alterações</button>
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+            
+            // Dispara logo de cara para mostrar a dica correta ao abrir
+            this.atualizarDicaExemplo(campo.tipo, 'dica-edit-campo', 'edit-container-opcoes');
+
+        } catch (e) {
+            console.error(e);
+            showNotification("Falha ao abrir modal de edição.", "error");
+        }
+    },
+
+    async salvarEdicaoCampo() {
+        const index = this._campoEditandoIndex;
+        const coletaId = this._coletaIdEditando;
+        
+        if (index === null || !coletaId) return;
+
+        const labelInput = document.getElementById('edit-campo-label').value;
+        const tipoInput = document.getElementById('edit-campo-tipo').value;
+        const opcoesInput = document.getElementById('edit-campo-opcoes').value;
+
+        const labelLimpo = limparTexto(labelInput);
+        if (!labelLimpo) return showNotification("Operação cancelada. Enunciado inválido.", "error");
+
+        let novasOpcoes = [];
+        if (tipoInput === 'selecao' || tipoInput === 'multipla_escolha') {
+            novasOpcoes = opcoesInput.split(',').map(o => limparTexto(o)).filter(o => o !== '');
+            if (novasOpcoes.length === 0) return showNotification("Preencha as opções separadas por vírgula.", "warning");
+        }
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let campos = snap.data().dicionarioDeCampos || [];
+            if (!campos[index]) return;
+
+            campos[index] = {
+                ...campos[index],
+                label: labelLimpo,
+                tipo: tipoInput,
+                opcoes: novasOpcoes
+            };
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+            
+            document.getElementById('modal-editar-campo').classList.add('hidden');
+            showNotification("Campo atualizado com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao atualizar campo.", "error");
+        }
+    },
 
     abrirModalConfigMetricas(coletaId, index) {
         const db = window.app.db;
@@ -592,43 +774,46 @@ export const ColetasBuilderService = {
             this._campoEditandoIndex = index;
             this._coletaIdEditando = coletaId;
 
-            const container = document.getElementById('container-metricas-opcoes');
-            const metricasAtuais = campo.metricasBi || [];
+            let modal = document.getElementById('modal-config-metricas');
+            if (modal) {
+                const container = document.getElementById('container-metricas-opcoes');
+                const metricasAtuais = campo.metricasBi || [];
 
-            let opcoesDisponiveis = [];
-            
-            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente' || campo.tipo === 'numero_idade') {
-                opcoesDisponiveis = [
-                    { id: 'soma', label: 'Soma Consolidada', default: campo.tipo !== 'numero_idade' },
-                    { id: 'media', label: 'Média Geral', default: true },
-                    { id: 'desvio', label: 'Desvio Padrão', default: false },
-                    { id: 'frequencia', label: 'Frequência Específica', default: campo.tipo === 'numero_idade' }
-                ];
-            } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
-                opcoesDisponiveis = [
-                    { id: 'distribuicao', label: 'Distribuição Percentual', default: true },
-                    { id: 'total', label: 'Contagem de Respostas', default: true }
-                ];
-            } else {
-                opcoesDisponiveis = [
-                    { id: 'total', label: 'Total Registrado', default: true },
-                    { id: 'ultima', label: 'Exibição de Exemplos', default: false }
-                ];
+                let opcoesDisponiveis = [];
+                
+                if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente' || campo.tipo === 'numero_idade') {
+                    opcoesDisponiveis = [
+                        { id: 'soma', label: 'Soma Consolidada', default: campo.tipo !== 'numero_idade' },
+                        { id: 'media', label: 'Média Geral', default: true },
+                        { id: 'desvio', label: 'Desvio Padrão', default: false },
+                        { id: 'frequencia', label: 'Frequência Específica', default: campo.tipo === 'numero_idade' }
+                    ];
+                } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+                    opcoesDisponiveis = [
+                        { id: 'distribuicao', label: 'Distribuição Percentual', default: true },
+                        { id: 'total', label: 'Contagem de Respostas', default: true }
+                    ];
+                } else {
+                    opcoesDisponiveis = [
+                        { id: 'total', label: 'Total Registrado', default: true },
+                        { id: 'ultima', label: 'Exibição de Exemplos', default: false }
+                    ];
+                }
+
+                const metricasParaUsar = metricasAtuais.length > 0 ? metricasAtuais : 
+                    opcoesDisponiveis.filter(o => o.default).map(o => o.id);
+
+                container.innerHTML = opcoesDisponiveis.map(op => `
+                    <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer border border-transparent hover:border-slate-200">
+                        <input type="checkbox" name="metrica_bi" value="${op.id}" 
+                               ${metricasParaUsar.includes(op.id) ? 'checked' : ''} 
+                               class="h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                        <span class="text-sm font-bold text-slate-700">${op.label}</span>
+                    </label>
+                `).join('');
+
+                modal.classList.remove('hidden');
             }
-
-            const metricasParaUsar = metricasAtuais.length > 0 ? metricasAtuais : 
-                opcoesDisponiveis.filter(o => o.default).map(o => o.id);
-
-            container.innerHTML = opcoesDisponiveis.map(op => `
-                <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer border border-transparent hover:border-slate-200">
-                    <input type="checkbox" name="metrica_bi" value="${op.id}" 
-                           ${metricasParaUsar.includes(op.id) ? 'checked' : ''} 
-                           class="h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                    <span class="text-sm font-bold text-slate-700">${op.label}</span>
-                </label>
-            `).join('');
-
-            document.getElementById('modal-config-metricas').classList.remove('hidden');
         });
     },
 
@@ -678,9 +863,6 @@ export const ColetasBuilderService = {
         }
     },
 
-    // ============================================================
-    // EDIÇÃO DE LINKS (BLOCO 2) COM FILTRO DE PERMISSÕES
-    // ============================================================
     async abrirModalEditarLink(coletaId, index) {
         const db = window.app.db;
         const docRef = doc(db, "formularios_coleta", coletaId);
@@ -808,141 +990,8 @@ export const ColetasBuilderService = {
         }
     },
 
-    // ============================================================
-    // MODAL EDITAR CAMPO (NOVO PADRÃO CORPORATIVO)
-    // ============================================================
-    async abrirModalEditarCampo(coletaId, index) {
-        try {
-            const db = window.app.db;
-            const docRef = doc(db, "formularios_coleta", coletaId);
-            const freshSnap = await getDoc(docRef);
-            if (!freshSnap.exists()) return;
-
-            let campos = freshSnap.data().dicionarioDeCampos || [];
-            const campo = campos[index];
-            if (!campo) return;
-
-            this._campoEditandoIndex = index;
-            this._coletaIdEditando = coletaId;
-
-            let modal = document.getElementById('modal-editar-campo');
-            if (!modal) {
-                modal = document.createElement('div');
-                modal.id = 'modal-editar-campo';
-                modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
-                document.body.appendChild(modal);
-            }
-
-            const isOpcoesRequired = ['selecao', 'multipla_escolha'].includes(campo.tipo);
-            const opcoesStr = (campo.opcoes || []).join(', ');
-
-            modal.innerHTML = `
-                <div class="bg-white rounded-2xl max-w-lg w-full shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
-                    <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
-                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Pergunta</h3>
-                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
-                    </div>
-                    
-                    <div class="p-6 space-y-5 overflow-y-auto">
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Enunciado da Pergunta</label>
-                            <input type="text" id="edit-campo-label" value="${escapeHTML(campo.label)}" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white font-medium">
-                        </div>
-                        
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Tipo Estrutural</label>
-                            <select id="edit-campo-tipo" onchange="ColetasBuilderService.atualizarDicaExemplo(this.value, 'dica-edit-campo', 'edit-container-opcoes')" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-                                <option value="numero" ${campo.tipo === 'numero' ? 'selected' : ''}>Número Estatístico (Somas Gerais)</option>
-                                <option value="numero_idade" ${campo.tipo === 'numero_idade' ? 'selected' : ''}>Idade (Apenas Números Inteiros)</option>
-                                <option value="texto_curto" ${campo.tipo === 'texto_curto' ? 'selected' : ''}>Texto Curto (1 linha)</option>
-                                <option value="texto_longo" ${campo.tipo === 'texto_longo' ? 'selected' : ''}>Parágrafo (Várias linhas)</option>
-                                <option value="data" ${campo.tipo === 'data' ? 'selected' : ''}>Data</option>
-                                <option value="booleano" ${campo.tipo === 'booleano' ? 'selected' : ''}>Sim / Não</option>
-                                <option value="selecao" ${campo.tipo === 'selecao' ? 'selected' : ''}>Lista Suspensa (Dropdown)</option>
-                                <option value="multipla_escolha" ${campo.tipo === 'multipla_escolha' ? 'selected' : ''}>Múltipla Escolha (Bolhas)</option>
-                            </select>
-                        </div>
-                        
-                        <!-- CAIXA DE DICAS AUTOMÁTICA -->
-                        <div id="dica-edit-campo" class="text-xs text-blue-800 bg-blue-50 p-4 rounded-xl border border-blue-100 font-medium leading-relaxed">
-                            <span class="font-black text-blue-700 uppercase tracking-widest text-[10px]">COMO FUNCIONA:</span> <br>
-                            Mude o tipo da pergunta para ver como ela se comporta no sistema.
-                        </div>
-
-                        <div id="edit-container-opcoes" class="${isOpcoesRequired ? '' : 'hidden'}">
-                            <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Opções de Resposta (separadas por vírgula)</label>
-                            <input type="text" id="edit-campo-opcoes" value="${escapeHTML(opcoesStr)}" placeholder="Ex: Fundamental, Médio, Superior" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none font-medium">
-                        </div>
-                    </div>
-                    
-                    <div class="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t border-slate-100 bg-slate-50">
-                        <button onclick="document.getElementById('modal-editar-campo').classList.add('hidden')" class="flex-1 p-3.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
-                        <button onclick="ColetasBuilderService.salvarEdicaoCampo()" class="flex-1 p-3.5 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Alterações</button>
-                    </div>
-                </div>
-            `;
-            modal.classList.remove('hidden');
-            
-            // Dispara logo de cara para mostrar a dica correta ao abrir
-            this.atualizarDicaExemplo(campo.tipo, 'dica-edit-campo', 'edit-container-opcoes');
-
-        } catch (e) {
-            console.error(e);
-            showNotification("Falha ao abrir modal de edição.", "error");
-        }
-    },
-
-    async salvarEdicaoCampo() {
-        const index = this._campoEditandoIndex;
-        const coletaId = this._coletaIdEditando;
-        
-        if (index === null || !coletaId) return;
-
-        const labelInput = document.getElementById('edit-campo-label').value;
-        const tipoInput = document.getElementById('edit-campo-tipo').value;
-        const opcoesInput = document.getElementById('edit-campo-opcoes').value;
-
-        const labelLimpo = limparTexto(labelInput);
-        if (!labelLimpo) return showNotification("Operação cancelada. Enunciado inválido.", "error");
-
-        let novasOpcoes = [];
-        if (tipoInput === 'selecao' || tipoInput === 'multipla_escolha') {
-            novasOpcoes = opcoesInput.split(',').map(o => limparTexto(o)).filter(o => o !== '');
-            if (novasOpcoes.length === 0) return showNotification("Preencha as opções separadas por vírgula.", "warning");
-        }
-
-        try {
-            const db = window.app.db;
-            const docRef = doc(db, "formularios_coleta", coletaId);
-            const snap = await getDoc(docRef);
-            if (!snap.exists()) return;
-
-            let campos = snap.data().dicionarioDeCampos || [];
-            if (!campos[index]) return;
-
-            campos[index] = {
-                ...campos[index],
-                label: labelLimpo,
-                tipo: tipoInput,
-                opcoes: novasOpcoes
-            };
-
-            await updateDoc(docRef, { dicionarioDeCampos: campos });
-            
-            document.getElementById('modal-editar-campo').classList.add('hidden');
-            showNotification("Campo atualizado com sucesso.", "success");
-            window.abrirConstrutor(coletaId);
-        } catch (e) {
-            console.error(e);
-            showNotification("Erro ao atualizar campo.", "error");
-        }
-    },
-
-    // ============================================================
-    // MÉTODOS DE AÇÕES DO CONSTRUTOR GERAIS
-    // ============================================================
     initEventos(db, coletaId, coletaData) {
-        // Agora os "change" de select chamam a função de Dica diretamente via "onchange" no HTML.
+        // Eventos gerais do builder
         const checkRequerSenha = document.getElementById('novo-link-requer-senha');
         const inputSenha = document.getElementById('novo-link-senha');
         if (checkRequerSenha && inputSenha) {
@@ -1229,9 +1278,6 @@ export const ColetasBuilderService = {
         });
     },
 
-    // ============================================================
-    // MODAL DE AJUDA DO GOOGLE SHEETS
-    // ============================================================
     abrirModalAjudaSheets() {
         const modal = document.getElementById('modal-ajuda-sheets');
         if (modal) modal.classList.remove('hidden');
