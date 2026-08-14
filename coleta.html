@@ -10,19 +10,6 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; } 
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        
-        /* Estilos para o modal */
-        .modal-overlay {
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(4px);
-        }
-        .modal-content {
-            animation: modalSlideIn 0.3s ease-out;
-        }
-        @keyframes modalSlideIn {
-            from { opacity: 0; transform: scale(0.95) translateY(-20px); }
-            to { opacity: 1; transform: scale(1) translateY(0); }
-        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -41,7 +28,7 @@
             <p class="text-slate-500 font-bold">Verificando segurança do link...</p>
         </div>
 
-        <!-- TELA DE AUTENTICAÇÃO (SÓ APARECE SE EXIGIR SENHA) -->
+        <!-- TELA DE AUTENTICAÇÃO -->
         <div id="auth-box" class="hidden animate-fade-in">
             <div class="bg-indigo-600 p-8 text-center">
                 <h1 class="text-3xl font-black text-white">Acesso Restrito</h1>
@@ -64,18 +51,18 @@
         <!-- FORMULÁRIO DINÂMICO -->
         <div id="form-box" class="hidden animate-fade-in">
             
-            <!-- HEADER DE IDENTIFICAÇÃO E SAIR -->
+            <!-- HEADER -->
             <div id="header-coleta" class="bg-indigo-50 border-b border-indigo-100 p-4 px-6 flex justify-between items-center text-xs">
                 <div>
                     <p class="text-[10px] uppercase font-bold text-indigo-500">Órgão Logado:</p>
                     <span class="font-black text-indigo-900 text-sm" id="label-orgao-logado">--</span>
                 </div>
-                <button onclick="window.location.reload()" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-1.5 rounded-lg transition shadow-sm">Sair / Trocar</button>
+                <button onclick="window.location.reload()" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-1.5 rounded-lg transition shadow-sm">Sair / Atualizar</button>
             </div>
 
             <div class="bg-emerald-600 p-6 text-white">
                 <h1 id="titulo-coleta" class="text-2xl font-black leading-tight"></h1>
-                <p id="subtitulo-coleta" class="text-emerald-100 text-sm mt-1 font-medium">Preencha os dados abaixo com atenção</p>
+                <p class="text-emerald-100 text-sm mt-1 font-medium">Preencha os dados abaixo com atenção</p>
             </div>
 
             <form id="form-estatisticas" class="p-6 sm:p-8 space-y-6">
@@ -92,12 +79,6 @@
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
-                <!-- HISTÓRICO DE ENVIOS (NOVO) -->
-                <div id="historico-container" class="hidden mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl animate-fade-in">
-                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📊 Registro de Envios (Sessão Atual)</h4>
-                    <div id="historico-envios-lista" class="space-y-2 max-h-40 overflow-y-auto"></div>
-                </div>
-
                 <!-- BOTÃO ENVIAR -->
                 <div class="pt-4">
                     <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg py-4 rounded-xl transition shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
@@ -105,83 +86,24 @@
                     </button>
                 </div>
 
-                <!-- MENSAGEM DE STATUS ABAIXO DO BOTÃO -->
-                <div id="status-message" class="text-center text-sm font-medium hidden"></div>
+                <!-- HISTÓRICO DE ENVIOS COM DETALHES -->
+                <div id="historico-container" class="hidden mt-8 p-5 bg-slate-50 border border-slate-200 rounded-2xl animate-fade-in">
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-4">📊 Registro de Envios (Sessão Atual)</h4>
+                    <div id="historico-envios-lista" class="space-y-3 max-h-60 overflow-y-auto pr-1">
+                        <!-- Itens do histórico aparecerão aqui -->
+                    </div>
+                </div>
+
             </form>
         </div>
     </div>
 
     <!-- TOAST DE NOTIFICAÇÃO -->
-    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all"></div>
-
-    <!-- ============================================================ -->
-    <!-- MODAL DE CONFIGURAÇÃO DE RELATÓRIO PDF                        -->
-    <!-- ============================================================ -->
-    <div id="modal-config-pdf" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
-        <div class="modal-content bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
-            
-            <!-- Cabeçalho do Modal -->
-            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
-                <h2 class="text-2xl font-black flex items-center gap-2">
-                    ⚙️ Configurar Relatório PDF
-                </h2>
-                <p class="text-blue-100 text-sm mt-1 font-medium">Selecione as seções que deseja incluir no relatório</p>
-            </div>
-            
-            <!-- Corpo do Modal -->
-            <div class="p-6 space-y-4">
-                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
-                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📋 Seções disponíveis:</p>
-                    
-                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-blue-400 transition group">
-                        <input type="checkbox" id="pdf-incluir-kpis" checked class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
-                        <span class="font-bold text-slate-700 group-hover:text-blue-600 transition">📈 Indicadores Acumulados (KPIs)</span>
-                    </label>
-                    
-                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-400 transition group">
-                        <input type="checkbox" id="pdf-incluir-distribuicao" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                        <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition">🧩 Distribuição de Respostas</span>
-                    </label>
-                    
-                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-indigo-400 transition group">
-                        <input type="checkbox" id="pdf-incluir-tabela-orgao" checked class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
-                        <span class="font-bold text-slate-700 group-hover:text-indigo-600 transition">📊 Tabela Consolidada por Órgão</span>
-                    </label>
-                    
-                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-slate-400 transition group">
-                        <input type="checkbox" id="pdf-incluir-historico" checked class="w-5 h-5 text-slate-600 rounded focus:ring-slate-500">
-                        <span class="font-bold text-slate-700 group-hover:text-slate-800 transition">📋 Histórico Detalhado</span>
-                    </label>
-                </div>
-                
-                <!-- Dica de uso -->
-                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                    <p class="text-xs text-amber-700 font-medium flex items-start gap-2">
-                        <span class="text-lg">💡</span>
-                        <span>O PDF será gerado apenas com as seções selecionadas. 
-                        <br>Desmarque o que não deseja incluir para um relatório mais enxuto.</span>
-                    </p>
-                    <p class="text-[10px] text-amber-600 mt-1 ml-6">
-                        📌 Tabelas com muitas colunas usarão fonte reduzida para caber na página.
-                    </p>
-                </div>
-            </div>
-            
-            <!-- Rodapé do Modal -->
-            <div class="p-6 bg-slate-50 border-t border-slate-200 flex gap-3">
-                <button onclick="ColetasBiService.fecharModalExportacao()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
-                    Cancelar
-                </button>
-                <button onclick="ColetasBiService.executarExportacaoCustomizada()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
-                    <span>📄</span> Gerar PDF
-                </button>
-            </div>
-        </div>
-    </div>
+    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden px-5 py-3 rounded-xl shadow-2xl font-bold text-sm text-white z-50 transition-all"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
 
         const app = initializeApp(firebaseConfig);
@@ -190,47 +112,101 @@
         const urlParams = new URLSearchParams(window.location.search);
         const token = urlParams.get('token');
 
-        let coletaEncontradaId = null;
-        let coletaConfigMaster = null;
+        let coletaConfig = null;
         let linkConfig = null;
         let historicoEnvios = [];
+
+        // Previne quebra de layout por caracteres maliciosos ou especiais
+        function escapeHTML(str) {
+            if (!str) return '--';
+            return String(str)
+                .replace(/&/g, "&amp;")
+                .replace(/</g, "&lt;")
+                .replace(/>/g, "&gt;")
+                .replace(/"/g, "&quot;")
+                .replace(/'/g, "&#039;");
+        }
 
         function mostrarToast(mensagem, tipo = 'success') {
             const toast = document.getElementById('toast-notificacao');
             toast.textContent = mensagem;
-            toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
+            toast.className = `fixed bottom-5 right-5 text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
             toast.classList.remove('hidden');
-            setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+            setTimeout(() => { toast.classList.add('hidden'); }, 3500);
         }
 
         function showError(msg) {
             document.getElementById('loading-box').innerHTML = `
-                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">!</div>
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 font-black">!</div>
                 <p class="text-slate-800 font-black text-xl mb-2">Ops...</p>
-                <p class="text-slate-500 font-medium">${msg}</p>
-                <button onclick="window.location.reload()" class="mt-6 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Recarregar Página</button>
+                <p class="text-slate-500 font-medium text-sm">${msg}</p>
+                <button onclick="window.location.reload()" class="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl font-bold transition">Recarregar Página</button>
             `;
         }
 
+        // Função para atualizar a lista visual do histórico com o recurso "Ver Detalhes"
+        function atualizarHistoricoVisual() {
+            const lista = document.getElementById('historico-envios-lista');
+            
+            lista.innerHTML = historicoEnvios.map(item => `
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
+                    <!-- Cabeçalho Clicável do Item -->
+                    <div class="flex justify-between items-center p-3 bg-slate-50 cursor-pointer hover:bg-slate-100 transition btn-toggle-detalhes" data-id="${item.id}">
+                        <div class="flex items-center gap-3">
+                            <span class="font-bold text-slate-700 text-sm">🕒 ${item.horario}</span>
+                            <span class="text-xs text-slate-500 hidden sm:inline-block">${escapeHTML(item.responsavel)}</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded-md font-black text-[9px] uppercase tracking-wider ${item.sync ? 'bg-emerald-100 text-emerald-700' : 'bg-amber-100 text-amber-700'}">
+                                ${item.sync ? '✓ Sincronizado' : '⚠️ Apenas Sistema'}
+                            </span>
+                            <span class="text-slate-400 text-xs">▼</span>
+                        </div>
+                    </div>
+                    <!-- Corpo Expansível com os Dados -->
+                    <div id="detalhes-${item.id}" class="hidden p-4 border-t border-slate-100 bg-white space-y-2 text-xs">
+                        ${Object.values(item.dados).map(d => `
+                            <div class="flex justify-between border-b border-slate-50 pb-1.5 items-start gap-4">
+                                <span class="font-bold text-slate-500 w-2/3 leading-tight">${escapeHTML(d.pergunta)}</span>
+                                <span class="font-black text-slate-800 text-right w-1/3">${escapeHTML(String(d.resposta))}</span>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+
+            document.getElementById('historico-container').classList.remove('hidden');
+        }
+
+        // Delegação de evento para o "Ver Detalhes" abrir/fechar
+        document.getElementById('historico-envios-lista').addEventListener('click', (e) => {
+            const btn = e.target.closest('.btn-toggle-detalhes');
+            if (btn) {
+                const id = btn.getAttribute('data-id');
+                const detalhesDiv = document.getElementById(`detalhes-${id}`);
+                if (detalhesDiv) {
+                    detalhesDiv.classList.toggle('hidden');
+                }
+            }
+        });
+
         async function inicializar() {
-            if (!token) return showError("Acesso Negado: Link inválido ou quebrado.");
+            if (!token) return showError("Acesso Negado: Link de coleta inválido.");
 
             try {
                 const querySnapshot = await getDocs(collection(db, "formularios_coleta"));
-                
                 querySnapshot.forEach(docSnap => {
                     const data = docSnap.data();
                     if (data.linksExternos) {
                         const encontrado = data.linksExternos.find(l => l.token === token);
                         if (encontrado) {
-                            coletaEncontradaId = docSnap.id;
-                            coletaConfigMaster = data;
+                            coletaConfig = { id: docSnap.id, ...data };
                             linkConfig = encontrado;
                         }
                     }
                 });
 
-                if (!linkConfig) return showError("Formulário não encontrado, expirou ou foi desativado pelo administrador.");
+                if (!linkConfig) return showError("Formulário não encontrado ou desativado pelo administrador.");
 
                 document.getElementById('loading-box').classList.add('hidden');
 
@@ -247,11 +223,9 @@
             }
         }
 
-        // Autenticação com Enter
+        // Validação da Senha
         document.getElementById('input-senha').addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') {
-                document.getElementById('btn-validar-senha').click();
-            }
+            if (e.key === 'Enter') document.getElementById('btn-validar-senha').click();
         });
 
         document.getElementById('btn-validar-senha').addEventListener('click', () => {
@@ -270,36 +244,29 @@
 
         function montarFormulario() {
             document.getElementById('form-box').classList.remove('hidden');
-            document.getElementById('titulo-coleta').textContent = coletaConfigMaster.nomeDaColeta;
+            document.getElementById('titulo-coleta').textContent = coletaConfig.nomeDaColeta;
             document.getElementById('label-orgao-logado').textContent = linkConfig.orgao;
 
-            // Carrega o nome do responsável salvo na máquina
             const nomeSalvo = localStorage.getItem('sigep_responsavel_coleta');
-            if (nomeSalvo) {
-                document.getElementById('input-responsavel').value = nomeSalvo;
-            }
+            if (nomeSalvo) document.getElementById('input-responsavel').value = nomeSalvo;
 
             const container = document.getElementById('dynamic-fields-container');
-            const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
-            const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
-
-            if (camposDesteLink.length === 0) {
-                container.innerHTML = `<div class="bg-amber-50 border border-amber-200 p-6 rounded-xl text-center">
-                    <p class="text-amber-700 font-bold">⚠️ Nenhum campo disponível para este link.</p>
-                    <p class="text-amber-600 text-sm mt-1">Entre em contato com o administrador.</p>
-                </div>`;
-                return;
-            }
+            const dicionario = coletaConfig.dicionarioDeCampos || [];
+            
+            // Lógica Inteligente para Novas Perguntas:
+            // Permite exibir perguntas marcadas no link original E/OU qualquer nova pergunta se a lista de habilitados estiver vazia.
+            let camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
+            if(camposDesteLink.length === 0) camposDesteLink = dicionario;
 
             container.innerHTML = camposDesteLink.map(campo => {
                 let inputHtml = '';
-                const baseClass = "w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-slate-700";
-                const baseClassSelect = "w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-slate-700 cursor-pointer";
+                const baseClass = "w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition text-slate-700";
+                const baseClassSelect = "w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition text-slate-700 cursor-pointer";
 
                 if (campo.tipo === 'numero') {
                     inputHtml = `<input type="number" id="f_${campo.id}" required class="${baseClass} font-bold text-lg" step="any">`;
                 } else if (campo.tipo === 'texto_longo') {
-                    inputHtml = `<textarea id="f_${campo.id}" rows="3" required class="${baseClass} resize-y" placeholder="Digite aqui..."></textarea>`;
+                    inputHtml = `<textarea id="f_${campo.id}" rows="3" required class="${baseClass} resize-y" placeholder="Descreva aqui os detalhes..."></textarea>`;
                 } else if (campo.tipo === 'texto_curto') {
                     inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}" placeholder="Digite aqui...">`;
                 } else if (campo.tipo === 'data') {
@@ -315,70 +282,55 @@
                     inputHtml = `
                         <select id="f_${campo.id}" required class="${baseClassSelect}">
                             <option value="">Selecione uma opção...</option>
-                            ${(campo.opcoes || []).map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                            ${(campo.opcoes || []).map(opt => `<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`).join('')}
                         </select>`;
                 } else if (campo.tipo === 'multipla_escolha') {
                     inputHtml = `<div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">` + 
                         (campo.opcoes || []).map((opt, idx) => `
                         <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-white rounded-lg transition">
-                            <input type="radio" name="f_${campo.id}" value="${opt}" required class="h-5 w-5 text-emerald-600 border-slate-300 focus:ring-emerald-500">
-                            <span class="text-sm font-medium text-slate-700">${opt}</span>
+                            <input type="radio" name="f_${campo.id}" value="${escapeHTML(opt)}" required class="h-5 w-5 text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                            <span class="text-sm font-medium text-slate-700">${escapeHTML(opt)}</span>
                         </label>`).join('') + `</div>`;
                 } else {
-                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}" placeholder="Digite aqui...">`;
+                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}" placeholder="...">`;
                 }
 
-                const requiredStar = '<span class="text-red-500 ml-1">*</span>';
                 return `
-                    <div class="mb-2">
-                        <label class="block text-sm font-black text-slate-800 mb-2">${campo.label} ${requiredStar}</label>
+                    <div class="mb-3">
+                        <label class="block text-sm font-black text-slate-800 mb-2">${escapeHTML(campo.label)} <span class="text-red-500">*</span></label>
                         ${inputHtml}
-                        ${campo.tipo === 'multipla_escolha' ? `<p class="text-xs text-slate-400 mt-2">Selecione uma das opções acima</p>` : ''}
                     </div>
                 `;
             }).join('');
         }
 
+        // Lógica de Envio e Integração com Firebase / Sheets
         document.getElementById('form-estatisticas').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-enviar-dados');
-            const statusMsg = document.getElementById('status-message');
-            
             btn.disabled = true;
-            btn.textContent = "⏳ Enviando dados...";
-            statusMsg.classList.add('hidden');
+            btn.textContent = "⏳ Enviando e sincronizando...";
 
             const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
-            if (!nomeResponsavel) {
-                mostrarToast("Preencha o nome do responsável.", "error");
-                btn.disabled = false;
-                btn.textContent = "📤 Enviar Respostas";
-                return;
-            }
-            
             localStorage.setItem('sigep_responsavel_coleta', nomeResponsavel);
 
-            const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
-            const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
-
             const respostas = {};
-            let camposVazios = [];
+            const dicionario = coletaConfig.dicionarioDeCampos || [];
+            let camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
+            if(camposDesteLink.length === 0) camposDesteLink = dicionario;
 
+            // Extrai as respostas
             camposDesteLink.forEach(campo => {
                 let val;
                 if(campo.tipo === 'multipla_escolha') {
                     const selected = document.querySelector(`input[name="f_${campo.id}"]:checked`);
-                    val = selected?.value || '';
+                    val = selected ? selected.value : '';
                 } else {
                     const el = document.getElementById(`f_${campo.id}`);
                     val = el ? el.value : '';
                     if (campo.tipo === 'numero') val = Number(val) || 0;
                 }
                 
-                if (!val || val === '') {
-                    camposVazios.push(campo.label);
-                }
-
                 respostas[campo.id] = {
                     pergunta: campo.label,
                     resposta: val,
@@ -386,15 +338,8 @@
                 };
             });
 
-            if (camposVazios.length > 0) {
-                mostrarToast(`⚠️ Preencha: ${camposVazios.slice(0, 3).join(', ')}${camposVazios.length > 3 ? '...' : ''}`, "error");
-                btn.disabled = false;
-                btn.textContent = "📤 Enviar Respostas";
-                return;
-            }
-
             const payload = {
-                coletaId: coletaEncontradaId,
+                coletaId: coletaConfig.id,
                 orgaoOrigem: linkConfig.orgao,
                 responsavel: nomeResponsavel,
                 timestamp: new Date().toISOString(),
@@ -402,30 +347,42 @@
             };
 
             try {
+                // 1. Grava no Firebase (Obrigatório)
                 await addDoc(collection(db, "respostas_coleta"), payload);
                 
-                // Adiciona ao histórico
+                let envioExternoSucesso = true;
+
+                // 2. Tenta gravar no Sheets se a URL estiver configurada
+                if (coletaConfig.urlSincronizacaoSheets && coletaConfig.urlSincronizacaoSheets.trim() !== '') {
+                    try {
+                        await fetch(coletaConfig.urlSincronizacaoSheets.trim(), {
+                            method: 'POST',
+                            mode: 'no-cors',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify(payload)
+                        });
+                        // Em no-cors não conseguimos ler o body da resposta, mas se não deu erro de fetch, assumimos que disparou.
+                    } catch (err) {
+                        console.error("Falha ao espelhar no Sheets:", err);
+                        envioExternoSucesso = false;
+                    }
+                } else {
+                    // Se não tem link configurado, não é erro de sincronização, apenas não há Sheets.
+                    envioExternoSucesso = false; 
+                }
+
+                // 3. Atualiza o Histórico Visual na tela (com as respostas para ver os detalhes)
                 historicoEnvios.unshift({
-                    horario: new Date().toLocaleTimeString(),
-                    responsavel: nomeResponsavel
+                    id: Date.now().toString(),
+                    horario: new Date().toLocaleTimeString('pt-BR'),
+                    responsavel: nomeResponsavel,
+                    sync: envioExternoSucesso,
+                    dados: respostas // Guarda as respostas para exibir no dropdown
                 });
                 
-                const historicoContainer = document.getElementById('historico-container');
-                const historicoLista = document.getElementById('historico-envios-lista');
+                atualizarHistoricoVisual();
                 
-                historicoLista.innerHTML = historicoEnvios.map(item => `
-                    <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200">
-                        <span class="font-bold text-slate-700 text-sm">${item.horario}</span>
-                        <span class="text-sm text-slate-600">${item.responsavel}</span>
-                        <span class="text-emerald-600 font-black text-xs bg-emerald-50 px-3 py-1 rounded-full">✅ Enviado</span>
-                    </div>
-                `).join('');
-                
-                historicoContainer.classList.remove('hidden');
-
-                mostrarToast(`✅ Envio #${historicoEnvios.length} realizado com sucesso!`, "success");
-                
-                // Limpa campos mantendo o nome
+                // 4. Limpa apenas os campos de resposta, mantém o nome preenchido
                 camposDesteLink.forEach(campo => {
                     if (campo.tipo === 'multipla_escolha') {
                         document.querySelectorAll(`input[name="f_${campo.id}"]`).forEach(el => el.checked = false);
@@ -435,26 +392,18 @@
                     }
                 });
 
-                // Mostra status de sucesso
-                statusMsg.textContent = `✅ Último envio: ${new Date().toLocaleTimeString()} - ${historicoEnvios.length} envio(s) registrado(s)`;
-                statusMsg.className = 'text-center text-sm font-medium text-emerald-600 bg-emerald-50 p-3 rounded-xl';
-                statusMsg.classList.remove('hidden');
-
-                btn.disabled = false;
-                btn.textContent = "📤 Enviar Respostas";
+                mostrarToast("✅ Respostas processadas com sucesso!", "success");
 
             } catch (err) {
                 console.error(err);
-                mostrarToast("❌ Falha de rede. Tente enviar novamente.", "error");
-                statusMsg.textContent = "❌ Erro ao enviar. Verifique sua conexão.";
-                statusMsg.className = 'text-center text-sm font-medium text-red-600 bg-red-50 p-3 rounded-xl';
-                statusMsg.classList.remove('hidden');
-                btn.disabled = false;
-                btn.textContent = "📤 Enviar Respostas";
+                mostrarToast("❌ Falha crítica de rede. O envio falhou.", "error");
             }
+            
+            btn.disabled = false;
+            btn.textContent = "📤 Enviar Novas Respostas";
         });
 
-        // Inicializa
+        // Start
         inicializar();
     </script>
 </body>
