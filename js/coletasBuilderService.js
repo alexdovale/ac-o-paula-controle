@@ -2,6 +2,16 @@
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
+// Função utilitária para limpar caracteres que quebram PDFs e JSONs
+function limparTexto(texto) {
+    if (typeof texto !== 'string') return texto;
+    return texto
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais por ponto
+        .replace(/[&]/g, 'e') // Substitui & por 'e'
+        .replace(/[^\x00-\x7F]/g, ""); // Remove qualquer outro caractere não-ASCII
+}
+
 export const ColetasBuilderService = {
     
     renderConstrutorHTML(coletaData, coletaId) {
@@ -53,10 +63,8 @@ export const ColetasBuilderService = {
                     <div id="lista-campos-dicionario" class="space-y-3 mb-6 max-h-80 overflow-y-auto pr-2">
                         ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic w-full">Nenhuma pergunta adicionada.</p>' : 
                             campos.map((c, index) => {
-                                // Mostra o tipo de forma legível
                                 let tipoDisplay = c.tipo.replace('_', ' ');
                                 
-                                // Mostra as métricas configuradas para o BI
                                 let metricasDisplay = '';
                                 if (c.metricasBi) {
                                     const metricasLabels = {
@@ -112,7 +120,7 @@ export const ColetasBuilderService = {
 
                             <div id="container-opcoes-extras" class="hidden mt-2">
                                 <label class="block text-xs font-bold text-indigo-700 mb-1">Digite as opções separadas por vírgula (,)</label>
-                                <input type="text" id="novo-campo-opcoes" placeholder="Ex: Fundamental, Médio, Superior" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white">
+                                <input type="text" id="novo-campo-opcoes" placeholder="Ex: Fundamental, Medio, Superior" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white">
                             </div>
                         </div>
                     </div>
@@ -152,7 +160,7 @@ export const ColetasBuilderService = {
                         <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                             <div>
                                 <label class="block text-xs font-bold text-slate-600 mb-1">Destinatário (Órgão/Pessoa)</label>
-                                <input type="text" id="novo-link-orgao" placeholder="Ex: Cartório do 1º Ofício" class="w-full p-3 border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <input type="text" id="novo-link-orgao" placeholder="Ex: Cartorio do 1 Oficio" class="w-full p-3 border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
                             </div>
                             <div>
                                 <div class="flex items-center justify-between mb-1">
@@ -357,7 +365,7 @@ export const ColetasBuilderService = {
     },
 
     // ============================================================
-    // MÉTODOS EXISTENTES (mantidos)
+    // MÉTODOS EXISTENTES (mantidos e atualizados com limparTexto)
     // ============================================================
     initEventos(db, coletaId, coletaData) {
         const selectTipo = document.getElementById('novo-campo-tipo');
@@ -383,7 +391,8 @@ export const ColetasBuilderService = {
         }
 
         document.getElementById('btn-add-campo')?.addEventListener('click', async () => {
-            const label = document.getElementById('novo-campo-label').value.trim();
+            // APLICANDO A LIMPEZA DE TEXTO NO NOVO CAMPO
+            const label = limparTexto(document.getElementById('novo-campo-label').value.trim());
             const tipo = document.getElementById('novo-campo-tipo').value;
             const opcoesString = document.getElementById('novo-campo-opcoes')?.value;
             
@@ -397,7 +406,8 @@ export const ColetasBuilderService = {
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
                 if (!opcoesString) return showNotification("Preencha as opções do campo separadas por vírgula.", "warning");
-                novoCampo.opcoes = opcoesString.split(',').map(o => o.trim()).filter(o => o !== '');
+                // APLICANDO A LIMPEZA DE TEXTO NAS OPÇÕES
+                novoCampo.opcoes = opcoesString.split(',').map(o => limparTexto(o.trim())).filter(o => o !== '');
             }
 
             const camposAtuais = coletaData.dicionarioDeCampos || [];
@@ -409,7 +419,8 @@ export const ColetasBuilderService = {
         });
 
         document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
-            const orgao = document.getElementById('novo-link-orgao').value.trim();
+            // APLICANDO A LIMPEZA DE TEXTO NO NOME DO ÓRGÃO
+            const orgao = limparTexto(document.getElementById('novo-link-orgao').value.trim());
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
             const senha = document.getElementById('novo-link-senha').value.trim();
             
@@ -493,7 +504,8 @@ export const ColetasBuilderService = {
 
             const novoLabel = prompt("✏️ Editar Enunciado da Pergunta:", campo.label);
             if (novoLabel === null) return;
-            const labelLimpo = novoLabel.trim();
+            // APLICANDO A LIMPEZA DE TEXTO NA EDIÇÃO DA PERGUNTA
+            const labelLimpo = limparTexto(novoLabel.trim());
             if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
 
             const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
@@ -505,7 +517,8 @@ export const ColetasBuilderService = {
             if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
                 const opcoesStr = prompt("✏️ Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
                 if (opcoesStr !== null) {
-                    novasOpcoes = opcoesStr.split(',').map(o => o.trim()).filter(o => o !== '');
+                    // APLICANDO A LIMPEZA DE TEXTO NA EDIÇÃO DAS OPÇÕES
+                    novasOpcoes = opcoesStr.split(',').map(o => limparTexto(o.trim())).filter(o => o !== '');
                 }
             }
 
@@ -572,12 +585,13 @@ export const ColetasBuilderService = {
             const docRef = doc(db, "formularios_coleta", coletaId);
             const camposAtuais = coletaData.dicionarioDeCampos || [];
             
+            // APLICANDO A LIMPEZA DE TEXTO NA IMPORTAÇÃO DE JSON
             const formatadas = novasPerguntas.map(p => ({
                 id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
-                label: p.label || p.pergunta || 'Nova Pergunta',
+                label: limparTexto(p.label || p.pergunta || 'Nova Pergunta'),
                 tipo: p.tipo || 'numero',
-                opcoes: p.opcoes || [],
-                metricasBi: p.metricasBi || [] // Mantém métricas se existirem
+                opcoes: (p.opcoes || []).map(o => limparTexto(o)),
+                metricasBi: p.metricasBi || [] 
             }));
 
             const listaFinal = [...camposAtuais, ...formatadas];
