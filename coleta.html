@@ -12,6 +12,12 @@
 
     <div id="app-coleta" class="bg-white w-full max-w-2xl rounded-3xl shadow-xl overflow-hidden border border-slate-200">
         
+        <!-- LOGO DO SIGEP -->
+        <div class="bg-slate-50 p-6 border-b border-slate-100 flex justify-center">
+            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
+                 alt="Logo SIGEP" class="h-14 w-auto">
+        </div>
+
         <!-- FAIXA DE CARREGAMENTO -->
         <div id="loading-box" class="text-center py-16">
             <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
@@ -38,25 +44,31 @@
             </div>
         </div>
 
-        <!-- FORMULÁRIO DINÂMICO (ONDE A MÁGICA ACONTECE) -->
+        <!-- FORMULÁRIO DINÂMICO -->
         <div id="form-box" class="hidden">
-            <div class="bg-emerald-600 p-6 sm:p-8 text-white relative">
-                <h1 id="titulo-coleta" class="text-2xl sm:text-3xl font-black leading-tight mb-2"></h1>
-                <div class="inline-block bg-emerald-800/50 px-3 py-1 rounded-lg border border-emerald-500/30">
-                    <p class="text-xs font-bold uppercase tracking-widest text-emerald-100">Remetente: <span id="label-orgao-logado" class="text-white"></span></p>
+            
+            <!-- HEADER DE IDENTIFICAÇÃO E SAIR -->
+            <div id="header-coleta" class="bg-indigo-50 border-b border-indigo-100 p-4 px-6 flex justify-between items-center text-xs">
+                <div>
+                    <p class="text-[10px] uppercase font-bold text-indigo-500">Órgão Logado:</p>
+                    <span class="font-black text-indigo-900 text-sm" id="label-orgao-logado">--</span>
                 </div>
+                <button onclick="window.location.reload()" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 font-bold px-3 py-1.5 rounded-lg transition shadow-sm">Sair / Trocar</button>
+            </div>
+
+            <div class="bg-emerald-600 p-6 text-white">
+                <h1 id="titulo-coleta" class="text-2xl font-black leading-tight"></h1>
             </div>
 
             <form id="form-estatisticas" class="p-6 sm:p-8 space-y-6">
                 
-                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-8">
+                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
                     <label class="block text-sm font-bold text-slate-800 mb-2">Seu Nome (Responsável pelo envio)</label>
                     <input type="text" id="input-responsavel" required placeholder="Ex: João (Técnico Judiciário)" class="w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
                 </div>
 
                 <div class="border-t border-slate-200 pt-6">
                     <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Preencha os Dados Abaixo</h3>
-                    <!-- O JAVASCRIPT INJETA OS CAMPOS DO GOOGLE FORMS AQUI -->
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
@@ -67,15 +79,10 @@
                 </div>
             </form>
         </div>
-
-        <!-- TELA DE SUCESSO -->
-        <div id="success-box" class="hidden text-center p-12">
-            <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">✓</div>
-            <h2 class="text-3xl font-black text-slate-800 mb-2">Muito Obrigado!</h2>
-            <p class="text-slate-500">As informações foram registradas com segurança no sistema central.</p>
-            <button onclick="window.location.reload()" class="mt-8 text-indigo-600 font-bold hover:underline">Enviar outra resposta</button>
-        </div>
     </div>
+
+    <!-- TOAST DE NOTIFICAÇÃO SIMPLES -->
+    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -91,6 +98,15 @@
         let coletaEncontradaId = null;
         let coletaConfigMaster = null;
         let linkConfig = null;
+        let contadorEnvios = 0;
+
+        function mostrarToast(mensagem, tipo = 'success') {
+            const toast = document.getElementById('toast-notificacao');
+            toast.textContent = mensagem;
+            toast.className = `fixed bottom-5 right-5 text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
+            toast.classList.remove('hidden');
+            setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+        }
 
         async function inicializar() {
             if (!token) return showError("Acesso Negado: Link inválido ou quebrado.");
@@ -142,10 +158,14 @@
             document.getElementById('titulo-coleta').textContent = coletaConfigMaster.nomeDaColeta;
             document.getElementById('label-orgao-logado').textContent = linkConfig.orgao;
 
+            // Carrega o nome do responsável salvo na máquina
+            const nomeSalvo = localStorage.getItem('sigep_responsavel_coleta');
+            if (nomeSalvo) {
+                document.getElementById('input-responsavel').value = nomeSalvo;
+            }
+
             const container = document.getElementById('dynamic-fields-container');
             const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
-
-            // Pega apenas as perguntas que você marcou pra eles verem
             const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
 
             container.innerHTML = camposDesteLink.map(campo => {
@@ -195,8 +215,10 @@
             e.preventDefault();
             const btn = document.getElementById('btn-enviar-dados');
             btn.disabled = true;
-            btn.textContent = "Validando e Enviando...";
-            btn.classList.replace('bg-emerald-600', 'bg-slate-400');
+            btn.textContent = "Enviando dados...";
+
+            const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
+            localStorage.setItem('sigep_responsavel_coleta', nomeResponsavel);
 
             const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
             const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
@@ -221,21 +243,34 @@
             const payload = {
                 coletaId: coletaEncontradaId,
                 orgaoOrigem: linkConfig.orgao,
-                responsavel: document.getElementById('input-responsavel').value.trim(),
+                responsavel: nomeResponsavel,
                 timestamp: new Date().toISOString(),
                 dados: respostas
             };
 
             try {
                 await addDoc(collection(db, "respostas_coleta"), payload);
-                document.getElementById('form-box').classList.add('hidden');
-                document.getElementById('success-box').classList.remove('hidden');
-            } catch (err) {
-                console.error(err);
-                alert("Falha de rede. Tente enviar novamente.");
+                contadorEnvios++;
+                
+                mostrarToast(`Envio #${contadorEnvios} realizado com sucesso!`, "success");
+                
+                // Limpa apenas os campos de resposta mantendo o nome e a sessão abertos
+                camposDesteLink.forEach(campo => {
+                    if (campo.tipo === 'multipla_escolha') {
+                        document.querySelectorAll(`input[name="f_${campo.id}"]`).forEach(el => el.checked = false);
+                    } else {
+                        const el = document.getElementById(`f_${campo.id}`);
+                        if (el) el.value = '';
+                    }
+                });
+
                 btn.disabled = false;
                 btn.textContent = "Enviar Respostas";
-                btn.classList.replace('bg-slate-400', 'bg-emerald-600');
+            } catch (err) {
+                console.error(err);
+                mostrarToast("Falha de rede. Tente enviar novamente.", "error");
+                btn.disabled = false;
+                btn.textContent = "Enviar Respostas";
             }
         });
 
