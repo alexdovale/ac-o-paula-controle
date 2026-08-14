@@ -1,4 +1,4 @@
-// js/coletasBuilderService.js - Construtor Avançado: Edição de campos, Tipos, Opções e Reordenação
+// js/coletasBuilderService.js - Construtor Avançado: Edição, Tipos, Opções, Reordenação e Integração Sheets
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
@@ -8,6 +8,7 @@ export const ColetasBuilderService = {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
         const formatoNumeracao = coletaData.formatoNumeracao || 'numero';
+        const urlSheets = coletaData.urlSincronizacaoSheets || '';
 
         const opcoesCamposHtml = campos.map((c, index) => `
             <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition">
@@ -156,13 +157,38 @@ export const ColetasBuilderService = {
                         <button type="button" id="btn-gerar-link" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-md transition uppercase tracking-wide">Gerar Link Seguro</button>
                     </div>
                 </div>
+
+                <!-- BLOCO 3: INTEGRAÇÃO GOOGLE SHEETS / LOOKER STUDIO -->
+                <div class="bg-white border-2 border-blue-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
+                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-3 mb-5">3. Sincronização Automática (Google Sheets / Looker Studio)</h3>
+                    
+                    <div class="space-y-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-600 mb-1">URL do Web App (Google Apps Script):</label>
+                            <input type="text" id="input-url-sheets" 
+                                   value="${escapeHTML(urlSheets)}" 
+                                   placeholder="Cole aqui a URL do seu script de integração..." 
+                                   class="w-full p-3 border border-blue-200 rounded-xl text-sm outline-none bg-blue-50/50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition">
+                        </div>
+                        
+                        <button type="button" 
+                                onclick="ColetasBuilderService.atualizarConfigIntegracao('${coletaId}', document.getElementById('input-url-sheets').value)" 
+                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md transition flex items-center gap-2">
+                            💾 Salvar URL de Sincronização
+                        </button>
+                        <p class="text-[11px] text-slate-400 mt-1">
+                            Ao colar e salvar a URL do Web App aqui, todas as submissões realizadas via link externo serão espelhadas automaticamente para a sua planilha do Google.
+                        </p>
+                    </div>
+                </div>
             </div>
         `;
     },
 
     formatarPrefixo(num, tipo) {
         if (tipo === 'romano') {
-            const romanos = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX", "XXI", "XXII", "XXIII", "XXIV", "XXV"];
+            const romanos = ["", "I", "II", "III", "IV", "V", "VI", "VII", "VIII", "IX", "X", "XI", "XII", "XIII", "XIV", "XV", "XVI", "XVII", "XVIII", "XIX", "XX"];
             return romanos[num] || num + '.';
         }
         if (tipo === 'letra') {
@@ -173,7 +199,6 @@ export const ColetasBuilderService = {
     },
 
     initEventos(db, coletaId, coletaData) {
-        // Lógica do seletor de tipo para opções extras
         const selectTipo = document.getElementById('novo-campo-tipo');
         const containerOpcoes = document.getElementById('container-opcoes-extras');
         if (selectTipo && containerOpcoes) {
@@ -186,7 +211,6 @@ export const ColetasBuilderService = {
             });
         }
 
-        // Checkbox de senha
         const checkRequerSenha = document.getElementById('novo-link-requer-senha');
         const inputSenha = document.getElementById('novo-link-senha');
         if (checkRequerSenha && inputSenha) {
@@ -197,7 +221,6 @@ export const ColetasBuilderService = {
             });
         }
 
-        // Adicionar campo
         document.getElementById('btn-add-campo')?.addEventListener('click', async () => {
             const label = document.getElementById('novo-campo-label').value.trim();
             const tipo = document.getElementById('novo-campo-tipo').value;
@@ -224,7 +247,6 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId); 
         });
 
-        // Gerar link
         document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
             const orgao = document.getElementById('novo-link-orgao').value.trim();
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
@@ -253,6 +275,20 @@ export const ColetasBuilderService = {
         });
     },
 
+    async atualizarConfigIntegracao(coletaId, urlPlanilha) {
+        try {
+            const db = window.app.db;
+            await updateDoc(doc(db, "formularios_coleta", coletaId), { 
+                urlSincronizacaoSheets: urlPlanilha.trim() 
+            });
+            showNotification("URL de sincronização salva com sucesso!", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao salvar URL de integração.", "error");
+        }
+    },
+
     async mudarFormatoNum(coletaId, novoFormato) {
         try {
             const db = window.app.db;
@@ -261,7 +297,6 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao mudar formato.", "error");
         }
     },
 
@@ -295,32 +330,19 @@ export const ColetasBuilderService = {
             const campo = campos[index];
             if (!campo) return;
 
-            // Editar label com prompt mais descritivo
-            const novoLabel = prompt("✏️ Editar Enunciado da Pergunta:", campo.label);
+            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
             if (novoLabel === null) return;
             const labelLimpo = novoLabel.trim();
             if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
 
-            // Editar tipo com prompt mais descritivo
             const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
-            const novoTipo = prompt(
-                `✏️ Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, 
-                campo.tipo
-            );
+            const novoTipo = prompt(`Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, campo.tipo);
             if (novoTipo === null) return;
             const tipoLimpo = novoTipo.trim();
-            
-            // Validar tipo
-            if (!tiposValidos.includes(tipoLimpo)) {
-                return showNotification("Tipo inválido. Use um dos tipos listados.", "error");
-            }
 
             let novasOpcoes = campo.opcoes || [];
             if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
-                const opcoesStr = prompt(
-                    "✏️ Editar Opções (separadas por vírgula):", 
-                    (campo.opcoes || []).join(', ')
-                );
+                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
                 if (opcoesStr !== null) {
                     novasOpcoes = opcoesStr.split(',').map(o => o.trim()).filter(o => o !== '');
                 }
@@ -334,7 +356,7 @@ export const ColetasBuilderService = {
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("✅ Pergunta atualizada com sucesso!", "success");
+            showNotification("Pergunta atualizada com sucesso!", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -343,7 +365,7 @@ export const ColetasBuilderService = {
     },
 
     async removerCampo(coletaId, index) {
-        if (!confirm("❌ Deseja realmente apagar esta pergunta?")) return;
+        if (!confirm("Deseja realmente apagar esta pergunta?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -354,7 +376,7 @@ export const ColetasBuilderService = {
             campos.splice(index, 1);
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("🗑️ Pergunta removida.", "info");
+            showNotification("Pergunta removida.", "info");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -367,7 +389,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: [] });
-            showNotification("🧹 Todas as perguntas foram apagadas.", "success");
+            showNotification("Todas as perguntas foram apagadas.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -376,13 +398,13 @@ export const ColetasBuilderService = {
     },
 
     async importarJsonLivre(coletaId, coletaData) {
-        const jsonInput = prompt("📥 Cole aqui o JSON estruturado com as perguntas:");
+        const jsonInput = prompt("Cole aqui o JSON estruturado com as perguntas:");
         if (!jsonInput) return;
 
         try {
             const novasPerguntas = JSON.parse(jsonInput);
             if (!Array.isArray(novasPerguntas)) {
-                return showNotification("❌ O formato do JSON deve ser uma lista [...]", "error");
+                return showNotification("O formato do JSON deve ser uma lista [...]", "error");
             }
 
             const db = window.app.db;
@@ -398,16 +420,16 @@ export const ColetasBuilderService = {
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
-            showNotification(`✅ ${formatadas.length} perguntas importadas com sucesso!`, "success");
+            showNotification(`${formatadas.length} perguntas importadas com sucesso!`, "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("❌ Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
+            showNotification("Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
         }
     },
 
     async removerLink(coletaId, index) {
-        if (!confirm("🗑️ Deseja realmente apagar este link?")) return;
+        if (!confirm("Deseja realmente apagar este link?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -418,7 +440,7 @@ export const ColetasBuilderService = {
             links.splice(index, 1);
 
             await updateDoc(docRef, { linksExternos: links });
-            showNotification("✅ Link apagado.", "success");
+            showNotification("Link apagado.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -431,7 +453,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: [] });
-            showNotification("🧹 Todos os links foram apagados.", "success");
+            showNotification("Todos os links foram apagados.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -447,7 +469,7 @@ export const ColetasBuilderService = {
             const snapshot = await getDocs(q);
 
             if (snapshot.empty) {
-                showNotification("ℹ️ Não há respostas para apagar.", "info");
+                showNotification("Não há respostas para apagar.", "info");
                 return;
             }
 
@@ -455,7 +477,7 @@ export const ColetasBuilderService = {
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
 
-            showNotification("🧹 Todas as respostas foram apagadas com sucesso!", "success");
+            showNotification("Todas as respostas foram apagadas com sucesso!", "success");
             window.verResultados(coletaId);
         } catch (e) {
             console.error(e);
@@ -477,7 +499,7 @@ export const ColetasBuilderService = {
             
             document.getElementById('container-construtor-coleta').classList.add('hidden');
             window.app.listarColetas();
-            showNotification("🗑️ Coleta excluída permanentemente.", "success");
+            showNotification("Coleta excluída permanentemente.", "success");
         } catch (e) {
             console.error(e);
             showNotification("Erro ao excluir coleta.", "error");
@@ -488,19 +510,9 @@ export const ColetasBuilderService = {
         let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
         const link = `${baseUrl}coleta.html?token=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            showNotification("📋 Link copiado para a área de transferência!", "success");
-        }).catch(() => {
-            // Fallback para browsers sem suporte a clipboard
-            const textArea = document.createElement('textarea');
-            textArea.value = link;
-            document.body.appendChild(textArea);
-            textArea.select();
-            document.execCommand('copy');
-            document.body.removeChild(textArea);
-            showNotification("📋 Link copiado para a área de transferência!", "success");
+            showNotification("Link copiado para a área de transferência!", "success");
         });
     }
 };
 
-// Expor no window para uso global
 window.ColetasBuilderService = ColetasBuilderService;
