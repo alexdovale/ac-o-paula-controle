@@ -1,16 +1,17 @@
-// js/coletasBiService.js - Serviço de BI e Relatórios Avançado para Coletas
+// js/coletasBiService.js - Serviço de BI e Relatórios Analíticos
 import { showNotification, escapeHTML } from './utils.js';
 
 // ============================================================
-// FUNÇÃO AUXILIAR: LIMPAR CARACTERES ESPECIAIS
+// FUNÇÃO AUXILIAR: LIMPAR CARACTERES ESPECIAIS E EMOJIS
 // ============================================================
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
-        .replace(/[ºª°]/g, '')
-        .replace(/[&]/g, 'e')
-        .replace(/[^\x00-\x7F]/g, "");
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais
+        .replace(/[&]/g, 'e') // Substitui & por e
+        .replace(/[^\x20-\x7E]/g, '') // Remove emojis e caracteres não imprimíveis
+        .trim();
 }
 
 // ============================================================
@@ -53,8 +54,8 @@ export const ColetasBiService = {
         container.classList.remove('hidden');
         container.innerHTML = `
             <div class="p-12 text-center animate-pulse space-y-3">
-                <div class="w-10 h-10 border-4 border-emerald-200 border-t-emerald-600 rounded-full animate-spin mx-auto"></div>
-                <p class="text-emerald-700 font-bold">Processando motor analítico de BI...</p>
+                <div class="w-10 h-10 border-4 border-slate-300 border-t-blue-600 rounded-full animate-spin mx-auto"></div>
+                <p class="text-slate-600 font-bold">Processando motor analítico...</p>
             </div>
         `;
 
@@ -66,7 +67,6 @@ export const ColetasBiService = {
                 ({ coletaData, dicionario, respostas, orgaosUnicos } = dadosCache);
                 window._dadosBiCache = { coletaData, dicionario, respostas, orgaosUnicos, coletaId };
                 this.renderizarPainelBiCompleto('todos', 'todos');
-                showNotification("📦 Dados carregados do cache!", "info");
                 return;
             }
 
@@ -74,7 +74,7 @@ export const ColetasBiService = {
             
             const coletaSnap = await getDoc(doc(db, "formularios_coleta", coletaId));
             if (!coletaSnap.exists()) {
-                container.innerHTML = `<p class="text-red-500 font-bold p-6">Coleta não encontrada.</p>`;
+                container.innerHTML = `<p class="text-red-500 font-bold p-6">Coleta não encontrada no banco de dados.</p>`;
                 return;
             }
             coletaData = coletaSnap.data();
@@ -86,10 +86,9 @@ export const ColetasBiService = {
             respostas = [];
             respostasSnap.forEach(rDoc => respostas.push({ id: rDoc.id, ...rDoc.data() }));
 
-            orgaosUnicos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
+            orgaosUnicos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))].sort();
 
             window._dadosBiCache = { coletaData, dicionario, respostas, orgaosUnicos, coletaId };
-            
             await setCachedData(coletaId, { coletaData, dicionario, respostas, orgaosUnicos });
 
             this.renderizarPainelBiCompleto('todos', 'todos');
@@ -113,106 +112,78 @@ export const ColetasBiService = {
         let html = `
             <div class="space-y-6 animate-fade-in bg-slate-50 p-4 sm:p-6 rounded-3xl border border-slate-200">
                 
-                <!-- BARRA DE FERRAMENTAS -->
-                <div class="bg-white p-6 rounded-2xl border shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">🏢 Filtrar por Órgão:</label>
-                        <select id="filtro-orgao-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(this.value, document.getElementById('filtro-periodo-bi').value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
-                            <option value="todos">Todos os Órgãos (${respostas.length} envios)</option>
+                <!-- BARRA DE FERRAMENTAS PROFISSIONAL -->
+                <div class="bg-white p-5 rounded-2xl border shadow-sm grid grid-cols-1 lg:grid-cols-4 gap-4 items-end">
+                    
+                    <div class="w-full">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Filtrar por Órgão:</label>
+                        <select id="filtro-orgao-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(this.value, document.getElementById('filtro-periodo-bi').value)" class="w-full p-2.5 border border-slate-300 rounded-lg font-medium text-sm text-slate-700 bg-white outline-none focus:border-blue-500">
+                            <option value="todos">Todos os Órgãos (${respostas.length})</option>
                             ${orgaosUnicos.map(o => `<option value="${o}" ${orgaoFiltro === o ? 'selected' : ''}>${o}</option>`).join('')}
                         </select>
                     </div>
                     
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">📅 Período:</label>
-                        <select id="filtro-periodo-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(document.getElementById('filtro-orgao-bi').value, this.value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
-                            <option value="todos" ${periodoFiltro === 'todos' ? 'selected' : ''}>Todos os períodos</option>
-                            <option value="hoje" ${periodoFiltro === 'hoje' ? 'selected' : ''}>Hoje</option>
-                            <option value="semana" ${periodoFiltro === 'semana' ? 'selected' : ''}>Última semana</option>
-                            <option value="mes" ${periodoFiltro === 'mes' ? 'selected' : ''}>Último mês</option>
+                    <div class="w-full">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Período:</label>
+                        <select id="filtro-periodo-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(document.getElementById('filtro-orgao-bi').value, this.value)" class="w-full p-2.5 border border-slate-300 rounded-lg font-medium text-sm text-slate-700 bg-white outline-none focus:border-blue-500">
+                            <option value="todos" ${periodoFiltro === 'todos' ? 'selected' : ''}>Todo o Histórico</option>
+                            <option value="hoje" ${periodoFiltro === 'hoje' ? 'selected' : ''}>Apenas Hoje</option>
+                            <option value="semana" ${periodoFiltro === 'semana' ? 'selected' : ''}>Últimos 7 dias</option>
+                            <option value="mes" ${periodoFiltro === 'mes' ? 'selected' : ''}>Últimos 30 dias</option>
                         </select>
                     </div>
 
-                    <div>
-                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">⭐ Favoritos:</label>
-                        <select id="filtro-favoritos" onchange="ColetasBiService.carregarFiltroFavorito(this.value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
-                            <option value="">Selecione um favorito...</option>
-                            ${this._carregarFiltrosFavoritos().map(f => `<option value="${f.nome}">⭐ ${f.nome}</option>`).join('')}
+                    <div class="w-full">
+                        <label class="text-[10px] font-bold text-slate-500 uppercase mb-1 block">Favoritos Salvos:</label>
+                        <select id="filtro-favoritos" onchange="ColetasBiService.carregarFiltroFavorito(this.value)" class="w-full p-2.5 border border-slate-300 rounded-lg font-medium text-sm text-slate-700 bg-white outline-none focus:border-blue-500">
+                            <option value="">Selecione uma visão...</option>
+                            ${this._carregarFiltrosFavoritos().map(f => `<option value="${f.nome}">${f.nome}</option>`).join('')}
                         </select>
                     </div>
                     
-                    <div class="flex gap-2 items-end">
-                        <button onclick="ColetasBiService.salvarFiltroComoFavorito()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold p-2 rounded-xl transition text-xs flex-1 h-[42px]">
-                            ⭐ Salvar
+                    <div class="flex flex-wrap gap-2 w-full lg:justify-end mt-2 lg:mt-0">
+                        <button onclick="ColetasBiService.salvarFiltroComoFavorito()" class="bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold px-4 py-2.5 rounded-lg transition text-xs flex-1 text-center">
+                            Salvar Filtro
                         </button>
-                        <button onclick="ColetasBiService.abrirModalExportacao()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow-lg transition text-sm h-[42px]">
-                            ⚙️ Exportar
+                        <button onclick="ColetasBiService.abrirModalExportacao()" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg shadow transition text-xs flex-1 text-center">
+                            Exportar
                         </button>
-                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold p-3 rounded-xl transition text-sm h-[42px]">
-                            🖨️
-                        </button>
-                        <button onclick="ColetasBiService.gerarInsights()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-xl transition text-sm h-[42px]" title="Insights Automáticos">
-                            💡
+                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2.5 rounded-lg transition text-xs">
+                            Imprimir
                         </button>
                     </div>
                 </div>
         `;
 
-        // COMPARAÇÃO ENTRE PERÍODOS
-        if (periodoFiltro !== 'todos' && respostasFiltradas.length > 0) {
-            const variacao = this._calcularVariacaoPeriodo(respostas, periodoFiltro);
-            html += `
-                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
-                    <p class="text-xs font-bold text-amber-700">📊 Comparação com período anterior</p>
-                    <div class="grid grid-cols-3 gap-4 mt-2">
-                        <div>
-                            <span class="text-xs text-slate-500">Período atual</span>
-                            <p class="text-lg font-black text-indigo-600">${respostasFiltradas.length} envios</p>
-                        </div>
-                        <div>
-                            <span class="text-xs text-slate-500">Período anterior</span>
-                            <p class="text-lg font-black text-slate-600">${variacao.anterior} envios</p>
-                        </div>
-                        <div>
-                            <span class="text-xs text-slate-500">Variação</span>
-                            <p class="text-lg font-black ${variacao.percentual >= 0 ? 'text-emerald-600' : 'text-red-600'}">
-                                ${variacao.percentual > 0 ? '↑' : variacao.percentual < 0 ? '↓' : '→'} ${Math.abs(variacao.percentual)}%
-                            </p>
-                        </div>
-                    </div>
-                </div>
-            `;
-        }
-
-        // INDICADORES GERAIS
+        // RESUMO GERAL
         html += `
-                <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
-                        <p class="text-[10px] uppercase font-black text-slate-400">Total de Envios</p>
-                        <p class="text-3xl font-black text-indigo-600">${respostasFiltradas.length}</p>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Total de Envios</p>
+                        <p class="text-2xl font-black text-slate-800">${respostasFiltradas.length}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
-                        <p class="text-[10px] uppercase font-black text-slate-400">Órgãos Participantes</p>
-                        <p class="text-3xl font-black text-emerald-600">${new Set(respostasFiltradas.map(r => r.orgaoOrigem)).size}</p>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Órgãos Envolvidos</p>
+                        <p class="text-2xl font-black text-slate-800">${new Set(respostasFiltradas.map(r => r.orgaoOrigem)).size}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
-                        <p class="text-[10px] uppercase font-black text-slate-400">Último Envio</p>
-                        <p class="text-sm font-black text-slate-700">${respostasFiltradas.length > 0 ? new Date(respostasFiltradas[0].timestamp).toLocaleDateString('pt-BR') : '--'}</p>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Última Atualização</p>
+                        <p class="text-sm mt-1 font-black text-slate-800">${respostasFiltradas.length > 0 ? new Date(respostasFiltradas[0].timestamp).toLocaleDateString('pt-BR') : '--'}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
-                        <p class="text-[10px] uppercase font-black text-slate-400">Média por Órgão</p>
-                        <p class="text-3xl font-black text-amber-600">${respostasFiltradas.length > 0 && orgaosUnicos.length > 0 ? (respostasFiltradas.length / orgaosUnicos.length).toFixed(1) : '0'}</p>
+                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Média de Envios / Órgão</p>
+                        <p class="text-2xl font-black text-slate-800">${respostasFiltradas.length > 0 && orgaosUnicos.length > 0 ? (respostasFiltradas.length / orgaosUnicos.length).toFixed(1) : '0'}</p>
                     </div>
                 </div>
         `;
 
         // ============================================================
-        // CARDS PARA TODAS AS PERGUNTAS (RESPEITANDO CONFIGURAÇÕES)
+        // CARDS DE DETALHAMENTO DAS PERGUNTAS
         // ============================================================
         html += `
             <div>
-                <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📊 Cards de Métricas (Clique para detalhar por órgão)</h4>
-                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+                <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest mb-3 border-b border-slate-200 pb-2">Métricas Individuais</h4>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
         `;
 
         dicionario.forEach(campo => {
@@ -220,15 +191,11 @@ export const ColetasBiService = {
                 .map(r => r.dados?.[campo.id]?.resposta)
                 .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
 
-            // Pega as métricas configuradas ou usa padrão
             const metricas = campo.metricasBi || this._getMetricasPadrao(campo.tipo);
 
-            // ============================================================
-            // CARD PARA CAMPOS NUMÉRICOS
-            // ============================================================
+            // NUMÉRICOS
             if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
                 const numeros = valores.map(Number).filter(n => !isNaN(n));
-                
                 if (numeros.length === 0) {
                     html += this._renderCardSemDados(campo);
                     return;
@@ -236,418 +203,229 @@ export const ColetasBiService = {
 
                 const soma = numeros.reduce((a, b) => a + b, 0);
                 const media = (soma / numeros.length).toFixed(1);
-                const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
-                const desvioPadrao = Math.sqrt(variancia).toFixed(1);
+                const desvioPadrao = Math.sqrt(numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length).toFixed(1);
 
-                // Contagem de frequência
-                const contagemNumerica = {};
-                numeros.forEach(num => {
-                    contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
-                });
-                const chavesOrdenadas = Object.keys(contagemNumerica).sort((a, b) => Number(a) - Number(b));
-                const frequenciaLista = chavesOrdenadas.map(num => 
-                    `${num}: ${contagemNumerica[num]}x`
-                ).join(' | ');
-
-                // Monta o card baseado nas métricas selecionadas
                 let metricasHtml = '';
-                let colunas = 0;
-
-                if (metricas.includes('soma')) {
-                    metricasHtml += `
-                        <div class="bg-indigo-50 p-2 rounded-xl text-center">
-                            <p class="text-lg font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
-                            <p class="text-[8px] font-bold text-indigo-400 uppercase">Soma</p>
-                        </div>
-                    `;
-                    colunas++;
-                }
-
-                if (metricas.includes('media')) {
-                    metricasHtml += `
-                        <div class="bg-emerald-50 p-2 rounded-xl text-center">
-                            <p class="text-lg font-black text-emerald-600">${media}</p>
-                            <p class="text-[8px] font-bold text-emerald-400 uppercase">Média</p>
-                        </div>
-                    `;
-                    colunas++;
-                }
-
-                if (metricas.includes('desvio')) {
-                    metricasHtml += `
-                        <div class="bg-amber-50 p-2 rounded-xl text-center">
-                            <p class="text-lg font-black text-amber-600">${desvioPadrao}</p>
-                            <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio</p>
-                        </div>
-                    `;
-                    colunas++;
-                }
-
-                // Define o grid com base no número de métricas
-                const gridCols = colunas > 0 ? `grid-cols-${colunas}` : 'grid-cols-1';
+                if (metricas.includes('soma')) metricasHtml += `<div class="bg-blue-50 p-2 rounded-lg text-center"><p class="text-lg font-black text-blue-700">${soma.toLocaleString('pt-BR')}</p><p class="text-[9px] font-bold text-blue-500 uppercase">Soma</p></div>`;
+                if (metricas.includes('media')) metricasHtml += `<div class="bg-slate-50 p-2 rounded-lg text-center border border-slate-100"><p class="text-lg font-black text-slate-700">${media}</p><p class="text-[9px] font-bold text-slate-500 uppercase">Média</p></div>`;
+                if (metricas.includes('desvio')) metricasHtml += `<div class="bg-slate-50 p-2 rounded-lg text-center border border-slate-100"><p class="text-lg font-black text-slate-700">${desvioPadrao}</p><p class="text-[9px] font-bold text-slate-500 uppercase">Desvio P.</p></div>`;
 
                 html += `
-                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
-                        <div class="mt-3 grid ${gridCols} gap-2 text-center">
-                            ${metricasHtml}
-                        </div>
-                        ${metricas.includes('frequencia') && chavesOrdenadas.length > 0 ? `
-                            <div class="mt-2 text-[10px] text-slate-500 truncate">
-                                📊 Frequência: ${frequenciaLista}
-                            </div>
-                        ` : ''}
-                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
-                            📌 ${numeros.length} respostas
-                            <span class="text-indigo-400 text-[8px] ml-auto">Clique para detalhar</span>
-                        </span>
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-blue-400 transition relative group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-blue-500 opacity-0 group-hover:opacity-100 transition"></div>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate pr-4">${escapeHTML(campo.label)}</p>
+                        <div class="mt-3 grid grid-cols-2 gap-2">${metricasHtml}</div>
+                        <p class="text-[9px] text-slate-400 mt-3 text-right group-hover:text-blue-500">Clique para detalhar</p>
                     </div>
                 `;
             }
 
-            // ============================================================
-            // CARD PARA SELEÇÃO / MÚLTIPLA ESCOLHA / BOOLEANO
-            // ============================================================
+            // SELEÇÃO
             else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
                 const contagem = {};
-                valores.forEach(val => {
-                    contagem[val] = (contagem[val] || 0) + 1;
-                });
-
-                const entries = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+                valores.forEach(val => contagem[val] = (contagem[val] || 0) + 1);
                 const total = valores.length;
-                const distribuicao = entries.map(([key, qtd]) => 
-                    `${key}: ${qtd}`
-                ).join(' | ');
-
-                let metricasHtml = '';
-
-                if (metricas.includes('total')) {
-                    metricasHtml += `
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Total respostas:</span>
-                            <span class="font-bold text-indigo-600">${total}</span>
-                        </div>
-                    `;
-                }
-
-                if (metricas.includes('distribuicao')) {
-                    metricasHtml += `
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Distribuição:</span>
-                            <span class="font-bold text-slate-700 truncate max-w-[150px]">${escapeHTML(distribuicao)}</span>
-                        </div>
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Opções disponíveis:</span>
-                            <span class="font-bold text-slate-700">${entries.length}</span>
-                        </div>
-                    `;
-                }
+                
+                const distribuicaoHtml = Object.entries(contagem)
+                    .sort((a, b) => b[1] - a[1])
+                    .slice(0, 3) // Mostra top 3 no card
+                    .map(([key, qtd]) => {
+                        const perc = total > 0 ? ((qtd / total) * 100).toFixed(0) : 0;
+                        return `<div class="flex justify-between text-xs text-slate-600 border-b border-slate-50 pb-1 mb-1"><span class="truncate pr-2">${escapeHTML(key)}</span><span class="font-bold">${perc}%</span></div>`;
+                    }).join('');
 
                 html += `
-                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition">${escapeHTML(campo.label)}</p>
-                        <div class="mt-3 space-y-1">
-                            ${metricasHtml}
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-emerald-400 transition relative group flex flex-col justify-between">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500 opacity-0 group-hover:opacity-100 transition"></div>
+                        <div>
+                            <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate pr-4 mb-3">${escapeHTML(campo.label)}</p>
+                            ${distribuicaoHtml || '<p class="text-xs text-slate-400">Sem dados</p>'}
                         </div>
-                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
-                            🏷️ ${entries.length} opções
-                            <span class="text-emerald-400 text-[8px] ml-auto">Clique para detalhar</span>
-                        </span>
+                        <p class="text-[9px] text-slate-400 mt-3 text-right group-hover:text-emerald-500">Clique para detalhar</p>
                     </div>
                 `;
             }
 
-            // ============================================================
-            // CARD PARA TEXTOS
-            // ============================================================
+            // TEXTO
             else {
-                const totalRespostas = valores.length;
-                const ultimaResposta = valores.length > 0 ? String(valores[valores.length - 1]).substring(0, 25) : '--';
-                const primeirasRespostas = valores.slice(0, 3).map(v => String(v).substring(0, 20)).join(', ');
-
-                let metricasHtml = '';
-
-                if (metricas.includes('total')) {
-                    metricasHtml += `
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Total respostas:</span>
-                            <span class="font-bold text-purple-600">${totalRespostas}</span>
-                        </div>
-                    `;
-                }
-
-                if (metricas.includes('ultima') && totalRespostas > 0) {
-                    metricasHtml += `
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Última resposta:</span>
-                            <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHTML(ultimaResposta)}</span>
-                        </div>
-                        <div class="flex justify-between text-xs">
-                            <span class="text-slate-500">Exemplos:</span>
-                            <span class="font-medium text-slate-600 truncate max-w-[120px]">${escapeHTML(primeirasRespostas)}</span>
-                        </div>
-                    `;
-                }
-
                 html += `
-                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm cursor-pointer hover:border-purple-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-purple-500"></div>
-                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-purple-600 transition">${escapeHTML(campo.label)}</p>
-                        <div class="mt-3 space-y-1">
-                            ${metricasHtml || `<p class="text-xs text-slate-400 italic">Sem métricas configuradas</p>`}
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm cursor-pointer hover:border-slate-400 transition relative group">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-slate-500 opacity-0 group-hover:opacity-100 transition"></div>
+                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wide truncate pr-4">${escapeHTML(campo.label)}</p>
+                        <div class="mt-3">
+                            <p class="text-2xl font-black text-slate-700">${valores.length}</p>
+                            <p class="text-[9px] font-bold text-slate-400 uppercase">Respostas Registradas</p>
                         </div>
-                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
-                            📝 ${totalRespostas} respostas
-                            <span class="text-purple-400 text-[8px] ml-auto">Clique para detalhar</span>
-                        </span>
+                        <p class="text-[9px] text-slate-400 mt-3 text-right group-hover:text-slate-600">Clique para detalhar</p>
                     </div>
                 `;
             }
         });
-
         html += `</div></div>`;
 
-        // DIV DE DETALHES
-        html += `
-            <div id="bi-detalhes-dinamicos" class="hidden bg-white p-6 rounded-2xl border shadow-sm"></div>
-        `;
+        // DIV DE DETALHES INJETÁVEL
+        html += `<div id="bi-detalhes-dinamicos" class="hidden bg-white p-6 rounded-2xl border border-slate-200 shadow-sm mt-4"></div>`;
 
         // ============================================================
-        // TABELA CONSOLIDADA POR ÓRGÃO (APENAS CAMPOS NUMÉRICOS)
+        // TABELA CONSOLIDADA GERAL
         // ============================================================
-        const camposNumericos = dicionario.filter(c => 
-            c.tipo === 'numero' || 
-            c.tipo === 'numero_abrangente'
-        );
-        
+        const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.tipo === 'numero_abrangente');
         if (camposNumericos.length > 0) {
             html += `
-                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
-                        <span>📊 Tabela Consolidada por Órgão</span>
-                        <span class="text-xs text-slate-500 font-medium">${respostasFiltradas.length} envios • ${orgaosUnicos.filter(o => orgaoFiltro === 'todos' || o === orgaoFiltro).length} órgãos</span>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm mt-6">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 font-bold text-slate-700 text-sm uppercase flex justify-between items-center">
+                        <span>Consolidado Analítico por Órgão</span>
                     </div>
                     <div class="overflow-x-auto">
                         <table class="w-full text-left border-collapse text-sm">
-                            <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                            <thead class="bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider border-b border-slate-200">
                                 <tr>
-                                    <th class="p-3.5">Órgão / Origem</th>
-                                    <th class="p-3.5 text-center">Total Envios</th>
+                                    <th class="p-3">Órgão Origem</th>
+                                    <th class="p-3 text-center">Submissões</th>
             `;
-            
-            camposNumericos.forEach(c => {
-                html += `<th class="p-3.5 text-right">${escapeHTML(c.label)}</th>`;
-            });
-
+            camposNumericos.forEach(c => html += `<th class="p-3 text-right">${escapeHTML(c.label)}</th>`);
             html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
             const orgaosParaMostrar = orgaoFiltro === 'todos' ? orgaosUnicos : [orgaoFiltro];
             orgaosParaMostrar.forEach(orgao => {
-                const enviosDoOrgao = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
+                const enviosDoOrgao = respostasFiltradas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
                 if (enviosDoOrgao.length === 0) return;
 
-                html += `
-                    <tr class="hover:bg-slate-50/80 transition">
-                        <td class="p-3.5 font-bold text-slate-800">${escapeHTML(orgao)}</td>
-                        <td class="p-3.5 text-center font-bold text-indigo-600">${enviosDoOrgao.length}</td>
-                `;
+                html += `<tr class="hover:bg-slate-50 transition">
+                            <td class="p-3 font-semibold text-slate-700 whitespace-nowrap">${escapeHTML(orgao)}</td>
+                            <td class="p-3 text-center font-bold text-blue-600">${enviosDoOrgao.length}</td>`;
 
                 camposNumericos.forEach(c => {
                     let somaOrgao = 0;
-                    enviosDoOrgao.forEach(r => {
-                        if (r.dados && r.dados[c.id]) somaOrgao += Number(r.dados[c.id].resposta) || 0;
-                    });
-                    html += `<td class="p-3.5 text-right font-semibold text-slate-700">${somaOrgao.toLocaleString('pt-BR')}</td>`;
+                    enviosDoOrgao.forEach(r => somaOrgao += Number(r.dados?.[c.id]?.resposta) || 0);
+                    html += `<td class="p-3 text-right text-slate-600">${somaOrgao.toLocaleString('pt-BR')}</td>`;
                 });
-
                 html += `</tr>`;
             });
-
             html += `</tbody></table></div></div>`;
         }
 
-        // ============================================================
-        // HISTÓRICO DETALHADO
-        // ============================================================
-        html += `
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
-                    <span>📋 Histórico Detalhado de Respostas</span>
-                    <span class="text-xs text-slate-500 font-medium">${respostasFiltradas.length} registros</span>
-                </div>
-                <div class="overflow-x-auto max-h-96">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200 sticky top-0">
-                            <tr>
-                                <th class="p-3.5">Data / Hora</th>
-                                <th class="p-3.5">Órgão</th>
-                                <th class="p-3.5">Responsável</th>
-        `;
-        
-        dicionario.forEach(c => {
-            html += `<th class="p-3.5">${escapeHTML(c.label)}</th>`;
-        });
-
-        html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
-
-        respostasFiltradas.slice(0, 50).forEach(r => {
-            const dataFormatada = r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--';
-            html += `
-                <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">${dataFormatada}</td>
-                    <td class="p-3.5 font-bold text-slate-800">${escapeHTML(r.orgaoOrigem || 'Desconhecido')}</td>
-                    <td class="p-3.5 text-slate-600">${escapeHTML(r.responsavel || '--')}</td>
-            `;
-
-            dicionario.forEach(c => {
-                const respostaItem = r.dados && r.dados[c.id] ? r.dados[c.id].resposta : '--';
-                html += `<td class="p-3.5 font-semibold text-slate-700">${escapeHTML(String(respostaItem))}</td>`;
-            });
-
-            html += `</tr>`;
-        });
-
-        if (respostasFiltradas.length > 50) {
-            html += `<tr><td colspan="${dicionario.length + 3}" class="p-3.5 text-center text-xs text-slate-400 italic">Exibindo os 50 registros mais recentes</td></tr>`;
-        }
-
-        html += `</tbody></table></div></div>`;
-
-        // AUTO-REFRESH
-        html += `
-            <div class="flex justify-end gap-2">
-                <button onclick="ColetasBiService.iniciarAutoRefresh()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
-                    🔄 Auto-Refresh (5min)
-                </button>
-                <button onclick="ColetasBiService.pararAutoRefresh()" class="text-xs bg-red-100 hover:bg-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg transition hidden" id="btn-parar-refresh">
-                    ⏹ Parar Refresh
-                </button>
-            </div>
-        </div>`;
-
+        html += `</div>`; // Fechamento container principal
         container.innerHTML = html;
-        container.scrollIntoView({ behavior: 'smooth' });
     },
 
     // ============================================================
-    // MÉTODOS AUXILIARES
+    // MÉTODOS AUXILIARES E DETALHAMENTO
     // ============================================================
     _getMetricasPadrao(tipo) {
-        if (tipo === 'numero' || tipo === 'numero_abrangente') {
-            return ['soma', 'media'];
-        }
-        if (['selecao', 'multipla_escolha', 'booleano'].includes(tipo)) {
-            return ['total', 'distribuicao'];
-        }
+        if (tipo === 'numero' || tipo === 'numero_abrangente') return ['soma', 'media'];
+        if (['selecao', 'multipla_escolha', 'booleano'].includes(tipo)) return ['total', 'distribuicao'];
         return ['total'];
     },
 
     _renderCardSemDados(campo) {
         return `
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden opacity-60">
-                <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
+            <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm opacity-60">
                 <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">${escapeHTML(campo.label)}</p>
-                <p class="text-2xl font-black text-slate-400 mt-3">--</p>
-                <span class="text-[10px] text-slate-400 mt-1 font-medium">Sem respostas ainda</span>
+                <p class="text-2xl font-black text-slate-300 mt-3">--</p>
+                <span class="text-[9px] text-slate-400 mt-1 uppercase">Aguardando Dados</span>
             </div>
         `;
     },
 
     _aplicarFiltros(respostas, orgaoFiltro, periodoFiltro) {
         let filtradas = [...respostas];
-
-        if (orgaoFiltro !== 'todos') {
-            filtradas = filtradas.filter(r => r.orgaoOrigem === orgaoFiltro);
-        }
+        if (orgaoFiltro !== 'todos') filtradas = filtradas.filter(r => r.orgaoOrigem === orgaoFiltro);
 
         if (periodoFiltro !== 'todos') {
             const agora = new Date();
             let dataLimite = new Date();
-            
-            if (periodoFiltro === 'hoje') {
-                dataLimite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
-            } else if (periodoFiltro === 'semana') {
-                dataLimite.setDate(agora.getDate() - 7);
-            } else if (periodoFiltro === 'mes') {
-                dataLimite.setMonth(agora.getMonth() - 1);
-            }
+            if (periodoFiltro === 'hoje') dataLimite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+            else if (periodoFiltro === 'semana') dataLimite.setDate(agora.getDate() - 7);
+            else if (periodoFiltro === 'mes') dataLimite.setMonth(agora.getMonth() - 1);
 
             filtradas = filtradas.filter(r => {
                 if (!r.timestamp) return false;
-                const data = new Date(r.timestamp);
-                return data >= dataLimite;
+                return new Date(r.timestamp) >= dataLimite;
             });
         }
-
         return filtradas;
     },
 
-    _calcularVariacaoPeriodo(respostas, periodoFiltro) {
-        const agora = new Date();
-        let dataAtual = new Date();
-        let dataAnterior = new Date();
+    detalharPorOrgao(campoId) {
+        const { respostas, dicionario } = window._dadosBiCache || {};
+        const campo = dicionario.find(c => c.id === campoId);
+        const div = document.getElementById('bi-detalhes-dinamicos');
+        
+        const agrupado = {};
+        respostas.forEach(r => {
+            const org = r.orgaoOrigem || 'Desconhecido';
+            const val = r.dados?.[campoId]?.resposta;
+            if (!agrupado[org]) agrupado[org] = [];
+            if (val !== undefined && val !== null && val !== '') agrupado[org].push(val);
+        });
 
-        if (periodoFiltro === 'semana') {
-            dataAtual.setDate(agora.getDate() - 7);
-            dataAnterior.setDate(agora.getDate() - 14);
-        } else if (periodoFiltro === 'mes') {
-            dataAtual.setMonth(agora.getMonth() - 1);
-            dataAnterior.setMonth(agora.getMonth() - 2);
+        div.classList.remove('hidden');
+        
+        let conteudoHtml = `<div class="flex justify-between items-center mb-4 border-b border-slate-100 pb-3">
+                                <h4 class="font-bold text-lg text-slate-700">Detalhes: ${escapeHTML(campo.label)}</h4>
+                                <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-sm transition">FECHAR</button>
+                            </div>`;
+
+        if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
+            conteudoHtml += `<div class="grid grid-cols-2 md:grid-cols-4 gap-3">`;
+            Object.entries(agrupado).forEach(([org, valores]) => {
+                const nums = valores.map(Number).filter(n => !isNaN(n));
+                const soma = nums.reduce((a, b) => a + b, 0);
+                if (soma > 0) {
+                    conteudoHtml += `
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <p class="text-[10px] uppercase font-bold text-slate-500 truncate" title="${escapeHTML(org)}">${escapeHTML(org)}</p>
+                            <p class="text-xl font-black text-blue-600 mt-1">${soma.toLocaleString('pt-BR')}</p>
+                        </div>
+                    `;
+                }
+            });
+            conteudoHtml += `</div>`;
+        } else {
+            conteudoHtml += `<div class="grid grid-cols-1 md:grid-cols-2 gap-4">`;
+            Object.entries(agrupado).forEach(([org, valores]) => {
+                if (valores.length > 0) {
+                    // Pega até os 3 valores mais recentes/frequentes dependendo do tipo
+                    const exibicao = [...new Set(valores)].slice(0, 5).map(v => escapeHTML(String(v))).join(', ');
+                    conteudoHtml += `
+                        <div class="p-3 bg-slate-50 rounded-lg border border-slate-200">
+                            <p class="text-[10px] uppercase font-bold text-slate-500 border-b border-slate-200 pb-1 mb-2">${escapeHTML(org)}</p>
+                            <p class="text-xs text-slate-700 leading-relaxed">${exibicao}${valores.length > 5 ? '...' : ''}</p>
+                        </div>
+                    `;
+                }
+            });
+            conteudoHtml += `</div>`;
         }
-
-        const atual = respostas.filter(r => {
-            if (!r.timestamp) return false;
-            const data = new Date(r.timestamp);
-            return data >= dataAtual;
-        });
-
-        const anterior = respostas.filter(r => {
-            if (!r.timestamp) return false;
-            const data = new Date(r.timestamp);
-            return data >= dataAnterior && data < dataAtual;
-        });
-
-        const perc = atual.length > 0 && anterior.length > 0 
-            ? ((atual.length - anterior.length) / anterior.length * 100)
-            : 0;
-
-        return {
-            atual: atual.length,
-            anterior: anterior.length,
-            percentual: Math.round(perc)
-        };
+        
+        div.innerHTML = conteudoHtml;
+        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
 
     // ============================================================
-    // FILTROS FAVORITOS
+    // FAVORITOS
     // ============================================================
     _carregarFiltrosFavoritos() {
-        try {
-            return JSON.parse(localStorage.getItem('sigep_filtros_favoritos') || '[]');
-        } catch { return []; }
+        try { return JSON.parse(localStorage.getItem('sigep_filtros_favoritos') || '[]'); } catch { return []; }
     },
 
     salvarFiltroComoFavorito() {
         const orgao = document.getElementById('filtro-orgao-bi')?.value || 'todos';
         const periodo = document.getElementById('filtro-periodo-bi')?.value || 'todos';
-        const nome = prompt('⭐ Nome do filtro favorito:', `Filtro ${new Date().toLocaleDateString()}`);
-        
+        const nome = prompt('Nome para identificar esta visão:', `Visão ${new Date().toLocaleDateString()}`);
         if (nome) {
             const favoritos = this._carregarFiltrosFavoritos();
-            favoritos.push({ nome, orgao, periodo });
+            favoritos.push({ nome: limparTexto(nome), orgao, periodo });
             localStorage.setItem('sigep_filtros_favoritos', JSON.stringify(favoritos));
-            this._atualizarSelectFavoritos();
-            showNotification(`⭐ Filtro "${nome}" salvo!`, "success");
+            this.renderizarPainelBiCompleto(orgao, periodo);
+            showNotification(`Filtro salvo com sucesso!`, "success");
         }
     },
 
     carregarFiltroFavorito(nome) {
         if (!nome) return;
-        const favoritos = this._carregarFiltrosFavoritos();
-        const filtro = favoritos.find(f => f.nome === nome);
+        const filtro = this._carregarFiltrosFavoritos().find(f => f.nome === nome);
         if (filtro) {
             document.getElementById('filtro-orgao-bi').value = filtro.orgao;
             document.getElementById('filtro-periodo-bi').value = filtro.periodo;
@@ -655,827 +433,217 @@ export const ColetasBiService = {
         }
     },
 
-    _atualizarSelectFavoritos() {
-        const select = document.getElementById('filtro-favoritos');
-        if (!select) return;
-        const favoritos = this._carregarFiltrosFavoritos();
-        const valorAtual = select.value;
-        select.innerHTML = `
-            <option value="">Selecione um favorito...</option>
-            ${favoritos.map(f => `<option value="${f.nome}" ${f.nome === valorAtual ? 'selected' : ''}>⭐ ${f.nome}</option>`).join('')}
-        `;
-    },
-
     // ============================================================
-    // AUTO-REFRESH
-    // ============================================================
-    iniciarAutoRefresh(intervalo = 300000) {
-        if (this._refreshInterval) clearInterval(this._refreshInterval);
-        
-        this._refreshInterval = setInterval(() => {
-            const coletaId = window._dadosBiCache?.coletaId;
-            if (coletaId) {
-                this.abrirResultados(window.app.db, coletaId);
-                showNotification("🔄 Dados atualizados automaticamente!", "info");
-            }
-        }, intervalo);
-
-        document.getElementById('btn-parar-refresh')?.classList.remove('hidden');
-        showNotification("🔄 Auto-Refresh ativado (5 minutos)", "info");
-    },
-
-    pararAutoRefresh() {
-        if (this._refreshInterval) {
-            clearInterval(this._refreshInterval);
-            this._refreshInterval = null;
-        }
-        document.getElementById('btn-parar-refresh')?.classList.add('hidden');
-        showNotification("⏹ Auto-Refresh desativado", "info");
-    },
-
-    // ============================================================
-    // INSIGHTS AUTOMÁTICOS
-    // ============================================================
-    gerarInsights() {
-        const { respostas, dicionario } = window._dadosBiCache || {};
-        if (!respostas || respostas.length === 0) {
-            showNotification("Sem dados para gerar insights.", "error");
-            return;
-        }
-
-        let insights = [];
-        const totalRespostas = respostas.length;
-        const orgaos = new Set(respostas.map(r => r.orgaoOrigem));
-
-        dicionario.forEach(campo => {
-            const valores = respostas
-                .map(r => r.dados?.[campo.id]?.resposta)
-                .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
-
-            if (valores.length === 0) {
-                insights.push(`⚠️ ${campo.label}: Nenhuma resposta registrada ainda.`);
-                return;
-            }
-
-            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
-                const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
-                if (numeros.length > 0) {
-                    const soma = numeros.reduce((a, b) => a + b, 0);
-                    const media = soma / numeros.length;
-                    const max = Math.max(...numeros);
-                    const min = Math.min(...numeros);
-                    
-                    const contagem = {};
-                    numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
-                    const maisFrequente = Object.entries(contagem).sort((a, b) => b[1] - a[1])[0];
-                    
-                    insights.push(`📊 ${campo.label}: Soma=${soma}, Média=${media.toFixed(1)}, ${maisFrequente[0]} apareceu ${maisFrequente[1]} vezes`);
-                    
-                    if (max > media * 2) {
-                        insights.push(`🔴 ${campo.label}: Valor máximo (${max}) é 2x maior que a média (${media.toFixed(1)})`);
-                    }
-                }
-            }
-
-            if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
-                const contagem = {};
-                valores.forEach(val => {
-                    contagem[val] = (contagem[val] || 0) + 1;
-                });
-
-                const entries = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
-                if (entries.length > 0) {
-                    const max = entries[0];
-                    const min = entries[entries.length - 1];
-                    
-                    const distribuicao = entries.map(([key, qtd]) => `${key}: ${qtd}`).join(', ');
-                    insights.push(`📊 ${campo.label}: Distribuição = ${distribuicao}`);
-                    
-                    if (max[1] > totalRespostas * 0.5) {
-                        insights.push(`📊 ${campo.label}: "${max[0]}" foi escolhido por ${Math.round(max[1]/totalRespostas*100)}% dos órgãos`);
-                    }
-                    if (min[1] < totalRespostas * 0.1 && entries.length > 1) {
-                        insights.push(`⚠️ ${campo.label}: "${min[0]}" teve apenas ${min[1]} escolha(s) (${Math.round(min[1]/totalRespostas*100)}%)`);
-                    }
-                }
-            }
-        });
-
-        if (orgaos.size > 1) {
-            insights.push(`🏢 ${orgaos.size} órgãos participaram da coleta`);
-        }
-        if (totalRespostas < 3) {
-            insights.push(`📉 Poucos registros (${totalRespostas}). Considere ampliar a divulgação.`);
-        }
-
-        if (insights.length === 0) {
-            insights.push("✅ Nenhum insight relevante encontrado. Os dados estão equilibrados.");
-        }
-
-        this._mostrarModalInsights(insights);
-    },
-
-    _mostrarModalInsights(insights) {
-        const modal = document.createElement('div');
-        modal.id = 'modal-insights';
-        modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in';
-        modal.innerHTML = `
-            <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-black text-slate-800">💡 Insights Automáticos</h3>
-                    <button onclick="this.closest('#modal-insights').remove()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
-                </div>
-                
-                <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
-                    ${insights.map((insight, i) => `
-                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
-                            <span class="text-xl">${insight.match(/^.{1,2}/)?.[0] || '📌'}</span>
-                            <p class="text-sm text-slate-700 font-medium">${insight.substring(2)}</p>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div class="mt-6 flex gap-3">
-                    <button onclick="this.closest('#modal-insights').remove()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
-                        Fechar
-                    </button>
-                    <button onclick="ColetasBiService.exportarInsights()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow-lg">
-                        📄 Exportar Insights
-                    </button>
-                </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    },
-
-    exportarInsights() {
-        const modal = document.getElementById('modal-insights');
-        if (modal) {
-            const insights = modal.querySelectorAll('.p-4');
-            let texto = `INSIGHTS - ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
-            insights.forEach(el => {
-                texto += el.textContent.trim() + '\n';
-            });
-            
-            const blob = new Blob([texto], { type: 'text/plain' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `insights_${new Date().toISOString().slice(0,10)}.txt`;
-            a.click();
-            URL.revokeObjectURL(url);
-            
-            showNotification("📄 Insights exportados!", "success");
-        }
-    },
-
-    // ============================================================
-    // DETALHAR POR ÓRGÃO
-    // ============================================================
-    detalharPorOrgao(campoId) {
-        const { respostas, dicionario } = window._dadosBiCache || {};
-        if (!respostas) return;
-        
-        const campo = dicionario.find(c => c.id === campoId);
-        if (!campo) return;
-        
-        const div = document.getElementById('bi-detalhes-dinamicos');
-        if (!div) return;
-        
-        // NUMÉRICO
-        if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
-            const agrupado = {};
-            const contagemGlobal = {};
-            
-            respostas.forEach(r => {
-                const org = r.orgaoOrigem || 'Desconhecido';
-                const valor = Number(r.dados?.[campoId]?.resposta) || 0;
-                
-                if (!agrupado[org]) agrupado[org] = [];
-                agrupado[org].push(valor);
-                
-                if (valor > 0) {
-                    contagemGlobal[valor] = (contagemGlobal[valor] || 0) + 1;
-                }
-            });
-
-            const totals = Object.entries(agrupado).map(([org, valores]) => {
-                const soma = valores.reduce((a, b) => a + b, 0);
-                const media = valores.length > 0 ? (soma / valores.length).toFixed(1) : 0;
-                const variancia = valores.length > 0 ? valores.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / valores.length : 0;
-                const desvio = Math.sqrt(variancia).toFixed(1);
-                return { org, soma, media, desvio, count: valores.length, valores };
-            }).sort((a, b) => b.soma - a.soma);
-
-            const totalGeral = totals.reduce((sum, t) => sum + t.soma, 0);
-            const freqList = Object.entries(contagemGlobal)
-                .sort((a, b) => Number(a[0]) - Number(b[0]))
-                .map(([val, qtd]) => `${val}: ${qtd}x`)
-                .join(' | ');
-
-            div.classList.remove('hidden');
-            div.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="font-black text-lg text-slate-800">📊 Detalhamento: ${escapeHTML(campo.label)}</h4>
-                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-                        ✕ Fechar
-                    </button>
-                </div>
-                
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
-                    <div class="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
-                        <p class="text-[10px] uppercase font-bold text-indigo-400">Total Geral</p>
-                        <p class="text-2xl font-black text-indigo-600">${totalGeral.toLocaleString('pt-BR')}</p>
-                    </div>
-                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
-                        <p class="text-[10px] uppercase font-bold text-emerald-400">Média Geral</p>
-                        <p class="text-2xl font-black text-emerald-600">${(totalGeral / respostas.length).toFixed(1)}</p>
-                    </div>
-                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center">
-                        <p class="text-[10px] uppercase font-bold text-amber-400">Frequência</p>
-                        <p class="text-sm font-black text-amber-600 truncate">${freqList || '--'}</p>
-                    </div>
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">Total Respostas</p>
-                        <p class="text-2xl font-black text-slate-600">${respostas.length}</p>
-                    </div>
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
-                            <tr>
-                                <th class="p-2">Órgão</th>
-                                <th class="p-2 text-center">Respostas</th>
-                                <th class="p-2 text-right">Soma</th>
-                                <th class="p-2 text-center">Média</th>
-                                <th class="p-2 text-center">Desvio</th>
-                                <th class="p-2 text-right">% do Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            ${totals.map(t => `
-                                <tr class="hover:bg-slate-50 transition">
-                                    <td class="p-2 font-bold text-slate-700">${escapeHTML(t.org)}</td>
-                                    <td class="p-2 text-center font-bold text-indigo-600">${t.count}</td>
-                                    <td class="p-2 text-right font-bold text-slate-800">${t.soma.toLocaleString('pt-BR')}</td>
-                                    <td class="p-2 text-center text-emerald-600">${t.media}</td>
-                                    <td class="p-2 text-center text-amber-600">${t.desvio}</td>
-                                    <td class="p-2 text-right font-bold text-slate-700">${totalGeral > 0 ? ((t.soma / totalGeral) * 100).toFixed(1) : 0}%</td>
-                                </tr>
-                            `).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        } 
-        
-        // SELEÇÃO
-        else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
-            const agrupado = {};
-            respostas.forEach(r => {
-                const org = r.orgaoOrigem || 'Desconhecido';
-                const val = r.dados?.[campoId]?.resposta || 'Não respondeu';
-                if (!agrupado[org]) agrupado[org] = {};
-                agrupado[org][val] = (agrupado[org][val] || 0) + 1;
-            });
-
-            const orgaos = Object.keys(agrupado);
-            const todasOpcoes = new Set();
-            Object.values(agrupado).forEach(obj => {
-                Object.keys(obj).forEach(k => todasOpcoes.add(k));
-            });
-            const opcoesOrdenadas = [...todasOpcoes].sort();
-
-            const totaisOpcao = {};
-            opcoesOrdenadas.forEach(op => {
-                totaisOpcao[op] = 0;
-                orgaos.forEach(org => {
-                    totaisOpcao[op] += agrupado[org][op] || 0;
-                });
-            });
-
-            div.classList.remove('hidden');
-            div.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="font-black text-lg text-slate-800">🧩 Detalhamento: ${escapeHTML(campo.label)}</h4>
-                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-                        ✕ Fechar
-                    </button>
-                </div>
-                
-                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
-                    ${opcoesOrdenadas.map(op => `
-                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
-                            <p class="text-[10px] uppercase font-bold text-slate-400">${escapeHTML(String(op))}</p>
-                            <p class="text-2xl font-black text-indigo-600">${totaisOpcao[op]}</p>
-                        </div>
-                    `).join('')}
-                </div>
-                
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
-                            <tr>
-                                <th class="p-2">Órgão</th>
-                                ${opcoesOrdenadas.map(op => `<th class="p-2 text-center">${escapeHTML(String(op))}</th>`).join('')}
-                                <th class="p-2 text-center">Total</th>
-                            </tr>
-                        </thead>
-                        <tbody class="divide-y divide-slate-100">
-                            ${orgaos.map(org => {
-                                const total = opcoesOrdenadas.reduce((sum, op) => sum + (agrupado[org][op] || 0), 0);
-                                return `
-                                    <tr class="hover:bg-slate-50 transition">
-                                        <td class="p-2 font-bold text-slate-700">${escapeHTML(org)}</td>
-                                        ${opcoesOrdenadas.map(op => `
-                                            <td class="p-2 text-center font-bold ${agrupado[org][op] > 0 ? 'text-indigo-600' : 'text-slate-300'}">
-                                                ${agrupado[org][op] || 0}
-                                            </td>
-                                        `).join('')}
-                                        <td class="p-2 text-center font-bold text-emerald-600">${total}</td>
-                                    </tr>
-                                `;
-                            }).join('')}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-        }
-        
-        // TEXTO
-        else {
-            const agrupado = {};
-            respostas.forEach(r => {
-                const org = r.orgaoOrigem || 'Desconhecido';
-                const val = r.dados?.[campoId]?.resposta || '--';
-                if (!agrupado[org]) agrupado[org] = [];
-                agrupado[org].push(String(val));
-            });
-
-            div.classList.remove('hidden');
-            div.innerHTML = `
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="font-black text-lg text-slate-800">📝 Detalhamento: ${escapeHTML(campo.label)}</h4>
-                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-                        ✕ Fechar
-                    </button>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    ${Object.entries(agrupado).map(([org, respostasLista]) => `
-                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                            <p class="text-xs font-black text-slate-600 uppercase">${escapeHTML(org)}</p>
-                            <div class="mt-2 space-y-1 max-h-32 overflow-y-auto">
-                                ${respostasLista.slice(0, 5).map(val => `
-                                    <p class="text-xs text-slate-700 border-b border-slate-100 pb-1">${escapeHTML(String(val).substring(0, 50))}</p>
-                                `).join('')}
-                                ${respostasLista.length > 5 ? `<p class="text-[10px] text-slate-400 italic">+ ${respostasLista.length - 5} outras respostas</p>` : ''}
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            `;
-        }
-        
-        div.scrollIntoView({ behavior: 'smooth', block: 'center' });
-    },
-
-    // ============================================================
-    // EXPORTAÇÃO PARA EXCEL
-    // ============================================================
-    async exportarParaExcel() {
-        const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
-        if (!respostas || respostas.length === 0) {
-            showNotification("Sem dados para exportar.", "error");
-            return;
-        }
-
-        try {
-            const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js');
-            
-            if (!XLSX || !XLSX.utils) {
-                throw new Error("Biblioteca XLSX não carregada corretamente.");
-            }
-
-            const workbook = XLSX.utils.book_new();
-            
-            // Planilha 1: Dados Brutos
-            const wsData = [
-                [`Relatório BI - ${coletaData.nomeDaColeta}`],
-                [`Gerado em: ${new Date().toLocaleString()}`],
-                [],
-                ['Data/Hora', 'Órgão', 'Responsável', ...dicionario.map(c => c.label)]
-            ];
-            
-            respostas.forEach(r => {
-                wsData.push([
-                    r.timestamp ? new Date(r.timestamp).toLocaleString() : '--',
-                    r.orgaoOrigem || '--',
-                    r.responsavel || '--',
-                    ...dicionario.map(c => r.dados?.[c.id]?.resposta || '--')
-                ]);
-            });
-            
-            const ws = XLSX.utils.aoa_to_sheet(wsData);
-            const colWidths = wsData[0].map((_, idx) => ({
-                wch: Math.max(...wsData.map(row => String(row[idx] || '').length)) + 2
-            }));
-            ws['!cols'] = colWidths;
-            XLSX.utils.book_append_sheet(workbook, ws, 'Dados');
-
-            // Planilha 2: Estatísticas por Campo
-            const statsData = [
-                ['ESTATÍSTICAS POR CAMPO'],
-                [],
-                ['Campo', 'Tipo', 'Total Respostas', 'Soma', 'Média', 'Mínimo', 'Máximo', 'Frequência']
-            ];
-            
-            dicionario.forEach(campo => {
-                const valores = respostas
-                    .map(r => r.dados?.[campo.id]?.resposta)
-                    .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
-
-                if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
-                    const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
-                    if (numeros.length > 0) {
-                        const soma = numeros.reduce((a, b) => a + b, 0);
-                        const media = soma / numeros.length;
-                        
-                        const contagem = {};
-                        numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
-                        const freq = Object.entries(contagem).sort((a, b) => Number(a[0]) - Number(b[0]))
-                            .map(([v, q]) => `${v}:${q}`).join('; ');
-                        
-                        statsData.push([
-                            campo.label,
-                            campo.tipo,
-                            numeros.length,
-                            soma,
-                            media.toFixed(2),
-                            Math.min(...numeros),
-                            Math.max(...numeros),
-                            freq
-                        ]);
-                    } else {
-                        statsData.push([campo.label, campo.tipo, 0, 0, 0, 0, 0, 'Sem dados']);
-                    }
-                } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
-                    const contagem = {};
-                    valores.forEach(v => contagem[v] = (contagem[v] || 0) + 1);
-                    const freq = Object.entries(contagem).sort((a, b) => b[1] - a[1])
-                        .map(([v, q]) => `${v}:${q}`).join('; ');
-                    statsData.push([
-                        campo.label,
-                        campo.tipo,
-                        valores.length,
-                        '--',
-                        '--',
-                        '--',
-                        '--',
-                        freq
-                    ]);
-                } else {
-                    statsData.push([
-                        campo.label,
-                        campo.tipo,
-                        valores.length,
-                        '--',
-                        '--',
-                        '--',
-                        '--',
-                        valores.length > 0 ? `${valores.slice(0, 3).map(v => String(v).substring(0, 15)).join('; ')}...` : 'Sem dados'
-                    ]);
-                }
-            });
-            
-            const wsStats = XLSX.utils.aoa_to_sheet(statsData);
-            XLSX.utils.book_append_sheet(workbook, wsStats, 'Estatísticas');
-
-            // Planilha 3: Resumo por Órgão
-            const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
-            const camposNumericos = dicionario.filter(c => 
-                c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente'
-            );
-            
-            const resumoData = [
-                ['RESUMO POR ÓRGÃO'],
-                [],
-                ['Órgão', 'Total Envios', ...camposNumericos.map(c => c.label)]
-            ];
-            
-            orgaos.forEach(org => {
-                const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === org);
-                const linha = [
-                    org,
-                    envios.length,
-                    ...camposNumericos.map(c => {
-                        const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
-                        return soma;
-                    })
-                ];
-                resumoData.push(linha);
-            });
-            
-            const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
-            XLSX.utils.book_append_sheet(workbook, wsResumo, 'Resumo por Órgão');
-            
-            // Salvar
-            const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
-            const blob = new Blob([wbout], { type: 'application/octet-stream' });
-            const url = URL.createObjectURL(blob);
-            const a = document.createElement('a');
-            a.href = url;
-            a.download = `Relatorio_BI_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.xlsx`;
-            document.body.appendChild(a);
-            a.click();
-            document.body.removeChild(a);
-            setTimeout(() => URL.revokeObjectURL(url), 100);
-            
-            showNotification("📊 Relatório Excel gerado com sucesso!", "success");
-        } catch (err) {
-            console.error('Erro ao exportar Excel:', err);
-            showNotification("❌ Erro ao gerar Excel: " + err.message, "error");
-        }
-    },
-
-    // ============================================================
-    // MODAL DE EXPORTAÇÃO
+    // EXPORTAÇÃO PROFISSIONAL (MODAL E PDF)
     // ============================================================
     abrirModalExportacao() {
-        let modal = document.getElementById('modal-config-pdf');
-        if (modal) {
-            modal.classList.remove('hidden');
-            return;
-        }
-
-        modal = document.createElement('div');
-        modal.id = 'modal-config-pdf';
-        modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in';
-        modal.innerHTML = `
-            <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-black text-slate-800">⚙️ Exportar Relatório</h3>
-                    <button onclick="ColetasBiService.fecharModalExportacao()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
-                </div>
-                
-                <div class="space-y-4">
-                    <!-- Opções de Formato -->
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <p class="text-xs font-bold text-slate-400 uppercase mb-3">📁 Formato de Exportação:</p>
-                        <div class="grid grid-cols-2 gap-3">
-                            <button onclick="ColetasBiService.gerarPDF()" class="p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
-                                📄 PDF
-                            </button>
-                            <button onclick="ColetasBiService.exportarParaExcel()" class="p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
-                                📊 Excel
-                            </button>
+        let modal = document.getElementById('modal-config-exportacao');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-config-exportacao';
+            modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden">
+                    <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wider">Configurar Exportação</h3>
+                        <button onclick="document.getElementById('modal-config-exportacao').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+                    
+                    <div class="p-6 space-y-5">
+                        <div class="space-y-3">
+                            <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Opções do Relatório PDF</p>
+                            
+                            <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:border-blue-300 transition">
+                                <input type="checkbox" id="pdf-chk-indicadores" checked class="h-5 w-5 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-bold text-slate-700">Incluir Tabela de Indicadores (Soma, Média)</span>
+                            </label>
+                            
+                            <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:border-blue-300 transition">
+                                <input type="checkbox" id="pdf-chk-distribuicao" checked class="h-5 w-5 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-bold text-slate-700">Incluir Distribuição de Respostas (Categorias)</span>
+                            </label>
+                            
+                            <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:border-blue-300 transition">
+                                <input type="checkbox" id="pdf-chk-consolidado" checked class="h-5 w-5 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-bold text-slate-700">Incluir Tabela Consolidada por Órgão</span>
+                            </label>
+                            
+                            <label class="flex items-center gap-3 p-3 bg-slate-50 rounded-xl border border-slate-200 cursor-pointer hover:border-blue-300 transition">
+                                <input type="checkbox" id="pdf-chk-historico" checked class="h-5 w-5 rounded text-blue-600 focus:ring-blue-500">
+                                <span class="text-sm font-bold text-slate-700">Incluir Histórico Completo de Submissões</span>
+                            </label>
                         </div>
                     </div>
-
-                    <!-- Opções do PDF -->
-                    <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                        <p class="text-xs font-bold text-indigo-600 uppercase mb-3">📋 Seções do PDF:</p>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-estatisticas" checked class="h-5 w-5 text-indigo-600 rounded">
-                            <span class="text-sm font-medium">📈 Estatísticas Numéricas</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-selecoes" checked class="h-5 w-5 text-indigo-600 rounded">
-                            <span class="text-sm font-medium">🧩 Distribuição de Seleções</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-tabela-orgao" checked class="h-5 w-5 text-indigo-600 rounded">
-                            <span class="text-sm font-medium">📊 Tabela por Órgão</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-historico" checked class="h-5 w-5 text-indigo-600 rounded">
-                            <span class="text-sm font-medium">📋 Histórico Detalhado</span>
-                        </label>
-                    </div>
                     
-                    <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                        <p class="text-xs text-amber-700 font-medium">💡 Desmarque as seções que não deseja incluir no PDF.</p>
-                        <p class="text-[10px] text-amber-600 mt-1">📌 O Excel sempre inclui todas as 3 abas completas.</p>
+                    <div class="p-6 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <button onclick="document.getElementById('modal-config-exportacao').classList.add('hidden')" class="flex-1 px-4 py-3 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl hover:bg-slate-100 transition">Cancelar</button>
+                        <button onclick="ColetasBiService.gerarPDF()" class="flex-1 px-4 py-3 bg-blue-600 text-white font-bold rounded-xl shadow-lg hover:bg-blue-700 transition">Baixar Relatório PDF</button>
                     </div>
-                    
-                    <button onclick="ColetasBiService.fecharModalExportacao()" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
-                        Cancelar
-                    </button>
                 </div>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    },
-
-    fecharModalExportacao() {
-        const modal = document.getElementById('modal-config-pdf');
-        if (modal) modal.classList.add('hidden');
+            `;
+            document.body.appendChild(modal);
+        }
+        modal.classList.remove('hidden');
     },
 
     async gerarPDF() {
-        this.fecharModalExportacao();
-        await this.executarExportacaoCustomizada();
-    },
+        document.getElementById('modal-config-exportacao').classList.add('hidden');
+        showNotification("Processando arquivo PDF...", "info");
 
-    // ============================================================
-    // EXPORTAÇÃO PDF
-    // ============================================================
-    async executarExportacaoCustomizada() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
-        if (!respostas || respostas.length === 0) {
-            showNotification("Sem dados para exportar.", "error");
-            return;
-        }
+        if (!respostas || respostas.length === 0) return showNotification("Não há dados para exportar.", "error");
 
-        const incluirEstatisticas = document.getElementById('pdf-incluir-estatisticas')?.checked !== false;
-        const incluirSelecoes = document.getElementById('pdf-incluir-selecoes')?.checked !== false;
-        const incluirTabelaOrgao = document.getElementById('pdf-incluir-tabela-orgao')?.checked !== false;
-        const incluirHistorico = document.getElementById('pdf-incluir-historico')?.checked !== false;
+        const chkInd = document.getElementById('pdf-chk-indicadores')?.checked;
+        const chkDist = document.getElementById('pdf-chk-distribuicao')?.checked;
+        const chkCons = document.getElementById('pdf-chk-consolidado')?.checked;
+        const chkHist = document.getElementById('pdf-chk-historico')?.checked;
 
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
-        
-        // CABEÇALHO
+        const primaryColor = [30, 58, 138]; // slate-900 / blue-900
+
+        // ================= HEADER GERAL =================
         doc.setFont("helvetica", "bold");
-        doc.setFontSize(18);
-        doc.text(limparTexto(`RELATÓRIO ANALÍTICO - ${coletaData.nomeDaColeta.toUpperCase()}`), 14, 18);
+        doc.setFontSize(16);
+        doc.text(limparTexto(`RELATÓRIO DE INTELIGÊNCIA: ${coletaData.nomeDaColeta}`).toUpperCase(), 14, 20);
         
         doc.setFont("helvetica", "normal");
-        doc.setFontSize(10);
-        doc.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 14, 25);
-        doc.text(`Total de Registros: ${respostas.length} | Órgãos: ${new Set(respostas.map(r => r.orgaoOrigem)).size}`, 14, 32);
+        doc.setFontSize(9);
+        doc.setTextColor(100);
+        doc.text(`Emitido em: ${new Date().toLocaleString('pt-BR')} | Fontes: ${new Set(respostas.map(r => r.orgaoOrigem)).size} Órgãos | Registros Processados: ${respostas.length}`, 14, 26);
+        doc.setTextColor(0);
 
-        let yPos = 40;
+        let yPos = 35;
 
-        // SEÇÃO 1: ESTATÍSTICAS NUMÉRICAS
-        if (incluirEstatisticas) {
-            const camposNumericos = dicionario.filter(c => 
-                c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente'
-            );
-            
-            if (camposNumericos.length > 0) {
-                if (yPos > 170) { doc.addPage(); yPos = 20; }
-                
+        // ================= 1. INDICADORES (NÚMEROS) =================
+        if (chkInd) {
+            const camposNum = dicionario.filter(c => c.tipo === 'numero' || c.tipo === 'numero_abrangente');
+            if (camposNum.length > 0) {
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.text("1. ESTATÍSTICAS NUMÉRICAS", 14, yPos);
-                yPos += 7;
+                doc.setFontSize(11);
+                doc.text("1. ESTATÍSTICAS NUMÉRICAS ACUMULADAS", 14, yPos);
+                yPos += 5;
 
-                const dataKpi = camposNumericos.map(c => {
-                    const numeros = respostas
-                        .map(r => Number(r.dados?.[c.id]?.resposta))
-                        .filter(n => !isNaN(n) && n !== 0);
-                    
-                    if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0", "Sem dados"];
-                    
-                    const soma = numeros.reduce((a, b) => a + b, 0);
-                    const media = (soma / numeros.length).toFixed(1);
-                    const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
+                const bodyInd = camposNum.map(c => {
+                    const nums = respostas.map(r => Number(r.dados?.[c.id]?.resposta)).filter(n => !isNaN(n) && n !== 0);
+                    if (nums.length === 0) return [limparTexto(c.label), "0", "0", "0"];
+                    const soma = nums.reduce((a, b) => a + b, 0);
+                    const media = (soma / nums.length).toFixed(1);
+                    const variancia = nums.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / nums.length;
                     const desvio = Math.sqrt(variancia).toFixed(1);
-                    
-                    const contagem = {};
-                    numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
-                    const freq = Object.entries(contagem)
-                        .sort((a, b) => Number(a[0]) - Number(b[0]))
-                        .map(([v, q]) => `${v}:${q}x`)
-                        .join(' | ');
-
-                    return [limparTexto(c.label), soma.toLocaleString('pt-BR'), media, desvio, freq];
+                    return [limparTexto(c.label), soma.toLocaleString('pt-BR'), media, desvio];
                 });
 
                 doc.autoTable({
                     startY: yPos,
-                    head: [['Campo', 'Soma Total', 'Média', 'Desvio Padrão', 'Frequência']],
-                    body: dataKpi,
-                    styles: { fontSize: 8, cellPadding: 2 },
-                    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }
+                    head: [['Métrica Analisada', 'Soma Consolidada', 'Média Geral', 'Desvio Padrão']],
+                    body: bodyInd,
+                    theme: 'striped',
+                    styles: { fontSize: 8, cellPadding: 3, textColor: [40, 40, 40] },
+                    headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] }
                 });
                 yPos = doc.lastAutoTable.finalY + 12;
             }
         }
 
-        // SEÇÃO 2: DISTRIBUIÇÃO DE SELEÇÕES
-        if (incluirSelecoes) {
-            const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
-            
-            if (camposSelecao.length > 0) {
-                if (yPos > 170) { doc.addPage(); yPos = 20; }
+        // ================= 2. DISTRIBUIÇÃO (CATEGORIAS) =================
+        if (chkDist) {
+            const camposSel = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
+            if (camposSel.length > 0) {
+                if (yPos > 150) { doc.addPage(); yPos = 20; }
                 
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.text("2. DISTRIBUIÇÃO DE RESPOSTAS", 14, yPos);
-                yPos += 7;
+                doc.setFontSize(11);
+                doc.text("2. DISTRIBUIÇÃO DE RESPOSTAS CATEGÓRICAS", 14, yPos);
+                yPos += 5;
 
-                let dadosSelecao = [];
-                camposSelecao.forEach(campo => {
+                const bodyDist = [];
+                camposSel.forEach(c => {
                     const contagem = {};
                     respostas.forEach(r => {
-                        const val = r.dados?.[campo.id]?.resposta;
-                        if (val !== undefined && val !== null && val !== '' && val !== '--') {
-                            contagem[val] = (contagem[val] || 0) + 1;
-                        }
+                        const v = r.dados?.[c.id]?.resposta;
+                        if (v && v !== '--') contagem[v] = (contagem[v] || 0) + 1;
                     });
-                    
                     const total = Object.values(contagem).reduce((a, b) => a + b, 0);
-                    const distribuicao = Object.entries(contagem)
+                    const distString = Object.entries(contagem)
                         .sort((a, b) => b[1] - a[1])
-                        .map(([opcao, qtd]) => {
-                            const perc = total > 0 ? ((qtd / total) * 100).toFixed(1) : 0;
-                            return `${opcao}: ${qtd} (${perc}%)`;
-                        })
-                        .join(' | ');
+                        .map(([k, q]) => `${limparTexto(k)}: ${q} (${((q/total)*100).toFixed(1)}%)`)
+                        .join('  |  ');
                     
-                    dadosSelecao.push([
-                        limparTexto(campo.label),
-                        total,
-                        distribuicao
-                    ]);
+                    if (total > 0) bodyDist.push([limparTexto(c.label), total.toString(), distString]);
                 });
 
-                if (dadosSelecao.length > 0) {
+                if (bodyDist.length > 0) {
                     doc.autoTable({
                         startY: yPos,
-                        head: [['Campo', 'Total Respostas', 'Distribuição']],
-                        body: dadosSelecao,
-                        styles: { fontSize: 8, cellPadding: 2 },
-                        headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] }
+                        head: [['Categoria', 'Amostra Válida', 'Detalhamento de Frequência']],
+                        body: bodyDist,
+                        theme: 'striped',
+                        styles: { fontSize: 8, cellPadding: 3, textColor: [40, 40, 40] },
+                        headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
+                        alternateRowStyles: { fillColor: [248, 250, 252] }
                     });
                     yPos = doc.lastAutoTable.finalY + 12;
                 }
             }
         }
 
-        // SEÇÃO 3: TABELA POR ÓRGÃO
-        if (incluirTabelaOrgao) {
-            const camposNumericos = dicionario.filter(c => 
-                c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente'
-            );
-            
-            if (yPos > 170) { doc.addPage(); yPos = 20; }
-            
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", 14, yPos);
-            yPos += 7;
+        // ================= 3. CONSOLIDADO POR ÓRGÃO =================
+        if (chkCons) {
+            const camposNum = dicionario.filter(c => c.tipo === 'numero' || c.tipo === 'numero_abrangente');
+            if (camposNum.length > 0) {
+                if (yPos > 150) { doc.addPage(); yPos = 20; }
 
-            const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
-            const head = [['Órgão', 'Envios', ...camposNumericos.map(c => limparTexto(c.label))]];
-            const body = orgaos.map(orgao => {
-                const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
-                return [
-                    limparTexto(orgao),
-                    envios.length.toString(),
-                    ...camposNumericos.map(c => {
-                        const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
-                        return soma.toLocaleString('pt-BR');
-                    })
-                ];
-            });
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(11);
+                doc.text("3. MATRIZ CONSOLIDADA POR ÓRGÃO (SOMAS)", 14, yPos);
+                yPos += 5;
 
-            const totalColunas = 2 + camposNumericos.length;
-            let tamanhoFonte = 9;
-            if (totalColunas > 10) tamanhoFonte = 7;
-            if (totalColunas > 15) tamanhoFonte = 6;
-            if (totalColunas > 20) tamanhoFonte = 5;
+                const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))].sort();
+                const headCons = [['Órgão de Origem', 'Registros', ...camposNum.map(c => limparTexto(c.label))]];
+                
+                const bodyCons = orgaos.map(org => {
+                    const rOrg = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === org);
+                    return [
+                        limparTexto(org),
+                        rOrg.length.toString(),
+                        ...camposNum.map(c => {
+                            const sum = rOrg.reduce((a, b) => a + (Number(b.dados?.[c.id]?.resposta) || 0), 0);
+                            return sum.toLocaleString('pt-BR');
+                        })
+                    ];
+                });
 
-            doc.autoTable({
-                startY: yPos,
-                head: head,
-                body: body,
-                styles: { fontSize: tamanhoFonte, cellPadding: 1.5 },
-                headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
-                columnStyles: {
-                    0: { cellWidth: 40, fontStyle: 'bold' },
-                    1: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
-                },
-                didDrawPage: function(data) {
-                    const pageCount = doc.internal.getNumberOfPages();
-                    doc.setFontSize(7);
-                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
-                }
-            });
-            yPos = doc.lastAutoTable.finalY + 12;
+                // Responsividade da fonte com base nas colunas
+                const colCount = headCons[0].length;
+                let fontSizeMatrix = 8;
+                if (colCount > 8) fontSizeMatrix = 7;
+                if (colCount > 12) fontSizeMatrix = 6;
+                if (colCount > 18) fontSizeMatrix = 5;
+
+                doc.autoTable({
+                    startY: yPos,
+                    head: headCons,
+                    body: bodyCons,
+                    theme: 'striped',
+                    styles: { fontSize: fontSizeMatrix, cellPadding: 2, textColor: [40, 40, 40] },
+                    headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
+                    alternateRowStyles: { fillColor: [248, 250, 252] }
+                });
+                yPos = doc.lastAutoTable.finalY + 12;
+            }
         }
 
-        // SEÇÃO 4: HISTÓRICO
-        if (incluirHistorico) {
+        // ================= 4. HISTÓRICO DETALHADO =================
+        if (chkHist) {
             doc.addPage();
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("4. HISTÓRICO DETALHADO", 14, 18);
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.text(`Total de ${respostas.length} registros.`, 14, 25);
+            doc.setFontSize(11);
+            doc.text("4. LOG DETALHADO DE REGISTROS", 14, 20);
 
-            const headHist = ["Data/Hora", "Órgão", "Responsável", ...dicionario.map(c => limparTexto(c.label))];
-            const bodyHist = respostas.slice(0, 200).map(r => [
+            const headHist = [["Data/Hora", "Origem", "Responsável", ...dicionario.map(c => limparTexto(c.label))]];
+            const bodyHist = respostas.map(r => [
                 r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--',
                 limparTexto(r.orgaoOrigem || '--'),
                 limparTexto(r.responsavel || '--'),
@@ -1485,35 +653,30 @@ export const ColetasBiService = {
                 })
             ]);
 
-            const totalColunasHist = 3 + dicionario.length;
-            let tamanhoFonteHist = 8;
-            if (totalColunasHist > 10) tamanhoFonteHist = 6;
-            if (totalColunasHist > 15) tamanhoFonteHist = 5;
-            if (totalColunasHist > 20) tamanhoFonteHist = 4.5;
+            const colCount = headHist[0].length;
+            let fontSizeHist = 7;
+            if (colCount > 10) fontSizeHist = 6;
+            if (colCount > 15) fontSizeHist = 5;
+            if (colCount > 20) fontSizeHist = 4.5;
 
             doc.autoTable({
-                startY: 30,
-                head: [headHist],
+                startY: 25,
+                head: headHist,
                 body: bodyHist,
-                styles: { fontSize: tamanhoFonteHist, cellPadding: 1 },
-                headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
+                theme: 'grid', // Grid é melhor para dados muito longos
+                styles: { fontSize: fontSizeHist, cellPadding: 1, textColor: [40, 40, 40] },
+                headStyles: { fillColor: primaryColor, textColor: 255, fontStyle: 'bold' },
                 didDrawPage: function(data) {
                     const pageCount = doc.internal.getNumberOfPages();
                     doc.setFontSize(7);
-                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+                    doc.setTextColor(150);
+                    doc.text(`Página ${data.pageNumber} / ${pageCount}`, 14, doc.internal.pageSize.height - 10);
                 }
             });
-
-            if (respostas.length > 200) {
-                const finalY = doc.lastAutoTable.finalY + 5;
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(8);
-                doc.text(`* Exibindo os 200 registros mais recentes de um total de ${respostas.length}.`, 14, finalY);
-            }
         }
 
-        doc.save(`Relatorio_Analitico_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.pdf`);
-        showNotification("📄 Relatório PDF gerado com sucesso!", "success");
+        doc.save(`SIGEP_BI_${limparTexto(coletaData.nomeDaColeta).replace(/\s+/g, '_')}.pdf`);
+        showNotification("Download do Relatório concluído.", "success");
     }
 };
 
