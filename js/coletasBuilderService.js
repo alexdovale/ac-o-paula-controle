@@ -1,5 +1,5 @@
-// js/coletasBuilderService.js - Construtor Avançado com Edição de Tipo e Opções
-import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// js/coletasBuilderService.js - Construtor Avançado: Edição de campos, Tipos, Opções e Reordenação
+import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
 export const ColetasBuilderService = {
@@ -18,23 +18,19 @@ export const ColetasBuilderService = {
 
         return `
             <div class="space-y-8 animate-fade-in pb-10">
-                <!-- CABEÇALHO DO CONSTRUTOR -->
+                <!-- CABEÇALHO -->
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-indigo-50 p-4 rounded-2xl border border-indigo-100 gap-4">
                     <div>
                         <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Editando Coleta:</span>
                         <h3 class="text-lg font-black text-indigo-900">${escapeHTML(coletaData.nomeDaColeta)}</h3>
                     </div>
                     <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-200 shadow-sm">
-                            🧹 Limpar Respostas (Zerar BI)
-                        </button>
-                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-4 py-2 rounded-xl text-xs transition border border-red-200 shadow-sm">
-                            🗑️ Excluir Coleta
-                        </button>
+                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-200 shadow-sm">🧹 Limpar Respostas (Zerar BI)</button>
+                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-4 py-2 rounded-xl text-xs transition border border-red-200 shadow-sm">🗑️ Excluir Coleta</button>
                     </div>
                 </div>
 
-                <!-- BLOCO 1: DICIONÁRIO DE CAMPOS -->
+                <!-- BLOCO 1: PERGUNTAS -->
                 <div class="bg-white border-2 border-indigo-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
                     
@@ -49,9 +45,7 @@ export const ColetasBuilderService = {
                         </div>
                         <div class="flex gap-2">
                             <button type="button" onclick="ColetasBuilderService.importarJsonLivre('${coletaId}', ${JSON.stringify(coletaData).replace(/"/g, '&quot;')})" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 transition">📥 Importar JSON</button>
-                            ${campos.length > 0 ? `
-                                <button type="button" onclick="ColetasBuilderService.apagarTodasPerguntas('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline self-center">Apagar Tudo</button>
-                            ` : ''}
+                            ${campos.length > 0 ? `<button type="button" onclick="ColetasBuilderService.apagarTodasPerguntas('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline self-center">Apagar Tudo</button>` : ''}
                         </div>
                     </div>
                     
@@ -76,6 +70,7 @@ export const ColetasBuilderService = {
                             `).join('')}
                     </div>
 
+                    <!-- ADICIONAR NOVA PERGUNTA -->
                     <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
                         <h4 class="text-sm font-bold text-indigo-900 mb-3">Adicionar Nova Pergunta</h4>
                         <div class="flex flex-col gap-3">
@@ -178,6 +173,7 @@ export const ColetasBuilderService = {
     },
 
     initEventos(db, coletaId, coletaData) {
+        // Lógica do seletor de tipo para opções extras
         const selectTipo = document.getElementById('novo-campo-tipo');
         const containerOpcoes = document.getElementById('container-opcoes-extras');
         if (selectTipo && containerOpcoes) {
@@ -190,6 +186,7 @@ export const ColetasBuilderService = {
             });
         }
 
+        // Checkbox de senha
         const checkRequerSenha = document.getElementById('novo-link-requer-senha');
         const inputSenha = document.getElementById('novo-link-senha');
         if (checkRequerSenha && inputSenha) {
@@ -200,10 +197,11 @@ export const ColetasBuilderService = {
             });
         }
 
+        // Adicionar campo
         document.getElementById('btn-add-campo')?.addEventListener('click', async () => {
             const label = document.getElementById('novo-campo-label').value.trim();
             const tipo = document.getElementById('novo-campo-tipo').value;
-            const opcoesSting = document.getElementById('novo-campo-opcoes')?.value;
+            const opcoesString = document.getElementById('novo-campo-opcoes')?.value;
             
             if (!label) return showNotification("Digite a pergunta.", "error");
 
@@ -214,8 +212,8 @@ export const ColetasBuilderService = {
             };
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
-                if (!opcoesSting) return showNotification("Preencha as opções do campo separadas por vírgula.", "warning");
-                novoCampo.opcoes = opcoesSting.split(',').map(o => o.trim()).filter(o => o !== '');
+                if (!opcoesString) return showNotification("Preencha as opções do campo separadas por vírgula.", "warning");
+                novoCampo.opcoes = opcoesString.split(',').map(o => o.trim()).filter(o => o !== '');
             }
 
             const camposAtuais = coletaData.dicionarioDeCampos || [];
@@ -226,6 +224,7 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId); 
         });
 
+        // Gerar link
         document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
             const orgao = document.getElementById('novo-link-orgao').value.trim();
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
@@ -262,6 +261,7 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
+            showNotification("Erro ao mudar formato.", "error");
         }
     },
 
@@ -269,7 +269,6 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
-            const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             const freshSnap = await getDoc(docRef);
             if (!freshSnap.exists()) return;
 
@@ -289,7 +288,6 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
-            const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             const freshSnap = await getDoc(docRef);
             if (!freshSnap.exists()) return;
 
@@ -297,19 +295,32 @@ export const ColetasBuilderService = {
             const campo = campos[index];
             if (!campo) return;
 
-            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
+            // Editar label com prompt mais descritivo
+            const novoLabel = prompt("✏️ Editar Enunciado da Pergunta:", campo.label);
             if (novoLabel === null) return;
             const labelLimpo = novoLabel.trim();
             if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
 
+            // Editar tipo com prompt mais descritivo
             const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
-            const novoTipo = prompt(`Editar Tipo da Pergunta:\n(Opções: numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha)`, campo.tipo);
+            const novoTipo = prompt(
+                `✏️ Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, 
+                campo.tipo
+            );
             if (novoTipo === null) return;
             const tipoLimpo = novoTipo.trim();
+            
+            // Validar tipo
+            if (!tiposValidos.includes(tipoLimpo)) {
+                return showNotification("Tipo inválido. Use um dos tipos listados.", "error");
+            }
 
             let novasOpcoes = campo.opcoes || [];
             if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
-                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
+                const opcoesStr = prompt(
+                    "✏️ Editar Opções (separadas por vírgula):", 
+                    (campo.opcoes || []).join(', ')
+                );
                 if (opcoesStr !== null) {
                     novasOpcoes = opcoesStr.split(',').map(o => o.trim()).filter(o => o !== '');
                 }
@@ -323,7 +334,7 @@ export const ColetasBuilderService = {
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("Pergunta atualizada com sucesso!", "success");
+            showNotification("✅ Pergunta atualizada com sucesso!", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -332,11 +343,10 @@ export const ColetasBuilderService = {
     },
 
     async removerCampo(coletaId, index) {
-        if (!confirm("Deseja realmente apagar esta pergunta?")) return;
+        if (!confirm("❌ Deseja realmente apagar esta pergunta?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
-            const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             const freshSnap = await getDoc(docRef);
             if (!freshSnap.exists()) return;
 
@@ -344,7 +354,7 @@ export const ColetasBuilderService = {
             campos.splice(index, 1);
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("Pergunta removida.", "info");
+            showNotification("🗑️ Pergunta removida.", "info");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -357,7 +367,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: [] });
-            showNotification("Todas as perguntas foram apagadas.", "success");
+            showNotification("🧹 Todas as perguntas foram apagadas.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -366,13 +376,13 @@ export const ColetasBuilderService = {
     },
 
     async importarJsonLivre(coletaId, coletaData) {
-        const jsonInput = prompt("Cole aqui o JSON estruturado com as perguntas:");
+        const jsonInput = prompt("📥 Cole aqui o JSON estruturado com as perguntas:");
         if (!jsonInput) return;
 
         try {
             const novasPerguntas = JSON.parse(jsonInput);
             if (!Array.isArray(novasPerguntas)) {
-                return showNotification("O formato do JSON deve ser uma lista [...]", "error");
+                return showNotification("❌ O formato do JSON deve ser uma lista [...]", "error");
             }
 
             const db = window.app.db;
@@ -388,20 +398,19 @@ export const ColetasBuilderService = {
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
-            showNotification(`${formatadas.length} perguntas importadas com sucesso!`, "success");
+            showNotification(`✅ ${formatadas.length} perguntas importadas com sucesso!`, "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
+            showNotification("❌ Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
         }
     },
 
     async removerLink(coletaId, index) {
-        if (!confirm("Deseja realmente apagar este link?")) return;
+        if (!confirm("🗑️ Deseja realmente apagar este link?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
-            const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             const freshSnap = await getDoc(docRef);
             if (!freshSnap.exists()) return;
 
@@ -409,7 +418,7 @@ export const ColetasBuilderService = {
             links.splice(index, 1);
 
             await updateDoc(docRef, { linksExternos: links });
-            showNotification("Link apagado.", "success");
+            showNotification("✅ Link apagado.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -422,7 +431,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: [] });
-            showNotification("Todos os links foram apagados.", "success");
+            showNotification("🧹 Todos os links foram apagados.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -438,7 +447,7 @@ export const ColetasBuilderService = {
             const snapshot = await getDocs(q);
 
             if (snapshot.empty) {
-                showNotification("Não há respostas para apagar.", "info");
+                showNotification("ℹ️ Não há respostas para apagar.", "info");
                 return;
             }
 
@@ -446,7 +455,7 @@ export const ColetasBuilderService = {
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
 
-            showNotification("Todas as respostas foram apagadas com sucesso!", "success");
+            showNotification("🧹 Todas as respostas foram apagadas com sucesso!", "success");
             window.verResultados(coletaId);
         } catch (e) {
             console.error(e);
@@ -468,7 +477,7 @@ export const ColetasBuilderService = {
             
             document.getElementById('container-construtor-coleta').classList.add('hidden');
             window.app.listarColetas();
-            showNotification("Coleta excluída permanentemente.", "success");
+            showNotification("🗑️ Coleta excluída permanentemente.", "success");
         } catch (e) {
             console.error(e);
             showNotification("Erro ao excluir coleta.", "error");
@@ -479,9 +488,19 @@ export const ColetasBuilderService = {
         let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
         const link = `${baseUrl}coleta.html?token=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            showNotification("Link copiado para a área de transferência!", "success");
+            showNotification("📋 Link copiado para a área de transferência!", "success");
+        }).catch(() => {
+            // Fallback para browsers sem suporte a clipboard
+            const textArea = document.createElement('textarea');
+            textArea.value = link;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showNotification("📋 Link copiado para a área de transferência!", "success");
         });
     }
 };
 
+// Expor no window para uso global
 window.ColetasBuilderService = ColetasBuilderService;
