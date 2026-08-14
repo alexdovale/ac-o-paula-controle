@@ -2,14 +2,13 @@
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
-// Função utilitária para limpar caracteres que quebram integrações e PDFs
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais
-        .replace(/[&]/g, 'e') // Substitui & por e
-        .replace(/[^\x20-\x7E]/g, '') // Remove emojis e caracteres não imprimíveis
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        .replace(/[ºª°]/g, '.')
+        .replace(/[&]/g, 'e')
+        .replace(/[^\x20-\x7E]/g, '')
         .trim();
 }
 
@@ -74,7 +73,6 @@ export const ColetasBuilderService = {
                         ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">Nenhuma pergunta configurada.</p>' : 
                             campos.map((c, index) => {
                                 const tipoDisplay = c.tipo.replace('_', ' ');
-                                
                                 let metricasDisplay = '';
                                 if (c.metricasBi && c.metricasBi.length > 0) {
                                     const metricasLabels = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
@@ -91,6 +89,7 @@ export const ColetasBuilderService = {
                                                 <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-100 uppercase tracking-wide">TIPO: ${tipoDisplay}</span>
                                                 ${c.opcoes?.length ? `<span class="bg-slate-50 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 truncate max-w-[200px]">OPÇÕES: ${escapeHTML(c.opcoes.join(', '))}</span>` : ''}
                                                 ${metricasDisplay ? `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100 uppercase tracking-wide">BI: ${metricasDisplay}</span>` : ''}
+                                                ${c.envioIndividual ? `<span class="bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded text-[10px] font-bold border border-emerald-100 uppercase tracking-wide">MODO RÁPIDO</span>` : ''}
                                             </div>
                                         </div>
                                     </div>
@@ -99,6 +98,7 @@ export const ColetasBuilderService = {
                                             ${index > 0 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index - 1})" class="bg-slate-50 hover:bg-slate-200 text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded text-xs font-bold transition">Subir</button>` : ''}
                                             ${index < campos.length - 1 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index + 1})" class="bg-slate-50 hover:bg-slate-200 text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded text-xs font-bold transition">Descer</button>` : ''}
                                         </div>
+                                        <button type="button" onclick="ColetasBuilderService.toggleEnvioIndividual('${coletaId}', ${index})" class="bg-white hover:bg-emerald-50 ${c.envioIndividual ? 'text-emerald-700 border-emerald-300' : 'text-slate-600 border-slate-200'} border px-3 py-1.5 rounded-lg text-xs font-bold transition">Rápido: ${c.envioIndividual ? 'ON' : 'OFF'}</button>
                                         <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index})" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">Editar</button>
                                         <button type="button" onclick="ColetasBuilderService.abrirModalConfigMetricas('${coletaId}', ${index})" class="bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">Métricas</button>
                                         <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold transition ml-auto xl:ml-0">Remover</button>
@@ -113,8 +113,8 @@ export const ColetasBuilderService = {
                         <div class="flex flex-col gap-4">
                             <input type="text" id="novo-campo-label" placeholder="Enunciado da pergunta (Ex: Número de Atendimentos)" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             
-                            <div class="flex flex-col md:flex-row gap-3">
-                                <select id="novo-campo-tipo" class="w-full md:w-1/2 p-3.5 border border-slate-300 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none">
+                            <div class="flex flex-col md:flex-row gap-3 items-center">
+                                <select id="novo-campo-tipo" class="w-full md:w-1/3 p-3.5 border border-slate-300 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                                     <option value="numero">Número Estatístico</option>
                                     <option value="texto_curto">Texto Curto (1 linha)</option>
                                     <option value="texto_longo">Parágrafo (Várias linhas)</option>
@@ -123,7 +123,13 @@ export const ColetasBuilderService = {
                                     <option value="selecao">Lista Suspensa (Dropdown)</option>
                                     <option value="multipla_escolha">Múltipla Escolha (Bolhas)</option>
                                 </select>
-                                <button type="button" id="btn-add-campo" class="w-full md:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3.5 rounded-xl text-sm transition shadow-sm">
+                                
+                                <label class="w-full md:w-1/3 flex items-center justify-center gap-2 p-3.5 bg-white border border-slate-300 rounded-xl cursor-pointer hover:bg-slate-50 transition">
+                                    <input type="checkbox" id="novo-campo-individual" class="w-4 h-4 text-blue-600 rounded">
+                                    <span class="text-xs font-bold text-slate-700 uppercase">Modo Envio Rápido</span>
+                                </label>
+
+                                <button type="button" id="btn-add-campo" class="w-full md:w-1/3 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3.5 rounded-xl text-sm transition shadow-sm">
                                     Adicionar ao Formulário
                                 </button>
                             </div>
@@ -412,13 +418,15 @@ export const ColetasBuilderService = {
             const label = limparTexto(document.getElementById('novo-campo-label').value);
             const tipo = document.getElementById('novo-campo-tipo').value;
             const opcoesString = document.getElementById('novo-campo-opcoes')?.value;
+            const envioIndividual = document.getElementById('novo-campo-individual')?.checked || false;
             
             if (!label) return showNotification("Informe o enunciado da pergunta.", "error");
 
             const novoCampo = {
                 id: 'c_' + Math.random().toString(36).substring(2, 8),
                 label,
-                tipo
+                tipo,
+                envioIndividual
             };
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
@@ -500,6 +508,25 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Falha na reordenação.", "error");
+        }
+    },
+
+    async toggleEnvioIndividual(coletaId, index) {
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            if (!freshSnap.exists()) return;
+
+            let campos = freshSnap.data().dicionarioDeCampos || [];
+            campos[index].envioIndividual = !campos[index].envioIndividual;
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+            showNotification(`Modo Envio Rápido ${campos[index].envioIndividual ? 'ativado' : 'desativado'}.`, "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Falha ao alterar modo de envio.", "error");
         }
     },
 
@@ -600,7 +627,8 @@ export const ColetasBuilderService = {
                 label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
                 tipo: p.tipo || 'numero',
                 opcoes: (p.opcoes || []).map(o => limparTexto(o)),
-                metricasBi: p.metricasBi || [] 
+                metricasBi: p.metricasBi || [],
+                envioIndividual: p.envioIndividual || false
             }));
 
             const listaFinal = [...camposAtuais, ...formatadas];
