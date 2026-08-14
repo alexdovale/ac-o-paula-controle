@@ -19,7 +19,7 @@
         <!-- LOGO DO SIGEP -->
         <div class="bg-slate-50 p-6 border-b border-slate-200 flex justify-center">
             <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                 alt="Logo SIGEP" class="h-12 w-auto">
+                 alt="Logo SIGEP" class="h-12 w-auto grayscale">
         </div>
 
         <!-- FAIXA DE CARREGAMENTO -->
@@ -73,11 +73,9 @@
 
                 <div class="border-t border-slate-200 pt-6">
                     <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">📋 Variáveis de Coleta</h3>
-                    <!-- AQUI ENTRAM OS CAMPOS INDIVIDUAIS COM O FOGUETINHO -->
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
-                <!-- BOTÃO GERAL DE ENVIO -->
                 <div class="pt-8 border-t-2 border-slate-100 mt-8">
                     <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl transition shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
                         <span>📤</span> PROCESSAR E ENVIAR FORMULÁRIO INTEIRO
@@ -134,13 +132,33 @@
         function showError(msg) {
             document.getElementById('loading-box').innerHTML = `
                 <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 font-black">!</div>
-                <p class="text-slate-800 font-black text-lg uppercase tracking-wide mb-2">Erro de Acesso</p>
-                <p class="text-slate-500 font-medium text-sm px-4">${msg}</p>
+                <p class="text-slate-800 font-black text-lg uppercase tracking-wide mb-2">Acesso Indisponível</p>
+                <p class="text-slate-500 font-medium text-sm px-4 text-center">${msg}</p>
                 <button onclick="window.location.reload()" class="mt-6 bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-lg font-bold transition text-xs uppercase tracking-widest">Recarregar Aplicação</button>
             `;
         }
 
-        // CARREGA HISTÓRICO DIRETO DO FIREBASE (NÃO SE PERDE MAIS)
+        // CHECAGEM DE VALIDADE (STATUS E DATAS)
+        function checarValidadeAcesso() {
+            if (coletaConfig.status === 'fechado') {
+                return "Este formulário foi encerrado temporária ou definitivamente pelo administrador.";
+            }
+
+            const hojeStr = new Date().toISOString().split('T')[0];
+
+            if (coletaConfig.dataInicio && hojeStr < coletaConfig.dataInicio) {
+                const parts = coletaConfig.dataInicio.split('-');
+                return `Este formulário só abrirá para respostas a partir do dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
+            }
+
+            if (coletaConfig.dataFim && hojeStr > coletaConfig.dataFim) {
+                const parts = coletaConfig.dataFim.split('-');
+                return `O prazo limite para submissão encerrou no dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
+            }
+
+            return null; // OK
+        }
+
         async function carregarHistoricoFirebase() {
             try {
                 const q = query(
@@ -156,15 +174,13 @@
                     envios.push({ id: doc.id, ...doc.data() });
                 });
 
-                // Ordena memória pela data
                 envios.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
 
-                // Pega os 50 registros mais recentes
                 historicoEnvios = envios.slice(0, 50).map(item => ({
                     id: item.id,
                     horario: new Date(item.timestamp).toLocaleString('pt-BR'),
                     responsavel: item.responsavel || '--',
-                    sync: true, // Já que está no banco
+                    sync: true, 
                     isIndividual: item.isIndividual || false,
                     dados: item.dados || {}
                 }));
@@ -235,6 +251,10 @@
                 });
 
                 if (!linkConfig) return showError("Formulário inexistente ou credencial revogada.");
+
+                // VALIDA STATUS E DATAS ANTES DE ABRIR
+                const erroValidade = checarValidadeAcesso();
+                if (erroValidade) return showError(erroValidade);
 
                 document.getElementById('loading-box').classList.add('hidden');
 
@@ -322,7 +342,6 @@
                     inputHtml = `<input type="text" id="f_${campo.id}" class="${baseClass}">`;
                 }
 
-                // O BOTÃO DE ENVIO RÁPIDO DO CAMPO INDIVIDUAL COM ÍCONE 🚀
                 let botaoRapidoHtml = '';
                 if (campo.envioIndividual) {
                     botaoRapidoHtml = `
@@ -378,10 +397,8 @@
             let envioExternoSucesso = true;
 
             try {
-                // Salva no Firestore
                 await addDoc(collection(db, "respostas_coleta"), payload);
                 
-                // Envia pro Sheets
                 if (coletaConfig.urlSincronizacaoSheets && coletaConfig.urlSincronizacaoSheets.trim() !== '') {
                     try {
                         await fetch(coletaConfig.urlSincronizacaoSheets.trim(), {
@@ -395,7 +412,6 @@
                     envioExternoSucesso = false; 
                 }
 
-                // Insere no topo da lista local pra mostrar na tela na hora
                 historicoEnvios.unshift({
                     id: Date.now().toString(),
                     horario: new Date().toLocaleTimeString('pt-BR'),
@@ -415,9 +431,6 @@
             }
         }
 
-        // ==========================================
-        // ENVIO RÁPIDO (INDIVIDUAL)
-        // ==========================================
         window.enviarCampoIndividual = async function(campoId, btnElement) {
             const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
             if (!nomeResponsavel) {
@@ -458,9 +471,6 @@
             btnElement.innerHTML = originalHTML;
         };
 
-        // ==========================================
-        // ENVIO GERAL (LOTE INTEIRO)
-        // ==========================================
         document.getElementById('form-estatisticas').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-enviar-dados');
