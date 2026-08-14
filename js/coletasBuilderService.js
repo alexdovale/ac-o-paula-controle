@@ -1,4 +1,4 @@
-// js/coletasBuilderService.js - Construtor Avançado: Edição, Tipos, Opções, Reordenação e Integração Sheets
+// js/coletasBuilderService.js - Construtor Avançado: Edição, Tipos, Opções, Reordenação e Configuração de Métricas BI
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
@@ -55,7 +55,20 @@ export const ColetasBuilderService = {
                             campos.map((c, index) => {
                                 // Mostra o tipo de forma legível
                                 let tipoDisplay = c.tipo.replace('_', ' ');
-                                if (c.tipo === 'numero_abrangente') tipoDisplay = 'Número Abrangente (Idade/Frequência)';
+                                
+                                // Mostra as métricas configuradas para o BI
+                                let metricasDisplay = '';
+                                if (c.metricasBi) {
+                                    const metricasLabels = {
+                                        soma: '📊 Soma',
+                                        media: '📈 Média',
+                                        desvio: '📉 Desvio',
+                                        frequencia: '🔢 Frequência',
+                                        total: '📋 Total',
+                                        distribuicao: '🧩 Distribuição'
+                                    };
+                                    metricasDisplay = c.metricasBi.map(m => metricasLabels[m] || m).join(', ');
+                                }
                                 
                                 return `
                                 <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
@@ -64,12 +77,14 @@ export const ColetasBuilderService = {
                                         <div class="w-full">
                                             <p class="font-bold text-slate-700 text-sm">${escapeHTML(c.label)}</p>
                                             <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${tipoDisplay} ${c.opcoes?.length ? `| 🏷️ Opções: [${c.opcoes.join(', ')}]` : ''}</p>
+                                            ${metricasDisplay ? `<p class="text-[9px] text-indigo-500 font-medium mt-0.5">🎯 BI: ${metricasDisplay}</p>` : ''}
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                                         ${index > 0 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index - 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Subir">⬆️</button>` : ''}
                                         ${index < campos.length - 1 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index + 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Descer">⬇️</button>` : ''}
                                         <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index})" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded text-xs font-bold ml-1" title="Editar Pergunta">✏️ Editar</button>
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalConfigMetricas('${coletaId}', ${index})" class="bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 px-2 py-1 rounded text-xs font-bold" title="Configurar Métricas BI">📊</button>
                                         <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-xs font-bold" title="Remover">✕</button>
                                     </div>
                                 </div>
@@ -84,8 +99,7 @@ export const ColetasBuilderService = {
                             
                             <div class="flex flex-col sm:flex-row gap-3">
                                 <select id="novo-campo-tipo" class="w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    <option value="numero">Número Estatístico (Soma/Média)</option>
-                                    <option value="numero_abrangente">🔢 Número Abrangente (Idade/Frequência)</option>
+                                    <option value="numero">Número Estatístico</option>
                                     <option value="texto_curto">Texto Curto (1 linha)</option>
                                     <option value="texto_longo">Parágrafo (Várias linhas)</option>
                                     <option value="data">Data</option>
@@ -189,6 +203,37 @@ export const ColetasBuilderService = {
                     </div>
                 </div>
             </div>
+
+            <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
+            <div id="modal-config-metricas" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in">
+                <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-xl font-black text-slate-800">📊 Configurar Métricas do BI</h3>
+                        <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
+                    </div>
+                    
+                    <div class="space-y-4">
+                        <p class="text-sm text-slate-600">Selecione quais métricas este campo deve exibir no painel de BI:</p>
+                        
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2" id="container-metricas-opcoes">
+                            <!-- As opções serão preenchidas dinamicamente -->
+                        </div>
+                        
+                        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                            <p class="text-xs text-amber-700 font-medium">💡 As métricas selecionadas aparecerão no card do BI para este campo.</p>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-3 pt-4">
+                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
+                                Cancelar
+                            </button>
+                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-lg">
+                                💾 Salvar Configuração
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
         `;
     },
 
@@ -204,6 +249,116 @@ export const ColetasBuilderService = {
         return num + '.';
     },
 
+    // ============================================================
+    // CONFIGURAÇÃO DE MÉTRICAS BI
+    // ============================================================
+    _campoEditandoIndex: null,
+    _coletaIdEditando: null,
+
+    abrirModalConfigMetricas(coletaId, index) {
+        const db = window.app.db;
+        const docRef = doc(db, "formularios_coleta", coletaId);
+        
+        getDoc(docRef).then((snap) => {
+            if (!snap.exists()) return;
+            const campos = snap.data().dicionarioDeCampos || [];
+            const campo = campos[index];
+            if (!campo) return;
+
+            this._campoEditandoIndex = index;
+            this._coletaIdEditando = coletaId;
+
+            const container = document.getElementById('container-metricas-opcoes');
+            const metricasAtuais = campo.metricasBi || [];
+
+            // Define as opções disponíveis baseado no tipo do campo
+            let opcoesDisponiveis = [];
+            
+            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
+                opcoesDisponiveis = [
+                    { id: 'soma', label: '📊 Soma Total', default: true },
+                    { id: 'media', label: '📈 Média', default: true },
+                    { id: 'desvio', label: '📉 Desvio Padrão', default: false },
+                    { id: 'frequencia', label: '🔢 Frequência (valores únicos)', default: false }
+                ];
+            } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+                opcoesDisponiveis = [
+                    { id: 'distribuicao', label: '🧩 Distribuição de opções', default: true },
+                    { id: 'total', label: '📋 Total de respostas', default: true }
+                ];
+            } else {
+                opcoesDisponiveis = [
+                    { id: 'total', label: '📋 Total de respostas', default: true },
+                    { id: 'ultima', label: '📝 Última resposta', default: false }
+                ];
+            }
+
+            // Se não tiver métricas configuradas, usa as padrão
+            const metricasParaUsar = metricasAtuais.length > 0 ? metricasAtuais : 
+                opcoesDisponiveis.filter(o => o.default).map(o => o.id);
+
+            container.innerHTML = opcoesDisponiveis.map(op => `
+                <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
+                    <input type="checkbox" name="metrica_bi" value="${op.id}" 
+                           ${metricasParaUsar.includes(op.id) ? 'checked' : ''} 
+                           class="h-5 w-5 text-indigo-600 rounded">
+                    <span class="text-sm font-medium text-slate-700">${op.label}</span>
+                </label>
+            `).join('');
+
+            document.getElementById('modal-config-metricas').classList.remove('hidden');
+        });
+    },
+
+    fecharModalConfigMetricas() {
+        document.getElementById('modal-config-metricas').classList.add('hidden');
+        this._campoEditandoIndex = null;
+        this._coletaIdEditando = null;
+    },
+
+    async salvarConfigMetricas() {
+        const index = this._campoEditandoIndex;
+        const coletaId = this._coletaIdEditando;
+        
+        if (index === null || !coletaId) {
+            showNotification("Erro: campo não identificado.", "error");
+            return;
+        }
+
+        const checkboxes = document.querySelectorAll('#container-metricas-opcoes input[type="checkbox"]:checked');
+        const metricasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+
+        if (metricasSelecionadas.length === 0) {
+            showNotification("Selecione pelo menos uma métrica para exibir no BI.", "warning");
+            return;
+        }
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            const campos = snap.data().dicionarioDeCampos || [];
+            campos[index] = {
+                ...campos[index],
+                metricasBi: metricasSelecionadas
+            };
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+            
+            this.fecharModalConfigMetricas();
+            showNotification("✅ Métricas do BI configuradas com sucesso!", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao salvar configuração.", "error");
+        }
+    },
+
+    // ============================================================
+    // MÉTODOS EXISTENTES (mantidos)
+    // ============================================================
     initEventos(db, coletaId, coletaData) {
         const selectTipo = document.getElementById('novo-campo-tipo');
         const containerOpcoes = document.getElementById('container-opcoes-extras');
@@ -336,19 +491,19 @@ export const ColetasBuilderService = {
             const campo = campos[index];
             if (!campo) return;
 
-            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
+            const novoLabel = prompt("✏️ Editar Enunciado da Pergunta:", campo.label);
             if (novoLabel === null) return;
             const labelLimpo = novoLabel.trim();
             if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
 
-            const tiposValidos = "numero, numero_abrangente, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
-            const novoTipo = prompt(`Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, campo.tipo);
+            const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
+            const novoTipo = prompt(`✏️ Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, campo.tipo);
             if (novoTipo === null) return;
             const tipoLimpo = novoTipo.trim();
 
             let novasOpcoes = campo.opcoes || [];
             if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
-                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
+                const opcoesStr = prompt("✏️ Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
                 if (opcoesStr !== null) {
                     novasOpcoes = opcoesStr.split(',').map(o => o.trim()).filter(o => o !== '');
                 }
@@ -362,7 +517,7 @@ export const ColetasBuilderService = {
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("Pergunta atualizada com sucesso!", "success");
+            showNotification("✅ Pergunta atualizada com sucesso!", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -371,7 +526,7 @@ export const ColetasBuilderService = {
     },
 
     async removerCampo(coletaId, index) {
-        if (!confirm("Deseja realmente apagar esta pergunta?")) return;
+        if (!confirm("❌ Deseja realmente apagar esta pergunta?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -382,7 +537,7 @@ export const ColetasBuilderService = {
             campos.splice(index, 1);
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("Pergunta removida.", "info");
+            showNotification("🗑️ Pergunta removida.", "info");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -395,7 +550,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: [] });
-            showNotification("Todas as perguntas foram apagadas.", "success");
+            showNotification("🧹 Todas as perguntas foram apagadas.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -404,13 +559,13 @@ export const ColetasBuilderService = {
     },
 
     async importarJsonLivre(coletaId, coletaData) {
-        const jsonInput = prompt("Cole aqui o JSON estruturado com as perguntas:");
+        const jsonInput = prompt("📥 Cole aqui o JSON estruturado com as perguntas:");
         if (!jsonInput) return;
 
         try {
             const novasPerguntas = JSON.parse(jsonInput);
             if (!Array.isArray(novasPerguntas)) {
-                return showNotification("O formato do JSON deve ser uma lista [...]", "error");
+                return showNotification("❌ O formato do JSON deve ser uma lista [...]", "error");
             }
 
             const db = window.app.db;
@@ -421,21 +576,22 @@ export const ColetasBuilderService = {
                 id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
                 label: p.label || p.pergunta || 'Nova Pergunta',
                 tipo: p.tipo || 'numero',
-                opcoes: p.opcoes || []
+                opcoes: p.opcoes || [],
+                metricasBi: p.metricasBi || [] // Mantém métricas se existirem
             }));
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
-            showNotification(`${formatadas.length} perguntas importadas com sucesso!`, "success");
+            showNotification(`✅ ${formatadas.length} perguntas importadas com sucesso!`, "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
+            showNotification("❌ Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
         }
     },
 
     async removerLink(coletaId, index) {
-        if (!confirm("Deseja realmente apagar este link?")) return;
+        if (!confirm("🗑️ Deseja realmente apagar este link?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -446,7 +602,7 @@ export const ColetasBuilderService = {
             links.splice(index, 1);
 
             await updateDoc(docRef, { linksExternos: links });
-            showNotification("Link apagado.", "success");
+            showNotification("✅ Link apagado.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -459,7 +615,7 @@ export const ColetasBuilderService = {
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: [] });
-            showNotification("Todos os links foram apagados.", "success");
+            showNotification("🧹 Todos os links foram apagados.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -475,7 +631,7 @@ export const ColetasBuilderService = {
             const snapshot = await getDocs(q);
 
             if (snapshot.empty) {
-                showNotification("Não há respostas para apagar.", "info");
+                showNotification("ℹ️ Não há respostas para apagar.", "info");
                 return;
             }
 
@@ -483,7 +639,7 @@ export const ColetasBuilderService = {
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
 
-            showNotification("Todas as respostas foram apagadas com sucesso!", "success");
+            showNotification("🧹 Todas as respostas foram apagadas com sucesso!", "success");
             window.verResultados(coletaId);
         } catch (e) {
             console.error(e);
@@ -505,7 +661,7 @@ export const ColetasBuilderService = {
             
             document.getElementById('container-construtor-coleta').classList.add('hidden');
             window.app.listarColetas();
-            showNotification("Coleta excluída permanentemente.", "success");
+            showNotification("🗑️ Coleta excluída permanentemente.", "success");
         } catch (e) {
             console.error(e);
             showNotification("Erro ao excluir coleta.", "error");
@@ -516,7 +672,16 @@ export const ColetasBuilderService = {
         let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
         const link = `${baseUrl}coleta.html?token=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            showNotification("Link copiado para a área de transferência!", "success");
+            showNotification("📋 Link copiado para a área de transferência!", "success");
+        }).catch(() => {
+            // Fallback
+            const textArea = document.createElement('textarea');
+            textArea.value = link;
+            document.body.appendChild(textArea);
+            textArea.select();
+            document.execCommand('copy');
+            document.body.removeChild(textArea);
+            showNotification("📋 Link copiado para a área de transferência!", "success");
         });
     }
 };
