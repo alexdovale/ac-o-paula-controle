@@ -52,13 +52,18 @@ export const ColetasBuilderService = {
                     
                     <div id="lista-campos-dicionario" class="space-y-3 mb-6 max-h-80 overflow-y-auto pr-2">
                         ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic w-full">Nenhuma pergunta adicionada.</p>' : 
-                            campos.map((c, index) => `
+                            campos.map((c, index) => {
+                                // Mostra o tipo de forma legível
+                                let tipoDisplay = c.tipo.replace('_', ' ');
+                                if (c.tipo === 'numero_abrangente') tipoDisplay = 'Número Abrangente (Idade/Frequência)';
+                                
+                                return `
                                 <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
                                     <div class="flex items-center gap-3 w-full">
                                         <span class="font-black text-indigo-600 text-xs bg-indigo-50 px-2 py-1 rounded border border-indigo-100 shrink-0">${this.formatarPrefixo(index + 1, formatoNumeracao)}</span>
                                         <div class="w-full">
                                             <p class="font-bold text-slate-700 text-sm">${escapeHTML(c.label)}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${c.tipo.replace('_', ' ')} ${c.opcoes?.length ? `| 🏷️ Opções: [${c.opcoes.join(', ')}]` : ''}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${tipoDisplay} ${c.opcoes?.length ? `| 🏷️ Opções: [${c.opcoes.join(', ')}]` : ''}</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
@@ -68,7 +73,7 @@ export const ColetasBuilderService = {
                                         <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-xs font-bold" title="Remover">✕</button>
                                     </div>
                                 </div>
-                            `).join('')}
+                            `}).join('')}
                     </div>
 
                     <!-- ADICIONAR NOVA PERGUNTA -->
@@ -79,7 +84,8 @@ export const ColetasBuilderService = {
                             
                             <div class="flex flex-col sm:flex-row gap-3">
                                 <select id="novo-campo-tipo" class="w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
-                                    <option value="numero">Número Estatístico</option>
+                                    <option value="numero">Número Estatístico (Soma/Média)</option>
+                                    <option value="numero_abrangente">🔢 Número Abrangente (Idade/Frequência)</option>
                                     <option value="texto_curto">Texto Curto (1 linha)</option>
                                     <option value="texto_longo">Parágrafo (Várias linhas)</option>
                                     <option value="data">Data</option>
@@ -335,7 +341,7 @@ export const ColetasBuilderService = {
             const labelLimpo = novoLabel.trim();
             if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
 
-            const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
+            const tiposValidos = "numero, numero_abrangente, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
             const novoTipo = prompt(`Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, campo.tipo);
             if (novoTipo === null) return;
             const tipoLimpo = novoTipo.trim();
