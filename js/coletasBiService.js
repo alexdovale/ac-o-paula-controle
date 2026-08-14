@@ -207,7 +207,7 @@ export const ColetasBiService = {
         `;
 
         // ============================================================
-        // CARDS PARA TODAS AS PERGUNTAS
+        // CARDS PARA TODAS AS PERGUNTAS (RESPEITANDO CONFIGURAÇÕES)
         // ============================================================
         html += `
             <div>
@@ -220,22 +220,17 @@ export const ColetasBiService = {
                 .map(r => r.dados?.[campo.id]?.resposta)
                 .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
 
-            // CARD PARA NUMÉRICO ABRANGENTE
-            if (campo.tipo === 'numero_abrangente' || 
-                campo.tipo === 'numero' || 
-                campo.label.toLowerCase().includes('idade')) {
-                
+            // Pega as métricas configuradas ou usa padrão
+            const metricas = campo.metricasBi || this._getMetricasPadrao(campo.tipo);
+
+            // ============================================================
+            // CARD PARA CAMPOS NUMÉRICOS
+            // ============================================================
+            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
                 const numeros = valores.map(Number).filter(n => !isNaN(n));
                 
                 if (numeros.length === 0) {
-                    html += `
-                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden opacity-60">
-                            <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
-                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">${escapeHTML(campo.label)}</p>
-                            <p class="text-2xl font-black text-slate-400 mt-3">--</p>
-                            <span class="text-[10px] text-slate-400 mt-1 font-medium">Sem respostas ainda</span>
-                        </div>
-                    `;
+                    html += this._renderCardSemDados(campo);
                     return;
                 }
 
@@ -244,6 +239,7 @@ export const ColetasBiService = {
                 const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
                 const desvioPadrao = Math.sqrt(variancia).toFixed(1);
 
+                // Contagem de frequência
                 const contagemNumerica = {};
                 numeros.forEach(num => {
                     contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
@@ -253,28 +249,56 @@ export const ColetasBiService = {
                     `${num}: ${contagemNumerica[num]}x`
                 ).join(' | ');
 
+                // Monta o card baseado nas métricas selecionadas
+                let metricasHtml = '';
+                let colunas = 0;
+
+                if (metricas.includes('soma')) {
+                    metricasHtml += `
+                        <div class="bg-indigo-50 p-2 rounded-xl text-center">
+                            <p class="text-lg font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
+                            <p class="text-[8px] font-bold text-indigo-400 uppercase">Soma</p>
+                        </div>
+                    `;
+                    colunas++;
+                }
+
+                if (metricas.includes('media')) {
+                    metricasHtml += `
+                        <div class="bg-emerald-50 p-2 rounded-xl text-center">
+                            <p class="text-lg font-black text-emerald-600">${media}</p>
+                            <p class="text-[8px] font-bold text-emerald-400 uppercase">Média</p>
+                        </div>
+                    `;
+                    colunas++;
+                }
+
+                if (metricas.includes('desvio')) {
+                    metricasHtml += `
+                        <div class="bg-amber-50 p-2 rounded-xl text-center">
+                            <p class="text-lg font-black text-amber-600">${desvioPadrao}</p>
+                            <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio</p>
+                        </div>
+                    `;
+                    colunas++;
+                }
+
+                // Define o grid com base no número de métricas
+                const gridCols = colunas > 0 ? `grid-cols-${colunas}` : 'grid-cols-1';
+
                 html += `
                     <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
-                        <div class="mt-3 grid grid-cols-3 gap-2 text-center">
-                            <div class="bg-indigo-50 p-2 rounded-xl">
-                                <p class="text-lg font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
-                                <p class="text-[8px] font-bold text-indigo-400 uppercase">Soma</p>
-                            </div>
-                            <div class="bg-emerald-50 p-2 rounded-xl">
-                                <p class="text-lg font-black text-emerald-600">${media}</p>
-                                <p class="text-[8px] font-bold text-emerald-400 uppercase">Média</p>
-                            </div>
-                            <div class="bg-amber-50 p-2 rounded-xl">
-                                <p class="text-lg font-black text-amber-600">${desvioPadrao}</p>
-                                <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio</p>
-                            </div>
+                        <div class="mt-3 grid ${gridCols} gap-2 text-center">
+                            ${metricasHtml}
                         </div>
-                        <div class="mt-2 text-[10px] text-slate-500 truncate">
-                            📊 ${frequenciaLista}
-                        </div>
-                        <span class="text-[10px] text-slate-400 mt-1 font-medium flex items-center gap-1">
+                        ${metricas.includes('frequencia') && chavesOrdenadas.length > 0 ? `
+                            <div class="mt-2 text-[10px] text-slate-500 truncate">
+                                📊 Frequência: ${frequenciaLista}
+                            </div>
+                        ` : ''}
+                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
                             📌 ${numeros.length} respostas
                             <span class="text-indigo-400 text-[8px] ml-auto">Clique para detalhar</span>
                         </span>
@@ -282,7 +306,9 @@ export const ColetasBiService = {
                 `;
             }
 
-            // CARD PARA SELEÇÃO
+            // ============================================================
+            // CARD PARA SELEÇÃO / MÚLTIPLA ESCOLHA / BOOLEANO
+            // ============================================================
             else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
                 const contagem = {};
                 valores.forEach(val => {
@@ -295,23 +321,36 @@ export const ColetasBiService = {
                     `${key}: ${qtd}`
                 ).join(' | ');
 
+                let metricasHtml = '';
+
+                if (metricas.includes('total')) {
+                    metricasHtml += `
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Total respostas:</span>
+                            <span class="font-bold text-indigo-600">${total}</span>
+                        </div>
+                    `;
+                }
+
+                if (metricas.includes('distribuicao')) {
+                    metricasHtml += `
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Distribuição:</span>
+                            <span class="font-bold text-slate-700 truncate max-w-[150px]">${escapeHTML(distribuicao)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Opções disponíveis:</span>
+                            <span class="font-bold text-slate-700">${entries.length}</span>
+                        </div>
+                    `;
+                }
+
                 html += `
                     <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition">${escapeHTML(campo.label)}</p>
                         <div class="mt-3 space-y-1">
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Distribuição:</span>
-                                <span class="font-bold text-slate-700 truncate max-w-[150px]">${escapeHTML(distribuicao)}</span>
-                            </div>
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Total respostas:</span>
-                                <span class="font-bold text-indigo-600">${total}</span>
-                            </div>
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Opções disponíveis:</span>
-                                <span class="font-bold text-slate-700">${entries.length}</span>
-                            </div>
+                            ${metricasHtml}
                         </div>
                         <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
                             🏷️ ${entries.length} opções
@@ -321,33 +360,44 @@ export const ColetasBiService = {
                 `;
             }
 
-            // CARD PARA TEXTO
+            // ============================================================
+            // CARD PARA TEXTOS
+            // ============================================================
             else {
                 const totalRespostas = valores.length;
                 const ultimaResposta = valores.length > 0 ? String(valores[valores.length - 1]).substring(0, 25) : '--';
                 const primeirasRespostas = valores.slice(0, 3).map(v => String(v).substring(0, 20)).join(', ');
+
+                let metricasHtml = '';
+
+                if (metricas.includes('total')) {
+                    metricasHtml += `
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Total respostas:</span>
+                            <span class="font-bold text-purple-600">${totalRespostas}</span>
+                        </div>
+                    `;
+                }
+
+                if (metricas.includes('ultima') && totalRespostas > 0) {
+                    metricasHtml += `
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Última resposta:</span>
+                            <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHTML(ultimaResposta)}</span>
+                        </div>
+                        <div class="flex justify-between text-xs">
+                            <span class="text-slate-500">Exemplos:</span>
+                            <span class="font-medium text-slate-600 truncate max-w-[120px]">${escapeHTML(primeirasRespostas)}</span>
+                        </div>
+                    `;
+                }
 
                 html += `
                     <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm cursor-pointer hover:border-purple-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-purple-500"></div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-purple-600 transition">${escapeHTML(campo.label)}</p>
                         <div class="mt-3 space-y-1">
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Total respostas:</span>
-                                <span class="font-bold text-purple-600">${totalRespostas}</span>
-                            </div>
-                            ${totalRespostas > 0 ? `
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Última resposta:</span>
-                                <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHTML(ultimaResposta)}</span>
-                            </div>
-                            <div class="flex justify-between text-xs">
-                                <span class="text-slate-500">Exemplos:</span>
-                                <span class="font-medium text-slate-600 truncate max-w-[120px]">${escapeHTML(primeirasRespostas)}</span>
-                            </div>
-                            ` : `
-                            <p class="text-xs text-slate-400 italic mt-2">Sem respostas ainda</p>
-                            `}
+                            ${metricasHtml || `<p class="text-xs text-slate-400 italic">Sem métricas configuradas</p>`}
                         </div>
                         <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
                             📝 ${totalRespostas} respostas
@@ -366,57 +416,58 @@ export const ColetasBiService = {
         `;
 
         // ============================================================
-        // TABELA CONSOLIDADA POR ÓRGÃO
+        // TABELA CONSOLIDADA POR ÓRGÃO (APENAS CAMPOS NUMÉRICOS)
         // ============================================================
         const camposNumericos = dicionario.filter(c => 
             c.tipo === 'numero' || 
-            c.tipo === 'numero_abrangente' || 
-            c.label.toLowerCase().includes('idade')
+            c.tipo === 'numero_abrangente'
         );
         
-        html += `
-            <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
-                <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
-                    <span>📊 Tabela Consolidada por Órgão</span>
-                    <span class="text-xs text-slate-500 font-medium">${respostasFiltradas.length} envios • ${orgaosUnicos.filter(o => orgaoFiltro === 'todos' || o === orgaoFiltro).length} órgãos</span>
-                </div>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-left border-collapse text-sm">
-                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
-                            <tr>
-                                <th class="p-3.5">Órgão / Origem</th>
-                                <th class="p-3.5 text-center">Total Envios</th>
-        `;
-        
-        camposNumericos.forEach(c => {
-            html += `<th class="p-3.5 text-right">${escapeHTML(c.label)}</th>`;
-        });
-
-        html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
-
-        const orgaosParaMostrar = orgaoFiltro === 'todos' ? orgaosUnicos : [orgaoFiltro];
-        orgaosParaMostrar.forEach(orgao => {
-            const enviosDoOrgao = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
-            if (enviosDoOrgao.length === 0) return;
-
+        if (camposNumericos.length > 0) {
             html += `
-                <tr class="hover:bg-slate-50/80 transition">
-                    <td class="p-3.5 font-bold text-slate-800">${escapeHTML(orgao)}</td>
-                    <td class="p-3.5 text-center font-bold text-indigo-600">${enviosDoOrgao.length}</td>
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
+                        <span>📊 Tabela Consolidada por Órgão</span>
+                        <span class="text-xs text-slate-500 font-medium">${respostasFiltradas.length} envios • ${orgaosUnicos.filter(o => orgaoFiltro === 'todos' || o === orgaoFiltro).length} órgãos</span>
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Órgão / Origem</th>
+                                    <th class="p-3.5 text-center">Total Envios</th>
             `;
-
+            
             camposNumericos.forEach(c => {
-                let somaOrgao = 0;
-                enviosDoOrgao.forEach(r => {
-                    if (r.dados && r.dados[c.id]) somaOrgao += Number(r.dados[c.id].resposta) || 0;
-                });
-                html += `<td class="p-3.5 text-right font-semibold text-slate-700">${somaOrgao.toLocaleString('pt-BR')}</td>`;
+                html += `<th class="p-3.5 text-right">${escapeHTML(c.label)}</th>`;
             });
 
-            html += `</tr>`;
-        });
+            html += `</tr></thead><tbody class="divide-y divide-slate-100">`;
 
-        html += `</tbody></table></div></div>`;
+            const orgaosParaMostrar = orgaoFiltro === 'todos' ? orgaosUnicos : [orgaoFiltro];
+            orgaosParaMostrar.forEach(orgao => {
+                const enviosDoOrgao = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
+                if (enviosDoOrgao.length === 0) return;
+
+                html += `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-3.5 font-bold text-slate-800">${escapeHTML(orgao)}</td>
+                        <td class="p-3.5 text-center font-bold text-indigo-600">${enviosDoOrgao.length}</td>
+                `;
+
+                camposNumericos.forEach(c => {
+                    let somaOrgao = 0;
+                    enviosDoOrgao.forEach(r => {
+                        if (r.dados && r.dados[c.id]) somaOrgao += Number(r.dados[c.id].resposta) || 0;
+                    });
+                    html += `<td class="p-3.5 text-right font-semibold text-slate-700">${somaOrgao.toLocaleString('pt-BR')}</td>`;
+                });
+
+                html += `</tr>`;
+            });
+
+            html += `</tbody></table></div></div>`;
+        }
 
         // ============================================================
         // HISTÓRICO DETALHADO
@@ -484,6 +535,27 @@ export const ColetasBiService = {
     // ============================================================
     // MÉTODOS AUXILIARES
     // ============================================================
+    _getMetricasPadrao(tipo) {
+        if (tipo === 'numero' || tipo === 'numero_abrangente') {
+            return ['soma', 'media'];
+        }
+        if (['selecao', 'multipla_escolha', 'booleano'].includes(tipo)) {
+            return ['total', 'distribuicao'];
+        }
+        return ['total'];
+    },
+
+    _renderCardSemDados(campo) {
+        return `
+            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden opacity-60">
+                <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
+                <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">${escapeHTML(campo.label)}</p>
+                <p class="text-2xl font-black text-slate-400 mt-3">--</p>
+                <span class="text-[10px] text-slate-400 mt-1 font-medium">Sem respostas ainda</span>
+            </div>
+        `;
+    },
+
     _aplicarFiltros(respostas, orgaoFiltro, periodoFiltro) {
         let filtradas = [...respostas];
 
@@ -645,7 +717,7 @@ export const ColetasBiService = {
                 return;
             }
 
-            if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+            if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
                 const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
                 if (numeros.length > 0) {
                     const soma = numeros.reduce((a, b) => a + b, 0);
@@ -770,8 +842,8 @@ export const ColetasBiService = {
         const div = document.getElementById('bi-detalhes-dinamicos');
         if (!div) return;
         
-        // NUMÉRICO ABRANGENTE
-        if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+        // NUMÉRICO
+        if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
             const agrupado = {};
             const contagemGlobal = {};
             
@@ -969,7 +1041,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // EXPORTAÇÃO PARA EXCEL (CORRIGIDO)
+    // EXPORTAÇÃO PARA EXCEL
     // ============================================================
     async exportarParaExcel() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
@@ -979,10 +1051,8 @@ export const ColetasBiService = {
         }
 
         try {
-            // Carrega a biblioteca XLSX de forma dinâmica
             const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js');
             
-            // Verifica se a biblioteca foi carregada corretamente
             if (!XLSX || !XLSX.utils) {
                 throw new Error("Biblioteca XLSX não carregada corretamente.");
             }
@@ -1025,7 +1095,7 @@ export const ColetasBiService = {
                     .map(r => r.dados?.[campo.id]?.resposta)
                     .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
 
-                if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+                if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
                     const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
                     if (numeros.length > 0) {
                         const soma = numeros.reduce((a, b) => a + b, 0);
@@ -1085,8 +1155,7 @@ export const ColetasBiService = {
             const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
             const camposNumericos = dicionario.filter(c => 
                 c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente' || 
-                c.label.toLowerCase().includes('idade')
+                c.tipo === 'numero_abrangente'
             );
             
             const resumoData = [
@@ -1131,7 +1200,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // MODAL DE EXPORTAÇÃO COM SELEÇÃO DE SEÇÕES DO PDF
+    // MODAL DE EXPORTAÇÃO
     // ============================================================
     abrirModalExportacao() {
         let modal = document.getElementById('modal-config-pdf');
@@ -1166,7 +1235,7 @@ export const ColetasBiService = {
 
                     <!-- Opções do PDF -->
                     <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200">
-                        <p class="text-xs font-bold text-indigo-600 uppercase mb-3">📋 Seções do PDF (opcional):</p>
+                        <p class="text-xs font-bold text-indigo-600 uppercase mb-3">📋 Seções do PDF:</p>
                         
                         <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
                             <input type="checkbox" id="pdf-incluir-estatisticas" checked class="h-5 w-5 text-indigo-600 rounded">
@@ -1214,7 +1283,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // EXPORTAÇÃO PDF COM SELEÇÃO DE SEÇÕES
+    // EXPORTAÇÃO PDF
     // ============================================================
     async executarExportacaoCustomizada() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
@@ -1223,7 +1292,6 @@ export const ColetasBiService = {
             return;
         }
 
-        // Lê as opções selecionadas
         const incluirEstatisticas = document.getElementById('pdf-incluir-estatisticas')?.checked !== false;
         const incluirSelecoes = document.getElementById('pdf-incluir-selecoes')?.checked !== false;
         const incluirTabelaOrgao = document.getElementById('pdf-incluir-tabela-orgao')?.checked !== false;
@@ -1232,7 +1300,7 @@ export const ColetasBiService = {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF('landscape');
         
-        // ===== CABEÇALHO =====
+        // CABEÇALHO
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
         doc.text(limparTexto(`RELATÓRIO ANALÍTICO - ${coletaData.nomeDaColeta.toUpperCase()}`), 14, 18);
@@ -1244,12 +1312,11 @@ export const ColetasBiService = {
 
         let yPos = 40;
 
-        // ===== SEÇÃO 1: ESTATÍSTICAS NUMÉRICAS =====
+        // SEÇÃO 1: ESTATÍSTICAS NUMÉRICAS
         if (incluirEstatisticas) {
             const camposNumericos = dicionario.filter(c => 
                 c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente' || 
-                c.label.toLowerCase().includes('idade')
+                c.tipo === 'numero_abrangente'
             );
             
             if (camposNumericos.length > 0) {
@@ -1257,7 +1324,7 @@ export const ColetasBiService = {
                 
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
-                doc.text("1. ESTATÍSTICAS NUMÉRICAS (Soma, Média, Desvio + Frequência)", 14, yPos);
+                doc.text("1. ESTATÍSTICAS NUMÉRICAS", 14, yPos);
                 yPos += 7;
 
                 const dataKpi = camposNumericos.map(c => {
@@ -1287,20 +1354,13 @@ export const ColetasBiService = {
                     head: [['Campo', 'Soma Total', 'Média', 'Desvio Padrão', 'Frequência']],
                     body: dataKpi,
                     styles: { fontSize: 8, cellPadding: 2 },
-                    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
-                    columnStyles: {
-                        0: { cellWidth: 50 },
-                        1: { cellWidth: 35, halign: 'right' },
-                        2: { cellWidth: 30, halign: 'center' },
-                        3: { cellWidth: 30, halign: 'center' },
-                        4: { cellWidth: 70 }
-                    }
+                    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }
                 });
                 yPos = doc.lastAutoTable.finalY + 12;
             }
         }
 
-        // ===== SEÇÃO 2: DISTRIBUIÇÃO DE SELEÇÕES =====
+        // SEÇÃO 2: DISTRIBUIÇÃO DE SELEÇÕES
         if (incluirSelecoes) {
             const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
             
@@ -1309,7 +1369,7 @@ export const ColetasBiService = {
                 
                 doc.setFont("helvetica", "bold");
                 doc.setFontSize(14);
-                doc.text("2. DISTRIBUIÇÃO DE RESPOSTAS (Seleção/Múltipla Escolha)", 14, yPos);
+                doc.text("2. DISTRIBUIÇÃO DE RESPOSTAS", 14, yPos);
                 yPos += 7;
 
                 let dadosSelecao = [];
@@ -1344,24 +1404,18 @@ export const ColetasBiService = {
                         head: [['Campo', 'Total Respostas', 'Distribuição']],
                         body: dadosSelecao,
                         styles: { fontSize: 8, cellPadding: 2 },
-                        headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
-                        columnStyles: {
-                            0: { cellWidth: 50 },
-                            1: { cellWidth: 30, halign: 'center' },
-                            2: { cellWidth: 90 }
-                        }
+                        headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] }
                     });
                     yPos = doc.lastAutoTable.finalY + 12;
                 }
             }
         }
 
-        // ===== SEÇÃO 3: TABELA POR ÓRGÃO =====
+        // SEÇÃO 3: TABELA POR ÓRGÃO
         if (incluirTabelaOrgao) {
             const camposNumericos = dicionario.filter(c => 
                 c.tipo === 'numero' || 
-                c.tipo === 'numero_abrangente' || 
-                c.label.toLowerCase().includes('idade')
+                c.tipo === 'numero_abrangente'
             );
             
             if (yPos > 170) { doc.addPage(); yPos = 20; }
@@ -1410,7 +1464,7 @@ export const ColetasBiService = {
             yPos = doc.lastAutoTable.finalY + 12;
         }
 
-        // ===== SEÇÃO 4: HISTÓRICO =====
+        // SEÇÃO 4: HISTÓRICO
         if (incluirHistorico) {
             doc.addPage();
             doc.setFont("helvetica", "bold");
