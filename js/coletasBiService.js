@@ -7,13 +7,45 @@ import { showNotification, escapeHTML } from './utils.js';
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .replace(/[ºª°]/g, '') // Remove símbolos que causam erro no PDF
-        .replace(/[&]/g, 'e') // Substitui & por 'e'
-        .replace(/[^\x00-\x7F]/g, ""); // Remove qualquer outro caractere não-ASCII
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        .replace(/[ºª°]/g, '')
+        .replace(/[&]/g, 'e')
+        .replace(/[^\x00-\x7F]/g, "");
+}
+
+// ============================================================
+// FUNÇÃO AUXILIAR: CACHE DE DADOS (IndexedDB / localStorage)
+// ============================================================
+const CACHE_KEY = 'sigep_bi_cache';
+const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+
+async function getCachedData(coletaId) {
+    try {
+        const cached = localStorage.getItem(CACHE_KEY);
+        if (cached) {
+            const data = JSON.parse(cached);
+            if (Date.now() - data.timestamp < CACHE_DURATION && data.coletaId === coletaId) {
+                return data.payload;
+            }
+        }
+    } catch (e) { /* Ignora erro de cache */ }
+    return null;
+}
+
+async function setCachedData(coletaId, payload) {
+    try {
+        localStorage.setItem(CACHE_KEY, JSON.stringify({
+            coletaId,
+            payload,
+            timestamp: Date.now()
+        }));
+    } catch (e) { /* Ignora erro de cache */ }
 }
 
 export const ColetasBiService = {
+    // ============================================================
+    // INICIALIZAÇÃO E CARREGAMENTO DE DADOS
+    // ============================================================
     async abrirResultados(db, coletaId) {
         const container = document.getElementById('container-construtor-coleta');
         if (!container) return;
@@ -27,6 +59,19 @@ export const ColetasBiService = {
         `;
 
         try {
+            // Tenta carregar do cache
+            let dadosCache = await getCachedData(coletaId);
+            let coletaData, dicionario, respostas, orgaosUnicos;
+
+            if (dadosCache) {
+                ({ coletaData, dicionario, respostas, orgaosUnicos } = dadosCache);
+                window._dadosBiCache = { coletaData, dicionario, respostas, orgaosUnicos, coletaId };
+                this.renderizarPainelBiCompleto('todos', 'todos');
+                showNotification("📦 Dados carregados do cache!", "info");
+                return;
+            }
+
+            // Carrega do Firebase
             const { doc, getDoc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             
             const coletaSnap = await getDoc(doc(db, "formularios_coleta", coletaId));
@@ -34,18 +79,22 @@ export const ColetasBiService = {
                 container.innerHTML = `<p class="text-red-500 font-bold p-6">Coleta não encontrada.</p>`;
                 return;
             }
-            const coletaData = coletaSnap.data();
-            const dicionario = coletaData.dicionarioDeCampos || [];
+            coletaData = coletaSnap.data();
+            dicionario = coletaData.dicionarioDeCampos || [];
 
             const q = query(collection(db, "respostas_coleta"), where("coletaId", "==", coletaId));
             const respostasSnap = await getDocs(q);
 
-            const respostas = [];
+            respostas = [];
             respostasSnap.forEach(rDoc => respostas.push({ id: rDoc.id, ...rDoc.data() }));
 
-            const orgaosUnicos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
+            orgaosUnicos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
 
             window._dadosBiCache = { coletaData, dicionario, respostas, orgaosUnicos, coletaId };
+            
+            // Salva no cache
+            await setCachedData(coletaId, { coletaData, dicionario, respostas, orgaosUnicos });
+
             this.renderizarPainelBiCompleto('todos', 'todos');
 
         } catch (err) {
@@ -54,22 +103,22 @@ export const ColetasBiService = {
         }
     },
 
+    // ============================================================
+    // RENDERIZAÇÃO DO PAINEL COMPLETO
+    // ============================================================
     renderizarPainelBiCompleto(orgaoFiltro = 'todos', periodoFiltro = 'todos') {
         const { coletaData, dicionario, respostas, orgaosUnicos } = window._dadosBiCache || {};
         const container = document.getElementById('container-construtor-coleta');
         if (!container) return;
 
-        // 1. FILTROS ROBUSTOS
-        let respostasFiltradas = respostas.filter(r => {
-            const matchOrgao = (orgaoFiltro === 'todos' || (r.orgaoOrigem === orgaoFiltro));
-            return matchOrgao;
-        });
+        // Aplica filtros
+        let respostasFiltradas = this._aplicarFiltros(respostas, orgaoFiltro, periodoFiltro);
 
         let html = `
             <div class="space-y-6 animate-fade-in bg-slate-50 p-4 sm:p-6 rounded-3xl border border-slate-200">
                 
                 <!-- BARRA DE FERRAMENTAS ROBUSTA -->
-                <div class="bg-white p-6 rounded-2xl border shadow-sm grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-6 rounded-2xl border shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">🏢 Filtrar por Órgão:</label>
                         <select id="filtro-orgao-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(this.value, document.getElementById('filtro-periodo-bi').value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
@@ -81,38 +130,80 @@ export const ColetasBiService = {
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">📅 Período:</label>
                         <select id="filtro-periodo-bi" onchange="ColetasBiService.renderizarPainelBiCompleto(document.getElementById('filtro-orgao-bi').value, this.value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
-                            <option value="todos">Todos os períodos</option>
-                            <option value="hoje">Hoje</option>
-                            <option value="semana">Última semana</option>
-                            <option value="mes">Último mês</option>
+                            <option value="todos" ${periodoFiltro === 'todos' ? 'selected' : ''}>Todos os períodos</option>
+                            <option value="hoje" ${periodoFiltro === 'hoje' ? 'selected' : ''}>Hoje</option>
+                            <option value="semana" ${periodoFiltro === 'semana' ? 'selected' : ''}>Última semana</option>
+                            <option value="mes" ${periodoFiltro === 'mes' ? 'selected' : ''}>Último mês</option>
+                        </select>
+                    </div>
+
+                    <div>
+                        <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">⭐ Favoritos:</label>
+                        <select id="filtro-favoritos" onchange="ColetasBiService.carregarFiltroFavorito(this.value)" class="w-full p-3 border rounded-xl font-bold text-sm bg-white outline-none">
+                            <option value="">Selecione um favorito...</option>
+                            ${this._carregarFiltrosFavoritos().map(f => `<option value="${f.nome}">⭐ ${f.nome}</option>`).join('')}
                         </select>
                     </div>
                     
-                    <div class="flex gap-2">
-                        <button onclick="ColetasBiService.abrirModalExportacao()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow-lg transition text-sm">
-                            ⚙️ Exportar Relatório
+                    <div class="flex gap-2 items-end">
+                        <button onclick="ColetasBiService.salvarFiltroComoFavorito()" class="bg-amber-500 hover:bg-amber-600 text-white font-bold p-2 rounded-xl transition text-xs flex-1 h-[42px]">
+                            ⭐ Salvar
                         </button>
-                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold p-3 rounded-xl transition text-sm">
+                        <button onclick="ColetasBiService.abrirModalExportacao()" class="flex-1 bg-blue-600 hover:bg-blue-700 text-white font-bold p-3 rounded-xl shadow-lg transition text-sm h-[42px]">
+                            ⚙️ Exportar
+                        </button>
+                        <button onclick="window.print()" class="bg-slate-800 hover:bg-slate-900 text-white font-bold p-3 rounded-xl transition text-sm h-[42px]">
                             🖨️
+                        </button>
+                        <button onclick="ColetasBiService.gerarInsights()" class="bg-purple-600 hover:bg-purple-700 text-white font-bold p-3 rounded-xl transition text-sm h-[42px]" title="Insights Automáticos">
+                            💡
                         </button>
                     </div>
                 </div>
+        `;
 
-                <!-- INDICADORES GERAIS -->
+        // COMPARAÇÃO ENTRE PERÍODOS (se filtrado)
+        if (periodoFiltro !== 'todos' && respostasFiltradas.length > 0) {
+            const variacao = this._calcularVariacaoPeriodo(respostas, periodoFiltro);
+            html += `
+                <div class="bg-amber-50 p-4 rounded-2xl border border-amber-200">
+                    <p class="text-xs font-bold text-amber-700">📊 Comparação com período anterior</p>
+                    <div class="grid grid-cols-3 gap-4 mt-2">
+                        <div>
+                            <span class="text-xs text-slate-500">Período atual</span>
+                            <p class="text-lg font-black text-indigo-600">${respostasFiltradas.length} envios</p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500">Período anterior</span>
+                            <p class="text-lg font-black text-slate-600">${variacao.anterior} envios</p>
+                        </div>
+                        <div>
+                            <span class="text-xs text-slate-500">Variação</span>
+                            <p class="text-lg font-black ${variacao.percentual >= 0 ? 'text-emerald-600' : 'text-red-600'}">
+                                ${variacao.percentual > 0 ? '↑' : variacao.percentual < 0 ? '↓' : '→'} ${Math.abs(variacao.percentual)}%
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            `;
+        }
+
+        // INDICADORES GERAIS
+        html += `
                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
                         <p class="text-[10px] uppercase font-black text-slate-400">Total de Envios</p>
                         <p class="text-3xl font-black text-indigo-600">${respostasFiltradas.length}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
                         <p class="text-[10px] uppercase font-black text-slate-400">Órgãos Participantes</p>
                         <p class="text-3xl font-black text-emerald-600">${new Set(respostasFiltradas.map(r => r.orgaoOrigem)).size}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
                         <p class="text-[10px] uppercase font-black text-slate-400">Último Envio</p>
                         <p class="text-sm font-black text-slate-700">${respostasFiltradas.length > 0 ? new Date(respostasFiltradas[0].timestamp).toLocaleDateString('pt-BR') : '--'}</p>
                     </div>
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm card-hover">
                         <p class="text-[10px] uppercase font-black text-slate-400">Média por Órgão</p>
                         <p class="text-3xl font-black text-amber-600">${respostasFiltradas.length > 0 && orgaosUnicos.length > 0 ? (respostasFiltradas.length / orgaosUnicos.length).toFixed(1) : '0'}</p>
                     </div>
@@ -130,9 +221,9 @@ export const ColetasBiService = {
         }
 
         // ============================================================
-        // 1. PROCESSAMENTO DE MÉTRICAS NUMÉRICAS E IDADES (Híbrido)
+        // 1. CARDS DE ESTATÍSTICAS HÍBRIDAS
         // ============================================================
-        let kpiHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">`;
+        let kpiHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">`;
         let frequenciasHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">`;
         let temFrequenciaNumerica = false;
 
@@ -143,19 +234,16 @@ export const ColetasBiService = {
 
             if (valores.length === 0) return;
 
-            // Se for campo numérico ou contiver "idade" no nome
+            // Campo numérico ou idade
             if (campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
                 const numeros = valores.map(Number);
                 const soma = numeros.reduce((a, b) => a + b, 0);
                 const media = (soma / numeros.length).toFixed(1);
-                
-                // Calcula o Desvio Padrão
                 const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
                 const desvioPadrao = Math.sqrt(variancia).toFixed(1);
 
-                // Card Principal de Estatística (Soma, Média e Desvio Padrão)
                 kpiHtml += `
-                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group">
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
                         <div class="mt-3 grid grid-cols-3 gap-2 text-center">
@@ -179,7 +267,7 @@ export const ColetasBiService = {
                     </div>
                 `;
 
-                // Tratamento Híbrido: Frequência (quantas vezes cada número foi escolhido)
+                // Frequência numérica
                 const contagemNumerica = {};
                 numeros.forEach(num => {
                     contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
@@ -187,12 +275,14 @@ export const ColetasBiService = {
 
                 const chavesOrdenadas = Object.keys(contagemNumerica).sort((a, b) => Number(a) - Number(b));
 
-                if (chavesOrdenadas.length > 0) {
+                if (chavesOrdenadas.length > 0 && chavesOrdenadas.length <= 20) {
                     temFrequenciaNumerica = true;
+                    const canvasId = `grafico_${campo.id}`;
                     frequenciasHtml += `
                         <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                             <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">📊 Frequência por ${escapeHTML(campo.label)}</p>
-                            <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                            <canvas id="${canvasId}" height="150"></canvas>
+                            <div class="space-y-2 max-h-44 overflow-y-auto pr-1 mt-3">
                     `;
                     chavesOrdenadas.forEach(num => {
                         const qtd = contagemNumerica[num];
@@ -210,6 +300,11 @@ export const ColetasBiService = {
                         `;
                     });
                     frequenciasHtml += `</div></div>`;
+                    
+                    // Renderizar gráfico
+                    setTimeout(() => {
+                        this._renderizarGrafico(canvasId, contagemNumerica);
+                    }, 100);
                 }
             }
         });
@@ -217,7 +312,7 @@ export const ColetasBiService = {
         html += kpiHtml + `</div>`;
 
         // ============================================================
-        // 2. PROCESSAMENTO DE ALTERNATIVAS (Seleção / Booleano / Múltipla Escolha)
+        // 2. ALTERNATIVAS (Seleção / Booleano / Múltipla Escolha)
         // ============================================================
         const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
         
@@ -231,10 +326,12 @@ export const ColetasBiService = {
                     if (val && val !== '--') contagem[val] = (contagem[val] || 0) + 1;
                 });
 
+                const canvasId = `grafico_cat_${campo.id}`;
                 html += `
                     <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
                         <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">🧩 ${escapeHTML(campo.label)}</p>
-                        <div class="space-y-3 max-h-44 overflow-y-auto pr-1">
+                        ${Object.keys(contagem).length > 0 ? `<canvas id="${canvasId}" height="120"></canvas>` : ''}
+                        <div class="space-y-3 max-h-44 overflow-y-auto pr-1 mt-3">
                             ${Object.keys(contagem).length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhuma resposta.</p>' : 
                                 Object.entries(contagem).map(([key, count]) => {
                                     const percent = ((count / respostasFiltradas.length) * 100).toFixed(0);
@@ -253,18 +350,27 @@ export const ColetasBiService = {
                         </div>
                     </div>
                 `;
+
+                // Renderizar gráfico de barras
+                if (Object.keys(contagem).length > 0) {
+                    setTimeout(() => {
+                        this._renderizarGrafico(canvasId, contagem, 'bar');
+                    }, 100);
+                }
             });
 
             if (temFrequenciaNumerica) html += frequenciasHtml;
             html += `</div>`;
         }
 
-        // DIV ONDE APARECEM OS DETALHES CLICADOS
+        // DIV DE DETALHES
         html += `
             <div id="bi-detalhes-dinamicos" class="hidden bg-white p-6 rounded-2xl border shadow-sm"></div>
         `;
 
+        // ============================================================
         // 3. TABELA CONSOLIDADA POR ÓRGÃO
+        // ============================================================
         const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
         html += `
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -310,7 +416,9 @@ export const ColetasBiService = {
 
         html += `</tbody></table></div></div>`;
 
-        // 4. HISTÓRICO DETALHADO DE RESPOSTAS
+        // ============================================================
+        // 4. HISTÓRICO DETALHADO
+        // ============================================================
         html += `
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
@@ -353,12 +461,368 @@ export const ColetasBiService = {
             html += `<tr><td colspan="${dicionario.length + 3}" class="p-3.5 text-center text-xs text-slate-400 italic">Exibindo os 50 registros mais recentes</td></tr>`;
         }
 
-        html += `</tbody></table></div></div></div>`;
+        html += `</tbody></table></div></div>`;
+
+        // BOTÃO DE AUTO-REFRESH (oculto)
+        html += `
+            <div class="flex justify-end gap-2">
+                <button onclick="ColetasBiService.iniciarAutoRefresh()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
+                    🔄 Auto-Refresh (5min)
+                </button>
+                <button onclick="ColetasBiService.pararAutoRefresh()" class="text-xs bg-red-100 hover:bg-red-200 text-red-600 font-bold px-3 py-1.5 rounded-lg transition hidden" id="btn-parar-refresh">
+                    ⏹ Parar Refresh
+                </button>
+            </div>
+        </div>`;
+
         container.innerHTML = html;
         container.scrollIntoView({ behavior: 'smooth' });
+
+        // Carrega gráficos já renderizados
+        this._renderizarTodosGraficos();
     },
 
-    // Detalhar ao clicar no Card
+    // ============================================================
+    // MÉTODOS AUXILIARES DE FILTRO
+    // ============================================================
+    _aplicarFiltros(respostas, orgaoFiltro, periodoFiltro) {
+        let filtradas = [...respostas];
+
+        // Filtro por órgão
+        if (orgaoFiltro !== 'todos') {
+            filtradas = filtradas.filter(r => r.orgaoOrigem === orgaoFiltro);
+        }
+
+        // Filtro por período
+        if (periodoFiltro !== 'todos') {
+            const agora = new Date();
+            let dataLimite = new Date();
+            
+            if (periodoFiltro === 'hoje') {
+                dataLimite = new Date(agora.getFullYear(), agora.getMonth(), agora.getDate());
+            } else if (periodoFiltro === 'semana') {
+                dataLimite.setDate(agora.getDate() - 7);
+            } else if (periodoFiltro === 'mes') {
+                dataLimite.setMonth(agora.getMonth() - 1);
+            }
+
+            filtradas = filtradas.filter(r => {
+                if (!r.timestamp) return false;
+                const data = new Date(r.timestamp);
+                return data >= dataLimite;
+            });
+        }
+
+        return filtradas;
+    },
+
+    _calcularVariacaoPeriodo(respostas, periodoFiltro) {
+        const agora = new Date();
+        let dataAtual = new Date();
+        let dataAnterior = new Date();
+
+        if (periodoFiltro === 'semana') {
+            dataAtual.setDate(agora.getDate() - 7);
+            dataAnterior.setDate(agora.getDate() - 14);
+        } else if (periodoFiltro === 'mes') {
+            dataAtual.setMonth(agora.getMonth() - 1);
+            dataAnterior.setMonth(agora.getMonth() - 2);
+        }
+
+        const atual = respostas.filter(r => {
+            if (!r.timestamp) return false;
+            const data = new Date(r.timestamp);
+            return data >= dataAtual;
+        });
+
+        const anterior = respostas.filter(r => {
+            if (!r.timestamp) return false;
+            const data = new Date(r.timestamp);
+            return data >= dataAnterior && data < dataAtual;
+        });
+
+        const perc = atual.length > 0 && anterior.length > 0 
+            ? ((atual.length - anterior.length) / anterior.length * 100)
+            : 0;
+
+        return {
+            atual: atual.length,
+            anterior: anterior.length,
+            percentual: Math.round(perc)
+        };
+    },
+
+    // ============================================================
+    // FILTROS FAVORITOS
+    // ============================================================
+    _carregarFiltrosFavoritos() {
+        try {
+            return JSON.parse(localStorage.getItem('sigep_filtros_favoritos') || '[]');
+        } catch { return []; }
+    },
+
+    salvarFiltroComoFavorito() {
+        const orgao = document.getElementById('filtro-orgao-bi')?.value || 'todos';
+        const periodo = document.getElementById('filtro-periodo-bi')?.value || 'todos';
+        const nome = prompt('⭐ Nome do filtro favorito:', `Filtro ${new Date().toLocaleDateString()}`);
+        
+        if (nome) {
+            const favoritos = this._carregarFiltrosFavoritos();
+            favoritos.push({ nome, orgao, periodo });
+            localStorage.setItem('sigep_filtros_favoritos', JSON.stringify(favoritos));
+            this._atualizarSelectFavoritos();
+            showNotification(`⭐ Filtro "${nome}" salvo!`, "success");
+        }
+    },
+
+    carregarFiltroFavorito(nome) {
+        if (!nome) return;
+        const favoritos = this._carregarFiltrosFavoritos();
+        const filtro = favoritos.find(f => f.nome === nome);
+        if (filtro) {
+            document.getElementById('filtro-orgao-bi').value = filtro.orgao;
+            document.getElementById('filtro-periodo-bi').value = filtro.periodo;
+            this.renderizarPainelBiCompleto(filtro.orgao, filtro.periodo);
+        }
+    },
+
+    _atualizarSelectFavoritos() {
+        const select = document.getElementById('filtro-favoritos');
+        if (!select) return;
+        const favoritos = this._carregarFiltrosFavoritos();
+        const valorAtual = select.value;
+        select.innerHTML = `
+            <option value="">Selecione um favorito...</option>
+            ${favoritos.map(f => `<option value="${f.nome}" ${f.nome === valorAtual ? 'selected' : ''}>⭐ ${f.nome}</option>`).join('')}
+        `;
+    },
+
+    // ============================================================
+    // GRÁFICOS COM CHART.JS
+    // ============================================================
+    _renderizarGrafico(canvasId, dados, tipo = 'bar') {
+        const canvas = document.getElementById(canvasId);
+        if (!canvas || typeof Chart === 'undefined') return;
+
+        const ctx = canvas.getContext('2d');
+        const labels = Object.keys(dados);
+        const values = Object.values(dados);
+
+        // Destroi gráfico anterior se existir
+        if (canvas._chart) {
+            canvas._chart.destroy();
+        }
+
+        const cores = [
+            'rgba(99, 102, 241, 0.8)',
+            'rgba(16, 185, 129, 0.8)',
+            'rgba(245, 158, 11, 0.8)',
+            'rgba(239, 68, 68, 0.8)',
+            'rgba(139, 92, 246, 0.8)',
+            'rgba(236, 72, 153, 0.8)'
+        ];
+
+        canvas._chart = new Chart(ctx, {
+            type: tipo === 'bar' ? 'bar' : 'bar',
+            data: {
+                labels: labels,
+                datasets: [{
+                    label: 'Frequência',
+                    data: values,
+                    backgroundColor: cores.slice(0, labels.length),
+                    borderColor: cores.slice(0, labels.length).map(c => c.replace('0.8', '1')),
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: { display: false }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: { font: { size: 9 } }
+                    },
+                    x: {
+                        ticks: { 
+                            font: { size: 8 },
+                            maxRotation: 45,
+                            minRotation: 0
+                        }
+                    }
+                }
+            }
+        });
+    },
+
+    _renderizarTodosGraficos() {
+        // Os gráficos são renderizados individualmente após cada card
+    },
+
+    // ============================================================
+    // AUTO-REFRESH
+    // ============================================================
+    iniciarAutoRefresh(intervalo = 300000) { // 5 minutos
+        if (this._refreshInterval) clearInterval(this._refreshInterval);
+        
+        this._refreshInterval = setInterval(() => {
+            const coletaId = window._dadosBiCache?.coletaId;
+            if (coletaId) {
+                this.abrirResultados(window.app.db, coletaId);
+                showNotification("🔄 Dados atualizados automaticamente!", "info");
+            }
+        }, intervalo);
+
+        document.getElementById('btn-parar-refresh')?.classList.remove('hidden');
+        showNotification("🔄 Auto-Refresh ativado (5 minutos)", "info");
+    },
+
+    pararAutoRefresh() {
+        if (this._refreshInterval) {
+            clearInterval(this._refreshInterval);
+            this._refreshInterval = null;
+        }
+        document.getElementById('btn-parar-refresh')?.classList.add('hidden');
+        showNotification("⏹ Auto-Refresh desativado", "info");
+    },
+
+    // ============================================================
+    // INSIGHTS AUTOMÁTICOS
+    // ============================================================
+    gerarInsights() {
+        const { respostas, dicionario } = window._dadosBiCache || {};
+        if (!respostas || respostas.length === 0) {
+            showNotification("Sem dados para gerar insights.", "error");
+            return;
+        }
+
+        let insights = [];
+        const totalRespostas = respostas.length;
+        const orgaos = new Set(respostas.map(r => r.orgaoOrigem));
+
+        // Análise de tendências numéricas
+        dicionario.forEach(campo => {
+            if (campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+                const valores = respostas
+                    .map(r => Number(r.dados?.[campo.id]?.resposta))
+                    .filter(n => !isNaN(n) && n > 0);
+                
+                if (valores.length > 0) {
+                    const soma = valores.reduce((a, b) => a + b, 0);
+                    const media = soma / valores.length;
+                    const max = Math.max(...valores);
+                    const min = Math.min(...valores);
+                    
+                    if (max > media * 2) {
+                        insights.push(`🔴 ${campo.label}: Valor máximo (${max}) é 2x maior que a média (${media.toFixed(1)})`);
+                    }
+                    if (min < media * 0.3 && min > 0) {
+                        insights.push(`🟢 ${campo.label}: Valor mínimo (${min}) é 70% menor que a média (${media.toFixed(1)})`);
+                    }
+                    if (valores.length === totalRespostas) {
+                        insights.push(`✅ ${campo.label}: Todos os ${totalRespostas} órgãos responderam`);
+                    }
+                }
+            }
+
+            // Análise de alternativas
+            if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+                const contagem = {};
+                respostas.forEach(r => {
+                    const val = r.dados?.[campo.id]?.resposta;
+                    if (val && val !== '--') contagem[val] = (contagem[val] || 0) + 1;
+                });
+
+                const entries = Object.entries(contagem);
+                if (entries.length > 0) {
+                    const max = entries.reduce((a, b) => a[1] > b[1] ? a : b);
+                    const min = entries.reduce((a, b) => a[1] < b[1] ? a : b);
+                    
+                    if (max[1] > totalRespostas * 0.5) {
+                        insights.push(`📊 ${campo.label}: "${max[0]}" foi escolhido por ${Math.round(max[1]/totalRespostas*100)}% dos órgãos`);
+                    }
+                    if (min[1] < totalRespostas * 0.1 && entries.length > 1) {
+                        insights.push(`⚠️ ${campo.label}: "${min[0]}" teve apenas ${min[1]} escolha(s) (${Math.round(min[1]/totalRespostas*100)}%)`);
+                    }
+                }
+            }
+        });
+
+        // Insights gerais
+        if (orgaos.size > 1) {
+            insights.push(`🏢 ${orgaos.size} órgãos participaram da coleta`);
+        }
+        if (totalRespostas < 3) {
+            insights.push(`📉 Poucos registros (${totalRespostas}). Considere ampliar a divulgação.`);
+        }
+
+        if (insights.length === 0) {
+            insights.push("✅ Nenhum insight relevante encontrado. Os dados estão equilibrados.");
+        }
+
+        this._mostrarModalInsights(insights);
+    },
+
+    _mostrarModalInsights(insights) {
+        const modal = document.createElement('div');
+        modal.id = 'modal-insights';
+        modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in';
+        modal.innerHTML = `
+            <div class="bg-white rounded-3xl max-w-lg w-full p-8 shadow-2xl border border-slate-200">
+                <div class="flex justify-between items-center mb-6">
+                    <h3 class="text-xl font-black text-slate-800">💡 Insights Automáticos</h3>
+                    <button onclick="this.closest('#modal-insights').remove()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
+                </div>
+                
+                <div class="space-y-3 max-h-96 overflow-y-auto pr-2">
+                    ${insights.map((insight, i) => `
+                        <div class="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-start gap-3">
+                            <span class="text-xl">${insight.match(/^.{1,2}/)?.[0] || '📌'}</span>
+                            <p class="text-sm text-slate-700 font-medium">${insight.substring(2)}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="mt-6 flex gap-3">
+                    <button onclick="this.closest('#modal-insights').remove()" class="w-full bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
+                        Fechar
+                    </button>
+                    <button onclick="ColetasBiService.exportarInsights()" class="w-full bg-purple-600 hover:bg-purple-700 text-white font-bold py-3 rounded-xl transition shadow-lg">
+                        📄 Exportar Insights
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+    },
+
+    exportarInsights() {
+        const modal = document.getElementById('modal-insights');
+        if (modal) {
+            const insights = modal.querySelectorAll('.p-4');
+            let texto = `INSIGHTS - ${new Date().toLocaleString()}\n${'='.repeat(50)}\n\n`;
+            insights.forEach(el => {
+                texto += el.textContent.trim() + '\n';
+            });
+            
+            // Criar blob e download
+            const blob = new Blob([texto], { type: 'text/plain' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `insights_${new Date().toISOString().slice(0,10)}.txt`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification("📄 Insights exportados!", "success");
+        }
+    },
+
+    // ============================================================
+    // DETALHAR POR ÓRGÃO (Cards Clicáveis)
+    // ============================================================
     detalharPorOrgao(campoId) {
         const { respostas, dicionario } = window._dadosBiCache || {};
         if (!respostas) return;
@@ -406,7 +870,97 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // ABRIR MODAL DE EXPORTAÇÃO CUSTOMIZADA
+    // EXPORTAÇÃO PARA EXCEL
+    // ============================================================
+    async exportarParaExcel() {
+        const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
+        if (!respostas || respostas.length === 0) {
+            showNotification("Sem dados para exportar.", "error");
+            return;
+        }
+
+        try {
+            const XLSX = await import('https://cdn.sheetjs.com/xlsx-0.20.2/package/dist/xlsx.full.min.js');
+            
+            const workbook = XLSX.utils.book_new();
+            
+            // Dados da planilha
+            const wsData = [
+                [`Relatório BI - ${coletaData.nomeDaColeta}`],
+                [`Gerado em: ${new Date().toLocaleString()}`],
+                [],
+                ['Data/Hora', 'Órgão', 'Responsável', ...dicionario.map(c => c.label)]
+            ];
+            
+            respostas.forEach(r => {
+                wsData.push([
+                    r.timestamp ? new Date(r.timestamp).toLocaleString() : '--',
+                    r.orgaoOrigem || '--',
+                    r.responsavel || '--',
+                    ...dicionario.map(c => r.dados?.[c.id]?.resposta || '--')
+                ]);
+            });
+            
+            const ws = XLSX.utils.aoa_to_sheet(wsData);
+            
+            // Ajustar largura das colunas
+            const colWidths = wsData[0].map((_, idx) => ({
+                wch: Math.max(...wsData.map(row => String(row[idx] || '').length)) + 2
+            }));
+            ws['!cols'] = colWidths;
+            
+            XLSX.utils.book_append_sheet(workbook, ws, 'Dados');
+            
+            // Criar segunda planilha com estatísticas
+            const statsData = [
+                ['ESTATÍSTICAS POR CAMPO'],
+                [],
+                ['Campo', 'Tipo', 'Total', 'Média', 'Mínimo', 'Máximo']
+            ];
+            
+            dicionario.forEach(campo => {
+                if (campo.tipo === 'numero') {
+                    const valores = respostas
+                        .map(r => Number(r.dados?.[campo.id]?.resposta))
+                        .filter(n => !isNaN(n) && n > 0);
+                    
+                    if (valores.length > 0) {
+                        const soma = valores.reduce((a, b) => a + b, 0);
+                        const media = soma / valores.length;
+                        statsData.push([
+                            campo.label,
+                            campo.tipo,
+                            soma,
+                            media.toFixed(2),
+                            Math.min(...valores),
+                            Math.max(...valores)
+                        ]);
+                    }
+                }
+            });
+            
+            const wsStats = XLSX.utils.aoa_to_sheet(statsData);
+            XLSX.utils.book_append_sheet(workbook, wsStats, 'Estatísticas');
+            
+            // Gerar arquivo
+            const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+            const blob = new Blob([wbout], { type: 'application/octet-stream' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Relatorio_BI_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.xlsx`;
+            a.click();
+            URL.revokeObjectURL(url);
+            
+            showNotification("📊 Relatório Excel gerado com sucesso!", "success");
+        } catch (err) {
+            console.error(err);
+            showNotification("Erro ao gerar Excel. Verifique a conexão.", "error");
+        }
+    },
+
+    // ============================================================
+    // ABRIR MODAL DE EXPORTAÇÃO
     // ============================================================
     abrirModalExportacao() {
         let modal = document.getElementById('modal-config-pdf');
@@ -421,47 +975,31 @@ export const ColetasBiService = {
         modal.innerHTML = `
             <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200">
                 <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-black text-slate-800">⚙️ Configurar Exportação PDF</h3>
+                    <h3 class="text-xl font-black text-slate-800">⚙️ Exportar Relatório</h3>
                     <button onclick="ColetasBiService.fecharModalExportacao()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
                 </div>
                 
                 <div class="space-y-4">
                     <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <p class="text-xs font-bold text-slate-400 uppercase mb-3">Selecione as seções do relatório:</p>
+                        <p class="text-xs font-bold text-slate-400 uppercase mb-3">Selecione o formato:</p>
                         
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-kpis" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">📈 Estatísticas e KPIs</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-distribuicao" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">🧩 Frequência de Respostas</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-tabela-orgao" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">📊 Tabela por Órgão</span>
-                        </label>
-                        
-                        <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
-                            <input type="checkbox" id="pdf-incluir-historico" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">📋 Histórico Detalhado</span>
-                        </label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <button onclick="ColetasBiService.gerarPDF()" class="p-4 bg-red-500 hover:bg-red-600 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
+                                📄 PDF
+                            </button>
+                            <button onclick="ColetasBiService.exportarParaExcel()" class="p-4 bg-green-600 hover:bg-green-700 text-white rounded-xl font-bold transition shadow-lg flex items-center justify-center gap-2">
+                                📊 Excel
+                            </button>
+                        </div>
                     </div>
                     
                     <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                        <p class="text-xs text-amber-700 font-medium">💡 O PDF será gerado com estatísticas avançadas (Soma, Média, Desvio Padrão e Frequência).</p>
+                        <p class="text-xs text-amber-700 font-medium">💡 Escolha o formato desejado para exportar os dados.</p>
                     </div>
                     
-                    <div class="grid grid-cols-2 gap-3 pt-4">
-                        <button onclick="ColetasBiService.fecharModalExportacao()" class="p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
-                            Cancelar
-                        </button>
-                        <button onclick="ColetasBiService.executarExportacaoCustomizada()" class="p-3 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-bold transition shadow-lg">
-                            📄 Gerar PDF
-                        </button>
-                    </div>
+                    <button onclick="ColetasBiService.fecharModalExportacao()" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
+                        Cancelar
+                    </button>
                 </div>
             </div>
         `;
@@ -474,24 +1012,17 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // EXPORTAÇÃO CUSTOMIZADA - COM ESTATÍSTICAS AVANÇADAS
+    // EXPORTAÇÃO PARA PDF (Versão Final)
     // ============================================================
+    async gerarPDF() {
+        this.fecharModalExportacao();
+        await this.executarExportacaoCustomizada();
+    },
+
     async executarExportacaoCustomizada() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
         if (!respostas || respostas.length === 0) {
             showNotification("Sem dados para exportar.", "error");
-            return;
-        }
-
-        const incluirKpis = document.getElementById('pdf-incluir-kpis')?.checked !== false;
-        const incluirDistribuicao = document.getElementById('pdf-incluir-distribuicao')?.checked !== false;
-        const incluirTabelaOrg = document.getElementById('pdf-incluir-tabela-orgao')?.checked !== false;
-        const incluirHist = document.getElementById('pdf-incluir-historico')?.checked !== false;
-
-        this.fecharModalExportacao();
-
-        if (!incluirKpis && !incluirDistribuicao && !incluirTabelaOrg && !incluirHist) {
-            showNotification("Selecione pelo menos uma seção para exportar.", "warning");
             return;
         }
 
@@ -511,267 +1042,191 @@ export const ColetasBiService = {
         let yPos = 40;
         const margemEsquerda = 14;
 
-        // ============================================================
-        // SEÇÃO 1: ESTATÍSTICAS E INDICADORES NUMÉRICOS
-        // ============================================================
-        if (incluirKpis) {
-            if (yPos > 170) { doc.addPage(); yPos = 20; }
+        // ===== SEÇÃO 1: ESTATÍSTICAS =====
+        if (yPos > 170) { doc.addPage(); yPos = 20; }
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("1. ESTATÍSTICAS E INDICADORES NUMÉRICOS", margemEsquerda, yPos);
-            yPos += 7;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("1. ESTATÍSTICAS E INDICADORES NUMÉRICOS", margemEsquerda, yPos);
+        yPos += 7;
 
-            const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
-            
-            if (camposNumericos.length > 0) {
-                const dataKpi = camposNumericos.map(c => {
-                    const numeros = respostas
-                        .map(r => Number(r.dados?.[c.id]?.resposta))
-                        .filter(n => !isNaN(n) && n !== 0);
-                    
-                    if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0"];
-                    
-                    const soma = numeros.reduce((a, b) => a + b, 0);
-                    const media = (soma / numeros.length).toFixed(1);
-                    const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
-                    const desvio = Math.sqrt(variancia).toFixed(1);
+        const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
+        
+        if (camposNumericos.length > 0) {
+            const dataKpi = camposNumericos.map(c => {
+                const numeros = respostas
+                    .map(r => Number(r.dados?.[c.id]?.resposta))
+                    .filter(n => !isNaN(n) && n !== 0);
+                
+                if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0"];
+                
+                const soma = numeros.reduce((a, b) => a + b, 0);
+                const media = (soma / numeros.length).toFixed(1);
+                const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
+                const desvio = Math.sqrt(variancia).toFixed(1);
 
-                    return [
-                        limparTexto(c.label),
-                        soma.toLocaleString('pt-BR'),
-                        media,
-                        desvio
-                    ];
-                });
-
-                doc.autoTable({
-                    startY: yPos,
-                    head: [['Métrica / Campo', 'Soma Total', 'Média', 'Desvio Padrão']],
-                    body: dataKpi,
-                    styles: { fontSize: 9, cellPadding: 2.5 },
-                    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
-                    columnStyles: {
-                        0: { cellWidth: 80 },
-                        1: { cellWidth: 50, halign: 'right' },
-                        2: { cellWidth: 40, halign: 'center' },
-                        3: { cellWidth: 40, halign: 'center' }
-                    }
-                });
-                yPos = doc.lastAutoTable.finalY + 12;
-            } else {
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(9);
-                doc.text("Nenhum campo numérico encontrado para exibir estatísticas.", margemEsquerda, yPos + 5);
-                yPos += 15;
-            }
-        }
-
-        // ============================================================
-        // SEÇÃO 2: FREQUÊNCIA DE RESPOSTAS
-        // ============================================================
-        if (incluirDistribuicao) {
-            if (yPos > 170) { doc.addPage(); yPos = 20; }
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("2. FREQUÊNCIA DE RESPOSTAS E ALTERNATIVAS", margemEsquerda, yPos);
-            yPos += 7;
-
-            const camposParaFrequencia = dicionario.filter(c => 
-                ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo) || 
-                c.tipo === 'numero' || 
-                c.label.toLowerCase().includes('idade')
-            );
-
-            let dadosFrequencia = [];
-            
-            camposParaFrequencia.forEach(campo => {
-                const contagem = {};
-                respostas.forEach(r => {
-                    const val = r.dados?.[campo.id]?.resposta;
-                    if (val !== undefined && val !== null && val !== '' && val !== '--') {
-                        contagem[val] = (contagem[val] || 0) + 1;
-                    }
-                });
-
-                Object.entries(contagem).forEach(([opcao, qtd]) => {
-                    const percent = ((qtd / respostas.length) * 100).toFixed(1);
-                    dadosFrequencia.push([
-                        limparTexto(campo.label),
-                        limparTexto(String(opcao)),
-                        String(qtd),
-                        `${percent}%`
-                    ]);
-                });
-            });
-
-            if (dadosFrequencia.length > 0) {
-                doc.autoTable({
-                    startY: yPos,
-                    head: [['Pergunta / Campo', 'Alternativa / Valor', 'Quantidade', 'Porcentagem']],
-                    body: dadosFrequencia,
-                    styles: { fontSize: 8, cellPadding: 2 },
-                    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
-                    columnStyles: {
-                        0: { cellWidth: 70 },
-                        1: { cellWidth: 60 },
-                        2: { cellWidth: 35, halign: 'center' },
-                        3: { cellWidth: 35, halign: 'center' }
-                    }
-                });
-                yPos = doc.lastAutoTable.finalY + 12;
-            } else {
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(9);
-                doc.text("Nenhum dado de frequência disponível.", margemEsquerda, yPos + 5);
-                yPos += 15;
-            }
-        }
-
-        // ============================================================
-        // SEÇÃO 3: TABELA CONSOLIDADA POR ÓRGÃO
-        // ============================================================
-        if (incluirTabelaOrg) {
-            if (yPos > 170) { doc.addPage(); yPos = 20; }
-
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", margemEsquerda, yPos);
-            yPos += 7;
-
-            const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
-            const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
-            
-            const head = [['Órgão / Origem', 'Total Envios', ...camposNumericos.map(c => limparTexto(c.label))]];
-            const body = orgaos.map(orgao => {
-                const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
                 return [
-                    limparTexto(orgao),
-                    envios.length.toString(),
-                    ...camposNumericos.map(c => {
-                        const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
-                        return soma.toLocaleString('pt-BR');
-                    })
+                    limparTexto(c.label),
+                    soma.toLocaleString('pt-BR'),
+                    media,
+                    desvio
                 ];
             });
 
-            const totalColunas = 2 + camposNumericos.length;
-            let tamanhoFonte = 9;
-            if (totalColunas > 10) tamanhoFonte = 7;
-            if (totalColunas > 15) tamanhoFonte = 6;
-            if (totalColunas > 20) tamanhoFonte = 5;
-
             doc.autoTable({
                 startY: yPos,
-                head: head,
-                body: body,
-                styles: { fontSize: tamanhoFonte, cellPadding: 1.5 },
-                headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
-                columnStyles: {
-                    0: { cellWidth: 40, fontStyle: 'bold' },
-                    1: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
-                },
-                didDrawPage: function(data) {
-                    const pageCount = doc.internal.getNumberOfPages();
-                    doc.setFontSize(7);
-                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
-                }
+                head: [['Métrica / Campo', 'Soma Total', 'Média', 'Desvio Padrão']],
+                body: dataKpi,
+                styles: { fontSize: 9, cellPadding: 2.5 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }
             });
             yPos = doc.lastAutoTable.finalY + 12;
         }
 
-        // ============================================================
-        // SEÇÃO 4: HISTÓRICO DETALHADO
-        // ============================================================
-        if (incluirHist) {
-            doc.addPage();
-            
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("4. HISTÓRICO DETALHADO DE RESPOSTAS", margemEsquerda, 18);
-            
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(9);
-            doc.text(`Total de ${respostas.length} registros encontrados.`, margemEsquerda, 25);
+        // ===== SEÇÃO 2: FREQUÊNCIA =====
+        if (yPos > 170) { doc.addPage(); yPos = 20; }
 
-            const head = [["Data/Hora", "Órgão", "Responsável", ...dicionario.map(c => limparTexto(c.label))]];
-            
-            const body = respostas.slice(0, 200).map(r => [
-                r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--',
-                limparTexto(r.orgaoOrigem || '--'),
-                limparTexto(r.responsavel || '--'),
-                ...dicionario.map(c => {
-                    const val = r.dados?.[c.id]?.resposta;
-                    return val !== undefined && val !== '' ? limparTexto(String(val)) : '--';
-                })
-            ]);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("2. FREQUÊNCIA DE RESPOSTAS", margemEsquerda, yPos);
+        yPos += 7;
 
-            const totalColunasHist = 3 + dicionario.length;
-            let tamanhoFonteHist = 8;
-            if (totalColunasHist > 10) tamanhoFonteHist = 6;
-            if (totalColunasHist > 15) tamanhoFonteHist = 5;
-            if (totalColunasHist > 20) tamanhoFonteHist = 4.5;
+        const camposParaFrequencia = dicionario.filter(c => 
+            ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo) || 
+            c.tipo === 'numero' || 
+            c.label.toLowerCase().includes('idade')
+        );
 
-            doc.autoTable({
-                startY: 30,
-                head: head,
-                body: body,
-                styles: { fontSize: tamanhoFonteHist, cellPadding: 1 },
-                headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
-                didDrawPage: function(data) {
-                    const pageCount = doc.internal.getNumberOfPages();
-                    doc.setFontSize(7);
-                    doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+        let dadosFrequencia = [];
+        
+        camposParaFrequencia.forEach(campo => {
+            const contagem = {};
+            respostas.forEach(r => {
+                const val = r.dados?.[campo.id]?.resposta;
+                if (val !== undefined && val !== null && val !== '' && val !== '--') {
+                    contagem[val] = (contagem[val] || 0) + 1;
                 }
             });
 
-            if (respostas.length > 200) {
-                const finalY = doc.lastAutoTable.finalY + 5;
-                doc.setFont("helvetica", "italic");
-                doc.setFontSize(8);
-                doc.text(`* Exibindo os 200 registros mais recentes de um total de ${respostas.length}.`, margemEsquerda, finalY);
+            Object.entries(contagem).forEach(([opcao, qtd]) => {
+                const percent = ((qtd / respostas.length) * 100).toFixed(1);
+                dadosFrequencia.push([
+                    limparTexto(campo.label),
+                    limparTexto(String(opcao)),
+                    String(qtd),
+                    `${percent}%`
+                ]);
+            });
+        });
+
+        if (dadosFrequencia.length > 0) {
+            doc.autoTable({
+                startY: yPos,
+                head: [['Pergunta', 'Alternativa / Valor', 'Quantidade', 'Porcentagem']],
+                body: dadosFrequencia,
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] }
+            });
+            yPos = doc.lastAutoTable.finalY + 12;
+        }
+
+        // ===== SEÇÃO 3: TABELA POR ÓRGÃO =====
+        if (yPos > 170) { doc.addPage(); yPos = 20; }
+
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", margemEsquerda, yPos);
+        yPos += 7;
+
+        const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
+        
+        const head = [['Órgão', 'Envios', ...camposNumericos.map(c => limparTexto(c.label))]];
+        const body = orgaos.map(orgao => {
+            const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
+            return [
+                limparTexto(orgao),
+                envios.length.toString(),
+                ...camposNumericos.map(c => {
+                    const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
+                    return soma.toLocaleString('pt-BR');
+                })
+            ];
+        });
+
+        const totalColunas = 2 + camposNumericos.length;
+        let tamanhoFonte = 9;
+        if (totalColunas > 10) tamanhoFonte = 7;
+        if (totalColunas > 15) tamanhoFonte = 6;
+        if (totalColunas > 20) tamanhoFonte = 5;
+
+        doc.autoTable({
+            startY: yPos,
+            head: head,
+            body: body,
+            styles: { fontSize: tamanhoFonte, cellPadding: 1.5 },
+            headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
+            columnStyles: {
+                0: { cellWidth: 40, fontStyle: 'bold' },
+                1: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
+            },
+            didDrawPage: function(data) {
+                const pageCount = doc.internal.getNumberOfPages();
+                doc.setFontSize(7);
+                doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
             }
+        });
+        yPos = doc.lastAutoTable.finalY + 12;
+
+        // ===== SEÇÃO 4: HISTÓRICO =====
+        doc.addPage();
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(14);
+        doc.text("4. HISTÓRICO DETALHADO", margemEsquerda, 18);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        doc.text(`Total de ${respostas.length} registros.`, margemEsquerda, 25);
+
+        const headHist = ["Data/Hora", "Órgão", "Responsável", ...dicionario.map(c => limparTexto(c.label))];
+        const bodyHist = respostas.slice(0, 200).map(r => [
+            r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--',
+            limparTexto(r.orgaoOrigem || '--'),
+            limparTexto(r.responsavel || '--'),
+            ...dicionario.map(c => {
+                const val = r.dados?.[c.id]?.resposta;
+                return val !== undefined && val !== '' ? limparTexto(String(val)) : '--';
+            })
+        ]);
+
+        const totalColunasHist = 3 + dicionario.length;
+        let tamanhoFonteHist = 8;
+        if (totalColunasHist > 10) tamanhoFonteHist = 6;
+        if (totalColunasHist > 15) tamanhoFonteHist = 5;
+        if (totalColunasHist > 20) tamanhoFonteHist = 4.5;
+
+        doc.autoTable({
+            startY: 30,
+            head: [headHist],
+            body: bodyHist,
+            styles: { fontSize: tamanhoFonteHist, cellPadding: 1 },
+            headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
+            didDrawPage: function(data) {
+                const pageCount = doc.internal.getNumberOfPages();
+                doc.setFontSize(7);
+                doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
+            }
+        });
+
+        if (respostas.length > 200) {
+            const finalY = doc.lastAutoTable.finalY + 5;
+            doc.setFont("helvetica", "italic");
+            doc.setFontSize(8);
+            doc.text(`* Exibindo os 200 registros mais recentes de um total de ${respostas.length}.`, margemEsquerda, finalY);
         }
 
         doc.save(`Relatorio_Analitico_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.pdf`);
-        showNotification("📄 Relatório PDF analítico gerado com sucesso!", "success");
-    },
-
-    // ============================================================
-    // MÉTODO AUXILIAR: DESENHAR DISTRIBUIÇÃO NO PDF
-    // ============================================================
-    _desenharDistribuicaoNoPDF(doc, campo, contagemOpcoes, totalRespostasCampo, xPos, yPos) {
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(9);
-        doc.text(limparTexto(campo.label.substring(0, 28)), xPos, yPos);
-        
-        let yAtual = yPos + 5;
-        const entries = Object.entries(contagemOpcoes);
-        
-        if (entries.length === 0) {
-            doc.setFont("helvetica", "italic");
-            doc.setFontSize(7);
-            doc.text("Sem respostas registradas", xPos, yAtual + 4);
-            return;
-        }
-
-        const maxItems = 6;
-        const itemsToShow = entries.slice(0, maxItems);
-        
-        itemsToShow.forEach(([opcao, qtd]) => {
-            const percentual = totalRespostasCampo > 0 ? ((qtd / totalRespostasCampo) * 100).toFixed(1) : 0;
-            doc.setFont("helvetica", "normal");
-            doc.setFontSize(7);
-            doc.text(`${limparTexto(opcao.substring(0, 22))}: ${qtd} (${percentual}%)`, xPos, yAtual);
-            yAtual += 4;
-        });
-
-        if (entries.length > maxItems) {
-            doc.setFont("helvetica", "italic");
-            doc.setFontSize(6);
-            doc.text(`+ ${entries.length - maxItems} outras opções...`, xPos, yAtual + 2);
-        }
+        showNotification("📄 Relatório PDF gerado com sucesso!", "success");
     }
 };
 
