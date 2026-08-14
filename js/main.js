@@ -156,6 +156,20 @@ class SIGEPApp {
         this.renderAdminContent();
     }
 
+
+    showColetasScreen() {
+        // Esconde todos
+        document.getElementById('pauta-selection-container')?.classList.add('hidden');
+        document.getElementById('dashboard-container')?.classList.add('hidden');
+        document.getElementById('app-container')?.classList.add('hidden');
+        document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('admin-container')?.classList.add('hidden');
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
+        
+        // Mostra Coletas e carrega a lista
+        document.getElementById('coletas-container')?.classList.remove('hidden');
+        this.listarColetas();
+    }
     renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
