@@ -1,4 +1,4 @@
-// js/coletasBuilderService.js - Construtor de Formulários Avançado com Exclusão
+// js/coletasBuilderService.js - Construtor de Formulários Avançado com Exclusão e Importação via JSON
 import { doc, updateDoc, deleteDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
@@ -31,7 +31,12 @@ export const ColetasBuilderService = {
                 <!-- BLOCO 1: DICIONÁRIO DE CAMPOS -->
                 <div class="bg-white border-2 border-indigo-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
-                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-3 mb-5">1. Estrutura do Formulário (Perguntas)</h3>
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 mb-5 gap-2">
+                        <h3 class="text-lg font-black text-slate-800">1. Estrutura do Formulário (Perguntas)</h3>
+                        <button type="button" id="btn-importar-json" class="bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs transition border border-slate-200 flex items-center gap-1.5 shadow-sm whitespace-nowrap">
+                            📥 Importar JSON
+                        </button>
+                    </div>
                     
                     <div id="lista-campos-dicionario" class="grid grid-cols-1 md:grid-cols-2 gap-3 mb-6 max-h-64 overflow-y-auto pr-2">
                         ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic w-full">Nenhuma pergunta adicionada.</p>' : 
@@ -179,6 +184,11 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId); 
         });
 
+        // Importação em massa de perguntas via JSON estruturado
+        document.getElementById('btn-importar-json')?.addEventListener('click', () => {
+            this.importarJsonLivre(coletaId, coletaData);
+        });
+
         document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
             const orgao = document.getElementById('novo-link-orgao').value.trim();
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
@@ -228,6 +238,49 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Erro ao remover pergunta.", "error");
+        }
+    },
+
+    // ============================================================
+    // IMPORTAÇÃO EM MASSA DE PERGUNTAS VIA JSON LIVRE
+    // ============================================================
+    // Aceita colar uma lista JSON de perguntas e as anexa ao dicionário
+    // de campos já existente na coleta, evitando cadastro manual repetitivo.
+    // Formato esperado: [{ "label"/"pergunta": "...", "tipo": "...", "opcoes": [...] }, ...]
+    async importarJsonLivre(coletaId, coletaData) {
+        const jsonInput = prompt("Cole aqui o JSON estruturado com as perguntas (formato de lista):");
+        if (!jsonInput) return;
+        try {
+            const novasPerguntas = JSON.parse(jsonInput);
+            if (!Array.isArray(novasPerguntas)) {
+                return showNotification("O formato do JSON deve ser uma lista [...]", "error");
+            }
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+
+            // Re-busca os dados mais recentes do banco para evitar sobrescrever
+            // alterações feitas em outra aba/sessão desde a última renderização.
+            const { getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const freshSnap = await getDoc(docRef);
+            const camposAtuais = freshSnap.exists()
+                ? (freshSnap.data().dicionarioDeCampos || [])
+                : (coletaData.dicionarioDeCampos || []);
+
+            // Garante que cada item importado tenha um ID único caso não venha no JSON
+            const formatadas = novasPerguntas.map(p => ({
+                id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
+                label: p.label || p.pergunta || 'Nova Pergunta',
+                tipo: p.tipo || 'texto_curto',
+                opcoes: p.opcoes || []
+            }));
+
+            const listaFinal = [...camposAtuais, ...formatadas];
+            await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
+            showNotification(`${formatadas.length} perguntas importadas com sucesso!`, "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
         }
     },
 
