@@ -1,6 +1,18 @@
 // js/coletasBiService.js - Serviço de BI e Relatórios Avançado para Coletas
 import { showNotification, escapeHTML } from './utils.js';
 
+// ============================================================
+// FUNÇÃO AUXILIAR: LIMPAR CARACTERES ESPECIAIS
+// ============================================================
+function limparTexto(texto) {
+    if (typeof texto !== 'string') return texto;
+    return texto
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
+        .replace(/[ºª°]/g, '') // Remove símbolos que causam erro no PDF
+        .replace(/[&]/g, 'e') // Substitui & por 'e'
+        .replace(/[^\x00-\x7F]/g, ""); // Remove qualquer outro caractere não-ASCII
+}
+
 export const ColetasBiService = {
     async abrirResultados(db, coletaId) {
         const container = document.getElementById('container-construtor-coleta');
@@ -117,35 +129,134 @@ export const ColetasBiService = {
             return;
         }
 
-        // 1. CARDS DE KPIS CLICÁVEIS PARA CAMPOS NUMÉRICOS
-        const camposNumericos = dicionario.filter(c => c.tipo === 'numero');
-        if (camposNumericos.length > 0) {
-            html += `
-                <div>
-                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📈 Cards de Métricas (Clique para detalhar por órgão)</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-            `;
-            camposNumericos.forEach(campo => {
-                let somaTotal = 0;
-                respostasFiltradas.forEach(r => {
-                    if (r.dados && r.dados[campo.id]) {
-                        somaTotal += Number(r.dados[campo.id].resposta) || 0;
-                    }
-                });
+        // ============================================================
+        // 1. PROCESSAMENTO DE MÉTRICAS NUMÉRICAS E IDADES (Híbrido)
+        // ============================================================
+        let kpiHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-6">`;
+        let frequenciasHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">`;
+        let temFrequenciaNumerica = false;
 
-                html += `
+        dicionario.forEach(campo => {
+            const valores = respostasFiltradas
+                .map(r => r.dados?.[campo.id]?.resposta)
+                .filter(v => v !== undefined && v !== null && v !== '--');
+
+            if (valores.length === 0) return;
+
+            // Se for campo numérico ou contiver "idade" no nome
+            if (campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+                const numeros = valores.map(Number);
+                const soma = numeros.reduce((a, b) => a + b, 0);
+                const media = (soma / numeros.length).toFixed(1);
+                
+                // Calcula o Desvio Padrão
+                const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
+                const desvioPadrao = Math.sqrt(variancia).toFixed(1);
+
+                // Card Principal de Estatística (Soma, Média e Desvio Padrão)
+                kpiHtml += `
                     <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
-                        <p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
-                        <p class="text-3xl font-black text-indigo-600 mt-3">${somaTotal.toLocaleString('pt-BR')}</p>
-                        <span class="text-[10px] text-slate-400 mt-1 font-medium flex items-center gap-1">
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
+                        <div class="mt-3 grid grid-cols-3 gap-2 text-center">
+                            <div class="bg-indigo-50 p-2 rounded-xl">
+                                <p class="text-xl font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
+                                <p class="text-[8px] font-bold text-indigo-400 uppercase">Soma</p>
+                            </div>
+                            <div class="bg-emerald-50 p-2 rounded-xl">
+                                <p class="text-xl font-black text-emerald-600">${media}</p>
+                                <p class="text-[8px] font-bold text-emerald-400 uppercase">Média</p>
+                            </div>
+                            <div class="bg-amber-50 p-2 rounded-xl">
+                                <p class="text-xl font-black text-amber-600">${desvioPadrao}</p>
+                                <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio P.</p>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
                             📊 ${respostasFiltradas.length} submissões
                             <span class="text-indigo-400 text-[8px] ml-auto">Clique para detalhar</span>
                         </span>
                     </div>
                 `;
+
+                // Tratamento Híbrido: Frequência (quantas vezes cada número foi escolhido)
+                const contagemNumerica = {};
+                numeros.forEach(num => {
+                    contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
+                });
+
+                const chavesOrdenadas = Object.keys(contagemNumerica).sort((a, b) => Number(a) - Number(b));
+
+                if (chavesOrdenadas.length > 0) {
+                    temFrequenciaNumerica = true;
+                    frequenciasHtml += `
+                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                            <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">📊 Frequência por ${escapeHTML(campo.label)}</p>
+                            <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
+                    `;
+                    chavesOrdenadas.forEach(num => {
+                        const qtd = contagemNumerica[num];
+                        const percent = ((qtd / numeros.length) * 100).toFixed(0);
+                        frequenciasHtml += `
+                            <div>
+                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
+                                    <span>Valor ${num}:</span>
+                                    <span class="text-indigo-600">${qtd} vez(es) (${percent}%)</span>
+                                </div>
+                                <div class="w-full bg-slate-100 rounded-full h-2">
+                                    <div class="bg-indigo-500 h-2 rounded-full" style="width: ${percent}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    frequenciasHtml += `</div></div>`;
+                }
+            }
+        });
+
+        html += kpiHtml + `</div>`;
+
+        // ============================================================
+        // 2. PROCESSAMENTO DE ALTERNATIVAS (Seleção / Booleano / Múltipla Escolha)
+        // ============================================================
+        const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
+        
+        if (camposSelecao.length > 0 || temFrequenciaNumerica) {
+            if (!temFrequenciaNumerica) html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">`;
+            
+            camposSelecao.forEach(campo => {
+                const contagem = {};
+                respostasFiltradas.forEach(r => {
+                    const val = r.dados?.[campo.id]?.resposta;
+                    if (val && val !== '--') contagem[val] = (contagem[val] || 0) + 1;
+                });
+
+                html += `
+                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
+                        <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">🧩 ${escapeHTML(campo.label)}</p>
+                        <div class="space-y-3 max-h-44 overflow-y-auto pr-1">
+                            ${Object.keys(contagem).length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhuma resposta.</p>' : 
+                                Object.entries(contagem).map(([key, count]) => {
+                                    const percent = ((count / respostasFiltradas.length) * 100).toFixed(0);
+                                    return `
+                                        <div>
+                                            <div class="flex justify-between text-xs mb-1">
+                                                <span class="font-bold text-slate-600">${escapeHTML(key)}</span>
+                                                <span class="font-black text-slate-800">${count} (${percent}%)</span>
+                                            </div>
+                                            <div class="w-full bg-slate-100 rounded-full h-2">
+                                                <div class="bg-emerald-500 h-2 rounded-full" style="width: ${percent}%"></div>
+                                            </div>
+                                        </div>
+                                    `;
+                                }).join('')}
+                        </div>
+                    </div>
+                `;
             });
-            html += `</div></div>`;
+
+            if (temFrequenciaNumerica) html += frequenciasHtml;
+            html += `</div>`;
         }
 
         // DIV ONDE APARECEM OS DETALHES CLICADOS
@@ -153,59 +264,8 @@ export const ColetasBiService = {
             <div id="bi-detalhes-dinamicos" class="hidden bg-white p-6 rounded-2xl border shadow-sm"></div>
         `;
 
-        // 2. AGRUPAMENTO INTELIGENTE PARA OPÇÕES / MÚLTIPLA ESCOLHA
-        const camposSelecao = dicionario.filter(c => c.tipo === 'selecao' || c.tipo === 'multipla_escolha' || c.tipo === 'booleano');
-        if (camposSelecao.length > 0) {
-            html += `
-                <div>
-                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">🧩 Distribuição de Respostas</h4>
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            `;
-            
-            camposSelecao.forEach(campo => {
-                const contagemOpcoes = {};
-                respostasFiltradas.forEach(r => {
-                    if (r.dados && r.dados[campo.id]) {
-                        const val = r.dados[campo.id].resposta;
-                        if (val && val !== '--') {
-                            contagemOpcoes[val] = (contagemOpcoes[val] || 0) + 1;
-                        }
-                    }
-                });
-
-                const totalRespostasCampo = Object.values(contagemOpcoes).reduce((a, b) => a + b, 0);
-
-                html += `
-                    <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">${escapeHTML(campo.label)}</p>
-                        <div class="space-y-2 max-h-44 overflow-y-auto pr-1">
-                `;
-
-                if (Object.keys(contagemOpcoes).length === 0) {
-                    html += `<p class="text-xs text-slate-400 italic">Nenhuma resposta registrada ainda.</p>`;
-                } else {
-                    for (const [opcao, qtd] of Object.entries(contagemOpcoes)) {
-                        const percentual = totalRespostasCampo > 0 ? ((qtd / totalRespostasCampo) * 100).toFixed(1) : 0;
-                        html += `
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                                    <span>${escapeHTML(opcao)}</span>
-                                    <span class="text-indigo-600">${qtd} (${percentual}%)</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2">
-                                    <div class="bg-indigo-500 h-2 rounded-full" style="width: ${percentual}%"></div>
-                                </div>
-                            </div>
-                        `;
-                    }
-                }
-
-                html += `</div></div>`;
-            });
-            html += `</div></div>`;
-        }
-
         // 3. TABELA CONSOLIDADA POR ÓRGÃO
+        const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
         html += `
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
@@ -316,7 +376,6 @@ export const ColetasBiService = {
             return acc;
         }, {});
 
-        // Ordenar por valor decrescente
         const sorted = Object.entries(agrupado).sort((a, b) => b[1] - a[1]);
         const total = sorted.reduce((sum, [, val]) => sum + val, 0);
 
@@ -350,14 +409,12 @@ export const ColetasBiService = {
     // ABRIR MODAL DE EXPORTAÇÃO CUSTOMIZADA
     // ============================================================
     abrirModalExportacao() {
-        // Verifica se o modal já existe
         let modal = document.getElementById('modal-config-pdf');
         if (modal) {
             modal.classList.remove('hidden');
             return;
         }
 
-        // Cria o modal
         modal = document.createElement('div');
         modal.id = 'modal-config-pdf';
         modal.className = 'fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4 animate-fade-in';
@@ -374,17 +431,17 @@ export const ColetasBiService = {
                         
                         <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
                             <input type="checkbox" id="pdf-incluir-kpis" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">📈 Cards de Métricas (KPIs)</span>
+                            <span class="text-sm font-medium">📈 Estatísticas e KPIs</span>
                         </label>
                         
                         <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
                             <input type="checkbox" id="pdf-incluir-distribuicao" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">🧩 Distribuição de Respostas</span>
+                            <span class="text-sm font-medium">🧩 Frequência de Respostas</span>
                         </label>
                         
                         <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
                             <input type="checkbox" id="pdf-incluir-tabela-orgao" checked class="h-5 w-5 text-emerald-600 rounded">
-                            <span class="text-sm font-medium">📊 Tabela Consolidada por Órgão</span>
+                            <span class="text-sm font-medium">📊 Tabela por Órgão</span>
                         </label>
                         
                         <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
@@ -394,8 +451,7 @@ export const ColetasBiService = {
                     </div>
                     
                     <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                        <p class="text-xs text-amber-700 font-medium">💡 O PDF será gerado apenas com as seções selecionadas acima, na ordem em que aparecem.</p>
-                        <p class="text-[10px] text-amber-600 mt-1">📌 Tabelas com muitas colunas usarão fonte reduzida para caber na página.</p>
+                        <p class="text-xs text-amber-700 font-medium">💡 O PDF será gerado com estatísticas avançadas (Soma, Média, Desvio Padrão e Frequência).</p>
                     </div>
                     
                     <div class="grid grid-cols-2 gap-3 pt-4">
@@ -418,7 +474,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // EXPORTAÇÃO CUSTOMIZADA - VERSÃO OTIMIZADA COM TABELAS
+    // EXPORTAÇÃO CUSTOMIZADA - COM ESTATÍSTICAS AVANÇADAS
     // ============================================================
     async executarExportacaoCustomizada() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
@@ -427,28 +483,25 @@ export const ColetasBiService = {
             return;
         }
 
-        // Lê as configurações do modal
         const incluirKpis = document.getElementById('pdf-incluir-kpis')?.checked !== false;
         const incluirDistribuicao = document.getElementById('pdf-incluir-distribuicao')?.checked !== false;
         const incluirTabelaOrg = document.getElementById('pdf-incluir-tabela-orgao')?.checked !== false;
         const incluirHist = document.getElementById('pdf-incluir-historico')?.checked !== false;
 
-        // Fecha o modal
         this.fecharModalExportacao();
 
-        // Verifica se pelo menos uma seção foi selecionada
         if (!incluirKpis && !incluirDistribuicao && !incluirTabelaOrg && !incluirHist) {
             showNotification("Selecione pelo menos uma seção para exportar.", "warning");
             return;
         }
 
         const { jsPDF } = window.jspdf;
-        const doc = new jsPDF('landscape'); // Paisagem para caber mais colunas
+        const doc = new jsPDF('landscape');
         
-        // ===== CABEÇALHO DO RELATÓRIO =====
+        // ===== CABEÇALHO =====
         doc.setFont("helvetica", "bold");
         doc.setFontSize(18);
-        doc.text(`RELATÓRIO ANALÍTICO - ${coletaData.nomeDaColeta.toUpperCase()}`, 14, 18);
+        doc.text(limparTexto(`RELATÓRIO ANALÍTICO - ${coletaData.nomeDaColeta.toUpperCase()}`), 14, 18);
         
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
@@ -459,101 +512,120 @@ export const ColetasBiService = {
         const margemEsquerda = 14;
 
         // ============================================================
-        // SEÇÃO 1: KPIs (Resumo de Indicadores)
+        // SEÇÃO 1: ESTATÍSTICAS E INDICADORES NUMÉRICOS
         // ============================================================
         if (incluirKpis) {
+            if (yPos > 170) { doc.addPage(); yPos = 20; }
+
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("📈 RESUMO DE INDICADORES ACUMULADOS", margemEsquerda, yPos);
+            doc.text("1. ESTATÍSTICAS E INDICADORES NUMÉRICOS", margemEsquerda, yPos);
             yPos += 7;
 
-            const camposNumericos = dicionario.filter(c => c.tipo === 'numero');
+            const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
             
             if (camposNumericos.length > 0) {
                 const dataKpi = camposNumericos.map(c => {
-                    const soma = respostas.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
-                    return [c.label, soma.toLocaleString('pt-BR')];
+                    const numeros = respostas
+                        .map(r => Number(r.dados?.[c.id]?.resposta))
+                        .filter(n => !isNaN(n) && n !== 0);
+                    
+                    if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0"];
+                    
+                    const soma = numeros.reduce((a, b) => a + b, 0);
+                    const media = (soma / numeros.length).toFixed(1);
+                    const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
+                    const desvio = Math.sqrt(variancia).toFixed(1);
+
+                    return [
+                        limparTexto(c.label),
+                        soma.toLocaleString('pt-BR'),
+                        media,
+                        desvio
+                    ];
                 });
 
                 doc.autoTable({
                     startY: yPos,
-                    head: [['📊 Métrica', 'Total Acumulado']],
+                    head: [['Métrica / Campo', 'Soma Total', 'Média', 'Desvio Padrão']],
                     body: dataKpi,
-                    styles: { fontSize: 10, cellPadding: 3 },
-                    headStyles: { 
-                        fillColor: [79, 70, 229], // Indigo
-                        textColor: [255, 255, 255],
-                        fontStyle: 'bold'
-                    },
+                    styles: { fontSize: 9, cellPadding: 2.5 },
+                    headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
                     columnStyles: {
-                        0: { cellWidth: 100 },
-                        1: { cellWidth: 80, halign: 'right', fontStyle: 'bold' }
+                        0: { cellWidth: 80 },
+                        1: { cellWidth: 50, halign: 'right' },
+                        2: { cellWidth: 40, halign: 'center' },
+                        3: { cellWidth: 40, halign: 'center' }
                     }
                 });
-                yPos = doc.lastAutoTable.finalY + 15;
+                yPos = doc.lastAutoTable.finalY + 12;
             } else {
                 doc.setFont("helvetica", "italic");
                 doc.setFontSize(9);
-                doc.text("Nenhum campo numérico encontrado para exibir KPIs.", margemEsquerda, yPos + 5);
+                doc.text("Nenhum campo numérico encontrado para exibir estatísticas.", margemEsquerda, yPos + 5);
                 yPos += 15;
             }
         }
 
         // ============================================================
-        // SEÇÃO 2: DISTRIBUIÇÃO DE RESPOSTAS
+        // SEÇÃO 2: FREQUÊNCIA DE RESPOSTAS
         // ============================================================
         if (incluirDistribuicao) {
-            const camposSelecao = dicionario.filter(c => c.tipo === 'selecao' || c.tipo === 'multipla_escolha' || c.tipo === 'booleano');
+            if (yPos > 170) { doc.addPage(); yPos = 20; }
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("2. FREQUÊNCIA DE RESPOSTAS E ALTERNATIVAS", margemEsquerda, yPos);
+            yPos += 7;
+
+            const camposParaFrequencia = dicionario.filter(c => 
+                ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo) || 
+                c.tipo === 'numero' || 
+                c.label.toLowerCase().includes('idade')
+            );
+
+            let dadosFrequencia = [];
             
-            if (camposSelecao.length > 0) {
-                // Verifica se precisa de nova página
-                if (yPos > 170) {
-                    doc.addPage();
-                    yPos = 20;
-                }
-
-                doc.setFont("helvetica", "bold");
-                doc.setFontSize(14);
-                doc.text("🧩 DISTRIBUIÇÃO DE RESPOSTAS", margemEsquerda, yPos);
-                yPos += 7;
-
-                // Organiza em grid de 2 colunas
-                const colunas = 2;
-                const larguraColuna = 130;
-                
-                camposSelecao.forEach((campo, index) => {
-                    const contagemOpcoes = {};
-                    respostas.forEach(r => {
-                        if (r.dados && r.dados[campo.id]) {
-                            const val = r.dados[campo.id].resposta;
-                            if (val && val !== '--') {
-                                contagemOpcoes[val] = (contagemOpcoes[val] || 0) + 1;
-                            }
-                        }
-                    });
-
-                    const totalRespostasCampo = Object.values(contagemOpcoes).reduce((a, b) => a + b, 0);
-                    const col = index % colunas;
-                    const row = Math.floor(index / colunas);
-                    const xPos = margemEsquerda + (col * larguraColuna);
-                    const yPosAtual = yPos + (row * 45);
-
-                    // Verifica se cabe na página
-                    if (yPosAtual > 180) {
-                        doc.addPage();
-                        yPos = 20;
-                        const newY = yPos + 7;
-                        doc.setFont("helvetica", "bold");
-                        doc.setFontSize(14);
-                        doc.text("🧩 DISTRIBUIÇÃO DE RESPOSTAS (continuação)", margemEsquerda, yPos);
-                        this._desenharDistribuicaoNoPDF(doc, campo, contagemOpcoes, totalRespostasCampo, margemEsquerda + (col * larguraColuna), newY + 7);
-                    } else {
-                        this._desenharDistribuicaoNoPDF(doc, campo, contagemOpcoes, totalRespostasCampo, xPos, yPosAtual);
+            camposParaFrequencia.forEach(campo => {
+                const contagem = {};
+                respostas.forEach(r => {
+                    const val = r.dados?.[campo.id]?.resposta;
+                    if (val !== undefined && val !== null && val !== '' && val !== '--') {
+                        contagem[val] = (contagem[val] || 0) + 1;
                     }
                 });
 
-                const totalRows = Math.ceil(camposSelecao.length / colunas);
-                yPos += (totalRows * 45) + 10;
+                Object.entries(contagem).forEach(([opcao, qtd]) => {
+                    const percent = ((qtd / respostas.length) * 100).toFixed(1);
+                    dadosFrequencia.push([
+                        limparTexto(campo.label),
+                        limparTexto(String(opcao)),
+                        String(qtd),
+                        `${percent}%`
+                    ]);
+                });
+            });
+
+            if (dadosFrequencia.length > 0) {
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Pergunta / Campo', 'Alternativa / Valor', 'Quantidade', 'Porcentagem']],
+                    body: dadosFrequencia,
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
+                    columnStyles: {
+                        0: { cellWidth: 70 },
+                        1: { cellWidth: 60 },
+                        2: { cellWidth: 35, halign: 'center' },
+                        3: { cellWidth: 35, halign: 'center' }
+                    }
+                });
+                yPos = doc.lastAutoTable.finalY + 12;
+            } else {
+                doc.setFont("helvetica", "italic");
+                doc.setFontSize(9);
+                doc.text("Nenhum dado de frequência disponível.", margemEsquerda, yPos + 5);
+                yPos += 15;
             }
         }
 
@@ -561,28 +633,21 @@ export const ColetasBiService = {
         // SEÇÃO 3: TABELA CONSOLIDADA POR ÓRGÃO
         // ============================================================
         if (incluirTabelaOrg) {
-            // Verifica se precisa de nova página
-            if (yPos > 170) {
-                doc.addPage();
-                yPos = 20;
-            }
+            if (yPos > 170) { doc.addPage(); yPos = 20; }
 
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("📊 TABELA CONSOLIDADA POR ÓRGÃO", margemEsquerda, yPos);
+            doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", margemEsquerda, yPos);
             yPos += 7;
 
             const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
-            const camposNumericos = dicionario.filter(c => c.tipo === 'numero');
+            const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
             
-            // Monta cabeçalho
-            const head = [['🏢 Órgão', '📋 Total Envios', ...camposNumericos.map(c => c.label)]];
-            
-            // Monta corpo
+            const head = [['Órgão / Origem', 'Total Envios', ...camposNumericos.map(c => limparTexto(c.label))]];
             const body = orgaos.map(orgao => {
                 const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
                 return [
-                    orgao, 
+                    limparTexto(orgao),
                     envios.length.toString(),
                     ...camposNumericos.map(c => {
                         const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
@@ -591,7 +656,6 @@ export const ColetasBiService = {
                 ];
             });
 
-            // Determina tamanho da fonte baseado no número de colunas
             const totalColunas = 2 + camposNumericos.length;
             let tamanhoFonte = 9;
             if (totalColunas > 10) tamanhoFonte = 7;
@@ -602,54 +666,47 @@ export const ColetasBiService = {
                 startY: yPos,
                 head: head,
                 body: body,
-                styles: { 
-                    fontSize: tamanhoFonte, 
-                    cellPadding: 1.5 
-                },
-                headStyles: { 
-                    fillColor: [16, 185, 129], // Emerald
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold'
-                },
+                styles: { fontSize: tamanhoFonte, cellPadding: 1.5 },
+                headStyles: { fillColor: [16, 185, 129], textColor: [255, 255, 255] },
                 columnStyles: {
                     0: { cellWidth: 40, fontStyle: 'bold' },
                     1: { cellWidth: 25, halign: 'center', fontStyle: 'bold' }
                 },
                 didDrawPage: function(data) {
-                    // Adiciona rodapé com número da página
                     const pageCount = doc.internal.getNumberOfPages();
                     doc.setFontSize(7);
                     doc.text(`Página ${data.pageNumber} de ${pageCount}`, 14, doc.internal.pageSize.height - 10);
                 }
             });
-            yPos = doc.lastAutoTable.finalY + 15;
+            yPos = doc.lastAutoTable.finalY + 12;
         }
 
         // ============================================================
-        // SEÇÃO 4: HISTÓRICO DETALHADO (NOVA PÁGINA)
+        // SEÇÃO 4: HISTÓRICO DETALHADO
         // ============================================================
         if (incluirHist) {
-            // Adiciona nova página para o histórico
             doc.addPage();
             
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("📋 HISTÓRICO DETALHADO DE RESPOSTAS", margemEsquerda, 18);
+            doc.text("4. HISTÓRICO DETALHADO DE RESPOSTAS", margemEsquerda, 18);
             
             doc.setFont("helvetica", "normal");
             doc.setFontSize(9);
             doc.text(`Total de ${respostas.length} registros encontrados.`, margemEsquerda, 25);
 
-            const head = [["🕐 Data/Hora", "🏢 Órgão", "👤 Responsável", ...dicionario.map(c => c.label)]];
+            const head = [["Data/Hora", "Órgão", "Responsável", ...dicionario.map(c => limparTexto(c.label))]];
             
             const body = respostas.slice(0, 200).map(r => [
                 r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--',
-                r.orgaoOrigem || '--',
-                r.responsavel || '--',
-                ...dicionario.map(c => r.dados?.[c.id]?.resposta || '--')
+                limparTexto(r.orgaoOrigem || '--'),
+                limparTexto(r.responsavel || '--'),
+                ...dicionario.map(c => {
+                    const val = r.dados?.[c.id]?.resposta;
+                    return val !== undefined && val !== '' ? limparTexto(String(val)) : '--';
+                })
             ]);
 
-            // Determina tamanho da fonte baseado no número de colunas
             const totalColunasHist = 3 + dicionario.length;
             let tamanhoFonteHist = 8;
             if (totalColunasHist > 10) tamanhoFonteHist = 6;
@@ -660,15 +717,8 @@ export const ColetasBiService = {
                 startY: 30,
                 head: head,
                 body: body,
-                styles: { 
-                    fontSize: tamanhoFonteHist, 
-                    cellPadding: 1 
-                },
-                headStyles: { 
-                    fillColor: [51, 65, 85], // Slate
-                    textColor: [255, 255, 255],
-                    fontStyle: 'bold'
-                },
+                styles: { fontSize: tamanhoFonteHist, cellPadding: 1 },
+                headStyles: { fillColor: [51, 65, 85], textColor: [255, 255, 255] },
                 didDrawPage: function(data) {
                     const pageCount = doc.internal.getNumberOfPages();
                     doc.setFontSize(7);
@@ -676,7 +726,6 @@ export const ColetasBiService = {
                 }
             });
 
-            // Adiciona observação se houver mais registros
             if (respostas.length > 200) {
                 const finalY = doc.lastAutoTable.finalY + 5;
                 doc.setFont("helvetica", "italic");
@@ -685,9 +734,8 @@ export const ColetasBiService = {
             }
         }
 
-        // ===== FINALIZA =====
-        doc.save(`Relatorio_BI_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.pdf`);
-        showNotification("📄 Relatório PDF gerado com sucesso!", "success");
+        doc.save(`Relatorio_Analitico_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.pdf`);
+        showNotification("📄 Relatório PDF analítico gerado com sucesso!", "success");
     },
 
     // ============================================================
@@ -696,7 +744,7 @@ export const ColetasBiService = {
     _desenharDistribuicaoNoPDF(doc, campo, contagemOpcoes, totalRespostasCampo, xPos, yPos) {
         doc.setFont("helvetica", "bold");
         doc.setFontSize(9);
-        doc.text(campo.label.substring(0, 28), xPos, yPos);
+        doc.text(limparTexto(campo.label.substring(0, 28)), xPos, yPos);
         
         let yAtual = yPos + 5;
         const entries = Object.entries(contagemOpcoes);
@@ -715,7 +763,7 @@ export const ColetasBiService = {
             const percentual = totalRespostasCampo > 0 ? ((qtd / totalRespostasCampo) * 100).toFixed(1) : 0;
             doc.setFont("helvetica", "normal");
             doc.setFontSize(7);
-            doc.text(`${opcao.substring(0, 22)}: ${qtd} (${percentual}%)`, xPos, yAtual);
+            doc.text(`${limparTexto(opcao.substring(0, 22))}: ${qtd} (${percentual}%)`, xPos, yAtual);
             yAtual += 4;
         });
 
