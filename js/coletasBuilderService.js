@@ -1,4 +1,4 @@
-// js/coletasBuilderService.js - Construtor Avançado com Edição, Reordenação e Numeração Personalizável
+// js/coletasBuilderService.js - Construtor Avançado com Edição de Tipo e Opções
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
@@ -7,7 +7,7 @@ export const ColetasBuilderService = {
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
-        const formatoNumeracao = coletaData.formatoNumeracao || 'numero'; // 'numero', 'romano', 'letra'
+        const formatoNumeracao = coletaData.formatoNumeracao || 'numero';
 
         const opcoesCamposHtml = campos.map((c, index) => `
             <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition">
@@ -63,13 +63,13 @@ export const ColetasBuilderService = {
                                         <span class="font-black text-indigo-600 text-xs bg-indigo-50 px-2 py-1 rounded border border-indigo-100 shrink-0">${this.formatarPrefixo(index + 1, formatoNumeracao)}</span>
                                         <div class="w-full">
                                             <p class="font-bold text-slate-700 text-sm">${escapeHTML(c.label)}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${c.tipo.replace('_', ' ')} ${c.opcoes?.length ? `| 🏷️ ${c.opcoes.length} opções` : ''}</p>
+                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${c.tipo.replace('_', ' ')} ${c.opcoes?.length ? `| 🏷️ Opções: [${c.opcoes.join(', ')}]` : ''}</p>
                                         </div>
                                     </div>
                                     <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
                                         ${index > 0 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index - 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Subir">⬆️</button>` : ''}
                                         ${index < campos.length - 1 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index + 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Descer">⬇️</button>` : ''}
-                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index}, '${escapeHTML(c.label).replace(/'/g, "\\'")}', '${c.tipo}')" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded text-xs font-bold ml-1" title="Editar Pergunta">✏️ Editar</button>
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index})" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded text-xs font-bold ml-1" title="Editar Pergunta">✏️ Editar</button>
                                         <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-xs font-bold" title="Remover">✕</button>
                                     </div>
                                 </div>
@@ -285,12 +285,7 @@ export const ColetasBuilderService = {
         }
     },
 
-    async abrirModalEditarCampo(coletaId, index, labelAtual, tipoAtual) {
-        const novoTexto = prompt("Edite o enunciado da pergunta:", labelAtual);
-        if (novoTexto === null) return; // Cancelou
-        const textoLimpo = novoTexto.trim();
-        if (!textoLimpo) return showNotification("A pergunta não pode ficar vazia.", "error");
-
+    async abrirModalEditarCampo(coletaId, index) {
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -299,9 +294,33 @@ export const ColetasBuilderService = {
             if (!freshSnap.exists()) return;
 
             let campos = freshSnap.data().dicionarioDeCampos || [];
-            if (campos[index]) {
-                campos[index].label = textoLimpo;
+            const campo = campos[index];
+            if (!campo) return;
+
+            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
+            if (novoLabel === null) return;
+            const labelLimpo = novoLabel.trim();
+            if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
+
+            const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
+            const novoTipo = prompt(`Editar Tipo da Pergunta:\n(Opções: numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha)`, campo.tipo);
+            if (novoTipo === null) return;
+            const tipoLimpo = novoTipo.trim();
+
+            let novasOpcoes = campo.opcoes || [];
+            if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
+                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
+                if (opcoesStr !== null) {
+                    novasOpcoes = opcoesStr.split(',').map(o => o.trim()).filter(o => o !== '');
+                }
             }
+
+            campos[index] = {
+                ...campo,
+                label: labelLimpo,
+                tipo: tipoLimpo,
+                opcoes: novasOpcoes
+            };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
             showNotification("Pergunta atualizada com sucesso!", "success");
