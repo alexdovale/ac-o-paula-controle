@@ -2724,21 +2724,19 @@ window.abrirConstrutor = async (coletaId) => {
     if (!window.app || !window.app.db) return;
     
     try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "formularios_coleta", coletaId);
         const docSnap = await getDoc(docRef);
         
         if (docSnap.exists() && window.ColetasBuilderService) {
             const container = document.getElementById('container-construtor-coleta');
             
-            // Desenha os campos e links na tela
-            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data());
+            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data(), coletaId);
             container.classList.remove('hidden');
             
-            // Ativa os cliques de "Adicionar Campo" e "Gerar Link"
             window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
             
-            // Rola a tela suavemente para baixo para o usuário ver o construtor
-            document.getElementById('modal-gerenciador-coletas').querySelector('.overflow-y-auto').scrollBy({ top: 300, behavior: 'smooth' });
+            document.getElementById('coletas-container').querySelector('.overflow-y-auto, div.bg-white')?.scrollBy({ top: 300, behavior: 'smooth' });
         } else {
             showNotification("Erro: Serviço construtor não carregado.", "error");
         }
@@ -2748,7 +2746,131 @@ window.abrirConstrutor = async (coletaId) => {
     }
 };
 
-window.verResultados = (coletaId) => {
-    // Isso vai te mostrar que o botão tá funcionando para implementarmos o painel final depois!
-    alert("O painel de BI/Resultados será implementado na próxima etapa!\n\nID da Coleta Selecionada: " + coletaId);
+window.verResultados = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    
+    const container = document.getElementById('container-construtor-coleta');
+    container.classList.remove('hidden');
+    container.innerHTML = `
+        <div class="p-8 text-center animate-pulse">
+            <p class="text-indigo-600 font-bold">Consolidando dados e gerando BI...</p>
+        </div>
+    `;
+
+    try {
+        const { doc, getDoc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        
+        // 1. Busca os metadados da coleta (para saber as perguntas)
+        const coletaSnap = await getDoc(doc(window.app.db, "formularios_coleta", coletaId));
+        if (!coletaSnap.exists()) {
+            container.innerHTML = `<p class="text-red-500 font-bold p-6">Coleta não encontrada.</p>`;
+            return;
+        }
+        const coletaData = coletaSnap.data();
+        const dicionario = coletaData.dicionarioDeCampos || [];
+
+        // 2. Busca todas as respostas enviadas para esta coleta
+        const q = query(collection(window.app.db, "respostas_coleta"), where("coletaId", "==", coletaId));
+        const respostasSnap = await getDocs(q);
+
+        const respostas = [];
+        respostasSnap.forEach(rDoc => respostas.push(rDoc.data()));
+
+        // 3. Monta o HTML do BI Consolidado
+        let htmlResultados = `
+            <div class="space-y-6 animate-fade-in bg-slate-50 p-6 rounded-2xl border border-slate-200">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-5 rounded-xl border shadow-sm">
+                    <div>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Painel de BI / Consolidação:</span>
+                        <h3 class="text-xl font-black text-slate-800">${escapeHTML(coletaData.nomeDaColeta)}</h3>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-800 px-4 py-2 rounded-xl font-black text-sm">
+                        📊 Total de Envios: ${respostas.length}
+                    </div>
+                </div>
+        `;
+
+        if (respostas.length === 0) {
+            htmlResultados += `
+                <div class="bg-white p-12 text-center rounded-xl border">
+                    <p class="text-slate-400 font-bold">Nenhum dado foi enviado por nenhum órgão ou parceiro ainda.</p>
+                    <p class="text-xs text-slate-400 mt-1">Copie o link gerado e envie para os responsáveis preencherem.</p>
+                </div>
+            `;
+        } else {
+            // Separa os campos numéricos para somatório automático
+            const camposNumericos = dicionario.filter(c => c.tipo === 'numero');
+            
+            if (camposNumericos.length > 0) {
+                htmlResultados += `<div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4">`;
+                camposNumericos.forEach(campo => {
+                    let somaTotal = 0;
+                    respostas.forEach(r => {
+                        if (r.dados && r.dados[campo.id]) {
+                            somaTotal += Number(r.dados[campo.id].resposta) || 0;
+                        }
+                    });
+
+                    htmlResultados += `
+                        <div class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm flex flex-col justify-between">
+                            <p class="text-xs font-bold text-slate-400 uppercase tracking-wider">${escapeHTML(campo.label)}</p>
+                            <p class="text-3xl font-black text-indigo-600 mt-2">${somaTotal.toLocaleString('pt-BR')}</p>
+                            <span class="text-[10px] text-slate-400 mt-1">Soma consolidada de todos os órgãos</span>
+                        </div>
+                    `;
+                });
+                html.closed = `</div>`;
+                htmlResultados += `</div>`;
+            }
+
+            // Tabela Detalhada por Envio / Órgão
+            htmlResultados += `
+                <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                    <div class="p-4 bg-slate-100 border-b border-slate-200 font-black text-slate-700 text-sm uppercase">
+                        📋 Histórico Detalhado de Respostas Recebidas
+                    </div>
+                    <div class="overflow-x-auto">
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead class="bg-slate-50 text-slate-500 text-xs uppercase border-b border-slate-200">
+                                <tr>
+                                    <th class="p-3.5">Data / Hora</th>
+                                    <th class="p-3.5">Órgão / Origem</th>
+                                    <th class="p-3.5">Responsável</th>
+            `;
+            
+            dicionario.forEach(c => {
+                htmlResultados += `<th class="p-3.5">${escapeHTML(c.label)}</th>`;
+            });
+
+            htmlResultados += `</tr></thead><tbody class="divide-y divide-slate-100">`;
+
+            respostas.forEach(r => {
+                const dataFormatada = r.timestamp ? new Date(r.timestamp).toLocaleString('pt-BR') : '--';
+                htmlResultados += `
+                    <tr class="hover:bg-slate-50/80 transition">
+                        <td class="p-3.5 text-xs text-slate-500 font-medium whitespace-nowrap">${dataFormatada}</td>
+                        <td class="p-3.5 font-bold text-slate-800">${escapeHTML(r.orgaoOrigem || 'Desconhecido')}</td>
+                        <td class="p-3.5 text-slate-600">${escapeHTML(r.responsavel || '--')}</td>
+                `;
+
+                dicionario.forEach(c => {
+                    const respostaItem = r.dados && r.dados[c.id] ? r.dados[c.id].resposta : '--';
+                    htmlResultados += `<td class="p-3.5 font-semibold text-slate-700">${escapeHTML(String(respostaItem))}</td>`;
+                });
+
+                htmlResultados += `</tr>`;
+            });
+
+            htmlResultados += `</tbody></table></div></div>`;
+        }
+
+        htmlResultados += `</div>`;
+        container.innerHTML = htmlResultados;
+        
+        container.scrollIntoView({ behavior: 'smooth' });
+
+    } catch (err) {
+        console.error(err);
+        container.innerHTML = `<p class="text-red-500 font-bold p-6">Erro ao gerar painel de resultados.</p>`;
+    }
 };
