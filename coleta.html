@@ -6,7 +6,11 @@
     <title>Coleta de Dados - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
-    <style> body { font-family: 'Inter', sans-serif; background-color: #f8fafc; } </style>
+    <style> 
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; } 
+        .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
 
@@ -19,13 +23,13 @@
         </div>
 
         <!-- FAIXA DE CARREGAMENTO -->
-        <div id="loading-box" class="text-center py-16">
+        <div id="loading-box" class="text-center py-16 animate-fade-in">
             <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
             <p class="text-slate-500 font-bold">Verificando segurança do link...</p>
         </div>
 
         <!-- TELA DE AUTENTICAÇÃO (SÓ APARECE SE EXIGIR SENHA) -->
-        <div id="auth-box" class="hidden">
+        <div id="auth-box" class="hidden animate-fade-in">
             <div class="bg-indigo-600 p-8 text-center">
                 <h1 class="text-3xl font-black text-white">Acesso Restrito</h1>
                 <p class="text-indigo-200 mt-2 font-medium">Formulário de Coleta Estratégica</p>
@@ -40,12 +44,12 @@
                     <input type="password" id="input-senha" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition" placeholder="••••••••">
                 </div>
                 <button id="btn-validar-senha" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-lg mt-2">Desbloquear Formulário</button>
-                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-3 rounded-lg border border-red-100">Senha incorreta.</p>
+                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-3 rounded-lg border border-red-100">Senha incorreta. Tente novamente.</p>
             </div>
         </div>
 
         <!-- FORMULÁRIO DINÂMICO -->
-        <div id="form-box" class="hidden">
+        <div id="form-box" class="hidden animate-fade-in">
             
             <!-- HEADER DE IDENTIFICAÇÃO E SAIR -->
             <div id="header-coleta" class="bg-indigo-50 border-b border-indigo-100 p-4 px-6 flex justify-between items-center text-xs">
@@ -58,35 +62,48 @@
 
             <div class="bg-emerald-600 p-6 text-white">
                 <h1 id="titulo-coleta" class="text-2xl font-black leading-tight"></h1>
+                <p id="subtitulo-coleta" class="text-emerald-100 text-sm mt-1 font-medium">Preencha os dados abaixo com atenção</p>
             </div>
 
             <form id="form-estatisticas" class="p-6 sm:p-8 space-y-6">
                 
+                <!-- RESPONSÁVEL -->
                 <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200">
-                    <label class="block text-sm font-bold text-slate-800 mb-2">Seu Nome (Responsável pelo envio)</label>
-                    <input type="text" id="input-responsavel" required placeholder="Ex: João (Técnico Judiciário)" class="w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                    <label class="block text-sm font-bold text-slate-800 mb-2">Seu Nome (Responsável pelo envio) <span class="text-red-500">*</span></label>
+                    <input type="text" id="input-responsavel" required placeholder="Ex: João Silva (Técnico Judiciário)" class="w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
                 </div>
 
+                <!-- CAMPOS DINÂMICOS -->
                 <div class="border-t border-slate-200 pt-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Preencha os Dados Abaixo</h3>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">📋 Preencha os Dados Abaixo</h3>
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
-                <div class="pt-6">
-                    <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg py-4 rounded-xl transition shadow-xl">
-                        Enviar Respostas
+                <!-- HISTÓRICO DE ENVIOS (NOVO) -->
+                <div id="historico-container" class="hidden mt-6 p-5 bg-slate-50 border border-slate-200 rounded-2xl animate-fade-in">
+                    <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📊 Registro de Envios (Sessão Atual)</h4>
+                    <div id="historico-envios-lista" class="space-y-2 max-h-40 overflow-y-auto"></div>
+                </div>
+
+                <!-- BOTÃO ENVIAR -->
+                <div class="pt-4">
+                    <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg py-4 rounded-xl transition shadow-xl disabled:opacity-50 disabled:cursor-not-allowed">
+                        📤 Enviar Respostas
                     </button>
                 </div>
+
+                <!-- MENSAGEM DE STATUS ABAIXO DO BOTÃO -->
+                <div id="status-message" class="text-center text-sm font-medium hidden"></div>
             </form>
         </div>
     </div>
 
-    <!-- TOAST DE NOTIFICAÇÃO SIMPLES -->
-    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all"></div>
+    <!-- TOAST DE NOTIFICAÇÃO -->
+    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, getDocs, addDoc, query, where } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
 
         const app = initializeApp(firebaseConfig);
@@ -98,14 +115,23 @@
         let coletaEncontradaId = null;
         let coletaConfigMaster = null;
         let linkConfig = null;
-        let contadorEnvios = 0;
+        let historicoEnvios = [];
 
         function mostrarToast(mensagem, tipo = 'success') {
             const toast = document.getElementById('toast-notificacao');
             toast.textContent = mensagem;
-            toast.className = `fixed bottom-5 right-5 text-white px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
+            toast.className = `fixed bottom-5 right-5 px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600' : 'bg-red-600'}`;
             toast.classList.remove('hidden');
-            setTimeout(() => { toast.classList.add('hidden'); }, 3500);
+            setTimeout(() => { toast.classList.add('hidden'); }, 4000);
+        }
+
+        function showError(msg) {
+            document.getElementById('loading-box').innerHTML = `
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">!</div>
+                <p class="text-slate-800 font-black text-xl mb-2">Ops...</p>
+                <p class="text-slate-500 font-medium">${msg}</p>
+                <button onclick="window.location.reload()" class="mt-6 bg-indigo-600 text-white px-6 py-3 rounded-xl font-bold hover:bg-indigo-700 transition">Recarregar Página</button>
+            `;
         }
 
         async function inicializar() {
@@ -143,13 +169,24 @@
             }
         }
 
+        // Autenticação com Enter
+        document.getElementById('input-senha').addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btn-validar-senha').click();
+            }
+        });
+
         document.getElementById('btn-validar-senha').addEventListener('click', () => {
             const senhaDigitada = document.getElementById('input-senha').value.trim();
             if (senhaDigitada === linkConfig.senha) {
                 document.getElementById('auth-box').classList.add('hidden');
                 montarFormulario();
             } else {
-                document.getElementById('msg-erro-senha').classList.remove('hidden');
+                const msgErro = document.getElementById('msg-erro-senha');
+                msgErro.classList.remove('hidden');
+                setTimeout(() => msgErro.classList.add('hidden'), 3000);
+                document.getElementById('input-senha').value = '';
+                document.getElementById('input-senha').focus();
             }
         });
 
@@ -168,44 +205,57 @@
             const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
             const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
 
+            if (camposDesteLink.length === 0) {
+                container.innerHTML = `<div class="bg-amber-50 border border-amber-200 p-6 rounded-xl text-center">
+                    <p class="text-amber-700 font-bold">⚠️ Nenhum campo disponível para este link.</p>
+                    <p class="text-amber-600 text-sm mt-1">Entre em contato com o administrador.</p>
+                </div>`;
+                return;
+            }
+
             container.innerHTML = camposDesteLink.map(campo => {
                 let inputHtml = '';
-                const baseClass = "w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition text-slate-700";
+                const baseClass = "w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-slate-700";
+                const baseClassSelect = "w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none transition text-slate-700 cursor-pointer";
 
                 if (campo.tipo === 'numero') {
-                    inputHtml = `<input type="number" id="f_${campo.id}" required class="${baseClass} font-bold text-lg">`;
+                    inputHtml = `<input type="number" id="f_${campo.id}" required class="${baseClass} font-bold text-lg" step="any">`;
                 } else if (campo.tipo === 'texto_longo') {
-                    inputHtml = `<textarea id="f_${campo.id}" rows="3" required class="${baseClass}"></textarea>`;
+                    inputHtml = `<textarea id="f_${campo.id}" rows="3" required class="${baseClass} resize-y" placeholder="Digite aqui..."></textarea>`;
+                } else if (campo.tipo === 'texto_curto') {
+                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}" placeholder="Digite aqui...">`;
                 } else if (campo.tipo === 'data') {
                     inputHtml = `<input type="date" id="f_${campo.id}" required class="${baseClass}">`;
                 } else if (campo.tipo === 'booleano') {
                     inputHtml = `
-                        <select id="f_${campo.id}" required class="${baseClass} font-bold cursor-pointer">
+                        <select id="f_${campo.id}" required class="${baseClassSelect} font-bold">
                             <option value="">Selecione...</option>
-                            <option value="Sim">Sim</option>
-                            <option value="Não">Não</option>
+                            <option value="Sim">✅ Sim</option>
+                            <option value="Não">❌ Não</option>
                         </select>`;
                 } else if (campo.tipo === 'selecao') {
                     inputHtml = `
-                        <select id="f_${campo.id}" required class="${baseClass} cursor-pointer">
+                        <select id="f_${campo.id}" required class="${baseClassSelect}">
                             <option value="">Selecione uma opção...</option>
                             ${(campo.opcoes || []).map(opt => `<option value="${opt}">${opt}</option>`).join('')}
                         </select>`;
                 } else if (campo.tipo === 'multipla_escolha') {
-                    inputHtml = `<div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">` + 
+                    inputHtml = `<div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">` + 
                         (campo.opcoes || []).map((opt, idx) => `
                         <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-white rounded-lg transition">
                             <input type="radio" name="f_${campo.id}" value="${opt}" required class="h-5 w-5 text-emerald-600 border-slate-300 focus:ring-emerald-500">
                             <span class="text-sm font-medium text-slate-700">${opt}</span>
                         </label>`).join('') + `</div>`;
                 } else {
-                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}">`;
+                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}" placeholder="Digite aqui...">`;
                 }
 
+                const requiredStar = '<span class="text-red-500 ml-1">*</span>';
                 return `
                     <div class="mb-2">
-                        <label class="block text-sm font-black text-slate-800 mb-2">${campo.label}</label>
+                        <label class="block text-sm font-black text-slate-800 mb-2">${campo.label} ${requiredStar}</label>
                         ${inputHtml}
+                        ${campo.tipo === 'multipla_escolha' ? `<p class="text-xs text-slate-400 mt-2">Selecione uma das opções acima</p>` : ''}
                     </div>
                 `;
             }).join('');
@@ -214,31 +264,56 @@
         document.getElementById('form-estatisticas').addEventListener('submit', async (e) => {
             e.preventDefault();
             const btn = document.getElementById('btn-enviar-dados');
+            const statusMsg = document.getElementById('status-message');
+            
             btn.disabled = true;
-            btn.textContent = "Enviando dados...";
+            btn.textContent = "⏳ Enviando dados...";
+            statusMsg.classList.add('hidden');
 
             const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
+            if (!nomeResponsavel) {
+                mostrarToast("Preencha o nome do responsável.", "error");
+                btn.disabled = false;
+                btn.textContent = "📤 Enviar Respostas";
+                return;
+            }
+            
             localStorage.setItem('sigep_responsavel_coleta', nomeResponsavel);
 
             const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
             const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
 
             const respostas = {};
+            let camposVazios = [];
+
             camposDesteLink.forEach(campo => {
                 let val;
                 if(campo.tipo === 'multipla_escolha') {
-                    val = document.querySelector(`input[name="f_${campo.id}"]:checked`)?.value || '';
+                    const selected = document.querySelector(`input[name="f_${campo.id}"]:checked`);
+                    val = selected?.value || '';
                 } else {
-                    val = document.getElementById(`f_${campo.id}`).value;
+                    const el = document.getElementById(`f_${campo.id}`);
+                    val = el ? el.value : '';
                     if (campo.tipo === 'numero') val = Number(val) || 0;
                 }
                 
+                if (!val || val === '') {
+                    camposVazios.push(campo.label);
+                }
+
                 respostas[campo.id] = {
                     pergunta: campo.label,
                     resposta: val,
                     tipo: campo.tipo
                 };
             });
+
+            if (camposVazios.length > 0) {
+                mostrarToast(`⚠️ Preencha: ${camposVazios.slice(0, 3).join(', ')}${camposVazios.length > 3 ? '...' : ''}`, "error");
+                btn.disabled = false;
+                btn.textContent = "📤 Enviar Respostas";
+                return;
+            }
 
             const payload = {
                 coletaId: coletaEncontradaId,
@@ -250,11 +325,29 @@
 
             try {
                 await addDoc(collection(db, "respostas_coleta"), payload);
-                contadorEnvios++;
                 
-                mostrarToast(`Envio #${contadorEnvios} realizado com sucesso!`, "success");
+                // Adiciona ao histórico
+                historicoEnvios.unshift({
+                    horario: new Date().toLocaleTimeString(),
+                    responsavel: nomeResponsavel
+                });
                 
-                // Limpa apenas os campos de resposta mantendo o nome e a sessão abertos
+                const historicoContainer = document.getElementById('historico-container');
+                const historicoLista = document.getElementById('historico-envios-lista');
+                
+                historicoLista.innerHTML = historicoEnvios.map(item => `
+                    <div class="flex justify-between items-center bg-white p-3 rounded-lg border border-slate-200">
+                        <span class="font-bold text-slate-700 text-sm">${item.horario}</span>
+                        <span class="text-sm text-slate-600">${item.responsavel}</span>
+                        <span class="text-emerald-600 font-black text-xs bg-emerald-50 px-3 py-1 rounded-full">✅ Enviado</span>
+                    </div>
+                `).join('');
+                
+                historicoContainer.classList.remove('hidden');
+
+                mostrarToast(`✅ Envio #${historicoEnvios.length} realizado com sucesso!`, "success");
+                
+                // Limpa campos mantendo o nome
                 camposDesteLink.forEach(campo => {
                     if (campo.tipo === 'multipla_escolha') {
                         document.querySelectorAll(`input[name="f_${campo.id}"]`).forEach(el => el.checked = false);
@@ -264,24 +357,26 @@
                     }
                 });
 
+                // Mostra status de sucesso
+                statusMsg.textContent = `✅ Último envio: ${new Date().toLocaleTimeString()} - ${historicoEnvios.length} envio(s) registrado(s)`;
+                statusMsg.className = 'text-center text-sm font-medium text-emerald-600 bg-emerald-50 p-3 rounded-xl';
+                statusMsg.classList.remove('hidden');
+
                 btn.disabled = false;
-                btn.textContent = "Enviar Respostas";
+                btn.textContent = "📤 Enviar Respostas";
+
             } catch (err) {
                 console.error(err);
-                mostrarToast("Falha de rede. Tente enviar novamente.", "error");
+                mostrarToast("❌ Falha de rede. Tente enviar novamente.", "error");
+                statusMsg.textContent = "❌ Erro ao enviar. Verifique sua conexão.";
+                statusMsg.className = 'text-center text-sm font-medium text-red-600 bg-red-50 p-3 rounded-xl';
+                statusMsg.classList.remove('hidden');
                 btn.disabled = false;
-                btn.textContent = "Enviar Respostas";
+                btn.textContent = "📤 Enviar Respostas";
             }
         });
 
-        function showError(msg) {
-            document.getElementById('loading-box').innerHTML = `
-                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">!</div>
-                <p class="text-slate-800 font-black text-xl mb-2">Ops...</p>
-                <p class="text-slate-500 font-medium">${msg}</p>
-            `;
-        }
-
+        // Inicializa
         inicializar();
     </script>
 </body>
