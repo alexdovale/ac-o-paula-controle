@@ -1,4 +1,4 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER)
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -117,6 +117,8 @@ class SIGEPApp {
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('coletas-container')?.classList.add('hidden');
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
         
         // Mostra o container de seleção de pautas
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
@@ -148,6 +150,7 @@ class SIGEPApp {
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('coletas-container')?.classList.add('hidden');
         
         // Mostra a tela do admin
         document.getElementById('admin-container')?.classList.remove('hidden');
@@ -2819,7 +2822,6 @@ window.verResultados = async (coletaId) => {
                         </div>
                     `;
                 });
-                html.closed = `</div>`;
                 htmlResultados += `</div>`;
             }
 
