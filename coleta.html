@@ -2,99 +2,127 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Coleta de Dados - SIGEP</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    
+    <!-- ========================================== -->
+    <!-- CONFIGURAÇÕES DE PWA (APP INSTALÁVEL)      -->
+    <!-- ========================================== -->
+    <title>Coleta Estratégica - SIGEP</title>
+    <meta name="theme-color" content="#1d4ed8"> <!-- Azul do topo do App -->
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="SIGEP Coleta">
+    
+    <!-- Ícones para iOS e Android -->
+    <link rel="apple-touch-icon" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
+    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
+    
+    <!-- Manifest Injetado (Para Adicionar à Tela Inicial sem arquivos extras) -->
+    <link rel="manifest" href='data:application/manifest+json;utf8,{"name":"Coleta Estratégica SIGEP","short_name":"SIGEP Coleta","start_url":".","display":"standalone","background_color":"#f1f5f9","theme_color":"#1d4ed8","icons":[{"src":"https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6","sizes":"192x192","type":"image/png"}]}'>
+
+    <!-- Tailwind & Fontes -->
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
     <style> 
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; } 
+        body { 
+            font-family: 'Inter', sans-serif; 
+            background-color: #f1f5f9; 
+            -webkit-tap-highlight-color: transparent; /* Remove piscar azul ao tocar botões no mobile */
+        } 
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Ajuste para textarea e inputs ficarem maiores no mobile evitando zoom automático no iOS */
+        input[type="text"], input[type="number"], input[type="date"], input[type="password"], textarea, select {
+            font-size: 16px !important;
+        }
     </style>
 </head>
-<body class="min-h-screen flex items-center justify-center p-4">
+<body class="min-h-screen flex items-start sm:items-center justify-center p-0 sm:p-4">
 
-    <div id="app-coleta" class="bg-white w-full max-w-2xl rounded-2xl shadow-xl overflow-hidden border border-slate-200">
+    <!-- Container adaptado para mobile (ocupa 100% no celular e vira card arredondado no PC) -->
+    <div id="app-coleta" class="bg-white w-full max-w-2xl sm:rounded-2xl sm:shadow-xl overflow-hidden min-h-screen sm:min-h-full sm:border border-slate-200 flex flex-col">
         
-        <!-- LOGO DO SIGEP -->
-        <div class="bg-slate-50 p-6 border-b border-slate-200 flex justify-center">
+        <div class="bg-slate-50 p-6 border-b border-slate-200 flex justify-center sticky top-0 z-10">
             <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                 alt="Logo SIGEP" class="h-12 w-auto grayscale">
+                 alt="Logo SIGEP" class="h-10 sm:h-12 w-auto grayscale">
         </div>
 
-        <!-- FAIXA DE CARREGAMENTO -->
-        <div id="loading-box" class="text-center py-16 animate-fade-in">
-            <div class="w-10 h-10 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-4"></div>
-            <p class="text-slate-500 font-bold uppercase tracking-wider text-sm">Validando Acesso de Segurança...</p>
+        <div id="loading-box" class="text-center py-20 animate-fade-in flex-1">
+            <div class="w-12 h-12 border-4 border-slate-200 border-t-blue-600 rounded-full animate-spin mx-auto mb-6"></div>
+            <p class="text-slate-500 font-bold uppercase tracking-wider text-sm px-6">Validando Credenciais e Segurança...</p>
         </div>
 
-        <!-- TELA DE AUTENTICAÇÃO -->
-        <div id="auth-box" class="hidden animate-fade-in">
+        <div id="auth-box" class="hidden animate-fade-in flex-1">
             <div class="bg-slate-800 p-8 text-center border-b border-slate-700">
                 <h1 class="text-2xl font-black text-white uppercase tracking-wide">🔒 Acesso Restrito</h1>
                 <p class="text-slate-400 mt-2 font-medium text-sm">Plataforma de Coleta Estratégica</p>
             </div>
-            <div class="p-8 space-y-5">
-                <div class="bg-slate-50 border border-slate-200 p-4 rounded-xl text-center">
+            <div class="p-6 sm:p-8 space-y-6">
+                <div class="bg-slate-50 border border-slate-200 p-5 rounded-xl text-center">
                     <p class="text-xs text-slate-500 font-bold uppercase mb-1">🏢 Identificação de Origem</p>
-                    <p id="auth-orgao-nome" class="font-black text-slate-800 text-lg"></p>
+                    <p id="auth-orgao-nome" class="font-black text-slate-800 text-xl"></p>
                 </div>
                 <div>
                     <label class="block text-sm font-bold text-slate-700 mb-2 uppercase tracking-wide">🔑 Credencial de Acesso</label>
-                    <input type="password" id="input-senha" class="w-full p-3.5 bg-slate-50 border border-slate-300 rounded-lg outline-none focus:border-blue-500 focus:bg-white transition" placeholder="Digite sua senha...">
+                    <input type="password" id="input-senha" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-100 transition shadow-inner" placeholder="Digite sua senha...">
                 </div>
-                <button id="btn-validar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-lg transition shadow mt-2 uppercase tracking-wider">Acessar Formulário</button>
-                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-3 rounded-lg border border-red-200">❌ Credencial incorreta. Tente novamente.</p>
+                <button id="btn-validar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-4 rounded-xl transition shadow-lg mt-4 uppercase tracking-wider active:scale-[0.98]">
+                    Acessar Formulário
+                </button>
+                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-4 rounded-xl border border-red-200">❌ Credencial incorreta. Tente novamente.</p>
             </div>
         </div>
 
-        <!-- FORMULÁRIO DINÂMICO -->
-        <div id="form-box" class="hidden animate-fade-in">
+        <div id="form-box" class="hidden animate-fade-in flex-1 flex flex-col">
             
-            <div id="header-coleta" class="bg-slate-50 border-b border-slate-200 p-4 px-6 flex flex-col sm:flex-row justify-between items-start sm:items-center text-xs gap-3">
-                <div>
-                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">🏢 Unidade Cadastrada:</p>
-                    <span class="font-black text-slate-700 text-sm" id="label-orgao-logado">--</span>
+            <div id="header-coleta" class="bg-slate-50 border-b border-slate-200 p-4 px-6 flex flex-row justify-between items-center text-xs gap-3">
+                <div class="truncate">
+                    <p class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">🏢 Unidade Logada:</p>
+                    <span class="font-black text-slate-700 text-sm truncate block" id="label-orgao-logado">--</span>
                 </div>
-                <button onclick="window.location.reload()" class="w-full sm:w-auto bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-4 py-2 rounded-lg transition shadow-sm uppercase tracking-wide">Encerrar Sessão</button>
+                <button onclick="window.location.reload()" class="bg-white hover:bg-slate-100 text-slate-600 border border-slate-300 font-bold px-4 py-2.5 rounded-lg transition shadow-sm uppercase tracking-wide whitespace-nowrap active:bg-slate-200">
+                    Sair
+                </button>
             </div>
 
-            <div class="bg-blue-700 p-8 text-white border-b-4 border-blue-800">
-                <h1 id="titulo-coleta" class="text-2xl font-black leading-tight uppercase tracking-wide"></h1>
+            <div class="bg-blue-700 p-6 sm:p-8 text-white border-b-4 border-blue-800">
+                <h1 id="titulo-coleta" class="text-xl sm:text-2xl font-black leading-tight uppercase tracking-wide"></h1>
                 <p class="text-blue-200 text-sm mt-2 font-medium">Preencha os dados abaixo com atenção.</p>
             </div>
 
-            <form id="form-estatisticas" class="p-6 sm:p-8 space-y-6">
+            <form id="form-estatisticas" class="p-4 sm:p-8 space-y-6 flex-1">
                 
                 <div class="bg-slate-50 p-5 rounded-xl border border-slate-200 shadow-sm">
-                    <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wide">👤 Nome do Operador (Responsável) <span class="text-red-500">*</span></label>
-                    <input type="text" id="input-responsavel" required placeholder="Ex: João Silva (Matrícula / Cargo)" class="w-full p-3.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                    <label class="block text-sm font-bold text-slate-800 mb-2 uppercase tracking-wide">👤 Nome do Operador <span class="text-red-500">*</span></label>
+                    <input type="text" id="input-responsavel" required placeholder="Ex: João Silva (Matrícula / Cargo)" class="w-full p-4 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none transition shadow-sm">
                 </div>
 
                 <div class="border-t border-slate-200 pt-6">
-                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">📋 Variáveis de Coleta</h3>
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6 px-2">📋 Variáveis de Coleta</h3>
                     <div id="dynamic-fields-container" class="space-y-6"></div>
                 </div>
 
-                <div class="pt-8 border-t-2 border-slate-100 mt-8">
-                    <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-sm uppercase tracking-widest py-4 rounded-xl transition shadow-lg flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed">
-                        <span>📤</span> PROCESSAR E ENVIAR FORMULÁRIO INTEIRO
+                <div class="pt-8 border-t-2 border-slate-100 mt-8 pb-4">
+                    <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 active:bg-emerald-800 text-white font-black text-sm sm:text-base uppercase tracking-widest py-4 sm:py-5 rounded-xl transition shadow-xl flex justify-center items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed transform active:scale-[0.99]">
+                        <span>📤</span> ENVIAR FORMULÁRIO COMPLETO
                     </button>
                     <p class="text-[10px] text-slate-400 text-center mt-3 font-medium uppercase tracking-wide">Utilize este botão para enviar todos os campos preenchidos de uma só vez.</p>
                 </div>
             </form>
 
-            <div id="historico-container" class="hidden border-t border-slate-200 p-6 sm:p-8 bg-slate-50">
-                <div class="flex justify-between items-center mb-4">
-                    <h4 class="text-xs font-black text-slate-500 uppercase tracking-widest">📊 Log Operacional (Sessão Atual)</h4>
-                    <span class="text-[10px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">Em tempo real</span>
+            <div id="historico-container" class="hidden border-t-8 border-slate-100 p-4 sm:p-8 bg-slate-50">
+                <div class="flex justify-between items-center mb-5">
+                    <h4 class="text-[11px] sm:text-xs font-black text-slate-500 uppercase tracking-widest">📊 Log Operacional <br><span class="font-medium text-[9px]">Sessão Atual / Histórico Recente</span></h4>
+                    <span class="text-[9px] font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200 whitespace-nowrap">Em tempo real</span>
                 </div>
-                <div id="historico-envios-lista" class="space-y-3 max-h-64 overflow-y-auto pr-1"></div>
+                <div id="historico-envios-lista" class="space-y-3 pb-8"></div>
             </div>
         </div>
     </div>
 
-    <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden px-6 py-4 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all border"></div>
+    <div id="toast-notificacao" class="fixed bottom-safe right-0 left-0 sm:left-auto sm:right-5 sm:bottom-5 mx-4 sm:mx-0 hidden px-5 py-4 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all border text-center sm:text-left"></div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -124,7 +152,7 @@
         function mostrarToast(mensagem, tipo = 'success') {
             const toast = document.getElementById('toast-notificacao');
             toast.textContent = mensagem;
-            toast.className = `fixed bottom-5 right-5 text-white px-6 py-4 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all ${tipo === 'success' ? 'bg-emerald-600 border-emerald-700' : tipo === 'warning' ? 'bg-amber-500 border-amber-600' : 'bg-red-600 border-red-700'}`;
+            toast.className = `fixed bottom-5 sm:right-5 left-4 right-4 sm:left-auto text-white px-5 py-4 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all border text-center sm:text-left animate-fade-in ${tipo === 'success' ? 'bg-emerald-600 border-emerald-700' : tipo === 'warning' ? 'bg-amber-500 border-amber-600' : 'bg-red-600 border-red-700'}`;
             toast.classList.remove('hidden');
             setTimeout(() => { toast.classList.add('hidden'); }, 3500);
         }
@@ -133,30 +161,30 @@
             document.getElementById('loading-box').innerHTML = `
                 <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4 font-black">!</div>
                 <p class="text-slate-800 font-black text-lg uppercase tracking-wide mb-2">Acesso Indisponível</p>
-                <p class="text-slate-500 font-medium text-sm px-4 text-center">${msg}</p>
-                <button onclick="window.location.reload()" class="mt-6 bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-lg font-bold transition text-xs uppercase tracking-widest">Recarregar Aplicação</button>
+                <p class="text-slate-500 font-medium text-sm px-6 text-center leading-relaxed">${msg}</p>
+                <button onclick="window.location.reload()" class="mt-8 bg-slate-800 hover:bg-slate-900 text-white px-8 py-4 rounded-xl font-bold transition text-xs uppercase tracking-widest shadow-lg">Recarregar Aplicação</button>
             `;
         }
 
-        // CHECAGEM DE VALIDADE (STATUS E DATAS)
         function checarValidadeAcesso() {
             if (coletaConfig.status === 'fechado') {
                 return "Este formulário foi encerrado temporária ou definitivamente pelo administrador.";
             }
 
-            const hojeStr = new Date().toISOString().split('T')[0];
+            const hoje = new Date();
+            const hojeStr = new Date(hoje.getTime() - (hoje.getTimezoneOffset() * 60000)).toISOString().split('T')[0];
 
             if (coletaConfig.dataInicio && hojeStr < coletaConfig.dataInicio) {
                 const parts = coletaConfig.dataInicio.split('-');
-                return `Este formulário só abrirá para respostas a partir do dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
+                return `Atenção: Este formulário só estará aberto para submissões a partir do dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
             }
 
             if (coletaConfig.dataFim && hojeStr > coletaConfig.dataFim) {
                 const parts = coletaConfig.dataFim.split('-');
-                return `O prazo limite para submissão encerrou no dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
+                return `O prazo limite corporativo para submissão foi encerrado no dia ${parts[2]}/${parts[1]}/${parts[0]}.`;
             }
 
-            return null; // OK
+            return null;
         }
 
         async function carregarHistoricoFirebase() {
@@ -178,7 +206,7 @@
 
                 historicoEnvios = envios.slice(0, 50).map(item => ({
                     id: item.id,
-                    horario: new Date(item.timestamp).toLocaleString('pt-BR'),
+                    horario: new Date(item.timestamp).toLocaleTimeString('pt-BR'),
                     responsavel: item.responsavel || '--',
                     sync: true, 
                     isIndividual: item.isIndividual || false,
@@ -197,25 +225,24 @@
             const lista = document.getElementById('historico-envios-lista');
             
             lista.innerHTML = historicoEnvios.map(item => `
-                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm">
-                    <div class="flex justify-between items-center p-3.5 bg-slate-100 cursor-pointer hover:bg-slate-200 transition btn-toggle-detalhes" data-id="${item.id}">
+                <div class="bg-white rounded-xl border border-slate-200 overflow-hidden shadow-sm active:bg-slate-50 transition">
+                    <div class="flex justify-between items-center p-4 bg-slate-100 cursor-pointer btn-toggle-detalhes" data-id="${item.id}">
                         <div class="flex items-center gap-3">
                             <span class="font-bold text-slate-700 text-xs">🕒 ${item.horario}</span>
-                            <span class="text-[10px] text-slate-500 font-bold uppercase hidden sm:inline-block truncate max-w-[150px]">${escapeHTML(item.responsavel)}</span>
+                            <span class="text-[10px] text-slate-500 font-bold uppercase hidden sm:inline-block truncate max-w-[120px]">${escapeHTML(item.responsavel)}</span>
                             ${item.isIndividual ? `<span class="bg-blue-100 text-blue-700 border border-blue-200 px-2 py-0.5 rounded text-[9px] font-black uppercase">🚀 Rápido</span>` : ''}
                         </div>
-                        <div class="flex items-center gap-3">
-                            <span class="px-2.5 py-1 rounded font-black text-[9px] uppercase tracking-wider ${item.sync ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-white'}">
-                                ${item.sync ? '✅ Salvo' : '⚠️ Pendente Sheets'}
+                        <div class="flex items-center gap-2">
+                            <span class="px-2 py-1 rounded font-black text-[9px] uppercase tracking-wider ${item.sync ? 'bg-emerald-600 text-white' : 'bg-slate-600 text-white'}">
+                                ${item.sync ? '✅ Salvo' : '⚠️ Pendente'}
                             </span>
-                            <span class="text-slate-400 text-[10px] font-black">EXPANDIR</span>
                         </div>
                     </div>
                     <div id="detalhes-${item.id}" class="hidden p-4 border-t border-slate-200 bg-white space-y-3 text-xs">
                         ${Object.values(item.dados).map(d => `
-                            <div class="flex justify-between border-b border-slate-100 pb-2 items-start gap-4">
-                                <span class="font-bold text-slate-500 w-2/3 leading-relaxed">${escapeHTML(d.pergunta)}</span>
-                                <span class="font-black text-blue-800 text-right w-1/3 bg-blue-50 px-2 py-1 rounded border border-blue-100">${escapeHTML(String(d.resposta))}</span>
+                            <div class="flex flex-col sm:flex-row justify-between border-b border-slate-100 pb-2 sm:items-center gap-2">
+                                <span class="font-bold text-slate-500 leading-relaxed uppercase tracking-wide text-[10px]">${escapeHTML(d.pergunta)}</span>
+                                <span class="font-black text-blue-800 bg-blue-50 px-3 py-1.5 rounded-lg border border-blue-100 break-words">${escapeHTML(String(d.resposta))}</span>
                             </div>
                         `).join('')}
                     </div>
@@ -235,7 +262,7 @@
         });
 
         async function inicializar() {
-            if (!token) return showError("Token de validação ausente.");
+            if (!token) return showError("Token de validação de rota está ausente.");
 
             try {
                 const querySnapshot = await getDocs(collection(db, "formularios_coleta"));
@@ -250,9 +277,8 @@
                     }
                 });
 
-                if (!linkConfig) return showError("Formulário inexistente ou credencial revogada.");
+                if (!linkConfig) return showError("Este formulário não existe ou sua credencial foi revogada pelo administrador.");
 
-                // VALIDA STATUS E DATAS ANTES DE ABRIR
                 const erroValidade = checarValidadeAcesso();
                 if (erroValidade) return showError(erroValidade);
 
@@ -268,7 +294,7 @@
 
             } catch (error) {
                 console.error(error);
-                showError("Falha de comunicação com o servidor principal.");
+                showError("Falha estrutural de comunicação com os servidores principais.");
             }
         }
 
@@ -307,11 +333,15 @@
 
             container.innerHTML = camposDesteLink.map(campo => {
                 let inputHtml = '';
-                const baseClass = "w-full p-3.5 border border-slate-300 rounded-lg bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-slate-700 font-medium";
-                const baseClassSelect = "w-full p-3.5 border border-slate-300 rounded-lg bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-slate-700 font-bold cursor-pointer";
+                // No mobile os botões/inputs precisam ser gordinhos (p-4) para o toque
+                const baseClass = "w-full p-4 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-slate-700 font-medium shadow-sm";
+                const baseClassSelect = "w-full p-4 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition text-slate-700 font-bold cursor-pointer shadow-sm appearance-none";
 
                 if (campo.tipo === 'numero') {
-                    inputHtml = `<input type="number" id="f_${campo.id}" class="${baseClass} text-lg font-black" step="any" placeholder="0">`;
+                    inputHtml = `<input type="number" id="f_${campo.id}" class="${baseClass} text-xl font-black" step="any" placeholder="0">`;
+                } else if (campo.tipo === 'numero_idade') {
+                    // Pattern \d* chama teclado numérico puro no iOS/Android
+                    inputHtml = `<input type="number" id="f_${campo.id}" class="${baseClass} text-xl font-black" step="1" min="0" max="150" pattern="\\d*" placeholder="Ex: 35">`;
                 } else if (campo.tipo === 'texto_longo') {
                     inputHtml = `<textarea id="f_${campo.id}" rows="3" class="${baseClass} resize-y" placeholder="Inserir relato detalhado..."></textarea>`;
                 } else if (campo.tipo === 'texto_curto') {
@@ -322,7 +352,7 @@
                     inputHtml = `
                         <select id="f_${campo.id}" class="${baseClassSelect}">
                             <option value="">Aguardando seleção...</option>
-                            <option value="Sim">✅ Sim</option>
+                            <option value="Sim">✅ Sim, Confirmo</option>
                             <option value="Não">❌ Não</option>
                         </select>`;
                 } else if (campo.tipo === 'selecao') {
@@ -332,10 +362,10 @@
                             ${(campo.opcoes || []).map(opt => `<option value="${escapeHTML(opt)}">${escapeHTML(opt)}</option>`).join('')}
                         </select>`;
                 } else if (campo.tipo === 'multipla_escolha') {
-                    inputHtml = `<div class="space-y-2 bg-slate-50 p-4 rounded-xl border border-slate-200">` + 
+                    inputHtml = `<div class="space-y-3 bg-slate-50 p-5 rounded-xl border border-slate-200">` + 
                         (campo.opcoes || []).map((opt) => `
-                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-white rounded-lg transition border border-transparent hover:border-slate-200">
-                            <input type="radio" name="f_${campo.id}" value="${escapeHTML(opt)}" class="h-4 w-4 text-blue-600 border-slate-300 focus:ring-blue-500">
+                        <label class="flex items-center gap-4 cursor-pointer p-3 bg-white border border-slate-200 hover:border-blue-300 rounded-xl transition shadow-sm active:bg-blue-50">
+                            <input type="radio" name="f_${campo.id}" value="${escapeHTML(opt)}" class="h-5 w-5 text-blue-600 border-slate-300 focus:ring-blue-500">
                             <span class="text-sm font-bold text-slate-700">${escapeHTML(opt)}</span>
                         </label>`).join('') + `</div>`;
                 } else {
@@ -345,16 +375,16 @@
                 let botaoRapidoHtml = '';
                 if (campo.envioIndividual) {
                     botaoRapidoHtml = `
-                        <div class="mt-4 flex justify-end">
-                            <button type="button" onclick="window.enviarCampoIndividual('${campo.id}', this)" class="bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-black px-4 py-2.5 rounded-lg text-xs uppercase tracking-widest transition shadow-sm flex items-center gap-2">
-                                <span>🚀</span> Enviar para Sistema (Rápido)
+                        <div class="mt-4">
+                            <button type="button" onclick="window.enviarCampoIndividual('${campo.id}', this)" class="w-full bg-blue-50 hover:bg-blue-100 active:bg-blue-200 text-blue-700 border border-blue-200 font-black px-4 py-4 rounded-xl text-xs uppercase tracking-widest transition shadow-sm flex justify-center items-center gap-2 transform active:scale-[0.99]">
+                                <span>🚀</span> ENVIAR APENAS ESTE DADO
                             </button>
                         </div>
                     `;
                 }
 
                 return `
-                    <div class="mb-4 bg-white p-5 border border-slate-200 rounded-xl shadow-sm">
+                    <div class="mb-5 bg-white p-5 sm:p-6 border border-slate-200 rounded-2xl shadow-sm">
                         <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">${escapeHTML(campo.label)}</label>
                         ${inputHtml}
                         ${botaoRapidoHtml}
@@ -370,7 +400,7 @@
             } else {
                 const el = document.getElementById(`f_${campoId}`);
                 let val = el ? el.value : '';
-                if (tipo === 'numero' && val !== '') val = Number(val);
+                if ((tipo === 'numero' || tipo === 'numero_idade') && val !== '') val = Number(val);
                 return val;
             }
         }
@@ -435,7 +465,8 @@
             const nomeResponsavel = document.getElementById('input-responsavel').value.trim();
             if (!nomeResponsavel) {
                 mostrarToast("⚠️ Preencha o nome do responsável (👤) no topo da página.", "warning");
-                document.getElementById('input-responsavel').focus();
+                document.getElementById('input-responsavel').scrollIntoView({behavior: 'smooth'});
+                setTimeout(() => document.getElementById('input-responsavel').focus(), 500);
                 return;
             }
             localStorage.setItem('sigep_responsavel_coleta', nomeResponsavel);
@@ -456,15 +487,15 @@
 
             const originalHTML = btnElement.innerHTML;
             btnElement.disabled = true;
-            btnElement.innerHTML = "⏳ Enviando...";
+            btnElement.innerHTML = "⏳ Enviando e Registrando...";
 
             const sucesso = await dispararPayload(respostas, nomeResponsavel, true);
 
             if (sucesso) {
                 limparCampoUI(campoId, campoDef.tipo);
-                mostrarToast("✅ Registro processado com sucesso!", "success");
+                mostrarToast("✅ Lançamento unitário validado e salvo!", "success");
             } else {
-                mostrarToast("❌ Falha de rede. O registro falhou.", "error");
+                mostrarToast("❌ Falha de comunicação. Verifique a rede.", "error");
             }
 
             btnElement.disabled = false;
@@ -494,21 +525,24 @@
             });
 
             if (camposPreechidosCount === 0) {
-                mostrarToast("⚠️ Preencha ao menos um campo para enviar.", "warning");
+                mostrarToast("⚠️ Formule ao menos uma variável para submissão.", "warning");
                 return;
             }
 
             const originalHTML = btn.innerHTML;
             btn.disabled = true;
-            btn.innerHTML = "⏳ PROCESSANDO LOTE...";
+            btn.innerHTML = "⏳ PROCESSANDO TRANSMISSÃO...";
 
             const sucesso = await dispararPayload(respostas, nomeResponsavel, false);
 
             if (sucesso) {
                 camposDesteLink.forEach(campo => limparCampoUI(campo.id, campo.tipo));
-                mostrarToast("✅ Lote processado de forma íntegra.", "success");
+                mostrarToast("✅ Formulário registrado com sucesso no Data Warehouse.", "success");
+                
+                // Desce a tela pro histórico pro usuário ver que salvou
+                document.getElementById('historico-container').scrollIntoView({behavior: 'smooth', block: 'end'});
             } else {
-                mostrarToast("❌ Falha estrutural de rede.", "error");
+                mostrarToast("❌ Transmissão comprometida.", "error");
             }
             
             btn.disabled = false;
