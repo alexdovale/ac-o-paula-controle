@@ -1,175 +1,253 @@
-// js/coletasBuilderService.js - Módulo de Construção de Coletas Dinâmicas
-import { collection, doc, updateDoc, addDoc, getDoc, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification, escapeHTML } from './utils.js';
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Coleta de Dados - SIGEP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&display=swap" rel="stylesheet">
+    <style> body { font-family: 'Inter', sans-serif; background-color: #f8fafc; } </style>
+</head>
+<body class="min-h-screen flex items-center justify-center p-4">
 
-export const ColetasBuilderService = {
-    
-    // Gera a interface do construtor dentro do SIGEP
-    renderConstrutorHTML(coletaData) {
-        const campos = coletaData.dicionarioDeCampos || [];
-        const links = coletaData.linksExternos || [];
+    <div id="app-coleta" class="bg-white w-full max-w-2xl rounded-3xl shadow-xl overflow-hidden border border-slate-200">
+        
+        <!-- FAIXA DE CARREGAMENTO -->
+        <div id="loading-box" class="text-center py-16">
+            <div class="w-12 h-12 border-4 border-indigo-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
+            <p class="text-slate-500 font-bold">Verificando segurança do link...</p>
+        </div>
 
-        // Gera os checkboxes para a criação de um novo link
-        const opcoesCamposHtml = campos.map(c => `
-            <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border rounded-lg cursor-pointer hover:bg-slate-50">
-                <input type="checkbox" name="campos_link" value="${c.id}" class="h-4 w-4 text-indigo-600 rounded">
-                ${escapeHTML(c.label)} <span class="text-[10px] text-slate-400">(${c.tipo})</span>
-            </label>
-        `).join('');
-
-        return `
-            <div class="space-y-6 max-w-5xl mx-auto">
-                
-                <!-- DICIONÁRIO GLOBAL DE CAMPOS -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-800 border-b pb-2 mb-4">📚 Dicionário Global de Campos</h3>
-                    
-                    <div id="lista-campos-dicionario" class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
-                        ${campos.length === 0 ? '<p class="text-sm text-slate-400">Nenhum campo cadastrado na matriz.</p>' : 
-                            campos.map(c => `
-                                <div class="bg-slate-50 border border-slate-200 p-3 rounded-xl flex justify-between items-center">
-                                    <div>
-                                        <p class="font-bold text-slate-700 text-sm">${escapeHTML(c.label)}</p>
-                                        <p class="text-[10px] text-slate-500 uppercase tracking-widest">${c.tipo}</p>
-                                    </div>
-                                </div>
-                            `).join('')}
-                    </div>
-
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                        <h4 class="text-xs font-bold text-slate-600 uppercase mb-3">Adicionar Novo Campo à Matriz</h4>
-                        <div class="flex flex-col sm:flex-row gap-3">
-                            <input type="text" id="novo-campo-label" placeholder="Nome da Pergunta/Campo" class="flex-1 p-2.5 border border-slate-300 rounded-xl text-sm">
-                            <select id="novo-campo-tipo" class="w-full sm:w-48 p-2.5 border border-slate-300 rounded-xl text-sm bg-white">
-                                <option value="numero">Número</option>
-                                <option value="texto">Texto</option>
-                                <option value="booleano">Sim / Não</option>
-                            </select>
-                            <button type="button" id="btn-add-campo" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-5 py-2.5 rounded-xl text-sm transition">Adicionar</button>
-                        </div>
-                    </div>
+        <!-- TELA DE AUTENTICAÇÃO (SÓ APARECE SE EXIGIR SENHA) -->
+        <div id="auth-box" class="hidden">
+            <div class="bg-indigo-600 p-8 text-center">
+                <h1 class="text-3xl font-black text-white">Acesso Restrito</h1>
+                <p class="text-indigo-200 mt-2 font-medium">Formulário de Coleta Estratégica</p>
+            </div>
+            <div class="p-8 space-y-5">
+                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl text-center">
+                    <p class="text-xs text-indigo-500 font-bold uppercase mb-1">Órgão Autorizado</p>
+                    <p id="auth-orgao-nome" class="font-black text-indigo-900 text-lg"></p>
                 </div>
+                <div>
+                    <label class="block text-sm font-bold text-slate-700 mb-2">Insira sua Senha de Acesso</label>
+                    <input type="password" id="input-senha" class="w-full p-4 bg-slate-50 border border-slate-300 rounded-xl outline-none focus:border-indigo-500 focus:bg-white transition" placeholder="••••••••">
+                </div>
+                <button id="btn-validar-senha" class="w-full bg-slate-900 hover:bg-black text-white font-bold py-4 rounded-xl transition shadow-lg mt-2">Desbloquear Formulário</button>
+                <p id="msg-erro-senha" class="text-red-500 text-sm text-center font-bold hidden bg-red-50 p-3 rounded-lg border border-red-100">Senha incorreta.</p>
+            </div>
+        </div>
 
-                <!-- GERADOR DE LINKS MODULARES -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    <h3 class="text-lg font-black text-slate-800 border-b pb-2 mb-4">🔗 Links de Coleta Externos</h3>
-                    
-                    <div class="space-y-3 mb-6">
-                        ${links.length === 0 ? '<p class="text-sm text-slate-400">Nenhum link gerado.</p>' : 
-                            links.map(l => `
-                                <div class="bg-indigo-50 border border-indigo-100 p-4 rounded-xl flex flex-col sm:flex-row justify-between gap-3">
-                                    <div>
-                                        <p class="font-bold text-indigo-900 text-sm">📍 ${escapeHTML(l.orgao)}</p>
-                                        <p class="text-[10px] text-indigo-600 mt-1">
-                                            🔒 ${l.requerSenha ? 'Exige Senha' : 'Acesso Livre'} | 📝 ${l.camposHabilitados.length} campos liberados
-                                        </p>
-                                    </div>
-                                    <button type="button" onclick="ColetasBuilderService.copiarLink('${l.token}')" class="bg-white border border-indigo-200 hover:bg-indigo-100 text-indigo-700 font-bold px-4 py-2 rounded-xl text-xs transition">Copiar Link</button>
-                                </div>
-                            `).join('')}
-                    </div>
-
-                    <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-4">
-                        <h4 class="text-xs font-bold text-slate-600 uppercase mb-2">Gerar Novo Link Personalizado</h4>
-                        
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-1">Nome do Órgão / Destinatário</label>
-                            <input type="text" id="novo-link-orgao" placeholder="Ex: Vara de Família - Comarca X" class="w-full p-2.5 border border-slate-300 rounded-xl text-sm">
-                        </div>
-
-                        <div class="flex items-center gap-4 bg-white p-3 rounded-xl border border-slate-200">
-                            <label class="flex items-center gap-2 cursor-pointer">
-                                <input type="checkbox" id="novo-link-requer-senha" checked class="h-4 w-4 text-indigo-600 rounded">
-                                <span class="text-sm font-bold text-slate-700">Exigir Senha de Acesso</span>
-                            </label>
-                            <input type="password" id="novo-link-senha" placeholder="Defina a senha" class="flex-1 p-2 border border-slate-300 rounded-lg text-sm outline-none focus:ring-2 focus:ring-indigo-500">
-                        </div>
-
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 mb-2">Selecione quais campos este órgão deverá preencher:</label>
-                            <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                                ${opcoesCamposHtml}
-                            </div>
-                        </div>
-
-                        <button type="button" id="btn-gerar-link" class="w-full bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl text-sm shadow transition">Gerar Link Específico</button>
-                    </div>
+        <!-- FORMULÁRIO DINÂMICO (ONDE A MÁGICA ACONTECE) -->
+        <div id="form-box" class="hidden">
+            <div class="bg-emerald-600 p-6 sm:p-8 text-white relative">
+                <h1 id="titulo-coleta" class="text-2xl sm:text-3xl font-black leading-tight mb-2"></h1>
+                <div class="inline-block bg-emerald-800/50 px-3 py-1 rounded-lg border border-emerald-500/30">
+                    <p class="text-xs font-bold uppercase tracking-widest text-emerald-100">Remetente: <span id="label-orgao-logado" class="text-white"></span></p>
                 </div>
             </div>
-        `;
-    },
 
-    initEventos(db, coletaId, coletaData) {
-        // Toggle do campo de senha
-        const checkRequerSenha = document.getElementById('novo-link-requer-senha');
-        const inputSenha = document.getElementById('novo-link-senha');
-        
-        if (checkRequerSenha && inputSenha) {
-            checkRequerSenha.addEventListener('change', (e) => {
-                inputSenha.disabled = !e.target.checked;
-                inputSenha.classList.toggle('bg-slate-100', !e.target.checked);
-                if (!e.target.checked) inputSenha.value = '';
-            });
+            <form id="form-estatisticas" class="p-6 sm:p-8 space-y-6">
+                
+                <div class="bg-slate-50 p-5 rounded-2xl border border-slate-200 mb-8">
+                    <label class="block text-sm font-bold text-slate-800 mb-2">Seu Nome (Responsável pelo envio)</label>
+                    <input type="text" id="input-responsavel" required placeholder="Ex: João (Técnico Judiciário)" class="w-full p-3.5 border border-slate-300 rounded-xl bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition">
+                </div>
+
+                <div class="border-t border-slate-200 pt-6">
+                    <h3 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-6">Preencha os Dados Abaixo</h3>
+                    <!-- O JAVASCRIPT INJETA OS CAMPOS DO GOOGLE FORMS AQUI -->
+                    <div id="dynamic-fields-container" class="space-y-6"></div>
+                </div>
+
+                <div class="pt-6">
+                    <button type="submit" id="btn-enviar-dados" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black text-lg py-4 rounded-xl transition shadow-xl">
+                        Enviar Respostas
+                    </button>
+                </div>
+            </form>
+        </div>
+
+        <!-- TELA DE SUCESSO -->
+        <div id="success-box" class="hidden text-center p-12">
+            <div class="w-24 h-24 bg-green-100 text-green-600 rounded-full flex items-center justify-center text-5xl mx-auto mb-6">✓</div>
+            <h2 class="text-3xl font-black text-slate-800 mb-2">Muito Obrigado!</h2>
+            <p class="text-slate-500">As informações foram registradas com segurança no sistema central.</p>
+            <button onclick="window.location.reload()" class="mt-8 text-indigo-600 font-bold hover:underline">Enviar outra resposta</button>
+        </div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, getDocs, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { firebaseConfig } from './js/config.js';
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        const urlParams = new URLSearchParams(window.location.search);
+        const token = urlParams.get('token');
+
+        let coletaEncontradaId = null;
+        let coletaConfigMaster = null;
+        let linkConfig = null;
+
+        async function inicializar() {
+            if (!token) return showError("Acesso Negado: Link inválido ou quebrado.");
+
+            try {
+                const querySnapshot = await getDocs(collection(db, "formularios_coleta"));
+                
+                querySnapshot.forEach(docSnap => {
+                    const data = docSnap.data();
+                    if (data.linksExternos) {
+                        const encontrado = data.linksExternos.find(l => l.token === token);
+                        if (encontrado) {
+                            coletaEncontradaId = docSnap.id;
+                            coletaConfigMaster = data;
+                            linkConfig = encontrado;
+                        }
+                    }
+                });
+
+                if (!linkConfig) return showError("Formulário não encontrado, expirou ou foi desativado pelo administrador.");
+
+                document.getElementById('loading-box').classList.add('hidden');
+
+                if (linkConfig.requerSenha) {
+                    document.getElementById('auth-orgao-nome').textContent = linkConfig.orgao;
+                    document.getElementById('auth-box').classList.remove('hidden');
+                } else {
+                    montarFormulario();
+                }
+
+            } catch (error) {
+                console.error(error);
+                showError("Falha de conexão. Tente recarregar a página.");
+            }
         }
 
-        // Adicionar Campo ao Dicionário
-        document.getElementById('btn-add-campo')?.addEventListener('click', async () => {
-            const label = document.getElementById('novo-campo-label').value.trim();
-            const tipo = document.getElementById('novo-campo-tipo').value;
-            
-            if (!label) return showNotification("Informe o nome do campo.", "error");
+        document.getElementById('btn-validar-senha').addEventListener('click', () => {
+            const senhaDigitada = document.getElementById('input-senha').value.trim();
+            if (senhaDigitada === linkConfig.senha) {
+                document.getElementById('auth-box').classList.add('hidden');
+                montarFormulario();
+            } else {
+                document.getElementById('msg-erro-senha').classList.remove('hidden');
+            }
+        });
 
-            const novoCampo = {
-                id: 'c_' + Math.random().toString(36).substring(2, 8),
-                label,
-                tipo
+        function montarFormulario() {
+            document.getElementById('form-box').classList.remove('hidden');
+            document.getElementById('titulo-coleta').textContent = coletaConfigMaster.nomeDaColeta;
+            document.getElementById('label-orgao-logado').textContent = linkConfig.orgao;
+
+            const container = document.getElementById('dynamic-fields-container');
+            const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
+
+            // Pega apenas as perguntas que você marcou pra eles verem
+            const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
+
+            container.innerHTML = camposDesteLink.map(campo => {
+                let inputHtml = '';
+                const baseClass = "w-full p-3.5 border border-slate-300 rounded-xl bg-slate-50 focus:bg-white focus:border-emerald-500 focus:ring-2 focus:ring-emerald-200 outline-none transition text-slate-700";
+
+                if (campo.tipo === 'numero') {
+                    inputHtml = `<input type="number" id="f_${campo.id}" required class="${baseClass} font-bold text-lg">`;
+                } else if (campo.tipo === 'texto_longo') {
+                    inputHtml = `<textarea id="f_${campo.id}" rows="3" required class="${baseClass}"></textarea>`;
+                } else if (campo.tipo === 'data') {
+                    inputHtml = `<input type="date" id="f_${campo.id}" required class="${baseClass}">`;
+                } else if (campo.tipo === 'booleano') {
+                    inputHtml = `
+                        <select id="f_${campo.id}" required class="${baseClass} font-bold cursor-pointer">
+                            <option value="">Selecione...</option>
+                            <option value="Sim">Sim</option>
+                            <option value="Não">Não</option>
+                        </select>`;
+                } else if (campo.tipo === 'selecao') {
+                    inputHtml = `
+                        <select id="f_${campo.id}" required class="${baseClass} cursor-pointer">
+                            <option value="">Selecione uma opção...</option>
+                            ${(campo.opcoes || []).map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+                        </select>`;
+                } else if (campo.tipo === 'multipla_escolha') {
+                    inputHtml = `<div class="space-y-3 bg-slate-50 p-4 rounded-xl border border-slate-200">` + 
+                        (campo.opcoes || []).map((opt, idx) => `
+                        <label class="flex items-center gap-3 cursor-pointer p-2 hover:bg-white rounded-lg transition">
+                            <input type="radio" name="f_${campo.id}" value="${opt}" required class="h-5 w-5 text-emerald-600 border-slate-300 focus:ring-emerald-500">
+                            <span class="text-sm font-medium text-slate-700">${opt}</span>
+                        </label>`).join('') + `</div>`;
+                } else {
+                    inputHtml = `<input type="text" id="f_${campo.id}" required class="${baseClass}">`;
+                }
+
+                return `
+                    <div class="mb-2">
+                        <label class="block text-sm font-black text-slate-800 mb-2">${campo.label}</label>
+                        ${inputHtml}
+                    </div>
+                `;
+            }).join('');
+        }
+
+        document.getElementById('form-estatisticas').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('btn-enviar-dados');
+            btn.disabled = true;
+            btn.textContent = "Validando e Enviando...";
+            btn.classList.replace('bg-emerald-600', 'bg-slate-400');
+
+            const dicionario = coletaConfigMaster.dicionarioDeCampos || [];
+            const camposDesteLink = dicionario.filter(c => linkConfig.camposHabilitados.includes(c.id));
+
+            const respostas = {};
+            camposDesteLink.forEach(campo => {
+                let val;
+                if(campo.tipo === 'multipla_escolha') {
+                    val = document.querySelector(`input[name="f_${campo.id}"]:checked`)?.value || '';
+                } else {
+                    val = document.getElementById(`f_${campo.id}`).value;
+                    if (campo.tipo === 'numero') val = Number(val) || 0;
+                }
+                
+                respostas[campo.id] = {
+                    pergunta: campo.label,
+                    resposta: val,
+                    tipo: campo.tipo
+                };
+            });
+
+            const payload = {
+                coletaId: coletaEncontradaId,
+                orgaoOrigem: linkConfig.orgao,
+                responsavel: document.getElementById('input-responsavel').value.trim(),
+                timestamp: new Date().toISOString(),
+                dados: respostas
             };
 
-            const camposAtuais = coletaData.dicionarioDeCampos || [];
-            camposAtuais.push(novoCampo);
-
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: camposAtuais });
-            window.location.reload();
+            try {
+                await addDoc(collection(db, "respostas_coleta"), payload);
+                document.getElementById('form-box').classList.add('hidden');
+                document.getElementById('success-box').classList.remove('hidden');
+            } catch (err) {
+                console.error(err);
+                alert("Falha de rede. Tente enviar novamente.");
+                btn.disabled = false;
+                btn.textContent = "Enviar Respostas";
+                btn.classList.replace('bg-slate-400', 'bg-emerald-600');
+            }
         });
 
-        // Gerar Link Personalizado
-        document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
-            const orgao = document.getElementById('novo-link-orgao').value.trim();
-            const requerSenha = document.getElementById('novo-link-requer-senha').checked;
-            const senha = document.getElementById('novo-link-senha').value.trim();
-            
-            const checkboxes = document.querySelectorAll('input[name="campos_link"]:checked');
-            const camposHabilitados = Array.from(checkboxes).map(cb => cb.value);
+        function showError(msg) {
+            document.getElementById('loading-box').innerHTML = `
+                <div class="w-16 h-16 bg-red-100 text-red-500 rounded-full flex items-center justify-center text-3xl mx-auto mb-4">!</div>
+                <p class="text-slate-800 font-black text-xl mb-2">Ops...</p>
+                <p class="text-slate-500 font-medium">${msg}</p>
+            `;
+        }
 
-            if (!orgao) return showNotification("Informe o nome do órgão.", "error");
-            if (requerSenha && !senha) return showNotification("Defina uma senha para o link.", "error");
-            if (camposHabilitados.length === 0) return showNotification("Selecione pelo menos um campo para este link.", "error");
-
-            const token = Math.random().toString(36).substring(2, 12);
-            
-            const novoLink = {
-                orgao,
-                token,
-                requerSenha,
-                senha: requerSenha ? senha : null,
-                camposHabilitados
-            };
-
-            const linksAtuais = coletaData.linksExternos || [];
-            linksAtuais.push(novoLink);
-
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: linksAtuais });
-            window.location.reload();
-        });
-    },
-
-    copiarLink(token) {
-        let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
-        const link = `${baseUrl}coleta.html?token=${token}`;
-        navigator.clipboard.writeText(link).then(() => {
-            showNotification("Link copiado!", "success");
-        });
-    }
-};
-
-window.ColetasBuilderService = ColetasBuilderService;
+        inicializar();
+    </script>
+</body>
+</html>
