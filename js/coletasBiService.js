@@ -14,10 +14,10 @@ function limparTexto(texto) {
 }
 
 // ============================================================
-// FUNÇÃO AUXILIAR: CACHE DE DADOS (IndexedDB / localStorage)
+// FUNÇÃO AUXILIAR: CACHE DE DADOS
 // ============================================================
 const CACHE_KEY = 'sigep_bi_cache';
-const CACHE_DURATION = 5 * 60 * 1000; // 5 minutos
+const CACHE_DURATION = 5 * 60 * 1000;
 
 async function getCachedData(coletaId) {
     try {
@@ -59,7 +59,6 @@ export const ColetasBiService = {
         `;
 
         try {
-            // Tenta carregar do cache
             let dadosCache = await getCachedData(coletaId);
             let coletaData, dicionario, respostas, orgaosUnicos;
 
@@ -71,7 +70,6 @@ export const ColetasBiService = {
                 return;
             }
 
-            // Carrega do Firebase
             const { doc, getDoc, collection, getDocs, query, where } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             
             const coletaSnap = await getDoc(doc(db, "formularios_coleta", coletaId));
@@ -92,7 +90,6 @@ export const ColetasBiService = {
 
             window._dadosBiCache = { coletaData, dicionario, respostas, orgaosUnicos, coletaId };
             
-            // Salva no cache
             await setCachedData(coletaId, { coletaData, dicionario, respostas, orgaosUnicos });
 
             this.renderizarPainelBiCompleto('todos', 'todos');
@@ -111,13 +108,12 @@ export const ColetasBiService = {
         const container = document.getElementById('container-construtor-coleta');
         if (!container) return;
 
-        // Aplica filtros
         let respostasFiltradas = this._aplicarFiltros(respostas, orgaoFiltro, periodoFiltro);
 
         let html = `
             <div class="space-y-6 animate-fade-in bg-slate-50 p-4 sm:p-6 rounded-3xl border border-slate-200">
                 
-                <!-- BARRA DE FERRAMENTAS ROBUSTA -->
+                <!-- BARRA DE FERRAMENTAS -->
                 <div class="bg-white p-6 rounded-2xl border shadow-sm grid grid-cols-1 md:grid-cols-4 gap-4">
                     <div>
                         <label class="text-[10px] font-bold text-slate-400 uppercase mb-1 block">🏢 Filtrar por Órgão:</label>
@@ -162,7 +158,7 @@ export const ColetasBiService = {
                 </div>
         `;
 
-        // COMPARAÇÃO ENTRE PERÍODOS (se filtrado)
+        // COMPARAÇÃO ENTRE PERÍODOS
         if (periodoFiltro !== 'todos' && respostasFiltradas.length > 0) {
             const variacao = this._calcularVariacaoPeriodo(respostas, periodoFiltro);
             html += `
@@ -210,158 +206,174 @@ export const ColetasBiService = {
                 </div>
         `;
 
-        if (respostasFiltradas.length === 0) {
-            html += `
-                <div class="bg-white p-12 text-center rounded-2xl border shadow-sm">
-                    <p class="text-slate-400 font-bold">Nenhum dado encontrado para o filtro selecionado.</p>
-                </div>
-            </div>`;
-            container.innerHTML = html;
-            return;
-        }
-
         // ============================================================
-        // 1. CARDS DE ESTATÍSTICAS HÍBRIDAS
+        // CARDS PARA TODAS AS PERGUNTAS (TODOS OS TIPOS)
         // ============================================================
-        let kpiHtml = `<div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">`;
-        let frequenciasHtml = `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">`;
-        let temFrequenciaNumerica = false;
+        html += `
+            <div>
+                <h4 class="text-xs font-black text-slate-400 uppercase tracking-widest mb-3">📊 Cards de Métricas (Clique para detalhar por órgão)</h4>
+                <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+        `;
 
+        // Itera sobre TODAS as perguntas do dicionário - MESMO SEM RESPOSTAS
         dicionario.forEach(campo => {
             const valores = respostasFiltradas
                 .map(r => r.dados?.[campo.id]?.resposta)
-                .filter(v => v !== undefined && v !== null && v !== '--');
+                .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
 
-            if (valores.length === 0) return;
+            // ============================================================
+            // CARD PARA CAMPO NUMÉRICO ABRANGENTE (numero_abrangente)
+            // Mostra Soma, Média, Desvio + Frequência detalhada
+            // ============================================================
+            if (campo.tipo === 'numero_abrangente' || 
+                campo.tipo === 'numero' || 
+                campo.label.toLowerCase().includes('idade')) {
+                
+                const numeros = valores.map(Number).filter(n => !isNaN(n));
+                
+                if (numeros.length === 0) {
+                    // Card sem respostas
+                    html += `
+                        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm relative overflow-hidden opacity-60">
+                            <div class="absolute top-0 left-0 w-1.5 h-full bg-slate-300"></div>
+                            <p class="text-[11px] font-bold text-slate-400 uppercase tracking-wider">${escapeHTML(campo.label)}</p>
+                            <p class="text-2xl font-black text-slate-400 mt-3">--</p>
+                            <span class="text-[10px] text-slate-400 mt-1 font-medium">Sem respostas ainda</span>
+                        </div>
+                    `;
+                    return;
+                }
 
-            // Campo numérico ou idade
-            if (campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
-                const numeros = valores.map(Number);
                 const soma = numeros.reduce((a, b) => a + b, 0);
                 const media = (soma / numeros.length).toFixed(1);
                 const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
                 const desvioPadrao = Math.sqrt(variancia).toFixed(1);
 
-                kpiHtml += `
+                // Contagem de frequência para cada valor
+                const contagemNumerica = {};
+                numeros.forEach(num => {
+                    contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
+                });
+                const chavesOrdenadas = Object.keys(contagemNumerica).sort((a, b) => Number(a) - Number(b));
+
+                // Gera lista de frequência para mostrar no card
+                const frequenciaLista = chavesOrdenadas.map(num => 
+                    `${num}: ${contagemNumerica[num]}x`
+                ).join(' | ');
+
+                html += `
                     <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-indigo-100 shadow-sm cursor-pointer hover:border-indigo-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
                         <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500"></div>
                         <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-indigo-600 transition">${escapeHTML(campo.label)}</p>
                         <div class="mt-3 grid grid-cols-3 gap-2 text-center">
                             <div class="bg-indigo-50 p-2 rounded-xl">
-                                <p class="text-xl font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
+                                <p class="text-lg font-black text-indigo-600">${soma.toLocaleString('pt-BR')}</p>
                                 <p class="text-[8px] font-bold text-indigo-400 uppercase">Soma</p>
                             </div>
                             <div class="bg-emerald-50 p-2 rounded-xl">
-                                <p class="text-xl font-black text-emerald-600">${media}</p>
+                                <p class="text-lg font-black text-emerald-600">${media}</p>
                                 <p class="text-[8px] font-bold text-emerald-400 uppercase">Média</p>
                             </div>
                             <div class="bg-amber-50 p-2 rounded-xl">
-                                <p class="text-xl font-black text-amber-600">${desvioPadrao}</p>
-                                <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio P.</p>
+                                <p class="text-lg font-black text-amber-600">${desvioPadrao}</p>
+                                <p class="text-[8px] font-bold text-amber-400 uppercase">Desvio</p>
                             </div>
                         </div>
-                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
-                            📊 ${respostasFiltradas.length} submissões
+                        <div class="mt-2 text-[10px] text-slate-500 truncate">
+                            📊 ${frequenciaLista}
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-1 font-medium flex items-center gap-1">
+                            📌 ${numeros.length} respostas
                             <span class="text-indigo-400 text-[8px] ml-auto">Clique para detalhar</span>
                         </span>
                     </div>
                 `;
+            }
 
-                // Frequência numérica
-                const contagemNumerica = {};
-                numeros.forEach(num => {
-                    contagemNumerica[num] = (contagemNumerica[num] || 0) + 1;
+            // ============================================================
+            // CARD PARA CAMPO DE SELEÇÃO / MÚLTIPLA ESCOLHA / BOOLEANO
+            // Mostra distribuição detalhada: A: 10, B: 40, C: 0, D: 1
+            // ============================================================
+            else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+                const contagem = {};
+                valores.forEach(val => {
+                    contagem[val] = (contagem[val] || 0) + 1;
                 });
 
-                const chavesOrdenadas = Object.keys(contagemNumerica).sort((a, b) => Number(a) - Number(b));
+                const entries = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
+                const total = valores.length;
 
-                if (chavesOrdenadas.length > 0 && chavesOrdenadas.length <= 20) {
-                    temFrequenciaNumerica = true;
-                    const canvasId = `grafico_${campo.id}`;
-                    frequenciasHtml += `
-                        <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                            <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">📊 Frequência por ${escapeHTML(campo.label)}</p>
-                            <canvas id="${canvasId}" height="150"></canvas>
-                            <div class="space-y-2 max-h-44 overflow-y-auto pr-1 mt-3">
-                    `;
-                    chavesOrdenadas.forEach(num => {
-                        const qtd = contagemNumerica[num];
-                        const percent = ((qtd / numeros.length) * 100).toFixed(0);
-                        frequenciasHtml += `
-                            <div>
-                                <div class="flex justify-between text-xs font-bold text-slate-700 mb-1">
-                                    <span>Valor ${num}:</span>
-                                    <span class="text-indigo-600">${qtd} vez(es) (${percent}%)</span>
-                                </div>
-                                <div class="w-full bg-slate-100 rounded-full h-2">
-                                    <div class="bg-indigo-500 h-2 rounded-full" style="width: ${percent}%"></div>
-                                </div>
+                // Gera string de distribuição: "A: 10 | B: 40 | C: 0 | D: 1"
+                const distribuicao = entries.map(([key, qtd]) => 
+                    `${key}: ${qtd}`
+                ).join(' | ');
+
+                html += `
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm cursor-pointer hover:border-emerald-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500"></div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-emerald-600 transition">${escapeHTML(campo.label)}</p>
+                        <div class="mt-3 space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Distribuição:</span>
+                                <span class="font-bold text-slate-700 truncate max-w-[150px]">${escapeHTML(distribuicao)}</span>
                             </div>
-                        `;
-                    });
-                    frequenciasHtml += `</div></div>`;
-                    
-                    // Renderizar gráfico
-                    setTimeout(() => {
-                        this._renderizarGrafico(canvasId, contagemNumerica);
-                    }, 100);
-                }
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Total respostas:</span>
+                                <span class="font-bold text-indigo-600">${total}</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Opções disponíveis:</span>
+                                <span class="font-bold text-slate-700">${entries.length}</span>
+                            </div>
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
+                            🏷️ ${entries.length} opções
+                            <span class="text-emerald-400 text-[8px] ml-auto">Clique para detalhar</span>
+                        </span>
+                    </div>
+                `;
+            }
+
+            // ============================================================
+            // CARD PARA TEXTO CURTO / LONGO / DATA
+            // ============================================================
+            else {
+                const totalRespostas = valores.length;
+                const ultimaResposta = valores.length > 0 ? String(valores[valores.length - 1]).substring(0, 25) : '--';
+                const primeirasRespostas = valores.slice(0, 3).map(v => String(v).substring(0, 20)).join(', ');
+
+                html += `
+                    <div onclick="ColetasBiService.detalharPorOrgao('${campo.id}')" class="bg-white p-5 rounded-2xl border border-purple-100 shadow-sm cursor-pointer hover:border-purple-500 hover:shadow-md transition-all relative overflow-hidden group card-hover">
+                        <div class="absolute top-0 left-0 w-1.5 h-full bg-purple-500"></div>
+                        <p class="text-[10px] font-black text-slate-400 uppercase tracking-wider group-hover:text-purple-600 transition">${escapeHTML(campo.label)}</p>
+                        <div class="mt-3 space-y-1">
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Total respostas:</span>
+                                <span class="font-bold text-purple-600">${totalRespostas}</span>
+                            </div>
+                            ${totalRespostas > 0 ? `
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Última resposta:</span>
+                                <span class="font-bold text-slate-700 truncate max-w-[120px]">${escapeHTML(ultimaResposta)}</span>
+                            </div>
+                            <div class="flex justify-between text-xs">
+                                <span class="text-slate-500">Exemplos:</span>
+                                <span class="font-medium text-slate-600 truncate max-w-[120px]">${escapeHTML(primeirasRespostas)}</span>
+                            </div>
+                            ` : `
+                            <p class="text-xs text-slate-400 italic mt-2">Sem respostas ainda</p>
+                            `}
+                        </div>
+                        <span class="text-[10px] text-slate-400 mt-2 font-medium flex items-center gap-1">
+                            📝 ${totalRespostas} respostas
+                            <span class="text-purple-400 text-[8px] ml-auto">Clique para detalhar</span>
+                        </span>
+                    </div>
+                `;
             }
         });
 
-        html += kpiHtml + `</div>`;
-
-        // ============================================================
-        // 2. ALTERNATIVAS (Seleção / Booleano / Múltipla Escolha)
-        // ============================================================
-        const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
-        
-        if (camposSelecao.length > 0 || temFrequenciaNumerica) {
-            if (!temFrequenciaNumerica) html += `<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">`;
-            
-            camposSelecao.forEach(campo => {
-                const contagem = {};
-                respostasFiltradas.forEach(r => {
-                    const val = r.dados?.[campo.id]?.resposta;
-                    if (val && val !== '--') contagem[val] = (contagem[val] || 0) + 1;
-                });
-
-                const canvasId = `grafico_cat_${campo.id}`;
-                html += `
-                    <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm">
-                        <p class="text-xs font-black text-slate-800 uppercase border-b pb-2 mb-3">🧩 ${escapeHTML(campo.label)}</p>
-                        ${Object.keys(contagem).length > 0 ? `<canvas id="${canvasId}" height="120"></canvas>` : ''}
-                        <div class="space-y-3 max-h-44 overflow-y-auto pr-1 mt-3">
-                            ${Object.keys(contagem).length === 0 ? '<p class="text-xs text-slate-400 italic">Nenhuma resposta.</p>' : 
-                                Object.entries(contagem).map(([key, count]) => {
-                                    const percent = ((count / respostasFiltradas.length) * 100).toFixed(0);
-                                    return `
-                                        <div>
-                                            <div class="flex justify-between text-xs mb-1">
-                                                <span class="font-bold text-slate-600">${escapeHTML(key)}</span>
-                                                <span class="font-black text-slate-800">${count} (${percent}%)</span>
-                                            </div>
-                                            <div class="w-full bg-slate-100 rounded-full h-2">
-                                                <div class="bg-emerald-500 h-2 rounded-full" style="width: ${percent}%"></div>
-                                            </div>
-                                        </div>
-                                    `;
-                                }).join('')}
-                        </div>
-                    </div>
-                `;
-
-                // Renderizar gráfico de barras
-                if (Object.keys(contagem).length > 0) {
-                    setTimeout(() => {
-                        this._renderizarGrafico(canvasId, contagem, 'bar');
-                    }, 100);
-                }
-            });
-
-            if (temFrequenciaNumerica) html += frequenciasHtml;
-            html += `</div>`;
-        }
+        html += `</div></div>`;
 
         // DIV DE DETALHES
         html += `
@@ -369,9 +381,14 @@ export const ColetasBiService = {
         `;
 
         // ============================================================
-        // 3. TABELA CONSOLIDADA POR ÓRGÃO
+        // TABELA CONSOLIDADA POR ÓRGÃO
         // ============================================================
-        const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
+        const camposNumericos = dicionario.filter(c => 
+            c.tipo === 'numero' || 
+            c.tipo === 'numero_abrangente' || 
+            c.label.toLowerCase().includes('idade')
+        );
+        
         html += `
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                 <div class="p-4 bg-slate-50 border-b border-slate-200 font-black text-slate-700 text-sm uppercase flex justify-between items-center">
@@ -417,7 +434,7 @@ export const ColetasBiService = {
         html += `</tbody></table></div></div>`;
 
         // ============================================================
-        // 4. HISTÓRICO DETALHADO
+        // HISTÓRICO DETALHADO
         // ============================================================
         html += `
             <div class="bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
@@ -463,7 +480,7 @@ export const ColetasBiService = {
 
         html += `</tbody></table></div></div>`;
 
-        // BOTÃO DE AUTO-REFRESH (oculto)
+        // AUTO-REFRESH
         html += `
             <div class="flex justify-end gap-2">
                 <button onclick="ColetasBiService.iniciarAutoRefresh()" class="text-xs bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold px-3 py-1.5 rounded-lg transition">
@@ -477,9 +494,6 @@ export const ColetasBiService = {
 
         container.innerHTML = html;
         container.scrollIntoView({ behavior: 'smooth' });
-
-        // Carrega gráficos já renderizados
-        this._renderizarTodosGraficos();
     },
 
     // ============================================================
@@ -488,12 +502,10 @@ export const ColetasBiService = {
     _aplicarFiltros(respostas, orgaoFiltro, periodoFiltro) {
         let filtradas = [...respostas];
 
-        // Filtro por órgão
         if (orgaoFiltro !== 'todos') {
             filtradas = filtradas.filter(r => r.orgaoOrigem === orgaoFiltro);
         }
 
-        // Filtro por período
         if (periodoFiltro !== 'todos') {
             const agora = new Date();
             let dataLimite = new Date();
@@ -598,73 +610,9 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // GRÁFICOS COM CHART.JS
-    // ============================================================
-    _renderizarGrafico(canvasId, dados, tipo = 'bar') {
-        const canvas = document.getElementById(canvasId);
-        if (!canvas || typeof Chart === 'undefined') return;
-
-        const ctx = canvas.getContext('2d');
-        const labels = Object.keys(dados);
-        const values = Object.values(dados);
-
-        // Destroi gráfico anterior se existir
-        if (canvas._chart) {
-            canvas._chart.destroy();
-        }
-
-        const cores = [
-            'rgba(99, 102, 241, 0.8)',
-            'rgba(16, 185, 129, 0.8)',
-            'rgba(245, 158, 11, 0.8)',
-            'rgba(239, 68, 68, 0.8)',
-            'rgba(139, 92, 246, 0.8)',
-            'rgba(236, 72, 153, 0.8)'
-        ];
-
-        canvas._chart = new Chart(ctx, {
-            type: tipo === 'bar' ? 'bar' : 'bar',
-            data: {
-                labels: labels,
-                datasets: [{
-                    label: 'Frequência',
-                    data: values,
-                    backgroundColor: cores.slice(0, labels.length),
-                    borderColor: cores.slice(0, labels.length).map(c => c.replace('0.8', '1')),
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: { display: false }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: { font: { size: 9 } }
-                    },
-                    x: {
-                        ticks: { 
-                            font: { size: 8 },
-                            maxRotation: 45,
-                            minRotation: 0
-                        }
-                    }
-                }
-            }
-        });
-    },
-
-    _renderizarTodosGraficos() {
-        // Os gráficos são renderizados individualmente após cada card
-    },
-
-    // ============================================================
     // AUTO-REFRESH
     // ============================================================
-    iniciarAutoRefresh(intervalo = 300000) { // 5 minutos
+    iniciarAutoRefresh(intervalo = 300000) {
         if (this._refreshInterval) clearInterval(this._refreshInterval);
         
         this._refreshInterval = setInterval(() => {
@@ -702,43 +650,53 @@ export const ColetasBiService = {
         const totalRespostas = respostas.length;
         const orgaos = new Set(respostas.map(r => r.orgaoOrigem));
 
-        // Análise de tendências numéricas
         dicionario.forEach(campo => {
-            if (campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
-                const valores = respostas
-                    .map(r => Number(r.dados?.[campo.id]?.resposta))
-                    .filter(n => !isNaN(n) && n > 0);
-                
-                if (valores.length > 0) {
-                    const soma = valores.reduce((a, b) => a + b, 0);
-                    const media = soma / valores.length;
-                    const max = Math.max(...valores);
-                    const min = Math.min(...valores);
+            const valores = respostas
+                .map(r => r.dados?.[campo.id]?.resposta)
+                .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
+
+            // Nenhuma resposta
+            if (valores.length === 0) {
+                insights.push(`⚠️ ${campo.label}: Nenhuma resposta registrada ainda.`);
+                return;
+            }
+
+            // Campos numéricos abrangentes
+            if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+                const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
+                if (numeros.length > 0) {
+                    const soma = numeros.reduce((a, b) => a + b, 0);
+                    const media = soma / numeros.length;
+                    const max = Math.max(...numeros);
+                    const min = Math.min(...numeros);
+                    
+                    // Contagem de frequência
+                    const contagem = {};
+                    numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
+                    const maisFrequente = Object.entries(contagem).sort((a, b) => b[1] - a[1])[0];
+                    
+                    insights.push(`📊 ${campo.label}: Soma=${soma}, Média=${media.toFixed(1)}, ${maisFrequente[0]} apareceu ${maisFrequente[1]} vezes`);
                     
                     if (max > media * 2) {
                         insights.push(`🔴 ${campo.label}: Valor máximo (${max}) é 2x maior que a média (${media.toFixed(1)})`);
                     }
-                    if (min < media * 0.3 && min > 0) {
-                        insights.push(`🟢 ${campo.label}: Valor mínimo (${min}) é 70% menor que a média (${media.toFixed(1)})`);
-                    }
-                    if (valores.length === totalRespostas) {
-                        insights.push(`✅ ${campo.label}: Todos os ${totalRespostas} órgãos responderam`);
-                    }
                 }
             }
 
-            // Análise de alternativas
+            // Campos de seleção
             if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
                 const contagem = {};
-                respostas.forEach(r => {
-                    const val = r.dados?.[campo.id]?.resposta;
-                    if (val && val !== '--') contagem[val] = (contagem[val] || 0) + 1;
+                valores.forEach(val => {
+                    contagem[val] = (contagem[val] || 0) + 1;
                 });
 
-                const entries = Object.entries(contagem);
+                const entries = Object.entries(contagem).sort((a, b) => b[1] - a[1]);
                 if (entries.length > 0) {
-                    const max = entries.reduce((a, b) => a[1] > b[1] ? a : b);
-                    const min = entries.reduce((a, b) => a[1] < b[1] ? a : b);
+                    const max = entries[0];
+                    const min = entries[entries.length - 1];
+                    
+                    const distribuicao = entries.map(([key, qtd]) => `${key}: ${qtd}`).join(', ');
+                    insights.push(`📊 ${campo.label}: Distribuição = ${distribuicao}`);
                     
                     if (max[1] > totalRespostas * 0.5) {
                         insights.push(`📊 ${campo.label}: "${max[0]}" foi escolhido por ${Math.round(max[1]/totalRespostas*100)}% dos órgãos`);
@@ -750,7 +708,6 @@ export const ColetasBiService = {
             }
         });
 
-        // Insights gerais
         if (orgaos.size > 1) {
             insights.push(`🏢 ${orgaos.size} órgãos participaram da coleta`);
         }
@@ -807,7 +764,6 @@ export const ColetasBiService = {
                 texto += el.textContent.trim() + '\n';
             });
             
-            // Criar blob e download
             const blob = new Blob([texto], { type: 'text/plain' });
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
@@ -821,7 +777,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // DETALHAR POR ÓRGÃO (Cards Clicáveis)
+    // DETALHAR POR ÓRGÃO
     // ============================================================
     detalharPorOrgao(campoId) {
         const { respostas, dicionario } = window._dadosBiCache || {};
@@ -833,38 +789,212 @@ export const ColetasBiService = {
         const div = document.getElementById('bi-detalhes-dinamicos');
         if (!div) return;
         
-        const agrupado = respostas.reduce((acc, r) => {
-            const org = r.orgaoOrigem || 'Desconhecido';
-            const valor = Number(r.dados?.[campoId]?.resposta) || 0;
-            acc[org] = (acc[org] || 0) + valor;
-            return acc;
-        }, {});
+        // ============================================================
+        // DETALHAMENTO PARA CAMPOS NUMÉRICOS ABRANGENTES
+        // Mostra Soma, Média, Desvio e Frequência por órgão
+        // ============================================================
+        if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+            const agrupado = {};
+            const contagemGlobal = {};
+            
+            respostas.forEach(r => {
+                const org = r.orgaoOrigem || 'Desconhecido';
+                const valor = Number(r.dados?.[campoId]?.resposta) || 0;
+                
+                if (!agrupado[org]) agrupado[org] = [];
+                agrupado[org].push(valor);
+                
+                if (valor > 0) {
+                    contagemGlobal[valor] = (contagemGlobal[valor] || 0) + 1;
+                }
+            });
 
-        const sorted = Object.entries(agrupado).sort((a, b) => b[1] - a[1]);
-        const total = sorted.reduce((sum, [, val]) => sum + val, 0);
+            // Calcula totais por órgão
+            const totals = Object.entries(agrupado).map(([org, valores]) => {
+                const soma = valores.reduce((a, b) => a + b, 0);
+                const media = valores.length > 0 ? (soma / valores.length).toFixed(1) : 0;
+                const variancia = valores.length > 0 ? valores.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / valores.length : 0;
+                const desvio = Math.sqrt(variancia).toFixed(1);
+                return { org, soma, media, desvio, count: valores.length, valores };
+            }).sort((a, b) => b.soma - a.soma);
 
-        div.classList.remove('hidden');
-        div.innerHTML = `
-            <div class="flex justify-between items-center mb-4">
-                <h4 class="font-black text-lg text-slate-800">📊 Detalhamento: ${escapeHTML(campo.label)}</h4>
-                <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
-                    ✕ Fechar
-                </button>
-            </div>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                ${sorted.map(([org, val]) => `
-                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
-                        <p class="text-[10px] uppercase font-bold text-slate-400">${escapeHTML(org)}</p>
-                        <p class="text-xl font-black text-indigo-600">${val.toLocaleString('pt-BR')}</p>
-                        <span class="text-[9px] text-slate-400">${total > 0 ? ((val / total) * 100).toFixed(1) : 0}% do total</span>
+            const totalGeral = totals.reduce((sum, t) => sum + t.soma, 0);
+
+            // Frequência global formatada
+            const freqList = Object.entries(contagemGlobal)
+                .sort((a, b) => Number(a[0]) - Number(b[0]))
+                .map(([val, qtd]) => `${val}: ${qtd}x`)
+                .join(' | ');
+
+            div.classList.remove('hidden');
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-black text-lg text-slate-800">📊 Detalhamento: ${escapeHTML(campo.label)}</h4>
+                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                        ✕ Fechar
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-3 mb-4">
+                    <div class="p-3 bg-indigo-50 rounded-xl border border-indigo-200 text-center">
+                        <p class="text-[10px] uppercase font-bold text-indigo-400">Total Geral</p>
+                        <p class="text-2xl font-black text-indigo-600">${totalGeral.toLocaleString('pt-BR')}</p>
                     </div>
-                `).join('')}
-            </div>
-            <div class="mt-4 pt-4 border-t border-slate-200 flex justify-between text-xs text-slate-500">
-                <span>Total geral: <strong class="text-slate-800">${total.toLocaleString('pt-BR')}</strong></span>
-                <span>${sorted.length} órgãos participantes</span>
-            </div>
-        `;
+                    <div class="p-3 bg-emerald-50 rounded-xl border border-emerald-200 text-center">
+                        <p class="text-[10px] uppercase font-bold text-emerald-400">Média Geral</p>
+                        <p class="text-2xl font-black text-emerald-600">${(totalGeral / respostas.length).toFixed(1)}</p>
+                    </div>
+                    <div class="p-3 bg-amber-50 rounded-xl border border-amber-200 text-center">
+                        <p class="text-[10px] uppercase font-bold text-amber-400">Frequência</p>
+                        <p class="text-sm font-black text-amber-600 truncate">${freqList || '--'}</p>
+                    </div>
+                    <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                        <p class="text-[10px] uppercase font-bold text-slate-400">Total Respostas</p>
+                        <p class="text-2xl font-black text-slate-600">${respostas.length}</p>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                            <tr>
+                                <th class="p-2">Órgão</th>
+                                <th class="p-2 text-center">Respostas</th>
+                                <th class="p-2 text-right">Soma</th>
+                                <th class="p-2 text-center">Média</th>
+                                <th class="p-2 text-center">Desvio</th>
+                                <th class="p-2 text-right">% do Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${totals.map(t => `
+                                <tr class="hover:bg-slate-50 transition">
+                                    <td class="p-2 font-bold text-slate-700">${escapeHTML(t.org)}</td>
+                                    <td class="p-2 text-center font-bold text-indigo-600">${t.count}</td>
+                                    <td class="p-2 text-right font-bold text-slate-800">${t.soma.toLocaleString('pt-BR')}</td>
+                                    <td class="p-2 text-center text-emerald-600">${t.media}</td>
+                                    <td class="p-2 text-center text-amber-600">${t.desvio}</td>
+                                    <td class="p-2 text-right font-bold text-slate-700">${totalGeral > 0 ? ((t.soma / totalGeral) * 100).toFixed(1) : 0}%</td>
+                                </tr>
+                            `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        } 
+        
+        // ============================================================
+        // DETALHAMENTO PARA CAMPOS DE SELEÇÃO
+        // Mostra distribuição completa: A: 10, B: 40, C: 0, D: 1
+        // ============================================================
+        else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+            const agrupado = {};
+            respostas.forEach(r => {
+                const org = r.orgaoOrigem || 'Desconhecido';
+                const val = r.dados?.[campoId]?.resposta || 'Não respondeu';
+                if (!agrupado[org]) agrupado[org] = {};
+                agrupado[org][val] = (agrupado[org][val] || 0) + 1;
+            });
+
+            const orgaos = Object.keys(agrupado);
+            const todasOpcoes = new Set();
+            Object.values(agrupado).forEach(obj => {
+                Object.keys(obj).forEach(k => todasOpcoes.add(k));
+            });
+            const opcoesOrdenadas = [...todasOpcoes].sort();
+
+            // Totais por opção
+            const totaisOpcao = {};
+            opcoesOrdenadas.forEach(op => {
+                totaisOpcao[op] = 0;
+                orgaos.forEach(org => {
+                    totaisOpcao[op] += agrupado[org][op] || 0;
+                });
+            });
+
+            div.classList.remove('hidden');
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-black text-lg text-slate-800">🧩 Detalhamento: ${escapeHTML(campo.label)}</h4>
+                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                        ✕ Fechar
+                    </button>
+                </div>
+                
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-3 mb-4">
+                    ${opcoesOrdenadas.map(op => `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 text-center">
+                            <p class="text-[10px] uppercase font-bold text-slate-400">${escapeHTML(String(op))}</p>
+                            <p class="text-2xl font-black text-indigo-600">${totaisOpcao[op]}</p>
+                        </div>
+                    `).join('')}
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse text-sm">
+                        <thead class="bg-slate-100 text-slate-600 text-xs uppercase border-b border-slate-200">
+                            <tr>
+                                <th class="p-2">Órgão</th>
+                                ${opcoesOrdenadas.map(op => `<th class="p-2 text-center">${escapeHTML(String(op))}</th>`).join('')}
+                                <th class="p-2 text-center">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody class="divide-y divide-slate-100">
+                            ${orgaos.map(org => {
+                                const total = opcoesOrdenadas.reduce((sum, op) => sum + (agrupado[org][op] || 0), 0);
+                                return `
+                                    <tr class="hover:bg-slate-50 transition">
+                                        <td class="p-2 font-bold text-slate-700">${escapeHTML(org)}</td>
+                                        ${opcoesOrdenadas.map(op => `
+                                            <td class="p-2 text-center font-bold ${agrupado[org][op] > 0 ? 'text-indigo-600' : 'text-slate-300'}">
+                                                ${agrupado[org][op] || 0}
+                                            </td>
+                                        `).join('')}
+                                        <td class="p-2 text-center font-bold text-emerald-600">${total}</td>
+                                    </tr>
+                                `;
+                            }).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            `;
+        }
+        
+        // ============================================================
+        // DETALHAMENTO PARA TEXTOS
+        // ============================================================
+        else {
+            const agrupado = {};
+            respostas.forEach(r => {
+                const org = r.orgaoOrigem || 'Desconhecido';
+                const val = r.dados?.[campoId]?.resposta || '--';
+                if (!agrupado[org]) agrupado[org] = [];
+                agrupado[org].push(String(val));
+            });
+
+            div.classList.remove('hidden');
+            div.innerHTML = `
+                <div class="flex justify-between items-center mb-4">
+                    <h4 class="font-black text-lg text-slate-800">📝 Detalhamento: ${escapeHTML(campo.label)}</h4>
+                    <button onclick="document.getElementById('bi-detalhes-dinamicos').classList.add('hidden')" class="text-red-500 font-bold text-xs bg-red-50 px-3 py-1.5 rounded-lg hover:bg-red-100 transition">
+                        ✕ Fechar
+                    </button>
+                </div>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                    ${Object.entries(agrupado).map(([org, respostasLista]) => `
+                        <div class="p-3 bg-slate-50 rounded-xl border border-slate-200">
+                            <p class="text-xs font-black text-slate-600 uppercase">${escapeHTML(org)}</p>
+                            <div class="mt-2 space-y-1 max-h-32 overflow-y-auto">
+                                ${respostasLista.slice(0, 5).map(val => `
+                                    <p class="text-xs text-slate-700 border-b border-slate-100 pb-1">${escapeHTML(String(val).substring(0, 50))}</p>
+                                `).join('')}
+                                ${respostasLista.length > 5 ? `<p class="text-[10px] text-slate-400 italic">+ ${respostasLista.length - 5} outras respostas</p>` : ''}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            `;
+        }
         
         div.scrollIntoView({ behavior: 'smooth', block: 'center' });
     },
@@ -884,7 +1014,7 @@ export const ColetasBiService = {
             
             const workbook = XLSX.utils.book_new();
             
-            // Dados da planilha
+            // Planilha 1: Dados Brutos
             const wsData = [
                 [`Relatório BI - ${coletaData.nomeDaColeta}`],
                 [`Gerado em: ${new Date().toLocaleString()}`],
@@ -902,47 +1032,111 @@ export const ColetasBiService = {
             });
             
             const ws = XLSX.utils.aoa_to_sheet(wsData);
-            
-            // Ajustar largura das colunas
             const colWidths = wsData[0].map((_, idx) => ({
                 wch: Math.max(...wsData.map(row => String(row[idx] || '').length)) + 2
             }));
             ws['!cols'] = colWidths;
-            
             XLSX.utils.book_append_sheet(workbook, ws, 'Dados');
-            
-            // Criar segunda planilha com estatísticas
+
+            // Planilha 2: Estatísticas por Campo
             const statsData = [
                 ['ESTATÍSTICAS POR CAMPO'],
                 [],
-                ['Campo', 'Tipo', 'Total', 'Média', 'Mínimo', 'Máximo']
+                ['Campo', 'Tipo', 'Total Respostas', 'Soma', 'Média', 'Mínimo', 'Máximo', 'Frequência']
             ];
             
             dicionario.forEach(campo => {
-                if (campo.tipo === 'numero') {
-                    const valores = respostas
-                        .map(r => Number(r.dados?.[campo.id]?.resposta))
-                        .filter(n => !isNaN(n) && n > 0);
-                    
-                    if (valores.length > 0) {
-                        const soma = valores.reduce((a, b) => a + b, 0);
-                        const media = soma / valores.length;
+                const valores = respostas
+                    .map(r => r.dados?.[campo.id]?.resposta)
+                    .filter(v => v !== undefined && v !== null && v !== '' && v !== '--');
+
+                if (campo.tipo === 'numero_abrangente' || campo.tipo === 'numero' || campo.label.toLowerCase().includes('idade')) {
+                    const numeros = valores.map(Number).filter(n => !isNaN(n) && n > 0);
+                    if (numeros.length > 0) {
+                        const soma = numeros.reduce((a, b) => a + b, 0);
+                        const media = soma / numeros.length;
+                        
+                        const contagem = {};
+                        numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
+                        const freq = Object.entries(contagem).sort((a, b) => Number(a[0]) - Number(b[0]))
+                            .map(([v, q]) => `${v}:${q}`).join('; ');
+                        
                         statsData.push([
                             campo.label,
                             campo.tipo,
+                            numeros.length,
                             soma,
                             media.toFixed(2),
-                            Math.min(...valores),
-                            Math.max(...valores)
+                            Math.min(...numeros),
+                            Math.max(...numeros),
+                            freq
                         ]);
+                    } else {
+                        statsData.push([campo.label, campo.tipo, 0, 0, 0, 0, 0, 'Sem dados']);
                     }
+                } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
+                    const contagem = {};
+                    valores.forEach(v => contagem[v] = (contagem[v] || 0) + 1);
+                    const freq = Object.entries(contagem).sort((a, b) => b[1] - a[1])
+                        .map(([v, q]) => `${v}:${q}`).join('; ');
+                    statsData.push([
+                        campo.label,
+                        campo.tipo,
+                        valores.length,
+                        '--',
+                        '--',
+                        '--',
+                        '--',
+                        freq
+                    ]);
+                } else {
+                    statsData.push([
+                        campo.label,
+                        campo.tipo,
+                        valores.length,
+                        '--',
+                        '--',
+                        '--',
+                        '--',
+                        valores.length > 0 ? `${valores.slice(0, 3).map(v => String(v).substring(0, 15)).join('; ')}...` : 'Sem dados'
+                    ]);
                 }
             });
             
             const wsStats = XLSX.utils.aoa_to_sheet(statsData);
             XLSX.utils.book_append_sheet(workbook, wsStats, 'Estatísticas');
+
+            // Planilha 3: Resumo por Órgão
+            const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
+            const camposNumericos = dicionario.filter(c => 
+                c.tipo === 'numero' || 
+                c.tipo === 'numero_abrangente' || 
+                c.label.toLowerCase().includes('idade')
+            );
             
-            // Gerar arquivo
+            const resumoData = [
+                ['RESUMO POR ÓRGÃO'],
+                [],
+                ['Órgão', 'Total Envios', ...camposNumericos.map(c => c.label)]
+            ];
+            
+            orgaos.forEach(org => {
+                const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === org);
+                const linha = [
+                    org,
+                    envios.length,
+                    ...camposNumericos.map(c => {
+                        const soma = envios.reduce((acc, r) => acc + (Number(r.dados?.[c.id]?.resposta) || 0), 0);
+                        return soma;
+                    })
+                ];
+                resumoData.push(linha);
+            });
+            
+            const wsResumo = XLSX.utils.aoa_to_sheet(resumoData);
+            XLSX.utils.book_append_sheet(workbook, wsResumo, 'Resumo por Órgão');
+            
+            // Salvar
             const wbout = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
             const blob = new Blob([wbout], { type: 'application/octet-stream' });
             const url = URL.createObjectURL(blob);
@@ -960,7 +1154,7 @@ export const ColetasBiService = {
     },
 
     // ============================================================
-    // ABRIR MODAL DE EXPORTAÇÃO
+    // MODAL DE EXPORTAÇÃO
     // ============================================================
     abrirModalExportacao() {
         let modal = document.getElementById('modal-config-pdf');
@@ -994,7 +1188,7 @@ export const ColetasBiService = {
                     </div>
                     
                     <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                        <p class="text-xs text-amber-700 font-medium">💡 Escolha o formato desejado para exportar os dados.</p>
+                        <p class="text-xs text-amber-700 font-medium">💡 O Excel inclui 3 abas: Dados Brutos, Estatísticas e Resumo por Órgão.</p>
                     </div>
                     
                     <button onclick="ColetasBiService.fecharModalExportacao()" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
@@ -1011,14 +1205,14 @@ export const ColetasBiService = {
         if (modal) modal.classList.add('hidden');
     },
 
-    // ============================================================
-    // EXPORTAÇÃO PARA PDF (Versão Final)
-    // ============================================================
     async gerarPDF() {
         this.fecharModalExportacao();
         await this.executarExportacaoCustomizada();
     },
 
+    // ============================================================
+    // EXPORTAÇÃO PDF COM DETALHES COMPLETOS
+    // ============================================================
     async executarExportacaoCustomizada() {
         const { coletaData, respostas, dicionario } = window._dadosBiCache || {};
         if (!respostas || respostas.length === 0) {
@@ -1040,106 +1234,125 @@ export const ColetasBiService = {
         doc.text(`Total de Registros: ${respostas.length} | Órgãos: ${new Set(respostas.map(r => r.orgaoOrigem)).size}`, 14, 32);
 
         let yPos = 40;
-        const margemEsquerda = 14;
 
-        // ===== SEÇÃO 1: ESTATÍSTICAS =====
-        if (yPos > 170) { doc.addPage(); yPos = 20; }
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text("1. ESTATÍSTICAS E INDICADORES NUMÉRICOS", margemEsquerda, yPos);
-        yPos += 7;
-
-        const camposNumericos = dicionario.filter(c => c.tipo === 'numero' || c.label.toLowerCase().includes('idade'));
+        // ===== SEÇÃO 1: ESTATÍSTICAS NUMÉRICAS ABRANGENTES =====
+        const camposNumericos = dicionario.filter(c => 
+            c.tipo === 'numero' || 
+            c.tipo === 'numero_abrangente' || 
+            c.label.toLowerCase().includes('idade')
+        );
         
         if (camposNumericos.length > 0) {
+            if (yPos > 170) { doc.addPage(); yPos = 20; }
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("1. ESTATÍSTICAS NUMÉRICAS (Soma, Média, Desvio + Frequência)", 14, yPos);
+            yPos += 7;
+
             const dataKpi = camposNumericos.map(c => {
                 const numeros = respostas
                     .map(r => Number(r.dados?.[c.id]?.resposta))
                     .filter(n => !isNaN(n) && n !== 0);
                 
-                if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0"];
+                if (numeros.length === 0) return [limparTexto(c.label), "0", "0", "0", "Sem dados"];
                 
                 const soma = numeros.reduce((a, b) => a + b, 0);
                 const media = (soma / numeros.length).toFixed(1);
                 const variancia = numeros.reduce((acc, n) => acc + Math.pow(n - media, 2), 0) / numeros.length;
                 const desvio = Math.sqrt(variancia).toFixed(1);
+                
+                // Frequência
+                const contagem = {};
+                numeros.forEach(n => contagem[n] = (contagem[n] || 0) + 1);
+                const freq = Object.entries(contagem)
+                    .sort((a, b) => Number(a[0]) - Number(b[0]))
+                    .map(([v, q]) => `${v}:${q}x`)
+                    .join(' | ');
 
-                return [
-                    limparTexto(c.label),
-                    soma.toLocaleString('pt-BR'),
-                    media,
-                    desvio
-                ];
+                return [limparTexto(c.label), soma.toLocaleString('pt-BR'), media, desvio, freq];
             });
 
             doc.autoTable({
                 startY: yPos,
-                head: [['Métrica / Campo', 'Soma Total', 'Média', 'Desvio Padrão']],
+                head: [['Campo', 'Soma Total', 'Média', 'Desvio Padrão', 'Frequência']],
                 body: dataKpi,
-                styles: { fontSize: 9, cellPadding: 2.5 },
-                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] }
+                styles: { fontSize: 8, cellPadding: 2 },
+                headStyles: { fillColor: [79, 70, 229], textColor: [255, 255, 255] },
+                columnStyles: {
+                    0: { cellWidth: 50 },
+                    1: { cellWidth: 35, halign: 'right' },
+                    2: { cellWidth: 30, halign: 'center' },
+                    3: { cellWidth: 30, halign: 'center' },
+                    4: { cellWidth: 70 }
+                }
             });
             yPos = doc.lastAutoTable.finalY + 12;
         }
 
-        // ===== SEÇÃO 2: FREQUÊNCIA =====
-        if (yPos > 170) { doc.addPage(); yPos = 20; }
-
-        doc.setFont("helvetica", "bold");
-        doc.setFontSize(14);
-        doc.text("2. FREQUÊNCIA DE RESPOSTAS", margemEsquerda, yPos);
-        yPos += 7;
-
-        const camposParaFrequencia = dicionario.filter(c => 
-            ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo) || 
-            c.tipo === 'numero' || 
-            c.label.toLowerCase().includes('idade')
-        );
-
-        let dadosFrequencia = [];
+        // ===== SEÇÃO 2: DISTRIBUIÇÃO DE SELEÇÕES =====
+        const camposSelecao = dicionario.filter(c => ['selecao', 'multipla_escolha', 'booleano'].includes(c.tipo));
         
-        camposParaFrequencia.forEach(campo => {
-            const contagem = {};
-            respostas.forEach(r => {
-                const val = r.dados?.[campo.id]?.resposta;
-                if (val !== undefined && val !== null && val !== '' && val !== '--') {
-                    contagem[val] = (contagem[val] || 0) + 1;
-                }
-            });
+        if (camposSelecao.length > 0) {
+            if (yPos > 170) { doc.addPage(); yPos = 20; }
+            
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(14);
+            doc.text("2. DISTRIBUIÇÃO DE RESPOSTAS (Seleção/Múltipla Escolha)", 14, yPos);
+            yPos += 7;
 
-            Object.entries(contagem).forEach(([opcao, qtd]) => {
-                const percent = ((qtd / respostas.length) * 100).toFixed(1);
-                dadosFrequencia.push([
+            let dadosSelecao = [];
+            camposSelecao.forEach(campo => {
+                const contagem = {};
+                respostas.forEach(r => {
+                    const val = r.dados?.[campo.id]?.resposta;
+                    if (val !== undefined && val !== null && val !== '' && val !== '--') {
+                        contagem[val] = (contagem[val] || 0) + 1;
+                    }
+                });
+                
+                const total = Object.values(contagem).reduce((a, b) => a + b, 0);
+                const distribuicao = Object.entries(contagem)
+                    .sort((a, b) => b[1] - a[1])
+                    .map(([opcao, qtd]) => {
+                        const perc = total > 0 ? ((qtd / total) * 100).toFixed(1) : 0;
+                        return `${opcao}: ${qtd} (${perc}%)`;
+                    })
+                    .join(' | ');
+                
+                dadosSelecao.push([
                     limparTexto(campo.label),
-                    limparTexto(String(opcao)),
-                    String(qtd),
-                    `${percent}%`
+                    total,
+                    distribuicao
                 ]);
             });
-        });
 
-        if (dadosFrequencia.length > 0) {
-            doc.autoTable({
-                startY: yPos,
-                head: [['Pergunta', 'Alternativa / Valor', 'Quantidade', 'Porcentagem']],
-                body: dadosFrequencia,
-                styles: { fontSize: 8, cellPadding: 2 },
-                headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] }
-            });
-            yPos = doc.lastAutoTable.finalY + 12;
+            if (dadosSelecao.length > 0) {
+                doc.autoTable({
+                    startY: yPos,
+                    head: [['Campo', 'Total Respostas', 'Distribuição']],
+                    body: dadosSelecao,
+                    styles: { fontSize: 8, cellPadding: 2 },
+                    headStyles: { fillColor: [99, 102, 241], textColor: [255, 255, 255] },
+                    columnStyles: {
+                        0: { cellWidth: 50 },
+                        1: { cellWidth: 30, halign: 'center' },
+                        2: { cellWidth: 90 }
+                    }
+                });
+                yPos = doc.lastAutoTable.finalY + 12;
+            }
         }
 
         // ===== SEÇÃO 3: TABELA POR ÓRGÃO =====
         if (yPos > 170) { doc.addPage(); yPos = 20; }
-
+        
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", margemEsquerda, yPos);
+        doc.text("3. TABELA CONSOLIDADA POR ÓRGÃO", 14, yPos);
         yPos += 7;
 
         const orgaos = [...new Set(respostas.map(r => r.orgaoOrigem || 'Desconhecido'))];
-        
         const head = [['Órgão', 'Envios', ...camposNumericos.map(c => limparTexto(c.label))]];
         const body = orgaos.map(orgao => {
             const envios = respostas.filter(r => (r.orgaoOrigem || 'Desconhecido') === orgao);
@@ -1179,14 +1392,12 @@ export const ColetasBiService = {
 
         // ===== SEÇÃO 4: HISTÓRICO =====
         doc.addPage();
-        
         doc.setFont("helvetica", "bold");
         doc.setFontSize(14);
-        doc.text("4. HISTÓRICO DETALHADO", margemEsquerda, 18);
-        
+        doc.text("4. HISTÓRICO DETALHADO", 14, 18);
         doc.setFont("helvetica", "normal");
         doc.setFontSize(9);
-        doc.text(`Total de ${respostas.length} registros.`, margemEsquerda, 25);
+        doc.text(`Total de ${respostas.length} registros.`, 14, 25);
 
         const headHist = ["Data/Hora", "Órgão", "Responsável", ...dicionario.map(c => limparTexto(c.label))];
         const bodyHist = respostas.slice(0, 200).map(r => [
@@ -1222,7 +1433,7 @@ export const ColetasBiService = {
             const finalY = doc.lastAutoTable.finalY + 5;
             doc.setFont("helvetica", "italic");
             doc.setFontSize(8);
-            doc.text(`* Exibindo os 200 registros mais recentes de um total de ${respostas.length}.`, margemEsquerda, finalY);
+            doc.text(`* Exibindo os 200 registros mais recentes de um total de ${respostas.length}.`, 14, finalY);
         }
 
         doc.save(`Relatorio_Analitico_${coletaData.nomeDaColeta.replace(/\s+/g, '_')}.pdf`);
