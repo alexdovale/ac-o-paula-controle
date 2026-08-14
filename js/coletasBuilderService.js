@@ -6,10 +6,10 @@ import { showNotification, escapeHTML } from './utils.js';
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
-        .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais
-        .replace(/[&]/g, 'e') // Substitui & por e
-        .replace(/[^\x20-\x7E]/g, '') // Remove emojis e caracteres não imprimíveis
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, "")
+        .replace(/[ºª°]/g, '.')
+        .replace(/[&]/g, 'e')
+        .replace(/[^\x20-\x7E]/g, '')
         .trim();
 }
 
@@ -20,35 +20,70 @@ export const ColetasBuilderService = {
         const links = coletaData.linksExternos || [];
         const formatoNumeracao = coletaData.formatoNumeracao || 'numero';
         const urlSheets = coletaData.urlSincronizacaoSheets || '';
+        const statusFormulario = coletaData.status || 'aberto';
+        const dataInicio = coletaData.dataInicio || '';
+        const dataFim = coletaData.dataFim || '';
 
         const opcoesCamposHtml = campos.map((c, index) => `
-            <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+            <label class="campo-checkbox flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
                 <input type="checkbox" name="campos_link" value="${c.id}" class="h-4 w-4 text-blue-600 rounded border-slate-300">
-                <span class="truncate font-medium" title="${escapeHTML(c.label)}">${this.formatarPrefixo(index + 1, formatoNumeracao)} ${escapeHTML(c.label)}</span>
+                <span class="truncate font-medium campo-texto" title="${escapeHTML(c.label)}">${this.formatarPrefixo(index + 1, formatoNumeracao)} ${escapeHTML(c.label)}</span>
             </label>
         `).join('');
 
         return `
             <div class="space-y-6 animate-fade-in pb-10">
-                <!-- CABEÇALHO -->
+                <!-- CABEÇALHO COM LOGO -->
                 <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-800 p-6 rounded-2xl shadow-sm gap-4">
-                    <div>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Configuração de Formulário</span>
-                        <h3 class="text-xl font-black text-white mt-1">${escapeHTML(coletaData.nomeDaColeta)}</h3>
+                    <div class="flex items-center gap-4">
+                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" class="h-10 w-auto grayscale brightness-200 opacity-90" alt="SIGEP">
+                        <div>
+                            <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Configuração de Formulário</span>
+                            <h3 class="text-xl font-black text-white mt-1">${escapeHTML(coletaData.nomeDaColeta)}</h3>
+                        </div>
                     </div>
-                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
-                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-600">
-                            Zerar Base de Dados
+                    <div class="flex flex-wrap gap-2 w-full md:w-auto justify-end">
+                        <button type="button" onclick="ColetasBuilderService.abrirModalCompartilhamento('${coletaId}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-sm">
+                            Compartilhar Acesso / Pauta
                         </button>
-                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-sm">
-                            Excluir Formulário
+                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-600">
+                            Zerar Base
+                        </button>
+                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-sm">
+                            Excluir Form
+                        </button>
+                    </div>
+                </div>
+
+                <!-- BLOCO 0: STATUS E VALIDADE DO FORMULÁRIO -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-4 mb-5">Controle de Validade e Acesso</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 items-end">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Status Operacional</label>
+                            <select id="config-status-form" class="w-full p-3 border border-slate-300 rounded-xl text-sm font-bold text-slate-700 bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                                <option value="aberto" ${statusFormulario === 'aberto' ? 'selected' : ''}>Aberto (Aceitando Respostas)</option>
+                                <option value="fechado" ${statusFormulario === 'fechado' ? 'selected' : ''}>Fechado (Bloqueado)</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data de Abertura (Opcional)</label>
+                            <input type="date" id="config-data-inicio" value="${dataInicio}" class="w-full p-3 border border-slate-300 rounded-xl text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-2">Data Limite / Encerramento (Opcional)</label>
+                            <input type="date" id="config-data-fim" value="${dataFim}" class="w-full p-3 border border-slate-300 rounded-xl text-sm bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none">
+                        </div>
+                    </div>
+                    <div class="mt-5 flex justify-end">
+                        <button type="button" onclick="ColetasBuilderService.salvarStatusEValidade('${coletaId}')" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-6 py-3 rounded-xl text-sm transition shadow-sm">
+                            Salvar Regras de Acesso
                         </button>
                     </div>
                 </div>
 
                 <!-- BLOCO 1: ESTRUTURA DO FORMULÁRIO -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-                    
                     <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
                         <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
                             <h3 class="text-lg font-black text-slate-800">1. Estrutura de Perguntas</h3>
@@ -69,12 +104,18 @@ export const ColetasBuilderService = {
                             ` : ''}
                         </div>
                     </div>
+
+                    <!-- BUSCA DE PERGUNTAS -->
+                    ${campos.length > 5 ? `
+                        <div class="mb-4">
+                            <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'lista-campos-dicionario', '.campo-card', '.campo-card-texto')" placeholder="Pesquisar perguntas configuradas..." class="w-full p-3 border border-slate-300 rounded-xl text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 outline-none transition">
+                        </div>
+                    ` : ''}
                     
                     <div id="lista-campos-dicionario" class="space-y-3 mb-8 max-h-[400px] overflow-y-auto pr-2">
                         ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">Nenhuma pergunta configurada.</p>' : 
                             campos.map((c, index) => {
                                 const tipoDisplay = c.tipo.replace('_', ' ');
-                                
                                 let metricasDisplay = '';
                                 if (c.metricasBi && c.metricasBi.length > 0) {
                                     const metricasLabels = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
@@ -82,11 +123,11 @@ export const ColetasBuilderService = {
                                 }
                                 
                                 return `
-                                <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 hover:border-blue-300 transition shadow-sm">
+                                <div class="campo-card bg-white border border-slate-200 p-4 rounded-xl flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 hover:border-blue-300 transition shadow-sm">
                                     <div class="flex items-start gap-4 w-full">
                                         <span class="font-black text-slate-500 text-xs bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 shrink-0 mt-0.5">${this.formatarPrefixo(index + 1, formatoNumeracao)}</span>
                                         <div class="w-full space-y-1">
-                                            <p class="font-bold text-slate-800 text-sm leading-snug">${escapeHTML(c.label)}</p>
+                                            <p class="campo-card-texto font-bold text-slate-800 text-sm leading-snug">${escapeHTML(c.label)}</p>
                                             <div class="flex flex-wrap gap-2 mt-2">
                                                 <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-100 uppercase tracking-wide">TIPO: ${tipoDisplay}</span>
                                                 ${c.opcoes?.length ? `<span class="bg-slate-50 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 truncate max-w-[200px]">OPÇÕES: ${escapeHTML(c.opcoes.join(', '))}</span>` : ''}
@@ -144,7 +185,7 @@ export const ColetasBuilderService = {
                     </div>
                 </div>
 
-                <!-- BLOCO 2: GERAÇÃO E GERENCIAMENTO DE LINKS -->
+                <!-- BLOCO 2: GERAÇÃO DE LINKS E PERMISSÕES -->
                 <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
                         <h3 class="text-lg font-black text-slate-800">2. Distribuição e Acesso</h3>
@@ -175,7 +216,7 @@ export const ColetasBuilderService = {
                                             Copiar URL
                                         </button>
                                         <button type="button" onclick="ColetasBuilderService.abrirModalEditarLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-blue-50 hover:bg-blue-100 text-blue-700 border border-blue-200 font-bold px-4 py-2 rounded-lg text-xs transition">
-                                            Editar
+                                            Editar Escopo
                                         </button>
                                         <button type="button" onclick="ColetasBuilderService.removerLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
                                             Revogar
@@ -205,10 +246,19 @@ export const ColetasBuilderService = {
                             </div>
                         </div>
 
-                        <div class="bg-white p-4 rounded-xl border border-slate-200 mb-5">
-                            <label class="block text-xs font-bold text-slate-700 uppercase mb-3">Escopo de Preenchimento (Permissões):</label>
+                        <div class="bg-white p-5 rounded-xl border border-slate-200 mb-5">
+                            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-3 mb-3 gap-3">
+                                <label class="block text-xs font-bold text-slate-700 uppercase">Escopo de Preenchimento (Permissões):</label>
+                                <div class="flex items-center gap-3 w-full sm:w-auto">
+                                    <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'container-opcoes-campos', '.campo-checkbox', '.campo-texto')" placeholder="Pesquisar..." class="p-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-blue-500 w-full sm:w-48">
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-blue-700 whitespace-nowrap">
+                                        <input type="checkbox" onchange="ColetasBuilderService.toggleSelectAll(this.checked, 'container-opcoes-campos')" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"> 
+                                        Selecionar Visíveis
+                                    </label>
+                                </div>
+                            </div>
                             ${campos.length === 0 ? '<p class="text-xs text-red-500 font-medium">Configure as perguntas no Bloco 1 primeiro.</p>' : `
-                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                                <div id="container-opcoes-campos" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 max-h-60 overflow-y-auto pr-2">
                                     ${opcoesCamposHtml}
                                 </div>
                             `}
@@ -247,28 +297,57 @@ export const ColetasBuilderService = {
                 </div>
             </div>
 
+            <!-- MODAL COMPARTILHAMENTO E EDIÇÃO CONJUNTA -->
+            <div id="modal-compartilhamento" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+                <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Compartilhar Acesso / Edição</h3>
+                        <button onclick="document.getElementById('modal-compartilhamento').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+                    
+                    <div class="space-y-5">
+                        <p class="text-sm text-slate-600 font-medium leading-relaxed">Conceda permissão para que outros usuários ou membros de uma Pauta possam editar e gerenciar este formulário.</p>
+                        
+                        <div class="space-y-3">
+                            <label class="block text-xs font-bold text-slate-500 uppercase">E-mail do Usuário ou ID da Pauta</label>
+                            <input type="text" id="input-compartilhar-alvo" placeholder="exemplo@defensoria.rj.def.br ou ID" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm outline-none focus:border-blue-500">
+                            
+                            <button type="button" onclick="ColetasBuilderService.adicionarCompartilhamento('${coletaId}')" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl text-sm transition">
+                                Conceder Acesso de Edição
+                            </button>
+                        </div>
+
+                        <div class="pt-4 border-t border-slate-100">
+                            <h4 class="text-xs font-bold text-slate-500 uppercase mb-3">Usuários com Acesso</h4>
+                            <div id="lista-compartilhados" class="space-y-2 max-h-40 overflow-y-auto">
+                                ${ (coletaData.compartilhadoCom || []).length === 0 ? '<p class="text-xs text-slate-400 italic">Restrito apenas ao criador e administradores.</p>' : 
+                                    (coletaData.compartilhadoCom || []).map(email => `
+                                        <div class="flex justify-between items-center p-2 bg-slate-50 border border-slate-200 rounded-lg">
+                                            <span class="text-sm text-slate-700 font-medium">${escapeHTML(email)}</span>
+                                            <button onclick="ColetasBuilderService.removerCompartilhamento('${coletaId}', '${escapeHTML(email)}')" class="text-red-500 hover:text-red-700 text-xs font-bold px-2 py-1">Remover</button>
+                                        </div>
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
             <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+                <!-- Mantido o layout anterior do modal de métricas -->
                 <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
                     <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
                         <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas Analíticas</h3>
                         <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
                     </div>
-                    
                     <div class="space-y-5">
                         <p class="text-sm text-slate-600 font-medium">Selecione os indicadores que devem ser processados para este campo no BI:</p>
-                        
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3" id="container-metricas-opcoes">
-                            <!-- As opções serão preenchidas dinamicamente -->
-                        </div>
-                        
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3" id="container-metricas-opcoes"></div>
                         <div class="flex flex-col sm:flex-row gap-3 pt-2">
-                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">
-                                Cancelar
-                            </button>
-                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition">
-                                Salvar Métricas
-                            </button>
+                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">Cancelar</button>
+                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition">Salvar Métricas</button>
                         </div>
                     </div>
                 </div>
@@ -286,6 +365,111 @@ export const ColetasBuilderService = {
             return (letras[num - 1] || num) + ')';
         }
         return num + '.';
+    },
+
+    // ============================================================
+    // FUNÇÕES DE BUSCA E SELEÇÃO (NOVIDADE)
+    // ============================================================
+    filtrarLista(texto, containerId, containerClass, textClass) {
+        const termo = limparTexto(texto).toLowerCase();
+        const container = document.getElementById(containerId);
+        if(!container) return;
+
+        const itens = container.querySelectorAll(containerClass);
+        itens.forEach(item => {
+            const spanTexto = item.querySelector(textClass);
+            if(spanTexto) {
+                const textoItem = limparTexto(spanTexto.textContent).toLowerCase();
+                item.style.display = textoItem.includes(termo) ? '' : 'none';
+            }
+        });
+    },
+
+    toggleSelectAll(checked, containerId) {
+        const container = document.getElementById(containerId);
+        if(!container) return;
+        const checkboxes = container.querySelectorAll('input[type="checkbox"]');
+        checkboxes.forEach(cb => {
+            // Marca apenas os que estão visíveis após o filtro
+            if(cb.closest('label').style.display !== 'none') {
+                cb.checked = checked;
+            }
+        });
+    },
+
+    // ============================================================
+    // VALIDADE E STATUS (NOVIDADE)
+    // ============================================================
+    async salvarStatusEValidade(coletaId) {
+        try {
+            const status = document.getElementById('config-status-form').value;
+            const dataInicio = document.getElementById('config-data-inicio').value;
+            const dataFim = document.getElementById('config-data-fim').value;
+
+            const db = window.app.db;
+            await updateDoc(doc(db, "formularios_coleta", coletaId), { 
+                status: status,
+                dataInicio: dataInicio,
+                dataFim: dataFim
+            });
+            showNotification("Regras operacionais atualizadas.", "success");
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao atualizar status.", "error");
+        }
+    },
+
+    // ============================================================
+    // COMPARTILHAMENTO (NOVIDADE)
+    // ============================================================
+    abrirModalCompartilhamento(coletaId) {
+        const modal = document.getElementById('modal-compartilhamento');
+        if (modal) modal.classList.remove('hidden');
+    },
+
+    async adicionarCompartilhamento(coletaId) {
+        const alvo = document.getElementById('input-compartilhar-alvo').value.trim().toLowerCase();
+        if (!alvo) return showNotification("Informe um e-mail ou Pauta válida.", "warning");
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let comp = snap.data().compartilhadoCom || [];
+            if (!comp.includes(alvo)) {
+                comp.push(alvo);
+                await updateDoc(docRef, { compartilhadoCom: comp });
+                showNotification("Acesso concedido.", "success");
+                window.abrirConstrutor(coletaId);
+            } else {
+                showNotification("Usuário já possui acesso.", "info");
+            }
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao conceder acesso.", "error");
+        }
+    },
+
+    async removerCompartilhamento(coletaId, alvo) {
+        if (!confirm(`Remover acesso de ${alvo}?`)) return;
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let comp = snap.data().compartilhadoCom || [];
+            comp = comp.filter(e => e !== alvo);
+            await updateDoc(docRef, { compartilhadoCom: comp });
+            
+            showNotification("Acesso removido.", "info");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao remover acesso.", "error");
+        }
     },
 
     // ============================================================
@@ -395,7 +579,7 @@ export const ColetasBuilderService = {
     },
 
     // ============================================================
-    // EDIÇÃO DE LINKS (BLOCO 2)
+    // EDIÇÃO DE LINKS (BLOCO 2) COM FILTRO DE PERMISSÕES
     // ============================================================
     async abrirModalEditarLink(coletaId, index) {
         const db = window.app.db;
@@ -422,38 +606,49 @@ export const ColetasBuilderService = {
         }
 
         const checkboxesHtml = campos.map(c => `
-            <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+            <label class="campo-checkbox flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
                 <input type="checkbox" name="edit_campos_link" value="${c.id}" ${link.camposHabilitados.includes(c.id) ? 'checked' : ''} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
-                <span class="truncate font-medium">${escapeHTML(c.label)}</span>
+                <span class="truncate font-medium campo-texto">${escapeHTML(c.label)}</span>
             </label>
         `).join('');
 
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+            <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
                 <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
                     <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Acesso de Distribuição</h3>
                     <button onclick="document.getElementById('modal-editar-link').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
                 </div>
                 
                 <div class="space-y-4 overflow-y-auto pr-2">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Identificação do Destinatário</label>
-                        <input type="text" id="edit-link-orgao" value="${escapeHTML(link.orgao)}" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
-                    </div>
-                    <div>
-                        <div class="flex items-center justify-between mb-1.5">
-                            <label class="text-xs font-bold text-slate-500 uppercase">Proteção por Senha</label>
-                            <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-600">
-                                <input type="checkbox" id="edit-link-requer-senha" ${link.requerSenha ? 'checked' : ''} onchange="document.getElementById('edit-link-senha').disabled = !this.checked; document.getElementById('edit-link-senha').classList.toggle('bg-slate-100', !this.checked); if(!this.checked) document.getElementById('edit-link-senha').value = '';" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> 
-                                Habilitar
-                            </label>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Identificação do Destinatário</label>
+                            <input type="text" id="edit-link-orgao" value="${escapeHTML(link.orgao)}" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                         </div>
-                        <input type="password" id="edit-link-senha" value="${link.senha || ''}" ${link.requerSenha ? '' : 'disabled'} placeholder="Definir nova senha" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none ${link.requerSenha ? 'bg-white' : 'bg-slate-100'}">
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Proteção por Senha</label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-600">
+                                    <input type="checkbox" id="edit-link-requer-senha" ${link.requerSenha ? 'checked' : ''} onchange="document.getElementById('edit-link-senha').disabled = !this.checked; document.getElementById('edit-link-senha').classList.toggle('bg-slate-100', !this.checked); if(!this.checked) document.getElementById('edit-link-senha').value = '';" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> 
+                                    Habilitar
+                                </label>
+                            </div>
+                            <input type="password" id="edit-link-senha" value="${link.senha || ''}" ${link.requerSenha ? '' : 'disabled'} placeholder="Definir nova senha" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none ${link.requerSenha ? 'bg-white' : 'bg-slate-100'}">
+                        </div>
                     </div>
                     
-                    <div class="pt-2 border-t border-slate-100">
-                        <label class="block text-xs font-bold text-slate-700 uppercase mb-3">Escopo de Preenchimento (Permissões):</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Escopo de Preenchimento (Permissões):</label>
+                            <div class="flex items-center gap-3 w-full sm:w-auto">
+                                <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'container-edit-permissoes', '.campo-checkbox', '.campo-texto')" placeholder="Pesquisar..." class="p-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-blue-500 w-full sm:w-48">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-blue-700 whitespace-nowrap">
+                                    <input type="checkbox" onchange="ColetasBuilderService.toggleSelectAll(this.checked, 'container-edit-permissoes')" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"> 
+                                    Selecionar Visíveis
+                                </label>
+                            </div>
+                        </div>
+                        <div id="container-edit-permissoes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
                             ${checkboxesHtml || '<p class="text-xs text-red-500 font-medium">Nenhuma pergunta configurada no formulário.</p>'}
                         </div>
                     </div>
@@ -514,7 +709,7 @@ export const ColetasBuilderService = {
     },
 
     // ============================================================
-    // MÉTODOS DE AÇÕES DO CONSTRUTOR
+    // MÉTODOS DE AÇÕES DO CONSTRUTOR (MANTIDOS E AJUSTADOS)
     // ============================================================
     initEventos(db, coletaId, coletaData) {
         const selectTipo = document.getElementById('novo-campo-tipo');
@@ -572,7 +767,7 @@ export const ColetasBuilderService = {
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
             const senha = document.getElementById('novo-link-senha').value.trim();
             
-            const checkboxes = document.querySelectorAll('input[name="campos_link"]:checked');
+            const checkboxes = document.querySelectorAll('#container-opcoes-campos input[name="campos_link"]:checked');
             const camposHabilitados = Array.from(checkboxes).map(cb => cb.value);
 
             if (!orgao) return showNotification("Informe a identificação do destinatário.", "error");
