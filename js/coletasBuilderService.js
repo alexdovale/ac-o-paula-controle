@@ -1,15 +1,16 @@
-// js/coletasBuilderService.js - Construtor Avançado: Edição, Tipos, Opções, Reordenação e Configuração de Métricas BI
+// js/coletasBuilderService.js - Construtor Avançado: Padrão Corporativo
 import { doc, updateDoc, deleteDoc, collection, getDocs, query, where, writeBatch, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
-// Função utilitária para limpar caracteres que quebram PDFs e JSONs
+// Função utilitária para limpar caracteres que quebram integrações e PDFs
 function limparTexto(texto) {
     if (typeof texto !== 'string') return texto;
     return texto
         .normalize('NFD').replace(/[\u0300-\u036f]/g, "") // Remove acentos
-        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais por ponto
-        .replace(/[&]/g, 'e') // Substitui & por 'e'
-        .replace(/[^\x00-\x7F]/g, ""); // Remove qualquer outro caractere não-ASCII
+        .replace(/[ºª°]/g, '.') // Substitui indicadores ordinais
+        .replace(/[&]/g, 'e') // Substitui & por e
+        .replace(/[^\x20-\x7E]/g, '') // Remove emojis e caracteres não imprimíveis
+        .trim();
 }
 
 export const ColetasBuilderService = {
@@ -21,222 +22,241 @@ export const ColetasBuilderService = {
         const urlSheets = coletaData.urlSincronizacaoSheets || '';
 
         const opcoesCamposHtml = campos.map((c, index) => `
-            <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border rounded-lg cursor-pointer hover:bg-slate-50 transition">
-                <input type="checkbox" name="campos_link" value="${c.id}" class="h-4 w-4 text-indigo-600 rounded">
-                <span class="truncate" title="${escapeHTML(c.label)}">${this.formatarPrefixo(index + 1, formatoNumeracao)} ${escapeHTML(c.label)}</span>
+            <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                <input type="checkbox" name="campos_link" value="${c.id}" class="h-4 w-4 text-blue-600 rounded border-slate-300">
+                <span class="truncate font-medium" title="${escapeHTML(c.label)}">${this.formatarPrefixo(index + 1, formatoNumeracao)} ${escapeHTML(c.label)}</span>
             </label>
         `).join('');
 
         return `
-            <div class="space-y-8 animate-fade-in pb-10">
+            <div class="space-y-6 animate-fade-in pb-10">
                 <!-- CABEÇALHO -->
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center bg-indigo-50 p-4 rounded-2xl border border-indigo-100 gap-4">
+                <div class="flex flex-col md:flex-row justify-between items-start md:items-center bg-slate-800 p-6 rounded-2xl shadow-sm gap-4">
                     <div>
-                        <span class="text-[10px] font-bold uppercase tracking-widest text-indigo-500">Editando Coleta:</span>
-                        <h3 class="text-lg font-black text-indigo-900">${escapeHTML(coletaData.nomeDaColeta)}</h3>
+                        <span class="text-[10px] font-bold uppercase tracking-widest text-slate-400">Configuração de Formulário</span>
+                        <h3 class="text-xl font-black text-white mt-1">${escapeHTML(coletaData.nomeDaColeta)}</h3>
                     </div>
-                    <div class="flex flex-wrap gap-2">
-                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="bg-amber-100 hover:bg-amber-200 text-amber-800 font-bold px-4 py-2 rounded-xl text-xs transition border border-amber-200 shadow-sm">🧹 Limpar Respostas (Zerar BI)</button>
-                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="bg-red-100 hover:bg-red-200 text-red-700 font-bold px-4 py-2 rounded-xl text-xs transition border border-red-200 shadow-sm">🗑️ Excluir Coleta</button>
+                    <div class="flex flex-col sm:flex-row gap-2 w-full md:w-auto">
+                        <button type="button" onclick="ColetasBuilderService.limparRespostas('${coletaId}')" class="w-full sm:w-auto bg-slate-700 hover:bg-slate-600 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition border border-slate-600">
+                            Zerar Base de Dados
+                        </button>
+                        <button type="button" onclick="ColetasBuilderService.apagarColeta('${coletaId}')" class="w-full sm:w-auto bg-red-600 hover:bg-red-700 text-white font-bold px-4 py-2.5 rounded-lg text-xs transition shadow-sm">
+                            Excluir Formulário
+                        </button>
                     </div>
                 </div>
 
-                <!-- BLOCO 1: PERGUNTAS -->
-                <div class="bg-white border-2 border-indigo-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-2 h-full bg-indigo-500"></div>
+                <!-- BLOCO 1: ESTRUTURA DO FORMULÁRIO -->
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
                     
-                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-150 pb-3 mb-5 gap-3">
-                        <div class="flex items-center gap-3">
-                            <h3 class="text-lg font-black text-slate-800">1. Estrutura do Formulário (Perguntas)</h3>
-                            <select id="select-formato-num" onchange="ColetasBuilderService.mudarFormatoNum('${coletaId}', this.value)" class="text-xs font-bold bg-slate-100 border border-slate-200 rounded-lg px-2.5 py-1.5 outline-none cursor-pointer">
+                    <div class="flex flex-col lg:flex-row justify-between items-start lg:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
+                        <div class="flex flex-col sm:flex-row items-start sm:items-center gap-4 w-full lg:w-auto">
+                            <h3 class="text-lg font-black text-slate-800">1. Estrutura de Perguntas</h3>
+                            <select id="select-formato-num" onchange="ColetasBuilderService.mudarFormatoNum('${coletaId}', this.value)" class="w-full sm:w-auto text-xs font-bold text-slate-600 bg-slate-50 border border-slate-200 rounded-lg px-3 py-2 outline-none focus:border-blue-500">
                                 <option value="numero" ${formatoNumeracao === 'numero' ? 'selected' : ''}>Numeração: 1, 2, 3...</option>
                                 <option value="romano" ${formatoNumeracao === 'romano' ? 'selected' : ''}>Numeração: I, II, III...</option>
                                 <option value="letra" ${formatoNumeracao === 'letra' ? 'selected' : ''}>Numeração: A, B, C...</option>
                             </select>
                         </div>
-                        <div class="flex gap-2">
-                            <button type="button" onclick="ColetasBuilderService.importarJsonLivre('${coletaId}', ${JSON.stringify(coletaData).replace(/"/g, '&quot;')})" class="text-xs bg-indigo-50 text-indigo-700 hover:bg-indigo-100 font-bold px-3 py-1.5 rounded-lg border border-indigo-200 transition">📥 Importar JSON</button>
-                            ${campos.length > 0 ? `<button type="button" onclick="ColetasBuilderService.apagarTodasPerguntas('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline self-center">Apagar Tudo</button>` : ''}
+                        <div class="flex gap-2 w-full lg:w-auto justify-end">
+                            <button type="button" onclick="ColetasBuilderService.importarJsonLivre('${coletaId}', ${JSON.stringify(coletaData).replace(/"/g, '&quot;')})" class="text-xs bg-slate-100 text-slate-700 hover:bg-slate-200 font-bold px-4 py-2 rounded-lg border border-slate-200 transition">
+                                Importar JSON
+                            </button>
+                            ${campos.length > 0 ? `
+                                <button type="button" onclick="ColetasBuilderService.apagarTodasPerguntas('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline px-2">
+                                    Apagar Tudo
+                                </button>
+                            ` : ''}
                         </div>
                     </div>
                     
-                    <div id="lista-campos-dicionario" class="space-y-3 mb-6 max-h-80 overflow-y-auto pr-2">
-                        ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic w-full">Nenhuma pergunta adicionada.</p>' : 
+                    <div id="lista-campos-dicionario" class="space-y-3 mb-8 max-h-[400px] overflow-y-auto pr-2">
+                        ${campos.length === 0 ? '<p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">Nenhuma pergunta configurada.</p>' : 
                             campos.map((c, index) => {
-                                let tipoDisplay = c.tipo.replace('_', ' ');
+                                const tipoDisplay = c.tipo.replace('_', ' ');
                                 
                                 let metricasDisplay = '';
-                                if (c.metricasBi) {
-                                    const metricasLabels = {
-                                        soma: '📊 Soma',
-                                        media: '📈 Média',
-                                        desvio: '📉 Desvio',
-                                        frequencia: '🔢 Frequência',
-                                        total: '📋 Total',
-                                        distribuicao: '🧩 Distribuição'
-                                    };
+                                if (c.metricasBi && c.metricasBi.length > 0) {
+                                    const metricasLabels = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
                                     metricasDisplay = c.metricasBi.map(m => metricasLabels[m] || m).join(', ');
                                 }
                                 
                                 return `
-                                <div class="bg-slate-50 border border-slate-200 p-3.5 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
-                                    <div class="flex items-center gap-3 w-full">
-                                        <span class="font-black text-indigo-600 text-xs bg-indigo-50 px-2 py-1 rounded border border-indigo-100 shrink-0">${this.formatarPrefixo(index + 1, formatoNumeracao)}</span>
-                                        <div class="w-full">
-                                            <p class="font-bold text-slate-700 text-sm">${escapeHTML(c.label)}</p>
-                                            <p class="text-[10px] font-bold text-slate-400 uppercase mt-0.5">📝 ${tipoDisplay} ${c.opcoes?.length ? `| 🏷️ Opções: [${c.opcoes.join(', ')}]` : ''}</p>
-                                            ${metricasDisplay ? `<p class="text-[9px] text-indigo-500 font-medium mt-0.5">🎯 BI: ${metricasDisplay}</p>` : ''}
+                                <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col xl:flex-row justify-between items-start xl:items-center gap-4 hover:border-blue-300 transition shadow-sm">
+                                    <div class="flex items-start gap-4 w-full">
+                                        <span class="font-black text-slate-500 text-xs bg-slate-100 px-2.5 py-1.5 rounded-lg border border-slate-200 shrink-0 mt-0.5">${this.formatarPrefixo(index + 1, formatoNumeracao)}</span>
+                                        <div class="w-full space-y-1">
+                                            <p class="font-bold text-slate-800 text-sm leading-snug">${escapeHTML(c.label)}</p>
+                                            <div class="flex flex-wrap gap-2 mt-2">
+                                                <span class="bg-blue-50 text-blue-700 px-2 py-0.5 rounded text-[10px] font-bold border border-blue-100 uppercase tracking-wide">TIPO: ${tipoDisplay}</span>
+                                                ${c.opcoes?.length ? `<span class="bg-slate-50 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 truncate max-w-[200px]">OPÇÕES: ${escapeHTML(c.opcoes.join(', '))}</span>` : ''}
+                                                ${metricasDisplay ? `<span class="bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-[10px] font-bold border border-indigo-100 uppercase tracking-wide">BI: ${metricasDisplay}</span>` : ''}
+                                            </div>
                                         </div>
                                     </div>
-                                    <div class="flex items-center gap-1.5 shrink-0 self-end sm:self-center">
-                                        ${index > 0 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index - 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Subir">⬆️</button>` : ''}
-                                        ${index < campos.length - 1 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index + 1})" class="bg-white hover:bg-slate-100 text-slate-600 border px-2 py-1 rounded text-xs" title="Descer">⬇️</button>` : ''}
-                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index})" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-2.5 py-1 rounded text-xs font-bold ml-1" title="Editar Pergunta">✏️ Editar</button>
-                                        <button type="button" onclick="ColetasBuilderService.abrirModalConfigMetricas('${coletaId}', ${index})" class="bg-green-50 hover:bg-green-100 text-green-600 border border-green-200 px-2 py-1 rounded text-xs font-bold" title="Configurar Métricas BI">📊</button>
-                                        <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-2 py-1 rounded text-xs font-bold" title="Remover">✕</button>
+                                    <div class="flex flex-wrap items-center gap-2 w-full xl:w-auto xl:justify-end border-t xl:border-t-0 border-slate-100 pt-3 xl:pt-0">
+                                        <div class="flex gap-1 mr-2">
+                                            ${index > 0 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index - 1})" class="bg-slate-50 hover:bg-slate-200 text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded text-xs font-bold transition">Subir</button>` : ''}
+                                            ${index < campos.length - 1 ? `<button type="button" onclick="ColetasBuilderService.moverCampo('${coletaId}', ${index}, ${index + 1})" class="bg-slate-50 hover:bg-slate-200 text-slate-600 border border-slate-200 px-2.5 py-1.5 rounded text-xs font-bold transition">Descer</button>` : ''}
+                                        </div>
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalEditarCampo('${coletaId}', ${index})" class="bg-white hover:bg-blue-50 text-blue-600 border border-blue-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">Editar</button>
+                                        <button type="button" onclick="ColetasBuilderService.abrirModalConfigMetricas('${coletaId}', ${index})" class="bg-white hover:bg-indigo-50 text-indigo-600 border border-indigo-200 px-3 py-1.5 rounded-lg text-xs font-bold transition">Métricas</button>
+                                        <button type="button" onclick="ColetasBuilderService.removerCampo('${coletaId}', ${index})" class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-bold transition ml-auto xl:ml-0">Remover</button>
                                     </div>
                                 </div>
                             `}).join('')}
                     </div>
 
                     <!-- ADICIONAR NOVA PERGUNTA -->
-                    <div class="bg-indigo-50 p-5 rounded-xl border border-indigo-100">
-                        <h4 class="text-sm font-bold text-indigo-900 mb-3">Adicionar Nova Pergunta</h4>
-                        <div class="flex flex-col gap-3">
-                            <input type="text" id="novo-campo-label" placeholder="Digite a pergunta (Ex: Número de Atendimentos)" class="p-3 border border-indigo-200 rounded-xl text-sm font-medium focus:ring-2 focus:ring-indigo-500 outline-none bg-white">
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                        <h4 class="text-sm font-black text-slate-700 uppercase tracking-wide mb-4">Nova Pergunta</h4>
+                        <div class="flex flex-col gap-4">
+                            <input type="text" id="novo-campo-label" placeholder="Enunciado da pergunta (Ex: Número de Atendimentos)" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm font-medium focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             
-                            <div class="flex flex-col sm:flex-row gap-3">
-                                <select id="novo-campo-tipo" class="w-full sm:w-1/2 p-3 border border-indigo-200 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-indigo-500 outline-none">
+                            <div class="flex flex-col md:flex-row gap-3">
+                                <select id="novo-campo-tipo" class="w-full md:w-1/2 p-3.5 border border-slate-300 rounded-xl text-sm bg-white font-medium focus:ring-2 focus:ring-blue-500 outline-none">
                                     <option value="numero">Número Estatístico</option>
                                     <option value="texto_curto">Texto Curto (1 linha)</option>
                                     <option value="texto_longo">Parágrafo (Várias linhas)</option>
                                     <option value="data">Data</option>
                                     <option value="booleano">Sim / Não</option>
                                     <option value="selecao">Lista Suspensa (Dropdown)</option>
-                                    <option value="multipla_escolha">Múltipla Escolha (Bolhinhas)</option>
+                                    <option value="multipla_escolha">Múltipla Escolha (Bolhas)</option>
                                 </select>
-                                <button type="button" id="btn-add-campo" class="w-full sm:w-1/2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-3 rounded-xl text-sm transition shadow-md">+ Salvar Pergunta</button>
+                                <button type="button" id="btn-add-campo" class="w-full md:w-1/2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-5 py-3.5 rounded-xl text-sm transition shadow-sm">
+                                    Adicionar ao Formulário
+                                </button>
                             </div>
 
-                            <div id="container-opcoes-extras" class="hidden mt-2">
-                                <label class="block text-xs font-bold text-indigo-700 mb-1">Digite as opções separadas por vírgula (,)</label>
-                                <input type="text" id="novo-campo-opcoes" placeholder="Ex: Fundamental, Medio, Superior" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white">
+                            <div id="container-opcoes-extras" class="hidden mt-1">
+                                <label class="block text-xs font-bold text-slate-500 mb-1.5 uppercase">Opções de Resposta (separadas por vírgula)</label>
+                                <input type="text" id="novo-campo-opcoes" placeholder="Ex: Fundamental, Medio, Superior" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm bg-white focus:ring-2 focus:ring-blue-500 outline-none">
                             </div>
                         </div>
                     </div>
                 </div>
 
                 <!-- BLOCO 2: GERAÇÃO DE LINKS -->
-                <div class="bg-white border-2 border-emerald-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-2 h-full bg-emerald-500"></div>
-                    <div class="flex justify-between items-center border-b border-slate-150 pb-3 mb-5">
-                        <h3 class="text-lg font-black text-slate-800">2. Links de Distribuição (Órgãos/Parceiros)</h3>
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center border-b border-slate-100 pb-4 mb-5 gap-4">
+                        <h3 class="text-lg font-black text-slate-800">2. Distribuição e Acesso</h3>
                         ${links.length > 0 ? `
-                            <button type="button" onclick="ColetasBuilderService.apagarTodosLinks('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline">Apagar Todos os Links</button>
+                            <button type="button" onclick="ColetasBuilderService.apagarTodosLinks('${coletaId}')" class="text-xs text-red-600 font-bold hover:underline">
+                                Revogar Todos os Links
+                            </button>
                         ` : ''}
                     </div>
                     
-                    <div class="space-y-3 mb-6 max-h-64 overflow-y-auto pr-2">
-                        ${links.length === 0 ? '<p class="text-sm text-slate-400 italic">Nenhum link gerado.</p>' : 
+                    <div class="space-y-3 mb-8 max-h-[300px] overflow-y-auto pr-2">
+                        ${links.length === 0 ? '<p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">Nenhum link gerado no momento.</p>' : 
                             links.map((l, index) => `
-                                <div class="bg-white border border-emerald-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-center gap-4 shadow-sm hover:shadow-md transition">
-                                    <div class="w-full truncate">
-                                        <p class="font-black text-emerald-900 text-sm uppercase">📍 ${escapeHTML(l.orgao)}</p>
-                                        <p class="text-[11px] text-slate-500 font-medium mt-1">
-                                            ${l.requerSenha ? '🔒 Requer Senha' : '🔓 Acesso Aberto'} | 📋 ${l.camposHabilitados.length} perguntas liberadas
-                                        </p>
+                                <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4 shadow-sm hover:border-blue-300 transition">
+                                    <div class="w-full">
+                                        <p class="font-black text-slate-700 text-sm uppercase">${escapeHTML(l.orgao)}</p>
+                                        <div class="flex flex-wrap gap-2 mt-2">
+                                            <span class="px-2 py-0.5 rounded text-[10px] font-bold border ${l.requerSenha ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-emerald-50 text-emerald-700 border-emerald-200'} uppercase tracking-wide">
+                                                ${l.requerSenha ? 'Acesso Restrito' : 'Acesso Público'}
+                                            </span>
+                                            <span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-[10px] font-bold border border-slate-200 uppercase tracking-wide">
+                                                Permissões: ${l.camposHabilitados.length} Campos
+                                            </span>
+                                        </div>
                                     </div>
-                                    <div class="flex items-center gap-2 w-full sm:w-auto justify-end">
-                                        <button type="button" onclick="ColetasBuilderService.copiarLink('${l.token}')" class="bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2.5 rounded-xl text-xs transition border border-emerald-300 whitespace-nowrap">📋 Copiar Link</button>
-                                        <button type="button" onclick="ColetasBuilderService.removerLink('${coletaId}', ${index})" class="bg-red-50 hover:bg-red-100 text-red-600 font-bold p-2.5 rounded-xl text-xs transition border border-red-200" title="Apagar Link">🗑️</button>
+                                    <div class="flex flex-wrap w-full md:w-auto gap-2 mt-2 md:mt-0">
+                                        <button type="button" onclick="ColetasBuilderService.copiarLink('${l.token}')" class="w-full sm:w-auto bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-300 font-bold px-4 py-2 rounded-lg text-xs transition">
+                                            Copiar URL
+                                        </button>
+                                        <button type="button" onclick="ColetasBuilderService.removerLink('${coletaId}', ${index})" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2 rounded-lg text-xs font-bold transition">
+                                            Revogar
+                                        </button>
                                     </div>
                                 </div>
                             `).join('')}
                     </div>
 
-                    <div class="bg-emerald-50 p-5 rounded-xl border border-emerald-100 space-y-4">
-                        <h4 class="text-sm font-bold text-emerald-900">Gerar Novo Link</h4>
+                    <div class="bg-slate-50 p-6 rounded-xl border border-slate-200">
+                        <h4 class="text-sm font-black text-slate-700 uppercase tracking-wide mb-4">Gerar Novo Acesso</h4>
                         
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
                             <div>
-                                <label class="block text-xs font-bold text-slate-600 mb-1">Destinatário (Órgão/Pessoa)</label>
-                                <input type="text" id="novo-link-orgao" placeholder="Ex: Cartorio do 1 Oficio" class="w-full p-3 border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Identificação do Destinatário</label>
+                                <input type="text" id="novo-link-orgao" placeholder="Nome do Órgão ou Pessoa" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             </div>
                             <div>
-                                <div class="flex items-center justify-between mb-1">
-                                    <label class="text-xs font-bold text-slate-600">Senha de Acesso</label>
-                                    <label class="flex items-center gap-1 cursor-pointer text-[10px] text-slate-500">
-                                        <input type="checkbox" id="novo-link-requer-senha" checked class="rounded"> Exigir
+                                <div class="flex items-center justify-between mb-1.5">
+                                    <label class="text-xs font-bold text-slate-500 uppercase">Proteção por Senha</label>
+                                    <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-600">
+                                        <input type="checkbox" id="novo-link-requer-senha" checked class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> 
+                                        Habilitar
                                     </label>
                                 </div>
-                                <input type="password" id="novo-link-senha" placeholder="Digite uma senha" class="w-full p-3 border border-emerald-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                                <input type="password" id="novo-link-senha" placeholder="Definir senha de acesso" class="w-full p-3.5 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
                             </div>
                         </div>
 
-                        <div class="bg-white p-4 rounded-xl border border-emerald-200">
-                            <label class="block text-xs font-bold text-emerald-800 uppercase mb-3">Selecione o que eles vão preencher:</label>
-                            ${campos.length === 0 ? '<p class="text-xs text-red-500">Adicione perguntas no Bloco 1 primeiro.</p>' : `
-                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+                        <div class="bg-white p-4 rounded-xl border border-slate-200 mb-5">
+                            <label class="block text-xs font-bold text-slate-700 uppercase mb-3">Escopo de Preenchimento (Permissões):</label>
+                            ${campos.length === 0 ? '<p class="text-xs text-red-500 font-medium">Configure as perguntas no Bloco 1 primeiro.</p>' : `
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                                     ${opcoesCamposHtml}
                                 </div>
                             `}
                         </div>
 
-                        <button type="button" id="btn-gerar-link" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3.5 rounded-xl text-sm shadow-md transition uppercase tracking-wide">Gerar Link Seguro</button>
+                        <button type="button" id="btn-gerar-link" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3.5 rounded-xl text-sm shadow-sm transition">
+                            Gerar Link de Acesso
+                        </button>
                     </div>
                 </div>
 
                 <!-- BLOCO 3: INTEGRAÇÃO GOOGLE SHEETS / LOOKER STUDIO -->
-                <div class="bg-white border-2 border-blue-100 rounded-2xl p-6 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-2 h-full bg-blue-500"></div>
-                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-3 mb-5">3. Sincronização Automática (Google Sheets / Looker Studio)</h3>
+                <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+                    <h3 class="text-lg font-black text-slate-800 border-b border-slate-100 pb-4 mb-5">3. Sincronização Externa (Google Sheets)</h3>
                     
-                    <div class="space-y-4">
+                    <div class="space-y-4 max-w-3xl">
                         <div>
-                            <label class="block text-xs font-bold text-slate-600 mb-1">URL do Web App (Google Apps Script):</label>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">URL do Web App (Apps Script):</label>
                             <input type="text" id="input-url-sheets" 
                                    value="${escapeHTML(urlSheets)}" 
-                                   placeholder="Cole aqui a URL do seu script de integração..." 
-                                   class="w-full p-3 border border-blue-200 rounded-xl text-sm outline-none bg-blue-50/50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition">
+                                   placeholder="Cole a URL do script gerado no Google Sheets..." 
+                                   class="w-full p-3.5 border border-slate-300 rounded-xl text-sm outline-none bg-slate-50 focus:bg-white focus:ring-2 focus:ring-blue-500 transition">
                         </div>
                         
-                        <button type="button" 
-                                onclick="ColetasBuilderService.atualizarConfigIntegracao('${coletaId}', document.getElementById('input-url-sheets').value)" 
-                                class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3 rounded-xl text-sm shadow-md transition flex items-center gap-2">
-                            💾 Salvar URL de Sincronização
-                        </button>
-                        <p class="text-[11px] text-slate-400 mt-1">
-                            Ao colar e salvar a URL do Web App aqui, todas as submissões realizadas via link externo serão espelhadas automaticamente para a sua planilha do Google.
-                        </p>
+                        <div class="flex flex-col sm:flex-row gap-4 items-start sm:items-center">
+                            <button type="button" 
+                                    onclick="ColetasBuilderService.atualizarConfigIntegracao('${coletaId}', document.getElementById('input-url-sheets').value)" 
+                                    class="w-full sm:w-auto bg-blue-600 hover:bg-blue-700 text-white font-bold px-6 py-3.5 rounded-xl text-sm shadow-sm transition">
+                                Salvar Configuração de Integração
+                            </button>
+                            <p class="text-[11px] text-slate-500 leading-relaxed max-w-md">
+                                A sincronização enviará uma cópia exata de cada submissão para a sua planilha, alimentando diretamente seu painel do Looker Studio.
+                            </p>
+                        </div>
                     </div>
                 </div>
             </div>
 
             <!-- MODAL DE CONFIGURAÇÃO DE MÉTRICAS BI -->
-            <div id="modal-config-metricas" class="fixed inset-0 bg-black/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in">
-                <div class="bg-white rounded-3xl max-w-md w-full p-8 shadow-2xl border border-slate-200">
-                    <div class="flex justify-between items-center mb-6">
-                        <h3 class="text-xl font-black text-slate-800">📊 Configurar Métricas do BI</h3>
-                        <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="text-slate-400 hover:text-slate-600 text-2xl transition">×</button>
+            <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm">
+                <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-200">
+                    <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas Analíticas</h3>
+                        <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
                     </div>
                     
-                    <div class="space-y-4">
-                        <p class="text-sm text-slate-600">Selecione quais métricas este campo deve exibir no painel de BI:</p>
+                    <div class="space-y-5">
+                        <p class="text-sm text-slate-600 font-medium">Selecione os indicadores que devem ser processados para este campo no BI:</p>
                         
-                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-2" id="container-metricas-opcoes">
+                        <div class="bg-slate-50 p-4 rounded-xl border border-slate-200 space-y-3" id="container-metricas-opcoes">
                             <!-- As opções serão preenchidas dinamicamente -->
                         </div>
                         
-                        <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
-                            <p class="text-xs text-amber-700 font-medium">💡 As métricas selecionadas aparecerão no card do BI para este campo.</p>
-                        </div>
-                        
-                        <div class="grid grid-cols-2 gap-3 pt-4">
-                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition">
+                        <div class="flex flex-col sm:flex-row gap-3 pt-2">
+                            <button onclick="ColetasBuilderService.fecharModalConfigMetricas()" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition">
                                 Cancelar
                             </button>
-                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="p-3 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold transition shadow-lg">
-                                💾 Salvar Configuração
+                            <button onclick="ColetasBuilderService.salvarConfigMetricas()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition">
+                                Salvar Métricas
                             </button>
                         </div>
                     </div>
@@ -279,38 +299,36 @@ export const ColetasBuilderService = {
             const container = document.getElementById('container-metricas-opcoes');
             const metricasAtuais = campo.metricasBi || [];
 
-            // Define as opções disponíveis baseado no tipo do campo
             let opcoesDisponiveis = [];
             
             if (campo.tipo === 'numero' || campo.tipo === 'numero_abrangente') {
                 opcoesDisponiveis = [
-                    { id: 'soma', label: '📊 Soma Total', default: true },
-                    { id: 'media', label: '📈 Média', default: true },
-                    { id: 'desvio', label: '📉 Desvio Padrão', default: false },
-                    { id: 'frequencia', label: '🔢 Frequência (valores únicos)', default: false }
+                    { id: 'soma', label: 'Soma Consolidada', default: true },
+                    { id: 'media', label: 'Média Geral', default: true },
+                    { id: 'desvio', label: 'Desvio Padrão', default: false },
+                    { id: 'frequencia', label: 'Frequência Específica', default: false }
                 ];
             } else if (['selecao', 'multipla_escolha', 'booleano'].includes(campo.tipo)) {
                 opcoesDisponiveis = [
-                    { id: 'distribuicao', label: '🧩 Distribuição de opções', default: true },
-                    { id: 'total', label: '📋 Total de respostas', default: true }
+                    { id: 'distribuicao', label: 'Distribuição Percentual', default: true },
+                    { id: 'total', label: 'Contagem de Respostas', default: true }
                 ];
             } else {
                 opcoesDisponiveis = [
-                    { id: 'total', label: '📋 Total de respostas', default: true },
-                    { id: 'ultima', label: '📝 Última resposta', default: false }
+                    { id: 'total', label: 'Total Registrado', default: true },
+                    { id: 'ultima', label: 'Exibição de Exemplos', default: false }
                 ];
             }
 
-            // Se não tiver métricas configuradas, usa as padrão
             const metricasParaUsar = metricasAtuais.length > 0 ? metricasAtuais : 
                 opcoesDisponiveis.filter(o => o.default).map(o => o.id);
 
             container.innerHTML = opcoesDisponiveis.map(op => `
-                <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer">
+                <label class="flex items-center gap-3 p-2 hover:bg-white rounded-lg transition cursor-pointer border border-transparent hover:border-slate-200">
                     <input type="checkbox" name="metrica_bi" value="${op.id}" 
                            ${metricasParaUsar.includes(op.id) ? 'checked' : ''} 
-                           class="h-5 w-5 text-indigo-600 rounded">
-                    <span class="text-sm font-medium text-slate-700">${op.label}</span>
+                           class="h-5 w-5 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                    <span class="text-sm font-bold text-slate-700">${op.label}</span>
                 </label>
             `).join('');
 
@@ -329,7 +347,7 @@ export const ColetasBuilderService = {
         const coletaId = this._coletaIdEditando;
         
         if (index === null || !coletaId) {
-            showNotification("Erro: campo não identificado.", "error");
+            showNotification("Erro interno de identificação.", "error");
             return;
         }
 
@@ -337,7 +355,7 @@ export const ColetasBuilderService = {
         const metricasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
 
         if (metricasSelecionadas.length === 0) {
-            showNotification("Selecione pelo menos uma métrica para exibir no BI.", "warning");
+            showNotification("Selecione pelo menos uma métrica.", "warning");
             return;
         }
 
@@ -356,7 +374,7 @@ export const ColetasBuilderService = {
             await updateDoc(docRef, { dicionarioDeCampos: campos });
             
             this.fecharModalConfigMetricas();
-            showNotification("✅ Métricas do BI configuradas com sucesso!", "success");
+            showNotification("Métricas configuradas com sucesso.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
@@ -365,7 +383,7 @@ export const ColetasBuilderService = {
     },
 
     // ============================================================
-    // MÉTODOS EXISTENTES (mantidos e atualizados com limparTexto)
+    // MÉTODOS DE AÇÕES DO CONSTRUTOR
     // ============================================================
     initEventos(db, coletaId, coletaData) {
         const selectTipo = document.getElementById('novo-campo-tipo');
@@ -391,12 +409,11 @@ export const ColetasBuilderService = {
         }
 
         document.getElementById('btn-add-campo')?.addEventListener('click', async () => {
-            // APLICANDO A LIMPEZA DE TEXTO NO NOVO CAMPO
-            const label = limparTexto(document.getElementById('novo-campo-label').value.trim());
+            const label = limparTexto(document.getElementById('novo-campo-label').value);
             const tipo = document.getElementById('novo-campo-tipo').value;
             const opcoesString = document.getElementById('novo-campo-opcoes')?.value;
             
-            if (!label) return showNotification("Digite a pergunta.", "error");
+            if (!label) return showNotification("Informe o enunciado da pergunta.", "error");
 
             const novoCampo = {
                 id: 'c_' + Math.random().toString(36).substring(2, 8),
@@ -405,31 +422,29 @@ export const ColetasBuilderService = {
             };
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
-                if (!opcoesString) return showNotification("Preencha as opções do campo separadas por vírgula.", "warning");
-                // APLICANDO A LIMPEZA DE TEXTO NAS OPÇÕES
-                novoCampo.opcoes = opcoesString.split(',').map(o => limparTexto(o.trim())).filter(o => o !== '');
+                if (!opcoesString) return showNotification("Preencha as opções separadas por vírgula.", "warning");
+                novoCampo.opcoes = opcoesString.split(',').map(o => limparTexto(o)).filter(o => o !== '');
             }
 
             const camposAtuais = coletaData.dicionarioDeCampos || [];
             camposAtuais.push(novoCampo);
 
             await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: camposAtuais });
-            showNotification("Pergunta salva!", "success");
+            showNotification("Pergunta cadastrada com sucesso.", "success");
             window.abrirConstrutor(coletaId); 
         });
 
         document.getElementById('btn-gerar-link')?.addEventListener('click', async () => {
-            // APLICANDO A LIMPEZA DE TEXTO NO NOME DO ÓRGÃO
-            const orgao = limparTexto(document.getElementById('novo-link-orgao').value.trim());
+            const orgao = limparTexto(document.getElementById('novo-link-orgao').value);
             const requerSenha = document.getElementById('novo-link-requer-senha').checked;
             const senha = document.getElementById('novo-link-senha').value.trim();
             
             const checkboxes = document.querySelectorAll('input[name="campos_link"]:checked');
             const camposHabilitados = Array.from(checkboxes).map(cb => cb.value);
 
-            if (!orgao) return showNotification("Informe o nome do destinatário.", "error");
-            if (requerSenha && !senha) return showNotification("Defina uma senha para o link.", "error");
-            if (camposHabilitados.length === 0) return showNotification("Selecione pelo menos uma pergunta para enviar.", "error");
+            if (!orgao) return showNotification("Informe a identificação do destinatário.", "error");
+            if (requerSenha && !senha) return showNotification("A senha de acesso é obrigatória.", "error");
+            if (camposHabilitados.length === 0) return showNotification("Selecione os campos permitidos para preenchimento.", "error");
 
             const token = Math.random().toString(36).substring(2, 12);
             const novoLink = {
@@ -442,7 +457,7 @@ export const ColetasBuilderService = {
             linksAtuais.push(novoLink);
 
             await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: linksAtuais });
-            showNotification("Link Gerado com Sucesso!", "success");
+            showNotification("Link gerado e pronto para distribuição.", "success");
             window.abrirConstrutor(coletaId);
         });
     },
@@ -453,23 +468,20 @@ export const ColetasBuilderService = {
             await updateDoc(doc(db, "formularios_coleta", coletaId), { 
                 urlSincronizacaoSheets: urlPlanilha.trim() 
             });
-            showNotification("URL de sincronização salva com sucesso!", "success");
+            showNotification("Integração habilitada.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao salvar URL de integração.", "error");
+            showNotification("Erro de comunicação ao salvar.", "error");
         }
     },
 
     async mudarFormatoNum(coletaId, novoFormato) {
         try {
             const db = window.app.db;
-            const docRef = doc(db, "formularios_coleta", coletaId);
-            await updateDoc(docRef, { formatoNumeracao: novoFormato });
+            await updateDoc(doc(db, "formularios_coleta", coletaId), { formatoNumeracao: novoFormato });
             window.abrirConstrutor(coletaId);
-        } catch (e) {
-            console.error(e);
-        }
+        } catch (e) { console.error(e); }
     },
 
     async moverCampo(coletaId, indexOrigem, indexDestino) {
@@ -487,7 +499,7 @@ export const ColetasBuilderService = {
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao reordenar.", "error");
+            showNotification("Falha na reordenação.", "error");
         }
     },
 
@@ -502,23 +514,21 @@ export const ColetasBuilderService = {
             const campo = campos[index];
             if (!campo) return;
 
-            const novoLabel = prompt("✏️ Editar Enunciado da Pergunta:", campo.label);
+            const novoLabel = prompt("Editar Enunciado da Pergunta:", campo.label);
             if (novoLabel === null) return;
-            // APLICANDO A LIMPEZA DE TEXTO NA EDIÇÃO DA PERGUNTA
-            const labelLimpo = limparTexto(novoLabel.trim());
-            if (!labelLimpo) return showNotification("O enunciado não pode ficar vazio.", "error");
+            const labelLimpo = limparTexto(novoLabel);
+            if (!labelLimpo) return showNotification("Operação cancelada. Enunciado inválido.", "error");
 
             const tiposValidos = "numero, texto_curto, texto_longo, data, booleano, selecao, multipla_escolha";
-            const novoTipo = prompt(`✏️ Editar Tipo da Pergunta:\n(Opções: ${tiposValidos})`, campo.tipo);
+            const novoTipo = prompt(`Editar Tipo Estrutural:\n(${tiposValidos})`, campo.tipo);
             if (novoTipo === null) return;
             const tipoLimpo = novoTipo.trim();
 
             let novasOpcoes = campo.opcoes || [];
             if (tipoLimpo === 'selecao' || tipoLimpo === 'multipla_escolha') {
-                const opcoesStr = prompt("✏️ Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
+                const opcoesStr = prompt("Editar Opções (separadas por vírgula):", (campo.opcoes || []).join(', '));
                 if (opcoesStr !== null) {
-                    // APLICANDO A LIMPEZA DE TEXTO NA EDIÇÃO DAS OPÇÕES
-                    novasOpcoes = opcoesStr.split(',').map(o => limparTexto(o.trim())).filter(o => o !== '');
+                    novasOpcoes = opcoesStr.split(',').map(o => limparTexto(o)).filter(o => o !== '');
                 }
             }
 
@@ -530,16 +540,16 @@ export const ColetasBuilderService = {
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("✅ Pergunta atualizada com sucesso!", "success");
+            showNotification("Campo atualizado.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao editar pergunta.", "error");
+            showNotification("Falha ao editar registro.", "error");
         }
     },
 
     async removerCampo(coletaId, index) {
-        if (!confirm("❌ Deseja realmente apagar esta pergunta?")) return;
+        if (!confirm("Confirma a exclusão permanente deste campo?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -550,45 +560,44 @@ export const ColetasBuilderService = {
             campos.splice(index, 1);
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
-            showNotification("🗑️ Pergunta removida.", "info");
+            showNotification("Campo excluído.", "info");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao remover pergunta.", "error");
+            showNotification("Falha de exclusão.", "error");
         }
     },
 
     async apagarTodasPerguntas(coletaId) {
-        if (!confirm("⚠️ Deseja apagar TODAS as perguntas deste formulário?")) return;
+        if (!confirm("Ação destrutiva: Deseja apagar todas as perguntas configuradas?")) return;
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: [] });
-            showNotification("🧹 Todas as perguntas foram apagadas.", "success");
+            showNotification("Estrutura redefinida.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao apagar perguntas.", "error");
+            showNotification("Falha no processamento.", "error");
         }
     },
 
     async importarJsonLivre(coletaId, coletaData) {
-        const jsonInput = prompt("📥 Cole aqui o JSON estruturado com as perguntas:");
+        const jsonInput = prompt("Cole o JSON com a estrutura do dicionário de dados:");
         if (!jsonInput) return;
 
         try {
             const novasPerguntas = JSON.parse(jsonInput);
             if (!Array.isArray(novasPerguntas)) {
-                return showNotification("❌ O formato do JSON deve ser uma lista [...]", "error");
+                return showNotification("Falha de validação: JSON deve conter uma lista.", "error");
             }
 
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
             const camposAtuais = coletaData.dicionarioDeCampos || [];
             
-            // APLICANDO A LIMPEZA DE TEXTO NA IMPORTAÇÃO DE JSON
             const formatadas = novasPerguntas.map(p => ({
                 id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
-                label: limparTexto(p.label || p.pergunta || 'Nova Pergunta'),
+                label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
                 tipo: p.tipo || 'numero',
                 opcoes: (p.opcoes || []).map(o => limparTexto(o)),
                 metricasBi: p.metricasBi || [] 
@@ -596,16 +605,16 @@ export const ColetasBuilderService = {
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
-            showNotification(`✅ ${formatadas.length} perguntas importadas com sucesso!`, "success");
+            showNotification(`Importação concluída. ${formatadas.length} campos inseridos.`, "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("❌ Erro ao interpretar o JSON. Verifique a sintaxe.", "error");
+            showNotification("Falha de sintaxe no JSON.", "error");
         }
     },
 
     async removerLink(coletaId, index) {
-        if (!confirm("🗑️ Deseja realmente apagar este link?")) return;
+        if (!confirm("O destinatário perderá imediatamente o acesso. Confirmar revogação?")) return;
         try {
             const db = window.app.db;
             const docRef = doc(db, "formularios_coleta", coletaId);
@@ -616,36 +625,36 @@ export const ColetasBuilderService = {
             links.splice(index, 1);
 
             await updateDoc(docRef, { linksExternos: links });
-            showNotification("✅ Link apagado.", "success");
+            showNotification("Acesso revogado.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao apagar link.", "error");
+            showNotification("Falha de rede.", "error");
         }
     },
 
     async apagarTodosLinks(coletaId) {
-        if (!confirm("⚠️ Deseja apagar TODOS os links gerados? Os órgãos perderão o acesso.")) return;
+        if (!confirm("Ação destrutiva: Todos os órgãos parceiros perderão o acesso ao formulário. Prosseguir?")) return;
         try {
             const db = window.app.db;
             await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: [] });
-            showNotification("🧹 Todos os links foram apagados.", "success");
+            showNotification("Todos os acessos foram revogados.", "success");
             window.abrirConstrutor(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao apagar links.", "error");
+            showNotification("Falha no processamento.", "error");
         }
     },
 
     async limparRespostas(coletaId) {
-        if (!confirm("⚠️ ATENÇÃO: Deseja apagar TODAS as respostas enviadas por todos os órgãos? O BI será zerado permanentemente!")) return;
+        if (!confirm("Ação destrutiva irreversível: Todos os registros de BI desta coleta serão deletados. Continuar?")) return;
         try {
             const db = window.app.db;
             const q = query(collection(db, "respostas_coleta"), where("coletaId", "==", coletaId));
             const snapshot = await getDocs(q);
 
             if (snapshot.empty) {
-                showNotification("ℹ️ Não há respostas para apagar.", "info");
+                showNotification("A base já se encontra vazia.", "info");
                 return;
             }
 
@@ -653,16 +662,16 @@ export const ColetasBuilderService = {
             snapshot.docs.forEach(d => batch.delete(d.ref));
             await batch.commit();
 
-            showNotification("🧹 Todas as respostas foram apagadas com sucesso!", "success");
+            showNotification("Base de dados zerada.", "success");
             window.verResultados(coletaId);
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao limpar respostas.", "error");
+            showNotification("Erro ao processar exclusão em massa.", "error");
         }
     },
 
     async apagarColeta(coletaId) {
-        if (!confirm("⚠️ ATENÇÃO: Deseja apagar esta Coleta Estatística INTEIRA e todas as suas respostas?")) return;
+        if (!confirm("Ação destrutiva irreversível: O formulário e todos os dados coletados serão deletados. Confirmar exclusão do projeto?")) return;
         try {
             const db = window.app.db;
             const q = query(collection(db, "respostas_coleta"), where("coletaId", "==", coletaId));
@@ -675,10 +684,10 @@ export const ColetasBuilderService = {
             
             document.getElementById('container-construtor-coleta').classList.add('hidden');
             window.app.listarColetas();
-            showNotification("🗑️ Coleta excluída permanentemente.", "success");
+            showNotification("Projeto excluído da base.", "success");
         } catch (e) {
             console.error(e);
-            showNotification("Erro ao excluir coleta.", "error");
+            showNotification("Erro na comunicação com o servidor.", "error");
         }
     },
 
@@ -686,16 +695,15 @@ export const ColetasBuilderService = {
         let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
         const link = `${baseUrl}coleta.html?token=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            showNotification("📋 Link copiado para a área de transferência!", "success");
+            showNotification("URL copiada.", "success");
         }).catch(() => {
-            // Fallback
             const textArea = document.createElement('textarea');
             textArea.value = link;
             document.body.appendChild(textArea);
             textArea.select();
             document.execCommand('copy');
             document.body.removeChild(textArea);
-            showNotification("📋 Link copiado para a área de transferência!", "success");
+            showNotification("URL copiada.", "success");
         });
     }
 };
