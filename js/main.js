@@ -1755,13 +1755,14 @@ class SIGEPApp {
     }
 
     setupColetas() {
-        // Abre o modal principal do Módulo de Coletas
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            document.getElementById('modal-gerenciador-coletas').classList.remove('hidden');
-            this.listarColetas();
+            this.showColetasScreen(); // Chama a tela cheia
         });
 
-        // Evento para criar uma nova matriz de coleta
+        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
+            this.showPautaSelectionScreen(); // Volta para a tela inicial
+        });
+
         document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
             const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
             if (!nome) return;
