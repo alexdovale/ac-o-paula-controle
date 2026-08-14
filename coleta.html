@@ -10,6 +10,19 @@
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; } 
         .animate-fade-in { animation: fadeIn 0.3s ease-in-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Estilos para o modal */
+        .modal-overlay {
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(4px);
+        }
+        .modal-content {
+            animation: modalSlideIn 0.3s ease-out;
+        }
+        @keyframes modalSlideIn {
+            from { opacity: 0; transform: scale(0.95) translateY(-20px); }
+            to { opacity: 1; transform: scale(1) translateY(0); }
+        }
     </style>
 </head>
 <body class="min-h-screen flex items-center justify-center p-4">
@@ -100,6 +113,71 @@
 
     <!-- TOAST DE NOTIFICAÇÃO -->
     <div id="toast-notificacao" class="fixed bottom-5 right-5 hidden px-5 py-3 rounded-xl shadow-2xl font-bold text-sm z-50 transition-all"></div>
+
+    <!-- ============================================================ -->
+    <!-- MODAL DE CONFIGURAÇÃO DE RELATÓRIO PDF                        -->
+    <!-- ============================================================ -->
+    <div id="modal-config-pdf" class="fixed inset-0 modal-overlay hidden flex items-center justify-center z-50 p-4">
+        <div class="modal-content bg-white rounded-3xl w-full max-w-lg shadow-2xl border border-slate-200 overflow-hidden">
+            
+            <!-- Cabeçalho do Modal -->
+            <div class="bg-gradient-to-r from-blue-600 to-indigo-600 p-6 text-white">
+                <h2 class="text-2xl font-black flex items-center gap-2">
+                    ⚙️ Configurar Relatório PDF
+                </h2>
+                <p class="text-blue-100 text-sm mt-1 font-medium">Selecione as seções que deseja incluir no relatório</p>
+            </div>
+            
+            <!-- Corpo do Modal -->
+            <div class="p-6 space-y-4">
+                <div class="bg-slate-50 p-4 rounded-2xl border border-slate-200 space-y-3">
+                    <p class="text-xs font-bold text-slate-400 uppercase tracking-wider mb-2">📋 Seções disponíveis:</p>
+                    
+                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-blue-400 transition group">
+                        <input type="checkbox" id="pdf-incluir-kpis" checked class="w-5 h-5 text-blue-600 rounded focus:ring-blue-500">
+                        <span class="font-bold text-slate-700 group-hover:text-blue-600 transition">📈 Indicadores Acumulados (KPIs)</span>
+                    </label>
+                    
+                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-emerald-400 transition group">
+                        <input type="checkbox" id="pdf-incluir-distribuicao" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                        <span class="font-bold text-slate-700 group-hover:text-emerald-600 transition">🧩 Distribuição de Respostas</span>
+                    </label>
+                    
+                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-indigo-400 transition group">
+                        <input type="checkbox" id="pdf-incluir-tabela-orgao" checked class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500">
+                        <span class="font-bold text-slate-700 group-hover:text-indigo-600 transition">📊 Tabela Consolidada por Órgão</span>
+                    </label>
+                    
+                    <label class="flex items-center gap-3 p-3 bg-white rounded-xl border border-slate-200 cursor-pointer hover:border-slate-400 transition group">
+                        <input type="checkbox" id="pdf-incluir-historico" checked class="w-5 h-5 text-slate-600 rounded focus:ring-slate-500">
+                        <span class="font-bold text-slate-700 group-hover:text-slate-800 transition">📋 Histórico Detalhado</span>
+                    </label>
+                </div>
+                
+                <!-- Dica de uso -->
+                <div class="bg-amber-50 p-4 rounded-xl border border-amber-200">
+                    <p class="text-xs text-amber-700 font-medium flex items-start gap-2">
+                        <span class="text-lg">💡</span>
+                        <span>O PDF será gerado apenas com as seções selecionadas. 
+                        <br>Desmarque o que não deseja incluir para um relatório mais enxuto.</span>
+                    </p>
+                    <p class="text-[10px] text-amber-600 mt-1 ml-6">
+                        📌 Tabelas com muitas colunas usarão fonte reduzida para caber na página.
+                    </p>
+                </div>
+            </div>
+            
+            <!-- Rodapé do Modal -->
+            <div class="p-6 bg-slate-50 border-t border-slate-200 flex gap-3">
+                <button onclick="ColetasBiService.fecharModalExportacao()" class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition">
+                    Cancelar
+                </button>
+                <button onclick="ColetasBiService.executarExportacaoCustomizada()" class="flex-1 bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-3 rounded-xl transition shadow-lg flex items-center justify-center gap-2">
+                    <span>📄</span> Gerar PDF
+                </button>
+            </div>
+        </div>
+    </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
