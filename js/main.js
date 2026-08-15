@@ -39,7 +39,7 @@ import { SIGEPRouter, ROUTES } from './router.js';
 import { PerfilService } from './perfilService.js';
 
 // Módulo de Coletas & BI
-import { ColetasBuilderService } from './coletasBuilderService.js';
+import { ColetasBuilderService } from './coletasBuilderService.js?v=2';
 window.ColetasBuilderService = ColetasBuilderService;
 
 import { ColetasBiService } from './coletasBiService.js';
