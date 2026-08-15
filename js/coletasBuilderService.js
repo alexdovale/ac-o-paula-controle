@@ -14,6 +14,10 @@ function limparTexto(texto) {
 
 export const ColetasBuilderService = {
     
+    _campoEditandoIndex: null,
+    _coletaIdEditando: null,
+    _linkEditandoIndex: null,
+
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
@@ -855,6 +859,138 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Erro ao atualizar campo.", "error");
+        }
+    },
+
+    // ============================================================
+    // EDIÇÃO DE LINKS (BLOCO 2) COM FILTRO DE PERMISSÕES E SENHA VISÍVEL
+    // ============================================================
+    async abrirModalEditarLink(coletaId, index) {
+        const db = window.app.db;
+        const docRef = doc(db, "formularios_coleta", coletaId);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return;
+
+        const coletaData = snap.data();
+        const links = coletaData.linksExternos || [];
+        const link = links[index];
+        const campos = coletaData.dicionarioDeCampos || [];
+
+        if (!link) return;
+
+        this._linkEditandoIndex = index;
+        this._coletaIdEditando = coletaId;
+
+        let modal = document.getElementById('modal-editar-link');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-editar-link';
+            modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+            document.body.appendChild(modal);
+        }
+
+        const checkboxesHtml = campos.map(c => `
+            <label class="campo-checkbox flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                <input type="checkbox" name="edit_campos_link" value="${c.id}" ${link.camposHabilitados.includes(c.id) ? 'checked' : ''} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                <span class="truncate font-medium campo-texto">${escapeHTML(c.label)}</span>
+            </label>
+        `).join('');
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+                    <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Acesso de Distribuição</h3>
+                    <button onclick="document.getElementById('modal-editar-link').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                </div>
+                
+                <div class="space-y-4 overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Identificação do Destinatário</label>
+                            <input type="text" id="edit-link-orgao" value="${escapeHTML(link.orgao)}" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Proteção por Senha</label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-600">
+                                    <input type="checkbox" id="edit-link-requer-senha" ${link.requerSenha ? 'checked' : ''} onchange="document.getElementById('edit-link-senha').disabled = !this.checked; document.getElementById('edit-link-senha').classList.toggle('bg-slate-100', !this.checked); if(!this.checked) document.getElementById('edit-link-senha').value = '';" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> 
+                                    Habilitar
+                                </label>
+                            </div>
+                            <!-- AQUI ESTÁ A CORREÇÃO: type="text" EM VEZ DE "password" PARA VER A SENHA ATUAL -->
+                            <input type="text" id="edit-link-senha" value="${link.senha || ''}" ${link.requerSenha ? '' : 'disabled'} placeholder="Definir nova senha" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none ${link.requerSenha ? 'bg-white' : 'bg-slate-100'}">
+                            <p class="text-[10px] text-amber-600 mt-1.5 font-bold">Dica: A senha atual está visível acima. Apague e digite outra para alterar.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Escopo de Preenchimento (Permissões):</label>
+                            <div class="flex items-center gap-3 w-full sm:w-auto">
+                                <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'container-edit-permissoes', '.campo-checkbox', '.campo-texto')" placeholder="Pesquisar..." class="p-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-blue-500 w-full sm:w-48">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-blue-700 whitespace-nowrap">
+                                    <input type="checkbox" onchange="ColetasBuilderService.toggleSelectAll(this.checked, 'container-edit-permissoes')" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"> 
+                                    Selecionar Visíveis
+                                </label>
+                            </div>
+                        </div>
+                        <div id="container-edit-permissoes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                            ${checkboxesHtml || '<p class="text-xs text-red-500 font-medium">Nenhuma pergunta configurada no formulário.</p>'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 pt-5 mt-auto border-t border-slate-100">
+                    <button onclick="document.getElementById('modal-editar-link').classList.add('hidden')" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                    <button onclick="ColetasBuilderService.salvarEdicaoLink()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Alterações</button>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+    },
+
+    async salvarEdicaoLink() {
+        const index = this._linkEditandoIndex;
+        const coletaId = this._coletaIdEditando;
+        
+        if (index === null || !coletaId) return;
+
+        const orgao = limparTexto(document.getElementById('edit-link-orgao').value);
+        const requerSenha = document.getElementById('edit-link-requer-senha').checked;
+        const senha = document.getElementById('edit-link-senha').value.trim();
+        
+        const checkboxes = document.querySelectorAll('input[name="edit_campos_link"]:checked');
+        const camposHabilitados = Array.from(checkboxes).map(cb => cb.value);
+
+        if (!orgao) return showNotification("Informe a identificação do destinatário.", "error");
+        if (requerSenha && !senha) return showNotification("A senha de acesso é obrigatória.", "error");
+        if (camposHabilitados.length === 0) return showNotification("Selecione os campos permitidos para preenchimento.", "error");
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let links = snap.data().linksExternos || [];
+            if (!links[index]) return;
+
+            links[index] = {
+                ...links[index],
+                orgao,
+                requerSenha,
+                senha: requerSenha ? senha : null,
+                camposHabilitados
+            };
+
+            await updateDoc(docRef, { linksExternos: links });
+            
+            document.getElementById('modal-editar-link').classList.add('hidden');
+            showNotification("Acesso atualizado com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao atualizar acesso do órgão.", "error");
         }
     },
 
