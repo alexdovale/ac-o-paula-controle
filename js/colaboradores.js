@@ -22,9 +22,8 @@ const CollaboratorService = {
     ordemAtual: 'grupo', 
     gruposPermitidosAta: ['1', '2', '3', '4', 'CRC', 'Coordenadores'],
     LOGO_URL: 'https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7',
-    ataAutoSaveTimer: null, // Timer para autosave
+    ataAutoSaveTimer: null,
 
-    // ⭐ FUNÇÃO DE EXPORTAR PDF PERSONALIZADO ⭐
     async exportarPDFCustomizado(app) {
         const checks = document.querySelectorAll('.pdf-col-selector:checked');
         const camposEscolhidos = Array.from(checks).map(el => el.value);
@@ -41,7 +40,6 @@ const CollaboratorService = {
         });
     },
 
-    // Abre modal de configuração do PDF
     abrirModalExportacaoPDF(app) {
         let modal = document.getElementById('export-pdf-config-modal');
         if (!modal) {
@@ -117,62 +115,116 @@ const CollaboratorService = {
         }
     },
 
-    // ⭐ NOVO: ABRE MODAL COM LISTA COMPLETA DOS COLABORADORES DA BASE MASTER ⭐
+    // ⭐ MODAL COMPLETO DE BUSCA NA BASE MASTER (O MAIS GARANTIDO) ⭐
     async abrirModalListagemMaster(app) {
         let modal = document.getElementById('master-list-modal');
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'master-list-modal';
-            modal.className = 'fixed inset-0 bg-black bg-opacity-50 z-[60] flex items-center justify-center hidden';
+            modal.className = 'fixed inset-0 bg-black bg-opacity-70 z-[9999] flex items-center justify-center hidden backdrop-blur-sm';
             modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg mx-4 overflow-hidden flex flex-col max-h-[80vh]">
-                    <div class="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-4 flex justify-between items-center">
-                        <h3 class="text-white font-bold text-lg">👥 Base Geral de Colaboradores</h3>
-                        <button onclick="document.getElementById('master-list-modal').classList.add('hidden')" class="text-white hover:text-gray-200 text-2xl">&times;</button>
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col h-[85vh]">
+                    <div class="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
+                        <h3 class="text-white font-black text-xl flex items-center gap-2">
+                            <span>👥</span> Base Geral de Colaboradores
+                        </h3>
+                        <button onclick="document.getElementById('master-list-modal').classList.add('hidden')" class="text-white hover:text-violet-200 text-3xl font-bold leading-none transition-colors">&times;</button>
                     </div>
-                    <div class="p-4 bg-slate-50 border-b border-slate-200">
-                        <input type="text" id="search-master-list" placeholder="Filtrar por nome ou matrícula..." class="w-full px-4 py-2 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm">
+                    
+                    <div class="p-5 bg-slate-50 border-b border-slate-200 shrink-0">
+                        <div class="relative">
+                            <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                                <svg class="h-5 w-5 text-slate-400" viewBox="0 0 20 20" fill="currentColor">
+                                    <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+                                </svg>
+                            </div>
+                            <input type="text" id="search-master-list" placeholder="Pesquisar por Nome, Matrícula ou Cargo..." class="w-full pl-10 pr-4 py-3 rounded-xl border-2 border-violet-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 text-slate-700 font-medium transition-all">
+                        </div>
+                        <p class="text-xs text-slate-500 mt-2 ml-1">Mostrando todos os registros do banco de dados.</p>
                     </div>
-                    <div class="overflow-y-auto p-4 flex-1" id="master-list-container">
-                        <p class="text-center text-sm text-slate-500 py-4">Carregando colaboradores...</p>
+                    
+                    <div class="overflow-y-auto p-2 sm:p-5 flex-1 bg-white" id="master-list-container">
+                        <div class="flex flex-col items-center justify-center h-full text-slate-400">
+                            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mb-4"></div>
+                            <p class="font-medium">Carregando colaboradores...</p>
+                        </div>
                     </div>
                 </div>
             `;
             document.body.appendChild(modal);
 
-            // Evento de busca/filtro em tempo real
-            document.getElementById('search-master-list').oninput = (e) => {
-                const termo = e.target.value.toLowerCase();
+            // Filtro em tempo real inteligente
+            document.getElementById('search-master-list').addEventListener('input', (e) => {
+                const termo = e.target.value.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
                 const itens = document.querySelectorAll('.master-item-row');
+                
                 itens.forEach(item => {
-                    const texto = item.textContent.toLowerCase();
-                    item.style.display = texto.includes(termo) ? 'flex' : 'none';
+                    // Pega o texto e remove acentos para busca flexível
+                    const texto = item.getAttribute('data-search').toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                    if (texto.includes(termo)) {
+                        item.style.display = 'flex';
+                    } else {
+                        item.style.display = 'none';
+                    }
                 });
-            };
+            });
         }
 
         modal.classList.remove('hidden');
+        document.getElementById('search-master-list').value = ''; // limpa busca
         const container = document.getElementById('master-list-container');
+        container.innerHTML = `
+            <div class="flex flex-col items-center justify-center h-full text-slate-400">
+                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mb-4"></div>
+                <p class="font-medium">Carregando colaboradores da nuvem...</p>
+            </div>
+        `;
 
         try {
             const querySnapshot = await getDocs(collection(app.db, "colaboradores_gerais"));
             if (querySnapshot.empty) {
-                container.innerHTML = `<p class="text-center text-sm text-slate-500 py-4">Nenhum colaborador cadastrado na base master.</p>`;
+                container.innerHTML = `
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400">
+                        <span class="text-4xl mb-2">📭</span>
+                        <p class="text-center font-medium">Nenhum colaborador cadastrado na base de dados.</p>
+                    </div>
+                `;
                 return;
             }
 
-            let listaHtml = [];
+            // Converter para array para ordenar
+            const colaboradoresMaster = [];
             querySnapshot.forEach((docSnap) => {
-                const dados = docSnap.data();
+                colaboradoresMaster.push({ id: docSnap.id, ...docSnap.data() });
+            });
+
+            // Ordena alfabeticamente
+            colaboradoresMaster.sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
+
+            let listaHtml = [];
+            colaboradoresMaster.forEach((dados) => {
+                const tipoId = dados.tipo_id || 'ID';
+                const cargo = dados.cargo || 'Membro';
+                const equipeStr = dados.equipe ? ` • Eq. ${dados.equipe}` : '';
+                const searchString = `${dados.nome} ${dados.id} ${cargo} ${dados.equipe || ''}`;
+                
                 listaHtml.push(`
-                    <div class="master-item-row flex justify-between items-center p-3 border-b border-slate-100 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors" 
-                         data-id="${docSnap.id}">
-                        <div>
-                            <div class="font-bold text-sm text-slate-800">${escapeHTML(dados.nome || '')}</div>
-                            <div class="text-[11px] text-slate-500 uppercase">${dados.cargo || 'Membro'} • ${dados.tipo_id || 'ID'}: ${docSnap.id}</div>
+                    <div class="master-item-row flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 mb-3 border border-slate-200 hover:border-violet-300 hover:bg-violet-50 hover:shadow-md rounded-xl cursor-pointer transition-all duration-200 group" 
+                         data-id="${dados.id}"
+                         data-search="${escapeHTML(searchString)}">
+                        
+                        <div class="flex-1 mb-3 sm:mb-0">
+                            <div class="font-black text-slate-800 text-lg group-hover:text-violet-700 transition-colors">${escapeHTML(dados.nome || 'Sem Nome')}</div>
+                            <div class="text-sm font-semibold text-slate-500 mt-1 flex flex-wrap gap-2 items-center">
+                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">${escapeHTML(cargo)}</span>
+                                <span>${tipoId}: <strong class="text-slate-700">${dados.id}</strong></span>
+                                <span class="text-slate-400">${escapeHTML(equipeStr)}</span>
+                            </div>
                         </div>
-                        <button class="bg-violet-50 text-violet-600 hover:bg-violet-600 hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-colors">
-                            Selecionar
+                        
+                        <button class="w-full sm:w-auto bg-white border-2 border-violet-200 text-violet-700 hover:bg-violet-600 hover:border-violet-600 hover:text-white px-5 py-2.5 rounded-xl font-bold transition-all shadow-sm flex items-center justify-center gap-2">
+                            <span>Preencher</span>
+                            <svg xmlns="http://www.w3.org/2000/svg" class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3" /></svg>
                         </button>
                     </div>
                 `);
@@ -185,6 +237,7 @@ const CollaboratorService = {
                 row.onclick = async () => {
                     const id = row.dataset.id;
                     modal.classList.add('hidden');
+                    
                     const inputIdentificador = document.getElementById('collaborator-identificador-modal');
                     if (inputIdentificador) {
                         inputIdentificador.value = id;
@@ -193,15 +246,25 @@ const CollaboratorService = {
                 };
             });
 
+            // Foca no campo de busca ao abrir
+            setTimeout(() => {
+                document.getElementById('search-master-list').focus();
+            }, 100);
+
         } catch (error) {
             console.error("Erro ao listar master:", error);
-            container.innerHTML = `<p class="text-center text-sm text-red-500 py-4">Erro ao carregar dados.</p>`;
+            container.innerHTML = `
+                <div class="flex flex-col items-center justify-center h-full text-red-500">
+                    <span class="text-4xl mb-2">⚠️</span>
+                    <p class="text-center font-bold">Erro ao carregar dados do banco.</p>
+                </div>
+            `;
         }
     },
 
     async buscarColaboradorMaster(app, identificador) {
         const idLimpo = identificador.trim().split('/').pop();
-        if (!idLimpo || idLimpo.length < 3) return;
+        if (!idLimpo) return;
 
         try {
             const masterRef = doc(app.db, "colaboradores_gerais", idLimpo);
@@ -229,7 +292,9 @@ const CollaboratorService = {
                 if (rTransp) rTransp.checked = true;
 
                 this.configurarLogicaCargo(); 
-                showNotification("Dados recuperados da base geral! ✅", "success");
+                showNotification(`Dados de ${dados.nome} preenchidos! ✅`, "success");
+            } else {
+                showNotification(`Matrícula/ID ${idLimpo} não encontrada na base geral.`, "warning");
             }
         } catch (e) {
             console.error("Erro ao buscar master:", e);
@@ -293,22 +358,18 @@ const CollaboratorService = {
         }
     },
 
-    // ⭐ FUNÇÃO PARA SALVAR AUTOMATICAMENTE OS DADOS DA ATA ⭐
     async autoSaveAtaData(app) {
         if (!app?.currentPauta?.id) return;
 
-        // Limpa o timer anterior
         if (this.ataAutoSaveTimer) {
             clearTimeout(this.ataAutoSaveTimer);
             this.ataAutoSaveTimer = null;
         }
 
-        // Pega os dados atuais do formulário
         const data = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            // Opcional agora: Vazio é aceito sem problemas!
             ataTotalManual: document.getElementById('ata-total')?.value || '', 
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
@@ -323,7 +384,6 @@ const CollaboratorService = {
                 app.currentPautaData = { ...app.currentPautaData, ...data };
             }
 
-            // Mostra indicador de salvamento (opcional)
             const indicator = document.getElementById('ata-save-indicator');
             if (indicator) {
                 indicator.textContent = '💾 Salvo';
@@ -343,29 +403,24 @@ const CollaboratorService = {
         }
     },
 
-    // ⭐ FUNÇÃO QUE DISPARA O AUTOSAVE COM DEBOUNCE ⭐
     triggerAutoSave(app) {
         if (!app?.currentPauta?.id) return;
 
-        // Cancela o timer anterior
         if (this.ataAutoSaveTimer) {
             clearTimeout(this.ataAutoSaveTimer);
         }
 
-        // Mostra indicador de "Salvando..."
         const indicator = document.getElementById('ata-save-indicator');
         if (indicator) {
             indicator.textContent = '💾 Salvando...';
             indicator.className = 'text-amber-600 text-xs font-semibold';
         }
 
-        // Aguarda 1 segundo sem novas alterações para salvar (debounce)
         this.ataAutoSaveTimer = setTimeout(() => {
             this.autoSaveAtaData(app);
         }, 1000);
     },
 
-    // ⭐ ATA PERSISTENTE E FUNCIONAL ⭐
     async saveAtaData(app) {
         if (!app?.currentPauta?.id) {
             showNotification("Selecione uma pauta primeiro", "error");
@@ -375,12 +430,11 @@ const CollaboratorService = {
         const btnSave = document.getElementById('save-ata-data-btn');
         if (btnSave) btnSave.disabled = true;
 
-        // Sem validações obrigatórias para o Total de Atendidos
         const data = {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
             ataEndereco: document.getElementById('ata-endereco')?.value?.trim() || '',
             ataData: document.getElementById('ata-data')?.value || '',
-            ataTotalManual: document.getElementById('ata-total')?.value || '', // Total opcional
+            ataTotalManual: document.getElementById('ata-total')?.value || '',
             ataOrgao: document.getElementById('ata-orgao')?.value?.trim() || '',
             ataLogoURL: this.LOGO_URL,
             ataLastUpdate: new Date().toISOString()
@@ -449,24 +503,20 @@ const CollaboratorService = {
         }
     },
 
-    // ⭐ CONFIGURA O AUTOSAVE PARA OS CAMPOS DA ATA ⭐
     configurarAutoSaveAta(app) {
         const campos = ['ata-acao-nome', 'ata-endereco', 'ata-data', 'ata-total', 'ata-orgao'];
         
         campos.forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Remove listeners antigos para evitar duplicação
                 el.removeEventListener('input', this._boundAutoSave);
                 el.removeEventListener('change', this._boundAutoSave);
                 
-                // Adiciona os listeners
                 el.addEventListener('input', () => this.triggerAutoSave(app));
                 el.addEventListener('change', () => this.triggerAutoSave(app));
             }
         });
 
-        // Botão de salvar manual (opcional)
         const btnSave = document.getElementById('save-ata-data-btn');
         if (btnSave) {
             btnSave.removeEventListener('click', btnSave.onclickBackup);
@@ -586,7 +636,7 @@ const CollaboratorService = {
                 await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
             }
             
-            // Atualiza a master database
+            // Atualiza a master database sempre que salva/edita
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
             
             showNotification("Membro atualizado/salvo com sucesso!", "success");
@@ -705,7 +755,6 @@ const CollaboratorService = {
             };
         });
 
-        // ⭐ CONFIGURA O AUTOSAVE AO ABRIR O MODAL DA ATA ⭐
         const btnOpenAtaModal = document.getElementById('btn-gerar-ata-social');
         if (btnOpenAtaModal) {
             btnOpenAtaModal.onclick = () => {
@@ -713,7 +762,6 @@ const CollaboratorService = {
                 const modal = document.getElementById('ata-social-modal');
                 if (modal) modal.classList.remove('hidden');
                 
-                // Configura o autosave após carregar os dados
                 setTimeout(() => {
                     this.configurarAutoSaveAta(app);
                     this.atualizarLogoAta();
@@ -721,19 +769,26 @@ const CollaboratorService = {
             };
         }
 
-        // Buscar manualmente pelo ID/Matrícula
+        // ⭐ QUANDO CLICA EM BUSCAR, ABRE O MODAL COM A LISTA DE TODOS ⭐
         const btnBuscarMaster = document.getElementById('buscar-master-btn');
         if (btnBuscarMaster) {
-            btnBuscarMaster.onclick = () => {
-                const identificador = document.getElementById('collaborator-identificador-modal')?.value;
-                if(identificador) this.buscarColaboradorMaster(app, identificador);
+            // Remove comportamento anterior e garante que abra o modal
+            const clone = btnBuscarMaster.cloneNode(true);
+            btnBuscarMaster.parentNode.replaceChild(clone, btnBuscarMaster);
+            
+            clone.onclick = (e) => {
+                e.preventDefault();
+                this.abrirModalListagemMaster(app);
             };
         }
 
-        // ⭐ LISTAR TODOS DA BASE MASTER ⭐
+        // O botão listar-master-btn se existir, faz a mesma coisa
         const btnListarMaster = document.getElementById('listar-master-btn');
         if (btnListarMaster) {
-            btnListarMaster.onclick = () => this.abrirModalListagemMaster(app);
+            btnListarMaster.onclick = (e) => {
+                e.preventDefault();
+                this.abrirModalListagemMaster(app);
+            };
         }
 
         const modal = document.getElementById('ata-social-modal');
@@ -842,9 +897,11 @@ const CollaboratorService = {
             btnSubmit.innerHTML = "➕ Adicionar à Equipe";
             btnSubmit.className = "w-full bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
         }
+        
         this.configurarLogicaCargo();
     }
 };
 
 export default CollaboratorService;
 window.CollaboratorService = CollaboratorService;
+

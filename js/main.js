@@ -1,4 +1,4 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER)
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -8,7 +8,7 @@ import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
 import { UIService } from './ui.js';
 import CollaboratorService from './colaboradores.js'; 
-window.CollaboratorService = CollaboratorService;  // ← ADICIONE ESTA LINHA
+window.CollaboratorService = CollaboratorService;  
 import { ModalService } from './modal.js?v=20260707';
 import { NotesService } from './notes.js?v=20260313';
 import { StatisticsService } from './estatisticas.js?v=20260313';
@@ -38,6 +38,12 @@ import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './geren
 import { SIGEPRouter, ROUTES } from './router.js';
 import { PerfilService } from './perfilService.js';
 
+// Módulo de Coletas & BI
+import { ColetasBuilderService } from './coletasBuilderService.js?v=2';
+window.ColetasBuilderService = ColetasBuilderService;
+
+import { ColetasBiService } from './coletasBiService.js';
+window.ColetasBiService = ColetasBiService;
 
 import { injetarModais } from './modais.js';
 injetarModais();
@@ -114,6 +120,8 @@ class SIGEPApp {
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('coletas-container')?.classList.add('hidden');
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
         
         // Mostra o container de seleção de pautas
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
@@ -145,6 +153,7 @@ class SIGEPApp {
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('coletas-container')?.classList.add('hidden');
         
         // Mostra a tela do admin
         document.getElementById('admin-container')?.classList.remove('hidden');
@@ -153,6 +162,20 @@ class SIGEPApp {
         this.renderAdminContent();
     }
 
+
+    showColetasScreen() {
+        // Esconde todos
+        document.getElementById('pauta-selection-container')?.classList.add('hidden');
+        document.getElementById('dashboard-container')?.classList.add('hidden');
+        document.getElementById('app-container')?.classList.add('hidden');
+        document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('admin-container')?.classList.add('hidden');
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
+        
+        // Mostra Coletas e carrega a lista
+        document.getElementById('coletas-container')?.classList.remove('hidden');
+        this.listarColetas();
+    }
     renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
@@ -181,7 +204,7 @@ class SIGEPApp {
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Usuários do Sistema (APENAS UMA VEZ) -->
+            <!-- Seção de Usuários do Sistema -->
             <div class="mt-8">
                 <div class="mb-4">
                     <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -430,29 +453,25 @@ class SIGEPApp {
                 // Se der erro (ex: falha de rede ou no Firestore), joga para o login por segurança
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
             } finally {
-                // 🔴 AQUI ESTÁ A MÁGICA: Independente de sucesso ou erro, removemos o Loading!
                 this.hideLoadingScreen();
             }
         });
     }
 
-    // 🔴 ADICIONE ESTE MÉTODO LOGO ABAIXO DO setupAuthListener()
     hideLoadingScreen() {
-        // Tentei mapear os IDs mais comuns. Descubra qual o ID real da sua div 
-        // de "Conectando com Segurança" no seu index.html e coloque aqui!
         const idsDeCarregamento = [
             'loading-screen', 
             'global-loader', 
             'splash-screen', 
             'loading-container',
-            'auth-loading-spinner' // Possível nome da div que está dentro do seu card de login
+            'auth-loading-spinner'
         ];
 
         idsDeCarregamento.forEach(id => {
             const loader = document.getElementById(id);
             if (loader) {
                 loader.classList.add('hidden');
-                loader.style.display = 'none'; // Garantia dupla de que vai sumir
+                loader.style.display = 'none'; 
             }
         });
     }
@@ -732,7 +751,6 @@ class SIGEPApp {
             const orgaoNome = document.getElementById('ata-orgao')?.value.trim();
             const totalManual = document.getElementById('ata-total')?.value;
             
-            // Aqui nós removemos o '!totalManual' e o 'totalManual < 0' da checagem
             if (!acaoNome || !endereco || !dataAcao || !orgaoNome) {
                 showNotification("Preencha todos os campos obrigatórios.", "error");
                 return;
@@ -917,6 +935,26 @@ class SIGEPApp {
             }
         });
 
+        // Evento que abre o Construtor na tela da Pauta
+        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
+            const modal = document.getElementById('bi-links-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                
+                const containerBi = document.getElementById('container-bi-links');
+                if (containerBi && this.currentPautaData && window.ColetasBuilderService) {
+                    containerBi.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                    
+                    const btnAdicionarParceiro = document.getElementById('bi-btn-adicionar-parceiro');
+                    if (btnAdicionarParceiro) {
+                        btnAdicionarParceiro.addEventListener('click', () => {
+                            window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                        });
+                    }
+                }
+            }
+        });
+
         document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
             if (typeof ModalService?.openMembersModal === 'function') {
                 await ModalService.openMembersModal(this);
@@ -1006,11 +1044,9 @@ class SIGEPApp {
         // PERSISTÊNCIA DO MODO SILENCIOSO NO REFRESH
         const silentModeCheckbox = document.getElementById('toggle-silent-mode') || document.getElementById('silent-mode-toggle');
         if (silentModeCheckbox) {
-            // Carrega o estado salvo assim que mapeia o elemento
             const savedSilentState = localStorage.getItem('sigep_silent_mode') === 'true';
             silentModeCheckbox.checked = savedSilentState;
         
-            // Escuta as mudanças do usuário para salvar no localStorage
             silentModeCheckbox.addEventListener('change', (e) => {
                 localStorage.setItem('sigep_silent_mode', e.target.checked);
                 showNotification(e.target.checked ? "Modo silencioso ativado." : "Modo silencioso desativado.", "info");
@@ -1295,12 +1331,9 @@ class SIGEPApp {
                 return;
             }
 
-            // CORREÇÃO: Captura o ID correto do Switch de modo silencioso (Garante compatibilidade de ID)
-            // CORREÇÃO: Lê o estado persistido ou o valor do elemento de forma segura
             const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || 
                       (document.getElementById('toggle-silent-mode')?.checked || 
                        document.getElementById('silent-mode-toggle')?.checked) || false;
-
 
             const idAssistidoAtual = window.assistedIdToHandle;
             const nomeAssistidoAtual = window.assistedNameToHandle;
@@ -1352,8 +1385,6 @@ class SIGEPApp {
                     inAttendanceTime: new Date().toISOString()
                 };
 
-                // CORREÇÃO: O token SEMPRE deve ser gerado se houver colaborador atribuído, 
-                // para não quebrar o link de acesso no painel dele.
                 if (collaboratorName) {
                     updatePayload.delegationToken = novoToken; 
                 }
@@ -1366,7 +1397,6 @@ class SIGEPApp {
                     this.currentUserName
                 );
                 
-                // CORREÇÃO: Condicional de envio baseada no Modo Silencioso
                 if (emailDestino && !isSilentMode) {
                     showNotification("Disparando notificação para o e-mail cadastrado...", "info");
                     try {
@@ -1383,7 +1413,6 @@ class SIGEPApp {
                         console.error("Erro no envio auto:", e);
                     }
                 } else if (emailDestino && isSilentMode) {
-                    // Notifica em tela que foi feito de forma silenciosa, sem disparar o EmailService
                     showNotification(`Card movido para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
                 } else {
                     showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
@@ -1615,13 +1644,11 @@ class SIGEPApp {
         });
 
         document.body.addEventListener('click', async (e) => {
-            // CORREÇÃO: Usa .closest para garantir a captura mesmo clicando no texto do botão
             const removeBtn = e.target.closest('.remove-member-btn');
             
             if (removeBtn) {
                 const email = removeBtn.dataset.email;
                 
-                // Validação de segurança preventiva baseada no e-mail
                 if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
                     showNotification("O dono da pauta não pode ser removido!", "error");
                     return;
@@ -1636,7 +1663,6 @@ class SIGEPApp {
                         if (!querySnapshot.empty) {
                             const userId = querySnapshot.docs[0].id;
                             
-                            // Bloqueio duplo de segurança por ID do proprietário
                             if (userId === this.currentPautaOwnerId) {
                                 showNotification("O dono da pauta não pode ser removido!", "error");
                                 return;
@@ -1711,6 +1737,95 @@ class SIGEPApp {
             }
         });
 
+        document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
+            localStorage.removeItem('sigep_active_screen');
+            localStorage.removeItem('sigep_app_state');
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({}, '', cleanUrl);
+            if (window.app && window.app.logout) window.app.logout();
+        });
+        
+        const btnVoltarLogin = document.getElementById('modo-back-to-login');
+        const modoSelectionScreen = document.getElementById('modo-selection-screen');
+        
+        if(btnVoltarLogin) {
+            btnVoltarLogin.addEventListener('click', () => {
+                if (modoSelectionScreen) modoSelectionScreen.classList.add('hidden');
+                document.getElementById('login-container')?.classList.remove('hidden');
+                if(window.app && window.app.logout) window.app.logout();
+            });
+        }
+
+        // --- INICIALIZA O MÓDULO DE COLETAS ---
+        this.setupColetas();
+    }
+
+    setupColetas() {
+        document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
+            this.showColetasScreen(); // Chama a tela cheia
+        });
+
+        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
+            this.showPautaSelectionScreen(); // Volta para a tela inicial
+        });
+
+        document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
+            const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
+            if (!nome) return;
+
+            try {
+                const novaColeta = {
+                    nomeDaColeta: nome,
+                    dicionarioDeCampos: [],
+                    linksExternos: [],
+                    criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
+                    criadoEm: new Date().toISOString()
+                };
+                
+                await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
+                showNotification("Nova coleta criada com sucesso!", "success");
+                this.listarColetas();
+            } catch (error) {
+                console.error(error);
+                showNotification("Erro ao criar coleta no banco de dados.", "error");
+            }
+        });
+    }
+
+    async listarColetas() {
+        const container = document.getElementById('lista-de-coletas');
+        if (!container) return;
+        
+        container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
+
+        try {
+            const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
+            if (querySnapshot.empty) {
+                container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
+                return;
+            }
+
+            let html = '';
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                html += `
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
+                        <div>
+                            <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1">📚 ${data.dicionarioDeCampos?.length || 0} campos cadastrados | 🔗 ${data.linksExternos?.length || 0} links gerados</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">⚙️ Configurar</button>
+                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">📈 Resultados</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            console.error("Erro ao listar coletas:", error);
+            container.innerHTML = '<p class="text-center text-red-500 py-4 font-bold">Erro ao carregar do servidor.</p>';
+        }
     }
 
     setupSubjectsAutocomplete() {
@@ -1775,10 +1890,9 @@ class SIGEPApp {
             const docSnap = await getDoc(userDocRef);
             if (docSnap.exists()) {
                 const userData = docSnap.data();
-                // ✅ GARANTE QUE O PERFIL É ATUALIZADO NO OBJETO APP
                 this.currentUser = { ...this.currentUser, ...userData }; 
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
-                this.applyRoleBasedUI(); // Chama para liberar os botões
+                this.applyRoleBasedUI(); 
             }
         } catch (error) {
             console.error("Erro ao carregar perfil:", error);
@@ -1786,13 +1900,11 @@ class SIGEPApp {
     }
 
     applyRoleBasedUI() {
-        // Se ainda não carregou o user, espera um pouco ou ignora
         if (!this.currentUser) return;
 
         const role = this.currentUser?.role;
         const isAdmin = (role === 'admin' || role === 'superadmin');
         
-        // Aplica visibilidade apenas se o elemento existir
         const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
         adminBtns.forEach(b => {
             if (b) b.classList.toggle('hidden', !isAdmin);
@@ -1914,15 +2026,13 @@ class SIGEPApp {
                 this.currentUser = { ...this.currentUser, ...userData };
             }
         } catch (err) {
-            console.warn("Aviso: erro ao buscar dados adicionais do usuário.", err);
+            console.warn("Aviso: erro ao buscar dados adicional do usuário.", err);
         }
     
         try {
             let pautasMap = new Map();
             let success = false;
             
-            // TENTATIVA 1: Filtro padrão (Membros da pauta)
-            // Muitos firestores barram se a regra exige ser o owner e a query usar array-contains
             try {
                 const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
                 const snapMembers = await getDocs(qMembers);
@@ -1932,8 +2042,6 @@ class SIGEPApp {
                 console.warn("Tentativa por 'members' falhou. Tentando próxima...", err.message);
             }
             
-            // TENTATIVA 2: Filtro secundário (Dono da pauta)
-            // Se as regras do Firestore barram 'array-contains', a regra owner == uid é a mais forte.
             if (!success) {
                 try {
                     const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
@@ -1945,7 +2053,6 @@ class SIGEPApp {
                 }
             }
             
-            // TENTATIVA 3: Se for admin/superadmin e nada mais funcionou, força carregar tudo
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
             if (!success && isAdmin) {
                 try {
@@ -2146,33 +2253,16 @@ class SIGEPApp {
 
             this.setupRealtimeListener(pautaId);
             
-            // ============================================================
-            // CARREGAR COLABORADORES - COM LOGS PARA DEBUG
-            // ============================================================
-            console.log('🔍 [loadPauta] Verificando CollaboratorService...');
-            console.log('🔍 CollaboratorService:', typeof CollaboratorService);
-            console.log('🔍 setupListener:', typeof CollaboratorService?.setupListener);
-            
             if (typeof CollaboratorService?.setupListener === 'function') {
-                console.log('✅ Chamando CollaboratorService.setupListener para pauta:', pautaId);
                 CollaboratorService.setupListener(this, pautaId);
             } else {
-                console.error('❌ CollaboratorService.setupListener NÃO é uma função!');
-                console.log('🔍 window.CollaboratorService:', typeof window.CollaboratorService);
-                
-                // Tenta usar a versão global como fallback
                 if (typeof window.CollaboratorService?.setupListener === 'function') {
-                    console.log('✅ Usando window.CollaboratorService como fallback');
                     window.CollaboratorService.setupListener(this, pautaId);
                 }
             }
             
             this.iniciarMonitorEnvelopes();
 
-            // FAILSAFE: Garantir a exibição da tela principal do app.
-            // Se a chamada de loadPauta() vier diretamente de um clique no card em vez do router,
-            // a tela não transicionaria sozinha porque o comando antigo foi removido.
-            // Este bloco força as outras telas a sumirem e a tela da pauta a aparecer.
             const appContainer = document.getElementById('app-container');
             if (appContainer && appContainer.classList.contains('hidden')) {
                 document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -2604,22 +2694,6 @@ document.addEventListener('DOMContentLoaded', function() {
             window.history.pushState({}, '', cleanUrl);
         }
     };
-
-    document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
-        setAppState('login');
-        if (window.app && window.app.logout) window.app.logout();
-    });
-    
-    const btnVoltarLogin = document.getElementById('modo-back-to-login');
-    const modoSelectionScreen = document.getElementById('modo-selection-screen');
-    
-    if(btnVoltarLogin) {
-        btnVoltarLogin.addEventListener('click', () => {
-            if (modoSelectionScreen) modoSelectionScreen.classList.add('hidden');
-            document.getElementById('login-container')?.classList.remove('hidden');
-            if(window.app && window.app.logout) window.app.logout();
-        });
-    }
 });
 
 // ============================================================
@@ -2646,3 +2720,39 @@ document.addEventListener('blur', async (e) => {
         }
     }
 }, true);
+
+
+// ============================================================
+// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS (BI)
+// ============================================================
+
+window.abrirConstrutor = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "formularios_coleta", coletaId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists() && window.ColetasBuilderService) {
+            const container = document.getElementById('container-construtor-coleta');
+            
+            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data(), coletaId);
+            container.classList.remove('hidden');
+            
+            window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
+            
+            document.getElementById('coletas-container').querySelector('.overflow-y-auto, div.bg-white')?.scrollBy({ top: 300, behavior: 'smooth' });
+        } else {
+            showNotification("Erro: Serviço construtor não carregado.", "error");
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification("Erro ao carregar estrutura da coleta.", "error");
+    }
+};
+
+window.verResultados = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    ColetasBiService.abrirResultados(window.app.db, coletaId);
+};

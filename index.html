@@ -362,6 +362,12 @@
                 <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
                     Ver Dashboard
                 </button>
+                
+                <!-- BOTÃO DO NOVO MÓDULO EM TELA CHEIA -->
+                <button id="btn-modulo-coletas" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition shadow-md flex items-center gap-2 justify-center">
+                    📊 Módulo Coletas & BI
+                </button>
+
                 <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
                     Meu Perfil
                 </button>
@@ -508,7 +514,7 @@
             </div>
         </div>
 
-        <!-- ADMIN (ATUALIZADO COM LOGO E TÍTULO CENTRALIZADOS) -->
+        <!-- ADMIN -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
@@ -529,6 +535,36 @@
             <div id="admin-content">
                 <div class="loader-small mx-auto my-12"></div>
                 <p class="text-center text-gray-500 mt-4">Carregando painel administrativo...</p>
+            </div>
+        </div>
+
+        <!-- MÓDULO DE COLETAS & BI (TELA CHEIA) -->
+        <div id="coletas-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="coletas-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+                    &larr; Voltar
+                </button>
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl"></div>
+                <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 flex items-center justify-center gap-3 text-center">
+                    Central de Coletas e Relatórios
+                </h2>
+                <p class="text-slate-500 mt-2 text-sm font-medium text-center">Crie formulários, gere links externos e consolide seus dados estatísticos.</p>
+            </div>
+
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-sm border border-slate-200 min-h-[50vh]">
+                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-8 border-b pb-4">
+                    <h4 class="font-bold text-slate-700 text-lg uppercase tracking-wider">Minhas Coletas Ativas</h4>
+                    <button id="btn-nova-coleta" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2.5 rounded-xl font-bold text-sm shadow transition flex items-center justify-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
+                        Nova Coleta
+                    </button>
+                </div>
+                
+                <div id="lista-de-coletas" class="space-y-4">
+                    <p class="text-center text-slate-400 py-10">Carregando coletas...</p>
+                </div>
+
+                <div id="container-construtor-coleta" class="hidden mt-8 border-t-2 border-dashed border-slate-200 pt-8"></div>
             </div>
         </div>
 
@@ -931,7 +967,7 @@
         </div>
     </footer>
 
-    <!-- MODAL LGPD (CORRIGIDO) -->
+    <!-- MODAL LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
             <div class="text-center mb-6">
@@ -1052,6 +1088,27 @@
         </div>
     </div>
 
+    <!-- MODAL DE CONFIGURAÇÃO DE LINKS EXTERNOS BI (PARA DENTRO DA PAUTA NORMAL) -->
+    <div id="bi-links-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
+                <div>
+                    <h3 class="text-lg font-bold text-white">🔗 Módulo Estatístico e Multi-eventos</h3>
+                    <p class="text-xs text-indigo-100 mt-1">Gerencie os links externos para coleta de dados na pauta atual</p>
+                </div>
+                <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto">
+                <div id="container-bi-links-pauta"></div>
+            </div>
+            
+            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+                <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-md text-sm font-bold">Fechar</button>
+            </div>
+        </div>
+    </div>
+
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js"></script>
 
@@ -1071,7 +1128,6 @@
                         if (window.app && typeof PautaService !== 'undefined' && PautaService.handleCSVUpload) {
                             PautaService.handleCSVUpload(e, window.app);
                         } else {
-                            // CORREÇÃO 2 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
                             var fileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
                             console.log('[Upload CSV] Arquivo selecionado:', fileName);
                             const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
@@ -1096,7 +1152,6 @@
                         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
                             window.ImportadorOrgaosService.handleFileSelect(e);
                         } else {
-                            // CORREÇÃO 3 APLICADA: Tratamento tradicional para null/undefined sem usar "?."
                             var orgaoFileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
                             console.log('[Importador] Arquivo de órgãos selecionado:', orgaoFileName);
                             const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
@@ -1185,6 +1240,17 @@
             observer.observe(document.body, { childList: true, subtree: true });
         })();
     </script>
+    <script>
+        // Forçar atualização do Cache do PWA (Service Worker)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.update(); // Força o PWA a buscar arquivos novos no servidor
+                }
+            });
+        }
+    </script>
 </body>
 </html>
-
+</body>
+</html>

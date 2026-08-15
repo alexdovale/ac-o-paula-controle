@@ -1,10 +1,11 @@
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where
+    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepcaoConfigService } from './recepcaoConfig.js';
+import { flatSubjects } from './assuntos.js';
 import { logAction } from './admin.js';
 
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
@@ -26,12 +27,12 @@ const estado = {
 
 function statusLabel(status) {
     const map = {
-        pauta:                  { txt: 'Na Pauta',     cor: 'bg-slate-100 text-slate-600' },
-        aguardando:             { txt: 'Aguardando',   cor: 'bg-amber-100 text-amber-700' },
-        emAtendimento:          { txt: 'Em Atendimento', cor: 'bg-blue-100 text-blue-700' },
+        pauta:                     { txt: 'Na Pauta',     cor: 'bg-slate-100 text-slate-600' },
+        aguardando:                { txt: 'Aguardando',   cor: 'bg-amber-100 text-amber-700' },
+        emAtendimento:             { txt: 'Em Atendimento', cor: 'bg-blue-100 text-blue-700' },
         aguardandoDistribuicao: { txt: 'Distribuição', cor: 'bg-cyan-100 text-cyan-700' },
-        atendido:               { txt: 'Atendido',     cor: 'bg-green-100 text-green-700' },
-        faltoso:                { txt: 'Faltoso',      cor: 'bg-red-100 text-red-700' },
+        atendido:                  { txt: 'Atendido',     cor: 'bg-green-100 text-green-700' },
+        faltoso:                   { txt: 'Faltoso',      cor: 'bg-red-100 text-red-700' },
     };
     return map[status] || { txt: status, cor: 'bg-gray-100 text-gray-600' };
 }
@@ -39,6 +40,7 @@ function statusLabel(status) {
 function contadores(assistidos) {
     return {
         total:        assistidos.length,
+        naPauta:      assistidos.filter(a => a.status === 'pauta').length,
         aguardando:   assistidos.filter(a => a.status === 'aguardando').length,
         emAtendimento:assistidos.filter(a => a.status === 'emAtendimento').length,
         atendidos:    assistidos.filter(a => a.status === 'atendido').length,
@@ -80,22 +82,13 @@ function renderVerificacoesBadge(a) {
 
 // ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
 
-export const RecepçãoCentralService = {
+export const RecepcaoCentralService = {
 
     // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 
     async init(app) {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
-
-        // 🟢 TRAVA DE ACESSO REMOVIDA PARA TODOS OS USUÁRIOS
-        /*
-        const role = app.currentUser?.role;
-        if (!['apoio', 'admin', 'superadmin'].includes(role)) {
-            showNotification("Acesso restrito à Recepção Central.", "warning");
-            return;
-        }
-        */
 
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
@@ -204,7 +197,6 @@ export const RecepçãoCentralService = {
             });
         });
         
-        // Ativa os eventos de pesquisa e filtros do HTML que acabamos de injetar
         RecepcaoConfigService.initSelectorEventos();
     
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
@@ -217,7 +209,6 @@ export const RecepçãoCentralService = {
 
         this._mostrarLoading();
 
-        // 1. Busca todas as pautas a que o utilizador tem acesso hoje
         let pautas = await PautaConfigService.buscarPautasHoje(
             app.db,
             app.currentUser.uid,
@@ -225,25 +216,23 @@ export const RecepçãoCentralService = {
             app.currentUser.role
         );
 
-        // 2. Filtro por data de atuação (apenas hoje)
-        const hoje = new Date().toISOString().slice(0, 10); 
-        pautas = pautas.filter(p => {
-            const dataAtuacao = p.dataAtuacao || p.data || p.createdAt || '';
-            if (!dataAtuacao) return true;
-            return dataAtuacao.slice(0, 10) === hoje;
+        pautas.sort((a, b) => {
+            const dataA = new Date(a.dataAtuacao || a.data || a.createdAt || 0).getTime();
+            const dataB = new Date(b.dataAtuacao || b.data || b.createdAt || 0).getTime();
+            return dataB - dataA;
         });
 
-        // 3. Filtro rápido de UI (Todos, Mutirão, Plantão, etc.)
         if (this._filtroTipo && this._filtroTipo !== 'todos') {
             pautas = pautas.filter(p =>
                 (p.tipo || p.type || '').toLowerCase() === this._filtroTipo.toLowerCase()
             );
         }
 
-        // 4. FILTRO ESTRITO DA RECEPÇÃO ATUAL (Agora obrigatório para todos)
-        // Corta as pautas que não pertencem às unidades e/ou aos grupos da receção
         if (this._recepcaoAtual) {
-            pautas = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
+            const pautasFiltradasPorRecepcao = RecepcaoConfigService.filtrarPautasPorRecepcao(pautas, this._recepcaoAtual);
+            if (pautasFiltradasPorRecepcao.length > 0) {
+                pautas = pautasFiltradasPorRecepcao;
+            }
         }
 
         estado.pautasHoje = pautas;
@@ -260,7 +249,7 @@ export const RecepçãoCentralService = {
             <div class="flex justify-center items-center h-64">
                 <div class="text-center">
                     <div class="loader-small mx-auto mb-4"></div>
-                    <p class="text-slate-500">Carregando pautas da recepção...</p>
+                    <p class="text-slate-500">Carregando histórico de pautas da recepção...</p>
                 </div>
             </div>
         `;
@@ -332,10 +321,10 @@ export const RecepçãoCentralService = {
                 <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 mb-6">
                     <div>
                         <h2 class="text-2xl font-black text-slate-800 tracking-tight">🏛️ Painel de Atendimento</h2>
-                        <p class="text-sm text-slate-500 mt-0.5">Pautas ativas — <span id="rc-data-hoje">${new Date().toLocaleDateString('pt-BR', { weekday: 'long', day: '2-digit', month: 'long' })}</span></p>
+                        <p class="text-sm text-slate-500 mt-0.5">Exibindo Histórico Contínuo da Recepção</p>
                         <div class="flex items-center gap-2 mt-2 flex-wrap">
                             <span class="text-xs text-slate-400 font-bold uppercase tracking-wider">Filtrar por tipo:</span>
-                            ${['todos','agendamento','avulso','multisala','mutirao','plantao','acao_social'].map(t => `
+                            ${['todos','agendamento','avulso','multisala', 'mutirao', 'plantao', 'acao_social'].map(t => `
                                 <button class="rc-filtro-tipo text-xs px-3 py-1 rounded-full border font-bold transition
                                     ${(this._filtroTipo || 'todos') === t
                                         ? 'bg-slate-800 text-white border-slate-800'
@@ -379,7 +368,7 @@ export const RecepçãoCentralService = {
                     <div id="rc-resultados-busca" class="mt-3 space-y-2 max-h-96 overflow-y-auto"></div>
                 </div>
 
-                <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6"></div>
+                <div id="rc-sumario" class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6"></div>
 
                 <div id="rc-grade-pautas" class="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-4"></div>
 
@@ -409,8 +398,8 @@ export const RecepçãoCentralService = {
             grade.innerHTML = `
                 <div class="col-span-full text-center py-16 opacity-60">
                     <span class="text-5xl block mb-4">📋</span>
-                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta ativa para esta recepção.</p>
-                    <p class="text-xs text-slate-400 mt-2">Certifique-se que existem pautas vinculadas a esta unidade ou aos grupos corretos.</p>
+                    <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhuma pauta encontrada no histórico.</p>
+                    <p class="text-xs text-slate-400 mt-2">Verifique os filtros selecionados acima.</p>
                 </div>
             `;
             return;
@@ -431,13 +420,17 @@ export const RecepçãoCentralService = {
             ? `<span class="text-[10px] bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full">🏠 ${escapeHTML(pauta.sala)}</span>`
             : '';
 
+        const dataPautaStr = pauta.dataAtuacao || pauta.data || pauta.createdAt 
+            ? new Date(pauta.dataAtuacao || pauta.data || pauta.createdAt).toLocaleDateString('pt-BR') 
+            : '';
+
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
         );
 
         const listaNomes = aguardando.length === 0
-            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila agora.</p>`
+            ? `<p class="text-[11px] text-slate-400 italic px-1">Nenhum na fila de espera no momento.</p>`
             : aguardando.slice(0, 5).map((a, i) => `
                 <div class="flex items-center gap-2 py-1 border-b border-slate-100 last:border-0">
                     <span class="text-[10px] font-black text-amber-500 w-4 shrink-0">${i + 1}.</span>
@@ -459,7 +452,7 @@ export const RecepçãoCentralService = {
                     <div class="min-w-0">
                         <h3 class="text-white font-black text-base truncate">${escapeHTML(pauta.name)}</h3>
                         <div class="flex items-center gap-2 mt-1">
-                            <p class="text-slate-400 text-[10px] uppercase tracking-wider">${pauta.type || 'agendamento'}</p>
+                            <p class="text-slate-400 text-[10px] uppercase tracking-wider">${pauta.type || 'agendamento'} ${dataPautaStr ? ` · ${dataPautaStr}` : ''}</p>
                             ${salaBadge}
                         </div>
                     </div>
@@ -470,18 +463,22 @@ export const RecepçãoCentralService = {
                     <div class="h-full bg-green-500 transition-all duration-500" style="width:${porcentagem}%"></div>
                 </div>
 
-                <div class="grid grid-cols-3 divide-x divide-slate-100 border-b border-slate-100">
+                <div class="grid grid-cols-4 divide-x divide-slate-100 border-b border-slate-100">
+                    <div class="text-center py-3">
+                        <div class="text-xl font-black text-slate-600">${c.naPauta}</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Agendados</div>
+                    </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-amber-600">${c.aguardando}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Aguardando</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Aguardando</div>
                     </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-blue-600">${c.emAtendimento}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendendo</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Atendendo</div>
                     </div>
                     <div class="text-center py-3">
                         <div class="text-xl font-black text-green-600">${c.atendidos}</div>
-                        <div class="text-[10px] text-slate-400 uppercase font-bold">Atendidos</div>
+                        <div class="text-[9px] text-slate-400 uppercase font-bold">Atendidos</div>
                     </div>
                 </div>
 
@@ -539,9 +536,10 @@ export const RecepçãoCentralService = {
         const el = document.getElementById('rc-sumario');
         if (!el) return;
 
-        let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0;
+        let totalAg = 0, totalAt = 0, totalEm = 0, totalDist = 0, totalNaPauta = 0;
         for (const assistidos of Object.values(estado.assistidosPorPauta)) {
             const c = contadores(assistidos);
+            totalNaPauta += c.naPauta;
             totalAg   += c.aguardando;
             totalAt   += c.atendidos;
             totalEm   += c.emAtendimento;
@@ -550,25 +548,29 @@ export const RecepçãoCentralService = {
 
         el.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-slate-600">${totalNaPauta}</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Agendados</div>
+            </div>
+            <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-amber-600">${totalAg}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Aguardando</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Aguardando</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-blue-600">${totalEm}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Em Atendimento</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Em Atendimento</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-green-600">${totalAt}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Atendidos</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Atendidos</div>
             </div>
             <div class="bg-white border border-slate-200 rounded-xl p-4 text-center shadow-sm">
                 <div class="text-2xl font-black text-cyan-600">${totalDist}</div>
-                <div class="text-xs text-slate-500 font-bold uppercase mt-1">Distribuição</div>
+                <div class="text-[10px] text-slate-500 font-bold uppercase mt-1">Distribuição</div>
             </div>
         `;
     },
 
-    // ── PAINEL DE FOCO ─────────────────────────────────────────────────────────
+    // ── PAINEL DE FOCO (VISÃO DETALHADA DA PAUTA) ──────────────────────────────
 
     _abrirFoco(pautaId) {
         estado.pautaFocadaId = pautaId;
@@ -600,8 +602,8 @@ export const RecepçãoCentralService = {
         const assistidos    = estado.assistidosPorPauta[pautaId] || [];
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
         const c = contadores(assistidos);
-        const { livres, ocupados } = colaboradoresStatus(colaboradores);
 
+        const naPautaList = assistidos.filter(a => a.status === 'pauta');
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
@@ -610,96 +612,161 @@ export const RecepçãoCentralService = {
         foco.innerHTML = `
             <div class="bg-white border border-slate-200 rounded-2xl shadow overflow-hidden">
 
-                <div class="bg-slate-800 px-6 py-5 flex justify-between items-center">
+                <div class="bg-slate-800 px-6 py-5 flex justify-between items-center flex-wrap gap-4">
                     <div>
-                        <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade</button>
+                        <button id="rc-btn-voltar-grade" class="text-slate-400 hover:text-white text-xs font-bold mb-2 block transition">← Voltar à grade geral</button>
                         <h3 class="text-white font-black text-xl">${escapeHTML(pauta.name)}</h3>
-                        <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total</p>
+                        <p class="text-slate-400 text-xs mt-0.5">${c.atendidos} atendidos · ${c.total} total na pauta</p>
                     </div>
                     <div class="flex gap-2">
-                        <button id="rc-foco-btn-acomp" class="bg-slate-600 hover:bg-slate-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition" title="Acompanhamento público desta pauta">
-                            🔗 Externo
+                        <button id="rc-foco-btn-add-assistido" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition shadow flex items-center gap-2">
+                            <span>➕</span> Adicionar Assistido
                         </button>
-                        <button id="rc-foco-btn-chamar" class="bg-green-600 hover:bg-green-700 text-white font-black px-5 py-2.5 rounded-xl text-sm transition shadow">
-                            📣 Chamar Próximo
+                        <button id="rc-foco-btn-acomp" class="bg-slate-600 hover:bg-slate-500 text-white font-bold px-4 py-2.5 rounded-xl text-sm transition" title="Acompanhamento público desta pauta">
+                            🔗 Tela Externa
+                        </button>
+                        <button id="rc-foco-btn-chamar" class="bg-green-600 hover:bg-green-700 text-white font-black px-5 py-2.5 rounded-xl text-sm transition shadow flex items-center gap-2">
+                            <span>📣</span> Chamar Próximo
                         </button>
                     </div>
                 </div>
 
+                <div class="p-4 bg-slate-50 border-b border-slate-200">
+                    <input type="search" id="rc-foco-input-busca" placeholder="🔍 Pesquisar por Nome, CPF, Assunto ou Nº Agendamento..." class="w-full bg-white border border-slate-300 rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-slate-500 shadow-sm">
+                </div>
+
                 <div class="grid grid-cols-1 lg:grid-cols-3 gap-0 divide-y lg:divide-y-0 lg:divide-x divide-slate-100">
 
-                    <div class="p-5">
+                    <!-- Coluna 1: Agendados / Na Pauta -->
+                    <div class="p-5 flex flex-col">
+                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">📅 Agendados (${naPautaList.length})</h4>
+                        <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1 rc-coluna-agendados">
+                            ${naPautaList.length === 0
+                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum agendado no momento.</p>`
+                                : naPautaList.map((a, i) => `
+                                    <div class="rc-assistido-card flex items-start gap-3 bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 hover:border-slate-300 transition" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
+                                        <div class="min-w-0 flex-1">
+                                            <p class="font-bold text-slate-800 text-sm truncate">
+                                                ${escapeHTML(a.name)} 
+                                                ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                            </p>
+                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                ${a.scheduledTime ? `<span class="text-slate-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                            </p>
+                                            ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
+                                            ${renderVerificacoesBadge(a)}
+                                        </div>
+                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition shadow-sm"
+                                            data-id="${a.id}" data-pauta="${pautaId}">Fazer Check-in</button>
+                                    </div>
+                                `).join('')
+                            }
+                        </div>
+                    </div>
+
+                    <!-- Coluna 2: Fila de Espera -->
+                    <div class="p-5 flex flex-col">
                         <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">⏳ Fila de Espera (${aguardando.length})</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
+                        <div class="space-y-2 max-h-[32rem] overflow-y-auto pr-1 rc-coluna-aguardando">
                             ${aguardando.length === 0
                                 ? `<p class="text-xs text-slate-400 text-center py-6">Fila vazia.</p>`
                                 : aguardando.map((a, i) => `
-                                    <div class="flex items-start gap-3 bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5">
-                                        <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
-                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                                ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
-                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                            </p>
-                                            ${renderVerificacoesBadge(a)}
+                                    <div class="rc-assistido-card flex flex-col bg-amber-50 border border-amber-200 rounded-xl px-3 py-2.5" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
+                                        <div class="flex items-start gap-3">
+                                            <span class="w-6 h-6 mt-1 rounded-full bg-amber-500 text-white text-[10px] font-black flex items-center justify-center shrink-0">${i + 1}</span>
+                                            <div class="min-w-0 flex-1">
+                                                <p class="font-bold text-slate-800 text-sm truncate">
+                                                    ${escapeHTML(a.name)} 
+                                                    ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}
+                                                </p>
+                                                <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                    ${a.scheduledTime ? `<span class="text-amber-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                    📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                                </p>
+                                                ${a.priority ? `<span class="inline-block mt-1 bg-red-100 text-red-700 border border-red-200 px-1.5 py-0.5 rounded text-[9px] font-black uppercase tracking-wider">🚨 Prioridade: ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
+                                                ${renderVerificacoesBadge(a)}
+                                            </div>
                                         </div>
-                                        <button class="rc-foco-checkin shrink-0 text-[10px] bg-amber-500 hover:bg-amber-600 text-white font-bold px-2 py-1.5 mt-1 rounded-lg transition"
-                                            data-id="${a.id}" data-pauta="${pautaId}">Check-in</button>
+
+                                        <!-- BOTÕES DE AÇÃO NA FILA -->
+                                        <div class="mt-2 pt-2 border-t border-amber-200/60 flex flex-wrap gap-2 items-center justify-between">
+                                            <div class="flex items-center gap-1.5">
+                                                <button class="rc-foco-abrir-prioridade text-[9px] font-bold px-2 py-1 rounded bg-white text-slate-600 border border-slate-200 hover:bg-slate-100 shadow-sm transition" data-id="${a.id}" data-pauta="${pautaId}">
+                                                    ⭐️ Definir Prioridade
+                                                </button>
+                                                ${(a.priority || a.priorityReason) ? `<button class="rc-foco-remover-prioridade text-[9px] font-bold px-2 py-1 rounded bg-red-50 text-red-600 border border-red-200 hover:bg-red-100 shadow-sm transition" data-id="${a.id}" data-pauta="${pautaId}">❌ Remover</button>` : ''}
+                                            </div>
+                                        </div>
+
+                                        <div class="flex justify-between items-center mt-2 pt-2 border-t border-amber-200">
+                                            <button class="rc-foco-voltar shrink-0 text-[10px] bg-slate-100 hover:bg-slate-200 text-slate-600 border border-slate-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                                data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Desfazer Check-in</button>
+                                            <button class="rc-foco-chamar-individual shrink-0 text-[10px] bg-green-500 hover:bg-green-600 text-white font-bold px-3 py-1 rounded transition shadow-sm"
+                                                data-id="${a.id}" data-pauta="${pautaId}">📣 Chamar</button>
+                                        </div>
                                     </div>
                                 `).join('')
                             }
                         </div>
                     </div>
 
-                    <div class="p-5">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
-                            ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
-                                : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
-                                    <div class="bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex items-start gap-3">
-                                        <span class="text-lg mt-1 shrink-0">💬</span>
-                                        <div class="min-w-0 flex-1">
-                                            <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
-                                            <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                                ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
-                                                📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                            </p>
-                                            <div class="mt-1">
-                                                <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
-                                                    🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
-                                                </span>
+                    <!-- Coluna 3: Atendimento e Equipe -->
+                    <div class="flex flex-col divide-y divide-slate-100">
+                        <div class="p-5 flex-1">
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👩‍💻 Em Atendimento (${c.emAtendimento})</h4>
+                            <div class="space-y-2 max-h-64 overflow-y-auto pr-1 rc-coluna-atendimento">
+                                ${assistidos.filter(a => a.status === 'emAtendimento').length === 0
+                                    ? `<p class="text-xs text-slate-400 text-center py-6">Ninguém em atendimento.</p>`
+                                    : assistidos.filter(a => a.status === 'emAtendimento').map(a => `
+                                        <div class="rc-assistido-card bg-blue-50 border border-blue-200 rounded-xl px-3 py-2.5 flex flex-col" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
+                                            <div class="flex items-start gap-3">
+                                                <span class="text-lg mt-1 shrink-0">💬</span>
+                                                <div class="min-w-0 flex-1">
+                                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)} ${a.numAgendamento ? `<span class="text-xs text-slate-400 font-mono ml-1">#${a.numAgendamento}</span>` : ''}</p>
+                                                    <p class="text-[10px] text-slate-500 truncate mt-0.5">
+                                                        ${a.scheduledTime ? `<span class="text-blue-600 font-bold">⏰ ${a.scheduledTime}</span> · ` : ''}
+                                                        📝 ${escapeHTML(a.subject || 'Sem assunto')}
+                                                    </p>
+                                                    <div class="mt-1">
+                                                        <span class="text-[10px] bg-blue-100 text-blue-700 px-2 py-0.5 rounded font-bold inline-flex items-center gap-1 border border-blue-200">
+                                                            🧑‍💻 Atendente: ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Não atribuído')}
+                                                        </span>
+                                                    </div>
+                                                </div>
                                             </div>
-                                            ${renderVerificacoesBadge(a)}
+                                             <div class="flex justify-end gap-2 mt-2 pt-2 border-t border-blue-200">
+                                                 <button class="rc-foco-voltar shrink-0 text-[10px] bg-white hover:bg-blue-100 text-blue-600 border border-blue-300 font-bold px-2 py-1 rounded transition shadow-sm"
+                                                     data-id="${a.id}" data-pauta="${pautaId}" data-destino="aguardando">Voltar p/ Fila</button>
+                                             </div>
                                         </div>
-                                    </div>
-                                `).join('')
-                            }
+                                    `).join('')
+                                }
+                            </div>
+                        </div>
+                        <div class="p-5 flex-1">
+                            <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
+                            <div class="space-y-2 max-h-48 overflow-y-auto pr-1">
+                                ${colaboradores.length === 0
+                                    ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador online.</p>`
+                                    : colaboradores.map(col => {
+                                        const livre = col.status === 'disponivel' || !col.status;
+                                        return `
+                                            <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
+                                                <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
+                                                <div class="min-w-0">
+                                                    <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
+                                                    <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
+                                                </div>
+                                                <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
+                                            </div>
+                                        `;
+                                    }).join('')
+                                }
+                            </div>
                         </div>
                     </div>
 
-                    <div class="p-5">
-                        <h4 class="text-xs font-black text-slate-500 uppercase tracking-wider mb-3">👥 Equipe do Dia</h4>
-                        <div class="space-y-2 max-h-96 overflow-y-auto pr-1">
-                            ${colaboradores.length === 0
-                                ? `<p class="text-xs text-slate-400 text-center py-6">Nenhum colaborador.</p>`
-                                : colaboradores.map(col => {
-                                    const livre = col.status === 'disponivel' || !col.status;
-                                    return `
-                                        <div class="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2">
-                                            <span class="w-2 h-2 rounded-full ${livre ? 'bg-green-500' : 'bg-red-500'} shrink-0"></span>
-                                            <div class="min-w-0">
-                                                <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(col.nome)}</p>
-                                                <p class="text-[10px] text-slate-400">${escapeHTML(col.cargo || '')}</p>
-                                            </div>
-                                            <span class="ml-auto text-[9px] font-black uppercase px-2 py-0.5 rounded ${livre ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-600'}">${livre ? 'Livre' : 'Ocupado'}</span>
-                                        </div>
-                                    `;
-                                }).join('')
-                            }
-                        </div>
-                    </div>
                 </div>
             </div>
         `;
@@ -714,11 +781,280 @@ export const RecepçãoCentralService = {
             window.open(`?painel=true&pautas=${pautaId}`, '_blank');
         });
 
-        foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._marcarChegada(pautaId, btn.dataset.id);
+        document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => {
+            this._abrirModalAdicionarAssistido(pautaId, pauta.name);
+        });
+
+        // PESQUISA INTERNA NA TELA DE FOCO
+        document.getElementById('rc-foco-input-busca')?.addEventListener('input', (e) => {
+            const termo = normalizeText(e.target.value.trim());
+            foco.querySelectorAll('.rc-assistido-card').forEach(card => {
+                const buscaTexto = card.dataset.busca || '';
+                if (!termo || buscaTexto.includes(termo)) {
+                    card.style.display = '';
+                } else {
+                    card.style.display = 'none';
+                }
             });
         });
+
+        foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
+            });
+        });
+        
+        foco.querySelectorAll('.rc-foco-chamar-individual').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._chamarAssistidoEspecifico(pautaId, btn.dataset.id);
+            });
+        });
+
+        foco.querySelectorAll('.rc-foco-voltar').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino);
+            });
+        });
+
+        foco.querySelectorAll('.rc-foco-abrir-prioridade').forEach(btn => {
+            btn.addEventListener('click', () => {
+                this._abrirModalDefinirPrioridade(btn.dataset.pauta, btn.dataset.id);
+            });
+        });
+
+        foco.querySelectorAll('.rc-foco-remover-prioridade').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if(confirm("Remover urgência?")) {
+                    await PautaService.updateStatus(
+                        this._app.db,
+                        btn.dataset.pauta,
+                        btn.dataset.id,
+                        { priority: null, priorityReason: null },
+                        this._app.currentUserName
+                    );
+                    showNotification("Prioridade removida", "info");
+                }
+            });
+        });
+    },
+
+    // ── MODAL DEFINIR PRIORIDADE ───────────────────────────────────────────────
+
+    _abrirModalDefinirPrioridade(pautaId, assistidoId) {
+        const existing = document.getElementById('rc-modal-prioridade');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-prioridade';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
+        modal.innerHTML = `
+            <div class="bg-white p-5 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-red-600 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
+                <h2 class="text-xl sm:text-2xl font-bold mb-2 text-gray-800">Prioridade Legal</h2>
+                <p class="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500">Selecione uma ou mais categorias:</p>
+                
+                <div id="rc-priority-types-grid" class="grid grid-cols-2 gap-2 mb-4 sm:mb-6">
+                    <button type="button" data-value="Idoso (60+)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">👴 Idoso (60+)</button>
+                    <button type="button" data-value="Idoso (80+)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🎖️ Idoso (80+)</button>
+                    <button type="button" data-value="Deficiência (PCD)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">♿ Deficiência</button>
+                    <button type="button" data-value="Autismo (TEA)" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🧩 Autismo</button>
+                    <button type="button" data-value="Gestante" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🤰 Gestante</button>
+                    <button type="button" data-value="Criança de Colo" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">👶 Colo</button>
+                    <button type="button" data-value="Obesidade" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">⚖️ Obesidade</button>
+                    <button type="button" data-value="Urgência Médica" class="rc-p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition focus:outline-none">🚑 Médica</button>
+                </div>
+        
+                <label class="block text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
+                <textarea id="rc-priority-reason-input" placeholder="Ex: Prazo vencendo..." class="w-full p-3 border border-gray-300 rounded-lg mb-6 h-20 text-sm sm:text-base outline-none focus:ring-2 focus:ring-red-500"></textarea>
+                
+                <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4">
+                    <button id="rc-cancel-priority-btn" class="w-full sm:w-auto bg-gray-200 text-gray-700 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400 transition">Cancelar</button>
+                    <button id="rc-confirm-priority-btn" class="w-full sm:w-auto bg-red-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-red-700 transition shadow-lg">Confirmar Prioridade</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const style = document.createElement('style');
+        style.innerHTML = `
+            .rc-p-chip.selected {
+                background-color: #fef2f2 !important; 
+                border-color: #f87171 !important; 
+                color: #b91c1c !important; 
+                box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+            }
+        `;
+        modal.appendChild(style);
+
+        modal.querySelectorAll('.rc-p-chip').forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.classList.toggle('selected');
+            });
+        });
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-cancel-priority-btn').onclick = closeModal;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        document.getElementById('rc-confirm-priority-btn').addEventListener('click', async () => {
+            const selectedChips = Array.from(modal.querySelectorAll('.rc-p-chip.selected')).map(chip => chip.dataset.value);
+            const customReason = document.getElementById('rc-priority-reason-input').value.trim();
+            
+            let finalReason = selectedChips.join(', ');
+            if (customReason) {
+                finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+            }
+
+            if (!finalReason) { 
+                showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
+                return; 
+            }
+
+            await PautaService.updateStatus(
+                this._app.db, pautaId, assistidoId,
+                { priority: 'URGENTE', priorityReason: finalReason },
+                this._app.currentUserName
+            );
+
+            closeModal();
+            showNotification("Prioridade Ativada!", "success");
+        });
+    },
+
+    // ── ADICIONAR ASSISTIDO (NOVO MODAL) ───────────────────────────────────────
+
+    _abrirModalAdicionarAssistido(pautaId, pautaNome) {
+        const existing = document.getElementById('rc-modal-add-assistido');
+        if (existing) existing.remove();
+
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-add-assistido';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
+        
+        let assuntosDatalistHtml = '';
+        if (flatSubjects && flatSubjects.length > 0) {
+            assuntosDatalistHtml = `
+                <datalist id="rc-lista-assuntos">
+                    ${flatSubjects.map(s => `<option value="${escapeHTML(s.value)}">${escapeHTML(s.description || '')}</option>`).join('')}
+                </datalist>
+            `;
+        }
+        
+        modal.innerHTML = `
+            ${assuntosDatalistHtml}
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                <div class="bg-emerald-700 px-6 py-4 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="text-white font-black text-lg flex items-center gap-2">➕ Adicionar Assistido</h3>
+                        <p class="text-emerald-100 text-[10px] uppercase tracking-wider mt-0.5">Pauta: ${escapeHTML(pautaNome)}</p>
+                    </div>
+                    <button id="rc-modal-add-close" class="text-emerald-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
+                </div>
+                
+                <form id="rc-form-add-assistido" class="p-6 space-y-4 overflow-y-auto max-h-[80vh]">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nome Completo <span class="text-red-500">*</span></label>
+                        <input type="text" id="rc-add-nome" required class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Digite o nome completo">
+                    </div>
+                    
+                    <div class="grid grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">CPF (Opcional)</label>
+                            <input type="text" id="rc-add-cpf" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="000.000.000-00">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Nº Agendamento</label>
+                            <input type="text" id="rc-add-agendamento" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none font-mono" placeholder="#12345">
+                        </div>
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Assunto / Motivo (Opcional)</label>
+                        <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão, etc.">
+                    </div>
+
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1">Prioridade</label>
+                        <select id="rc-add-prioridade" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none bg-white">
+                            <option value="">Nenhuma</option>
+                            <option value="URGENTE" class="font-bold text-red-600">🚨 URGENTE</option>
+                            <option value="Máxima">🔴 Máxima</option>
+                            <option value="Média">🟡 Média</option>
+                            <option value="Mínima">🔵 Mínima</option>
+                        </select>
+                    </div>
+
+                    <div class="pt-2">
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ação Imediata</label>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="cursor-pointer bg-slate-50 border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:bg-slate-100 transition">
+                                <input type="radio" name="rc_add_status" value="pauta" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                                <div class="text-sm font-bold text-slate-700">Apenas Agendar</div>
+                            </label>
+                            <label class="cursor-pointer bg-amber-50 border border-amber-200 rounded-xl p-3 flex items-center gap-2 hover:bg-amber-100 transition">
+                                <input type="radio" name="rc_add_status" value="aguardando" class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
+                                <div class="text-sm font-bold text-amber-800">Fazer Check-in</div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="pt-4 flex gap-3">
+                        <button type="button" id="rc-btn-add-cancelar" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
+                        <button type="submit" id="rc-btn-add-salvar" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Salvar Assistido</button>
+                    </div>
+                </form>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-modal-add-close').onclick = closeModal;
+        document.getElementById('rc-btn-add-cancelar').onclick = closeModal;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        document.getElementById('rc-form-add-assistido').onsubmit = async (e) => {
+            e.preventDefault();
+            
+            const btn = document.getElementById('rc-btn-add-salvar');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="animate-pulse">Salvando...</span>';
+
+            const statusEscolhido = document.querySelector('input[name="rc_add_status"]:checked').value;
+            const isAguardando = statusEscolhido === 'aguardando';
+            const prioridadeSelecionada = document.getElementById('rc-add-prioridade').value;
+
+            const assistedData = {
+                name: document.getElementById('rc-add-nome').value.trim(),
+                cpf: document.getElementById('rc-add-cpf').value.trim(),
+                numAgendamento: document.getElementById('rc-add-agendamento').value.trim(),
+                subject: document.getElementById('rc-add-assunto').value.trim(),
+                status: statusEscolhido,
+                type: 'avulso',
+                arrivalTime: isAguardando ? new Date().toISOString() : null,
+                checkInOrder: isAguardando ? Date.now() : null,
+                priority: prioridadeSelecionada || null
+            };
+
+            const app = this._app;
+            const sucesso = await PautaService.addAssistedProgrammatic(
+                app.db, 
+                pautaId, 
+                assistedData, 
+                app.currentUserName || 'Recepção Central'
+            );
+
+            if (sucesso) {
+                closeModal();
+                if (isAguardando) {
+                    playSound('notification');
+                }
+            } else {
+                btn.disabled = false;
+                btn.innerHTML = 'Tentar Novamente';
+            }
+        };
     },
 
     // ── BUSCA GLOBAL ───────────────────────────────────────────────────────────
@@ -728,7 +1064,7 @@ export const RecepçãoCentralService = {
         if (!input) return;
 
         input.addEventListener('input', () => {
-            const termo     = normalizeText(input.value.trim());
+            const termo      = normalizeText(input.value.trim());
             const resultados = document.getElementById('rc-resultados-busca');
             if (!resultados) return;
 
@@ -755,7 +1091,7 @@ export const RecepçãoCentralService = {
             }
 
             resultados.innerHTML = encontrados.map(({ pauta, assistido: a }) => {
-                const sl          = statusLabel(a.status);
+                const sl           = statusLabel(a.status);
                 const podeCheckin = a.status === 'pauta';
                 return `
                     <div class="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 shadow-sm">
@@ -783,7 +1119,7 @@ export const RecepçãoCentralService = {
 
             resultados.querySelectorAll('.rc-busca-checkin').forEach(btn => {
                 btn.addEventListener('click', () => {
-                    this._marcarChegada(btn.dataset.pauta, btn.dataset.id);
+                    this._abrirModalCheckinComHorario(btn.dataset.pauta, btn.dataset.id);
                     input.value        = '';
                     resultados.innerHTML = '';
                     document.getElementById('rc-busca-global-wrap').classList.add('hidden');
@@ -794,21 +1130,117 @@ export const RecepçãoCentralService = {
 
     // ── AÇÕES ──────────────────────────────────────────────────────────────────
 
-    async _marcarChegada(pautaId, assistidoId) {
+    async _marcarChegadaComDados(pautaId, assistidoId, horarioStr) {
         const app = this._app;
+        
+        let arrivalTimeISO = new Date().toISOString();
+        if (horarioStr) {
+            const [h, m] = horarioStr.split(':');
+            const d = new Date();
+            d.setHours(parseInt(h), parseInt(m), 0, 0);
+            arrivalTimeISO = d.toISOString();
+        }
+
         await PautaService.updateStatus(
             app.db,
             pautaId,
             assistidoId,
             {
                 status:       'aguardando',
-                arrivalTime:  new Date().toISOString(),
+                arrivalTime:  arrivalTimeISO,
                 checkInOrder: Date.now(),
             },
             app.currentUserName
         );
         showNotification("Chegada registrada!", "success");
         playSound('notification');
+    },
+
+    _abrirModalCheckinComHorario(pautaId, assistidoId) {
+        const existing = document.getElementById('rc-modal-checkin-horario');
+        if (existing) existing.remove();
+
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const assistido = assistidos.find(a => a.id === assistidoId);
+        if (!assistido) return;
+
+        const horaAtual = new Date().toTimeString().slice(0, 5);
+
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-checkin-horario';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl overflow-hidden p-6 space-y-4">
+                <div class="flex justify-between items-center border-b pb-3">
+                    <h3 class="font-black text-slate-800 text-base">Check-in: ${escapeHTML(assistido.name)}</h3>
+                    <button id="rc-checkin-close" class="text-slate-400 hover:text-red-500 text-2xl">&times;</button>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase mb-1">Horário de Chegada</label>
+                    <input type="time" id="rc-input-hora-chegada" value="${horaAtual}" class="w-full p-3 border border-slate-300 rounded-xl font-bold text-base outline-none focus:ring-2 focus:ring-amber-500">
+                    <p class="text-[10px] text-slate-400 mt-1">O sistema calculará automaticamente se houve atraso em relação ao horário agendado.</p>
+                </div>
+                <div class="flex gap-2 pt-2">
+                    <button type="button" id="rc-checkin-cancel" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Cancelar</button>
+                    <button type="button" id="rc-checkin-confirm" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-xl text-xs shadow">Confirmar Check-in</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-checkin-close').onclick = closeModal;
+        document.getElementById('rc-checkin-cancel').onclick = closeModal;
+
+        document.getElementById('rc-checkin-confirm').onclick = async () => {
+            const horaStr = document.getElementById('rc-input-hora-chegada').value;
+            closeModal();
+            await this._marcarChegadaComDados(pautaId, assistidoId, horaStr);
+        };
+    },
+
+    async _voltarStatusAssistido(pautaId, assistidoId, destino) {
+        const app = this._app;
+        const msg = destino === 'pauta' ? 'Assistido retornado para Agendados.' : 'Assistido retornado para Fila de Espera.';
+        
+        let updates = { status: destino };
+        
+        if (destino === 'pauta') {
+            updates.arrivalTime = null;
+            updates.checkInOrder = null;
+        } else if (destino === 'aguardando') {
+            updates.assignedCollaborator = null;
+            updates.inAttendanceTime = null;
+        }
+
+        await PautaService.updateStatus(
+            app.db,
+            pautaId,
+            assistidoId,
+            updates,
+            app.currentUserName
+        );
+        showNotification(msg, "info");
+    },
+
+    async _chamarAssistidoEspecifico(pautaId, assistidoId) {
+        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        if (!pauta) return;
+
+        const assistidos = estado.assistidosPorPauta[pautaId] || [];
+        const assistido = assistidos.find(a => a.id === assistidoId);
+        
+        if (!assistido) return;
+
+        const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
+        
+        if(colaboradores.length > 0) {
+           this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
+        } else {
+             await this._executarChamado(pautaId, assistido, pauta, null);
+        }
     },
 
     async _chamarProximo(pautaId) {
@@ -827,18 +1259,129 @@ export const RecepçãoCentralService = {
         }
 
         const proximo = aguardando[0];
-        this._registrarUltimoChamado(pautaId, proximo, pauta.name);
+        
+        const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
+        
+        if(colaboradores.length > 0) {
+           this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
+        } else {
+             await this._executarChamado(pautaId, proximo, pauta, null);
+        }
+    },
+    
+    _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
+        const existing = document.getElementById('rc-modal-seletor-colaborador');
+        if (existing) existing.remove();
 
-        await PautaService.updateStatus(
-            app.db,
-            pautaId,
-            proximo.id,
-            { status: 'emAtendimento', inAttendanceTime: new Date().toISOString() },
-            app.currentUserName
-        );
+        const modal = document.createElement('div');
+        modal.id = 'rc-modal-seletor-colaborador';
+        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
+        
+        let colaboradoresOptions = '<option value="">Sem atribuição direta</option>';
+        
+        const colabOrdenados = [...colaboradores].sort((a,b) => {
+            const aLivre = a.status === 'disponivel' || !a.status;
+            const bLivre = b.status === 'disponivel' || !b.status;
+            if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
+            return aLivre ? -1 : 1;
+        });
 
-        showNotification(`📣 Chamado: ${proximo.name}`, "success");
-        playSound('chime');
+        colabOrdenados.forEach(c => {
+             const livre = c.status === 'disponivel' || !c.status;
+             const statusTxt = livre ? '(Livre)' : '(Ocupado)';
+             colaboradoresOptions += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')} ${statusTxt}</option>`;
+        });
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-md rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+                <div class="bg-indigo-700 px-6 py-4 flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="text-white font-black text-lg flex items-center gap-2">📣 Direcionar Atendimento</h3>
+                        <p class="text-indigo-100 text-[10px] uppercase tracking-wider mt-0.5">Assistido: ${escapeHTML(assistido.name)}</p>
+                    </div>
+                    <button id="rc-modal-colaborador-close" class="text-indigo-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
+                </div>
+                
+                <div class="p-6 space-y-4">
+                    <div>
+                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Para qual mesa / colaborador?</label>
+                        <select id="rc-select-colaborador-destino" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                            ${colaboradoresOptions}
+                        </select>
+                        <p class="text-[10px] text-slate-400 mt-2">Você pode deixar em branco para apenas chamar no painel sem direcionar a uma mesa específica.</p>
+                    </div>
+
+                    <div class="pt-4 flex gap-3">
+                        <button type="button" id="rc-btn-colaborador-cancelar" class="flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
+                        <button type="button" id="rc-btn-colaborador-confirmar" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow">Confirmar Chamada</button>
+                    </div>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        const closeModal = () => modal.remove();
+        document.getElementById('rc-modal-colaborador-close').onclick = closeModal;
+        document.getElementById('rc-btn-colaborador-cancelar').onclick = closeModal;
+        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+
+        document.getElementById('rc-btn-colaborador-confirmar').onclick = async () => {
+            const select = document.getElementById('rc-select-colaborador-destino');
+            const colaboradorId = select.value;
+            let colaboradorObj = null;
+            
+            if(colaboradorId) {
+                const opt = select.options[select.selectedIndex];
+                colaboradorObj = {
+                    id: colaboradorId,
+                    name: opt.getAttribute('data-nome')
+                };
+            }
+            
+            closeModal();
+            await this._executarChamado(pautaId, assistido, pauta, colaboradorObj);
+        };
+    },
+    
+    async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj) {
+         const app = this._app;
+         this._registrarUltimoChamado(pautaId, assistido, pauta.name);
+
+         const updates = { 
+             status: 'emAtendimento', 
+             inAttendanceTime: new Date().toISOString() 
+         };
+
+         if(colaboradorDestinoObj) {
+             updates.assignedCollaborator = {
+                 id: colaboradorDestinoObj.id,
+                 name: colaboradorDestinoObj.name
+             };
+         }
+
+         await PautaService.updateStatus(
+             app.db,
+             pautaId,
+             assistido.id,
+             updates,
+             app.currentUserName
+         );
+         
+         if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
+             try {
+                const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
+                await updateDoc(colabDocRef, {
+                    status: 'ocupado',
+                    currentAttendance: assistido.id
+                });
+             } catch(e) {
+                 console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
+             }
+         }
+
+         showNotification(`📣 Chamado: ${assistido.name}`, "success");
+         playSound('chime');
     },
 
     async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
@@ -1193,10 +1736,8 @@ export const RecepçãoCentralService = {
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
             btn.addEventListener('click', async () => {
-                btn.disabled    = true;
-                btn.textContent = '...';
-                await this._marcarChegada(pautaId, btn.dataset.id);
-                btn.closest('div.flex').remove();
+                modal.remove();
+                this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
             });
         });
     },
@@ -1205,12 +1746,7 @@ export const RecepçãoCentralService = {
 
     fechar() {
         this._cancelarListeners();
-
-        // Removemos o 'innerHTML = empty' para não quebrar a tela num próximo acesso
-        
         const app = this._app;
-        
-        // Delega a navegação de volta para o novo Roteador
         if (app && app.router) {
             app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
@@ -1234,4 +1770,5 @@ export const RecepçãoCentralService = {
     }
 };
 
-export default RecepçãoCentralService;
+export const RecepçãoCentralService = RecepcaoCentralService;
+export default RecepcaoCentralService;
