@@ -393,6 +393,9 @@ export const ColetasBuilderService = {
             <div id="modal-config-metricas" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
             <div id="modal-compartilhamento" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
             <div id="modal-ajuda-sheets" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
+            
+            <!-- MODAL DE EDIÇÃO DE LINK -->
+            <div id="modal-editar-link" class="fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 hidden p-4 animate-fade-in backdrop-blur-sm"></div>
         `;
     },
 
@@ -492,13 +495,11 @@ export const ColetasBuilderService = {
             const db = window.app.db;
             await deleteDoc(doc(db, "respostas_coleta", msgId));
             
-            // Remove o elemento da tela sem precisar recarregar tudo
             const card = btnElement.closest('.bg-white');
             if (card) card.remove();
             
             showNotification("Mensagem apagada.", "success");
             
-            // Verifica se ficou vazia
             const containerLista = document.getElementById('lista-caixa-entrada');
             if (containerLista.children.length === 0) {
                 containerLista.innerHTML = `<p class="text-sm text-slate-400 italic text-center p-8 bg-slate-50 rounded-xl">Caixa de entrada vazia.</p>`;
@@ -523,7 +524,6 @@ export const ColetasBuilderService = {
             const atividadeOrgao = {};
             snap.forEach(doc => {
                 const r = doc.data();
-                // Ignora mensagens de suporte da contagem de envios e do timestamp ativo
                 if (r.isMensagemSuporte) return;
 
                 const org = r.orgaoOrigem;
@@ -858,7 +858,6 @@ export const ColetasBuilderService = {
         }
     },
 
-    // (Omitindo demais funções inalteradas como initEventos, importarJson, copiarLink, etc... Tudo continua funcionando)
     initEventos(db, coletaId, coletaData) {
         const checkRequerSenha = document.getElementById('novo-link-requer-senha');
         const inputSenha = document.getElementById('novo-link-senha');
