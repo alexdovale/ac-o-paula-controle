@@ -1240,5 +1240,17 @@
             observer.observe(document.body, { childList: true, subtree: true });
         })();
     </script>
+    <script>
+        // Forçar atualização do Cache do PWA (Service Worker)
+        if ('serviceWorker' in navigator) {
+            navigator.serviceWorker.getRegistrations().then(function(registrations) {
+                for(let registration of registrations) {
+                    registration.update(); // Força o PWA a buscar arquivos novos no servidor
+                }
+            });
+        }
+    </script>
+</body>
+</html>
 </body>
 </html>
