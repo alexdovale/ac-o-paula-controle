@@ -12,11 +12,33 @@ function limparTexto(texto) {
         .trim();
 }
 
+// Rótulos de exibição para cada métrica de BI (usado no card do campo e no modal de métricas)
+const METRICAS_LABELS = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
+
+// Quais métricas fazem sentido pra cada tipo de campo, e quais vêm marcadas por padrão ao criar o campo
+const METRICAS_POR_TIPO = {
+    numero: { disponiveis: ['soma', 'media', 'desvio'], padrao: ['soma', 'media', 'desvio'] },
+    numero_idade: { disponiveis: ['media', 'desvio', 'frequencia'], padrao: ['media', 'frequencia'] },
+    booleano: { disponiveis: ['frequencia', 'total'], padrao: ['frequencia', 'total'] },
+    selecao: { disponiveis: ['frequencia', 'distribuicao'], padrao: ['distribuicao'] },
+    multipla_escolha: { disponiveis: ['frequencia', 'distribuicao'], padrao: ['distribuicao'] },
+};
+
+function metricasDisponiveisParaTipo(tipo) {
+    return (METRICAS_POR_TIPO[tipo] || { disponiveis: [] }).disponiveis;
+}
+
+function metricasPadraoParaTipo(tipo) {
+    return (METRICAS_POR_TIPO[tipo] || { padrao: [] }).padrao;
+}
+
 export const ColetasBuilderService = {
     
     _campoEditandoIndex: null,
     _coletaIdEditando: null,
     _linkEditandoIndex: null,
+    _campoMetricasIndex: null,
+    _coletaIdMetricas: null,
 
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
@@ -123,8 +145,7 @@ export const ColetasBuilderService = {
                                 const tipoDisplay = c.tipo.replace('_', ' ');
                                 let metricasDisplay = '';
                                 if (c.metricasBi && c.metricasBi.length > 0) {
-                                    const metricasLabels = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
-                                    metricasDisplay = c.metricasBi.map(m => metricasLabels[m] || m).join(', ');
+                                    metricasDisplay = c.metricasBi.map(m => METRICAS_LABELS[m] || m).join(', ');
                                 }
                                 
                                 return `
@@ -844,11 +865,17 @@ export const ColetasBuilderService = {
             let campos = snap.data().dicionarioDeCampos || [];
             if (!campos[index]) return;
 
+            // Se o tipo mudou, descarta métricas de BI que não se aplicam mais ao novo tipo
+            const disponiveisNovoTipo = metricasDisponiveisParaTipo(tipoInput);
+            const metricasAtuais = campos[index].metricasBi || [];
+            const metricasFiltradas = metricasAtuais.filter(m => disponiveisNovoTipo.includes(m));
+
             campos[index] = {
                 ...campos[index],
                 label: labelLimpo,
                 tipo: tipoInput,
-                opcoes: novasOpcoes
+                opcoes: novasOpcoes,
+                metricasBi: metricasFiltradas
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
@@ -859,6 +886,105 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Erro ao atualizar campo.", "error");
+        }
+    },
+
+    // ============================================================
+    // CONFIGURAÇÃO DE MÉTRICAS DE BI (SOMA, MÉDIA, ETC.)
+    // ============================================================
+    async abrirModalConfigMetricas(coletaId, index) {
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            if (!freshSnap.exists()) return;
+
+            let campos = freshSnap.data().dicionarioDeCampos || [];
+            const campo = campos[index];
+            if (!campo) return;
+
+            this._campoMetricasIndex = index;
+            this._coletaIdMetricas = coletaId;
+
+            const disponiveis = metricasDisponiveisParaTipo(campo.tipo);
+            const metricasAtuais = campo.metricasBi || [];
+
+            let modal = document.getElementById('modal-config-metricas');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-config-metricas';
+                modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+                document.body.appendChild(modal);
+            }
+
+            const opcoesHtml = disponiveis.length > 0 ? disponiveis.map(m => `
+                <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 transition">
+                    <input type="checkbox" name="metrica_bi" value="${m}" ${metricasAtuais.includes(m) ? 'checked' : ''} class="h-4 w-4 text-indigo-600 rounded border-slate-300">
+                    <span class="font-medium">${METRICAS_LABELS[m] || m}</span>
+                </label>
+            `).join('') : `
+                <p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">
+                    O tipo "${escapeHTML(campo.tipo.replace('_', ' '))}" não possui métricas estatísticas aplicáveis (texto livre não é somado nem tabulado).
+                </p>
+            `;
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+                    <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas de BI</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-1 truncate max-w-[280px]" title="${escapeHTML(campo.label)}">${escapeHTML(campo.label)}</p>
+                        </div>
+                        <button onclick="document.getElementById('modal-config-metricas').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+
+                    <div class="p-6 space-y-3 overflow-y-auto">
+                        <p class="text-xs text-slate-500 font-medium mb-2">Selecione o que o painel de resultados deve calcular a partir das respostas deste campo:</p>
+                        ${opcoesHtml}
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t border-slate-100 bg-slate-50">
+                        <button onclick="document.getElementById('modal-config-metricas').classList.add('hidden')" class="flex-1 p-3.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                        ${disponiveis.length > 0 ? `<button onclick="ColetasBuilderService.salvarMetricas()" class="flex-1 p-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Métricas</button>` : ''}
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+
+        } catch (e) {
+            console.error(e);
+            showNotification("Falha ao abrir configuração de métricas.", "error");
+        }
+    },
+
+    async salvarMetricas() {
+        const index = this._campoMetricasIndex;
+        const coletaId = this._coletaIdMetricas;
+
+        if (index === null || !coletaId) return;
+
+        const checkboxes = document.querySelectorAll('#modal-config-metricas input[name="metrica_bi"]:checked');
+        const metricasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let campos = snap.data().dicionarioDeCampos || [];
+            if (!campos[index]) return;
+
+            campos[index] = { ...campos[index], metricasBi: metricasSelecionadas };
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+
+            document.getElementById('modal-config-metricas').classList.add('hidden');
+            showNotification("Métricas atualizadas com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao salvar métricas.", "error");
         }
     },
 
@@ -1017,7 +1143,8 @@ export const ColetasBuilderService = {
                 id: 'c_' + Math.random().toString(36).substring(2, 8),
                 label,
                 tipo,
-                envioIndividual
+                envioIndividual,
+                metricasBi: metricasPadraoParaTipo(tipo)
             };
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
@@ -1025,10 +1152,12 @@ export const ColetasBuilderService = {
                 novoCampo.opcoes = opcoesString.split(',').map(o => limparTexto(o)).filter(o => o !== '');
             }
 
-            const camposAtuais = coletaData.dicionarioDeCampos || [];
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            const camposAtuais = freshSnap.exists() ? (freshSnap.data().dicionarioDeCampos || []) : [];
             camposAtuais.push(novoCampo);
 
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: camposAtuais });
+            await updateDoc(docRef, { dicionarioDeCampos: camposAtuais });
             showNotification("Pergunta cadastrada com sucesso.", "success");
             window.abrirConstrutor(coletaId); 
         });
@@ -1052,10 +1181,12 @@ export const ColetasBuilderService = {
                 camposHabilitados
             };
 
-            const linksAtuais = coletaData.linksExternos || [];
+            const docRefLink = doc(db, "formularios_coleta", coletaId);
+            const freshSnapLink = await getDoc(docRefLink);
+            const linksAtuais = freshSnapLink.exists() ? (freshSnapLink.data().linksExternos || []) : [];
             linksAtuais.push(novoLink);
 
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: linksAtuais });
+            await updateDoc(docRefLink, { linksExternos: linksAtuais });
             showNotification("Link gerado e pronto para distribuição.", "success");
             window.abrirConstrutor(coletaId);
         });
@@ -1149,14 +1280,17 @@ export const ColetasBuilderService = {
             const docRef = doc(db, "formularios_coleta", coletaId);
             const camposAtuais = coletaData.dicionarioDeCampos || [];
             
-            const formatadas = novasPerguntas.map(p => ({
-                id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
-                label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
-                tipo: p.tipo || 'numero',
-                opcoes: (p.opcoes || []).map(o => limparTexto(o)),
-                metricasBi: p.metricasBi || [],
-                envioIndividual: p.envioIndividual || false
-            }));
+            const formatadas = novasPerguntas.map(p => {
+                const tipoFinal = p.tipo || 'numero';
+                return {
+                    id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
+                    label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
+                    tipo: tipoFinal,
+                    opcoes: (p.opcoes || []).map(o => limparTexto(o)),
+                    metricasBi: p.metricasBi || metricasPadraoParaTipo(tipoFinal),
+                    envioIndividual: p.envioIndividual || false
+                };
+            });
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
