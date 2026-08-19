@@ -361,121 +361,60 @@
             <button id="modo-back-to-login" class="mt-8 text-sm text-slate-400 hover:text-slate-600 font-semibold transition-colors">&larr; Sair e Voltar ao Login</button>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS (REESTRUTURADA: NAVBAR + ÁREA PRINCIPAL) -->
-        <div id="pauta-selection-container" class="hidden w-full bg-slate-50 min-h-screen flex-col absolute top-0 left-0 z-40">
+        <!-- TELA DE SELEÇÃO DE PAUTAS -->
+        <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
+            <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
+                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="var logoutBtn = document.getElementById('logout-btn-app'); if(logoutBtn) logoutBtn.click(); else window.location.reload();">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
+                        <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                        <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                    </svg>
+                </button>
+            </div>
             
-            <!-- 1. NAVBAR CORPORATIVA -->
-            <nav class="bg-slate-900 w-full shadow-md">
-                <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div class="flex items-center justify-between h-14"> 
-                        
-                        <!-- Logo & Nome Reduzido -->
-                        <div class="flex items-center gap-3">
-                            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="SIGEP" class="h-8 w-auto filter brightness-0 invert">
-                            <div class="text-white flex flex-col justify-center">
-                                <span class="font-bold text-lg leading-none tracking-wide">SIGEP</span>
-                                <span class="text-[10px] text-slate-400 uppercase tracking-widest leading-none mt-1">Gestão de Pauta</span>
-                            </div>
-                        </div>
+            <div id="install-container" class="hidden my-4 p-3 bg-green-100 border border-green-200 rounded-lg text-center">
+                <p class="text-sm text-green-800">Leve o gerenciador de pautas com você!</p>
+                <button id="install-button" class="mt-2 bg-green-600 hover:bg-green-700 text-white font-semibold px-4 py-2 text-sm rounded-lg shadow-md hover:shadow-lg transition-all w-full sm:w-auto">
+                    Instalar App
+                </button>
+            </div>
 
-                        <!-- Navegação Principal -->
-                        <div class="hidden md:flex items-center space-x-1 ml-8">
-                            <button id="nav-inicio" class="bg-slate-800 text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6"></path></svg>
-                                Início
-                            </button>
-                            
-                            <button id="btn-recepcao-central" class="text-slate-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
-                                Recepção Central
-                            </button>
-
-                            <button id="admin-panel-btn" class="hidden text-slate-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                                Administração
-                            </button>
-
-                            <button id="view-dashboard-btn" class="text-slate-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
-                                Dashboard
-                            </button>
-
-                            <button id="btn-modulo-coletas" class="text-slate-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6"></path></svg>
-                                Coletas & BI
-                            </button>
-                            
-                            <button id="btn-trocar-unidade" class="hidden text-slate-300 hover:bg-slate-700 hover:text-white px-3 py-2 rounded-md text-sm font-medium flex items-center gap-2 transition-colors">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"></path></svg>
-                                Trocar Unidade
-                            </button>
-                        </div>
-
-                        <!-- Área do Usuário & Ações da Conta -->
-                        <div class="flex items-center gap-3 sm:gap-4 ml-auto">
-                            <button id="btn-trocar-modo" class="text-slate-400 hover:text-white flex items-center gap-1.5 text-xs sm:text-sm transition-colors px-2 py-1" title="Trocar Modo">
-                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"></path></svg>
-                                <span class="hidden sm:inline">Trocar Modo</span>
-                            </button>
-                            
-                            <div class="h-6 w-px bg-slate-700 hidden sm:block"></div>
-                            
-                            <button id="open-user-preferences-btn" class="flex items-center gap-2 text-sm text-slate-300 hover:text-white transition-colors group">
-                                <div class="w-8 h-8 rounded-full bg-slate-800 flex items-center justify-center border border-slate-700 group-hover:border-slate-500 transition-colors">
-                                    <svg class="w-4 h-4 text-slate-400 group-hover:text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
-                                </div>
-                                <span class="hidden sm:inline font-medium">Meu Perfil</span>
-                            </button>
-
-                            <button id="logout-btn-pautas" class="text-slate-400 hover:text-red-400 p-1.5 rounded-md transition-colors ml-1" title="Sair do Sistema">
-                                <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            </nav>
-
-            <!-- 2. DASHBOARD DE PAUTAS -->
-            <div class="flex-1 w-full max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 overflow-y-auto">
-                
-                <div id="install-container" class="hidden mb-6 p-4 bg-blue-50 border border-blue-100 rounded-xl flex flex-col sm:flex-row items-center justify-between shadow-sm">
-                    <div class="flex items-center gap-3">
-                        <div class="bg-blue-100 p-2 rounded-lg text-blue-600"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 18h.01M8 21h8a2 2 0 002-2V5a2 2 0 00-2-2H8a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg></div>
-                        <p class="text-sm text-blue-900 font-medium">Leve o gerenciador de pautas com você!</p>
-                    </div>
-                    <button id="install-button" class="mt-3 sm:mt-0 bg-blue-600 hover:bg-blue-700 text-white font-medium px-5 py-2 text-sm rounded-lg shadow-sm transition-colors w-full sm:w-auto">
-                        Instalar App
-                    </button>
-                </div>
-
-                <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
-                    <div>
-                        <h2 class="text-2xl font-bold text-slate-800 tracking-tight">Painel de Pautas</h2>
-                        <p class="text-sm text-slate-500 mt-1">Gerencie os atendimentos e acompanhe o fluxo</p>
-                    </div>
-                    <button id="create-pauta-btn" class="bg-blue-600 hover:bg-blue-700 text-white font-medium py-2.5 px-6 rounded-lg shadow-sm transition-colors flex items-center justify-center gap-2 h-10 w-full sm:w-auto">
-                        <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
-                        Criar Nova Pauta
-                    </button>
-                </div>
-
-                <div class="bg-white rounded-xl shadow-sm border border-slate-200 p-5 mb-8">
-                    <h3 class="text-sm font-semibold text-slate-700 mb-4 flex items-center gap-2 uppercase tracking-wide">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z"></path></svg>
-                        Filtros de Exibição
-                    </h3>
-                    <div id="filters-container" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 items-end"></div>
-                </div>
-
-                <div id="invitations-container" class="hidden mb-8 bg-indigo-50 border border-indigo-100 rounded-xl p-5 shadow-sm">
-                    <h2 class="text-lg font-bold text-indigo-800 mb-4 flex items-center gap-2">
-                        <svg class="w-5 h-5 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l7-4.666a2 2 0 012.22 0l7 4.666A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-1.14.76a2 2 0 01-2.22 0l-1.14-.76"></path></svg>
-                        Convites Pendentes
-                    </h2>
-                    <div id="pending-invitations-list" class="space-y-4"></div>
-                </div>
-
-                <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 w-full"></div>
+            <!-- MENU PRINCIPAL PADRONIZADO E SEM ÍCONES -->
+            <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-6">
+                <button id="btn-recepcao-central" class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Recepção Central
+                </button>
+                <button id="admin-panel-btn" class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Painel do Administrador
+                </button>
+                <button id="view-dashboard-btn" class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Ver Dashboard
+                </button>
+                <button id="btn-modulo-coletas" class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Módulo Coletas & BI
+                </button>
+                <button id="btn-trocar-unidade" class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Trocar Unidade
+                </button>
+                <button id="btn-trocar-modo" class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Trocar Modo
+                </button>
+                <button id="open-user-preferences-btn" class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Meu Perfil
+                </button>
+            </div>
+            
+            <div id="invitations-container" class="hidden mb-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
+                <div id="pending-invitations-list" class="space-y-4"></div>
+            </div>
+            
+            <div id="filters-container" class="mb-6"></div>
+            
+            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"></div>
+            <div class="mt-6 w-full">
+                <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
             </div>
         </div>
 
@@ -757,7 +696,7 @@
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
                                 <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
                                 <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-30 space-y-2">
                                     <p class="text-xs font-bold text-gray-500 uppercase mb-2">Mostrar Colunas:</p>
