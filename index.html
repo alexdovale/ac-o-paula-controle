@@ -362,10 +362,17 @@
                 <button id="view-dashboard-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-purple-700 transition shadow-md">
                     Ver Dashboard
                 </button>
-                
+
+                <!-- NOVO: BOTÃO TROCAR UNIDADE -->
+                <button id="btn-trocar-unidade" class="hidden bg-indigo-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-indigo-700 transition shadow-md items-center gap-2">
+                    <span></span> Trocar Unidade
+                </button>
+
+                <!-- Botão Trocar Modo -->
+                <button id="btn-trocar-modo" class="bg-amber-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-amber-700 transition shadow-md flex items-center gap-2">
                 <!-- BOTÃO DO NOVO MÓDULO EM TELA CHEIA -->
                 <button id="btn-modulo-coletas" class="w-full sm:w-auto bg-indigo-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-indigo-700 transition shadow-md flex items-center gap-2 justify-center">
-                    📊 Módulo Coletas & BI
+                    Módulo Coletas & BI
                 </button>
 
                 <button id="open-user-preferences-btn" class="ml-4 bg-gray-600 text-white font-bold py-2 px-6 rounded-lg hover:bg-gray-700 transition shadow-md">
@@ -1000,6 +1007,29 @@
     <!-- RECIPIENTE DE MODAIS -->
     <div id="modals-container"></div>
 
+
+    <!-- MODAL DE SELEÇÃO DE UNIDADE (NOVO) -->
+    <div id="select-unidade-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
+        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" onclick="event.stopPropagation()">
+            <div class="text-center mb-6">
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🏢</div>
+                <h2 class="text-xl font-bold text-gray-800 mb-2">Selecione a Unidade</h2>
+                <p class="text-sm text-gray-500">Escolha o local de atuação para visualizar as pautas desta unidade.</p>
+            </div>
+            
+            <div class="space-y-4 mb-8">
+                <select id="modal-unidade-select" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base bg-gray-50 font-semibold text-gray-700">
+                    <option value="todas">🌍 Todas as minhas unidades</option>
+                </select>
+            </div>
+            
+            <div class="flex gap-3">
+                <button id="cancel-unidade-modal" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-300 transition-colors">Voltar</button>
+                <button id="confirm-unidade-modal" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors shadow-md">Continuar</button>
+            </div>
+        </div>
+    </div>
+    
     <!-- SELECT COLLABORATOR MODAL -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl">
