@@ -41,7 +41,7 @@
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f0f2f5; display: flex; flex-direction: column; min-height: 100vh; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; }
         html, body {
             transform: none !important;
             filter: none !important;     
@@ -54,9 +54,9 @@
         .priority-urgente { border-left: 5px solid #ef4444; }
         .priority-maxima { border-left: 5px solid #22c55e; }
         .priority-media { border-left: 5px solid #f97316; }
-        .priority-minima { border-left: 5px solid #6b7280; }
+        .priority-minima { border-left: 5px solid #64748b; }
         .column-content::-webkit-scrollbar, .scrollable-content::-webkit-scrollbar, #policy-content::-webkit-scrollbar, #checklist-container::-webkit-scrollbar, #members-list-container::-webkit-scrollbar, #statistics-content::-webkit-scrollbar { width: 8px; }
-        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #e2e8f0; border-radius: 10px; }
+        .column-content::-webkit-scrollbar-track, .scrollable-content::-webkit-scrollbar-track, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-track, #members-list-container::-webkit-scrollbar-track, #statistics-content::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
         .column-content::-webkit-scrollbar-thumb, .scrollable-content::-webkit-scrollbar-thumb, #policy-content::-webkit-scrollbar-track, #checklist-container::-webkit-scrollbar-thumb, #members-list-container::-webkit-scrollbar-thumb, #statistics-content::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 10px; }
         input[type="search"]::-webkit-search-cancel-button { -webkit-appearance: none; appearance: none; }
         
@@ -97,7 +97,7 @@
         @keyframes pulse-bg {
             0% { background-color: #a7f3d0; transform: scale(1); }
             50% { background-color: #34d399; transform: scale(1.1); }
-            100% { background-color: #e2e8f0; transform: scale(1); }
+            100% { background-color: #f1f5f9; transform: scale(1); }
         }
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
@@ -107,7 +107,6 @@
         /* MODOS DE FOCO: MAXIMIZAR E DESENCAIXAR    */
         /* ========================================= */
         
-        /* 1. Estado Maximizado na mesma tela */
         .column-maximized {
             position: fixed !important;
             top: 0 !important;
@@ -119,7 +118,7 @@
             border-radius: 0 !important;
             margin: 0 !important;
             padding: 1.5rem !important;
-            background-color: #e2e8f0 !important;
+            background-color: #f1f5f9 !important;
             box-sizing: border-box !important;
         }
         
@@ -134,13 +133,11 @@
             overflow-y: auto !important;
         }
 
-        /* 2. Estado Pop-out (Nova Janela na Tela 2) */
         body.is-popout {
-            background-color: #e2e8f0 !important;
+            background-color: #f1f5f9 !important;
             overflow: hidden !important; 
         }
         
-        /* CORREÇÃO: Força todos os contêineres a usarem 100% do espaço do monitor */
         body.is-popout #main-wrapper,
         body.is-popout #app-container,
         body.is-popout #main-content {
@@ -154,7 +151,6 @@
 
         body.is-popout > *:not(#main-wrapper) { display: none !important; }
         
-        /* Esconde tudo que não for a lista (cabeçalhos, rodapés, botões) */
         body.is-popout #app-container > header,
         body.is-popout #form-agendamento,
         body.is-popout .mt-6.flex.justify-center,
@@ -166,7 +162,6 @@
         
         body.is-popout .column-wrapper-base { display: none !important; }
         
-        /* Estica a coluna escolhida */
         body.is-popout .column-wrapper-base.popout-active {
             display: flex !important;
             flex-direction: column !important;
@@ -239,36 +234,36 @@
 
     <div id="loading-container" class="loading-container">
         <div class="loader"></div>
-        <p id="loading-text" class="mt-4 text-gray-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
+        <p id="loading-text" class="mt-4 text-slate-700 font-semibold text-center">Conectando com Segurança ao SIGEP...</p>
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
         <div id="login-container" class="hidden w-full min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-gray-800 mb-6">Sistema de Gerenciamento de Pauta - SIGEP</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6">Sistema de Gerenciamento de Pauta - SIGEP</h2>
                 <div id="auth-error" class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-4 hidden text-sm" role="alert"></div>
-                <div class="flex border-b mb-6">
+                <div class="flex border-b border-slate-200 mb-6">
                     <button id="login-tab-btn" class="flex-1 py-2 text-center font-semibold text-green-600 border-b-2 border-green-600 text-sm sm:text-base">Login</button>
-                    <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-gray-500 text-sm sm:text-base">Cadastrar</button>
+                    <button id="register-tab-btn" class="flex-1 py-2 text-center font-semibold text-slate-500 text-sm sm:text-base">Cadastrar</button>
                 </div>
                 
                 <form id="login-form" class="space-y-4">
-                    <div><label for="login-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="login-password" class="block text-sm font-medium text-gray-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
+                    <div><label for="login-email" class="block text-sm font-medium text-slate-700">Email</label><input type="email" id="login-email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
+                    <div><label for="login-password" class="block text-sm font-medium text-slate-700">Senha</label><input type="password" id="login-password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
                     <div class="text-right">
                         <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
                     </div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
                 </form>
                 <form id="register-form" class="hidden space-y-4">
-                    <div><label for="register-name" class="block text-sm font-medium text-gray-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-email" class="block text-sm font-medium text-gray-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
-                    <div><label for="register-password" class="block text-sm font-medium text-gray-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
+                    <div><label for="register-name" class="block text-sm font-medium text-slate-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
+                    <div><label for="register-email" class="block text-sm font-medium text-slate-700">Email</label><input type="email" id="register-email" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
+                    <div><label for="register-password" class="block text-sm font-medium text-slate-700">Senha (mínimo 6 caracteres)</label><input type="password" id="register-password" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Criar Conta</button>
                 </form>
 
-                <div class="mt-6 text-center text-xs text-gray-500">
+                <div class="mt-6 text-center text-xs text-slate-500">
                     Ao entrar ou se cadastrar, você concorda com nossos 
                     <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-green-600 hover:text-green-800 font-semibold hover:underline transition-colors">Termos de Uso</button> 
                     e 
@@ -295,7 +290,7 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-4 mb-6">
-                            <div class="bg-slate-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-blue-50 transition-colors">
+                            <div class="bg-slate-50 text-blue-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-200 group-hover:bg-blue-50 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M12 21v-8.25M15.75 21v-8.25M8.25 21v-8.25M3 9l9-6 9 6m-1.5 12V10.332A48.36 48.36 0 0012 9.75c-2.551 0-5.056.2-7.5.582V21M3 21h18M12 6.75h.008v.008H12V6.75z" /></svg>
                             </div>
                             <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Normal</h2>
@@ -329,7 +324,7 @@
                     </div>
                     <div>
                         <div class="flex items-center gap-4 mb-6">
-                            <div class="bg-slate-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-100 group-hover:bg-emerald-50 transition-colors">
+                            <div class="bg-slate-50 text-emerald-600 w-14 h-14 flex items-center justify-center rounded-xl border border-slate-200 group-hover:bg-emerald-50 transition-colors">
                                 <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19.128a9.38 9.38 0 002.625.372 9.337 9.337 0 004.121-.952 4.125 4.125 0 00-7.533-2.493M15 19.128v-.003c0-1.113-.285-2.16-.786-3.07M15 19.128v.106A12.318 12.318 0 018.624 21c-2.331 0-4.512-.645-6.374-1.766l-.001-.109a6.375 6.375 0 0111.964-3.07M12 6.375a3.375 3.375 0 11-6.75 0 3.375 3.375 0 016.75 0zm8.25 2.25a2.625 2.625 0 11-5.25 0 2.625 2.625 0 015.25 0z" /></svg>
                             </div>
                             <h2 class="font-black text-2xl text-slate-800 uppercase">Modo Evento</h2>
@@ -364,8 +359,8 @@
         <!-- TELA DE SELEÇÃO DE PAUTAS -->
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <div class="flex justify-center items-center w-full relative mb-6 sm:mb-8">
-                <h1 class="text-2xl sm:text-3xl font-bold text-gray-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
-                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition" onclick="var logoutBtn = document.getElementById('logout-btn-app'); if(logoutBtn) logoutBtn.click(); else window.location.reload();">
+                <h1 class="text-2xl sm:text-3xl font-bold text-slate-800 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                <button id="logout-btn-pautas" title="Sair do Sistema" class="absolute top-0 right-0 bg-slate-600 text-white font-bold p-2 rounded-lg hover:bg-slate-700 transition" onclick="var logoutBtn = document.getElementById('logout-btn-app'); if(logoutBtn) logoutBtn.click(); else window.location.reload();">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                         <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
@@ -406,7 +401,7 @@
             </div>
             
             <div id="invitations-container" class="hidden mb-8">
-                <h2 class="text-xl sm:text-2xl font-bold text-gray-800 mb-4">Convites Pendentes</h2>
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4">Convites Pendentes</h2>
                 <div id="pending-invitations-list" class="space-y-4"></div>
             </div>
             
@@ -420,8 +415,8 @@
 
         <!-- DASHBOARD -->
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
-                <button id="dashboard-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="dashboard-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 <img 
@@ -438,14 +433,14 @@
             </div>
             <div id="dashboard-content">
                 <div class="loader-small mx-auto my-12"></div>
-                <p class="text-center text-gray-500 mt-4">Carregando dados do Dashboard...</p>
+                <p class="text-center text-slate-500 mt-4">Carregando dados do Dashboard...</p>
             </div>
         </div>
 
         <!-- MEU PERFIL E PREFERÊNCIAS -->
         <div id="meu-perfil-container" class="hidden w-full max-w-5xl mx-auto p-2 sm:p-4">
-            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
-                <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl">👤</div>
@@ -461,20 +456,20 @@
                     <h3 class="text-lg font-bold text-slate-800 border-b pb-2">🔐 Dados de Acesso</h3>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">Nome Completo</label>
-                        <input type="text" id="perfil-nome" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-slate-700">Nome Completo</label>
+                        <input type="text" id="perfil-nome" class="mt-1 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
                     
                     <div>
-                        <label class="block text-sm font-medium text-gray-700">E-mail (Login)</label>
-                        <input type="email" id="perfil-email" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        <label class="block text-sm font-medium text-slate-700">E-mail (Login)</label>
+                        <input type="email" id="perfil-email" class="mt-1 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                     </div>
 
-                    <div class="pt-4 border-t border-gray-100">
-                        <h4 class="text-sm font-bold text-gray-600 mb-3">Alterar Senha (Opcional)</h4>
+                    <div class="pt-4 border-t border-slate-100">
+                        <h4 class="text-sm font-bold text-slate-600 mb-3">Alterar Senha (Opcional)</h4>
                         <div>
-                            <label class="block text-sm font-medium text-gray-700">Nova Senha</label>
-                            <input type="password" id="perfil-nova-senha" placeholder="Deixe em branco para não alterar" class="mt-1 w-full p-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                            <label class="block text-sm font-medium text-slate-700">Nova Senha</label>
+                            <input type="password" id="perfil-nova-senha" placeholder="Deixe em branco para não alterar" class="mt-1 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
 
@@ -492,15 +487,15 @@
                         <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🏛️ Vínculo Institucional</h3>
                         
                         <div class="mb-4">
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Seu Perfil no Sistema</label>
-                            <input type="text" id="perfil-role" disabled class="w-full p-2 bg-gray-100 border border-gray-300 rounded-lg text-gray-500 cursor-not-allowed font-semibold uppercase text-sm">
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Seu Perfil no Sistema</label>
+                            <input type="text" id="perfil-role" disabled class="w-full p-2 bg-slate-100 border border-slate-300 rounded-lg text-slate-500 cursor-not-allowed font-semibold uppercase text-sm">
                         </div>
 
                         <div>
-                            <label class="block text-sm font-medium text-gray-700 mb-1">Unidades de Lotação / Atuação</label>
-                            <p class="text-xs text-gray-500 mb-2">As pautas da Recepção Central serão filtradas com base nas unidades marcadas abaixo.</p>
-                            <div id="perfil-unidades-list" class="max-h-48 overflow-y-auto border border-gray-200 rounded-lg p-3 space-y-2 bg-gray-50">
-                                <p class="text-sm text-gray-500 text-center py-2">Carregando unidades...</p>
+                            <label class="block text-sm font-medium text-slate-700 mb-1">Unidades de Lotação / Atuação</label>
+                            <p class="text-xs text-slate-500 mb-2">As pautas da Recepção Central serão filtradas com base nas unidades marcadas abaixo.</p>
+                            <div id="perfil-unidades-list" class="max-h-48 overflow-y-auto border border-slate-200 rounded-lg p-3 space-y-2 bg-slate-50">
+                                <p class="text-sm text-slate-500 text-center py-2">Carregando unidades...</p>
                             </div>
                         </div>
                     </div>
@@ -511,14 +506,14 @@
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-3">
-                                <p class="text-sm font-bold text-gray-600">Emitir Sons</p>
+                                <p class="text-sm font-bold text-slate-600">Emitir Sons</p>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-success" class="h-4 w-4 text-green-600 rounded"> <span class="text-sm">Sucesso</span></label>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-error" class="h-4 w-4 text-red-600 rounded"> <span class="text-sm">Erro</span></label>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-warning" class="h-4 w-4 text-amber-600 rounded"> <span class="text-sm">Aviso</span></label>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-som-info" class="h-4 w-4 text-blue-600 rounded"> <span class="text-sm">Informação</span></label>
                             </div>
                             <div class="space-y-3">
-                                <p class="text-sm font-bold text-gray-600">Exibir Toasts (Pop-ups)</p>
+                                <p class="text-sm font-bold text-slate-600">Exibir Toasts (Pop-ups)</p>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-success" class="h-4 w-4 text-green-600 rounded"> <span class="text-sm">Sucesso</span></label>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-error" class="h-4 w-4 text-red-600 rounded"> <span class="text-sm">Erro</span></label>
                                 <label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="perfil-toast-warning" class="h-4 w-4 text-amber-600 rounded"> <span class="text-sm">Aviso</span></label>
@@ -540,8 +535,8 @@
 
         <!-- ADMIN -->
         <div id="admin-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
-                <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="admin-back-to-pautas-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 <img 
@@ -558,14 +553,14 @@
             </div>
             <div id="admin-content">
                 <div class="loader-small mx-auto my-12"></div>
-                <p class="text-center text-gray-500 mt-4">Carregando painel administrativo...</p>
+                <p class="text-center text-slate-500 mt-4">Carregando painel administrativo...</p>
             </div>
         </div>
 
         <!-- MÓDULO DE COLETAS & BI (TELA CHEIA) -->
         <div id="coletas-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
-            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-gray-200 bg-white shadow-sm rounded-2xl relative">
-                <button id="coletas-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-gray-200 text-gray-800 font-bold py-2 px-4 rounded-lg hover:bg-gray-300 transition text-sm sm:text-base">
+            <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
+                <button id="coletas-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
                 <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl"></div>
@@ -599,8 +594,8 @@
         <div id="app-container" class="hidden w-full max-w-[1400px] mx-auto">
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
-                    <h1 class="text-lg sm:text-xl font-semibold text-gray-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
-                    <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-gray-600 text-white font-bold p-2 rounded-lg hover:bg-gray-700 transition">
+                    <h1 class="text-lg sm:text-xl font-semibold text-slate-600 text-center pr-10">Sistema de Gerenciamento de Pauta - SIGEP</h1>
+                    <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-slate-600 text-white font-bold p-2 rounded-lg hover:bg-slate-700 transition">
                         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                             <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                             <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
@@ -609,13 +604,13 @@
                 </div>
 
                 <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-4">
-                    <div class="text-center border-b pb-3 sm:pb-4">
-                        <h2 id="pauta-title" class="text-xl sm:text-2xl md:text-3xl font-bold text-gray-800 truncate px-2 sm:px-4"></h2>
+                    <div class="text-center border-b border-slate-200 pb-3 sm:pb-4">
+                        <h2 id="pauta-title" class="text-xl sm:text-2xl md:text-3xl font-bold text-slate-800 truncate px-2 sm:px-4"></h2>
                     </div>
 
                     <div class="flex flex-col sm:flex-row justify-between items-center w-full gap-3 pt-2 sm:pt-4">
                         <div class="flex-shrink-0 w-full sm:w-auto">
-                            <button id="back-to-pautas-btn" class="w-full sm:w-auto bg-gray-200 text-gray-800 font-bold py-2.5 px-4 rounded-lg hover:bg-gray-300 transition">&larr; Voltar</button>
+                            <button id="back-to-pautas-btn" class="w-full sm:w-auto bg-slate-200 text-slate-800 font-bold py-2.5 px-4 rounded-lg hover:bg-slate-300 transition">&larr; Voltar</button>
                         </div>
 
                         <div class="relative flex items-center w-full sm:w-auto justify-end">
@@ -657,19 +652,19 @@
                                     </button>
                                     <div class="h-px bg-slate-100 my-1 mx-3"></div>
                                     
-                                    <div class="px-4 py-2 bg-gray-50 flex items-center justify-between hover:bg-gray-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
+                                    <div class="px-4 py-2 bg-slate-50 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
                                         <div class="flex items-center gap-3 pointer-events-none">
                                             <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
                                                 🔕
                                             </div>
                                             <div>
-                                                <span class="text-sm font-bold text-gray-700 block">Modo Silencioso</span>
-                                                <span class="text-[9px] text-gray-500 block leading-tight mt-0.5">Bloquear e-mails</span>
+                                                <span class="text-sm font-bold text-slate-700 block">Modo Silencioso</span>
+                                                <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Bloquear e-mails</span>
                                             </div>
                                         </div>
                                         <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
                                             <input type="checkbox" id="toggle-silent-mode" class="sr-only peer">
-                                            <div class="w-9 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
+                                            <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
                                         </label>
                                     </div>
                                     <div class="h-px bg-slate-100 my-1 mx-3"></div>
@@ -695,20 +690,20 @@
                             </button>
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
-                                <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-gray-600 bg-gray-200 hover:bg-gray-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
-                                <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-gray-200 z-30 space-y-2">
-                                    <p class="text-xs font-bold text-gray-500 uppercase mb-2">Mostrar Colunas:</p>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-slate-200 z-30 space-y-2">
+                                    <p class="text-xs font-bold text-slate-500 uppercase mb-2">Mostrar Colunas:</p>
+                                    <label class="flex items-center text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
                                         <input type="checkbox" id="toggle-em-atendimento" class="h-4 w-4 text-blue-600 rounded">
                                         <span class="ml-2">Em Atendimento</span>
                                     </label>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <label class="flex items-center text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
                                         <input type="checkbox" id="toggle-distribuicao" class="h-4 w-4 text-cyan-600 rounded">
                                         <span class="ml-2">Distribuição</span>
                                     </label>
-                                    <label class="flex items-center text-sm text-gray-700 cursor-pointer hover:bg-gray-50 p-1 rounded">
+                                    <label class="flex items-center text-sm text-slate-700 cursor-pointer hover:bg-slate-50 p-1 rounded">
                                         <input type="checkbox" id="toggle-faltosos" class="h-4 w-4 text-purple-600 rounded">
                                         <span class="ml-2">Faltosos</span>
                                     </label>
@@ -726,10 +721,10 @@
 
             <div id="app-content" class="w-full">
                 <div class="mb-4 sm:mb-6">
-                    <div class="border-b border-gray-200 overflow-x-auto scrollable-content">
+                    <div class="border-b border-slate-200 overflow-x-auto scrollable-content">
                         <nav class="-mb-px flex space-x-2 sm:space-x-6 min-w-max" aria-label="Tabs">
                             <button id="tab-agendamento" class="tab-active whitespace-nowrap py-3 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm rounded-t-lg transition">Atendimento Agendado</button>
-                            <button id="tab-avulso" class="text-gray-500 hover:text-gray-700 hover:bg-gray-100 whitespace-nowrap py-3 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm rounded-t-lg transition">Atendimento Avulso</button>
+                            <button id="tab-avulso" class="text-slate-500 hover:text-slate-700 hover:bg-slate-100 whitespace-nowrap py-3 px-3 sm:px-4 border-b-2 font-medium text-xs sm:text-sm rounded-t-lg transition">Atendimento Avulso</button>
                         </nav>
                     </div>
                 </div>
@@ -761,56 +756,56 @@
                     <div class="space-y-4 mt-6">
                         <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                             <div class="flex flex-col lg:col-span-2">
-                                <label for="assisted-name" class="mb-1 font-medium text-gray-600 text-sm">Nome do Assistido</label>
-                                <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                                <label for="assisted-name" class="mb-1 font-medium text-slate-600 text-sm">Nome do Assistido</label>
+                                <input type="text" id="assisted-name" placeholder="Ex: João da Silva" class="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
                             
                             <div class="flex flex-col">
-                                <label for="assisted-cpf" class="mb-1 font-medium text-gray-600 text-sm">CPF (Opcional)</label>
-                                <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                                <label for="assisted-cpf" class="mb-1 font-medium text-slate-600 text-sm">CPF (Opcional)</label>
+                                <input type="text" id="assisted-cpf" placeholder="___.___.___-__" maxlength="14" class="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
                             
                             <div class="flex flex-col">
-                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-gray-600 text-sm">Nº Agendamento / Código</label>
-                                <input type="text" id="assisted-num-agendamento" placeholder="Ex: 12345" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                                <label for="assisted-num-agendamento" class="mb-1 font-medium text-slate-600 text-sm">Nº Agendamento / Código</label>
+                                <input type="text" id="assisted-num-agendamento" placeholder="Ex: 12345" class="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                             </div>
                             
                             <div class="flex flex-col lg:col-span-4">
                                 <div class="flex items-center gap-2 mb-1">
-                                    <label for="assisted-subject" class="font-medium text-gray-600 text-sm">Matéria - Assunto</label>
-                                    <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-gray-300 disabled:cursor-not-allowed">!</button>
+                                    <label for="assisted-subject" class="font-medium text-slate-600 text-sm">Matéria - Assunto</label>
+                                    <button type="button" id="subject-info-btn" class="font-bold text-lg text-blue-500 cursor-help rounded-full disabled:text-slate-300 disabled:cursor-not-allowed">!</button>
                                 </div>
-                                <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full text-sm sm:text-base">
+                                <input list="subjects-list" id="assisted-subject" name="assisted-subject" placeholder="Digite ou selecione um assunto" class="p-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition w-full text-sm sm:text-base">
                                 <datalist id="subjects-list"></datalist>
-                                <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-gray-800 rounded-lg text-xs sm:text-sm transition-all duration-300"></div>
+                                <div id="subject-description" class="hidden mt-2 p-4 bg-blue-50 border border-blue-200 text-slate-800 rounded-lg text-xs sm:text-sm transition-all duration-300"></div>
                             </div>
                         </div>
 
-                        <div id="form-options-container" class="border-t mt-4 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-x-8">
+                        <div id="form-options-container" class="border-t border-slate-200 mt-4 pt-4 grid grid-cols-1 md:grid-cols-2 gap-4 sm:gap-x-8">
                             <div id="is-scheduled-container">
-                                <label class="font-medium text-gray-700 text-sm">Possui horário agendado?</label>
+                                <label class="font-medium text-slate-700 text-sm">Possui horário agendado?</label>
                                 <div class="flex items-center gap-x-4 mt-1 text-sm">
                                     <label class="flex items-center"><input type="radio" name="is-scheduled" value="yes" class="mr-1 h-4 w-4 text-green-600"> Sim</label>
                                     <label class="flex items-center"><input type="radio" name="is-scheduled" value="no" class="mr-1 h-4 w-4 text-green-600" checked> Não</label>
                                 </div>
                                 <div id="scheduled-time-wrapper" class="hidden mt-2">
-                                    <label for="scheduled-time" class="block mb-1 font-medium text-gray-600 text-sm">Horário Agendado</label>
-                                    <input type="time" id="scheduled-time" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                                    <label for="scheduled-time" class="block mb-1 font-medium text-slate-600 text-sm">Horário Agendado</label>
+                                    <input type="time" id="scheduled-time" class="p-3 w-full sm:w-1/2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                                 </div>
                             </div>
                             <div>
-                                <label class="font-medium text-gray-700 text-sm">Assistido já chegou?</label>
+                                <label class="font-medium text-slate-700 text-sm">Assistido já chegou?</label>
                                 <div class="flex items-center gap-x-4 mt-1 text-sm">
                                     <label class="flex items-center"><input type="radio" name="has-arrived" value="yes" class="mr-1 h-4 w-4 text-green-600"> Sim</label>
                                     <label class="flex items-center"><input type="radio" name="has-arrived" value="no" class="mr-1 h-4 w-4 text-green-600" checked> Não</label>
                                 </div>
                                 <div id="arrival-time-wrapper" class="hidden mt-2">
-                                    <label for="arrival-time" class="block mb-1 font-medium text-gray-600 text-sm">Horário de Chegada</label>
-                                    <input type="time" id="arrival-time" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
+                                    <label for="arrival-time" class="block mb-1 font-medium text-slate-600 text-sm">Horário de Chegada</label>
+                                    <input type="time" id="arrival-time" class="p-3 w-full sm:w-1/2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base">
                                 </div>
                                 <div id="manual-room-wrapper" class="hidden mt-2">
-                                    <label for="manual-room-select" class="block mb-1 font-medium text-gray-600 text-sm">Sala de Destino</label>
-                                    <select id="manual-room-select" class="p-3 w-full sm:w-1/2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base"></select>
+                                    <label for="manual-room-select" class="block mb-1 font-medium text-slate-600 text-sm">Sala de Destino</label>
+                                    <select id="manual-room-select" class="p-3 w-full sm:w-1/2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 transition text-sm sm:text-base"></select>
                                 </div>
                             </div>
                         </div>
@@ -822,20 +817,20 @@
                 
                 <main id="main-content" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 w-full">
                     <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
+                            <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
                                 <span>📋 Pauta</span>
-                                <span id="pauta-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                <span id="pauta-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                             </h3>
-                            <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
-                        <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="pauta-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
                     
                     <div class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center w-full mb-1">
-                                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex items-center gap-2">
                                    <span>⏳ Aguardando</span>
                                    <button id="btn-manage-rooms" class="hidden text-blue-500 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 p-1.5 rounded-lg transition-colors" title="Gerenciar Salas/Varas">
                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
@@ -843,64 +838,64 @@
                                        </svg>
                                    </button>
                                 </h3>
-                                <span id="aguardando-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                <span id="aguardando-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                             </div>
                              <button id="call-next-assisted-btn" class="w-full mt-2 bg-blue-600 text-white font-bold py-2 px-4 rounded-lg hover:bg-blue-700 transition shadow-md text-sm sm:text-base">
                                 Chamar Próximo
                             </button>
-                            <input type="search" id="aguardando-search" placeholder="Pesquisar em todos..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="aguardando-search" placeholder="Pesquisar em todos..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
-                        <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="aguardando-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
                     
                     <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
+                            <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
                                 <span>👩‍💻 Em Atend.</span>
-                                <span id="em-atendimento-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                <span id="em-atendimento-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                             </h3>
-                            <input type="search" id="em-atendimento-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="em-atendimento-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
-                        <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="em-atendimento-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
 
                     <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-cyan-50 rounded-t-lg shrink-0">
-                            <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-cyan-50 rounded-t-lg shrink-0">
+                            <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
                                 <span>⚖️ Distribuição</span>
-                                <span id="distribuicao-count" class="text-sm font-normal bg-white text-gray-700 px-2 rounded-full border">0</span>
+                                <span id="distribuicao-count" class="text-sm font-normal bg-white text-slate-700 px-2 rounded-full border border-slate-200">0</span>
                             </h3>
-                            <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
+                            <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
                         </div>
-                        <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="distribuicao-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
 
                     <div id="atendidos-column" class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center mb-2">
-                                 <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex justify-between items-center w-full">
+                                 <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center w-full">
                                      <span>✅ Atendidos</span>
-                                     <span id="atendidos-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                     <span id="atendidos-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                                  </h3>
                                 <button id="download-pdf-btn" class="ml-2 flex-shrink-0 bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-blue-700 text-xs sm:text-sm">PDF</button>
                             </div>
-                            <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="atendidos-search" placeholder="Pesquisar..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
-                        <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="atendidos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
                     
                     <div id="faltosos-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
-                        <div class="p-3 sm:p-4 border-b border-gray-200 bg-gray-50 rounded-t-lg shrink-0">
+                        <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center mb-2">
-                                <h3 class="text-lg sm:text-xl font-semibold text-gray-800 flex items-center gap-2">
+                                <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex items-center gap-2">
                                     🚫 Faltosos
-                                    <span id="faltosos-count" class="text-sm font-normal bg-gray-200 text-gray-700 px-2 rounded-full"></span>
+                                    <span id="faltosos-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                                 </h3>
                                 <button id="download-faltosos-pdf-btn" class="bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-red-700 text-xs sm:text-sm">PDF</button>
                             </div>
-                            <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
+                            <input type="search" id="faltosos-search" placeholder="Pesquisar..." class="w-full p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
                         </div>
-                        <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content"></div>
+                        <div id="faltosos-list" class="p-2 space-y-2 overflow-y-auto flex-grow column-content bg-slate-50"></div>
                     </div>
                 </main>
                 
@@ -908,33 +903,33 @@
                     <button id="toggle-faltosos-btn" class="w-full sm:w-auto bg-purple-600 text-white font-bold py-3 px-6 rounded-lg hover:bg-purple-700 shadow-md">Ver Faltosos</button>
                 </div>
                 
-                <footer class="mt-8 sm:mt-12 bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8">
-                    <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-gray-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+                <footer class="mt-8 sm:mt-12 bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 border border-slate-200">
+                    <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-slate-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
                     <div id="order-explanation-content">
                         <div id="logic-explanation-padrao">
                             <div class="text-center mb-4">
                                 <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que esta ordem é a mais justa? (Clique para expandir)</button>
                             </div>
-                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-gray-200 shadow-inner space-y-4">
+                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-slate-200 shadow-inner space-y-4">
                                 <div class="border-l-4 border-green-500 pl-3 sm:pl-4">
-                                    <h4 class="font-bold text-gray-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro</h4>
-                                    <p class="text-[10px] sm:text-xs text-gray-600">Priorizamos a <b>Pontualidade</b>. Em caso de empate (mesmo horário agendado), o critério de desempate é a <b>Hora da Chegada Real</b> na recepção.</p>
+                                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro</h4>
+                                    <p class="text-[10px] sm:text-xs text-slate-600">Priorizamos a <b>Pontualidade</b>. Em caso de empate (mesmo horário agendado), o critério de desempate é a <b>Hora da Chegada Real</b> na recepção.</p>
                                 </div>
-                                <div class="bg-gray-50 p-3 sm:p-4 rounded-lg">
-                                    <h4 class="font-bold text-gray-700 text-[9px] sm:text-[10px] uppercase mb-2 sm:mb-3 tracking-widest text-center">Exemplo Prático (Desempate)</h4>
+                                <div class="bg-slate-50 p-3 sm:p-4 rounded-lg">
+                                    <h4 class="font-bold text-slate-700 text-[9px] sm:text-[10px] uppercase mb-2 sm:mb-3 tracking-widest text-center">Exemplo Prático (Desempate)</h4>
                                     <div class="space-y-2 text-[10px] sm:text-[11px]">
-                                        <div class="flex justify-between border-b pb-1">
+                                        <div class="flex justify-between border-b border-slate-200 pb-1">
                                             <span><b>João:</b> Agendado 09:00 | Chegou 08:08</span>
                                             <span class="text-green-600 font-bold">1º na Fila</span>
                                         </div>
-                                        <div class="flex justify-between border-b pb-1">
+                                        <div class="flex justify-between border-b border-slate-200 pb-1">
                                             <span><b>Maria:</b> Agendado 09:00 | Chegou 08:30</span>
                                             <span class="text-blue-600 font-bold">2º na Fila</span>
                                         </div>
-                                        <p class="text-[8px] sm:text-[9px] text-gray-500 mt-2 italic">* João fica na frente porque, embora ambos sejam das 09h, ele chegou fisicamente antes na unidade.</p>
+                                        <p class="text-[8px] sm:text-[9px] text-slate-500 mt-2 italic">* João fica na frente porque, embora ambos sejam das 09h, ele chegou fisicamente antes na unidade.</p>
                                     </div>
                                 </div>
-                                <ul class="list-disc list-inside space-y-1 sm:space-y-2 text-gray-700 text-[10px] sm:text-[11px]">
+                                <ul class="list-disc list-inside space-y-1 sm:space-y-2 text-slate-700 text-[10px] sm:text-[11px]">
                                     <li><b>Hierarquia Legal:</b> Idoso 80+ e Urgência Médica têm prioridade sobre todos os outros.</li>
                                     <li><b>Atrasos:</b> Quem atrasa muito perde a vez para os pontuais do próximo horário, mas não vai para o "fim da fila" de quem agendou horas depois.</li>
                                 </ul>
@@ -942,19 +937,19 @@
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
                                 <div class="bg-red-50 p-3 sm:p-4 rounded-lg border-l-4 border-red-500">
                                     <p class="font-bold text-red-700 text-[10px] sm:text-xs">Lei Brasileira 🚨</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Preferência absoluta para 80+, Urgências, PCD, Gestantes e 60+ (nesta ordem).</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Preferência absoluta para 80+, Urgências, PCD, Gestantes e 60+ (nesta ordem).</p>
                                 </div>
                                 <div class="bg-green-50 p-3 sm:p-4 rounded-lg border-l-4 border-green-500">
                                     <p class="font-bold text-green-700 text-[10px] sm:text-xs">Pontuais ✅</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Quem chegou no horário ou antes. O desempate é por quem fez o check-in primeiro.</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Quem chegou no horário ou antes. O desempate é por quem fez o check-in primeiro.</p>
                                 </div>
                                 <div class="bg-orange-50 p-3 sm:p-4 rounded-lg border-l-4 border-orange-500">
                                     <p class="font-bold text-orange-700 text-[10px] sm:text-xs">Atraso Leve / Avulso ⏳</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-600 mt-1">Atrasos de até 30 min ou atendimentos sem agendamento (ordem de chegada).</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Atrasos de até 30 min ou atendimentos sem agendamento (ordem de chegada).</p>
                                 </div>
-                                <div class="bg-gray-100 p-3 sm:p-4 rounded-lg border-l-4 border-gray-400">
-                                    <p class="font-bold text-gray-700 text-[10px] sm:text-xs">Atraso Grave ⚠️</p>
-                                    <p class="text-[8px] sm:text-[9px] text-gray-500 mt-1">Atraso superior a 30 min. O assistido aguarda uma brecha entre os pontuais.</p>
+                                <div class="bg-slate-100 p-3 sm:p-4 rounded-lg border-l-4 border-slate-400">
+                                    <p class="font-bold text-slate-700 text-[10px] sm:text-xs">Atraso Grave ⚠️</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-500 mt-1">Atraso superior a 30 min. O assistido aguarda uma brecha entre os pontuais.</p>
                                 </div>
                             </div>
                         </div>
@@ -965,25 +960,25 @@
 
     </div> 
     
-    <footer id="main-footer" class="w-full py-6 bg-white border-t border-gray-300 mt-auto">
+    <footer id="main-footer" class="w-full py-6 bg-white border-t border-slate-300 mt-auto">
         <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-6">
             
-            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-4 text-sm text-gray-600 font-semibold w-full md:w-auto">
+            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-4 text-sm text-slate-600 font-semibold w-full md:w-auto">
                 <button id="btn-footer-manual" class="hover:text-green-600 transition-colors">Manual do Utilizador</button>
                 <button id="btn-footer-termos" class="hover:text-green-600 transition-colors">Termos de Uso</button>
                 <button id="btn-footer-politica" class="hover:text-green-600 transition-colors">Política de Privacidade</button>
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-3">
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm" title="Monitoramento active de estabilidade">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm" title="Monitoramento ativo de estabilidade">
                     <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
                     <span>Ambiente Monitorado</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                     <span>Conexão Criptografada</span>
                 </div>
-                <div class="flex items-center gap-1.5 text-xs text-gray-500 bg-gray-50 px-2.5 py-1.5 rounded-lg border border-gray-200 shadow-sm">
+                <div class="flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
                     <span>Conformidade LGPD</span>
                 </div>
@@ -992,30 +987,30 @@
     </footer>
 
     <!-- MODAL LGPD -->
-    <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
+    <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[9999] p-4 backdrop-blur-sm">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-lg flex flex-col">
             <div class="text-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800 mb-2">Bem-vindo(a) ao SIGEP!</h2>
-                <p class="text-sm text-gray-600">Para continuar e utilizar o sistema, é necessário ler e aceitar nossos Termos de Uso e a Política de Privacidade (LGPD).</p>
+                <h2 class="text-2xl font-bold text-slate-800 mb-2">Bem-vindo(a) ao SIGEP!</h2>
+                <p class="text-sm text-slate-600">Para continuar e utilizar o sistema, é necessário ler e aceitar nossos Termos de Uso e a Política de Privacidade (LGPD).</p>
             </div>
             
-            <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
+            <div class="space-y-4 mb-8 bg-slate-50 p-4 rounded-xl border border-slate-200">
                 <label class="flex items-start cursor-pointer group">
-                    <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <span class="ml-3 text-sm text-gray-700">
+                    <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-slate-300 rounded focus:ring-green-500">
+                    <span class="ml-3 text-sm text-slate-700">
                         Eu li e aceito os <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Termos de Uso</button> do sistema.
                     </span>
                 </label>
                 
                 <label class="flex items-start cursor-pointer group">
-                    <input type="checkbox" id="lgpd-check-privacidade" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
-                    <span class="ml-3 text-sm text-gray-700">
+                    <input type="checkbox" id="lgpd-check-privacidade" class="mt-1 h-5 w-5 text-green-600 border-slate-300 rounded focus:ring-green-500">
+                    <span class="ml-3 text-sm text-slate-700">
                         Eu concordo com a <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-bold hover:underline">Política de Privacidade (LGPD)</button> e com o tratamento dos dados inseridos.
                     </span>
                 </label>
             </div>
             
-            <button id="btn-confirm-lgpd" disabled class="w-full bg-gray-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed">
+            <button id="btn-confirm-lgpd" disabled class="w-full bg-slate-400 text-white font-bold py-3.5 px-4 rounded-xl shadow-md transition-all duration-300 cursor-not-allowed">
                 Confirmar e Entrar
             </button>
         </div>
@@ -1024,24 +1019,23 @@
     <!-- RECIPIENTE DE MODAIS -->
     <div id="modals-container"></div>
 
-
     <!-- MODAL DE SELEÇÃO DE UNIDADE (NOVO) -->
-    <div id="select-unidade-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
+    <div id="select-unidade-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" onclick="event.stopPropagation()">
             <div class="text-center mb-6">
                 <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🏢</div>
-                <h2 class="text-xl font-bold text-gray-800 mb-2">Selecione a Unidade</h2>
-                <p class="text-sm text-gray-500">Escolha o local de atuação para visualizar as pautas desta unidade.</p>
+                <h2 class="text-xl font-bold text-slate-800 mb-2">Selecione a Unidade</h2>
+                <p class="text-sm text-slate-500">Escolha o local de atuação para visualizar as pautas desta unidade.</p>
             </div>
             
             <div class="space-y-4 mb-8">
-                <select id="modal-unidade-select" class="w-full p-3 border border-gray-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base bg-gray-50 font-semibold text-gray-700">
+                <select id="modal-unidade-select" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base bg-slate-50 font-semibold text-slate-700">
                     <option value="todas">🌍 Todas as minhas unidades</option>
                 </select>
             </div>
             
             <div class="flex gap-3">
-                <button id="cancel-unidade-modal" class="w-full bg-gray-200 text-gray-700 font-bold py-3 px-4 rounded-xl hover:bg-gray-300 transition-colors">Voltar</button>
+                <button id="cancel-unidade-modal" class="w-full bg-slate-200 text-slate-700 font-bold py-3 px-4 rounded-xl hover:bg-slate-300 transition-colors">Voltar</button>
                 <button id="confirm-unidade-modal" class="w-full bg-blue-600 text-white font-bold py-3 px-4 rounded-xl hover:bg-blue-700 transition-colors shadow-md">Continuar</button>
             </div>
         </div>
@@ -1056,15 +1050,15 @@
             </div>
             
             <div class="p-4">
-                <input type="text" id="collaborator-search-input" placeholder="🔍 Pesquisar colaborador..." class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
+                <input type="text" id="collaborator-search-input" placeholder="🔍 Pesquisar colaborador..." class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none text-sm">
             </div>
             
             <div id="collaborators-list-container" class="px-4 pb-4 overflow-y-auto max-h-[55vh] space-y-2">
-                <p class="text-center text-gray-400 text-sm py-8">Carregando colaboradores...</p>
+                <p class="text-center text-slate-400 text-sm py-8">Carregando colaboradores...</p>
             </div>
             
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
-                <button id="cancel-select-collaborator-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold rounded-lg transition text-sm">
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                <button id="cancel-select-collaborator-btn" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-lg transition text-sm">
                     Cancelar
                 </button>
                 <button id="confirm-select-collaborator-btn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white font-bold rounded-lg transition shadow-md text-sm">
@@ -1082,13 +1076,13 @@
                 <p class="text-sm text-green-100 mt-1">Selecione quem está atendendo</p>
             </div>
             <div class="p-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Atendente</label>
-                <select id="attendant-select" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Atendente</label>
+                <select id="attendant-select" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-green-500 outline-none">
                     <option value="">Selecione...</option>
                 </select>
             </div>
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
-                <button id="cancel-attendant-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                <button id="cancel-attendant-btn" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg transition text-sm font-bold">Cancelar</button>
                 <button id="confirm-attendant-btn" class="px-5 py-2.5 bg-green-600 hover:bg-green-700 text-white rounded-lg transition shadow-md text-sm font-bold">Confirmar</button>
             </div>
         </div>
@@ -1102,13 +1096,13 @@
                 <p class="text-sm text-amber-100 mt-1">Selecione o novo atendente responsável</p>
             </div>
             <div class="p-4">
-                <label class="block text-sm font-medium text-gray-700 mb-1">Novo Atendente</label>
-                <select id="edit-attendant-select" class="w-full p-2.5 border border-gray-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
+                <label class="block text-sm font-medium text-slate-700 mb-1">Novo Atendente</label>
+                <select id="edit-attendant-select" class="w-full p-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-amber-500 outline-none">
                     <option value="">Selecione...</option>
                 </select>
             </div>
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
-                <button id="cancel-edit-attendant-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                <button id="cancel-edit-attendant-btn" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg transition text-sm font-bold">Cancelar</button>
                 <button id="confirm-edit-attendant-btn" class="px-5 py-2.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg transition shadow-md text-sm font-bold">Salvar</button>
             </div>
         </div>
@@ -1121,21 +1115,21 @@
                 <h3 class="text-lg font-bold text-white">Editar Assistido</h3>
             </div>
             <div class="p-4 overflow-y-auto max-h-[60vh] space-y-3">
-                <div><label class="block text-sm font-medium text-gray-700">Nome</label><input type="text" id="edit-assisted-name" class="w-full p-2 border rounded-lg"></div>
-                <div><label class="block text-sm font-medium text-gray-700">CPF</label><input type="text" id="edit-assisted-cpf" class="w-full p-2 border rounded-lg"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Nº Agendamento</label><input type="text" id="edit-assisted-num-agendamento" class="w-full p-2 border rounded-lg"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Assunto</label><input type="text" id="edit-assisted-subject" class="w-full p-2 border rounded-lg"></div>
-                <div><label class="block text-sm font-medium text-gray-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="w-full p-2 border rounded-lg"></div>
-                <div id="edit-room-container" class="hidden"><label class="block text-sm font-medium text-gray-700">Sala</label><select id="edit-room-select" class="w-full p-2 border rounded-lg"></select></div>
+                <div><label class="block text-sm font-medium text-slate-700">Nome</label><input type="text" id="edit-assisted-name" class="w-full p-2 border border-slate-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-slate-700">CPF</label><input type="text" id="edit-assisted-cpf" class="w-full p-2 border border-slate-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-slate-700">Nº Agendamento</label><input type="text" id="edit-assisted-num-agendamento" class="w-full p-2 border border-slate-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-slate-700">Assunto</label><input type="text" id="edit-assisted-subject" class="w-full p-2 border border-slate-300 rounded-lg"></div>
+                <div><label class="block text-sm font-medium text-slate-700">Horário Agendado</label><input type="time" id="edit-scheduled-time" class="w-full p-2 border border-slate-300 rounded-lg"></div>
+                <div id="edit-room-container" class="hidden"><label class="block text-sm font-medium text-slate-700">Sala</label><select id="edit-room-select" class="w-full p-2 border border-slate-300 rounded-lg"></select></div>
             </div>
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
-                <button id="cancel-edit-assisted-btn" class="px-5 py-2.5 bg-gray-200 hover:bg-gray-300 rounded-lg transition text-sm font-bold">Cancelar</button>
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2">
+                <button id="cancel-edit-assisted-btn" class="px-5 py-2.5 bg-slate-200 hover:bg-slate-300 rounded-lg transition text-sm font-bold text-slate-700">Cancelar</button>
                 <button id="confirm-edit-assisted-btn" class="px-5 py-2.5 bg-blue-600 hover:bg-blue-700 text-white rounded-lg transition shadow-md text-sm font-bold">Salvar</button>
             </div>
         </div>
     </div>
 
-    <!-- MODAL DE CONFIGURAÇÃO DE LINKS EXTERNOS BI (PARA DENTRO DA PAUTA NORMAL) -->
+    <!-- MODAL DE CONFIGURAÇÃO DE LINKS EXTERNOS BI -->
     <div id="bi-links-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
@@ -1150,7 +1144,7 @@
                 <div id="container-bi-links-pauta"></div>
             </div>
             
-            <div class="p-4 border-t bg-gray-50 flex justify-end gap-2">
+            <div class="p-4 border-t bg-slate-50 flex justify-end gap-2">
                 <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg transition shadow-md text-sm font-bold">Fechar</button>
             </div>
         </div>
