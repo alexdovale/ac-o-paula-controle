@@ -1,4 +1,4 @@
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SaaS CORPORATIVO + PREMIUM UI)
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -572,7 +572,7 @@ export const UIService = {
     _getEmptyStateHtml(svgIcon, textMessage) {
         return `
             <div class="flex flex-col items-center justify-center py-10 opacity-60">
-                <div class="text-slate-300 w-12 h-12 mb-3">
+                <div class="text-slate-400 w-12 h-12 mb-3">
                     ${svgIcon}
                 </div>
                 <p class="text-slate-500 font-medium text-sm text-center px-4">${textMessage}</p>
@@ -840,16 +840,16 @@ export const UIService = {
                 roomGroup.className = "mb-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50 room-group-container shadow-sm";
 
                 roomGroup.innerHTML = `
-                    <div class="bg-white p-3 border-b border-slate-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-semibold text-slate-700 text-xs flex items-center gap-1.5">
+                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
+                        <div class="flex justify-between items-center px-1">
+                            <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>🏢</span> ${escapeHTML(roomName)}
                             </h4>
-                            <span class="bg-slate-100 text-slate-600 border border-slate-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
+                            <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
                         </div>
-                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-slate-200 rounded-lg outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500 bg-white">
                     </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                    <div class="p-2 space-y-2 room-cards-wrapper bg-slate-50"></div>
                 `;
 
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
@@ -868,16 +868,16 @@ export const UIService = {
                 roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-xl overflow-hidden bg-red-50 room-group-container shadow-sm";
 
                 roomGroupNoRoom.innerHTML = `
-                    <div class="bg-white p-3 border-b border-red-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center">
-                            <h4 class="font-semibold text-red-700 text-xs flex items-center gap-1.5">
+                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
+                        <div class="flex justify-between items-center px-1">
+                            <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>⚠️</span> Sem Sala Definida
                             </h4>
-                            <span class="bg-red-100 text-red-700 border border-red-200 text-[10px] font-semibold px-2 py-0.5 rounded-full">${peopleNoRoom.length}</span>
+                            <span class="bg-red-200 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleNoRoom.length}</span>
                         </div>
-                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-1.5 text-xs border border-red-200 rounded-lg outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-1.5 text-xs border border-red-200 rounded outline-none focus:ring-2 focus:ring-red-500 bg-white">
                     </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                    <div class="p-2 space-y-2 room-cards-wrapper bg-slate-50"></div>
                 `;
 
                 const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
@@ -915,7 +915,8 @@ export const UIService = {
                 alertaClass = 'card-alerta-espera'; 
             }
 
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border ${alertaClass} mb-2 group transition-shadow hover:shadow-md`;
+            const priorityClass = PautaService.getPriorityClass(item.priority) || '';
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border ${priorityClass} ${alertaClass} mb-2 group transition-shadow hover:shadow-md`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
@@ -1956,6 +1957,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             if (container && countBadge && !container.hasAttribute('data-controls-added')) {
                 container.setAttribute('data-controls-added', 'true');
                 
+                // Add specific styling to the column header container
                 container.classList.add('border', 'border-slate-200', 'shadow-sm');
                 
                 const headerFlex = countBadge.parentElement; 
