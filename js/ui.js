@@ -749,8 +749,45 @@ export const UIService = {
             new Date(item.lastActionTimestamp).toLocaleString('pt-BR', { hour: '2-digit', minute: '2-digit', day: '2-digit', month: '2-digit' }) :
             '--/-- --:--';
         return `
-            <div class="mt-3 pt-2 border-t border-gray-100 flex justify-end">
-                <p class="text-[10px] text-gray-400 italic">Última ação por: <b>${lastActionBy}</b> às ${lastActionDate}</p>
+            <div class="mt-3 pt-2 border-t border-slate-100 flex justify-end">
+                <p class="text-[10px] text-slate-400 italic">Última ação por: <b class="text-slate-500">${lastActionBy}</b> às ${lastActionDate}</p>
+            </div>
+        `;
+    },
+
+    // MENU DE AÇÕES PADRONIZADO E MODERNO
+    _getActionButtonsHtml(item) {
+        return `
+            <div class="absolute top-2 right-2 flex items-center z-10">
+                <div class="relative">
+                    <button data-id="${item.id}" class="quick-action-toggle text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200" title="Opções">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
+                            <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
+                        </svg>
+                    </button>
+                    <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-200 z-30 py-1.5 overflow-hidden" role="menu">
+                        <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1 bg-slate-50">Ações Rápidas</div>
+                        <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 2v6h-6"/><path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M3 22v-6h6"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/></svg> Reagendar
+                        </button>
+                        <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg> Agendar
+                        </button>
+                        <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Consulta
+                        </button>
+                        <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
+                        </button>
+                        <div class="border-t border-slate-100 my-1"></div>
+                        <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Dados
+                        </button>
+                        <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg> Ver Detalhes
+                        </button>
+                    </div>
+                </div>
             </div>
         `;
     },
@@ -779,44 +816,57 @@ export const UIService = {
         const nomeSeguro = item.name || '';
 
         const card = document.createElement('div');
-        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
+        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-3';
         card.setAttribute('data-id', item.id);
 
         const badgeAgendamentoHtml = numAgendamento ? `
-            <div class="flex justify-center mb-1.5">
-                <span class="text-xs text-blue-800 font-bold bg-blue-50/80 px-3 py-1 rounded-md border border-blue-200 tracking-wide shadow-sm">
-                    📅 Agendamento: ${escapeHTML(numAgendamento)}
+            <div class="flex justify-center mb-3">
+                <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                    Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
                 </span>
             </div>
         ` : '';
 
+        const timeInfoHtml = `
+            <div class="flex justify-center w-full mt-2 mb-3">
+                <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-600 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Agendado:</span> <span class="text-slate-900">${item.scheduledTime || '--:--'}</span>
+                </div>
+            </div>
+        `;
+
         card.innerHTML = `
             ${canDelete ? `
-            <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
+            <button data-id="${item.id}" class="delete-btn absolute top-2 left-2 text-slate-300 hover:text-red-500 transition-colors bg-white rounded-full z-10" ${isOwner ? '' : 'disabled'} title="Excluir">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                 </svg>
             </button>` : ''}
 
-            ${badgeAgendamentoHtml}
+            ${this._getActionButtonsHtml(item)}
 
-            <p class="font-bold text-lg text-gray-800 leading-tight mb-2 pr-6 text-center uppercase">${escapeHTML(nomeSeguro).toUpperCase()}</p>
+            <div class="text-center pt-2">
+                ${badgeAgendamentoHtml}
 
-            <div class="mt-2 space-y-1 text-xs text-gray-700 text-center">
-                <p>Assunto: <span class="font-bold uppercase text-slate-700">${escapeHTML(item.subject || 'Não informado')}</span></p>
-                <p>Agendado: <span class="font-bold text-slate-800">${item.scheduledTime || '--:--'}</span></p>
+                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-1.5 px-6">${escapeHTML(nomeSeguro)}</p>
+                
+                <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                
+                ${timeInfoHtml}
             </div>
 
             <div class="mt-4 space-y-2">
                 <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" class="check-in-btn bg-green-600 hover:bg-green-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
+                    <button data-id="${item.id}" class="check-in-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
                         Marcar Chegada
                     </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-yellow-500 hover:bg-yellow-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
+                    <button data-id="${item.id}" class="faltou-btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
                         Faltou
                     </button>
                 </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-500 hover:bg-slate-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
+                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide border border-slate-200" ${canEdit ? '' : 'disabled'}>
                     Editar Dados
                 </button>
             </div>
@@ -843,10 +893,10 @@ export const UIService = {
                 if (peopleInRoom.length === 0) return;
 
                 const roomGroup = document.createElement('div');
-                roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
+                roomGroup.className = "mb-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 room-group-container shadow-sm";
 
                 roomGroup.innerHTML = `
-                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
+                    <div class="bg-blue-50 p-2 border-b border-blue-100 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
                             <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>🏢</span> ${escapeHTML(roomName)}
@@ -874,7 +924,7 @@ export const UIService = {
                 roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
 
                 roomGroupNoRoom.innerHTML = `
-                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
+                    <div class="bg-red-50 p-2 border-b border-red-100 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
                             <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>⚠️</span> Sem Sala Definida
@@ -915,15 +965,12 @@ export const UIService = {
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             
-            // LÊ AS ETIQUETAS E APLICA A CLASSE DO PISCA-ALERTA NO CSS (Desativado)
-            let alertaClass = '';
-
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200 border-l-4`;
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm ${priorityClass} mb-3 group transition-all duration-200 border-l-4 border-y border-r border-slate-200`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
             if (item.selectedAction) {
-                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusColor = 'bg-slate-100 text-slate-600';
                 let statusText = '📋 Selecionado';
                 let statusIcon = '📋';
 
@@ -932,7 +979,7 @@ export const UIService = {
                     statusText = '✏️ Preenchendo';
                     statusIcon = '✏️';
                 } else if (item.documentState === 'saved') {
-                    statusColor = 'bg-green-100 text-green-700 font-bold';
+                    statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
                     statusText = '✅ Salvo';
                     statusIcon = '✅';
                 } else if (item.documentState === 'pdf') {
@@ -945,18 +992,17 @@ export const UIService = {
                     <div class="mt-2 flex flex-col gap-1 items-center justify-center w-full">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
                             <span>📂</span>
-                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                            <span>${escapeHTML(item.selectedAction)}</span>
                         </span>
                         <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
                             <span>${statusIcon}</span>
-                            <span class="hidden xs:inline">${statusText}</span>
+                            <span>${statusText}</span>
                         </span>
                     </div>`;
             }
 
             const nomeSeguro = item.name || 'Nome não informado';
-            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const assuntoSeguro = item.subject || 'Não informado';
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
@@ -967,7 +1013,7 @@ export const UIService = {
                 if (availableRooms.length > 0 && canEditPriority) {
                     const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
                     roomDropdownHtml = `
-                        <div class="flex flex-col items-center justify-center">
+                        <div class="flex flex-col items-center justify-center w-full mt-2">
                             <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
                             <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
                                 <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
@@ -977,7 +1023,7 @@ export const UIService = {
                     `;
                 } else if (item.room) {
                     roomDropdownHtml = `
-                        <div class="flex flex-col items-center justify-center">
+                        <div class="flex flex-col items-center justify-center w-full mt-2">
                             <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Sala Atual</label>
                             <span class="bg-purple-50 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 shadow-sm">${escapeHTML(item.room)}</span>
                         </div>
@@ -985,7 +1031,12 @@ export const UIService = {
                 }
             }
 
-            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
+            let timeInfoHtml = `
+                <div class="inline-flex items-center justify-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <span>Chegada:</span> <span class="font-bold text-slate-900">--:--</span>
+                </div>
+            `;
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
@@ -993,23 +1044,23 @@ export const UIService = {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
-                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
+                                <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
                                     <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
-                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
+                                        <span class="text-slate-500">Agendado:</span>
+                                        <span class="font-bold text-slate-900">${escapeHTML(scheduledTimeSeguro)}</span>
                                     </div>
-                                    <div class="w-px h-3 bg-blue-200"></div>
+                                    <div class="w-px h-3.5 bg-slate-300"></div>
                                     <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
+                                        <span class="text-slate-500">Chegou:</span>
+                                        <span class="font-bold text-blue-700">${horaChegada}</span>
                                     </div>
                                 </div>
                             `;
                         } else {
                             timeInfoHtml = `
-                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
+                                <div class="inline-flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
+                                    <span class="text-slate-500">Chegou:</span>
+                                    <span class="font-bold text-blue-700">${horaChegada}</span>
                                 </div>
                             `;
                         }
@@ -1026,9 +1077,18 @@ export const UIService = {
                 </div>
             `;
 
-            // Botão Atender agora com a classe select-collaborator-btn, ícone, gradiente e alinhado no tamanho do prioridade
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mb-3">
+                    <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
+
+            // Botão Atender agora com a mesma altura do botão de prioridade (py-2.5) e classe mágica
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700">
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
                     </svg>
@@ -1036,64 +1096,40 @@ export const UIService = {
                    </button>`
                 : '';
 
-            const actionButtonsHTML = `
-                <div class="absolute top-2 right-10 flex items-center">
-                    <div class="relative">
-                        <button data-id="${item.id}" class="quick-action-toggle text-gray-400 hover:text-blue-600 p-1 rounded-full transition-colors" title="Opções de atendimento" aria-expanded="false" aria-controls="quick-menu-${item.id}">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
-                                <path d="M3 9.5a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3zm5 0a1.5 1.5 0 1 1 0-3 1.5 1.5 0 0 1 0 3z"/>
-                            </svg>
-                        </button>
-                        <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-40 bg-white rounded-lg shadow-xl border border-gray-200 z-30 py-1" role="menu" aria-orientation="vertical" aria-labelledby="quick-toggle-${item.id}">
-                            <button data-id="${item.id}" data-tipo="reagendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-amber-50 hover:text-amber-700 flex items-center gap-2" role="menuitem"><span>🔄</span> Reagendar</button>
-                            <button data-id="${item.id}" data-tipo="agendar" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-emerald-50 hover:text-emerald-700 flex items-center gap-2" role="menuitem"><span>📅</span> Agendar</button>
-                            <button data-id="${item.id}" data-tipo="consulta" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2" role="menuitem"><span>🔍</span> Consulta</button>
-                            <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>⚙️</span> Outros</button>
-                            <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>✏️</span> Editar Assistido</button>
-                            <button data-id="${item.id}" class="view-details-btn quick-action-item w-full text-left px-3 py-2 text-xs hover:bg-gray-50 hover:text-gray-700 flex items-center gap-2" role="menuitem"><span>👁️</span> Ver Detalhes</button>
-                        </div>
-                    </div>
-                </div>
-            `;
-
-            const badgeAgendamentoHtml = numAgendamento ? `
-                <div class="flex justify-center mb-2">
-                    <span class="text-xs text-blue-800 font-bold bg-blue-50/80 px-3 py-1 rounded-md border border-blue-200 tracking-wide shadow-sm">
-                        📅 Agendamento: ${escapeHTML(numAgendamento)}
-                    </span>
-                </div>` : '';
-
             card.innerHTML = `
                 ${numeroBadge}
-                ${canAttend ? actionButtonsHTML : ''}
+                ${this._getActionButtonsHtml(item)}
                 ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500 p-1 rounded-full transition-colors">
+                <button data-id="${item.id}" class="delete-btn absolute top-2 left-8 text-slate-300 hover:text-red-500 p-1 rounded-full transition-colors z-10" title="Deletar">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
-                <div class="flex flex-col h-full mt-2">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                
+                <div class="flex flex-col h-full pt-2">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1 text-center">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
 
                     ${badgeAgendamentoHtml}
 
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-2 uppercase text-center pr-8 pl-8">${escapeHTML(nomeSeguro).toUpperCase()}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight mb-2 uppercase text-center px-6">${escapeHTML(nomeSeguro)}</p>
 
-                    <p class="text-xs text-gray-600 mb-3 text-center">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <p class="text-xs text-slate-600 mb-3 text-center">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
                     
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
                         ${timeInfoHtml}
-                        ${roomDropdownHtml ? `<div class="mt-1">${roomDropdownHtml}</div>` : ''}
+                        ${roomDropdownHtml}
                     </div>
                     
                     ${docStatusHtml}
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide">Voltar para Pauta</button>
+                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-500 hover:bg-red-600'} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
+                            ${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}
+                        </button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
-                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes</button>
+                    <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
@@ -1147,7 +1183,7 @@ export const UIService = {
             const delegateBtnClass = isDelegated ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600';
 
             const card = document.createElement('div');
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-3`;
             card.setAttribute('data-id', item.id);
 
             const startTime = item.inAttendanceTime ?
@@ -1157,7 +1193,7 @@ export const UIService = {
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const historicoTransferenciaHtml = item.historicoTransferencia
-                ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
+                ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg flex items-center justify-center gap-1 font-medium shadow-sm mb-2 text-center w-full">
                        <span class="text-xs">🔄</span>
                        <span>${escapeHTML(item.historicoTransferencia)}</span>
                    </div>`
@@ -1165,7 +1201,7 @@ export const UIService = {
 
             let docStatusHtml = '';
             if (item.selectedAction) {
-                let statusColor = 'bg-gray-100 text-gray-600';
+                let statusColor = 'bg-slate-100 text-slate-600';
                 let statusText = '📋 Selecionado';
                 let statusIcon = '📋';
 
@@ -1174,7 +1210,7 @@ export const UIService = {
                     statusText = '✏️ Preenchendo';
                     statusIcon = '✏️';
                 } else if (item.documentState === 'saved') {
-                    statusColor = 'bg-green-100 text-green-700 font-bold';
+                    statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
                     statusText = '✅ Salvo';
                     statusIcon = '✅';
                 } else if (item.documentState === 'pdf') {
@@ -1184,58 +1220,78 @@ export const UIService = {
                 }
 
                 docStatusHtml = `
-                    <div class="mt-2 flex flex-col gap-1 items-center justify-center w-full">
+                    <div class="mt-3 mb-2 flex flex-col gap-1 items-center justify-center w-full">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
                             <span>📂</span>
-                            <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                            <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                            <span>${escapeHTML(item.selectedAction)}</span>
                         </span>
                         <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
                             <span>${statusIcon}</span>
-                            <span class="hidden xs:inline">${statusText}</span>
+                            <span>${statusText}</span>
                         </span>
                     </div>`;
             }
 
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mb-3 mt-1">
+                    <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
+
             const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
-                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
+                            <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
                                 Delegar
                             </button>
-                            <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                            <button data-id="${item.id}" class="attend-directly-from-aguardando-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
                                 Finalizar / Avançar
                             </button>
                         </div>
-                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-400 hover:bg-slate-500 text-white font-bold py-2 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide">
                             Mover para Fila
                         </button>
-                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-1 text-center underline w-full">
-                            Ver Detalhes
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-1 text-center underline w-full">
+                            Ver Detalhes do Caso
                         </button>
                    </div>`
                 : `<div class="mt-4 flex flex-col gap-2">
-                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                             👁️ Ver Detalhes / Checklist
                         </button>
                    </div>`;
 
             card.innerHTML = `
+                <div class="absolute -left-2 -top-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                    ${index + 1}
+                </div>
+
                 ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-gray-300 hover:text-red-500">
+                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-slate-300 hover:text-red-500">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
 
-                <p class="font-bold text-lg text-gray-800 leading-tight">${index + 1}. ${escapeHTML(item.name || '')}</p>
-                ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mt-1 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
-                <p class="text-xs text-gray-600 mt-1">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                <p class="text-xs text-gray-600 mt-1">Colaborador: ${escapeHTML(atendenteNome)}</p>
-                <p class="text-xs text-gray-400 mt-1">Início do Tempo: ${startTime}</p>
+                <div class="text-center pt-2">
+                    ${badgeAgendamentoHtml}
+                    
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(item.name || '')}</p>
+                    <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                    <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
+                    
+                    <div class="inline-flex items-center justify-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm mb-2">
+                        <span class="text-slate-500">Início do Tempo:</span>
+                        <span class="font-bold text-slate-900">${startTime}</span>
+                    </div>
 
-                ${historicoTransferenciaHtml}
-                ${docStatusHtml}
+                    ${historicoTransferenciaHtml}
+                    ${docStatusHtml}
+                </div>
+
                 ${buttonsContainerHtml}
 
                 ${this._getStandardizedFooterHtml(item)}
@@ -1273,7 +1329,7 @@ export const UIService = {
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-slate-200 mb-4';
             card.setAttribute('data-id', item.id);
 
             const arrivalT = item.arrivalTime ?
@@ -1285,65 +1341,84 @@ export const UIService = {
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const confirmButton = item.isConfirmed
-                ? 'bg-green-500 border-green-500 text-white'
-                : 'bg-slate-100 text-slate-300';
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : 'bg-slate-100 text-slate-300 border-slate-200';
+
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mb-3">
+                    <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
 
             card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <p class="font-bold text-lg md:text-xl text-gray-800">${escapeHTML(item.name || '')}</p>
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButton} shadow-sm" ${canToggleConfirmed ? '' : 'disabled'}>
+                <div class="absolute top-3 right-3 z-10">
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border flex items-center justify-center ${confirmButton} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Verde">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
 
-                ${numAgendamento ? `<p class="text-xs md:text-sm mt-1 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
-                <p class="text-xs md:text-sm mt-1 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
+                <div class="text-center pt-2">
+                    ${badgeAgendamentoHtml}
+                    
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-8">${escapeHTML(item.name || '')}</p>
+                    <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
-                ${item.tipoAcaoRapida ? (() => {
-                    const acaoCfg = {
-                        'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
-                        'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
-                        'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
-                        'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
-                    }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
-                    return `<div class="mt-1 mb-2">
-                        <span style="background:${acaoCfg.bg};border:1.5px solid ${acaoCfg.border};color:${acaoCfg.text}" class="inline-flex items-center gap-1 text-[10px] md:text-xs font-black px-2 py-1 rounded-lg">
-                            ${acaoCfg.icon} ${acaoCfg.label}
-                        </span>
-                    </div>`;
-                })() : ''}
+                    ${item.tipoAcaoRapida ? (() => {
+                        const acaoCfg = {
+                            'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
+                            'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
+                            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
+                            'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
+                        }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
+                        return `<div class="mt-2 mb-3 flex justify-center">
+                            <span style="background:${acaoCfg.bg};border:1px solid ${acaoCfg.border};color:${acaoCfg.text}" class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-md shadow-sm">
+                                ${acaoCfg.icon} ${acaoCfg.label}
+                            </span>
+                        </div>`;
+                    })() : ''}
 
-                <div class="grid grid-cols-3 gap-1 md:gap-2 text-center border-t border-b py-2 md:py-3 my-2 md:my-3 text-[8px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    <div>Agendado:<br><span class="text-gray-600">${item.scheduledTime || 'N/A'}</span></div>
-                    <div>Chegou:<br><span class="text-gray-600">${arrivalT}</span></div>
-                    <div>Finalizado:<br><span class="text-gray-600">${attendedT}</span></div>
+                    <div class="flex items-center justify-center gap-2 mb-4 w-full px-2">
+                        <div class="flex flex-col items-center bg-slate-50 border border-slate-200 rounded-lg p-2 flex-1 shadow-sm">
+                            <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Agendado</span>
+                            <span class="text-xs font-semibold text-slate-700">${item.scheduledTime || '--:--'}</span>
+                        </div>
+                        <div class="flex flex-col items-center bg-slate-50 border border-slate-200 rounded-lg p-2 flex-1 shadow-sm">
+                            <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Chegou</span>
+                            <span class="text-xs font-semibold text-slate-700">${arrivalT}</span>
+                        </div>
+                        <div class="flex flex-col items-center bg-emerald-50 border border-emerald-200 rounded-lg p-2 flex-1 shadow-sm">
+                            <span class="text-[9px] text-emerald-600 uppercase font-bold tracking-wider mb-0.5">Fim</span>
+                            <span class="text-xs font-bold text-emerald-800">${attendedT}</span>
+                        </div>
+                    </div>
                 </div>
 
-                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
-                    <p class="text-gray-500">Por: <b class="text-gray-800">${escapeHTML(atendenteNome)}</b></p>
-                    <div class="grid grid-cols-2 gap-x-2 md:gap-x-4 gap-y-1 md:gap-y-2 text-right">
-                        <button data-id="${item.id}" class="manage-demands-btn text-blue-500 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
-                        <button data-id="${item.id}" class="edit-attendant-btn text-green-600 font-bold hover:underline" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
+                <div class="flex flex-col items-center text-[10px] md:text-xs mb-4 pt-3 border-t border-slate-100">
+                    <p class="text-slate-500 mb-3">Atendido por: <b class="text-slate-800 uppercase">${escapeHTML(atendenteNome)}</b></p>
+                    
+                    <div class="flex flex-wrap justify-center gap-2 w-full px-2">
+                        <button data-id="${item.id}" class="manage-demands-btn flex-1 min-w-[70px] bg-slate-100 text-blue-600 font-bold py-2 rounded-lg hover:bg-blue-50 transition border border-slate-200 shadow-sm" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Demandas</button>
+                        <button data-id="${item.id}" class="edit-assisted-btn flex-1 min-w-[70px] bg-slate-100 text-slate-600 font-bold py-2 rounded-lg hover:bg-slate-200 transition border border-slate-200 shadow-sm" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Dados</button>
+                        <button data-id="${item.id}" class="edit-attendant-btn flex-1 min-w-[70px] bg-slate-100 text-emerald-600 font-bold py-2 rounded-lg hover:bg-emerald-50 transition border border-slate-200 shadow-sm" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
+                        ${canDelete ? `<button data-id="${item.id}" class="delete-btn flex-1 min-w-[70px] bg-red-50 text-red-600 font-bold py-2 rounded-lg hover:bg-red-100 transition border border-red-100 shadow-sm">Deletar</button>` : ''}
                     </div>
                 </div>
 
                 ${item.arquivoPdfConteudo ? `
-                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-600 font-bold py-2 rounded-lg md:py-2.5 md:rounded-xl text-[8px] md:text-[10px] uppercase border border-blue-100 hover:bg-blue-100 transition">
+                    <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-700 font-bold py-2.5 rounded-lg text-[10px] uppercase border border-blue-200 hover:bg-blue-100 transition shadow-sm">
                         📄 Baixar Protocolo
                     </a>
                 ` : ''}
 
-                <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-between items-center gap-2 md:gap-3">
-                        <p class="text-[7px] md:text-[9px] text-gray-400 uppercase italic">Última: ${escapeHTML(item.lastActionBy || 'Sistema')}</p>
-                        <button data-id="${item.id}" class="return-from-atendido-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 md:py-3 px-4 md:px-8 rounded-lg md:rounded-xl text-[8px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Mover de Volta
-                        </button>
-                    </div>
+                <div class="pt-3 border-t border-slate-100">
+                    <button data-id="${item.id}" class="return-from-atendido-btn w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-2.5 rounded-lg text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
+                        Mover de Volta para Fila
+                    </button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
@@ -1374,49 +1449,64 @@ export const UIService = {
             const card = document.createElement('div');
             const isConfirmed = item.isConfirmed || false;
 
-            card.className = 'assisted-card relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-4 opacity-90';
+            card.className = 'assisted-card relative bg-red-50 p-4 rounded-xl shadow-sm border border-red-200 mb-4 opacity-95';
             card.setAttribute('data-id', item.id);
 
             const confirmButtonClass = isConfirmed
-                ? 'bg-green-500 border-green-500 text-white'
-                : 'bg-slate-100 text-slate-300';
+                ? 'bg-emerald-500 border-emerald-500 text-white'
+                : 'bg-white text-slate-300 border-slate-200';
+
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mb-3">
+                    <span class="inline-flex items-center gap-1.5 bg-white text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                        Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
 
             card.innerHTML = `
-                <div class="flex justify-between items-start">
-                    <div>
-                        <p class="font-bold text-lg md:text-xl text-gray-800 leading-tight">${escapeHTML(item.name || '').toUpperCase()}</p>
-                        <span class="text-[9px] font-bold text-purple-600 bg-purple-50 px-1.5 py-0.5 rounded mt-1 border border-purple-100 inline-block uppercase">🚫 Faltoso</span>
-                    </div>
-
-                    <button data-id="${item.id}" class="toggle-confirmed-faltoso w-6 h-6 md:w-7 md:h-7 rounded-full border border-gray-200 flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
+                <div class="absolute top-3 right-3 z-10">
+                    <button data-id="${item.id}" class="toggle-confirmed-faltoso w-7 h-7 rounded-full border flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
 
-                ${numAgendamento ? `<p class="text-xs md:text-sm mt-2 text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide">Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
-                <p class="text-xs md:text-sm mt-2 text-gray-700">Assunto: <b>${escapeHTML(item.subject || 'Não informado')}</b></p>
-
-                <div class="grid grid-cols-2 gap-2 text-center border-t border-b py-2 my-3 text-[9px] md:text-[10px] text-gray-400 uppercase font-bold tracking-wider">
-                    <div class="border-r">Agendado:<br><span class="text-gray-600">${item.scheduledTime || '---'}</span></div>
-                    <div>Falta marcada às:<br><span class="text-gray-600">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span></div>
+                <div class="text-center pt-2">
+                    ${badgeAgendamentoHtml}
+                    
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2">${escapeHTML(item.name || '')}</p>
+                    <span class="text-[9px] font-black text-red-700 bg-red-100 px-2 py-1 rounded-md border border-red-200 inline-block uppercase tracking-wider shadow-sm">🚫 Faltoso</span>
+                    
+                    <p class="text-xs text-slate-700 mt-3 mb-2">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 </div>
 
-                <div class="flex justify-between items-center text-[10px] md:text-xs mb-4">
-                    <p class="text-gray-400 italic">Status: <span class="${isConfirmed ? 'text-green-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente no Verde'}</span></p>
-                    <div class="flex gap-3">
-                        <button data-id="${item.id}" class="edit-assisted-btn text-slate-400 font-bold hover:underline" ${canRevert ? '' : 'disabled'}>Dados</button>
-                        <button data-id="${item.id}" class="delete-btn text-red-500 font-bold hover:underline" ${canDelete ? '' : 'disabled'}>Deletar</button>
+                <div class="flex items-center justify-center gap-2 mb-4 mt-2 w-full px-2">
+                    <div class="flex flex-col items-center bg-white border border-red-100 rounded-lg p-2 flex-1 shadow-sm">
+                        <span class="text-[9px] text-slate-400 uppercase font-bold tracking-wider mb-0.5">Agendado</span>
+                        <span class="text-xs font-semibold text-slate-700">${item.scheduledTime || '---'}</span>
+                    </div>
+                    <div class="flex flex-col items-center bg-white border border-red-100 rounded-lg p-2 flex-1 shadow-sm">
+                        <span class="text-[9px] text-red-400 uppercase font-bold tracking-wider mb-0.5">Faltou às</span>
+                        <span class="text-xs font-bold text-red-700">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
                     </div>
                 </div>
 
-                <div class="pt-3 border-t">
-                    <div class="flex flex-col sm:flex-row justify-end items-center gap-2">
-                        <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn w-full sm:w-auto bg-orange-500 text-white font-black py-2 px-6 rounded-lg text-[9px] md:text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                            Reativar Assistido
-                        </button>
+                <div class="flex flex-col items-center text-[10px] md:text-xs mb-4 pt-3 border-t border-red-100 w-full">
+                    <p class="text-slate-500 italic mb-3">Status Verde: <span class="${isConfirmed ? 'text-emerald-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente de Lançamento'}</span></p>
+                    
+                    <div class="flex justify-center gap-2 w-full px-2">
+                        <button data-id="${item.id}" class="edit-assisted-btn flex-1 bg-white text-slate-600 font-bold py-2 rounded-lg hover:bg-slate-50 transition border border-red-200 shadow-sm" ${canRevert ? '' : 'disabled'}>Editar Dados</button>
+                        ${canDelete ? `<button data-id="${item.id}" class="delete-btn flex-1 bg-white text-red-600 font-bold py-2 rounded-lg hover:bg-red-50 transition border border-red-200 shadow-sm">Deletar Faltoso</button>` : ''}
                     </div>
+                </div>
+
+                <div class="pt-3 border-t border-red-100">
+                    <button data-id="${item.id}" class="return-to-pauta-from-faltoso-btn w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-2.5 rounded-lg text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
+                        Reativar Assistido
+                    </button>
                 </div>
 
                 ${this._getStandardizedFooterHtml(item)}
@@ -1493,11 +1583,20 @@ export const UIService = {
                 `;
 
                 const badgeStatus = item.status === 'aguardandoCorrecao'
-                    ? `<span class="absolute top-2 left-8 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>`
-                    : `<span class="absolute top-2 left-8 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-0.5 rounded uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
+                    ? `<span class="absolute top-2 right-2 bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded-md uppercase border border-amber-200 shadow-sm">P/ Avaliação</span>`
+                    : `<span class="absolute top-2 right-2 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-1 rounded-md uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
+
+                const badgeAgendamentoHtml = numAgendamento ? `
+                    <div class="flex justify-center mb-3 mt-4">
+                        <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
+                        </span>
+                    </div>
+                ` : '<div class="mt-8"></div>';
 
                 const historicoTransferenciaHtml = item.historicoTransferencia
-                    ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded flex items-center gap-1 font-medium shadow-sm">
+                    ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg flex items-center justify-center gap-1 font-medium shadow-sm mb-2 text-center w-full">
                            <span class="text-xs">🔄</span>
                            <span>${escapeHTML(item.historicoTransferencia)}</span>
                        </div>`
@@ -1505,7 +1604,7 @@ export const UIService = {
 
                 let docStatusHtml = '';
                 if (item.selectedAction) {
-                    let statusColor = 'bg-gray-100 text-gray-600';
+                    let statusColor = 'bg-slate-100 text-slate-600';
                     let statusText = '📋 Selecionado';
                     let statusIcon = '📋';
 
@@ -1514,7 +1613,7 @@ export const UIService = {
                         statusText = '✏️ Preenchendo';
                         statusIcon = '✏️';
                     } else if (item.documentState === 'saved') {
-                        statusColor = 'bg-green-100 text-green-700 font-bold';
+                        statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
                         statusText = '✅ Salvo';
                         statusIcon = '✅';
                     } else if (item.documentState === 'pdf') {
@@ -1524,22 +1623,21 @@ export const UIService = {
                     }
 
                     docStatusHtml = `
-                        <div class="mt-2 flex flex-col gap-1">
+                        <div class="mt-3 mb-2 flex flex-col gap-1 items-center justify-center w-full">
                             <span class="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 truncate flex items-center gap-1">
                                 <span>📂</span>
-                                <span class="hidden xs:inline">${escapeHTML(item.selectedAction)}</span>
-                                <span class="xs:hidden">${escapeHTML(item.selectedAction).substring(0, 15)}${item.selectedAction.length > 15 ? '...' : ''}</span>
+                                <span>${escapeHTML(item.selectedAction)}</span>
                             </span>
                             <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
                                 <span>${statusIcon}</span>
-                                <span class="hidden xs:inline">${statusText}</span>
+                                <span>${statusText}</span>
                             </span>
                         </div>`;
                 }
 
                 const deleteBtnHtml = canDelete ? `
-                    <button data-id="${item.id}" class="delete-btn absolute top-3 right-3 text-gray-300 hover:text-red-500 transition-colors z-10">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                    <button data-id="${item.id}" class="delete-btn absolute top-2 left-8 text-slate-300 hover:text-red-500 transition-colors bg-white rounded-full z-10">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                             <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                         </svg>
                     </button>` : '';
@@ -1547,19 +1645,19 @@ export const UIService = {
                 const actionControlsHtml = canManageDistribution
                     ? `<div class="mt-4 flex flex-col gap-2">
                             <div class="grid grid-cols-2 gap-2">
-                                <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm hover:bg-cyan-700 transition active:scale-95 uppercase tracking-wide">
+                                <button onclick="window.open('${linkExterno}', '_blank')" class="w-full bg-cyan-600 hover:bg-cyan-700 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
                                     Abrir Link
                                 </button>
-                                <button data-id="${item.id}" class="delegate-finalization-btn bg-green-600 text-white font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-green-700 transition active:scale-95 uppercase tracking-wide">
-                                    Concluir Protocolo
+                                <button data-id="${item.id}" class="delegate-finalization-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide">
+                                    Concluir
                                 </button>
                             </div>
-                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 text-slate-600 border border-slate-200 font-bold py-2 rounded-lg text-xs shadow-sm hover:bg-slate-200 transition active:scale-95 uppercase tracking-wide">
+                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide border border-slate-200">
                                 Reverter para Fila
                             </button>
                        </div>`
                     : `<div class="mt-4">
-                            <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold w-full border p-2 rounded-lg bg-gray-50 hover:bg-gray-100">
+                            <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors uppercase tracking-wide">
                                 👁️ Ver Detalhes / Checklist
                             </button>
                        </div>`;
@@ -1569,22 +1667,22 @@ export const UIService = {
                     ${badgeStatus}
                     ${deleteBtnHtml}
 
-                    <div class="pr-8 pt-4">
-                        <p class="font-bold text-lg text-gray-800 leading-tight">${escapeHTML(item.name || '')}</p>
-                    </div>
+                    <div class="text-center">
+                        ${badgeAgendamentoHtml}
+                        <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2">${escapeHTML(item.name || '')}</p>
 
-                    <div class="mt-2 space-y-1">
-                        ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
-                        <p class="text-xs text-gray-600">Assunto: <strong>${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                        ${item.numeroProcesso ? `<p class="text-xs text-blue-700 font-bold">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
+                        <div class="text-xs text-slate-600 space-y-1 mb-2">
+                            <p>Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                            ${item.numeroProcesso ? `<p class="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1 border border-blue-100">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
+                        </div>
                     </div>
 
                     ${historicoTransferenciaHtml}
                     ${docStatusHtml}
 
                     ${item.notasRevisao ? `
-                        <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-2.5 rounded-lg border border-yellow-200 shadow-sm leading-snug">
-                            <span class="font-black text-yellow-900 block mb-0.5">⚠️ NOTA PARA O DEFENSOR:</span>
+                        <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-3 rounded-lg border border-yellow-200 shadow-sm leading-snug">
+                            <span class="font-black text-yellow-900 block mb-1">⚠️ NOTA PARA O DEFENSOR:</span>
                             ${escapeHTML(item.notasRevisao)}
                         </div>`
                     : ''}
@@ -1982,4 +2080,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
-
