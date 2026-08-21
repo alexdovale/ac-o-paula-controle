@@ -842,7 +842,7 @@ export const UIService = {
                             </h4>
                             <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
                         </div>
-                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-500 bg-white">
+                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-50 bg-white">
                     </div>
                     <div class="p-2 space-y-2 room-cards-wrapper"></div>
                 `;
@@ -904,16 +904,11 @@ export const UIService = {
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             
-            // LÊ AS ETIQUETAS E APLICA A CLASSE DO PISCA-ALERTA NO CSS
+            // LÊ AS ETIQUETAS E APLICA A CLASSE DO PISCA-ALERTA NO CSS (Desativado)
             let alertaClass = '';
-            if (item._alertaAtraso) {
-                alertaClass = 'card-alerta-atrasado'; // Pisca Vermelho
-            } else if (item._alertaEspera) {
-                alertaClass = 'card-alerta-espera'; // Pisca Amarelo
-            }
 
             // Injeta o alertaClass junto com as outras classes do Tailwind
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} ${alertaClass} mb-2 group transition-all duration-200`;
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
