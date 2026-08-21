@@ -1,10 +1,4 @@
-Abaixo está o arquivo js/ui.js completamente atualizado com todas as melhorias visuais aplicadas:
- * Base Geral de Colaboradores Repaginada: O modal de selecionar colaboradores ganhou uma cara muito mais executiva, limpa e profissional, removendo os emojis infantis e adotando uma paleta corporativa com ícones SVG modernos e avatares sutis.
- * Menu de Ações Modernizado: O menu flutuante (opções de reagendar, editar, etc.) foi refeito para um design limpo e de alto padrão.
- * Número de Agendamento Executivo: O design agressivo e escuro foi substituído por uma "pílula" (badge) clara, moderna e centralizada, que se integra suavemente ao visual do card sem "destoar".
- * Nomes Completos e Centralização: O truncate (reticências) foi removido de todos os cards para mostrar o nome completo (em caixa alta), e todas as informações de horário (Agendado / Chegou / Atendido) foram devidamente centralizadas em caixas de status elegantes em todos os cards (Pauta, Aguardando, Em Atendimento, Atendidos, Faltosos e Distribuição).
- * Botões e Bordas Padronizadas: O botão principal agora mantém o mesmo tamanho do botão de prioridade, e a barra colorida lateral foi mantida para fácil identificação visual.
-Basta substituir todo o conteúdo do seu js/ui.js por este código:
+
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SIGEP)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
