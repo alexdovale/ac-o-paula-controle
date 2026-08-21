@@ -6,7 +6,7 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
-import { UIService } from './ui.js';
+import { UIService } from './ui.js?v=2';
 import CollaboratorService from './colaboradores.js'; 
 window.CollaboratorService = CollaboratorService;  
 import { ModalService } from './modal.js?v=20260707';
@@ -68,6 +68,7 @@ class SIGEPApp {
         
         // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
+        this.currentUnidadeExibicao = localStorage.getItem('sigep_unidade_ativa') || 'todas';
         
         this.init();
     }
@@ -331,23 +332,91 @@ class SIGEPApp {
     }
 
     setupModoListeners() {
-        document.getElementById('btn-modo-normal')?.addEventListener('click', async () => {
+        document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            localStorage.removeItem('sigep_app_state');
-            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
-            this.applyRoleBasedUI();
-            showNotification('Modo Normal ativado', 'info', 3000);
+            
+            // NOVO: Em vez de ir direto, abre o modal de seleção de unidade
+            this.abrirModalSelecaoUnidade();
         });
     
         document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
             this.currentMode = 'evento';
             localStorage.setItem('sigep_current_mode', 'evento');
             localStorage.removeItem('sigep_app_state');
+            
+            // Modo Evento vai direto, ignorando unidades
             await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             this.applyRoleBasedUI();
             showNotification('Modo Evento ativado', 'info', 3000);
         });
+    }
+
+    async abrirModalSelecaoUnidade() {
+        const modal = document.getElementById('select-unidade-modal');
+        const select = document.getElementById('modal-unidade-select');
+        if (!modal || !select) return;
+
+        select.innerHTML = '<option value="todas">Carregando...</option>';
+        modal.classList.remove('hidden');
+
+        // Carrega as unidades
+        const userUnidades = this.currentUser?.unidades || [];
+        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+
+        if (isAdmin) {
+            try {
+                const { getDocs, collection } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const snap = await getDocs(collection(this.db, "unidades"));
+                const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
+                
+                let html = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option>`;
+                if (userUnidades.length > 0) {
+                    html += `<optgroup label="Minhas Unidades Vinculadas">`;
+                    userUnidades.forEach(u => {
+                        const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
+                        if (nome) html += `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                    });
+                    html += `</optgroup><optgroup label="Todas as Unidades do Sistema">`;
+                }
+                allUnidades.forEach(nome => {
+                    html += `<option value="${escapeHTML(nome)}">🏢 ${escapeHTML(nome)}</option>`;
+                });
+                if (userUnidades.length > 0) html += `</optgroup>`;
+                select.innerHTML = html;
+            } catch (err) {
+                select.innerHTML = `<option value="todas">🌍 Erro ao carregar unidades</option>`;
+            }
+        } else {
+            let html = `<option value="todas">🌍 Todas as minhas unidades</option>`;
+            userUnidades.forEach(u => {
+                const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
+                if (nome) html += `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+            });
+            select.innerHTML = html;
+        }
+
+        // Restaura a última seleção se existir
+        if (this.currentUnidadeExibicao) {
+            const options = Array.from(select.options).map(opt => opt.value);
+            if (options.includes(this.currentUnidadeExibicao)) select.value = this.currentUnidadeExibicao;
+        }
+
+        // Ações dos botões
+        document.getElementById('cancel-unidade-modal').onclick = () => {
+            modal.classList.add('hidden');
+        };
+
+        document.getElementById('confirm-unidade-modal').onclick = async () => {
+            this.currentUnidadeExibicao = select.value;
+            localStorage.setItem('sigep_unidade_ativa', select.value);
+            modal.classList.add('hidden');
+            
+            localStorage.removeItem('sigep_app_state');
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+            this.applyRoleBasedUI();
+            showNotification('Modo Normal ativado', 'info', 3000);
+        };
     }
 
     voltarParaSelecaoModo() {
@@ -575,6 +644,10 @@ class SIGEPApp {
         
         document.getElementById('btn-trocar-modo-app')?.addEventListener('click', () => {
             this.voltarParaSelecaoModo();
+        });
+        
+        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => {
+            this.abrirModalSelecaoUnidade();
         });
 
         document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
@@ -1758,6 +1831,11 @@ class SIGEPApp {
 
         // --- INICIALIZA O MÓDULO DE COLETAS ---
         this.setupColetas();
+        
+        // NOVO: Adiciona a ação do botão de Trocar Unidade
+        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => {
+            this.abrirModalSelecaoUnidade();
+        });
     }
 
     setupColetas() {
@@ -2079,12 +2157,32 @@ class SIGEPApp {
                     tipoPauta = String(tipoPauta).toLowerCase();
                     return !tiposEvento.includes(tipoPauta);
                 });
+                
+                // NOVO: Filtrar as pautas exatamente pela unidade que o usuário escolheu no modal!
+                if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
+                    pautas = pautas.filter(p => {
+                        const unidadePauta = p.unidadeNome || p.origin || p.orgao;
+                        return unidadePauta === this.currentUnidadeExibicao;
+                    });
+                }
             } else if (modoAtual === 'evento') {
                 pautas = pautas.filter(p => {
                     let tipoPauta = p.tipo || p.type || '';
                     tipoPauta = String(tipoPauta).toLowerCase();
                     return tiposEvento.includes(tipoPauta);
                 });
+            }
+
+            // NOVO: Mostra o botão "Trocar Unidade" somente se estiver no Modo Normal
+            const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
+            if (btnTrocarUnidade) {
+                if (modoAtual === 'normal') {
+                    btnTrocarUnidade.classList.remove('hidden');
+                    btnTrocarUnidade.classList.add('flex');
+                } else {
+                    btnTrocarUnidade.classList.add('hidden');
+                    btnTrocarUnidade.classList.remove('flex');
+                }
             }
             
             this.mostrarIndicadorModo();

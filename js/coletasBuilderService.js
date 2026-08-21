@@ -12,8 +12,34 @@ function limparTexto(texto) {
         .trim();
 }
 
+// Rótulos de exibição para cada métrica de BI (usado no card do campo e no modal de métricas)
+const METRICAS_LABELS = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
+
+// Quais métricas fazem sentido pra cada tipo de campo, e quais vêm marcadas por padrão ao criar o campo
+const METRICAS_POR_TIPO = {
+    numero: { disponiveis: ['soma', 'media', 'desvio'], padrao: ['soma', 'media', 'desvio'] },
+    numero_idade: { disponiveis: ['media', 'desvio', 'frequencia'], padrao: ['media', 'frequencia'] },
+    booleano: { disponiveis: ['frequencia', 'total'], padrao: ['frequencia', 'total'] },
+    selecao: { disponiveis: ['frequencia', 'distribuicao'], padrao: ['distribuicao'] },
+    multipla_escolha: { disponiveis: ['frequencia', 'distribuicao'], padrao: ['distribuicao'] },
+};
+
+function metricasDisponiveisParaTipo(tipo) {
+    return (METRICAS_POR_TIPO[tipo] || { disponiveis: [] }).disponiveis;
+}
+
+function metricasPadraoParaTipo(tipo) {
+    return (METRICAS_POR_TIPO[tipo] || { padrao: [] }).padrao;
+}
+
 export const ColetasBuilderService = {
     
+    _campoEditandoIndex: null,
+    _coletaIdEditando: null,
+    _linkEditandoIndex: null,
+    _campoMetricasIndex: null,
+    _coletaIdMetricas: null,
+
     renderConstrutorHTML(coletaData, coletaId) {
         const campos = coletaData.dicionarioDeCampos || [];
         const links = coletaData.linksExternos || [];
@@ -119,8 +145,7 @@ export const ColetasBuilderService = {
                                 const tipoDisplay = c.tipo.replace('_', ' ');
                                 let metricasDisplay = '';
                                 if (c.metricasBi && c.metricasBi.length > 0) {
-                                    const metricasLabels = { soma: 'Soma', media: 'Média', desvio: 'Desvio', frequencia: 'Frequência', total: 'Total', distribuicao: 'Distribuição' };
-                                    metricasDisplay = c.metricasBi.map(m => metricasLabels[m] || m).join(', ');
+                                    metricasDisplay = c.metricasBi.map(m => METRICAS_LABELS[m] || m).join(', ');
                                 }
                                 
                                 return `
@@ -840,11 +865,17 @@ export const ColetasBuilderService = {
             let campos = snap.data().dicionarioDeCampos || [];
             if (!campos[index]) return;
 
+            // Se o tipo mudou, descarta métricas de BI que não se aplicam mais ao novo tipo
+            const disponiveisNovoTipo = metricasDisponiveisParaTipo(tipoInput);
+            const metricasAtuais = campos[index].metricasBi || [];
+            const metricasFiltradas = metricasAtuais.filter(m => disponiveisNovoTipo.includes(m));
+
             campos[index] = {
                 ...campos[index],
                 label: labelLimpo,
                 tipo: tipoInput,
-                opcoes: novasOpcoes
+                opcoes: novasOpcoes,
+                metricasBi: metricasFiltradas
             };
 
             await updateDoc(docRef, { dicionarioDeCampos: campos });
@@ -855,6 +886,237 @@ export const ColetasBuilderService = {
         } catch (e) {
             console.error(e);
             showNotification("Erro ao atualizar campo.", "error");
+        }
+    },
+
+    // ============================================================
+    // CONFIGURAÇÃO DE MÉTRICAS DE BI (SOMA, MÉDIA, ETC.)
+    // ============================================================
+    async abrirModalConfigMetricas(coletaId, index) {
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            if (!freshSnap.exists()) return;
+
+            let campos = freshSnap.data().dicionarioDeCampos || [];
+            const campo = campos[index];
+            if (!campo) return;
+
+            this._campoMetricasIndex = index;
+            this._coletaIdMetricas = coletaId;
+
+            const disponiveis = metricasDisponiveisParaTipo(campo.tipo);
+            const metricasAtuais = campo.metricasBi || [];
+
+            let modal = document.getElementById('modal-config-metricas');
+            if (!modal) {
+                modal = document.createElement('div');
+                modal.id = 'modal-config-metricas';
+                modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+                document.body.appendChild(modal);
+            }
+
+            const opcoesHtml = disponiveis.length > 0 ? disponiveis.map(m => `
+                <label class="flex items-center gap-2 text-sm text-slate-700 bg-white p-3 border border-slate-200 rounded-xl cursor-pointer hover:bg-indigo-50 transition">
+                    <input type="checkbox" name="metrica_bi" value="${m}" ${metricasAtuais.includes(m) ? 'checked' : ''} class="h-4 w-4 text-indigo-600 rounded border-slate-300">
+                    <span class="font-medium">${METRICAS_LABELS[m] || m}</span>
+                </label>
+            `).join('') : `
+                <p class="text-sm text-slate-400 italic bg-slate-50 p-4 rounded-xl text-center">
+                    O tipo "${escapeHTML(campo.tipo.replace('_', ' '))}" não possui métricas estatísticas aplicáveis (texto livre não é somado nem tabulado).
+                </p>
+            `;
+
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl max-w-md w-full shadow-2xl flex flex-col overflow-hidden max-h-[90vh]">
+                    <div class="flex justify-between items-center p-6 border-b border-slate-100 bg-slate-50">
+                        <div>
+                            <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Métricas de BI</h3>
+                            <p class="text-xs text-slate-500 font-medium mt-1 truncate max-w-[280px]" title="${escapeHTML(campo.label)}">${escapeHTML(campo.label)}</p>
+                        </div>
+                        <button onclick="document.getElementById('modal-config-metricas').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                    </div>
+
+                    <div class="p-6 space-y-3 overflow-y-auto">
+                        <p class="text-xs text-slate-500 font-medium mb-2">Selecione o que o painel de resultados deve calcular a partir das respostas deste campo:</p>
+                        ${opcoesHtml}
+                    </div>
+
+                    <div class="flex flex-col sm:flex-row gap-3 p-6 mt-auto border-t border-slate-100 bg-slate-50">
+                        <button onclick="document.getElementById('modal-config-metricas').classList.add('hidden')" class="flex-1 p-3.5 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                        ${disponiveis.length > 0 ? `<button onclick="ColetasBuilderService.salvarMetricas()" class="flex-1 p-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Métricas</button>` : ''}
+                    </div>
+                </div>
+            `;
+            modal.classList.remove('hidden');
+
+        } catch (e) {
+            console.error(e);
+            showNotification("Falha ao abrir configuração de métricas.", "error");
+        }
+    },
+
+    async salvarMetricas() {
+        const index = this._campoMetricasIndex;
+        const coletaId = this._coletaIdMetricas;
+
+        if (index === null || !coletaId) return;
+
+        const checkboxes = document.querySelectorAll('#modal-config-metricas input[name="metrica_bi"]:checked');
+        const metricasSelecionadas = Array.from(checkboxes).map(cb => cb.value);
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let campos = snap.data().dicionarioDeCampos || [];
+            if (!campos[index]) return;
+
+            campos[index] = { ...campos[index], metricasBi: metricasSelecionadas };
+
+            await updateDoc(docRef, { dicionarioDeCampos: campos });
+
+            document.getElementById('modal-config-metricas').classList.add('hidden');
+            showNotification("Métricas atualizadas com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao salvar métricas.", "error");
+        }
+    },
+
+    // ============================================================
+    // EDIÇÃO DE LINKS (BLOCO 2) COM FILTRO DE PERMISSÕES E SENHA VISÍVEL
+    // ============================================================
+    async abrirModalEditarLink(coletaId, index) {
+        const db = window.app.db;
+        const docRef = doc(db, "formularios_coleta", coletaId);
+        const snap = await getDoc(docRef);
+        if (!snap.exists()) return;
+
+        const coletaData = snap.data();
+        const links = coletaData.linksExternos || [];
+        const link = links[index];
+        const campos = coletaData.dicionarioDeCampos || [];
+
+        if (!link) return;
+
+        this._linkEditandoIndex = index;
+        this._coletaIdEditando = coletaId;
+
+        let modal = document.getElementById('modal-editar-link');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-editar-link';
+            modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-50 p-4 animate-fade-in backdrop-blur-sm';
+            document.body.appendChild(modal);
+        }
+
+        const checkboxesHtml = campos.map(c => `
+            <label class="campo-checkbox flex items-center gap-2 text-sm text-slate-700 bg-white p-2 border border-slate-200 rounded-lg cursor-pointer hover:bg-blue-50 transition">
+                <input type="checkbox" name="edit_campos_link" value="${c.id}" ${link.camposHabilitados.includes(c.id) ? 'checked' : ''} class="h-4 w-4 text-blue-600 rounded border-slate-300 focus:ring-blue-500">
+                <span class="truncate font-medium campo-texto">${escapeHTML(c.label)}</span>
+            </label>
+        `).join('');
+
+        modal.innerHTML = `
+            <div class="bg-white rounded-2xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 max-h-[90vh] flex flex-col">
+                <div class="flex justify-between items-center mb-5 border-b border-slate-100 pb-4">
+                    <h3 class="text-lg font-black text-slate-800 uppercase tracking-wide">Editar Acesso de Distribuição</h3>
+                    <button onclick="document.getElementById('modal-editar-link').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-xl transition">&times;</button>
+                </div>
+                
+                <div class="space-y-4 overflow-y-auto pr-2">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase mb-1.5">Identificação do Destinatário</label>
+                            <input type="text" id="edit-link-orgao" value="${escapeHTML(link.orgao)}" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none bg-white">
+                        </div>
+                        <div>
+                            <div class="flex items-center justify-between mb-1.5">
+                                <label class="text-xs font-bold text-slate-500 uppercase">Proteção por Senha</label>
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-slate-600">
+                                    <input type="checkbox" id="edit-link-requer-senha" ${link.requerSenha ? 'checked' : ''} onchange="document.getElementById('edit-link-senha').disabled = !this.checked; document.getElementById('edit-link-senha').classList.toggle('bg-slate-100', !this.checked); if(!this.checked) document.getElementById('edit-link-senha').value = '';" class="rounded border-slate-300 text-blue-600 focus:ring-blue-500"> 
+                                    Habilitar
+                                </label>
+                            </div>
+                            <!-- AQUI ESTÁ A CORREÇÃO: type="text" EM VEZ DE "password" PARA VER A SENHA ATUAL -->
+                            <input type="text" id="edit-link-senha" value="${link.senha || ''}" ${link.requerSenha ? '' : 'disabled'} placeholder="Definir nova senha" class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none ${link.requerSenha ? 'bg-white' : 'bg-slate-100'}">
+                            <p class="text-[10px] text-amber-600 mt-1.5 font-bold">Dica: A senha atual está visível acima. Apague e digite outra para alterar.</p>
+                        </div>
+                    </div>
+                    
+                    <div class="pt-4 border-t border-slate-100">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-3 gap-3">
+                            <label class="block text-xs font-bold text-slate-700 uppercase">Escopo de Preenchimento (Permissões):</label>
+                            <div class="flex items-center gap-3 w-full sm:w-auto">
+                                <input type="text" onkeyup="ColetasBuilderService.filtrarLista(this.value, 'container-edit-permissoes', '.campo-checkbox', '.campo-texto')" placeholder="Pesquisar..." class="p-2 border border-slate-300 rounded-lg text-xs outline-none focus:border-blue-500 w-full sm:w-48">
+                                <label class="flex items-center gap-1.5 cursor-pointer text-xs font-bold text-blue-700 whitespace-nowrap">
+                                    <input type="checkbox" onchange="ColetasBuilderService.toggleSelectAll(this.checked, 'container-edit-permissoes')" class="rounded border-blue-300 text-blue-600 focus:ring-blue-500"> 
+                                    Selecionar Visíveis
+                                </label>
+                            </div>
+                        </div>
+                        <div id="container-edit-permissoes" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-48 overflow-y-auto pr-1">
+                            ${checkboxesHtml || '<p class="text-xs text-red-500 font-medium">Nenhuma pergunta configurada no formulário.</p>'}
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex flex-col sm:flex-row gap-3 pt-5 mt-auto border-t border-slate-100">
+                    <button onclick="document.getElementById('modal-editar-link').classList.add('hidden')" class="flex-1 p-3 border border-slate-300 rounded-xl font-bold text-slate-600 hover:bg-slate-100 transition text-sm">Cancelar</button>
+                    <button onclick="ColetasBuilderService.salvarEdicaoLink()" class="flex-1 p-3 bg-blue-600 hover:bg-blue-700 text-white rounded-xl font-bold shadow-sm transition text-sm">Salvar Alterações</button>
+                </div>
+            </div>
+        `;
+        modal.classList.remove('hidden');
+    },
+
+    async salvarEdicaoLink() {
+        const index = this._linkEditandoIndex;
+        const coletaId = this._coletaIdEditando;
+        
+        if (index === null || !coletaId) return;
+
+        const orgao = limparTexto(document.getElementById('edit-link-orgao').value);
+        const requerSenha = document.getElementById('edit-link-requer-senha').checked;
+        const senha = document.getElementById('edit-link-senha').value.trim();
+        
+        const checkboxes = document.querySelectorAll('input[name="edit_campos_link"]:checked');
+        const camposHabilitados = Array.from(checkboxes).map(cb => cb.value);
+
+        if (!orgao) return showNotification("Informe a identificação do destinatário.", "error");
+        if (requerSenha && !senha) return showNotification("A senha de acesso é obrigatória.", "error");
+        if (camposHabilitados.length === 0) return showNotification("Selecione os campos permitidos para preenchimento.", "error");
+
+        try {
+            const db = window.app.db;
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const snap = await getDoc(docRef);
+            if (!snap.exists()) return;
+
+            let links = snap.data().linksExternos || [];
+            if (!links[index]) return;
+
+            links[index] = {
+                ...links[index],
+                orgao,
+                requerSenha,
+                senha: requerSenha ? senha : null,
+                camposHabilitados
+            };
+
+            await updateDoc(docRef, { linksExternos: links });
+            
+            document.getElementById('modal-editar-link').classList.add('hidden');
+            showNotification("Acesso atualizado com sucesso.", "success");
+            window.abrirConstrutor(coletaId);
+        } catch (e) {
+            console.error(e);
+            showNotification("Erro ao atualizar acesso do órgão.", "error");
         }
     },
 
@@ -881,7 +1143,8 @@ export const ColetasBuilderService = {
                 id: 'c_' + Math.random().toString(36).substring(2, 8),
                 label,
                 tipo,
-                envioIndividual
+                envioIndividual,
+                metricasBi: metricasPadraoParaTipo(tipo)
             };
 
             if (tipo === 'selecao' || tipo === 'multipla_escolha') {
@@ -889,10 +1152,12 @@ export const ColetasBuilderService = {
                 novoCampo.opcoes = opcoesString.split(',').map(o => limparTexto(o)).filter(o => o !== '');
             }
 
-            const camposAtuais = coletaData.dicionarioDeCampos || [];
+            const docRef = doc(db, "formularios_coleta", coletaId);
+            const freshSnap = await getDoc(docRef);
+            const camposAtuais = freshSnap.exists() ? (freshSnap.data().dicionarioDeCampos || []) : [];
             camposAtuais.push(novoCampo);
 
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { dicionarioDeCampos: camposAtuais });
+            await updateDoc(docRef, { dicionarioDeCampos: camposAtuais });
             showNotification("Pergunta cadastrada com sucesso.", "success");
             window.abrirConstrutor(coletaId); 
         });
@@ -916,10 +1181,12 @@ export const ColetasBuilderService = {
                 camposHabilitados
             };
 
-            const linksAtuais = coletaData.linksExternos || [];
+            const docRefLink = doc(db, "formularios_coleta", coletaId);
+            const freshSnapLink = await getDoc(docRefLink);
+            const linksAtuais = freshSnapLink.exists() ? (freshSnapLink.data().linksExternos || []) : [];
             linksAtuais.push(novoLink);
 
-            await updateDoc(doc(db, "formularios_coleta", coletaId), { linksExternos: linksAtuais });
+            await updateDoc(docRefLink, { linksExternos: linksAtuais });
             showNotification("Link gerado e pronto para distribuição.", "success");
             window.abrirConstrutor(coletaId);
         });
@@ -1013,14 +1280,17 @@ export const ColetasBuilderService = {
             const docRef = doc(db, "formularios_coleta", coletaId);
             const camposAtuais = coletaData.dicionarioDeCampos || [];
             
-            const formatadas = novasPerguntas.map(p => ({
-                id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
-                label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
-                tipo: p.tipo || 'numero',
-                opcoes: (p.opcoes || []).map(o => limparTexto(o)),
-                metricasBi: p.metricasBi || [],
-                envioIndividual: p.envioIndividual || false
-            }));
+            const formatadas = novasPerguntas.map(p => {
+                const tipoFinal = p.tipo || 'numero';
+                return {
+                    id: p.id || 'c_' + Math.random().toString(36).substring(2, 8),
+                    label: limparTexto(p.label || p.pergunta || 'Campo Não Nomeado'),
+                    tipo: tipoFinal,
+                    opcoes: (p.opcoes || []).map(o => limparTexto(o)),
+                    metricasBi: p.metricasBi || metricasPadraoParaTipo(tipoFinal),
+                    envioIndividual: p.envioIndividual || false
+                };
+            });
 
             const listaFinal = [...camposAtuais, ...formatadas];
             await updateDoc(docRef, { dicionarioDeCampos: listaFinal });
