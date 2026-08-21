@@ -6,7 +6,7 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
-import { UIService } from './ui.js';
+import { UIService } from './ui.js?v=2';
 import CollaboratorService from './colaboradores.js'; 
 window.CollaboratorService = CollaboratorService;  
 import { ModalService } from './modal.js?v=20260707';
