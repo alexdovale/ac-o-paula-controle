@@ -908,7 +908,7 @@ export const UIService = {
             let alertaClass = '';
 
             // Injeta o alertaClass junto com as outras classes do Tailwind
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200 border-l-4`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
@@ -1016,8 +1016,15 @@ export const UIService = {
                 </div>
             `;
 
+            // === NOVO BOTÃO ATENDER DESTACADO E RETIRADO DO GRID MENOR ===
+            // Agora ele SEMPRE abre a lista de servidores independentemente da configuração da pauta
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn'} bg-blue-600 text-white font-bold py-2 rounded-lg hover:bg-blue-700 text-xs shadow-sm uppercase tracking-wide">Atender</button>`
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 rounded-xl text-sm shadow-md transition-all transform active:scale-95 uppercase tracking-widest flex items-center justify-center gap-2 mb-3 border border-blue-700">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                      <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
+                    </svg>
+                    Atender Assistido
+                   </button>`
                 : '';
 
             const actionButtonsHTML = `
@@ -1049,26 +1056,29 @@ export const UIService = {
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
-                <div class="flex flex-col h-full">
+                <div class="flex flex-col h-full mt-2">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                    <p class="font-bold text-lg text-gray-800 leading-tight mb-1 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
+                    <p class="font-bold text-xl text-gray-800 leading-tight mb-2 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
 
                     ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
 
-                    <p class="text-xs text-gray-600 mb-2">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                    <div class="flex items-end justify-between w-full mb-2 gap-2">
+                    <p class="text-sm text-gray-600 mb-3">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
+                    <div class="flex items-end justify-between w-full mb-3 gap-2">
                         <div class="flex flex-wrap items-center gap-2">
                             ${timeInfoHtml}
                         </div>
                         ${roomDropdownHtml}
                     </div>
                     ${docStatusHtml}
-                    <div class="mt-4 grid grid-cols-2 gap-2">
+                    
+                    <div class="mt-4">
                         ${atenderButton ? atenderButton : ''}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                        <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-1.5 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide">Voltar para Pauta</button>
+                        <div class="grid grid-cols-2 gap-2">
+                            <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm col-span-2" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
+                            <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide shadow-sm">Voltar para Pauta</button>
+                        </div>
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold mt-3 block w-full text-center underline">Ver Detalhes do Caso</button>
                     </div>
-                    <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-[11px] font-bold mt-2 text-center underline">Ver Detalhes</button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
