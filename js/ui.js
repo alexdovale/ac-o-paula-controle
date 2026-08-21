@@ -1,4 +1,4 @@
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (REVISADO)
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (REVISADO E CORRIGIDO)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -148,6 +148,7 @@ export const UIService = {
                         window.selectedCollaboratorName = nomeSeguro;
                         this.destacarSelecao(container, btn);
                     };
+                    
                     container.appendChild(btn);
                 } catch (err) {}
             });
@@ -156,7 +157,8 @@ export const UIService = {
         if (searchInput) {
             const applyFilter = (term) => {
                 const t = (term || '').toLowerCase().trim();
-                container.querySelectorAll('.collaborator-item').forEach(item => {
+                const items = container.querySelectorAll('.collaborator-item');
+                items.forEach(item => {
                     const nome = (item.dataset.nome || '').toLowerCase();
                     item.style.display = (!t || nome.includes(t)) ? 'flex' : 'none';
                 });
@@ -769,7 +771,6 @@ export const UIService = {
                 const roomGroup = document.createElement('div');
                 roomGroup.className = "mb-4 border border-slate-200 rounded-xl overflow-hidden bg-slate-50 room-group-container shadow-sm";
 
-                // CORES ORIGINAIS RESTAURADAS PARA AS SALAS (AZUL)
                 roomGroup.innerHTML = `
                     <div class="bg-blue-50 p-3 border-b border-blue-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center">
@@ -798,7 +799,6 @@ export const UIService = {
                 const roomGroupNoRoom = document.createElement('div');
                 roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-xl overflow-hidden bg-red-50 room-group-container shadow-sm";
 
-                // CORES ORIGINAIS RESTAURADAS PARA SEM SALA (VERMELHO)
                 roomGroupNoRoom.innerHTML = `
                     <div class="bg-red-50 p-3 border-b border-red-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center">
@@ -847,10 +847,8 @@ export const UIService = {
                 alertaClass = 'card-alerta-espera'; 
             }
 
-            // COR DA BORDA DE PRIORIDADE RESTAURADA
             const priorityClass = PautaService.getPriorityClass(item.priority) || '';
             
-            // Adicionado border-y e border-r para que a borda esquerda espessa do priorityClass não seja sobrescrita pelo border padrão
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border-y border-r ${priorityClass} ${alertaClass} mb-2 group transition-shadow hover:shadow-md`;
             card.setAttribute('data-id', item.id);
 
@@ -991,8 +989,8 @@ export const UIService = {
                     </svg>
                 </button>` : ''}
                 
-                <div class="flex flex-col h-full">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-1.5 text-[10px] font-bold text-red-600 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded border border-red-100 w-max">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                <div class="pr-8">
+                    ${item.priority === 'URGENTE' ? `<div class="mb-1.5 text-[10px] font-bold text-red-600 flex items-center gap-1 bg-red-50 px-2 py-0.5 rounded border border-red-100 w-max">🚨 ${escapeHTML(item.priorityReason || '')}</div>` : ''}
                     
                     <p class="font-semibold text-sm text-slate-800 leading-tight mb-2 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
 
@@ -1817,4 +1815,5 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
             }
         });
     }
+
 }; // Fim do objeto UIService
