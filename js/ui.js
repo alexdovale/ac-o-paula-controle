@@ -904,11 +904,8 @@ export const UIService = {
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             
-            // LÊ AS ETIQUETAS E APLICA A CLASSE DO PISCA-ALERTA NO CSS (Desativado)
-            let alertaClass = '';
-
-            // Injeta o alertaClass junto com as outras classes do Tailwind
-            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200 border-l-4`;
+            // Injeta as classes do Tailwind com a borda lateral de cor de prioridade
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm ${priorityClass} mb-3 group transition-all duration-200 border-l-4 border-y border-r border-gray-100`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
@@ -946,7 +943,7 @@ export const UIService = {
             }
 
             const nomeSeguro = item.name || 'Nome não informado';
-            const assuntoSeguro = item.subject || 'Assunto não informado';
+            const assuntoSeguro = item.subject || 'Não informado';
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
@@ -957,9 +954,9 @@ export const UIService = {
                 if (availableRooms.length > 0 && canEditPriority) {
                     const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
                     roomDropdownHtml = `
-                        <div class="ml-auto flex flex-col items-end">
-                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
-                            <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
+                        <div class="flex items-center justify-center gap-1.5 mt-2 bg-purple-50/70 p-1.5 rounded-lg border border-purple-100">
+                            <label class="text-[9px] font-bold text-purple-700 uppercase tracking-wider">🏢 Sala:</label>
+                            <select class="change-room-select bg-white text-purple-900 text-xs px-2 py-0.5 rounded font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 shadow-sm" title="Mudar Sala do Assistido">
                                 <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
                                 ${options}
                             </select>
@@ -967,15 +964,19 @@ export const UIService = {
                     `;
                 } else if (item.room) {
                     roomDropdownHtml = `
-                        <div class="ml-auto flex flex-col items-end">
-                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Sala Atual</label>
-                            <span class="bg-purple-50 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 shadow-sm">${escapeHTML(item.room)}</span>
+                        <div class="flex items-center justify-center gap-1.5 mt-2 bg-purple-50/70 p-1 rounded-lg border border-purple-100 w-max mx-auto">
+                            <span class="text-[9px] font-bold text-purple-700 uppercase tracking-wider">🏢 Sala:</span>
+                            <span class="text-xs text-purple-900 font-bold">${escapeHTML(item.room)}</span>
                         </div>
                     `;
                 }
             }
 
-            let timeInfoHtml = `<span class="bg-gray-100 text-gray-600 text-[10px] px-2 py-0.5 rounded font-medium">Chegada: --:--</span>`;
+            let timeInfoHtml = `
+                <div class="inline-flex items-center justify-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1 rounded-lg text-xs font-semibold shadow-sm">
+                    <span>🕒 Chegada:</span> <span class="font-bold text-slate-900">--:--</span>
+                </div>
+            `;
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
@@ -983,23 +984,23 @@ export const UIService = {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
-                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max">
+                                <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
                                     <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
-                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
+                                        <span class="text-slate-500">Agendado:</span>
+                                        <span class="font-bold text-slate-900">${escapeHTML(scheduledTimeSeguro)}</span>
                                     </div>
-                                    <div class="w-px h-3 bg-blue-200"></div>
+                                    <div class="w-px h-3.5 bg-slate-300"></div>
                                     <div class="flex items-center gap-1">
-                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
+                                        <span class="text-slate-500">Chegou:</span>
+                                        <span class="font-bold text-blue-700">${horaChegada}</span>
                                     </div>
                                 </div>
                             `;
                         } else {
                             timeInfoHtml = `
-                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
-                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
+                                <div class="inline-flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
+                                    <span class="text-slate-500">Chegou:</span>
+                                    <span class="font-bold text-blue-700">${horaChegada}</span>
                                 </div>
                             `;
                         }
@@ -1016,15 +1017,20 @@ export const UIService = {
                 </div>
             `;
 
-            // === NOVO BOTÃO ATENDER DESTACADO E RETIRADO DO GRID MENOR ===
-            // Agora ele SEMPRE abre a lista de servidores independentemente da configuração da pauta
+            // Badge Executivo e Centralizado do Número de Agendamento
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mb-2">
+                    <div class="inline-flex items-center gap-1.5 bg-slate-900 text-white px-2.5 py-0.5 rounded-md font-mono text-[11px] font-semibold tracking-wider shadow-sm border border-slate-800">
+                        <span class="text-blue-400 font-sans text-[10px] font-bold uppercase tracking-normal">AGENDAMENTO</span>
+                        <span class="text-slate-500">#</span>
+                        <span class="text-slate-100">${escapeHTML(numAgendamento)}</span>
+                    </div>
+                </div>
+            ` : '';
+
+            // Botão Atender no mesmo tamanho/altura do botão de Prioridade
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn w-full bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-black py-3 rounded-xl text-sm shadow-md transition-all transform active:scale-95 uppercase tracking-widest flex items-center justify-center gap-2 mb-3 border border-blue-700">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
-                      <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
-                    </svg>
-                    Atender Assistido
-                   </button>`
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm">Atender</button>`
                 : '';
 
             const actionButtonsHTML = `
@@ -1056,28 +1062,38 @@ export const UIService = {
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
-                <div class="flex flex-col h-full mt-2">
+                
+                <div class="flex flex-col h-full">
                     ${item.priority === 'URGENTE' ? `<div class="mb-1 text-[10px] font-black text-red-600 uppercase flex items-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
-                    <p class="font-bold text-xl text-gray-800 leading-tight mb-2 truncate pr-14">${escapeHTML(nomeSeguro)}</p>
+                    
+                    ${badgeAgendamentoHtml}
 
-                    ${numAgendamento ? `<p class="text-xs text-blue-700 font-bold mb-1.5 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm">📅 Nº Agend.: ${escapeHTML(numAgendamento)}</p>` : ''}
+                    <p class="font-bold text-lg text-gray-800 leading-tight pr-14 mb-1.5 uppercase">${escapeHTML(nomeSeguro).toUpperCase()}</p>
 
-                    <p class="text-sm text-gray-600 mb-3">Assunto: <strong>${escapeHTML(assuntoSeguro)}</strong></p>
-                    <div class="flex items-end justify-between w-full mb-3 gap-2">
-                        <div class="flex flex-wrap items-center gap-2">
-                            ${timeInfoHtml}
-                        </div>
+                    <div class="text-xs text-gray-700 mb-2.5">
+                        <p>Assunto: <span class="font-bold uppercase text-slate-700">${escapeHTML(assuntoSeguro)}</span></p>
+                    </div>
+
+                    <div class="flex flex-col items-center justify-center w-full mb-2">
+                        ${timeInfoHtml}
                         ${roomDropdownHtml}
                     </div>
+
                     ${docStatusHtml}
-                    
-                    <div class="mt-4">
-                        ${atenderButton ? atenderButton : ''}
+
+                    <div class="mt-4 space-y-2">
                         <div class="grid grid-cols-2 gap-2">
-                            <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} text-white font-semibold py-2 rounded-lg text-xs uppercase shadow-sm col-span-2" ${canEditPriority ? '' : 'disabled'}>${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}</button>
-                            <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-gray-200 text-gray-700 font-bold py-2 rounded-lg text-[10px] hover:bg-gray-300 transition-colors uppercase tracking-wide shadow-sm">Voltar para Pauta</button>
+                            ${atenderButton}
+                            <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600' : 'bg-red-500'} hover:opacity-90 text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
+                                ${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}
+                            </button>
                         </div>
-                        <button data-id="${item.id}" class="view-details-btn text-indigo-500 hover:text-indigo-700 text-xs font-bold mt-3 block w-full text-center underline">Ver Detalhes do Caso</button>
+                        <button data-id="${item.id}" class="return-to-pauta-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs transition active:scale-95 uppercase tracking-wide border border-slate-200">
+                            Voltar para Pauta
+                        </button>
+                        <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold pt-1 block w-full text-center underline">
+                            Ver Detalhes do Caso
+                        </button>
                     </div>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
