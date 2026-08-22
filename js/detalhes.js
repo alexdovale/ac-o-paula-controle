@@ -1,4 +1,7 @@
-
+O erro que você encontrou (ReferenceError: Can't find variable: renderizarFasesDocumentacao) é um clássico de navegadores mobile em dispositivos Apple (iPhone/iOS).
+O motor do navegador do iPhone às vezes se perde na hora de "ler o arquivo inteiro" e não consegue achar a função porque ela foi colocada lá no final do arquivo e marcada com export.
+Não precisamos mexer no main.js. O conserto é feito apenas no próprio js/detalhes.js: eu removi o export desnecessário dessa função (já que ela só trabalha internamente no modal) e movi a declaração dela para o topo, antes de ser chamada, garantindo que qualquer navegador (especialmente no iOS) consiga ler sem problemas.
+Substitua todo o seu js/detalhes.js por este código corrigido:
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -1707,4 +1710,5 @@ window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
-window.gerarLinkCaptacao = gerarLinkCaptacao;==
+window.gerarLinkCaptacao = gerarLinkCaptacao;
+
