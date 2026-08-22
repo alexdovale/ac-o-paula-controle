@@ -1,10 +1,4 @@
-Aqui está o código completo do js/ui.js com todas as correções consolidadas.
-Nesta versão:
- * As cores e bordas laterais originais foram restauradas em todos os cards, removendo as classes que estavam bagunçando seu estilo.
- * A ordenação dos Atendidos e Faltosos agora segue exatamente a ordem da Pauta (baseada no horário agendado, usando '23:59' para quem não tem horário).
- * Agilidade Mobile e Modal de Chegada: O código no topo garante o clique rápido no celular e evita que a caixa de horário vaze.
- * Número do Agendamento e Horários: Seguem o padrão limpo, centralizado e sem reticências no nome, e a lista de colaboradores está executiva.
-Basta substituir tudo:
+
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SIGEP)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
