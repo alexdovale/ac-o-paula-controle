@@ -15,7 +15,7 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         button, a, select, .touch-manipulation { touch-action: manipulation !important; }
         
         /* Corrige o vazamento do modal de confirmar chegada no celular */
-        #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; }
+        #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
     `;
     document.head.appendChild(style);
@@ -774,7 +774,6 @@ export const UIService = {
         `;
     },
 
-    // MENU DE AÇÕES PADRONIZADO E MODERNO
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10">
@@ -835,25 +834,25 @@ export const UIService = {
         const nomeSeguro = item.name || '';
 
         const card = document.createElement('div');
-        // Borda cinza mantida (border-l-slate-400)
-        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border-l-4 border-slate-400 border-y border-r border-slate-200 mb-3';
+        card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
         card.setAttribute('data-id', item.id);
 
-        const timeInfoHtml = `
-            <div class="flex justify-center w-full mb-2">
-                <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
-                    <span class="text-slate-500">Agendado:</span> <span class="text-slate-900">${item.scheduledTime || '--:--'}</span>
-                </div>
-            </div>
-        `;
-
         const badgeAgendamentoHtml = numAgendamento ? `
-            <div class="flex justify-center mt-2 mb-2">
-                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
-                    Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+            <div class="flex justify-center mt-2 w-full">
+                <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                    📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                 </span>
             </div>
         ` : '';
+
+        const timeInfoHtml = `
+            <div class="inline-flex items-center justify-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                <div class="flex items-center gap-1">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                    <span>Agendado: <span class="font-semibold">${item.scheduledTime || '--:--'}</span></span>
+                </div>
+            </div>
+        `;
 
         card.innerHTML = `
             ${canDelete ? `
@@ -866,10 +865,10 @@ export const UIService = {
             ${this._getActionButtonsHtml(item)}
 
             <div class="pt-2 text-center">
-                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(nomeSeguro)}</p>
+                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(nomeSeguro)}</p>
                 <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 
-                <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                     ${timeInfoHtml}
                     ${badgeAgendamentoHtml}
                 </div>
@@ -911,10 +910,10 @@ export const UIService = {
                 if (peopleInRoom.length === 0) return;
 
                 const roomGroup = document.createElement('div');
-                roomGroup.className = "mb-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 room-group-container shadow-sm";
+                roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
 
                 roomGroup.innerHTML = `
-                    <div class="bg-blue-50 p-2 border-b border-blue-100 flex flex-col gap-2">
+                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
                             <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>🏢</span> ${escapeHTML(roomName)}
@@ -942,7 +941,7 @@ export const UIService = {
                 roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
 
                 roomGroupNoRoom.innerHTML = `
-                    <div class="bg-red-50 p-2 border-b border-red-100 flex flex-col gap-2">
+                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
                         <div class="flex justify-between items-center px-1">
                             <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
                                 <span>⚠️</span> Sem Sala Definida
@@ -981,15 +980,11 @@ export const UIService = {
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
             const card = document.createElement('div');
-            // O priorityClass já contém as cores da borda de prioridade (ex: border-l-4 border-red-500)
             const priorityClass = PautaService.getPriorityClass(item.priority);
             const attendBtnClass = currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn';
 
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm ${priorityClass} mb-3 group transition-all duration-200 border-y border-r border-slate-200`;
-            // Garantindo que tenha a borda esquerda pro Tailwind caso falte no priorityClass
-            if (!card.className.includes('border-l-')) {
-                card.classList.add('border-l-4', 'border-l-slate-400');
-            }
+            // Classe original que traz as cores corretas e a borda da prioridade
+            card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
             let docStatusHtml = '';
@@ -1056,10 +1051,9 @@ export const UIService = {
             }
 
             let timeInfoHtml = `
-                <div class="flex justify-center w-full mb-2">
-                    <div class="inline-flex items-center justify-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
-                        <span class="text-slate-500">Chegada:</span> <span class="font-bold text-slate-900">--:--</span>
-                    </div>
+                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                    <span>Chegada: <span class="font-bold">--:--</span></span>
                 </div>
             `;
             if (item.arrivalTime) {
@@ -1069,24 +1063,23 @@ export const UIService = {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
-                                <div class="flex flex-wrap justify-center items-center gap-2 w-full mb-2">
-                                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                                        <span class="text-slate-500">Agendado:</span>
-                                        <span class="font-bold text-slate-900">${escapeHTML(scheduledTimeSeguro)}</span>
+                                <div class="inline-flex items-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                                        <span>Agendado: <span class="font-semibold">${escapeHTML(scheduledTimeSeguro)}</span></span>
                                     </div>
-                                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                                        <span class="text-slate-500">Chegou:</span>
-                                        <span class="font-bold text-blue-700">${horaChegada}</span>
+                                    <div class="w-px h-3 bg-blue-200"></div>
+                                    <div class="flex items-center gap-1">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                        <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
                                     </div>
                                 </div>
                             `;
                         } else {
                             timeInfoHtml = `
-                                <div class="flex justify-center w-full mb-2">
-                                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                                        <span class="text-slate-500">Chegou:</span>
-                                        <span class="font-bold text-blue-700">${horaChegada}</span>
-                                    </div>
+                                <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
+                                    <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
                                 </div>
                             `;
                         }
@@ -1104,9 +1097,9 @@ export const UIService = {
             `;
 
             const badgeAgendamentoHtml = numAgendamento ? `
-                <div class="flex justify-center mt-2 mb-2 w-full">
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
-                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                <div class="mt-2 flex justify-center w-full">
+                    <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                     </span>
                 </div>
             ` : '';
@@ -1134,14 +1127,14 @@ export const UIService = {
                 <div class="text-center pt-2">
                     ${item.priority === 'URGENTE' ? `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
 
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2">${escapeHTML(nomeSeguro)}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(nomeSeguro)}</p>
 
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
                     
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
-                        ${roomDropdownHtml}
+                        ${roomDropdownHtml ? `<div class="mt-1">${roomDropdownHtml}</div>` : ''}
                     </div>
                     
                     ${docStatusHtml}
@@ -1207,21 +1200,11 @@ export const UIService = {
             const delegateBtnClass = isDelegated ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600';
 
             const card = document.createElement('div');
-            // Borda azul (border-l-blue-500)
-            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border-l-4 border-blue-500 border-y border-r border-slate-200 mb-3`;
+            card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
             card.setAttribute('data-id', item.id);
 
             const startTime = item.inAttendanceTime ?
                 new Date(item.inAttendanceTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '--:--';
-
-            const timeInfoHtml = `
-                <div class="flex justify-center w-full mb-2">
-                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                        <span class="text-slate-500">Início:</span>
-                        <span class="font-bold text-blue-700">${startTime}</span>
-                    </div>
-                </div>
-            `;
 
             const atendenteNome = this.getAttendantName(item);
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
@@ -1266,10 +1249,19 @@ export const UIService = {
                     </div>`;
             }
 
+            const timeInfoHtml = `
+                <div class="inline-flex items-center justify-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                    <div class="flex items-center gap-1">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                        <span>Início: <span class="font-bold">${startTime}</span></span>
+                    </div>
+                </div>
+            `;
+
             const badgeAgendamentoHtml = numAgendamento ? `
                 <div class="flex justify-center mt-2 mb-2 w-full">
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
-                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                     </span>
                 </div>
             ` : '';
@@ -1310,12 +1302,11 @@ export const UIService = {
                 </button>` : ''}
 
                 <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2">${escapeHTML(item.name || '')}</p>
-                    
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
                     
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
                     </div>
@@ -1361,8 +1352,7 @@ export const UIService = {
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const card = document.createElement('div');
-            // Borda verde (border-l-emerald-500)
-            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border-l-4 border-emerald-500 border-y border-r border-slate-200 mb-4';
+            card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
             card.setAttribute('data-id', item.id);
 
             const arrivalT = item.arrivalTime ?
@@ -1378,26 +1368,27 @@ export const UIService = {
                 : 'bg-slate-100 text-slate-300 border-slate-200';
 
             const timeInfoHtml = `
-                <div class="flex flex-wrap justify-center items-center gap-2 w-full mb-2">
-                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] shadow-sm">
-                        <span class="text-slate-500">Agendado:</span>
-                        <span class="font-bold text-slate-900">${item.scheduledTime || '--:--'}</span>
+                <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                    ${item.scheduledTime && item.scheduledTime !== '--:--' ? `
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-600">Agendado:</span><span class="font-semibold">${escapeHTML(item.scheduledTime)}</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-[10px] shadow-sm">
-                        <span class="text-slate-500">Chegou:</span>
-                        <span class="font-bold text-blue-700">${arrivalT}</span>
+                    <div class="w-px h-3 bg-blue-200"></div>` : ''}
+                    ${arrivalT !== 'N/A' ? `
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-600">Chegou:</span><span class="font-semibold">${arrivalT}</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 bg-emerald-50 border border-emerald-200 text-emerald-800 px-3 py-1.5 rounded-lg text-[10px] shadow-sm">
-                        <span class="text-emerald-600">Fim:</span>
-                        <span class="font-bold">${attendedT}</span>
+                    <div class="w-px h-3 bg-blue-200"></div>` : ''}
+                    <div class="flex items-center gap-1">
+                        <span class="text-emerald-700">Fim:</span><span class="font-bold text-emerald-800">${attendedT}</span>
                     </div>
                 </div>
             `;
 
             const badgeAgendamentoHtml = numAgendamento ? `
                 <div class="flex justify-center mt-2 mb-2 w-full">
-                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
-                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                     </span>
                 </div>
             ` : '';
@@ -1412,7 +1403,7 @@ export const UIService = {
                 </div>
 
                 <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-8">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
                     ${item.tipoAcaoRapida ? (() => {
@@ -1429,7 +1420,7 @@ export const UIService = {
                         </div>`;
                     })() : ''}
 
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
                     </div>
@@ -1486,8 +1477,7 @@ export const UIService = {
             const card = document.createElement('div');
             const isConfirmed = item.isConfirmed || false;
 
-            // Borda vermelha (border-l-red-500)
-            card.className = 'assisted-card relative bg-red-50 p-4 rounded-xl shadow-sm border-l-4 border-red-500 border-y border-r border-red-200 mb-4 opacity-95';
+            card.className = 'assisted-card relative bg-red-50 p-4 rounded-lg shadow-sm border border-red-100 mb-4 opacity-90';
             card.setAttribute('data-id', item.id);
 
             const confirmButtonClass = isConfirmed
@@ -1495,22 +1485,21 @@ export const UIService = {
                 : 'bg-white text-slate-300 border-slate-200';
 
             const timeInfoHtml = `
-                <div class="flex flex-wrap justify-center items-center gap-2 w-full mb-2">
-                    <div class="inline-flex items-center gap-1.5 bg-white border border-red-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                        <span class="text-slate-500">Agendado:</span>
-                        <span class="font-bold text-slate-900">${item.scheduledTime || '--:--'}</span>
+                <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                    <div class="flex items-center gap-1">
+                        <span class="text-slate-600">Agendado:</span><span class="font-semibold">${item.scheduledTime || '--:--'}</span>
                     </div>
-                    <div class="inline-flex items-center gap-1.5 bg-red-100 border border-red-200 text-red-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
-                        <span class="text-red-500">Faltou às:</span>
-                        <span class="font-bold">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
+                    <div class="w-px h-3 bg-blue-200"></div>
+                    <div class="flex items-center gap-1">
+                        <span class="text-red-600">Faltou às:</span><span class="font-bold text-red-700">${item.lastActionTimestamp ? new Date(item.lastActionTimestamp).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--'}</span>
                     </div>
                 </div>
             `;
 
             const badgeAgendamentoHtml = numAgendamento ? `
                 <div class="flex justify-center mt-2 mb-2 w-full">
-                    <span class="inline-flex items-center gap-1 bg-white text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-red-200 shadow-sm">
-                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                     </span>
                 </div>
             ` : '';
@@ -1530,7 +1519,7 @@ export const UIService = {
                     
                     <p class="text-xs text-slate-700 mt-3 mb-2">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
                     </div>
@@ -1612,8 +1601,7 @@ export const UIService = {
                 const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
 
                 const card = document.createElement('div');
-                // Borda Ciano (border-l-cyan-500)
-                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border-l-4 border-cyan-500 border-y border-r border-cyan-200 mb-3';
+                card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
                 card.setAttribute('data-id', item.id);
 
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
@@ -1630,17 +1618,18 @@ export const UIService = {
                     : `<span class="absolute top-2 right-2 bg-blue-100 text-blue-700 text-[9px] font-black px-2 py-1 rounded-md uppercase border border-blue-200 shadow-sm">P/ Assinatura</span>`;
 
                 const timeInfoHtml = `
-                    <div class="flex justify-center w-full mb-2">
-                        <div class="inline-flex items-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
-                            <span class="text-slate-500">Agendado:</span> <span class="text-slate-900">${item.scheduledTime || '--:--'}</span>
+                    <div class="inline-flex items-center justify-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
+                        <div class="flex items-center gap-1">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M21 7.5V6a2 2 0 0 0-2-2H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h3.5"/><path d="M16 2v4"/><path d="M8 2v4"/><path d="M3 10h5"/><path d="M17.5 17.5 16 16.3V14"/><circle cx="16" cy="16" r="6"/></svg>
+                            <span>Agendado: <span class="font-semibold">${item.scheduledTime || '--:--'}</span></span>
                         </div>
                     </div>
                 `;
 
                 const badgeAgendamentoHtml = numAgendamento ? `
                     <div class="flex justify-center mt-2 mb-2 w-full">
-                        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
-                            Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                        <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                            📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
                         </span>
                     </div>
                 ` : '';
@@ -1725,7 +1714,7 @@ export const UIService = {
                             ${item.numeroProcesso ? `<p class="text-blue-700 font-bold bg-blue-50 px-2 py-0.5 rounded-md inline-block mt-1 border border-blue-100">Nº Proc: ${escapeHTML(item.numeroProcesso)}</p>` : ''}
                         </div>
                         
-                        <div class="flex flex-col items-center justify-center w-full mb-3 gap-2">
+                        <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                             ${timeInfoHtml}
                             ${badgeAgendamentoHtml}
                         </div>
@@ -2134,3 +2123,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
+
