@@ -442,14 +442,13 @@ export const PautaService = {
                 return false;
             }
 
-            // CONTADOR DA PROPORÇÃO 3x1 
             let eAtrasado = false;
             if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
                 const [h, m] = assisted.scheduledTime.split(':').map(Number);
                 const schedDate = new Date();
                 schedDate.setHours(h, m, 0, 0);
                 const arrDate = new Date(assisted.arrivalTime);
-                eAtrasado = arrDate > new Date(schedDate.getTime() + 15 * 60000); // 15 min de tolerância
+                eAtrasado = arrDate > new Date(schedDate.getTime() + 15 * 60000); 
             }
 
             try {
@@ -857,17 +856,13 @@ export const PautaService = {
         return 'Média';
     },
 
-    // FUNÇÃO ATUALIZADA E CORRIGIDA: Suporta os Modos de Ordenação e os Alertas
     sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
         const agora = Date.now();
         const TOLERANCIA_MINUTOS = 15;
-        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; // 45 minutos
+        const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; 
 
-        // ==========================================
-        // REGRA UNIVERSAL DE CHEGADA: 
-        // ==========================================
         const getTempoChegada = (item) => {
             if (item.arrivalTime) {
                 return new Date(item.arrivalTime).getTime();
@@ -875,10 +870,8 @@ export const PautaService = {
             return item.checkInOrder || agora;
         };
 
-        // 1. MODO MANUAL
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         
-        // 2. MODO ORDEM DE CHEGADA
         if (orderType === 'chegada') {
             return [...list].sort((a, b) => {
                 if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
@@ -887,7 +880,6 @@ export const PautaService = {
             });
         }
 
-        // Valida se está atrasado (> 15 min do horário marcado)
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
             
@@ -900,16 +892,11 @@ export const PautaService = {
             return arrDate > new Date(schedDate.getTime() + TOLERANCIA_MINUTOS * 60000);
         };
 
-        // Valida se está esperando muito tempo na recepção
         const isEsperandoMuito = (item) => {
             return (agora - getTempoChegada(item)) > TEMPO_ESPERA_ALERTA_MS;
         };
 
-        // ==========================================
-        // O SEGREDO DO ENCAIXE JUSTO (HH:MM)
-        // ==========================================
         const getHoraParaOrdenacao = (item) => {
-            // Se for avulso sem hora marcada, a hora dele na fila é a hora em que fez check-in
             if (item.type === 'avulso' || !item.scheduledTime) {
                 if (item.arrivalTime) {
                     const dataArr = new Date(item.arrivalTime);
@@ -917,25 +904,21 @@ export const PautaService = {
                         return dataArr.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     }
                 }
-                return '23:59'; // Fim da fila se não tiver nada
+                return '23:59'; 
             }
 
-            // Se for agendado e ATRASOU muito, ele perde a vaga. O novo "horário" dele é a hora real que chegou!
             if (isAtrasado(item)) {
                 const dataArr = new Date(item.arrivalTime);
                 return dataArr.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
             }
 
-            // Se chegou NO HORÁRIO (ou antes), ele mantém o "Horário Sagrado" da agenda
             return item.scheduledTime;
         };
 
         return [...list].sort((a, b) => {
-            // Regra Universal: Prioridade URGENTE sempre fura a fila
             if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
             if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
 
-            // 3. MODO PROPORCIONAL (3x1)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -945,7 +928,6 @@ export const PautaService = {
                 }
             }
 
-            // 4. MODO AGING
             if (orderType === 'aging') {
                 const esperaA = agora - getTempoChegada(a);
                 const esperaB = agora - getTempoChegada(b);
@@ -953,32 +935,27 @@ export const PautaService = {
                 if (esperaB > 3600000) return 1;
             }
 
-            // 5. MODO FIM DO TURNO
             if (orderType === 'fim_turno') {
                 const isTardeA = parseInt((a.scheduledTime || '09:00').split(':')[0]) >= 13;
                 const isTardeB = parseInt((b.scheduledTime || '09:00').split(':')[0]) >= 13;
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            // GERA AS FLAGS DE ALERTA NO ITEM PARA O UI.JS LER E PISCAR
             a._alertaAtraso = isAtrasado(a);
             a._alertaEspera = isEsperandoMuito(a);
             b._alertaAtraso = isAtrasado(b);
             b._alertaEspera = isEsperandoMuito(b);
 
-            // 6. MODO FLEXÍVEL COM A LÓGICA CORRIGIDA (Mistura Atrasados com Avulsos)
             if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
                 const horaA = getHoraParaOrdenacao(a);
                 const horaB = getHoraParaOrdenacao(b);
                 
                 if (horaA === horaB) {
-                    // Empate: quem fez o check-in fisicamente primeiro ganha
                     return getTempoChegada(a) - getTempoChegada(b);
                 }
                 return horaA.localeCompare(horaB);
             }
 
-            // 7. DESEMPATE FINAL (Segurança)
             return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (getTempoChegada(a) - getTempoChegada(b));
         });
     },
@@ -1330,6 +1307,11 @@ export const PautaService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
             
+            // 👇 INTEGRAÇÃO COM A TV (PAINEL GERAL) 👇
+            if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
+                PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
+            }
+            
             window.assistedIdToHandle = id;
             window.assistedNameToHandle = assisted.name || '';
             window.assistedTipoAcao = 'delegar';
@@ -1373,7 +1355,11 @@ export const PautaService = {
                 }, app.currentUserName);
                 showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
             } else {
-                // ABRE A NOVA LISTA VISUAL EM VEZ DO SELECT ANTIGO
+                // 👇 INTEGRAÇÃO COM A TV (PAINEL GERAL) 👇
+                if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
+                    PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
+                }
+
                 window.assistedIdToHandle = id;
                 window.assistedNameToHandle = assisted.name || '';
                 window.assistedTipoAcao = 'atender_direto';
