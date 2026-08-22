@@ -276,7 +276,7 @@ function parseCurrency(s) {
 }
 
 /* ========================================================
-   3.1 FUNÇÃO DE GERAÇÃO DE LINK DE CAPTAÇÃO (CORRIGIDA)
+   3.1 FUNÇÃO DE GERAÇÃO DE LINK DE CAPTAÇÃO
    ======================================================== */
 export async function gerarLinkCaptacao() {
     const pautaId = currentPautaId;
@@ -291,7 +291,6 @@ export async function gerarLinkCaptacao() {
 
     try {
         const assistidoRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-        // Salva o token no banco para permitir a regra de segurança do Firebase
         await updateDoc(assistidoRef, { delegationToken: tokenSeguranca });
 
         let path = window.location.pathname; 
@@ -324,6 +323,64 @@ export async function gerarLinkCaptacao() {
         console.error("Erro ao gerar link:", error);
         showNotification("Erro ao preparar o link com segurança.", "error");
     }
+}
+
+/* ========================================================
+   3.2 FUNÇÃO DE RENDERIZAR O STATUS DE DOCUMENTAÇÃO (MOVIDA PARA CIMA)
+   ======================================================== */
+function renderizarFasesDocumentacao(assistedId, pautaId, statusAtual, db) {
+    let container = document.getElementById('doc-workflow-container');
+    if (!container) {
+        const modalBody = document.querySelector('#assisted-details-modal .modal-body') || document.querySelector('#assisted-details-modal > div > div.p-6') || document.querySelector('#assisted-details-modal .overflow-y-auto');
+        if (modalBody) {
+            container = document.createElement('div');
+            container.id = 'doc-workflow-container';
+            container.className = 'mt-6 pt-4 border-t border-slate-200';
+            modalBody.appendChild(container);
+        } else {
+            return;
+        }
+    }
+
+    const etapas = [
+        'Pendente', 
+        'Assistido Orientado', 
+        'Preenchendo Dados', 
+        'Documentação Recebida', 
+        'Falta Digitalizar', 
+        'Digitalizado', 
+        'Inserido no Verde/CNP'
+    ];
+
+    let html = '<p class="text-sm font-bold text-slate-800 mb-3">📑 Status da Documentação / Triagem:</p><div class="flex flex-wrap gap-2">';
+    
+    etapas.forEach(etapa => {
+        const isSelected = (statusAtual === etapa) || (!statusAtual && etapa === 'Pendente');
+        const btnClass = isSelected 
+            ? 'bg-blue-600 text-white border-blue-700 shadow-md scale-105 font-bold' 
+            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50';
+        
+        html += `<button class="doc-etapa-btn px-3 py-1.5 rounded-lg border text-xs transition-all ${btnClass}" data-etapa="${etapa}">${etapa}</button>`;
+    });
+    html += '</div>';
+
+    container.innerHTML = html;
+
+    container.querySelectorAll('.doc-etapa-btn').forEach(btn => {
+        btn.addEventListener('click', async (e) => {
+            const novaEtapa = e.target.dataset.etapa;
+            renderizarFasesDocumentacao(assistedId, pautaId, novaEtapa, db); 
+            
+            try {
+                const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
+                await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
+                
+                if (window.showNotification) window.showNotification("Status da documentação salvo!", "success");
+            } catch (error) {
+                console.error("Erro ao salvar etapa:", error);
+            }
+        });
+    });
 }
 
 /* ========================================================
@@ -482,10 +539,8 @@ function renderChecklist(actionKey) {
         'investigacao_paternidade'
     ];
 
-    // Verifica se é o link do Cidadão (Assistido). Se tiver 'captacao' na URL, é ele.
     const isLinkDoCidadao = window.location.pathname.includes('captacao');
 
-    // Mostra a calculadora se o assunto for de pensão E NÃO for a tela do cidadão
     if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
         const calcContainer = document.createElement('div');
         calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
@@ -565,7 +620,6 @@ function renderChecklist(actionKey) {
     `;
     containerEl.appendChild(socioSection);
     
-    // Lógica para mostrar/esconder campo de profissão
     const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
     const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
     const profissaoInput = socioSection.querySelector('#socio-profissao');
@@ -589,7 +643,6 @@ function renderChecklist(actionKey) {
         checkProfissaoVisibility();
     }
     
-    // Máscara de dinheiro para renda familiar
     const ganhosInput = socioSection.querySelector('#socio-ganhos');
     if (ganhosInput) {
         ganhosInput.addEventListener('input', (e) => {
@@ -598,7 +651,6 @@ function renderChecklist(actionKey) {
         });
     }
 
-    // Carregar dados salvos do assistido principal
     if (saved?.socioData) {
         const socioSaved = saved.socioData;
         if (socioSaved.ocupacao) ocupacaoSelect.value = socioSaved.ocupacao;
@@ -1650,10 +1702,9 @@ function renderSubjectSelection(selectionArea) {
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
 
-
 // ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
-window.gerarLinkCaptacao = gerarLinkCaptacao;
+window.gerarLinkCaptacao = gerarLinkCaptacao;==
