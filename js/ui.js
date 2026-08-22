@@ -100,13 +100,15 @@ export const UIService = {
         window.selectedCollaboratorName = null;
         
         const btnNaoAtribuir = document.createElement('button');
-        btnNaoAtribuir.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border-2 border-blue-500 rounded-xl hover:bg-blue-50 transition-all shadow-sm flex items-center gap-3";
+        btnNaoAtribuir.className = "collaborator-item w-full text-left p-3 mb-3 bg-white border border-slate-200 rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-3";
         btnNaoAtribuir.dataset.nome = 'nao atribuir';
         btnNaoAtribuir.innerHTML = `
-            <div class="w-10 h-10 rounded-full bg-gray-100 flex items-center justify-center text-gray-500 text-xl flex-shrink-0">🚫</div>
+            <div class="w-10 h-10 rounded border border-dashed border-slate-300 flex items-center justify-center text-slate-400 flex-shrink-0 bg-slate-50">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18M6 6l12 12"/></svg>
+            </div>
             <div class="overflow-hidden">
-                <div class="font-bold text-gray-800 truncate">Não atribuir</div>
-                <div class="text-xs text-gray-500 truncate">Atender sem atribuir a nenhum colaborador</div>
+                <div class="font-bold text-slate-700 text-sm">Não atribuir</div>
+                <div class="text-[10px] text-slate-500 font-medium">Atender sem vincular um profissional específico</div>
             </div>
         `;
         btnNaoAtribuir.onclick = (e) => {
@@ -120,19 +122,19 @@ export const UIService = {
         const colabs = app?.colaboradores || window.app?.colaboradores || [];
 
         if (colabs.length === 0) {
-            const msg = document.createElement('p');
-            msg.className = 'text-center text-gray-400 py-4 text-sm';
+            const msg = document.createElement('div');
+            msg.className = 'text-center text-slate-400 py-6 text-sm flex flex-col items-center gap-2';
             msg.innerHTML = `
-                <span class="block text-2xl mb-2">👥</span>
-                Nenhum colaborador carregado.<br>
-                <span class="text-xs">Verifique a aba <b>Ações → Colaboradores</b> no painel de gestão.</span>
+                <div class="text-slate-300 mb-1"><svg xmlns="http://www.w3.org/2000/svg" width="36" height="36" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg></div>
+                <span class="font-bold text-slate-500">Nenhum colaborador carregado.</span>
+                <span class="text-xs">Verifique a aba <b>Ações → Colaboradores</b> no painel.</span>
             `;
             container.appendChild(msg);
         } else {
             colabs.forEach(c => {
                 try {
                     const btn = document.createElement('button');
-                    btn.className = "collaborator-item w-full text-left p-4 mb-2 bg-white border border-gray-200 rounded-xl hover:border-blue-500 transition-all shadow-sm flex items-center gap-3";
+                    btn.className = "collaborator-item w-full text-left p-3 mb-2 bg-white border border-slate-200 rounded-xl hover:border-blue-400 hover:shadow-sm transition-all flex items-center gap-3";
                     
                     const rawNome = typeof c.nome === 'object' ? (c.nome.nome || c.nome.name || '') : (c.nome || '');
                     const nomeSeguro = String(rawNome).trim() || 'Nome não informado';
@@ -149,10 +151,12 @@ export const UIService = {
                     }
                     
                     btn.innerHTML = `
-                        <div class="w-10 h-10 rounded-full bg-blue-600 text-white font-bold flex items-center justify-center text-sm flex-shrink-0">${escapeHTML(iniciais)}</div>
+                        <div class="w-10 h-10 rounded-full bg-slate-100 border border-slate-200 text-slate-600 font-bold flex items-center justify-center text-xs flex-shrink-0 uppercase">${escapeHTML(iniciais)}</div>
                         <div class="overflow-hidden w-full">
-                            <div class="font-bold text-gray-800 truncate pr-2">${escapeHTML(nomeSeguro)}</div>
-                            <div class="text-xs text-gray-500 truncate">${escapeHTML(c.cargo || 'Membro')} | Equipe ${escapeHTML(c.equipe || 'N/A')}</div>
+                            <div class="font-bold text-slate-800 text-sm truncate">${escapeHTML(nomeSeguro)}</div>
+                            <div class="text-[10px] text-slate-500 font-medium tracking-wide mt-0.5">
+                                ${escapeHTML(c.cargo || 'Membro')} ${c.equipe ? `<span class="mx-1 text-slate-300">•</span> Eq: ${escapeHTML(c.equipe)}` : ''}
+                            </div>
                         </div>
                     `;
                     
@@ -194,12 +198,12 @@ export const UIService = {
         if (!container || !btnSelecionado) return;
         
         container.querySelectorAll('.collaborator-item').forEach(b => {
-            b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-200');
-            b.classList.add('border-gray-200');
+            b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-100', 'bg-blue-50/30');
+            b.classList.add('border-slate-200');
         });
         
-        btnSelecionado.classList.add('border-blue-500', 'ring-2', 'ring-blue-200');
-        btnSelecionado.classList.remove('border-gray-200');
+        btnSelecionado.classList.add('border-blue-500', 'ring-2', 'ring-blue-100', 'bg-blue-50/30');
+        btnSelecionado.classList.remove('border-slate-200');
     },
 
     renderPautaFilters(containerId, activeFilter, onFilterChange, app) {
@@ -839,7 +843,7 @@ export const UIService = {
 
         card.innerHTML = `
             ${canDelete ? `
-            <button data-id="${item.id}" class="delete-btn absolute top-2 left-2 text-slate-300 hover:text-red-500 transition-colors bg-white rounded-full z-10" ${isOwner ? '' : 'disabled'} title="Excluir">
+            <button data-id="${item.id}" class="delete-btn absolute top-2 left-2 text-slate-300 hover:text-red-500 transition-colors bg-white rounded-full z-10" ${isOwner ? '' : 'disabled'} title="Excluir (apenas criador)">
                 <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="currentColor" viewBox="0 0 16 16">
                     <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                 </svg>
@@ -847,28 +851,28 @@ export const UIService = {
 
             ${this._getActionButtonsHtml(item)}
 
-            <div class="text-center pt-2">
+            <div class="px-2 pt-2">
                 ${badgeAgendamentoHtml}
-
-                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-1.5 px-6">${escapeHTML(nomeSeguro)}</p>
                 
-                <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
+                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-1.5 text-center px-4">${escapeHTML(nomeSeguro).toUpperCase()}</p>
+                
+                <p class="text-xs text-slate-600 mb-1 text-center">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 
                 ${timeInfoHtml}
-            </div>
 
-            <div class="mt-4 space-y-2">
-                <div class="grid grid-cols-2 gap-2">
-                    <button data-id="${item.id}" class="check-in-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
-                        Marcar Chegada
-                    </button>
-                    <button data-id="${item.id}" class="faltou-btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
-                        Faltou
+                <div class="mt-4 space-y-2">
+                    <div class="grid grid-cols-2 gap-2">
+                        <button data-id="${item.id}" class="check-in-btn bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide">
+                            Marcar Chegada
+                        </button>
+                        <button data-id="${item.id}" class="faltou-btn bg-amber-500 hover:bg-amber-600 text-white font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide" ${canEdit ? '' : 'disabled'}>
+                            Faltou
+                        </button>
+                    </div>
+                    <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide border border-slate-200" ${canEdit ? '' : 'disabled'}>
+                        Editar Dados
                     </button>
                 </div>
-                <button data-id="${item.id}" class="edit-assisted-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs transition active:scale-95 shadow-sm uppercase tracking-wide border border-slate-200" ${canEdit ? '' : 'disabled'}>
-                    Editar Dados
-                </button>
             </div>
 
             ${this._getStandardizedFooterHtml(item)}
@@ -965,6 +969,9 @@ export const UIService = {
             const card = document.createElement('div');
             const priorityClass = PautaService.getPriorityClass(item.priority);
             
+            // O botão do sistema restaurado para a lógica que define para onde o card vai:
+            const attendBtnClass = currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn';
+
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm ${priorityClass} mb-3 group transition-all duration-200 border-l-4 border-y border-r border-slate-200`;
             card.setAttribute('data-id', item.id);
 
@@ -1086,9 +1093,8 @@ export const UIService = {
                 </div>
             ` : '';
 
-            // Botão Atender agora com a mesma altura do botão de prioridade (py-2.5) e classe mágica
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="select-collaborator-btn bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
                     </svg>
@@ -1099,6 +1105,7 @@ export const UIService = {
             card.innerHTML = `
                 ${numeroBadge}
                 ${this._getActionButtonsHtml(item)}
+                
                 ${canDelete ? `
                 <button data-id="${item.id}" class="delete-btn absolute top-2 left-8 text-slate-300 hover:text-red-500 p-1 rounded-full transition-colors z-10" title="Deletar">
                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -1111,7 +1118,7 @@ export const UIService = {
 
                     ${badgeAgendamentoHtml}
 
-                    <p class="font-bold text-lg text-slate-800 leading-tight mb-2 uppercase text-center px-6">${escapeHTML(nomeSeguro)}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight mb-2 uppercase text-center px-4">${escapeHTML(nomeSeguro)}</p>
 
                     <p class="text-xs text-slate-600 mb-3 text-center">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
                     
@@ -1278,13 +1285,12 @@ export const UIService = {
 
                 <div class="text-center pt-2">
                     ${badgeAgendamentoHtml}
-                    
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
-                    <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
+                    <p class="text-xs text-slate-600 mb-2">Colaborador: <strong>${escapeHTML(atendenteNome)}</strong></p>
                     
-                    <div class="inline-flex items-center justify-center gap-1 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm mb-2">
-                        <span class="text-slate-500">Início do Tempo:</span>
+                    <div class="inline-flex items-center justify-center gap-1.5 bg-slate-50 border border-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs shadow-sm mb-2">
+                        <span class="text-slate-500">Início:</span>
                         <span class="font-bold text-slate-900">${startTime}</span>
                     </div>
 
@@ -1345,7 +1351,7 @@ export const UIService = {
                 : 'bg-slate-100 text-slate-300 border-slate-200';
 
             const badgeAgendamentoHtml = numAgendamento ? `
-                <div class="flex justify-center mb-3">
+                <div class="flex justify-center mb-3 mt-1">
                     <span class="inline-flex items-center gap-1.5 bg-slate-100 text-slate-700 px-3 py-1 rounded-full text-[10px] font-bold border border-slate-200 shadow-sm uppercase tracking-wide">
                         <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
                         Agendamento: <span class="text-blue-600">${escapeHTML(numAgendamento)}</span>
@@ -1494,7 +1500,7 @@ export const UIService = {
                     </div>
                 </div>
 
-                <div class="flex flex-col items-center text-[10px] md:text-xs mb-4 pt-3 border-t border-red-100 w-full">
+                <div class="flex flex-col items-center text-[10px] md:text-xs mb-4 pt-2 border-t border-red-100 w-full">
                     <p class="text-slate-500 italic mb-3">Status Verde: <span class="${isConfirmed ? 'text-emerald-600' : 'text-amber-600'} font-bold">${isConfirmed ? 'Lançado no Verde' : 'Pendente de Lançamento'}</span></p>
                     
                     <div class="flex justify-center gap-2 w-full px-2">
@@ -2080,3 +2086,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
+
