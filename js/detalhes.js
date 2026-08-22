@@ -1,3 +1,4 @@
+
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -1604,6 +1605,8 @@ export async function openDetailsModal(config) {
         renderSubjectSelection(selectionArea);
     }
     
+    renderizarFasesDocumentacao(currentAssistedId, currentPautaId, assisted.docWorkflowStatus, db);
+    
     getEl('assisted-details-modal')?.classList.remove('hidden');
 }
 
@@ -1646,68 +1649,6 @@ function renderSubjectSelection(selectionArea) {
     renderFilteredSubjects();
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
-
-
-export function renderizarFasesDocumentacao(assistedId, pautaId, statusAtual, db) {
-    // Procura o container para injetar os botões. Se não existir, ele cria automaticamente no final do modal.
-    let container = document.getElementById('doc-workflow-container');
-    if (!container) {
-        const modalBody = document.querySelector('#assisted-details-modal .modal-body') || document.querySelector('#assisted-details-modal > div > div.p-6') || document.querySelector('#assisted-details-modal .overflow-y-auto');
-        if (modalBody) {
-            container = document.createElement('div');
-            container.id = 'doc-workflow-container';
-            container.className = 'mt-6 pt-4 border-t border-slate-200';
-            modalBody.appendChild(container);
-        } else {
-            return; // Sai se não achar o modal
-        }
-    }
-
-    const etapas = [
-        'Pendente', 
-        'Assistido Orientado', 
-        'Preenchendo Dados', 
-        'Documentação Recebida', 
-        'Falta Digitalizar', 
-        'Digitalizado', 
-        'Inserido no Verde/CNP'
-    ];
-
-    let html = '<p class="text-sm font-bold text-slate-800 mb-3">📑 Status da Documentação / Triagem:</p><div class="flex flex-wrap gap-2">';
-    
-    etapas.forEach(etapa => {
-        const isSelected = (statusAtual === etapa) || (!statusAtual && etapa === 'Pendente');
-        const btnClass = isSelected 
-            ? 'bg-blue-600 text-white border-blue-700 shadow-md scale-105 font-bold' 
-            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50';
-        
-        html += `<button class="doc-etapa-btn px-3 py-1.5 rounded-lg border text-xs transition-all ${btnClass}" data-etapa="${etapa}">${etapa}</button>`;
-    });
-    html += '</div>';
-
-    container.innerHTML = html;
-
-    // Ação ao clicar: Salva imediatamente no banco e muda a cor do botão selecionado
-    container.querySelectorAll('.doc-etapa-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const novaEtapa = e.target.dataset.etapa;
-            renderizarFasesDocumentacao(assistedId, pautaId, novaEtapa, db); // Atualiza cor na tela
-            
-            try {
-                const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-                await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
-                
-                if (window.showNotification) window.showNotification("Status da documentação salvo!", "success");
-            } catch (error) {
-                console.error("Erro ao salvar etapa:", error);
-            }
-        });
-    });
-}
-
-
-
 
 
 // ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
