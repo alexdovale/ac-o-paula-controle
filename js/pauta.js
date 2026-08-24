@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (com sortAguardando limpa)
+// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -9,7 +9,6 @@ export const PautaService = {
     currentListeners: new Map(),
     actionCooldown: new Map(),
 
-    // LÓGICA DE DESTINO INTELIGENTE
     getDestinoRetorno(app) {
         if (app.currentPautaData?.useDelegationFlow === true) {
             return 'emAtendimento';
@@ -460,7 +459,7 @@ export const PautaService = {
                 if (eAtrasado) app.currentPautaData.stats.atrasados++;
                 else app.currentPautaData.stats.pontuais++;
             } catch (e) {
-                console.warn("Aviso: Falha ao salvar contador de estatísticas 3x1.", e);
+                console.warn("Aviso: Falha ao salvar contador de estatísticas.", e);
             }
 
             const updates = {
@@ -511,7 +510,7 @@ export const PautaService = {
                         currentAttendance: null
                     });
                 } catch (e) {
-                    console.warn("Aviso: Não foi possível atualizar o status do colaborador para livre.", e);
+                    console.warn("Aviso: Não foi possível atualizar o status do colaborador.", e);
                 }
             }
 
@@ -960,7 +959,6 @@ export const PautaService = {
         });
     },
 
-
     getPriorityClass(priority) {
         const classes = {
             'URGENTE': 'priority-urgente', 
@@ -1080,7 +1078,8 @@ export const PautaService = {
             'edit-attendant-btn',
             'manage-demands-btn',
             'toggle-confirmed-atendido',
-            'toggle-confirmed-faltoso'
+            'toggle-confirmed-faltoso',
+            'update-doc-status-btn'
         ];
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
@@ -1121,9 +1120,10 @@ export const PautaService = {
                     document.addEventListener('click', clickOutsideHandler);
                 }, 0);
             }
+            return;
         }
 
-        if (button.classList.contains('quick-action-item')) {
+        if (button.classList.contains('quick-action-item') && !button.classList.contains('update-doc-status-btn')) {
             e.stopPropagation();
             
             if (isApoio) {
@@ -1188,6 +1188,59 @@ export const PautaService = {
                     if (firstInput) firstInput.focus();
                 }, 150);
             }
+            return;
+        }
+
+        // ==========================================
+        // LÓGICA DO MINI-MODAL DE STATUS DA TRIAGEM
+        // ==========================================
+        if (button.classList.contains('update-doc-status-btn')) {
+            e.stopPropagation();
+            
+            // Fecha o menu de 3 pontinhos
+            const menu = document.getElementById(`quick-menu-${id}`);
+            if (menu) {
+                menu.classList.add('hidden');
+                const toggle = document.getElementById(`quick-toggle-${id}`);
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
+
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted) {
+                window.assistedIdToHandle = id;
+                
+                const statusAtual = assisted.docWorkflowStatus || 'Pendente';
+                const containerButtons = document.getElementById('doc-status-buttons-container');
+                const modalStatus = document.getElementById('doc-status-modal');
+                
+                if (containerButtons && modalStatus) {
+                    const etapas = [
+                        { val: 'Pendente', icon: '⚪' },
+                        { val: 'Assistido Orientado', icon: '🗣️' },
+                        { val: 'Preenchendo Dados', icon: '✍️' },
+                        { val: 'Documentação Recebida', icon: '📂' },
+                        { val: 'Falta Digitalizar', icon: '🖨️' },
+                        { val: 'Digitalizado', icon: '💻' },
+                        { val: 'Inserido no Verde/CNP', icon: '✅' }
+                    ];
+
+                    let botoesHtml = '';
+                    etapas.forEach(etapa => {
+                        const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
+                        const cssClass = isSelected 
+                            ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' 
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+                        
+                        botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
+                    });
+
+                    containerButtons.innerHTML = botoesHtml;
+                    modalStatus.classList.remove('hidden');
+                } else {
+                    console.error("Erro: Modal ou container de botões não encontrado no DOM. Verifique o index.html.");
+                }
+            }
+            return;
         }
 
         if (button.classList.contains('check-in-btn')) {
@@ -1307,7 +1360,6 @@ export const PautaService = {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
             if (!assisted) return;
             
-            // 👇 INTEGRAÇÃO COM A TV (PAINEL GERAL) 👇
             if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
                 PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
             }
@@ -1355,7 +1407,6 @@ export const PautaService = {
                 }, app.currentUserName);
                 showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
             } else {
-                // 👇 INTEGRAÇÃO COM A TV (PAINEL GERAL) 👇
                 if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
                     PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
                 }
@@ -1575,52 +1626,5 @@ export const PautaService = {
         }
     }
 };
-
-        if (button.classList.contains('update-doc-status-btn')) {
-            e.stopPropagation();
-            
-            // Fecha o menu de 3 pontinhos
-            const menu = document.getElementById(`quick-menu-${id}`);
-            if (menu) {
-                menu.classList.add('hidden');
-                const toggle = document.getElementById(`quick-toggle-${id}`);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
-
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                window.assistedIdToHandle = id;
-                
-                const statusAtual = assisted.docWorkflowStatus || 'Pendente';
-                const containerButtons = document.getElementById('doc-status-buttons-container');
-                
-                if (containerButtons) {
-                    const etapas = [
-                        { val: 'Pendente', icon: '⚪' },
-                        { val: 'Assistido Orientado', icon: '🗣️' },
-                        { val: 'Preenchendo Dados', icon: '✍️' },
-                        { val: 'Documentação Recebida', icon: '📂' },
-                        { val: 'Falta Digitalizar', icon: '🖨️' },
-                        { val: 'Digitalizado', icon: '💻' },
-                        { val: 'Inserido no Verde/CNP', icon: '✅' }
-                    ];
-
-                    let botoesHtml = '';
-                    etapas.forEach(etapa => {
-                        const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
-                        const cssClass = isSelected 
-                            ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' 
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
-                        
-                        botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
-                    });
-
-                    containerButtons.innerHTML = botoesHtml;
-                    document.getElementById('doc-status-modal').classList.remove('hidden');
-                }
-            }
-        }
-
-
 
 export default PautaService;
