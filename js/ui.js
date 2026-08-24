@@ -1,4 +1,3 @@
-
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SIGEP)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
@@ -533,22 +532,22 @@ export const UIService = {
         const tabAvulso = document.getElementById('tab-avulso');
         const isScheduledContainer = document.getElementById('is-scheduled-container');
         const formTitle = document.getElementById('form-title');
-        const pautaColumn = document.getElementById('pauta-column');
         const emAtendimentoColumn = document.getElementById('em-atendimento-column');
         const formContainer = document.getElementById('form-agendamento');
 
         formContainer.classList.remove('hidden');
 
+        // Mostra ou esconde a coluna "Em Atendimento" baseado na configuração da pauta (Delegação)
+        if (app.currentPautaData?.useDelegationFlow) {
+            emAtendimentoColumn?.classList.remove('hidden');
+        } else {
+            emAtendimentoColumn?.classList.add('hidden');
+        }
+
         if (tabName === 'agendamento') {
             tabAgendamento.classList.add('tab-active');
             tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
             isScheduledContainer.classList.remove('hidden');
-            pautaColumn.classList.remove('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
             if (formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
             this.showAgendamentoForm();
         } else {
@@ -556,15 +555,11 @@ export const UIService = {
             tabAgendamento.classList.remove('tab-active');
             tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
             isScheduledContainer.classList.add('hidden');
-            pautaColumn.classList.add('hidden');
-            if (app.currentPautaData?.useDelegationFlow) {
-                emAtendimentoColumn.classList.remove('hidden');
-            } else {
-                emAtendimentoColumn.classList.add('hidden');
-            }
             if (formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
             this.showAvulsoForm(app);
         }
+        
+        // Mantém a tela renderizada na aba, unificando a fila
         this.renderAssistedLists(app);
     },
 
@@ -639,34 +634,30 @@ export const UIService = {
             }
         });
 
-        const tabAgendamento = document.getElementById('tab-agendamento');
-        const currentMode = tabAgendamento?.classList.contains('tab-active') ? 'agendamento' : 'avulso';
         const searchTerms = this.getSearchTerms();
 
-        // 1. SEPARA POR STATUS E ORDENA (Para pegar o número absoluto)
-        let rawAguardando = allAssisted.filter(a => a.status === 'aguardando' && a.type === currentMode);
-        let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento' && a.type === currentMode);
-        let rawAtendidos = allAssisted.filter(a => a.status === 'atendido' && a.type === currentMode);
-        let rawFaltosos = allAssisted.filter(a => a.status === 'faltoso' && a.type === 'agendamento');
-        let rawPauta = allAssisted.filter(a => a.status === 'pauta' && a.type === 'agendamento');
+        // 1. SEPARA APENAS POR STATUS (Removido o filtro de tipo para UNIFICAR a fila)
+        let rawAguardando = allAssisted.filter(a => a.status === 'aguardando');
+        let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
+        let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
+        let rawFaltosos = allAssisted.filter(a => a.status === 'faltoso');
+        let rawPauta = allAssisted.filter(a => a.status === 'pauta');
         let rawDistribuicao = allAssisted.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao' || a.status === 'aguardandoNumero'));
 
-        // 2. ORDENAÇÃO
+        // 2. ORDENAÇÃO DE CADA LISTA
         rawPauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         if (currentPautaData?.ordemAtendimento) {
             rawAguardando = PautaService.sortAguardando(rawAguardando, currentPautaData.ordemAtendimento);
         }
         rawEmAtendimento.sort((a, b) => new Date(a.inAttendanceTime) - new Date(b.inAttendanceTime));
-        
-        // Atendidos e Faltosos na mesma ordem da pauta
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-        // 3. ATRIBUI ORDEM ABSOLUTA ANTES DO FILTRO DE PESQUISA
+        // 3. ATRIBUI ORDEM ABSOLUTA ANTES DO FILTRO DE PESQUISA (Evita sumir a numeração)
         rawAguardando.forEach((a, i) => a.absoluteOrder = i + 1);
         rawEmAtendimento.forEach((a, i) => a.absoluteOrder = i + 1);
 
-        // 4. APLICA O FILTRO DE PESQUISA
+        // 4. APLICA O FILTRO DE PESQUISA (Se houver)
         const lists = {
             pauta: rawPauta.filter(a => this.searchFilter(a, searchTerms.pauta)),
             aguardando: rawAguardando.filter(a => this.searchFilter(a, searchTerms.aguardando)),
@@ -789,7 +780,29 @@ export const UIService = {
         `;
     },
 
-    // MENU DE AÇÕES PADRONIZADO E MODERNO
+    _getDocWorkflowBadgeHtml(status) {
+        if (!status || status === 'Pendente') return '';
+        
+        const cfg = {
+            'Assistido Orientado': { icon: '🗣️', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+            'Preenchendo Dados': { icon: '✍️', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            'Documentação Recebida': { icon: '📂', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+            'Falta Digitalizar': { icon: '🖨️', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            'Digitalizado': { icon: '💻', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+            'Inserido no Verde/CNP': { icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+        };
+
+        const style = cfg[status] || { icon: '📌', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+
+        return `
+            <div class="flex justify-center mt-2 w-full">
+                <span class="inline-flex items-center gap-1.5 ${style.color} px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border shadow-sm uppercase">
+                    ${style.icon} ${escapeHTML(status)}
+                </span>
+            </div>
+        `;
+    },
+
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10">
@@ -848,6 +861,7 @@ export const UIService = {
 
         const numAgendamento = item.numeroAgendamento || item.numAgendamento || item.assistedManualNumAgendamento || '';
         const nomeSeguro = item.name || '';
+        const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
         const card = document.createElement('div');
         card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3';
@@ -856,11 +870,19 @@ export const UIService = {
         const timeInfoHtml = `
             <div class="flex justify-center w-full mb-2">
                 <div class="inline-flex items-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs font-semibold shadow-sm">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                    <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                     <span>Agendado:</span> <span class="text-blue-900">${item.scheduledTime || '--:--'}</span>
                 </div>
             </div>
         `;
+
+        const badgeAgendamentoHtml = numAgendamento ? `
+            <div class="flex justify-center mt-2 mb-2 w-full">
+                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
+                    Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                </span>
+            </div>
+        ` : '';
 
         card.innerHTML = `
             ${canDelete ? `
@@ -878,7 +900,8 @@ export const UIService = {
                 
                 <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                     ${timeInfoHtml}
-                    ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                    ${badgeAgendamentoHtml}
+                    ${docWorkflowBadge}
                 </div>
 
                 <div class="mt-4 space-y-2">
@@ -918,7 +941,7 @@ export const UIService = {
                 if (peopleInRoom.length === 0) return;
 
                 const roomGroup = document.createElement('div');
-                roomGroup.className = "mb-4 border border-gray-200 rounded-lg overflow-hidden bg-gray-50 room-group-container shadow-sm";
+                roomGroup.className = "mb-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 room-group-container shadow-sm";
 
                 roomGroup.innerHTML = `
                     <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
@@ -986,13 +1009,12 @@ export const UIService = {
             const canAttend = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
             const card = document.createElement('div');
-            
             const priorityClass = PautaService.getPriorityClass(item.priority);
             const attendBtnClass = currentPautaData?.useDelegationFlow ? 'select-collaborator-btn' : 'attend-directly-from-aguardando-btn';
 
-            // Classe original restaurada mantendo as cores e bordas como era
             card.className = `assisted-card relative bg-white p-4 rounded-lg shadow-sm ${priorityClass} mb-2 group transition-all duration-200`;
             card.setAttribute('data-id', item.id);
 
@@ -1105,6 +1127,14 @@ export const UIService = {
                 </div>
             `;
 
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mt-2 mb-2 w-full">
+                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
+                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
+
             const atenderButton = canAttend
                 ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
@@ -1132,10 +1162,11 @@ export const UIService = {
 
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
                     
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                         ${timeInfoHtml}
-                        ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                        ${badgeAgendamentoHtml}
                         ${roomDropdownHtml ? `<div class="mt-2">${roomDropdownHtml}</div>` : ''}
+                        ${docWorkflowBadge}
                     </div>
                     
                     ${docStatusHtml}
@@ -1199,6 +1230,7 @@ export const UIService = {
             const isDelegated = !!(item.assignedCollaborator && item.assignedCollaborator.name);
             const canDelegate = canDelegateOrFinalize && !isDelegated;
             const delegateBtnClass = isDelegated ? 'bg-indigo-300 cursor-not-allowed' : 'bg-indigo-500 hover:bg-indigo-600';
+            const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
             const card = document.createElement('div');
             card.className = `assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-3`;
@@ -1251,13 +1283,21 @@ export const UIService = {
             }
 
             const timeInfoHtml = `
-                <div class="inline-flex items-center justify-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-[11px] shadow-sm w-max mx-auto">
+                <div class="inline-flex items-center justify-center gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-2.5 py-1 rounded text-[11px] shadow-sm w-max mx-auto">
                     <div class="flex items-center gap-1">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         <span>Início: <span class="font-bold">${startTime}</span></span>
                     </div>
                 </div>
             `;
+
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mt-2 mb-2 w-full">
+                    <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
+                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
+                    </span>
+                </div>
+            ` : '';
 
             const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
@@ -1297,13 +1337,14 @@ export const UIService = {
                 </button>` : ''}
 
                 <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
                     
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
-                        ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                        ${badgeAgendamentoHtml}
+                        ${docWorkflowBadge}
                     </div>
 
                     ${historicoTransferenciaHtml}
@@ -1345,6 +1386,7 @@ export const UIService = {
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
             const card = document.createElement('div');
             card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-gray-100 mb-4';
@@ -1380,6 +1422,14 @@ export const UIService = {
                 </div>
             `;
 
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mt-2 mb-2 w-full">
+                    <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm">
+                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
+
             card.innerHTML = `
                 <div class="absolute top-3 right-3 z-10">
                     <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border flex items-center justify-center ${confirmButton} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Verde">
@@ -1409,7 +1459,8 @@ export const UIService = {
 
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
-                        ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                        ${badgeAgendamentoHtml}
+                        ${docWorkflowBadge}
                     </div>
                 </div>
 
@@ -1460,6 +1511,7 @@ export const UIService = {
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+            const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
             const card = document.createElement('div');
             const isConfirmed = item.isConfirmed || false;
@@ -1483,6 +1535,14 @@ export const UIService = {
                 </div>
             `;
 
+            const badgeAgendamentoHtml = numAgendamento ? `
+                <div class="flex justify-center mt-2 mb-2 w-full">
+                    <span class="inline-flex items-center gap-1 bg-white text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-red-200 shadow-sm">
+                        Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                    </span>
+                </div>
+            ` : '';
+
             card.innerHTML = `
                 <div class="absolute top-3 right-3 z-10">
                     <button data-id="${item.id}" class="toggle-confirmed-faltoso w-7 h-7 rounded-full border flex items-center justify-center ${confirmButtonClass} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Lançar falta no Verde">
@@ -1500,7 +1560,8 @@ export const UIService = {
 
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                         ${timeInfoHtml}
-                        ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                        ${badgeAgendamentoHtml}
+                        ${docWorkflowBadge}
                     </div>
                 </div>
 
@@ -1578,6 +1639,7 @@ export const UIService = {
                 const canManageDistribution = currentUserRole !== 'apoio';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
                 const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
+                const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
                 const card = document.createElement('div');
                 card.className = 'assisted-card relative bg-white p-4 rounded-xl shadow-sm border border-cyan-200 mb-3';
@@ -1585,7 +1647,7 @@ export const UIService = {
 
                 const linkExterno = `${baseUrl}/atendimento_externo.html?pautaId=${pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(userName)}&token=${item.delegationToken || ''}`;
 
-                const numeroOrdem = index + 1;
+                const numeroOrdem = item.absoluteOrder || (index + 1);
                 const numeroBadge = `
                     <div class="absolute -left-2 -top-2 w-8 h-8 bg-cyan-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
                         ${numeroOrdem}
@@ -1604,6 +1666,14 @@ export const UIService = {
                         </div>
                     </div>
                 `;
+
+                const badgeAgendamentoHtml = numAgendamento ? `
+                    <div class="flex justify-center mt-2 mb-2 w-full">
+                        <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2.5 py-1 rounded text-[10px] font-bold tracking-wide border border-slate-200 shadow-sm mx-auto">
+                            Nº DO AGEND.: <span class="text-blue-700 text-xs ml-1">${escapeHTML(numAgendamento)}</span>
+                        </span>
+                    </div>
+                ` : '';
 
                 const historicoTransferenciaHtml = item.historicoTransferencia
                     ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg flex items-center justify-center gap-1 font-medium shadow-sm mb-2 text-center w-full">
@@ -1687,7 +1757,8 @@ export const UIService = {
                         
                         <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                             ${timeInfoHtml}
-                            ${numAgendamento ? `<p class="text-xs text-slate-600 mt-2 text-center">Nº do Agend.: <strong class="text-slate-800">${escapeHTML(numAgendamento)}</strong></p>` : ''}
+                            ${badgeAgendamentoHtml}
+                            ${docWorkflowBadge}
                         </div>
                     </div>
 
@@ -2094,4 +2165,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
-
