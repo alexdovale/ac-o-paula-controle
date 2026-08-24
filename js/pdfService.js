@@ -417,6 +417,10 @@ export const PDFService = {
                                 <span class="font-bold text-slate-700 text-sm">Assunto Principal</span>
                             </label>
                             <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="demandas" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Demandas Adicionais</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
                                 <input type="checkbox" value="attendant" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Responsável pelo Atendimento</span>
                             </label>
@@ -487,6 +491,7 @@ export const PDFService = {
                 { key: 'attendedTime', label: 'Chamado/Fim' },
                 { key: 'duration', label: 'Duração' },
                 { key: 'subject', label: 'Assunto' },
+                { key: 'demandas', label: 'Demandas Adicionais' },
                 { key: 'attendant', label: 'Atendente' }
             ];
 
@@ -510,6 +515,11 @@ export const PDFService = {
                 const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const atendente = getAttendantNameForPDF(item);
+                
+                let demandasStr = '---';
+                if (item.demandas && item.demandas.descricoes && item.demandas.descricoes.length > 0) {
+                    demandasStr = item.demandas.descricoes.join(', ');
+                }
 
                 const rowData = {
                     name: cleanString(item.name).toUpperCase(),
@@ -519,6 +529,7 @@ export const PDFService = {
                     attendedTime: attStr,
                     duration: duration,
                     subject: cleanString(item.subject).toUpperCase(),
+                    demandas: cleanString(demandasStr).toUpperCase(),
                     attendant: cleanString(atendente).toUpperCase()
                 };
 
