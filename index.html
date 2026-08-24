@@ -693,7 +693,7 @@
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
                                 <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
                                 <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-slate-200 z-30 space-y-2">
                                     <p class="text-xs font-bold text-slate-500 uppercase mb-2">Mostrar Colunas:</p>
@@ -906,52 +906,99 @@
                 </div>
                 
                 <footer class="mt-8 sm:mt-12 bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 border border-slate-200">
-                    <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-slate-800 mb-2 text-center">Entenda a Ordem de Atendimento</h3>
+                    <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-slate-800 mb-2 text-center">Entenda a Ordem de Atendimento do Sistema</h3>
                     <div id="order-explanation-content">
                         <div id="logic-explanation-padrao">
                             <div class="text-center mb-4">
-                                <button id="toggle-logic-btn-padrao" class="text-green-600 hover:text-green-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que esta ordem é a mais justa? (Clique para expandir)</button>
+                                <button id="toggle-logic-btn-padrao" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que a fila muda sozinha? (Clique para entender a lógica)</button>
                             </div>
-                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-slate-200 shadow-inner space-y-4">
-                                <div class="border-l-4 border-green-500 pl-3 sm:pl-4">
-                                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro</h4>
-                                    <p class="text-[10px] sm:text-xs text-slate-600">Priorizamos a <b>Pontualidade</b>. Em caso de empate (mesmo horário agendado), o critério de desempate é a <b>Hora da Chegada Real</b> na recepção.</p>
+                            
+                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-slate-200 shadow-inner space-y-5">
+                                <div class="border-l-4 border-blue-500 pl-3 sm:pl-4">
+                                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro (Dinâmica)</h4>
+                                    <p class="text-[10px] sm:text-xs text-slate-600">A pauta do SIGEP é dinâmica e prioriza a <b>Pontualidade</b>. A fila é organizada inicialmente pelo <b>Horário Agendado</b>, mas atrasos e encaixes avulsos reajustam as posições automaticamente com base na <b>hora exata da chegada na recepção</b>.</p>
                                 </div>
-                                <div class="bg-slate-50 p-3 sm:p-4 rounded-lg">
-                                    <h4 class="font-bold text-slate-700 text-[9px] sm:text-[10px] uppercase mb-2 sm:mb-3 tracking-widest text-center">Exemplo Prático (Desempate)</h4>
-                                    <div class="space-y-2 text-[10px] sm:text-[11px]">
-                                        <div class="flex justify-between border-b border-slate-200 pb-1">
-                                            <span><b>João:</b> Agendado 09:00 | Chegou 08:08</span>
-                                            <span class="text-green-600 font-bold">1º na Fila</span>
+                                
+                                <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-100 pb-2">Exemplos Práticos do Sistema</h4>
+                                
+                                <!-- GRID COM OS 4 CENÁRIOS DE EXEMPLO -->
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                    
+                                    <!-- Cenário 1: Desempate Exato -->
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: O Desempate Exato</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Ambos são pontuais. O sistema desempata a favor da Maria porque o check-in dela foi feito primeiro.</p>
                                         </div>
-                                        <div class="flex justify-between border-b border-slate-200 pb-1">
-                                            <span><b>Maria:</b> Agendado 09:00 | Chegou 08:30</span>
-                                            <span class="text-blue-600 font-bold">2º na Fila</span>
-                                        </div>
-                                        <p class="text-[8px] sm:text-[9px] text-slate-500 mt-2 italic">* João fica na frente porque, embora ambos sejam das 09h, ele chegou fisicamente antes na unidade.</p>
                                     </div>
+
+                                    <!-- Cenário 2: Atraso vs Avulso -->
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Ana:</b> Atendimento Avulso | Chegou 09:10</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Pedro:</b> Agendado 09:00 | Chegou 09:20</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cenário 3: O Fura-Fila Legal -->
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Sr. José:</b> Urgência / 80+ | Chegou 10:00</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades absolutas (Idosos 80+, Risco de Morte) ignoram a regra de horário e vão direto para o topo da fila global.</p>
+                                        </div>
+                                    </div>
+
+                                    <!-- Cenário 4: Chegar muito cedo -->
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia chegou super cedo, mas a fila respeita a faixa de horário. Ela será a primeira das 10h, mas não passa a pauta das 09h.</p>
+                                        </div>
+                                    </div>
+
                                 </div>
-                                <ul class="list-disc list-inside space-y-1 sm:space-y-2 text-slate-700 text-[10px] sm:text-[11px]">
-                                    <li><b>Hierarquia Legal:</b> Idoso 80+ e Urgência Médica têm prioridade sobre todos os outros.</li>
-                                    <li><b>Atrasos:</b> Quem atrasa muito perde a vez para os pontuais do próximo horário, mas não vai para o "fim da fila" de quem agendou horas depois.</li>
-                                </ul>
                             </div>
+                            
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
-                                <div class="bg-red-50 p-3 sm:p-4 rounded-lg border-l-4 border-red-500">
-                                    <p class="font-bold text-red-700 text-[10px] sm:text-xs">Lei Brasileira 🚨</p>
-                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Preferência absoluta para 80+, Urgências, PCD, Gestantes e 60+ (nesta ordem).</p>
+                                <div class="bg-red-50 p-3 sm:p-4 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="font-bold text-red-700 text-[10px] sm:text-xs uppercase tracking-wider">Urgência 🚨</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Casos marcados como URGENTE no sistema (Idosos 80+, PCD grave, risco de vida) furam a fila imediatamente.</p>
                                 </div>
-                                <div class="bg-green-50 p-3 sm:p-4 rounded-lg border-l-4 border-green-500">
-                                    <p class="font-bold text-green-700 text-[10px] sm:text-xs">Pontuais ✅</p>
-                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Quem chegou no horário ou antes. O desempate é por quem fez o check-in primeiro.</p>
+                                <div class="bg-green-50 p-3 sm:p-4 rounded-xl border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider">Pontuais ✅</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Agendados que chegam no horário (ou com até 15 min de tolerância). O desempate é por quem fez o check-in na recepção primeiro.</p>
                                 </div>
-                                <div class="bg-orange-50 p-3 sm:p-4 rounded-lg border-l-4 border-orange-500">
-                                    <p class="font-bold text-orange-700 text-[10px] sm:text-xs">Atraso Leve / Avulso ⏳</p>
-                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-1">Atrasos de até 30 min ou atendimentos sem agendamento (ordem de chegada).</p>
+                                <div class="bg-blue-50 p-3 sm:p-4 rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase tracking-wider">Avulsos 🚶</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Não possuem horário marcado. Entram na fila disputando a posição de acordo com o horário exato em que chegaram na Defensoria.</p>
                                 </div>
-                                <div class="bg-slate-100 p-3 sm:p-4 rounded-lg border-l-4 border-slate-400">
-                                    <p class="font-bold text-slate-700 text-[10px] sm:text-xs">Atraso Grave ⚠️</p>
-                                    <p class="text-[8px] sm:text-[9px] text-slate-500 mt-1">Atraso superior a 30 min. O assistido aguarda uma brecha entre os pontuais.</p>
+                                <div class="bg-orange-50 p-3 sm:p-4 rounded-xl border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+                                    <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados ⚠️</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-500 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
                                 </div>
                             </div>
                         </div>
