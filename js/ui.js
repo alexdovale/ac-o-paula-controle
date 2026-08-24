@@ -103,13 +103,9 @@ export const UIService = {
         const container = document.getElementById('collaborator-selection-list') || document.getElementById('collaborators-list-container');
         const searchInput = document.getElementById('collaborator-search-input');
         
-        if (!container) {
-            console.warn('Container da lista de colaboradores não encontrado no HTML');
-            return;
-        }
+        if (!container) return;
         
         container.innerHTML = '';
-        
         window.selectedCollaboratorId = null;
         window.selectedCollaboratorName = null;
         
@@ -190,7 +186,6 @@ export const UIService = {
             const applyFilter = (term) => {
                 const t = (term || '').toLowerCase().trim();
                 const items = container.querySelectorAll('.collaborator-item');
-                
                 items.forEach(item => {
                     const nome = (item.dataset.nome || '').toLowerCase();
                     item.style.display = (!t || nome.includes(t)) ? 'flex' : 'none';
@@ -198,9 +193,7 @@ export const UIService = {
             };
 
             const newSearchInput = searchInput.cloneNode(true);
-            if(searchInput.parentNode) {
-                 searchInput.parentNode.replaceChild(newSearchInput, searchInput);
-            }
+            if(searchInput.parentNode) searchInput.parentNode.replaceChild(newSearchInput, searchInput);
             
             newSearchInput.addEventListener('input', (e) => applyFilter(e.target.value));
             newSearchInput.value = ''; 
@@ -210,12 +203,10 @@ export const UIService = {
 
     destacarSelecao(container, btnSelecionado) {
         if (!container || !btnSelecionado) return;
-        
         container.querySelectorAll('.collaborator-item').forEach(b => {
             b.classList.remove('border-blue-500', 'ring-2', 'ring-blue-100', 'bg-blue-50/30');
             b.classList.add('border-slate-200');
         });
-        
         btnSelecionado.classList.add('border-blue-500', 'ring-2', 'ring-blue-100', 'bg-blue-50/30');
         btnSelecionado.classList.remove('border-slate-200');
     },
@@ -226,12 +217,9 @@ export const UIService = {
 
         const isPeriodo = activeFilter === 'periodo';
         const isUnidades = activeFilter === 'unidades';
-
         const isAdmin = app.currentUser?.role === 'admin' || app.currentUser?.role === 'superadmin';
         const userUnidades = app.currentUser?.unidades || [];
-
         const hasUnidadesVinculadas = userUnidades.length > 0 || isAdmin;
-
         const isEventoMode = app?.currentMode === 'evento';
 
         const dateFiltersHTML = `
@@ -318,9 +306,7 @@ export const UIService = {
                 if (isAdmin) {
                     getDocs(collection(app.db, "unidades")).then(snap => {
                         const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
-
                         let html = `<option value="todas"> Todas as Unidades (Visão Admin)</option>`;
-
                         if (userUnidades.length > 0) {
                             html += `<optgroup label=" Minhas Unidades Vinculadas">`;
                             userUnidades.forEach(u => {
@@ -330,15 +316,12 @@ export const UIService = {
                             html += `</optgroup>`;
                             html += `<optgroup label=" Todas as Unidades do Sistema">`;
                         }
-
                         allUnidades.forEach(nome => {
                             html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
                         });
-
                         if (userUnidades.length > 0) {
                             html += `</optgroup>`;
                         }
-
                         selectUnidade.innerHTML = html;
                     }).catch(err => {
                         console.error("Erro ao carregar unidades do sistema:", err);
@@ -361,16 +344,13 @@ export const UIService = {
         if (filterSelect) {
             filterSelect.addEventListener('change', (e) => {
                 const val = e.target.value;
-
                 if (periodoContainer) periodoContainer.classList.add('hidden');
                 if (unidadesContainer) unidadesContainer.classList.add('hidden');
-
                 if (val === 'periodo' && periodoContainer) {
                     periodoContainer.classList.remove('hidden');
                 } else if (val === 'unidades' && unidadesContainer) {
                     unidadesContainer.classList.remove('hidden');
                 }
-
                 onFilterChange(val);
             });
         }
@@ -537,7 +517,6 @@ export const UIService = {
 
         formContainer.classList.remove('hidden');
 
-        // Mostra ou esconde a coluna "Em Atendimento" baseado na configuração da pauta (Delegação)
         if (app.currentPautaData?.useDelegationFlow) {
             emAtendimentoColumn?.classList.remove('hidden');
         } else {
@@ -559,7 +538,6 @@ export const UIService = {
             this.showAvulsoForm(app);
         }
         
-        // Mantém a tela renderizada na aba, unificando a fila
         this.renderAssistedLists(app);
     },
 
@@ -636,7 +614,6 @@ export const UIService = {
 
         const searchTerms = this.getSearchTerms();
 
-        // 1. SEPARA APENAS POR STATUS (Removido o filtro de tipo para UNIFICAR a fila)
         let rawAguardando = allAssisted.filter(a => a.status === 'aguardando');
         let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
         let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
@@ -644,7 +621,6 @@ export const UIService = {
         let rawPauta = allAssisted.filter(a => a.status === 'pauta');
         let rawDistribuicao = allAssisted.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao' || a.status === 'aguardandoNumero'));
 
-        // 2. ORDENAÇÃO DE CADA LISTA
         rawPauta.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         if (currentPautaData?.ordemAtendimento) {
             rawAguardando = PautaService.sortAguardando(rawAguardando, currentPautaData.ordemAtendimento);
@@ -653,11 +629,9 @@ export const UIService = {
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-        // 3. ATRIBUI ORDEM ABSOLUTA ANTES DO FILTRO DE PESQUISA (Evita sumir a numeração)
         rawAguardando.forEach((a, i) => a.absoluteOrder = i + 1);
         rawEmAtendimento.forEach((a, i) => a.absoluteOrder = i + 1);
 
-        // 4. APLICA O FILTRO DE PESQUISA (Se houver)
         const lists = {
             pauta: rawPauta.filter(a => this.searchFilter(a, searchTerms.pauta)),
             aguardando: rawAguardando.filter(a => this.searchFilter(a, searchTerms.aguardando)),
@@ -691,8 +665,6 @@ export const UIService = {
 
         setTimeout(() => { 
             if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); 
-            
-            // INICIA OS BOTÕES DE DUAS TELAS
             this.setupColumnControls(app); 
             this.applyPopoutMode(); 
         }, 100);
@@ -796,7 +768,7 @@ export const UIService = {
 
         return `
             <div class="flex justify-center mt-2 w-full">
-                <span class="inline-flex items-center gap-1.5 ${style.color} px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border shadow-sm uppercase">
+                <span class="inline-flex items-center gap-1.5 ${style.color} px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border shadow-sm uppercase cursor-default">
                     ${style.icon} ${escapeHTML(status)}
                 </span>
             </div>
@@ -826,7 +798,13 @@ export const UIService = {
                         <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
                         </button>
-                        <div class="border-t border-slate-100 my-1"></div>
+                        
+                        <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                        <button data-id="${item.id}" class="update-doc-status-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 flex items-center gap-2 transition-colors font-bold text-blue-700">
+                            <span class="w-4 h-4 flex items-center justify-center">📑</span> Mudar Status Triagem
+                        </button>
+                        <div class="h-px bg-slate-100 my-1 mx-3"></div>
+
                         <button data-id="${item.id}" class="edit-assisted-btn quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Dados
                         </button>
