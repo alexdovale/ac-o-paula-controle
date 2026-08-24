@@ -1198,6 +1198,46 @@
             </div>
         </div>
     </div>
+    
+        <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM -->
+    <div id="doc-status-modal" class="hidden fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all">
+            <div class="p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 flex justify-between items-center">
+                <h3 class="text-lg font-bold text-white flex items-center gap-2">📑 Status da Triagem</h3>
+                <button onclick="document.getElementById('doc-status-modal').classList.add('hidden')" class="text-white/80 hover:text-white text-2xl font-bold leading-none">&times;</button>
+            </div>
+            <div class="p-4 bg-slate-50 space-y-2 max-h-[60vh] overflow-y-auto" id="doc-status-buttons-container">
+                <!-- Os botões serão injetados aqui -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Lógica super rápida para salvar o status com 1 clique
+        document.getElementById('doc-status-buttons-container')?.addEventListener('click', async (e) => {
+            const btn = e.target.closest('.doc-etapa-btn');
+            if (!btn) return;
+            
+            const novaEtapa = btn.dataset.etapa;
+            const pautaId = window.app?.currentPauta?.id;
+            const assistedId = window.assistedIdToHandle;
+            
+            if (!pautaId || !assistedId) return;
+
+            document.getElementById('doc-status-modal').classList.add('hidden');
+            
+            try {
+                const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistedId);
+                await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
+                
+                if (window.showNotification) window.showNotification("Status atualizado na tela!", "success");
+            } catch (err) {
+                console.error("Erro ao salvar status da triagem:", err);
+            }
+        });
+    </script>
+
 
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js?v=2"></script>
