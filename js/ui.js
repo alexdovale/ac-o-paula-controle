@@ -775,6 +775,7 @@ export const UIService = {
         `;
     },
 
+        // MENU DE AÇÕES PADRONIZADO E MODERNO
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10">
@@ -800,6 +801,7 @@ export const UIService = {
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                        <!-- AQUI ESTÁ O BOTÃO DE STATUS DA TRIAGEM -->
                         <button data-id="${item.id}" class="update-doc-status-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 flex items-center gap-2 transition-colors font-bold text-blue-700">
                             <span class="w-4 h-4 flex items-center justify-center">📑</span> Mudar Status Triagem
                         </button>
@@ -816,6 +818,7 @@ export const UIService = {
             </div>
         `;
     },
+
 
     renderPautaColumn(items) {
         const container = document.getElementById('pauta-list');
