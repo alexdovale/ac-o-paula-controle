@@ -224,7 +224,6 @@
             background-color: #fff5f5 !important;
             animation: piscaAlertaVermelho 1s infinite;
         }
-
     </style>
 </head>
 <body class="p-0 sm:p-0 md:p-0">
@@ -238,6 +237,7 @@
     </div>
 
     <div id="main-wrapper" class="p-2 sm:p-4 md:p-8 w-full flex flex-col items-center">
+        <!-- LOGIN CONTAINER -->
         <div id="login-container" class="hidden w-full min-h-screen flex items-center justify-center p-2">
             <div class="max-w-md w-full bg-white p-5 sm:p-8 rounded-xl shadow-lg">
                 <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="mx-auto h-20 sm:h-24 w-auto mb-6">
@@ -693,7 +693,7 @@
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
                                 <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
                                 <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-slate-200 z-30 space-y-2">
                                     <p class="text-xs font-bold text-slate-500 uppercase mb-2">Mostrar Colunas:</p>
@@ -1199,7 +1199,7 @@
         </div>
     </div>
     
-        <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM -->
+    <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM -->
     <div id="doc-status-modal" class="hidden fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all">
             <div class="p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 flex justify-between items-center">
@@ -1207,13 +1207,13 @@
                 <button onclick="document.getElementById('doc-status-modal').classList.add('hidden')" class="text-white/80 hover:text-white text-2xl font-bold leading-none">&times;</button>
             </div>
             <div class="p-4 bg-slate-50 space-y-2 max-h-[60vh] overflow-y-auto" id="doc-status-buttons-container">
-                <!-- Os botões serão injetados aqui -->
+                <!-- Os botões serão injetados aqui pelo JavaScript -->
             </div>
         </div>
     </div>
 
     <script>
-        // Lógica super rápida para salvar o status com 1 clique
+        // Lógica independente e super rápida para salvar o status com 1 clique
         document.getElementById('doc-status-buttons-container')?.addEventListener('click', async (e) => {
             const btn = e.target.closest('.doc-etapa-btn');
             if (!btn) return;
@@ -1224,8 +1224,10 @@
             
             if (!pautaId || !assistedId) return;
 
+            // 1. Esconde o modal imediatamente para dar sensação de velocidade
             document.getElementById('doc-status-modal').classList.add('hidden');
             
+            // 2. Salva no banco de dados em segundo plano
             try {
                 const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistedId);
@@ -1237,7 +1239,6 @@
             }
         });
     </script>
-
 
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js?v=2"></script>
@@ -1380,48 +1381,5 @@
             });
         }
     </script>
-    
-    
-        <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM -->
-    <div id="doc-status-modal" class="hidden fixed inset-0 bg-black/50 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all">
-            <div class="p-4 border-b bg-gradient-to-r from-blue-600 to-indigo-600 flex justify-between items-center">
-                <h3 class="text-lg font-bold text-white flex items-center gap-2">📑 Status da Triagem</h3>
-                <button onclick="document.getElementById('doc-status-modal').classList.add('hidden')" class="text-white/80 hover:text-white text-2xl font-bold leading-none">&times;</button>
-            </div>
-            <div class="p-4 bg-slate-50 space-y-2 max-h-[60vh] overflow-y-auto" id="doc-status-buttons-container">
-                <!-- Os botões serão injetados aqui pelo JavaScript -->
-            </div>
-        </div>
-    </div>
-
-    <script>
-        // Lógica independente e super rápida para salvar o status com 1 clique
-        document.getElementById('doc-status-buttons-container')?.addEventListener('click', async (e) => {
-            const btn = e.target.closest('.doc-etapa-btn');
-            if (!btn) return;
-            
-            const novaEtapa = btn.dataset.etapa;
-            const pautaId = window.app?.currentPauta?.id;
-            const assistedId = window.assistedIdToHandle;
-            
-            if (!pautaId || !assistedId) return;
-
-            // 1. Esconde o modal imediatamente para dar sensação de velocidade
-            document.getElementById('doc-status-modal').classList.add('hidden');
-            
-            // 2. Salva no banco de dados em segundo plano
-            try {
-                const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistedId);
-                await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
-                
-                if (window.showNotification) window.showNotification("Status atualizado na tela!", "success");
-            } catch (err) {
-                console.error("Erro ao salvar status da triagem:", err);
-            }
-        });
-    </script>
-
 </body>
 </html>
