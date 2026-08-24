@@ -105,12 +105,9 @@ const loadImage = (url) => {
 };
 
 // FUNÇÃO: Adiciona a logo nos demais relatórios/estatísticas (Exceção da Ata)
-// Agora SEMPRE fixada na parte de cima (startY pequeno) e com altura máxima
-// limitada, retornando a altura real ocupada (bottomY) para que cada relatório
-// posicione o título/conteúdo abaixo da logo, evitando qualquer sobreposição.
 const addLogoHeader = async (doc, startY = 15) => {
     const larguraDesejada = 45;
-    const alturaMaxima = 35; // trava de segurança contra logos com proporção diferente
+    const alturaMaxima = 35; 
 
     try {
         const img = await loadImage(LOGO_DEMAIS_PDF_RAW);
@@ -368,21 +365,107 @@ export const PDFService = {
         }
     },
 
+    // MÉTODOS PARA RELATÓRIO DE ATENDIDOS COM SELEÇÃO DE COLUNAS
     async generateAtendidosPDF(arg1, arg2) {
+        return new Promise((resolve) => {
+            const modalId = 'pdf-column-selector-modal';
+            let modal = document.getElementById(modalId);
+            if (modal) modal.remove();
+
+            modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+            
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
+                            Configurar Relatório
+                        </h3>
+                    </div>
+                    <div class="p-5 overflow-y-auto">
+                        <p class="text-xs text-slate-500 mb-4 font-medium">Selecione quais informações devem constar no PDF final:</p>
+                        
+                        <div class="space-y-2 mb-2" id="pdf-columns-checkboxes">
+                            <label class="flex items-center gap-3 p-3 border rounded-xl bg-slate-50 opacity-70 cursor-not-allowed border-slate-200">
+                                <input type="checkbox" checked disabled class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Nome do Assistido (Obrigatório)</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="numAgendamento" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Nº do Agendamento / Senha</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="scheduledTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Horário Agendado</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="arrivalTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Horário de Chegada</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="attendedTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Horário de Finalização</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="duration" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Duração do Atendimento</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="subject" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Assunto Principal</span>
+                            </label>
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="attendant" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Responsável pelo Atendimento</span>
+                            </label>
+                        </div>
+                    </div>
+                    <div class="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <button id="cancel-pdf-btn" class="flex-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition-colors text-xs uppercase shadow-sm">Cancelar</button>
+                        <button id="confirm-pdf-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md text-xs uppercase flex items-center justify-center gap-2">
+                            <span>Gerar PDF</span>
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+
+            document.getElementById('cancel-pdf-btn').onclick = () => {
+                modal.remove();
+                resolve(false);
+            };
+
+            document.getElementById('confirm-pdf-btn').onclick = async () => {
+                const btn = document.getElementById('confirm-pdf-btn');
+                btn.innerHTML = `<span class="animate-spin">⏳</span> Gerando...`;
+                btn.disabled = true;
+
+                const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
+                
+                let atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
+                const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
+
+                const success = await PDFService._buildAtendidosPDF(atendidosList, pautaNome, selectedColumns);
+                
+                modal.remove();
+                resolve(success);
+            };
+        });
+    },
+
+    async _buildAtendidosPDF(atendidosList, pautaNome, selectedColumns) {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
 
-            // Logo fixada no topo. bottomY indica onde ela termina, para o
-            // título nunca ser desenhado por cima da imagem.
             const logoInfo = await addLogoHeader(docPDF, 20);
             const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
-            let atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
-            const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
-
-            // ⭐ ORDENAÇÃO POR HORÁRIO DE AGENDAMENTO
+            // Ordenação
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
@@ -392,15 +475,31 @@ export const PDFService = {
             docPDF.setFontSize(10);
             docPDF.setTextColor(100);
             const totalAssuntos = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-            docPDF.text(`Data: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
-            docPDF.text(`Total: ${atendidosList.length} assistidos | Assuntos totais: ${totalAssuntos}`, 40, tituloY + 28);
+            docPDF.text(`Data da Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
+            docPDF.text(`Total: ${atendidosList.length} assistidos | Volume de Demandas (Múltiplas): ${totalAssuntos}`, 40, tituloY + 28);
 
-            // ⭐ REMOÇÃO DA COLUNA VALIDADO VERDE
-            const head = [["#", "Nome", "Agendado", "Chegou", "Chamado", "Duração", "Assunto", "Atendente"]];
+            // Definição Mestre das Colunas
+            const colDef = [
+                { key: 'name', label: 'Nome Completo' },
+                { key: 'numAgendamento', label: 'Nº Agend.' },
+                { key: 'scheduledTime', label: 'Agendado' },
+                { key: 'arrivalTime', label: 'Chegou' },
+                { key: 'attendedTime', label: 'Chamado/Fim' },
+                { key: 'duration', label: 'Duração' },
+                { key: 'subject', label: 'Assunto' },
+                { key: 'attendant', label: 'Atendente' }
+            ];
 
+            // Filtra as colunas ativas (Nome é obrigatório)
+            const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
+
+            // Monta o Header do AutoTable
+            const head = [["#", ...activeCols.map(c => c.label)]];
+
+            // Monta o Body
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
-                const attendedDate = getSafeDate(item.attendedTime);
+                const attendedDate = getSafeDate(item.attendedTime || item.attendedAt); 
 
                 let duration = 'N/A';
                 if (arrivalDate && attendedDate) {
@@ -410,38 +509,53 @@ export const PDFService = {
 
                 const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
                 const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
-                let atendente = getAttendantNameForPDF(item);
+                const atendente = getAttendantNameForPDF(item);
 
-                return [
-                    index + 1,
-                    cleanString(item.name),
-                    item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
-                    arrStr,
-                    attStr,
-                    duration,
-                    cleanString(item.subject),
-                    cleanString(atendente)
-                ];
+                const rowData = {
+                    name: cleanString(item.name).toUpperCase(),
+                    numAgendamento: item.numAgendamento || item.numeroAgendamento || '---',
+                    scheduledTime: item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
+                    arrivalTime: arrStr,
+                    attendedTime: attStr,
+                    duration: duration,
+                    subject: cleanString(item.subject).toUpperCase(),
+                    attendant: cleanString(atendente).toUpperCase()
+                };
+
+                return [index + 1, ...activeCols.map(c => rowData[c.key])];
             });
 
-            if (body.length === 0) body.push([{ content: "Nenhum atendimento finalizado nesta pauta.", colSpan: 8, styles: { halign: 'center', fontStyle: 'italic' } }]);
+            if (body.length === 0) {
+                body.push([{ 
+                    content: "Nenhum atendimento finalizado nesta pauta até o momento.", 
+                    colSpan: activeCols.length + 1, 
+                    styles: { halign: 'center', fontStyle: 'italic' } 
+                }]);
+            }
 
+            // A largura das colunas se ajustará automaticamente baseada na seleção
+            // Fixamos apenas a largura da coluna do número "#" e alinhamento do Nome
             docPDF.autoTable({
                 head: head,
                 body: body,
                 startY: tituloY + 45,
                 theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] },
-                styles: { fontSize: 8, cellPadding: 4, halign: 'center' },
-                columnStyles: { 0: { cellWidth: 25 }, 1: { cellWidth: 120 }, 6: { cellWidth: 170 } }
+                headStyles: { fillColor: [22, 163, 74], halign: 'center' },
+                styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle' },
+                columnStyles: { 
+                    0: { cellWidth: 25 }, 
+                    1: { halign: 'left' } // A coluna 1 (Nome) sempre será alinhada à esquerda
+                }
             });
 
             addFooter(docPDF, 1, 1);
 
-            docPDF.save(`atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            docPDF.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
         } catch (error) {
-            console.error("Erro PDF Atendidos:", error);
+            console.error("Erro PDF Atendidos Personalizado:", error);
+            if (window.showNotification) window.showNotification("Falha na geração do PDF.", "error");
             return false;
         }
     },
@@ -458,7 +572,6 @@ export const PDFService = {
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
 
-            // ⭐ ORDENAÇÃO POR HORÁRIO DE AGENDAMENTO
             faltososList = [...faltososList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
@@ -470,7 +583,6 @@ export const PDFService = {
             docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
             docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, tituloY + 28);
 
-            // ⭐ REMOÇÃO DA COLUNA VERDE
             const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às"]];
 
             const body = faltososList.map((item, index) => {
@@ -631,8 +743,6 @@ export const PDFService = {
             const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
             const pageHeight = doc.internal.pageSize.getHeight();
 
-            // Logo desenhada primeiro; título/texto só começam depois do
-            // ponto onde ela termina (bottomY), garantindo zero sobreposição.
             const logoInfo = await addLogoHeader(doc, 15);
             let y = Math.max(60, logoInfo.bottomY + 20);
 
