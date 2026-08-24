@@ -1576,4 +1576,51 @@ export const PautaService = {
     }
 };
 
+        if (button.classList.contains('update-doc-status-btn')) {
+            e.stopPropagation();
+            
+            // Fecha o menu de 3 pontinhos
+            const menu = document.getElementById(`quick-menu-${id}`);
+            if (menu) {
+                menu.classList.add('hidden');
+                const toggle = document.getElementById(`quick-toggle-${id}`);
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
+
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            if (assisted) {
+                window.assistedIdToHandle = id;
+                
+                const statusAtual = assisted.docWorkflowStatus || 'Pendente';
+                const containerButtons = document.getElementById('doc-status-buttons-container');
+                
+                if (containerButtons) {
+                    const etapas = [
+                        { val: 'Pendente', icon: '⚪' },
+                        { val: 'Assistido Orientado', icon: '🗣️' },
+                        { val: 'Preenchendo Dados', icon: '✍️' },
+                        { val: 'Documentação Recebida', icon: '📂' },
+                        { val: 'Falta Digitalizar', icon: '🖨️' },
+                        { val: 'Digitalizado', icon: '💻' },
+                        { val: 'Inserido no Verde/CNP', icon: '✅' }
+                    ];
+
+                    let botoesHtml = '';
+                    etapas.forEach(etapa => {
+                        const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
+                        const cssClass = isSelected 
+                            ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' 
+                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+                        
+                        botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
+                    });
+
+                    containerButtons.innerHTML = botoesHtml;
+                    document.getElementById('doc-status-modal').classList.remove('hidden');
+                }
+            }
+        }
+
+
+
 export default PautaService;
