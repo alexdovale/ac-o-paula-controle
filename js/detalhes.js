@@ -1,4 +1,3 @@
-
 /**
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
@@ -323,64 +322,6 @@ export async function gerarLinkCaptacao() {
         console.error("Erro ao gerar link:", error);
         showNotification("Erro ao preparar o link com segurança.", "error");
     }
-}
-
-/* ========================================================
-   3.2 FUNÇÃO DE RENDERIZAR O STATUS DE DOCUMENTAÇÃO (MOVIDA PARA CIMA)
-   ======================================================== */
-function renderizarFasesDocumentacao(assistedId, pautaId, statusAtual, db) {
-    let container = document.getElementById('doc-workflow-container');
-    if (!container) {
-        const modalBody = document.querySelector('#assisted-details-modal .modal-body') || document.querySelector('#assisted-details-modal > div > div.p-6') || document.querySelector('#assisted-details-modal .overflow-y-auto');
-        if (modalBody) {
-            container = document.createElement('div');
-            container.id = 'doc-workflow-container';
-            container.className = 'mt-6 pt-4 border-t border-slate-200';
-            modalBody.appendChild(container);
-        } else {
-            return;
-        }
-    }
-
-    const etapas = [
-        'Pendente', 
-        'Assistido Orientado', 
-        'Preenchendo Dados', 
-        'Documentação Recebida', 
-        'Falta Digitalizar', 
-        'Digitalizado', 
-        'Inserido no Verde/CNP'
-    ];
-
-    let html = '<p class="text-sm font-bold text-slate-800 mb-3">📑 Status da Documentação / Triagem:</p><div class="flex flex-wrap gap-2">';
-    
-    etapas.forEach(etapa => {
-        const isSelected = (statusAtual === etapa) || (!statusAtual && etapa === 'Pendente');
-        const btnClass = isSelected 
-            ? 'bg-blue-600 text-white border-blue-700 shadow-md scale-105 font-bold' 
-            : 'bg-white text-slate-600 border-slate-300 hover:bg-slate-50';
-        
-        html += `<button class="doc-etapa-btn px-3 py-1.5 rounded-lg border text-xs transition-all ${btnClass}" data-etapa="${etapa}">${etapa}</button>`;
-    });
-    html += '</div>';
-
-    container.innerHTML = html;
-
-    container.querySelectorAll('.doc-etapa-btn').forEach(btn => {
-        btn.addEventListener('click', async (e) => {
-            const novaEtapa = e.target.dataset.etapa;
-            renderizarFasesDocumentacao(assistedId, pautaId, novaEtapa, db); 
-            
-            try {
-                const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-                await updateDoc(docRef, { docWorkflowStatus: novaEtapa });
-                
-                if (window.showNotification) window.showNotification("Status da documentação salvo!", "success");
-            } catch (error) {
-                console.error("Erro ao salvar etapa:", error);
-            }
-        });
-    });
 }
 
 /* ========================================================
@@ -1054,7 +995,6 @@ function initCepSearch() {
 }
 
 function initReuSocioeconomicoEvents() {
-    // Máscara para ganhos do réu
     const ganhosInput = document.getElementById('reu-ganhos');
     if (ganhosInput) {
         ganhosInput.addEventListener('input', (e) => {
@@ -1063,7 +1003,6 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica para mostrar/esconder profissão do réu
     const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
     const reuProfissaoContainer = document.getElementById('reu-profissao-container');
     const reuProfissaoInput = document.getElementById('reu-profissao');
@@ -1087,7 +1026,6 @@ function initReuSocioeconomicoEvents() {
         checkReuProfissaoVisibility();
     }
 
-    // Lógica "Não sei informar" para Ocupação do Réu
     const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
     if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
         reuOcupacaoNaoSei.addEventListener('change', (e) => {
@@ -1102,7 +1040,6 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica "Não sei informar" para Profissão do Réu
     const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
     if (reuProfissaoNaoSei && reuProfissaoInput) {
         reuProfissaoNaoSei.addEventListener('change', (e) => {
@@ -1116,7 +1053,6 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica "Não sei informar" para Estado Civil do Réu
     const reuCivilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
     const reuCivilSelect = document.getElementById('reu-estado-civil');
     if (reuCivilNaoSei && reuCivilSelect) {
@@ -1131,7 +1067,6 @@ function initReuSocioeconomicoEvents() {
         });
     }
 
-    // Lógica "Não sei informar" para Ganhos do Réu
     const reuGanhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
     if (reuGanhosNaoSei && ganhosInput) {
         reuGanhosNaoSei.addEventListener('change', (e) => {
@@ -1252,7 +1187,6 @@ function getReuDataFromForm() {
         cidade_comercial: getEl('cidade-comercial-reu')?.value || '',
         uf_comercial: getEl('estado-comercial-reu')?.value || '',
         cep_comercial: getEl('cep-comercial-reu')?.value || '',
-        // DADOS SOCIOECONÔMICOS DO RÉU
         ocupacao: getEl('reu-ocupacao')?.value || '',
         ocupacaoNaoSei: getEl('reu-ocupacao-nao-sei')?.checked || false,
         profissao: getEl('reu-profissao')?.value || '',
@@ -1301,7 +1235,6 @@ function fillReuData(d) {
     setValue('estado-comercial-reu', d.uf_comercial);
     setValue('cep-comercial-reu', d.cep_comercial);
     
-    // Preencher dados socioeconômicos do réu
     setValue('reu-ocupacao', d.ocupacao);
     if (d.ocupacaoNaoSei) {
         const ocupNaoSei = getEl('reu-ocupacao-nao-sei');
@@ -1397,7 +1330,6 @@ async function handlePdf() {
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
         
-        // Coletar dados socioeconômicos do assistido principal
         const socioData = {
             ocupacao: document.getElementById('socio-ocupacao')?.value || '',
             profissao: document.getElementById('socio-profissao')?.value || '',
@@ -1434,7 +1366,6 @@ function addReuToPdfData(documentosTextos, reu) {
     if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `   • CPF: ${reu.cpf}` });
     if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `   • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
     
-    // Adicionar dados socioeconômicos do réu ao PDF
     let ocupacao = reu.ocupacao;
     if (reu.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
     documentosTextos.push({ id: 'reu-ocupacao', text: `   • Ocupação do Réu: ${ocupacao || 'Não informado'}` });
@@ -1483,7 +1414,6 @@ function collectCheckedDocuments() {
 }
 
 async function handleSave(closeModal = true) {
-    // ⭐ TENTAR RECUPERAR O ID SE ESTIVER PERDIDO
     ensureAssistedId();
     
     if (!currentAssistedId || !currentPautaId || !db) {
@@ -1501,7 +1431,6 @@ async function handleSave(closeModal = true) {
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
     
-    // Coletar dados socioeconômicos do assistido principal
     const socioData = {
         ocupacao: document.getElementById('socio-ocupacao')?.value || '',
         profissao: document.getElementById('socio-profissao')?.value || '',
@@ -1613,13 +1542,10 @@ export async function openDetailsModal(config) {
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
     
-    // ⭐ SALVAR BACKUP PARA RECUPERAÇÃO
     _backupAssistedId = currentAssistedId;
     _backupPautaId = currentPautaId;
     window._lastOpenedAssistedId = currentAssistedId;
     window._lastOpenedPautaId = currentPautaId;
-    
-    console.log("📌 openDetailsModal - IDs salvos:", { currentAssistedId, currentPautaId });
     
     try {
         const docSnap = await getDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId));
@@ -1656,8 +1582,6 @@ export async function openDetailsModal(config) {
         selectionArea?.classList.remove('hidden');
         renderSubjectSelection(selectionArea);
     }
-    
-    renderizarFasesDocumentacao(currentAssistedId, currentPautaId, assisted.docWorkflowStatus, db);
     
     getEl('assisted-details-modal')?.classList.remove('hidden');
 }
@@ -1708,4 +1632,3 @@ window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
-
