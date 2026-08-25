@@ -1429,12 +1429,23 @@ export const PautaService = {
             }
         }
 
-        // --- AÇÃO DO BOTÃO DE XEROX / RETORNO ---
+        // --- AÇÃO DO BOTÃO DE PAUSAR / RETORNO ---
         if (button.classList.contains('set-retorno-rapido-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            
+            // Abre uma caixinha para o usuário digitar o motivo
+            const motivo = prompt("Qual o motivo da pausa na pauta?\n(Ex: Foi tirar xerox, Aguardando a 2ª parte chegar, etc)");
+            
+            // Se ele clicar em "Cancelar" na caixinha, aborta a ação
+            if (motivo === null) return; 
+            
+            // Se ele não digitar nada, coloca um texto padrão. Se digitar, salva o que ele digitou.
+            const razaoSalva = motivo.trim() === "" ? "Aguardando Retorno" : motivo.trim();
+
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardando',
                 priority: 'RETORNO_RAPIDO',
+                priorityReason: razaoSalva, // Salva o texto personalizado aqui!
                 assignedCollaborator: null,
                 delegatedBy: null,
                 delegatedAt: null,
@@ -1442,7 +1453,7 @@ export const PautaService = {
                 distributionStatus: null
             }, app.currentUserName);
             
-            showNotification(`Assistido movido para Retorno Rápido (Xerox/Doc)! Vai pular a fila.`, "info");
+            showNotification(`Assistido pausado: ${razaoSalva}`, "info");
         }
 
         // --- ATUALIZAR O BOTÃO DE PRIORIDADE PARA CONSEGUIR LIMPAR O RETORNO ---
