@@ -834,6 +834,7 @@ export const PautaService = {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
         
         if (assisted.priority === 'URGENTE') return 'URGENTE';
+        if (assisted.priority === 'RETORNO_RAPIDO') return 'RETORNO_RAPIDO'; // <--- Nova regra de retorno
 
         if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
             try {
@@ -855,6 +856,17 @@ export const PautaService = {
         return 'Média';
     },
 
+    getPriorityClass(priority) {
+        const classes = {
+            'URGENTE': 'priority-urgente', 
+            'RETORNO_RAPIDO': 'priority-retorno', // <--- Injeta a borda roxa
+            'Máxima': 'priority-maxima',   
+            'Média': 'priority-media',     
+            'Mínima': 'priority-minima'    
+        };
+        return classes[priority] || '';
+    },
+
     sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
@@ -869,12 +881,20 @@ export const PautaService = {
             return item.checkInOrder || agora;
         };
 
+        // PESO DA PRIORIDADE: Urgente (3) vence Retorno (2), que vence fila normal (1)
+        const getPriorityWeight = (p) => {
+            if (p === 'URGENTE') return 3;
+            if (p === 'RETORNO_RAPIDO') return 2;
+            return 1;
+        };
+
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
         
         if (orderType === 'chegada') {
             return [...list].sort((a, b) => {
-                if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                const wA = getPriorityWeight(a.priority);
+                const wB = getPriorityWeight(b.priority);
+                if (wA !== wB) return wB - wA; // Pesos maiores vão pro topo primeiro
                 return getTempoChegada(a) - getTempoChegada(b);
             });
         }
@@ -915,8 +935,10 @@ export const PautaService = {
         };
 
         return [...list].sort((a, b) => {
-            if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-            if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+            // Força a matemática dos pesos logo no início de todas as lógicas de ordem
+            const wA = getPriorityWeight(a.priority);
+            const wB = getPriorityWeight(b.priority);
+            if (wA !== wB) return wB - wA; 
 
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
@@ -1407,10 +1429,27 @@ export const PautaService = {
             }
         }
 
+        // --- AÇÃO DO BOTÃO DE XEROX / RETORNO ---
+        if (button.classList.contains('set-retorno-rapido-btn')) {
+            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardando',
+                priority: 'RETORNO_RAPIDO',
+                assignedCollaborator: null,
+                delegatedBy: null,
+                delegatedAt: null,
+                inAttendanceTime: null,
+                distributionStatus: null
+            }, app.currentUserName);
+            
+            showNotification(`Assistido movido para Retorno Rápido (Xerox/Doc)! Vai pular a fila.`, "info");
+        }
+
+        // --- ATUALIZAR O BOTÃO DE PRIORIDADE PARA CONSEGUIR LIMPAR O RETORNO ---
         if (button.classList.contains('priority-btn')) {
             const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted && assisted.priority === 'URGENTE') {
-                if (confirm("Remover urgência?")) {
+            if (assisted && (assisted.priority === 'URGENTE' || assisted.priority === 'RETORNO_RAPIDO')) {
+                if (confirm("Remover a marcação especial desta pessoa?")) {
                     this.updateStatus(app.db, app.currentPauta.id, id, {
                         priority: null,
                         priorityReason: null
