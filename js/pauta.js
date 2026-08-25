@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA
+// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (COM CHECKLIST DINÂMICO)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -1192,7 +1192,7 @@ export const PautaService = {
         }
 
         // ==========================================
-        // LÓGICA DO MINI-MODAL DE STATUS DA TRIAGEM
+        // LÓGICA DO MINI-MODAL DE STATUS DA TRIAGEM E CHECKLIST
         // ==========================================
         if (button.classList.contains('update-doc-status-btn')) {
             e.stopPropagation();
@@ -1211,9 +1211,11 @@ export const PautaService = {
                 
                 const statusAtual = assisted.docWorkflowStatus || 'Pendente';
                 const containerButtons = document.getElementById('doc-status-buttons-container');
+                const checklistContainer = document.getElementById('doc-status-checklist-container');
                 const modalStatus = document.getElementById('doc-status-modal');
                 
                 if (containerButtons && modalStatus) {
+                    // 1. GERAR BOTÕES DE STATUS
                     const etapas = [
                         { val: 'Pendente', icon: '⚪' },
                         { val: 'Assistido Orientado', icon: '🗣️' },
@@ -1235,9 +1237,78 @@ export const PautaService = {
                     });
 
                     containerButtons.innerHTML = botoesHtml;
+
+                    // 2. GERAR CHECKLIST INTELIGENTE POR ASSUNTO
+                    if (checklistContainer) {
+                        const assuntoDigitado = assisted.subject || "";
+                        // Normaliza (tira acentos e joga pra minúscula) para evitar erros
+                        const textoLimpo = assuntoDigitado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                        
+                        // Dicionário de Mapeamento
+                        const regrasDocumentos = {
+                            "divorcio": {
+                                gatilhos: ["divorcio", "separacao", "dissolucao", "casamento"],
+                                docs: [
+                                    { nome: "Certidão de Casamento", obrigatorio: true },
+                                    { nome: "Certidão de Nascimento dos filhos (se houver)", obrigatorio: false },
+                                    { nome: "Relação de Bens (Documentos de imóveis, carros)", obrigatorio: false }
+                                ]
+                            },
+                            "alimentos": {
+                                gatilhos: ["alimento", "pensao", "revisao", "exoneracao", "guarda"],
+                                docs: [
+                                    { nome: "Certidão de Nascimento do(s) menor(es)", obrigatorio: true },
+                                    { nome: "Comprovantes de despesas (escola, farmácia)", obrigatorio: false }
+                                ]
+                            },
+                            "saude": {
+                                gatilhos: ["saude", "medicamento", "cirurgia", "internacao", "vaga", "sus"],
+                                docs: [
+                                    { nome: "Laudo Médico atualizado (com CID)", obrigatorio: true },
+                                    { nome: "Receituário / Negativa do SUS", obrigatorio: true }
+                                ]
+                            }
+                        };
+                        
+                        let docsDinamicos = [];
+                        for (const chave in regrasDocumentos) {
+                            if (regrasDocumentos[chave].gatilhos.some(palavra => textoLimpo.includes(palavra))) {
+                                docsDinamicos = regrasDocumentos[chave].docs;
+                                break;
+                            }
+                        }
+
+                        // Renderizador de HTML do Checkbox
+                        const renderCheck = (doc) => `
+                            <label class="flex items-start gap-2 cursor-pointer group mb-1.5">
+                                <input type="checkbox" class="mt-0.5 w-4 h-4 ${doc.obrigatorio ? 'text-blue-600' : 'text-slate-400'} border-slate-300 rounded focus:ring-blue-500 transition-colors">
+                                <span class="text-[11px] md:text-xs ${doc.obrigatorio ? 'font-semibold text-slate-700' : 'text-slate-500 italic'} leading-tight group-hover:text-blue-700 transition-colors">
+                                    ${escapeHTML(doc.nome)} ${!doc.obrigatorio ? `<span class="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-normal border border-slate-200">Facultativo</span>` : ''}
+                                </span>
+                            </label>
+                        `;
+
+                        let checkHtml = `<p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Conferência de Documentos</p>`;
+                        
+                        // Base Universal
+                        checkHtml += renderCheck({nome: "Identidade (RG/CNH) e CPF", obrigatorio: true});
+                        checkHtml += renderCheck({nome: "Comprovante de Residência atualizado", obrigatorio: true});
+                        checkHtml += renderCheck({nome: "Comprovante de Renda", obrigatorio: true});
+
+                        // Específicos da Matéria
+                        docsDinamicos.forEach(d => checkHtml += renderCheck(d));
+
+                        // Facultativos Universais
+                        checkHtml += `<div class="mt-3 pt-2 border-t border-slate-100"></div>`;
+                        checkHtml += renderCheck({nome: "Declaração de Imposto de Renda", obrigatorio: false});
+                        checkHtml += renderCheck({nome: "Afirmação de Hipossuficiência", obrigatorio: false});
+                        checkHtml += renderCheck({nome: "Dados do Réu (Qualificação)", obrigatorio: false});
+
+                        checklistContainer.innerHTML = checkHtml;
+                        checklistContainer.classList.remove('hidden');
+                    }
+
                     modalStatus.classList.remove('hidden');
-                } else {
-                    console.error("Erro: Modal ou container de botões não encontrado no DOM. Verifique o index.html.");
                 }
             }
             return;
