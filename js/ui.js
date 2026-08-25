@@ -1071,6 +1071,31 @@ export const UIService = {
                     const arrivalDate = new Date(item.arrivalTime);
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                        
+                        // --- CÁLCULO DO RELÓGIO SLIM (TERMÔMETRO DE ESPERA) ---
+                        const diffMin = Math.floor((Date.now() - arrivalDate.getTime()) / 60000);
+                        let clockColor = 'text-slate-500';
+                        let clockIconAnim = '';
+                        
+                        if (diffMin >= 60) {
+                            clockColor = 'text-red-600 font-bold'; // Crítico: Vermelho
+                            clockIconAnim = 'animate-pulse';
+                        } else if (diffMin >= 30) {
+                            clockColor = 'text-amber-500 font-bold'; // Atenção: Amarelo
+                        }
+                        
+                        const hrs = Math.floor(Math.abs(diffMin) / 60);
+                        const mins = Math.abs(diffMin) % 60;
+                        const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+                        
+                        const clockHtml = diffMin >= 0 ? `
+                            <div class="flex items-center gap-1 ${clockColor} ml-2 pl-2 border-l border-blue-200" title="Tempo aguardando">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 ${clockIconAnim}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                <span class="text-[10px] tracking-tight">${timeStr}</span>
+                            </div>
+                        ` : '';
+                        // --------------------------------------------------------
+
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
                                 <div class="inline-flex items-center justify-center flex-wrap gap-2 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
@@ -1083,13 +1108,15 @@ export const UIService = {
                                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
                                         <span>Chegou: <span class="font-bold">${horaChegada}</span></span>
                                     </div>
+                                    ${clockHtml}
                                 </div>
                             `;
                         } else {
                             timeInfoHtml = `
-                                <div class="inline-flex items-center justify-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
+                                <div class="inline-flex items-center justify-center gap-1 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-blue-600"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
                                     <span>Chegada: <span class="font-bold">${horaChegada}</span></span>
+                                    ${clockHtml}
                                 </div>
                             `;
                         }
