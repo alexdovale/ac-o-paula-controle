@@ -922,66 +922,90 @@
                                 <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-100 pb-2">Exemplos Práticos do Sistema</h4>
                                 
                                 <!-- GRID COM OS 4 CENÁRIOS DE EXEMPLO -->
-                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     
-                                    <!-- Cenário 1: Desempate Exato -->
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-                                        <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: O Desempate Exato</h5>
-                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
-                                            </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>2º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
-                                            </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Ambos são pontuais. O sistema desempata a favor da Maria porque o check-in dela foi feito primeiro.</p>
-                                        </div>
-                                    </div>
+    <!-- Cenário 1: Desempate Exato -->
+    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+        <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: Pontuais e o Desempate Exato</h5>
+        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>2º João:</b> Agendado 09:00 | Chegou 08:40</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>3º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>4º Aline:</b> Agendada 09:00 | Chegou 08:50</span>
+            </div>
+            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Todos são pontuais (dentro da tolerância). O sistema desempata a favor de quem fez o check-in na recepção primeiro.</p>
+        </div>
+    </div>
 
-                                    <!-- Cenário 2: Atraso vs Avulso -->
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-                                        <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
-                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>1º Ana:</b> Atendimento Avulso | Chegou 09:10</span>
-                                            </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>2º Pedro:</b> Agendado 09:00 | Chegou 09:20</span>
-                                            </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
-                                        </div>
-                                    </div>
+    <!-- Cenário 2: Atraso vs Avulso -->
+    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+        <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
+        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>1º Bruno:</b> Avulso (Sem agend.) | Chegou 09:10</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>2º Alice:</b> Agendada 09:15 | Chegou 09:12</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span class="text-red-600"><b>3º Pedro:</b> Agendado 09:00 | Chegou 09:20 (Atrasado)</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>4º Carla:</b> Avulso (Sem agend.) | Chegou 09:25</span>
+            </div>
+            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bruno (09:10) entra antes. Alice mantém as 09:15 por ser pontual. Pedro atrasou >15 min; foi "punido" e sua hora de ordenação passou a ser a hora real (09:20).</p>
+        </div>
+    </div>
 
-                                    <!-- Cenário 3: O Fura-Fila Legal -->
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-                                        <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal</h5>
-                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>1º Sr. José:</b> Urgência / 80+ | Chegou 10:00</span>
-                                            </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>2º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
-                                            </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades absolutas (Idosos 80+, Risco de Morte) ignoram a regra de horário e vão direto para o topo da fila global.</p>
-                                        </div>
-                                    </div>
+    <!-- Cenário 3: O Fura-Fila Legal -->
+    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+        <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal (Urgência)</h5>
+        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+            <div class="flex justify-between border-b border-slate-200 pb-1 text-red-700">
+                <span><b>1º Sr. José:</b> Urgência (80+) | Chegou 10:00</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1 text-red-700">
+                <span><b>2º D. Ana:</b> Urgência (PCD) | Chegou 10:05</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>3º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>4º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
+            </div>
+            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades manuais (URGENTE) ignoram o horário e pulam direto para o topo da fila. Entre eles, desempata quem chegou primeiro.</p>
+        </div>
+    </div>
 
-                                    <!-- Cenário 4: Chegar muito cedo -->
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-                                        <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
-                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
-                                            </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
-                                                <span><b>2º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
-                                            </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia chegou super cedo, mas a fila respeita a faixa de horário. Ela será a primeira das 10h, mas não passa a pauta das 09h.</p>
-                                        </div>
-                                    </div>
+    <!-- Cenário 4: Chegar muito cedo -->
+    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+        <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
+        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1">
+                <span><b>2º Marcos:</b> Agendado 09:15 | Chegou 08:55</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1 text-blue-600">
+                <span><b>3º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
+            </div>
+            <div class="flex justify-between border-b border-slate-200 pb-1 text-blue-600">
+                <span><b>4º João:</b> Agendado 10:00 | Chegou 07:45</span>
+            </div>
+            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia e João chegaram horas antes, mas o sistema respeita os blocos. Eles serão os primeiros do bloco das 10h, mas não furam a pauta das 09h.</p>
+        </div>
+    </div>
 
-                                </div>
-                            </div>
+</div>
+
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
                                 <div class="bg-red-50 p-3 sm:p-4 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
