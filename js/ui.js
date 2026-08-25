@@ -1067,23 +1067,21 @@ export const UIService = {
                     <span>Chegada: <span class="font-bold">--:--</span></span>
                 </div>
             `;
-            
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         
-                        // --- CÁLCULO DO RELÓGIO SLIM (TERMÔMETRO DE ESPERA) ---
                         const diffMin = Math.floor((Date.now() - arrivalDate.getTime()) / 60000);
                         let clockColor = 'text-slate-500';
                         let clockIconAnim = '';
                         
                         if (diffMin >= 60) {
-                            clockColor = 'text-red-600 font-bold'; // Crítico: Vermelho
+                            clockColor = 'text-red-600 font-bold';
                             clockIconAnim = 'animate-pulse';
                         } else if (diffMin >= 30) {
-                            clockColor = 'text-amber-500 font-bold'; // Atenção: Amarelo
+                            clockColor = 'text-amber-500 font-bold';
                         }
                         
                         const hrs = Math.floor(Math.abs(diffMin) / 60);
@@ -1096,7 +1094,6 @@ export const UIService = {
                                 <span class="clock-text text-[10px] tracking-tight">${timeStr}</span>
                             </div>
                         ` : '';
-                        // --------------------------------------------------------
 
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
@@ -1152,6 +1149,21 @@ export const UIService = {
                    </button>`
                 : '';
 
+            // --- LÓGICA DE EXIBIÇÃO DA TAG DE PRIORIDADE NA TELA ---
+            let priorityTagHtml = '';
+            let priorityBtnLabel = 'Prioridade';
+            let priorityBtnClass = 'bg-red-500 hover:bg-red-600';
+            
+            if (item.priority === 'URGENTE') {
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro || 'URGÊNCIA')}</div>`;
+                priorityBtnLabel = 'Urgência';
+                priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
+            } else if (item.priority === 'RETORNO_RAPIDO') {
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm">⏳ Retorno (Xerox)</div>`;
+                priorityBtnLabel = 'Retorno';
+                priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
+            }
+
             card.innerHTML = `
                 ${numeroBadge}
                 ${this._getActionButtonsHtml(item)}
@@ -1164,7 +1176,7 @@ export const UIService = {
                 </button>` : ''}
                 
                 <div class="text-center pt-2">
-                    ${item.priority === 'URGENTE' ? `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro)}</div>` : ''}
+                    ${priorityTagHtml}
 
                     <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(nomeSeguro)}</p>
 
@@ -1181,8 +1193,8 @@ export const UIService = {
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        <button data-id="${item.id}" class="priority-btn ${item.priority === 'URGENTE' ? 'bg-orange-600 hover:bg-orange-700' : 'bg-red-500 hover:bg-red-600'} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
-                            ${item.priority === 'URGENTE' ? 'Urgência' : 'Prioridade'}
+                        <button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
+                            ${priorityBtnLabel}
                         </button>
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
@@ -1307,7 +1319,7 @@ export const UIService = {
                 </div>
             ` : '';
 
-            const buttonsContainerHtml = canDelegateOrFinalize
+           const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
@@ -1317,6 +1329,12 @@ export const UIService = {
                                 Finalizar / Avançar
                             </button>
                         </div>
+                        
+                        <!-- NOVO BOTÃO DE RETORNO RÁPIDO (XEROX) -->
+                        <button data-id="${item.id}" class="set-retorno-rapido-btn w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-lg text-[11px] border border-purple-200 shadow-sm transition active:scale-95 uppercase tracking-wide flex justify-center items-center gap-1.5">
+                            <span class="text-sm">⏳</span> Aguardando Retorno (Xerox)
+                        </button>
+                        
                         <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide">
                             Mover para Fila
                         </button>
