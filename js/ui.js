@@ -788,8 +788,9 @@ export const UIService = {
                     <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-48 bg-white rounded-xl shadow-lg border border-slate-200 z-30 py-1.5 overflow-hidden" role="menu">
                         <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1 bg-slate-50">Ações Rápidas</div>
                         
-                        <button data-id="${item.id}" class="set-retorno-rapido-btn w-full text-left px-4 py-2 text-xs font-bold text-purple-700 hover:bg-purple-50 flex items-center gap-2 transition-colors">
-                            <span class="text-sm">⏳</span> Pausar / Pendência
+                        <button data-id="${item.id}" class="set-retorno-rapido-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-purple-50 hover:text-purple-700 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 22h14"/><path d="M5 2h14"/><path d="M17 22v-4.172a2 2 0 0 0-.586-1.414L12 12l-4.414 4.414A2 2 0 0 0 7 17.828V22"/><path d="M7 2v4.172a2 2 0 0 0 .586 1.414L12 12l4.414-4.414A2 2 0 0 0 17 6.172V2"/></svg>
+                            Pausar / Pendência
                         </button>
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
