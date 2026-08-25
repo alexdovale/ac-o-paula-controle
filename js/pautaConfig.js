@@ -154,6 +154,21 @@ export const PautaConfigService = {
 
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
             if (!app.currentPautaData) return;
+            
+            // FIX: Fecha o modal roxo de BI caso ele tenha ficado "preso" na tela
+            const biModal = document.getElementById('bi-links-modal');
+            if (biModal) biModal.classList.add('hidden');
+            
+            // FIX: Recolhe o menu flutuante verde (Ações) para limpar a tela
+            const actionsPanel = document.getElementById('actions-panel');
+            const actionsArrow = document.getElementById('actions-arrow');
+            if (actionsPanel) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            }
+            if (actionsArrow) {
+                actionsArrow.classList.remove('rotate-180');
+            }
+
             this._preencherFormEdicao(app.currentPautaData);
             document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
         });
