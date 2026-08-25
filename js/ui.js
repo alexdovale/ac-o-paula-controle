@@ -607,7 +607,7 @@ export const UIService = {
         }
 
         allAssisted.forEach(a => {
-            if (a.status === 'aguardando' && a.priority !== 'URGENTE') {
+            if (a.status === 'aguardando' && a.priority !== 'URGENTE' && a.priority !== 'RETORNO_RAPIDO') {
                 a.priority = PautaService.getPriorityLevel(a);
             }
         });
@@ -667,7 +667,7 @@ export const UIService = {
             if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); 
             this.setupColumnControls(app); 
             this.applyPopoutMode(); 
-            this.startRealtimeClocks(); // <--- MOTOR DO RELÓGIO LIGADO AQUI
+            this.startRealtimeClocks();
         }, 100);
     },
 
@@ -1070,21 +1070,23 @@ export const UIService = {
                     <span>Chegada: <span class="font-bold">--:--</span></span>
                 </div>
             `;
+            
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         
+                        // --- CÁLCULO DO RELÓGIO SLIM (TERMÔMETRO DE ESPERA) ---
                         const diffMin = Math.floor((Date.now() - arrivalDate.getTime()) / 60000);
                         let clockColor = 'text-slate-500';
                         let clockIconAnim = '';
                         
                         if (diffMin >= 60) {
-                            clockColor = 'text-red-600 font-bold';
+                            clockColor = 'text-red-600 font-bold'; // Crítico: Vermelho
                             clockIconAnim = 'animate-pulse';
                         } else if (diffMin >= 30) {
-                            clockColor = 'text-amber-500 font-bold';
+                            clockColor = 'text-amber-500 font-bold'; // Atenção: Amarelo
                         }
                         
                         const hrs = Math.floor(Math.abs(diffMin) / 60);
@@ -1097,6 +1099,7 @@ export const UIService = {
                                 <span class="clock-text text-[10px] tracking-tight">${timeStr}</span>
                             </div>
                         ` : '';
+                        // --------------------------------------------------------
 
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
@@ -1200,12 +1203,6 @@ export const UIService = {
                         <button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
                             ${priorityBtnLabel}
                         </button>
-                        
-                        <!-- NOVO BOTÃO DE PAUSA NA FILA DE AGUARDANDO -->
-                        <button data-id="${item.id}" class="set-retorno-rapido-btn col-span-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-lg text-[11px] border border-purple-200 shadow-sm transition active:scale-95 uppercase tracking-wide flex justify-center items-center gap-1.5 mt-1" ${canEditPriority ? '' : 'disabled'}>
-                            <span class="text-sm">⏳</span> Add Pausa / Pendência
-                        </button>
-
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
@@ -1329,7 +1326,7 @@ export const UIService = {
                 </div>
             ` : '';
 
-           const buttonsContainerHtml = canDelegateOrFinalize
+            const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
                         <div class="grid grid-cols-2 gap-2">
                             <button id="btn-delegar-card" data-id="${item.id}" data-name="${escapeHTML(item.name || '')}" data-collaborator-name="${escapeHTML(atendenteNome)}" class="select-collaborator-btn ${delegateBtnClass} text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide" ${canDelegate ? '' : 'disabled'}>
@@ -1339,12 +1336,6 @@ export const UIService = {
                                 Finalizar / Avançar
                             </button>
                         </div>
-                        
-                        <!-- NOVO BOTÃO DE PAUSAR/RETORNO -->
-                        <button data-id="${item.id}" class="set-retorno-rapido-btn w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-lg text-[11px] border border-purple-200 shadow-sm transition active:scale-95 uppercase tracking-wide flex justify-center items-center gap-1.5">
-                            <span class="text-sm">⏳</span> Pausar / Aguardando...
-                        </button>
-                        
                         <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide">
                             Mover para Fila
                         </button>
@@ -1358,6 +1349,14 @@ export const UIService = {
                         </button>
                    </div>`;
 
+            // --- LÓGICA DA TAG NO EM ATENDIMENTO ---
+            let priorityTagHtml = '';
+            if (item.priority === 'URGENTE') {
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(item.priorityReason || 'URGÊNCIA')}</div>`;
+            } else if (item.priority === 'RETORNO_RAPIDO') {
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(item.priorityReason || 'Aguardando')}</div>`;
+            }
+
             const numeroOrdem = item.absoluteOrder || (index + 1);
 
             card.innerHTML = `
@@ -1368,8 +1367,8 @@ export const UIService = {
                 ${this._getActionButtonsHtml(item)}
 
                 ${canDelete ? `
-                <button data-id="${item.id}" class="delete-btn absolute top-2 right-2 text-slate-300 hover:text-red-500">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" viewBox="0 0 16 16">
+                <button data-id="${item.id}" class="delete-btn absolute top-2 left-8 text-slate-300 hover:text-red-500 p-1 rounded-full transition-colors z-10" title="Deletar">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
                         <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5Zm-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5ZM4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 0l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06Zm3 .5a.5.5 0 0 0-1 0v8.5a.5.5 0 0 0 1 0v-8.5Z"/>
                     </svg>
                 </button>` : ''}
