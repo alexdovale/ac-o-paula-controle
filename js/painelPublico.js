@@ -405,7 +405,7 @@ export const PainelPublicoService = {
         };
 
         btnSom.addEventListener('click', () => {
-            if (!somAtivo) { try { garantirAudioCtx(); somAtivo = true; atualizarSom(); tocarSom(); } catch(e){} }
+            if (!somAtivo) { try { garantirAudioCtx(); somAtivo = true; atualizarSom(); tocarSomEDizer("Testando o som", "Recepção"); } catch(e){} }
             else { somAtivo = false; atualizarSom(); }
         });
 
@@ -504,10 +504,13 @@ export const PainelPublicoService = {
         }
         setInterval(tickRelogio, 1000); tickRelogio();
 
-        function tocarSom() {
+        // NOVA LÓGICA: SINO E DEPOIS A VOZ (TTS)
+        function tocarSomEDizer(nomePessoa, salaOuLocal) {
             if (!somAtivo) return;
             try {
                 const ctx = garantirAudioCtx();
+                
+                // Toca o "Ding-Dong" primeiro
                 [[659, 0, 0.4], [523, 0.4, 0.6]].forEach(([f, i, d]) => {
                     const o = ctx.createOscillator(), g = ctx.createGain();
                     o.connect(g); g.connect(ctx.destination);
@@ -515,6 +518,21 @@ export const PainelPublicoService = {
                     g.gain.setValueAtTime(0.5, ctx.currentTime + i); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + i + d);
                     o.start(ctx.currentTime + i); o.stop(ctx.currentTime + i + d);
                 });
+
+                // Espera 1.2 segundos (tempo do sino) e chama a voz!
+                if ('speechSynthesis' in window) {
+                    setTimeout(() => {
+                        const localFormatado = salaOuLocal.toLowerCase().includes('sala') 
+                                ? salaOuLocal 
+                                : `a recepção ${salaOuLocal}`;
+                        
+                        const mensagem = new SpeechSynthesisUtterance(`${nomePessoa}. Por favor, dirija-se à ${localFormatado}.`);
+                        mensagem.lang = 'pt-BR';
+                        mensagem.rate = 0.85;  // Mais devagar e claro
+                        mensagem.pitch = 1.0;
+                        window.speechSynthesis.speak(mensagem);
+                    }, 1200);
+                }
             } catch(e) {}
         }
 
@@ -622,7 +640,9 @@ export const PainelPublicoService = {
                     if(estado.ultimoChamado) { estado.historico.unshift(estado.ultimoChamado); if(estado.historico.length>6) estado.historico.pop(); }
                     estado.ultimoChamado = novo;
                     renderChamados(novo);
-                    tocarSom(); // O som já valida internamente se está ativo
+                    
+                    // CHAMA A FUNÇÃO NOVA QUE TOCA O SINO E FALA O NOME!
+                    tocarSomEDizer(novo.nome, novo.sala || novo.local || novo.pautaNome || 'nossa recepção');
                 }
             });
         });
