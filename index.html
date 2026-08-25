@@ -921,7 +921,7 @@
                                 
                                 <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-100 pb-2">Exemplos Práticos do Sistema</h4>
                                 
-                                <!-- GRID COM OS 4 CENÁRIOS DE EXEMPLO -->
+<!-- GRID COM OS 4 CENÁRIOS DE EXEMPLO -->
 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     
     <!-- Cenário 1: Desempate Exato -->
@@ -1145,15 +1145,22 @@
         </div>
     </div>
 
-    <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM (PADRONIZADO) -->
+    <!-- MODAL DE STATUS DA DOCUMENTAÇÃO / TRIAGEM (PADRONIZADO E COM CHECKLIST) -->
     <div id="doc-status-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all flex flex-col">
-            <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
+        <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
+            <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
                 <h3 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">📑 Status da Triagem</h3>
                 <button onclick="document.getElementById('doc-status-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none transition-colors">&times;</button>
             </div>
-            <div class="p-4 bg-white space-y-2 max-h-[60vh] overflow-y-auto" id="doc-status-buttons-container">
-                <!-- Os botões injetados via JS -->
+            
+            <div class="p-4 bg-white overflow-y-auto flex-grow scrollable-content">
+                <!-- Botões de Status Injetados via JS -->
+                <div id="doc-status-buttons-container" class="space-y-2 mb-4"></div>
+                
+                <!-- CHECKLIST DINÂMICO INJETADO VIA JS -->
+                <div id="doc-status-checklist-container" class="hidden border-t border-slate-200 pt-4 mt-2">
+                    <!-- O JavaScript vai colocar os checkboxes aqui -->
+                </div>
             </div>
         </div>
     </div>
