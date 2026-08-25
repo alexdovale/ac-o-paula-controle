@@ -378,17 +378,26 @@ export const PautaConfigService = {
     },
 
     _preencherFormEdicao(pautaData) {
+        // Blinda contra valores nulos, forçando os padrões (DEFAULTS) se estiver vazio
+        const tipoAtual = pautaData.type || DEFAULTS.type;
+        const ordemAtual = pautaData.ordemAtendimento || DEFAULTS.ordemAtendimento;
+        const usaDelegacao = pautaData.useDelegationFlow === true;
+        const usaDistribuicao = pautaData.useDistributionFlow === true;
+
         document.querySelectorAll('input[name="edit-pauta-type"]').forEach(r => {
-            r.checked = r.value === pautaData.type;
+            r.checked = r.value === tipoAtual;
         });
+        
         document.querySelectorAll('input[name="edit-ordem"]').forEach(r => {
-            r.checked = r.value === pautaData.ordemAtendimento;
+            r.checked = r.value === ordemAtual;
         });
+        
         document.querySelectorAll('input[name="edit-delegation"]').forEach(r => {
-            r.checked = (r.value === 'true') === pautaData.useDelegationFlow;
+            r.checked = (r.value === 'true') === usaDelegacao;
         });
+        
         const distCheck = document.getElementById('edit-use-distribution');
-        if (distCheck) distCheck.checked = pautaData.useDistributionFlow || false;
+        if (distCheck) distCheck.checked = usaDistribuicao;
 
         const dateInput = document.getElementById('edit-pauta-date-input');
         if (dateInput && pautaData.dataOperacao) {
@@ -533,7 +542,7 @@ export const PautaConfigService = {
         const newDate       = document.getElementById('edit-pauta-date-input')?.value || '';
 
         if (!newType || !newOrdem) {
-            showNotification("Selecione todas as opções.", "error");
+            showNotification("Selecione todas as opções obrigatórias.", "error");
             return;
         }
 
@@ -546,18 +555,27 @@ export const PautaConfigService = {
             };
             if (newDate) updates.dataOperacao = newDate;
 
+            // 1. Atualiza no banco de dados (Firebase)
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), updates);
 
+            // 2. Atualiza a memória local da aplicação instantaneamente
             Object.assign(app.currentPautaData, updates);
 
+            // 3. Força a UI a re-renderizar todas as filas IMEDIATAMENTE com a nova regra de ordem
             if (typeof app.loadColumnPreferences === 'function') app.loadColumnPreferences();
+            
+            if (window.UIService && typeof window.UIService.renderAssistedLists === 'function') {
+                window.UIService.renderAssistedLists(app);
+            } else if (app.UIService && typeof app.UIService.renderAssistedLists === 'function') {
+                app.UIService.renderAssistedLists(app);
+            }
 
             await logAction(
                 app.db, app.auth,
                 app.currentUserName,
                 app.currentPauta.id,
                 'EDIT_PAUTA_CONFIG',
-                `Editou configurações: tipo=${newType}, ordem=${newOrdem}, delegação=${newDelegation}, distribuição=${newDist}`
+                `Editou config: tipo=${newType}, ordem=${newOrdem}, delegação=${newDelegation}, distribuição=${newDist}`
             );
 
             showNotification("Configurações atualizadas com sucesso!", "success");
