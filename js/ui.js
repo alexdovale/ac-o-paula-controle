@@ -775,7 +775,6 @@ export const UIService = {
         `;
     },
 
-        // MENU DE AÇÕES PADRONIZADO E MODERNO
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10">
@@ -801,9 +800,9 @@ export const UIService = {
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                        <!-- AQUI ESTÁ O BOTÃO DE STATUS DA TRIAGEM -->
-                        <button data-id="${item.id}" class="update-doc-status-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 flex items-center gap-2 transition-colors font-bold text-blue-700">
-                            <span class="w-4 h-4 flex items-center justify-center">📑</span> Mudar Status Triagem
+                        <button data-id="${item.id}" class="update-doc-status-btn quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
+                            Status da Triagem
                         </button>
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
@@ -818,7 +817,6 @@ export const UIService = {
             </div>
         `;
     },
-
 
     renderPautaColumn(items) {
         const container = document.getElementById('pauta-list');
@@ -1318,7 +1316,7 @@ export const UIService = {
                 </button>` : ''}
 
                 <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
                     
