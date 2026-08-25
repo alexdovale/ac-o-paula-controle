@@ -667,6 +667,7 @@ export const UIService = {
             if (typeof PautaService.setupManualSort === 'function') PautaService.setupManualSort(app); 
             this.setupColumnControls(app); 
             this.applyPopoutMode(); 
+            this.startRealtimeClocks(); // <--- MOTOR DO RELÓGIO LIGADO AQUI
         }, 100);
     },
 
@@ -1066,6 +1067,7 @@ export const UIService = {
                     <span>Chegada: <span class="font-bold">--:--</span></span>
                 </div>
             `;
+            
             if (item.arrivalTime) {
                 try {
                     const arrivalDate = new Date(item.arrivalTime);
@@ -1089,9 +1091,9 @@ export const UIService = {
                         const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
                         
                         const clockHtml = diffMin >= 0 ? `
-                            <div class="flex items-center gap-1 ${clockColor} ml-2 pl-2 border-l border-blue-200" title="Tempo aguardando">
-                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="w-3.5 h-3.5 ${clockIconAnim}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
-                                <span class="text-[10px] tracking-tight">${timeStr}</span>
+                            <div class="realtime-clock flex items-center gap-1 ${clockColor} ml-2 pl-2 border-l border-blue-200 transition-colors duration-500" title="Tempo aguardando" data-arrival-time="${arrivalDate.getTime()}">
+                                <svg fill="none" viewBox="0 0 24 24" stroke-width="2" stroke="currentColor" class="clock-icon w-3.5 h-3.5 ${clockIconAnim}"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 1 1-18 0 9 9 0 0 1 18 0Z" /></svg>
+                                <span class="clock-text text-[10px] tracking-tight">${timeStr}</span>
                             </div>
                         ` : '';
                         // --------------------------------------------------------
@@ -2168,6 +2170,62 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 };
             }
         });
+    },
+
+    startRealtimeClocks() {
+        // Evita criar vários loops se a função for chamada de novo
+        if (this._clocksInterval) return; 
+        
+        // Roda a cada 30 segundos (30000ms) atualizando os tempos na tela silenciosamente
+        this._clocksInterval = setInterval(() => {
+            const clocks = document.querySelectorAll('.realtime-clock');
+            const now = Date.now();
+            
+            clocks.forEach(clock => {
+                const arrivalTime = parseInt(clock.getAttribute('data-arrival-time'));
+                if (!arrivalTime) return;
+
+                const diffMin = Math.floor((now - arrivalTime) / 60000);
+                
+                let clockColorClass = 'text-slate-500';
+                let isBold = false;
+                let isPulse = false;
+                
+                if (diffMin >= 60) {
+                    clockColorClass = 'text-red-600';
+                    isBold = true;
+                    isPulse = true;
+                } else if (diffMin >= 30) {
+                    clockColorClass = 'text-amber-500';
+                    isBold = true;
+                }
+                
+                const hrs = Math.floor(Math.abs(diffMin) / 60);
+                const mins = Math.abs(diffMin) % 60;
+                const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
+
+                // 1. Atualiza apenas o número do texto (sem piscar a tela)
+                const textEl = clock.querySelector('.clock-text');
+                if (textEl && textEl.textContent !== timeStr) {
+                    textEl.textContent = timeStr;
+                }
+
+                // 2. Remove cores antigas e aplica a nova transição suave
+                clock.classList.remove('text-slate-500', 'text-amber-500', 'text-red-600', 'font-bold');
+                clock.classList.add(clockColorClass);
+                if (isBold) clock.classList.add('font-bold');
+
+                // 3. Controla a animação do coração batendo (pulse)
+                const iconEl = clock.querySelector('.clock-icon');
+                if (iconEl) {
+                    if (isPulse) {
+                        iconEl.classList.add('animate-pulse');
+                    } else {
+                        iconEl.classList.remove('animate-pulse');
+                    }
+                }
+            });
+        }, 30000); 
     }
 
 }; // Fim do objeto UIService
