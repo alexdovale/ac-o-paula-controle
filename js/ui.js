@@ -1159,7 +1159,8 @@ export const UIService = {
                 priorityBtnLabel = 'Urgência';
                 priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
             } else if (item.priority === 'RETORNO_RAPIDO') {
-                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm">⏳ Retorno (Xerox)</div>`;
+                // AQUI ELE PUXA O TEXTO DIGITADO NO PROMPT
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(priorityReasonSeguro || 'Aguardando')}</div>`;
                 priorityBtnLabel = 'Retorno';
                 priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
             }
@@ -1330,9 +1331,9 @@ export const UIService = {
                             </button>
                         </div>
                         
-                        <!-- NOVO BOTÃO DE RETORNO RÁPIDO (XEROX) -->
+                        <!-- NOVO BOTÃO DE PAUSAR/RETORNO -->
                         <button data-id="${item.id}" class="set-retorno-rapido-btn w-full bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-lg text-[11px] border border-purple-200 shadow-sm transition active:scale-95 uppercase tracking-wide flex justify-center items-center gap-1.5">
-                            <span class="text-sm">⏳</span> Aguardando Retorno (Xerox)
+                            <span class="text-sm">⏳</span> Pausar / Aguardando...
                         </button>
                         
                         <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide">
@@ -1363,6 +1364,7 @@ export const UIService = {
                 </button>` : ''}
 
                 <div class="text-center pt-2">
+                    ${priorityTagHtml}
                     <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
