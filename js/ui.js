@@ -1197,6 +1197,12 @@ export const UIService = {
                         <button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
                             ${priorityBtnLabel}
                         </button>
+                        
+                        <!-- NOVO BOTÃO DE PAUSA NA FILA DE AGUARDANDO -->
+                        <button data-id="${item.id}" class="set-retorno-rapido-btn col-span-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold py-2 rounded-lg text-[11px] border border-purple-200 shadow-sm transition active:scale-95 uppercase tracking-wide flex justify-center items-center gap-1.5 mt-1" ${canEditPriority ? '' : 'disabled'}>
+                            <span class="text-sm">⏳</span> Add Pausa / Pendência
+                        </button>
+
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
