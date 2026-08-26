@@ -1436,6 +1436,77 @@
             });
         }
     </script>
+    <!-- ============================================== -->
+    <!-- WIDGETS DE UX: DITADO POR VOZ E AUTO-SAVE      -->
+    <!-- ============================================== -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            // Verifica suporte a voz no navegador
+            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+            
+            // Função para aplicar os poderes a qualquer caixa de texto (textarea)
+            function aplicarSuperPoderesAosTextos() {
+                const textareas = document.querySelectorAll('textarea');
+                
+                textareas.forEach(ta => {
+                    if (!ta.id || ta.hasAttribute('data-ux-aplicado')) return;
+                    ta.setAttribute('data-ux-aplicado', 'true'); // Evita duplicar
+
+                    // --- 1. SALVA-VIDAS AUTOMÁTICO ---
+                    const storageKey = `autosave_sigep_${ta.id}`;
+                    const savedText = localStorage.getItem(storageKey);
+                    if (savedText) ta.value = savedText; // Restaura se a página fechou do nada
+
+                    ta.addEventListener('input', () => {
+                        localStorage.setItem(storageKey, ta.value); // Salva a cada letra digitada
+                    });
+
+                    // --- 2. DITADO POR VOZ ---
+                    if (SpeechRecognition) {
+                        const micBtn = document.createElement('button');
+                        micBtn.type = 'button';
+                        micBtn.innerHTML = '🎙️ Ditar Resumo';
+                        micBtn.className = 'text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 px-3 rounded-lg border border-slate-300 ml-auto shadow-sm transition-all flex items-center gap-1 mt-1 mb-3';
+                        
+                        ta.parentNode.insertBefore(micBtn, ta.nextSibling);
+
+                        const recognition = new SpeechRecognition();
+                        recognition.lang = 'pt-BR';
+                        recognition.continuous = false;
+
+                        micBtn.addEventListener('click', (e) => {
+                            e.preventDefault();
+                            if (micBtn.classList.contains('bg-red-100')) {
+                                recognition.stop();
+                                return;
+                            }
+                            recognition.start();
+                            micBtn.innerHTML = '🔴 Ouvindo... (Fale agora)';
+                            micBtn.classList.replace('bg-slate-100', 'bg-red-100');
+                            micBtn.classList.replace('text-slate-600', 'text-red-600');
+                        });
+
+                        recognition.onresult = (event) => {
+                            const transcript = event.results[0][0].transcript;
+                            ta.value += (ta.value ? ' ' : '') + transcript;
+                            ta.dispatchEvent(new Event('input')); // Salva o que a voz digitou
+                        };
+
+                        recognition.onend = () => {
+                            micBtn.innerHTML = '🎙️ Ditar Resumo';
+                            micBtn.classList.replace('bg-red-100', 'bg-slate-100');
+                            micBtn.classList.replace('text-red-600', 'text-slate-600');
+                        };
+                    }
+                });
+            }
+
+            // Aplica agora e fica vigiando caso novos modais sejam abertos
+            aplicarSuperPoderesAosTextos();
+            const observer = new MutationObserver(aplicarSuperPoderesAosTextos);
+            observer.observe(document.body, { childList: true, subtree: true });
+        });
+    </script>
 </body>
 </html>
 
