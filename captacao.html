@@ -159,8 +159,41 @@
                 <div id="checklist-area" class="space-y-3"></div>
             </section>
 
+            <!-- 4. FOTO DO DOCUMENTO (CÂMERA INTELIGENTE COM ANÁLISE DE ILUMINAÇÃO) -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-black text-red-600 uppercase mb-4 border-b pb-2">4. DADOS DA PARTE CONTRÁRIA (RÉU)</h2>
+                <h2 class="text-xs font-black text-indigo-600 uppercase mb-2 border-b pb-2 flex items-center justify-between">
+                    <span>📸 4. FOTO DO DOCUMENTO (RG / CPF)</span>
+                </h2>
+                <p class="text-[11px] text-slate-500 mb-4 leading-tight">Posicione o documento. O sistema analisará a iluminação automaticamente e liberará a captura quando estiver nítida.</p>
+
+                <div id="camera-container" class="hidden relative w-full h-72 bg-black rounded-2xl overflow-hidden mb-4 shadow-inner">
+                    <video id="video-preview" autoplay playsinline class="w-full h-full object-cover"></video>
+                    <div class="absolute inset-6 border-2 border-dashed border-white/75 rounded-xl pointer-events-none flex items-end justify-center p-3">
+                        <span id="feedback-qualidade" class="bg-slate-900/80 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider transition-all">
+                            🔍 Analisando luz e foco...
+                        </span>
+                    </div>
+                </div>
+                <canvas id="canvas-captura" class="hidden"></canvas>
+
+                <button type="button" id="btn-iniciar-camera" class="w-full bg-indigo-600 text-white font-black py-4 rounded-2xl shadow-md uppercase tracking-widest text-sm flex items-center justify-center gap-2 hover:bg-indigo-700 active:scale-95 transition-all">
+                    <span>📷</span> Abrir Câmera Inteligente
+                </button>
+
+                <button type="button" id="btn-tirar-foto-real" class="hidden w-full bg-emerald-600 text-white font-black py-4 rounded-2xl shadow-lg uppercase tracking-widest text-sm items-center justify-center gap-2 hover:bg-emerald-700 active:scale-95 transition-all animate-pulse">
+                    <span>✨</span> CAPTURAR FOTO PERFEITA
+                </button>
+
+                <div id="upload-loading" class="hidden w-full mt-4 flex flex-col items-center">
+                    <div class="animate-spin rounded-full h-6 w-6 border-b-2 border-indigo-600 mb-2"></div>
+                    <p class="text-[10px] text-indigo-600 font-bold uppercase tracking-widest">Enviando documento com segurança...</p>
+                </div>
+
+                <div id="lista-fotos-preview" class="grid grid-cols-2 gap-2 mt-4"></div>
+            </section>
+
+            <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
+                <h2 class="text-xs font-black text-red-600 uppercase mb-4 border-b pb-2">5. DADOS DA PARTE CONTRÁRIA (RÉU)</h2>
                 
                 <div class="bg-red-50 p-4 rounded-xl border border-red-200 mb-4 cursor-pointer" onclick="document.getElementById('check-reu-unico').click()">
                     <div class="flex items-center gap-3">
@@ -314,7 +347,7 @@
             </section>
 
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
-                <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">5. PLANILHA DE GASTOS MENSAIS</h2>
+                <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">6. PLANILHA DE GASTOS MENSAIS</h2>
                 
                 <div class="bg-green-50 p-4 rounded-xl border border-green-200 mb-4 cursor-pointer" onclick="document.getElementById('check-exibir-gastos').click()">
                     <div class="flex items-center gap-3">
@@ -357,6 +390,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
         import { EXPENSE_CATEGORIES } from './js/detalhes.js';
 
@@ -393,11 +427,142 @@
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
         // VARIÁVEIS GLOBAIS
         let pautaId, assistedId, actionKey, delegationToken;
         let formSubmitted = false;
         let realtimeUnsubscribe = null;
+        let fotosAnexadasParaEnvio = [];
+
+        // ===================== CÂMERA INTELIGENTE (ANÁLISE DE ILUMINAÇÃO) =====================
+        let streamCamera = null;
+        const videoEl = document.getElementById('video-preview');
+        const canvasEl = document.getElementById('canvas-captura');
+        const feedbackEl = document.getElementById('feedback-qualidade');
+        const btnCapturar = document.getElementById('btn-tirar-foto-real');
+        const btnIniciarCamera = document.getElementById('btn-iniciar-camera');
+        const containerCam = document.getElementById('camera-container');
+        let analiseQualidadeInterval = null;
+
+        if (btnIniciarCamera) {
+            btnIniciarCamera.onclick = async () => {
+                if (formSubmitted) return;
+                try {
+                    containerCam.classList.remove('hidden');
+                    btnIniciarCamera.classList.add('hidden');
+                    btnCapturar.classList.add('hidden');
+
+                    streamCamera = await navigator.mediaDevices.getUserMedia({
+                        video: { facingMode: 'environment', width: { ideal: 1280 }, height: { ideal: 720 } }
+                    });
+                    videoEl.srcObject = streamCamera;
+                    iniciarAnaliseQualidade();
+                } catch (err) {
+                    console.error("Erro câmera:", err);
+                    showNotification("Não foi possível acessar a câmera. Verifique as permissões.");
+                    containerCam.classList.add('hidden');
+                    btnIniciarCamera.classList.remove('hidden');
+                }
+            };
+        }
+
+        function pararCamera() {
+            if (streamCamera) {
+                streamCamera.getTracks().forEach(track => track.stop());
+                streamCamera = null;
+            }
+            if (analiseQualidadeInterval) {
+                clearInterval(analiseQualidadeInterval);
+                analiseQualidadeInterval = null;
+            }
+        }
+
+        function iniciarAnaliseQualidade() {
+            const ctx = canvasEl.getContext('2d');
+            analiseQualidadeInterval = setInterval(() => {
+                if (!streamCamera || containerCam.classList.contains('hidden')) {
+                    clearInterval(analiseQualidadeInterval);
+                    analiseQualidadeInterval = null;
+                    return;
+                }
+
+                canvasEl.width = videoEl.videoWidth || 640;
+                canvasEl.height = videoEl.videoHeight || 480;
+                ctx.drawImage(videoEl, 0, 0, canvasEl.width, canvasEl.height);
+
+                const imgData = ctx.getImageData(0, 0, canvasEl.width, canvasEl.height);
+                let somaBrilho = 0;
+                for (let i = 0; i < imgData.data.length; i += 4) {
+                    somaBrilho += (imgData.data[i] * 0.299 + imgData.data[i + 1] * 0.587 + imgData.data[i + 2] * 0.114);
+                }
+                const brilhoMedio = somaBrilho / (imgData.data.length / 4);
+
+                if (brilhoMedio < 45) {
+                    feedbackEl.textContent = "⚠️ Muito escuro! Procure mais luz";
+                    feedbackEl.className = "bg-red-600/90 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider";
+                    btnCapturar.classList.add('hidden');
+                } else if (brilhoMedio > 240) {
+                    feedbackEl.textContent = "⚠️ Muito claro / Reflexo";
+                    feedbackEl.className = "bg-amber-600/90 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider";
+                    btnCapturar.classList.add('hidden');
+                } else {
+                    feedbackEl.textContent = "✨ Perfeito! Pode fotografar";
+                    feedbackEl.className = "bg-emerald-600/90 text-white text-[10px] font-black px-3 py-1.5 rounded-lg uppercase tracking-wider";
+                    btnCapturar.classList.remove('hidden');
+                    btnCapturar.classList.add('flex');
+                }
+            }, 600);
+        }
+
+        if (btnCapturar) {
+            btnCapturar.onclick = async () => {
+                if (!streamCamera || formSubmitted) return;
+
+                const ctx = canvasEl.getContext('2d');
+                canvasEl.width = videoEl.videoWidth;
+                canvasEl.height = videoEl.videoHeight;
+                ctx.drawImage(videoEl, 0, 0);
+
+                pararCamera();
+                containerCam.classList.add('hidden');
+                btnCapturar.classList.add('hidden');
+                document.getElementById('upload-loading').classList.remove('hidden');
+
+                canvasEl.toBlob(async (blob) => {
+                    try {
+                        const timestamp = Date.now();
+                        const path = `documentos_temporarios/${pautaId}/${assistedId}/foto_${timestamp}.jpg`;
+                        const storageRef = ref(storage, path);
+
+                        await uploadBytes(storageRef, blob);
+                        const downloadURL = await getDownloadURL(storageRef);
+
+                        fotosAnexadasParaEnvio.push({
+                            url: downloadURL,
+                            nome: `Documento Válido (Triagem)`,
+                            dataUpload: new Date().toISOString()
+                        });
+
+                        document.getElementById('upload-loading').classList.add('hidden');
+                        btnIniciarCamera.classList.remove('hidden');
+                        btnIniciarCamera.innerHTML = '<span>📸</span> Tirar Outra Foto';
+
+                        document.getElementById('lista-fotos-preview').innerHTML += `
+                            <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black p-2 rounded-lg flex items-center justify-center gap-1 uppercase">
+                                <span>✅ Foto Anexada com Sucesso</span>
+                            </div>
+                        `;
+                    } catch (err) {
+                        console.error("Erro upload:", err);
+                        showNotification("Erro ao enviar foto. Tente novamente.");
+                        document.getElementById('upload-loading').classList.add('hidden');
+                        btnIniciarCamera.classList.remove('hidden');
+                    }
+                }, 'image/jpeg', 0.85);
+            };
+        }
+        // ===================== FIM CÂMERA INTELIGENTE =====================
 
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
@@ -477,6 +642,16 @@
                     }
                 }
             });
+
+            // Protege a área da câmera após o envio
+            pararCamera();
+            containerCam?.classList.add('hidden');
+            btnCapturar?.classList.add('hidden');
+            if (btnIniciarCamera) {
+                btnIniciarCamera.disabled = true;
+                btnIniciarCamera.classList.add('opacity-50', 'cursor-not-allowed');
+                btnIniciarCamera.innerHTML = '<span>🔒</span> Câmera Bloqueada';
+            }
         }
 
         function bloquearFormulario(motivo) {
@@ -623,6 +798,20 @@
                         const checklistArea = document.getElementById('checklist-area');
                         if (checklistArea) {
                             checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto ainda não definido pela Defensoria. Siga para o próximo passo.</div>`;
+                        }
+                    }
+
+                    if (Array.isArray(data.documentChecklist?.fotosAnexadas)) {
+                        fotosAnexadasParaEnvio = data.documentChecklist.fotosAnexadas;
+                        const preview = document.getElementById('lista-fotos-preview');
+                        if (preview) {
+                            fotosAnexadasParaEnvio.forEach(() => {
+                                preview.innerHTML += `
+                                    <div class="bg-emerald-50 border border-emerald-200 text-emerald-700 text-[9px] font-black p-2 rounded-lg flex items-center justify-center gap-1 uppercase">
+                                        <span>✅ Foto Anexada com Sucesso</span>
+                                    </div>
+                                `;
+                            });
                         }
                     }
 
@@ -967,7 +1156,8 @@
                         docTypes: docTypes,
                         reuData: reuData,
                         expenseData: gastos,
-                        socioData: socioData
+                        socioData: socioData,
+                        fotosAnexadas: fotosAnexadasParaEnvio
                     },
                     documentState: 'pre_triagem_concluida',
                     lastActionBy: 'Cidadão (App Web)',
