@@ -5,84 +5,258 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Autoatendimento - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        /* Estilos da Tela */
+        .btn-ativo { background-color: #16a34a; color: white; border-color: #15803d; }
+        .btn-inativo { background-color: #f1f5f9; color: #64748b; border-color: #e2e8f0; }
+
+        /* ========================================= */
+        /* MÁGICA DA IMPRESSORA TÉRMICA (TICKET)     */
+        /* ========================================= */
+        @media screen {
+            #ticket-impressao { display: none !important; }
+        }
+        
+        @media print {
+            /* Esconde a tela inteira na hora de imprimir */
+            #tela-totem { display: none !important; }
+            
+            /* Mostra apenas o ticket e tira as margens do navegador */
+            @page { margin: 0; }
+            body { 
+                margin: 0; 
+                padding: 10px; 
+                background: white; 
+            }
+            #ticket-impressao { 
+                display: block !important; 
+                width: 100%; 
+                max-width: 300px; /* Adapta bem para impressoras de 80mm e 58mm */
+                margin: 0 auto;
+                font-family: 'Courier New', Courier, monospace; /* Fonte clara para térmicas */
+                color: black;
+            }
+        }
+    </style>
 </head>
 <body class="bg-slate-100 h-screen flex flex-col items-center justify-center p-4">
 
-    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-lg w-full text-center border-t-8 border-green-600">
-        <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo Defensoria" class="mx-auto h-24 mb-6">
-        <h1 class="text-4xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Chegou?</h1>
-        <p class="text-slate-500 font-bold mb-8">Confirme sua presença digitando seu CPF abaixo:</p>
+    <!-- O TICKET INVISÍVEL QUE VAI PARA A IMPRESSORA -->
+    <div id="ticket-impressao"></div>
 
-        <input type="text" id="totem-cpf" placeholder="Apenas números..." maxlength="11" class="w-full text-center text-3xl font-bold p-4 border-2 border-slate-300 rounded-2xl focus:border-green-600 focus:outline-none mb-6 tracking-widest bg-slate-50">
+    <!-- A TELA DO TOTEM QUE O CIDADÃO VÊ -->
+    <div id="tela-totem" class="bg-white rounded-3xl shadow-2xl p-8 sm:p-10 max-w-lg w-full text-center border-t-8 border-green-600">
+        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo Defensoria" class="mx-auto h-20 sm:h-24 mb-6">
+        <h1 class="text-3xl sm:text-4xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Chegou?</h1>
+        <p class="text-slate-500 font-bold mb-6">Escolha como deseja confirmar sua presença:</p>
 
-        <button id="btn-totem-checkin" class="w-full bg-green-600 hover:bg-green-700 text-white text-2xl font-black py-5 rounded-2xl shadow-lg transition-transform active:scale-95 uppercase tracking-wide">
+        <!-- SELETORES DE TIPO DE BUSCA -->
+        <div class="flex gap-3 mb-6">
+            <button id="btn-tipo-cpf" class="tipo-busca-btn btn-ativo flex-1 font-bold py-3 rounded-xl border shadow-sm text-sm transition-colors">
+                Por CPF
+            </button>
+            <button id="btn-tipo-duplo" class="tipo-busca-btn btn-inativo flex-1 font-bold py-3 rounded-xl border shadow-sm text-sm transition-colors leading-tight">
+                Nome + Agendamento
+            </button>
+        </div>
+
+        <!-- INPUT: CPF -->
+        <div id="box-cpf" class="block w-full mb-6">
+            <input type="text" id="totem-input-cpf" placeholder="Digite apenas os números do CPF..." maxlength="11" class="w-full text-center text-xl sm:text-2xl font-bold p-4 border-2 border-slate-300 rounded-2xl focus:border-green-600 focus:outline-none tracking-wide bg-slate-50 transition-all">
+        </div>
+
+        <!-- INPUTS: NOME + AGENDAMENTO -->
+        <div id="box-duplo" class="hidden flex-col gap-4 mb-6 w-full">
+            <input type="text" id="totem-input-nome" placeholder="Seu nome completo..." class="w-full text-center text-lg font-bold p-4 border-2 border-slate-300 rounded-2xl focus:border-green-600 focus:outline-none tracking-wide bg-slate-50 transition-all">
+            <input type="text" id="totem-input-agendamento" placeholder="Número do Agendamento..." class="w-full text-center text-lg font-bold p-4 border-2 border-slate-300 rounded-2xl focus:border-green-600 focus:outline-none tracking-wide bg-slate-50 transition-all">
+        </div>
+
+        <!-- BOTÃO DE CONFIRMAR -->
+        <button id="btn-totem-checkin" class="w-full bg-green-600 hover:bg-green-700 text-white text-xl sm:text-2xl font-black py-4 sm:py-5 rounded-2xl shadow-lg transition-transform active:scale-95 uppercase tracking-wide">
             CONFIRMAR PRESENÇA
         </button>
 
-        <div id="totem-msg" class="hidden mt-6 p-4 rounded-xl font-bold text-lg"></div>
+        <div id="totem-msg" class="hidden mt-6 p-4 rounded-xl font-bold text-base sm:text-lg"></div>
     </div>
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, query, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { firebaseConfig } from './js/config.js'; // Usa a sua config existente!
+        import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // SUA CONFIGURAÇÃO DO FIREBASE
+        const firebaseConfig = {
+            apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
+            authDomain: "pauta-ce162.firebaseapp.com",
+            projectId: "pauta-ce162",
+            storageBucket: "pauta-ce162.appspot.com",
+            messagingSenderId: "87113750208",
+            appId: "1:87113750208:web:4abba0024f4d4af699bf25"
+        };
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // O Totem precisa saber qual pauta está ativa (passe pela URL: totem.html?id=ID_DA_PAUTA)
-        const pautaId = new URLSearchParams(window.location.search).get('pautaId');
+        // Pega o ID da pauta pela URL
+        const params = new URLSearchParams(window.location.search);
+        const pautaId = params.get('pautaId') || params.get('id');
+
+        // LÓGICA DA INTERFACE (Trocar tipo de busca)
+        let tipoBuscaAtual = 'cpf';
+        const boxCpf = document.getElementById('box-cpf');
+        const boxDuplo = document.getElementById('box-duplo');
+        const inputCpf = document.getElementById('totem-input-cpf');
+        const inputNome = document.getElementById('totem-input-nome');
+        
+        document.getElementById('btn-tipo-cpf').onclick = (e) => {
+            tipoBuscaAtual = 'cpf';
+            document.querySelectorAll('.tipo-busca-btn').forEach(b => { b.classList.remove('btn-ativo'); b.classList.add('btn-inativo'); });
+            e.target.classList.remove('btn-inativo'); e.target.classList.add('btn-ativo');
+            boxCpf.classList.remove('hidden'); boxCpf.classList.add('block');
+            boxDuplo.classList.remove('flex'); boxDuplo.classList.add('hidden');
+            inputCpf.focus();
+        };
+
+        document.getElementById('btn-tipo-duplo').onclick = (e) => {
+            tipoBuscaAtual = 'duplo';
+            document.querySelectorAll('.tipo-busca-btn').forEach(b => { b.classList.remove('btn-ativo'); b.classList.add('btn-inativo'); });
+            e.target.classList.remove('btn-inativo'); e.target.classList.add('btn-ativo');
+            boxCpf.classList.remove('block'); boxCpf.classList.add('hidden');
+            boxDuplo.classList.remove('hidden'); boxDuplo.classList.add('flex');
+            inputNome.focus();
+        };
+
+        // LÓGICA DE BUSCA E IMPRESSÃO
         document.getElementById('btn-totem-checkin').addEventListener('click', async () => {
-            const cpfDigitado = document.getElementById('totem-cpf').value.trim();
-            const msgBox = document.getElementById('totem-msg');
+            const valCpf = inputCpf.value.trim();
+            const valNome = inputNome.value.trim();
+            const valAgendamento = document.getElementById('totem-input-agendamento').value.trim();
+            const btnConfirmar = document.getElementById('btn-totem-checkin');
             
             if (!pautaId) {
                 mostrarMsg('Erro: Pauta não configurada neste Totem.', 'bg-red-100 text-red-700'); return;
             }
-            if (cpfDigitado.length < 11) {
-                mostrarMsg('Digite um CPF válido (11 números)', 'bg-amber-100 text-amber-700'); return;
+
+            if (tipoBuscaAtual === 'cpf' && !valCpf) {
+                mostrarMsg('Por favor, preencha o seu CPF.', 'bg-amber-100 text-amber-700'); return;
+            }
+            if (tipoBuscaAtual === 'duplo' && (!valNome || !valAgendamento)) {
+                mostrarMsg('Por favor, preencha o Nome E o Número do Agendamento.', 'bg-amber-100 text-amber-700'); return;
             }
 
-            document.getElementById('btn-totem-checkin').innerText = 'BUSCANDO...';
+            btnConfirmar.innerText = 'BUSCANDO E GERANDO SENHA...';
+            btnConfirmar.disabled = true;
 
             try {
-                // Busca nos attendances da pauta quem tem esse CPF
                 const attendancesRef = collection(db, "pautas", pautaId, "attendances");
                 const snapshot = await getDocs(attendancesRef);
+                
                 let assistidoEncontrado = null;
+                let jaConfirmado = false;
+
+                const normalizarTexto = (texto) => {
+                    if (!texto) return '';
+                    return texto.toString().toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").trim();
+                };
 
                 snapshot.forEach(d => {
                     const dados = d.data();
-                    const cpfLimpo = (dados.cpf || '').replace(/\D/g, '');
-                    if (cpfLimpo === cpfDigitado && dados.status === 'agendado') {
-                        assistidoEncontrado = { id: d.id, ...dados };
+                    let deuMatch = false;
+
+                    if (tipoBuscaAtual === 'cpf') {
+                        const cpfLimpo = (dados.cpf || '').replace(/\D/g, '');
+                        const valorLimpo = valCpf.replace(/\D/g, '');
+                        if (cpfLimpo && cpfLimpo === valorLimpo) deuMatch = true;
+                    } 
+                    else if (tipoBuscaAtual === 'duplo') {
+                        const nomeDb = dados.name || '';
+                        const numDb = (dados.numeroAgendamento || dados.numAgendamento || '');
+                        if (normalizarTexto(nomeDb) === normalizarTexto(valNome) && normalizarTexto(numDb) === normalizarTexto(valAgendamento)) {
+                            deuMatch = true;
+                        }
+                    }
+
+                    if (deuMatch) {
+                        const naFila = ['aguardando', 'emAtendimento', 'atendido'].includes(dados.status);
+                        if (naFila) {
+                            jaConfirmado = true;
+                        } else {
+                            assistidoEncontrado = { id: d.id, ...dados };
+                        }
                     }
                 });
 
-                if (assistidoEncontrado) {
-                    // Atualiza o status automaticamente para Aguardando (Entrou na fila!)
+                if (jaConfirmado && !assistidoEncontrado) {
+                    mostrarMsg('⚠️ Você já confirmou sua presença! Aguarde ser chamado na TV.', 'bg-amber-100 text-amber-800 border border-amber-300');
+                } 
+                else if (assistidoEncontrado) {
+                    
+                    // 1. Atualiza no banco
                     await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoEncontrado.id), {
                         status: 'aguardando',
                         arrivalTime: new Date().toISOString(),
                         checkInOrder: Date.now()
                     });
-                    mostrarMsg(`✅ Presença confirmada!<br><span class="text-sm">Sente-se e acompanhe na TV, ${assistidoEncontrado.name.split(' ')[0]}!</span>`, 'bg-green-100 text-green-700');
-                    document.getElementById('totem-cpf').value = '';
-                } else {
-                    mostrarMsg('CPF não encontrado ou já confirmado na triagem hoje.', 'bg-red-100 text-red-700');
+                    
+                    // 2. Prepara os dados para o papel
+                    const primeiroNome = assistidoEncontrado.name.split(' ')[0];
+                    const horaChegada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    const assunto = assistidoEncontrado.subject || 'Triagem Geral';
+                    const local = assistidoEncontrado.room || 'Recepção / Fila Geral';
+                    const numAgendamentoFormatado = assistidoEncontrado.numeroAgendamento || assistidoEncontrado.numAgendamento || '';
+
+                    // 3. Monta o Ticket em HTML
+                    document.getElementById('ticket-impressao').innerHTML = `
+                        <div style="text-align: center; font-family: 'Courier New', monospace; padding-bottom: 20px;">
+                            <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 2px;">DEFENSORIA PÚBLICA</h2>
+                            <p style="font-size: 12px; margin-top: 0; border-bottom: 1px dashed black; padding-bottom: 5px;">Sistema SIGEP</p>
+                            
+                            <h1 style="font-size: 22px; font-weight: 900; margin: 15px 0;">SENHA CONFIRMADA</h1>
+                            
+                            <p style="font-size: 18px; font-weight: bold; margin: 5px 0;">${assistidoEncontrado.name.toUpperCase()}</p>
+                            ${numAgendamentoFormatado ? `<p style="font-size: 12px; margin: 0;">Agendamento: ${numAgendamentoFormatado}</p>` : ''}
+                            
+                            <div style="margin: 15px 0; border-top: 1px dashed black; border-bottom: 1px dashed black; padding: 10px 0; text-align: left;">
+                                <p style="margin: 4px 0; font-size: 14px;"><strong>HORA:</strong> ${horaChegada}</p>
+                                <p style="margin: 4px 0; font-size: 14px;"><strong>ASSUNTO:</strong> ${assunto.toUpperCase()}</p>
+                                <p style="margin: 4px 0; font-size: 14px;"><strong>LOCAL:</strong> ${local.toUpperCase()}</p>
+                            </div>
+                            
+                            <p style="font-size: 12px; font-weight: bold; text-align: center; margin-top: 10px;">ACOMPANHE SUA VEZ PELO PAINEL DA TV</p>
+                        </div>
+                    `;
+
+                    mostrarMsg(`✅ Presença confirmada!<br><span class="text-sm font-medium mt-1 block">Retire seu comprovante e aguarde na TV, ${primeiroNome}!</span>`, 'bg-green-100 text-green-800 border border-green-300');
+                    
+                    // Limpa os campos
+                    inputCpf.value = '';
+                    inputNome.value = '';
+                    document.getElementById('totem-input-agendamento').value = '';
+
+                    // 4. DISPARA A IMPRESSÃO
+                    // O setTimeout dá tempo do HTML do ticket ser desenhado na tela invisível
+                    setTimeout(() => {
+                        window.print();
+                    }, 500);
+                } 
+                else {
+                    mostrarMsg('❌ Cadastro não encontrado ou dados não conferem. Procure a recepção.', 'bg-red-100 text-red-800 border border-red-300');
                 }
+
             } catch (e) {
-                mostrarMsg('Erro ao conectar ao servidor.', 'bg-red-100 text-red-700');
+                console.error("Erro no totem:", e);
+                mostrarMsg('Erro de conexão. Chame um atendente.', 'bg-red-100 text-red-700');
             }
-            document.getElementById('btn-totem-checkin').innerText = 'CONFIRMAR PRESENÇA';
+            
+            btnConfirmar.innerText = 'CONFIRMAR PRESENÇA';
+            btnConfirmar.disabled = false;
         });
 
         function mostrarMsg(html, classes) {
             const m = document.getElementById('totem-msg');
             m.innerHTML = html;
-            m.className = `mt-6 p-4 rounded-xl font-bold text-lg ${classes}`;
+            m.className = `mt-6 p-4 rounded-2xl font-bold text-lg transition-all shadow-sm ${classes}`;
             m.classList.remove('hidden');
-            setTimeout(() => m.classList.add('hidden'), 6000);
+            setTimeout(() => { m.classList.add('hidden'); }, 7000);
         }
     </script>
 </body>
