@@ -933,6 +933,27 @@ class SIGEPApp {
             }
         });
 
+        // ABRIR O TOTEM DE AUTOATENDIMENTO EM NOVA ABA
+        document.getElementById('open-totem-btn')?.addEventListener('click', () => {
+            if (this.currentPauta) {
+                // Pega a URL do sistema e monta o link do totem com o ID da pauta atual
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const totemUrl = `${baseUrl}/totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                
+                // Abre o totem em uma nova aba
+                window.open(totemUrl, '_blank');
+                
+                // Fecha o menuzinho verde de "Ações" para deixar a tela limpa
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
+            } else {
+                if(window.showNotification) showNotification("Nenhuma pauta selecionada.", "error");
+            }
+        });
+
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
             const statusText = document.getElementById('share-status-text');
