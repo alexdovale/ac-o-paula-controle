@@ -32,8 +32,6 @@
 </head>
 <body class="p-2 md:p-6 min-h-screen flex justify-center items-start pt-4 sm:pt-10">
 
-    <!-- Este container serve de "casca" para a Tela de Atendimento Individual.
-         O painel Dashboard vai substituir o Body automaticamente via JS. -->
     <div id="shell-atendimento" class="w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex flex-col border border-slate-200">
         
         <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center gap-4 relative overflow-hidden">
@@ -88,10 +86,21 @@
 
             <div class="p-4 sm:p-6 bg-white flex-1">
                 <div id="aba-encerramento" class="space-y-6">
+                    
+                    <!-- PAINEL DE FOTOS ENVIADAS PELO CIDADÃO NA TRIAGEM -->
+                    <div id="painel-fotos-servidor" class="hidden bg-slate-900 rounded-2xl p-4 shadow-md border border-slate-700 animate-fade-in">
+                        <h4 class="text-xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                            <span>📱</span> Documentos Anexados pelo Cidadão (Celular)
+                        </h4>
+                        <div id="grid-fotos-recebidas" class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                            <!-- As fotos do cidadão preenchem aqui dinamicamente -->
+                        </div>
+                    </div>
+
                     <div id="area-colaborador" class="hidden">
                         <div class="flex flex-col justify-center items-center py-20 gap-3">
                             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-                            <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa Judicial...</p>
+                            <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa de Trabalho...</p>
                         </div>
                     </div>
                 </div>
@@ -115,38 +124,59 @@
 
     <script type="module">
         import { AtendimentoExternoService } from './js/atendimentoExternoService.js';
+        import { getFirestore, doc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { firebaseConfig } from './js/config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
 
         document.addEventListener('DOMContentLoaded', () => {
-            
-            // Lemos os parâmetros reais da URL
             const searchLimpa = window.location.search.replace(/&amp;/g, '&');
             const urlParams = new URLSearchParams(searchLimpa);
-            const assistidoId = urlParams.get('assistidoId');
+            const assistidoId = urlParams.get('assistidoId') || urlParams.get('aid');
+            const pautaId = urlParams.get('pid') || urlParams.get('pautaId');
 
-            // Se existir assistidoId na URL, mostra direto a tela de Atendimento Individual
             if (assistidoId) {
                 document.getElementById('view-dashboard').classList.add('hidden');
                 document.getElementById('view-atendimento').classList.remove('hidden');
                 document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
+
+                if (pautaId) {
+                    onSnapshot(doc(db, "pautas", pautaId, "attendances", assistidoId), (snap) => {
+                        if (!snap.exists()) return;
+                        const data = snap.data();
+                        const fotos = data.documentChecklist?.fotosAnexadas || [];
+                        
+                        const painelServidor = document.getElementById('painel-fotos-servidor');
+                        const gridFotos = document.getElementById('grid-fotos-recebidas');
+
+                        if (fotos.length > 0) {
+                            painelServidor.classList.remove('hidden');
+                            gridFotos.innerHTML = fotos.map((f, i) => `
+                                <a href="${f.url}" target="_blank" class="bg-slate-800 hover:bg-indigo-600 border border-slate-600 text-white font-bold text-[10px] p-2.5 rounded-xl text-center shadow transition-all block uppercase tracking-wider flex items-center justify-center gap-1.5">
+                                    <span class="text-base">🔍</span> Ver Foto ${i + 1}
+                                </a>
+                            `).join('');
+                        } else {
+                            painelServidor.classList.add('hidden');
+                        }
+                    });
+                }
             } else {
-                // Para o Dashboard, ocultamos o shell HTML original para o JS reconstruí-lo mais bonito
                 document.getElementById('shell-atendimento').classList.add('hidden');
             }
 
-            // Inicia o serviço sem passar nenhum parâmetro mockado (o JS lê da URL automaticamente)
             AtendimentoExternoService.init();
 
-            // Lógica do botão Voltar (Tira você de "Em atendimento" de volta para o Dashboard)
             document.getElementById('btn-voltar-dashboard').addEventListener('click', () => {
                 const urlAtual = new URL(window.location.href);
-                urlAtual.searchParams.delete('assistidoId'); // Remove o assistido da URL
-                urlAtual.searchParams.delete('token');       // Remove o token de segurança
+                urlAtual.searchParams.delete('assistidoId');
+                urlAtual.searchParams.delete('aid');
+                urlAtual.searchParams.delete('token');
                 urlAtual.searchParams.delete('view');
-                
-                // Recarrega a página na mesma pauta, mas voltando pro Dashboard Geral
                 window.location.href = urlAtual.toString();
             });
-            
         });
     </script>
 </body>
