@@ -12,7 +12,19 @@
         .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
-        /* ── MELHORIA 3: Animações do último chamado ── */
+        /* ── MODO ALTO CONTRASTE ── */
+        html.alto-contraste {
+            filter: invert(1) hue-rotate(180deg) contrast(120%);
+            background-color: #111 !important;
+        }
+        html.alto-contraste img, 
+        html.alto-contraste video, 
+        html.alto-contraste iframe,
+        html.alto-contraste [vw] {
+            filter: invert(1) hue-rotate(180deg);
+        }
+
+        /* ── Animações do último chamado ── */
         @keyframes fadeInDown {
             from { opacity: 0; transform: translateY(-18px) scale(0.97); }
             to   { opacity: 1; transform: translateY(0)   scale(1);    }
@@ -79,15 +91,22 @@
                     </div>
                 </div>
             </div>
-            <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] w-full md:w-auto uppercase tracking-wider">
-                <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
-                <span id="total-atendidos-count" class="text-2xl font-black">0</span>
-            </button>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto">
+                <!-- Botão Alto Contraste -->
+                <button id="btn-alto-contraste" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl flex flex-col items-center shadow-sm transition-all min-w-[80px] flex-1 md:flex-none uppercase tracking-wider border border-slate-200">
+                    <span class="text-[14px]">🌗</span>
+                    <span class="text-[8px] font-black uppercase mt-1">Contraste</span>
+                </button>
+                <!-- Botão Finalizados -->
+                <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] flex-1 md:flex-none uppercase tracking-wider">
+                    <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
+                    <span id="total-atendidos-count" class="text-2xl font-black">0</span>
+                </button>
+            </div>
         </header>
 
-        <!-- ═══════════════════════════════════════════════════
-             MELHORIA 3: BLOCO DO ÚLTIMO CHAMADO (animado)
-        ════════════════════════════════════════════════════ -->
+        <!-- BLOCO DO ÚLTIMO CHAMADO (animado) -->
         <div id="ultimo-chamado-container" class="hidden mb-6">
             <div id="uc-card" class="bg-slate-900 rounded-3xl p-6 md:p-8 text-center relative overflow-hidden shadow-xl border border-slate-700">
                 <div class="absolute inset-0 bg-amber-500 opacity-10 rounded-3xl animate-pulse-slow pointer-events-none"></div>
@@ -142,6 +161,31 @@
         </div>
     </div>
 
+    <!-- WIDGET DE ACESSIBILIDADE: VLIBRAS -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+        
+        // Controle de Alto Contraste
+        const btnContraste = document.getElementById('btn-alto-contraste');
+        const htmlElement = document.documentElement;
+        if (localStorage.getItem('sigep_alto_contraste') === 'true') {
+            htmlElement.classList.add('alto-contraste');
+        }
+        if (btnContraste) {
+            btnContraste.addEventListener('click', () => {
+                htmlElement.classList.toggle('alto-contraste');
+                localStorage.setItem('sigep_alto_contraste', htmlElement.classList.contains('alto-contraste'));
+            });
+        }
+    </script>
+
     <script type="module">
         import { initializeApp }    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, doc, onSnapshot, collection, setDoc, serverTimestamp }
@@ -171,15 +215,10 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        // ════════════════════════════════════════════════════════
         // ESTADO GLOBAL
-        // ════════════════════════════════════════════════════════
-        let ultimoChamadoAtual = null;  // cache do último chamado exibido
+        let ultimoChamadoAtual = null; 
         let maskNames = false;
 
-        // ════════════════════════════════════════════════════════
-        // HELPERS
-        // ════════════════════════════════════════════════════════
         function escapeHTML(str) {
             if (!str) return '';
             return str.replace(/[&<>'"]/g,
@@ -200,14 +239,9 @@
             );
         }
 
-        // ════════════════════════════════════════════════════════
-        // MELHORIA 4: SOM DE CHAMADO
-        // Gera um "ding" via Web Audio API — sem arquivo externo
-        // ════════════════════════════════════════════════════════
         function tocarSomChamado() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-
                 const tocarNota = (freq, inicio, duracao, ganho = 0.4) => {
                     const osc  = ctx.createOscillator();
                     const gain = ctx.createGain();
@@ -221,40 +255,28 @@
                     osc.stop(ctx.currentTime + inicio + duracao);
                 };
 
-                // Três notas ascendentes — tipo campainha de recepção
                 tocarNota(523, 0,    0.22); // C5
                 tocarNota(659, 0.22, 0.22); // E5
                 tocarNota(784, 0.44, 0.35); // G5
-
                 setTimeout(() => ctx.close(), 1200);
             } catch(e) {
                 console.warn('Som indisponível:', e);
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // MELHORIA 3: ANIMAR ÚLTIMO CHAMADO
-        // ════════════════════════════════════════════════════════
         function animarUltimoChamado() {
             const card  = document.getElementById('uc-card');
             const nomeEl = document.getElementById('uc-nome');
             if (!card || !nomeEl) return;
 
-            // Remove e re-adiciona a classe para reiniciar a animação
             nomeEl.classList.remove('animate-chamado-in');
             card.classList.remove('animate-flash-border');
-
-            // Força reflow para reiniciar
             void nomeEl.offsetWidth;
             void card.offsetWidth;
-
             nomeEl.classList.add('animate-chamado-in');
             card.classList.add('animate-flash-border');
         }
 
-        // ════════════════════════════════════════════════════════
-        // MELHORIA 1 + 2: RENDERIZAR ÚLTIMO CHAMADO VIA FIRESTORE
-        // ════════════════════════════════════════════════════════
         function renderUltimoChamado(chamado, historico) {
             if (!chamado) return;
 
@@ -265,8 +287,6 @@
             const recentesEl = document.getElementById('uc-recentes');
 
             const novoNome = formatNameMasked(chamado.nome, maskNames);
-
-            // Só anima e toca som se o nome mudou
             const nomeMudou = nomeEl.textContent !== novoNome && novoNome !== '—';
 
             container.classList.remove('hidden');
@@ -279,7 +299,6 @@
                 tocarSomChamado();
             }
 
-            // Recentes (exclui o atual)
             const anteriores = (historico || []).slice(1, 4);
 
             if (anteriores.length > 0) {
@@ -297,10 +316,6 @@
             }
         }
 
-        // ════════════════════════════════════════════════════════
-        // MELHORIA 1: LISTENER FIRESTORE PARA ÚLTIMO CHAMADO
-        // Funciona em qualquer dispositivo, inclusive TV
-        // ════════════════════════════════════════════════════════
         function iniciarListenerUltimoChamado(pautaId) {
             const chamadoRef = doc(db, "pautas", pautaId, "painel", "ultimoChamado");
             onSnapshot(chamadoRef, (snap) => {
@@ -310,14 +325,10 @@
             });
         }
 
-        // Também escuta o evento local (mesma aba/máquina) para resposta imediata
         window.addEventListener('sigep:chamado', (e) => {
             if (e.detail) renderUltimoChamado(e.detail, []);
         });
 
-        // ════════════════════════════════════════════════════════
-        // CARDS DA FILA
-        // ════════════════════════════════════════════════════════
         const createCardHTML = (a, i, color, type, data) => {
             const numAg  = a.numeroAgendamento || a.numAgendamento || '';
             const horaAg = a.scheduledTime || '';
@@ -344,11 +355,7 @@
                 </div>`;
         };
 
-        // ════════════════════════════════════════════════════════
-        // INICIALIZAÇÃO PRINCIPAL
-        // ════════════════════════════════════════════════════════
         if (pId) {
-            // Listener da pauta (config + dados)
             onSnapshot(doc(db, "pautas", pId), (snap) => {
                 if (!snap.exists() || !snap.data().isPublic) {
                     document.getElementById('loading').classList.add('hidden');
@@ -364,7 +371,6 @@
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
-                // Colunas visíveis
                 const grid = document.getElementById('main-grid');
                 let cols = 1;
                 if (data.useDelegationFlow) { document.getElementById('col-atendimento').classList.remove('hidden'); cols++; }
@@ -374,15 +380,12 @@
                 grid.className = `grid grid-cols-1 ${cols > 1 ? 'lg:grid-cols-' + cols : ''} gap-4 flex-1 min-h-0`;
             });
 
-            // MELHORIA 1: Listener do último chamado via Firestore
             iniciarListenerUltimoChamado(pId);
 
-            // Listener dos atendimentos
             onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
                 const pautaSnap = document.getElementById('pauta-title').textContent !== '---';
-                if (!pautaSnap) return; // aguarda a pauta carregar
+                if (!pautaSnap) return; 
 
-                // Lê config atual do DOM (já carregada pelo listener da pauta)
                 const ordemAtendimento = window._sigepOrdem || 'padrao';
                 const tipo = window._sigepTipo || 'agendamento';
 
@@ -403,7 +406,6 @@
                 document.getElementById('count-distribuicao').textContent = dist.length;
                 document.getElementById('total-atendidos-count').textContent = done.length;
 
-                // Fila de espera
                 const elAg = document.getElementById('list-aguardando');
                 if (ag.length === 0) {
                     elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
@@ -438,17 +440,14 @@
                     elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', { maskNames })).join('');
                 }
 
-                // Em atendimento
                 document.getElementById('list-atendimento').innerHTML = serv.length
                     ? serv.map((a, i) => createCardHTML(a, i, 'border-indigo-500', 'pulse', { maskNames })).join('')
                     : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Ninguém em atendimento</p></div>';
 
-                // Distribuição
                 document.getElementById('list-distribuicao').innerHTML = dist.length
                     ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-500', 'normal', { maskNames })).join('')
                     : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Nenhum processo aguardando</p></div>';
 
-                // Modal atendidos
                 document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
                     <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
                         <span class="font-bold text-gray-700 uppercase text-xs truncate">${formatNameMasked(d.name, maskNames)}</span>
@@ -457,7 +456,6 @@
                     || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado hoje.</p>';
             });
 
-            // Salva config da pauta em variáveis globais para o listener de atendimentos usar
             onSnapshot(doc(db, "pautas", pId), (snap) => {
                 if (!snap.exists()) return;
                 const d = snap.data();
@@ -467,7 +465,6 @@
             });
         }
 
-        // Botões modais
         document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
         document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
     </script>
