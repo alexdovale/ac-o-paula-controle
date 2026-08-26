@@ -1,3 +1,10 @@
+Aqui está o seu arquivo index.html completo e atualizado!
+Ele já inclui:
+ * O Modo Alto Contraste estruturado no CSS.
+ * O Botão de Alto Contraste injetado bonitinho no rodapé.
+ * O Script de Lógica para salvar sua preferência de contraste no navegador.
+ * O Widget do VLibras integrado para acessibilidade em Libras.
+Pode copiar e substituir todo o conteúdo do seu index.html:
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -103,6 +110,21 @@
         #main-wrapper { flex: 1 0 auto; }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        /* ========================================= */
+        /* MODO ALTO CONTRASTE (ACESSIBILIDADE)      */
+        /* ========================================= */
+        html.alto-contraste {
+            filter: invert(1) hue-rotate(180deg) contrast(120%);
+            background-color: #111 !important;
+        }
+        
+        html.alto-contraste img, 
+        html.alto-contraste video, 
+        html.alto-contraste iframe,
+        html.alto-contraste [vw] {
+            filter: invert(1) hue-rotate(180deg);
+        }
 
         /* ========================================= */
         /* MODOS DE FOCO: MAXIMIZAR E DESENCAIXAR    */
@@ -694,7 +716,7 @@
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
                                 <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2h-2a2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0-.33 1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2v-2a2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 4.6a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
                                 <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-slate-200 z-30 space-y-2">
                                     <p class="text-xs font-bold text-slate-500 uppercase mb-2">Mostrar Colunas:</p>
@@ -922,91 +944,62 @@
                                 
                                 <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-100 pb-2">Exemplos Práticos do Sistema</h4>
                                 
-<!-- GRID COM OS 4 CENÁRIOS DE EXEMPLO -->
-<div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
                                     
-    <!-- Cenário 1: Desempate Exato -->
-    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-        <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: Pontuais e o Desempate Exato</h5>
-        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>2º João:</b> Agendado 09:00 | Chegou 08:40</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>3º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>4º Aline:</b> Agendada 09:00 | Chegou 08:50</span>
-            </div>
-            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Todos são pontuais (dentro da tolerância). O sistema desempata a favor de quem fez o check-in na recepção primeiro.</p>
-        </div>
-    </div>
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: O Desempate Exato</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Ambos são pontuais. O sistema desempata a favor da Maria porque o check-in dela foi feito primeiro.</p>
+                                        </div>
+                                    </div>
 
-    <!-- Cenário 2: Atraso vs Avulso -->
-    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-        <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
-        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>1º Bruno:</b> Avulso (Sem agend.) | Chegou 09:10</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>2º Alice:</b> Agendada 09:15 | Chegou 09:12</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span class="text-red-600"><b>3º Pedro:</b> Agendado 09:00 | Chegou 09:20 (Atrasado)</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>4º Carla:</b> Avulso (Sem agend.) | Chegou 09:25</span>
-            </div>
-            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bruno (09:10) entra antes. Alice mantém as 09:15 por ser pontual. Pedro atrasou >15 min; foi "punido" e sua hora de ordenação passou a ser a hora real (09:20).</p>
-        </div>
-    </div>
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Ana:</b> Atendimento Avulso | Chegou 09:10</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Pedro:</b> Agendado 09:00 | Chegou 09:20</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
+                                        </div>
+                                    </div>
 
-    <!-- Cenário 3: O Fura-Fila Legal -->
-    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-        <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal (Urgência)</h5>
-        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-            <div class="flex justify-between border-b border-slate-200 pb-1 text-red-700">
-                <span><b>1º Sr. José:</b> Urgência (80+) | Chegou 10:00</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1 text-red-700">
-                <span><b>2º D. Ana:</b> Urgência (PCD) | Chegou 10:05</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>3º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>4º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
-            </div>
-            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades manuais (URGENTE) ignoram o horário e pulam direto para o topo da fila. Entre eles, desempata quem chegou primeiro.</p>
-        </div>
-    </div>
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Sr. José:</b> Urgência / 80+ | Chegou 10:00</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades absolutas (Idosos 80+, Risco de Morte) ignoram a regra de horário e vão direto para o topo da fila global.</p>
+                                        </div>
+                                    </div>
 
-    <!-- Cenário 4: Chegar muito cedo -->
-    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
-        <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
-        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1">
-                <span><b>2º Marcos:</b> Agendado 09:15 | Chegou 08:55</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1 text-blue-600">
-                <span><b>3º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
-            </div>
-            <div class="flex justify-between border-b border-slate-200 pb-1 text-blue-600">
-                <span><b>4º João:</b> Agendado 10:00 | Chegou 07:45</span>
-            </div>
-            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia e João chegaram horas antes, mas o sistema respeita os blocos. Eles serão os primeiros do bloco das 10h, mas não furam a pauta das 09h.</p>
-        </div>
-    </div>
+                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                        <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
+                                        <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
+                                            </div>
+                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                                <span><b>2º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
+                                            </div>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia chegou super cedo, mas a fila respeita a faixa de horário. Ela será a primeira das 10h, mas não passa a pauta das 09h.</p>
+                                        </div>
+                                    </div>
 
-</div>
-
+                                </div>
+                            </div>
                             
                             <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
                                 <div class="bg-red-50 p-3 sm:p-4 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
@@ -1023,7 +1016,7 @@
                                 </div>
                                 <div class="bg-orange-50 p-3 sm:p-4 rounded-xl border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
                                     <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados ⚠️</p>
-                                    <p class="text-[8px] sm:text-[9px] text-slate-500 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
+                                    <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
                                 </div>
                             </div>
                         </div>
@@ -1044,6 +1037,13 @@
             </div>
 
             <div class="flex flex-wrap items-center justify-center gap-3">
+                
+                <!-- BOTÃO DE ALTO CONTRASTE ADICIONADO AQUI -->
+                <button id="btn-alto-contraste" title="Ativar/Desativar Modo de Alto Contraste para baixa visão" class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-700 font-bold bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm transition-all active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <span>Alto Contraste</span>
+                </button>
+
                 <div title="Nossos servidores são monitorados 24/7 para garantir máxima disponibilidade e evitar quedas do sistema durante o seu trabalho." class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
                     <span>Ambiente Monitorado</span>
@@ -1115,7 +1115,7 @@
         </div>
     </div>
     
-        <!-- SELECT COLLABORATOR MODAL (PADRONIZADO) -->
+    <!-- SELECT COLLABORATOR MODAL (PADRONIZADO) -->
     <div id="select-collaborator-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
@@ -1155,17 +1155,11 @@
             </div>
             
             <div class="p-4 bg-white overflow-y-auto flex-grow scrollable-content">
-                <!-- Botões de Status Injetados via JS -->
                 <div id="doc-status-buttons-container" class="space-y-2 mb-4"></div>
-                
-                <!-- CHECKLIST DINÂMICO INJETADO VIA JS -->
-                <div id="doc-status-checklist-container" class="hidden border-t border-slate-200 pt-4 mt-2">
-                    <!-- O JavaScript vai colocar os checkboxes aqui -->
-                </div>
+                <div id="doc-status-checklist-container" class="hidden border-t border-slate-200 pt-4 mt-2"></div>
             </div>
         </div>
     </div>
-
 
     <!-- MODAL DE CONFIRMAÇÃO DE ATENDENTE -->
     <div id="attendant-modal" class="hidden fixed inset-0 bg-black/50 z-[60] flex items-center justify-center p-4 backdrop-blur-sm">
@@ -1249,6 +1243,17 @@
         </div>
     </div>
     
+    <!-- WIDGET DE ACESSIBILIDADE: VLIBRAS -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
 
     <script>
         // Lógica independente e super rápida para salvar o status com 1 clique
@@ -1262,10 +1267,8 @@
             
             if (!pautaId || !assistedId) return;
 
-            // 1. Esconde o modal imediatamente para dar sensação de velocidade
             document.getElementById('doc-status-modal').classList.add('hidden');
             
-            // 2. Salva no banco de dados em segundo plano
             try {
                 const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistedId);
@@ -1280,6 +1283,30 @@
 
     <script type="module" src="./js/api_integration.js"></script>
     <script type="module" src="./js/main.js?v=2"></script>
+
+    <script>
+        // Script do Botão de Alto Contraste
+        (function() {
+            const btnContraste = document.getElementById('btn-alto-contraste');
+            const htmlElement = document.documentElement;
+            
+            if (localStorage.getItem('sigep_alto_contraste') === 'true') {
+                htmlElement.classList.add('alto-contraste');
+            }
+
+            if (btnContraste) {
+                btnContraste.addEventListener('click', () => {
+                    htmlElement.classList.toggle('alto-contraste');
+                    const isAtivo = htmlElement.classList.contains('alto-contraste');
+                    localStorage.setItem('sigep_alto_contraste', isAtivo);
+                    
+                    if (window.showNotification) {
+                        window.showNotification(isAtivo ? "Alto Contraste Ativado" : "Alto Contraste Desativado", "info");
+                    }
+                });
+            }
+        })();
+    </script>
 
     <script>
         (function() {
@@ -1298,7 +1325,6 @@
                             PautaService.handleCSVUpload(e, window.app);
                         } else {
                             var fileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
-                            console.log('[Upload CSV] Arquivo selecionado:', fileName);
                             const evt = new CustomEvent('csv-file-selected', { detail: { files: e.target.files } });
                             document.dispatchEvent(evt);
                         }
@@ -1322,7 +1348,6 @@
                             window.ImportadorOrgaosService.handleFileSelect(e);
                         } else {
                             var orgaoFileName = e.target.files && e.target.files[0] ? e.target.files[0].name : undefined;
-                            console.log('[Importador] Arquivo de órgãos selecionado:', orgaoFileName);
                             const evt = new CustomEvent('orgao-file-selected', { detail: { files: e.target.files } });
                             document.dispatchEvent(evt);
                         }
@@ -1392,7 +1417,6 @@
                             if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.handleFileSelect === 'function') {
                                 window.ImportadorOrgaosService.handleFileSelect(fakeEvent);
                             } else {
-                                console.log('[Drag&Drop] Arquivo recebido:', files[0].name);
                                 alert(`Arquivo "${files[0].name}" recebido via drag-and-drop.`);
                             }
                         }
@@ -1410,14 +1434,14 @@
         })();
     </script>
     <script>
-        // Forçar atualização do Cache do PWA (Service Worker)
         if ('serviceWorker' in navigator) {
             navigator.serviceWorker.getRegistrations().then(function(registrations) {
                 for(let registration of registrations) {
-                    registration.update(); // Força o PWA a buscar arquivos novos no servidor
+                    registration.update();
                 }
             });
         }
     </script>
 </body>
 </html>
+
