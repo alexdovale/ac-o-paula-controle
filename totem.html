@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Autoatendimento - SIGEP</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+</head>
+<body class="bg-slate-100 h-screen flex flex-col items-center justify-center p-4">
+
+    <div class="bg-white rounded-3xl shadow-2xl p-10 max-w-lg w-full text-center border-t-8 border-green-600">
+        <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo Defensoria" class="mx-auto h-24 mb-6">
+        <h1 class="text-4xl font-black text-slate-800 mb-2 uppercase tracking-tighter">Chegou?</h1>
+        <p class="text-slate-500 font-bold mb-8">Confirme sua presença digitando seu CPF abaixo:</p>
+
+        <input type="text" id="totem-cpf" placeholder="Apenas números..." maxlength="11" class="w-full text-center text-3xl font-bold p-4 border-2 border-slate-300 rounded-2xl focus:border-green-600 focus:outline-none mb-6 tracking-widest bg-slate-50">
+
+        <button id="btn-totem-checkin" class="w-full bg-green-600 hover:bg-green-700 text-white text-2xl font-black py-5 rounded-2xl shadow-lg transition-transform active:scale-95 uppercase tracking-wide">
+            CONFIRMAR PRESENÇA
+        </button>
+
+        <div id="totem-msg" class="hidden mt-6 p-4 rounded-xl font-bold text-lg"></div>
+    </div>
+
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, collection, query, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { firebaseConfig } from './js/config.js'; // Usa a sua config existente!
+
+        const app = initializeApp(firebaseConfig);
+        const db = getFirestore(app);
+
+        // O Totem precisa saber qual pauta está ativa (passe pela URL: totem.html?id=ID_DA_PAUTA)
+        const pautaId = new URLSearchParams(window.location.search).get('id');
+
+        document.getElementById('btn-totem-checkin').addEventListener('click', async () => {
+            const cpfDigitado = document.getElementById('totem-cpf').value.trim();
+            const msgBox = document.getElementById('totem-msg');
+            
+            if (!pautaId) {
+                mostrarMsg('Erro: Pauta não configurada neste Totem.', 'bg-red-100 text-red-700'); return;
+            }
+            if (cpfDigitado.length < 11) {
+                mostrarMsg('Digite um CPF válido (11 números)', 'bg-amber-100 text-amber-700'); return;
+            }
+
+            document.getElementById('btn-totem-checkin').innerText = 'BUSCANDO...';
+
+            try {
+                // Busca nos attendances da pauta quem tem esse CPF
+                const attendancesRef = collection(db, "pautas", pautaId, "attendances");
+                const snapshot = await getDocs(attendancesRef);
+                let assistidoEncontrado = null;
+
+                snapshot.forEach(d => {
+                    const dados = d.data();
+                    const cpfLimpo = (dados.cpf || '').replace(/\D/g, '');
+                    if (cpfLimpo === cpfDigitado && dados.status === 'agendado') {
+                        assistidoEncontrado = { id: d.id, ...dados };
+                    }
+                });
+
+                if (assistidoEncontrado) {
+                    // Atualiza o status automaticamente para Aguardando (Entrou na fila!)
+                    await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoEncontrado.id), {
+                        status: 'aguardando',
+                        arrivalTime: new Date().toISOString(),
+                        checkInOrder: Date.now()
+                    });
+                    mostrarMsg(`✅ Presença confirmada!<br><span class="text-sm">Sente-se e acompanhe na TV, ${assistidoEncontrado.name.split(' ')[0]}!</span>`, 'bg-green-100 text-green-700');
+                    document.getElementById('totem-cpf').value = '';
+                } else {
+                    mostrarMsg('CPF não encontrado ou já confirmado na triagem hoje.', 'bg-red-100 text-red-700');
+                }
+            } catch (e) {
+                mostrarMsg('Erro ao conectar ao servidor.', 'bg-red-100 text-red-700');
+            }
+            document.getElementById('btn-totem-checkin').innerText = 'CONFIRMAR PRESENÇA';
+        });
+
+        function mostrarMsg(html, classes) {
+            const m = document.getElementById('totem-msg');
+            m.innerHTML = html;
+            m.className = `mt-6 p-4 rounded-xl font-bold text-lg ${classes}`;
+            m.classList.remove('hidden');
+            setTimeout(() => m.classList.add('hidden'), 6000);
+        }
+    </script>
+</body>
+</html>
