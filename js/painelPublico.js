@@ -367,7 +367,11 @@ export const PainelPublicoService = {
                     
                     <div id="lista-historico-video" style="padding:4px 16px 16px;display:flex;flex-direction:column;gap:6px"></div>
 
-                    <div id="faixa-footer" style="padding:12px 16px;border-top:1px solid #f1f5f9;text-align:center;background:#f8fafc">
+                    <div id="faixa-footer" style="padding:12px 16px;border-top:1px solid #f1f5f9;text-align:center;background:#f8fafc;display:flex;flex-direction:column;align-items:center;">
+                        <p style="font-size:9px;font-weight:800;color:#64748b;text-transform:uppercase;margin-bottom:6px;">Acompanhe no Celular</p>
+                        <!-- O QR Code vai aparecer aqui dentro -->
+                        <div id="qr-code-tv" style="background:white;padding:4px;border-radius:8px;border:1px solid #cbd5e1;margin-bottom:6px;"></div>
+                        
                         <div id="data-hora-video" class="mono" style="font-size:11px;font-weight:700;color:#64748b;text-transform:uppercase;letter-spacing:0.05em"></div>
                     </div>
                 </div>
