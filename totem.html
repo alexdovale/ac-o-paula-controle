@@ -81,7 +81,8 @@
 
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, getDocs, updateDoc, doc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        // Importamos o getDoc para puxar o nome da pauta
+        import { getFirestore, collection, getDocs, updateDoc, doc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
         // SUA CONFIGURAÇÃO DO FIREBASE
         const firebaseConfig = {
@@ -99,6 +100,18 @@
         // Pega o ID da pauta pela URL
         const params = new URLSearchParams(window.location.search);
         const pautaId = params.get('pautaId') || params.get('id');
+
+        // VARIÁVEL PARA GUARDAR O NOME DA PAUTA
+        let nomeDaPautaAtual = 'ATENDIMENTO GERAL';
+
+        // Assim que o totem carrega, ele já busca o nome da pauta no banco silenciosamente
+        if (pautaId) {
+            getDoc(doc(db, "pautas", pautaId)).then(snap => {
+                if (snap.exists() && snap.data().name) {
+                    nomeDaPautaAtual = snap.data().name;
+                }
+            }).catch(e => console.error("Erro ao buscar nome da pauta:", e));
+        }
 
         // LÓGICA DA INTERFACE (Trocar tipo de busca)
         let tipoBuscaAtual = 'cpf';
@@ -204,7 +217,7 @@
                     const local = assistidoEncontrado.room || 'Recepção / Fila Geral';
                     const numAgendamentoFormatado = assistidoEncontrado.numeroAgendamento || assistidoEncontrado.numAgendamento || '';
 
-                    // 3. Monta o Ticket em HTML
+                    // 3. Monta o Ticket em HTML (AGORA COM O NOME DA PAUTA)
                     document.getElementById('ticket-impressao').innerHTML = `
                         <div style="text-align: center; font-family: 'Courier New', monospace; padding-bottom: 20px;">
                             <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 2px;">DEFENSORIA PÚBLICA</h2>
@@ -216,6 +229,7 @@
                             ${numAgendamentoFormatado ? `<p style="font-size: 12px; margin: 0;">Agendamento: ${numAgendamentoFormatado}</p>` : ''}
                             
                             <div style="margin: 15px 0; border-top: 1px dashed black; border-bottom: 1px dashed black; padding: 10px 0; text-align: left;">
+                                <p style="margin: 4px 0; font-size: 14px;"><strong>PAUTA:</strong> ${nomeDaPautaAtual.toUpperCase()}</p>
                                 <p style="margin: 4px 0; font-size: 14px;"><strong>HORA:</strong> ${horaChegada}</p>
                                 <p style="margin: 4px 0; font-size: 14px;"><strong>ASSUNTO:</strong> ${assunto.toUpperCase()}</p>
                                 <p style="margin: 4px 0; font-size: 14px;"><strong>LOCAL:</strong> ${local.toUpperCase()}</p>
@@ -233,7 +247,6 @@
                     document.getElementById('totem-input-agendamento').value = '';
 
                     // 4. DISPARA A IMPRESSÃO
-                    // O setTimeout dá tempo do HTML do ticket ser desenhado na tela invisível
                     setTimeout(() => {
                         window.print();
                     }, 500);
