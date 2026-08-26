@@ -31,8 +31,7 @@
         const db = getFirestore(app);
 
         // O Totem precisa saber qual pauta está ativa (passe pela URL: totem.html?id=ID_DA_PAUTA)
-        const pautaId = new URLSearchParams(window.location.search).get('id');
-
+        const pautaId = new URLSearchParams(window.location.search).get('pautaId');
         document.getElementById('btn-totem-checkin').addEventListener('click', async () => {
             const cpfDigitado = document.getElementById('totem-cpf').value.trim();
             const msgBox = document.getElementById('totem-msg');
