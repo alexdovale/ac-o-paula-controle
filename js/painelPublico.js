@@ -650,5 +650,24 @@ export const PainelPublicoService = {
                 }
             });
         });
+
+        // 9. GERA O QR CODE PARA A FILA VIRTUAL
+        setTimeout(() => {
+            const baseUrl = window.location.origin + window.location.pathname.replace('painel_tv.html', '').replace('index.html', '');
+            const linkFilaVirtual = `${baseUrl}/acompanhamento.html?id=${pIds[0]}`;
+            
+            const qrContainer = document.getElementById('qr-code-tv');
+            if (qrContainer && typeof QRCode !== 'undefined') {
+                new QRCode(qrContainer, {
+                    text: linkFilaVirtual,
+                    width: 90,
+                    height: 90,
+                    colorDark : "#0f172a",
+                    colorLight : "#ffffff",
+                    correctLevel : QRCode.CorrectLevel.L
+                });
+            }
+        }, 1500);
+
     }
 };
