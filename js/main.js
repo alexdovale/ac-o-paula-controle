@@ -64,7 +64,6 @@ class SIGEPApp {
         this.unsubscribeFromAttendances = null;
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
-        this.monitorInterval = null; 
         
         // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
@@ -336,7 +335,6 @@ class SIGEPApp {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
             
-            // NOVO: Em vez de ir direto, abre o modal de seleção de unidade
             this.abrirModalSelecaoUnidade();
         });
     
@@ -501,25 +499,16 @@ class SIGEPApp {
         onAuthStateChanged(this.auth, async (user) => {
             try {
                 if (user) {
-                    // 1. Primeiro, autentica o estado global
                     await AuthService.handleAuthState(this, user);
-                    
-                    // 2. Carrega as preferências e o perfil do Firestore
                     await this.loadUserPreferences();
-                    
-                    // 3. Só agora, com o currentUser populado, aplicamos a UI
                     this.applyRoleBasedUI();
-        
-                    // 4. Resolve a rota apenas após garantir que o usuário está carregado
                     await this.router.resolveInitialRoute();
                 } else {
-                    // Caso não logado
                     this.currentUser = null;
                     await this.router.navigate(ROUTES.LOGIN, {}, true);
                 }
             } catch (error) {
                 console.error("Erro crítico na verificação de autenticação:", error);
-                // Se der erro (ex: falha de rede ou no Firestore), joga para o login por segurança
                 await this.router.navigate(ROUTES.LOGIN, {}, true);
             } finally {
                 this.hideLoadingScreen();
@@ -1838,6 +1827,53 @@ class SIGEPApp {
         });
     }
 
+    // ============================================================
+    // NOVO: MONITOR DE ENVELOPES OTIMIZADO (SEM SETINTERVAL)
+    // ============================================================
+    atualizarMonitorEnvelopes() {
+        if (!this.colaboradores || this.colaboradores.length === 0) return;
+
+        const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+        
+        const colabsLivres = colabsAtivos.filter(c => {
+            const casosOcupando = this.allAssisted.filter(a => {
+                const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                return emAtendimentoNormal || pendenteAssinatura;
+            });
+            return casosOcupando.length === 0;
+        });
+
+        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+        if (!headerActions) return;
+
+        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+        
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
+            if (btn.id !== btnId) btn.remove();
+        });
+
+        let btnEnvelope = document.getElementById(btnId);
+
+        if (colabsLivres.length > 0) {
+            if (!btnEnvelope) {
+                btnEnvelope = document.createElement('button');
+                btnEnvelope.id = btnId;
+                btnEnvelope.onclick = () => {
+                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                };
+                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+            }
+            
+            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+            btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+        } else {
+            if (btnEnvelope) btnEnvelope.remove();
+        }
+    }
+
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
             this.showColetasScreen(); // Chama a tela cheia
@@ -2089,6 +2125,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // NOVO: loadPautasWithFilter OTIMIZADO COM PROMISE.ALL
+    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -2109,41 +2148,28 @@ class SIGEPApp {
     
         try {
             let pautasMap = new Map();
-            let success = false;
-            
-            try {
-                const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
-                const snapMembers = await getDocs(qMembers);
-                snapMembers.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-                success = true;
-            } catch (err) {
-                console.warn("Tentativa por 'members' falhou. Tentando próxima...", err.message);
-            }
-            
-            if (!success) {
-                try {
-                    const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
-                    const snapOwner = await getDocs(qOwner);
-                    snapOwner.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-                    success = true;
-                } catch (err) {
-                    console.warn("Tentativa por 'owner' falhou.", err.message);
-                }
-            }
-            
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
-            if (!success && isAdmin) {
-                try {
-                    const snapAll = await getDocs(collection(this.db, "pautas"));
-                    snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-                    success = true;
-                } catch (err) {
-                    console.warn("Tentativa full admin falhou.", err.message);
-                }
+
+            if (isAdmin) {
+                // Admin: Faz uma única requisição limpa para todas as pautas
+                const snapAll = await getDocs(collection(this.db, "pautas"));
+                snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+            } else {
+                // Usuário Normal: Dispara as duas buscas ao mesmo tempo (Paralelo) = Mais rápido!
+                const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
+                const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
+                
+                const [snapOwner, snapMembers] = await Promise.all([
+                    getDocs(qOwner).catch(() => ({ docs: [] })), 
+                    getDocs(qMembers).catch(() => ({ docs: [] }))
+                ]);
+                
+                snapOwner.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+                snapMembers.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
             }
-            
-            if (!success) {
-                throw new Error("Você não possui permissão para acessar as pautas. Verifique com um administrador.");
+
+            if (pautasMap.size === 0 && !isAdmin) {
+                console.warn("Nenhuma pauta encontrada para este usuário.");
             }
             
             let pautas = Array.from(pautasMap.values());
@@ -2158,7 +2184,6 @@ class SIGEPApp {
                     return !tiposEvento.includes(tipoPauta);
                 });
                 
-                // NOVO: Filtrar as pautas exatamente pela unidade que o usuário escolheu no modal!
                 if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
                     pautas = pautas.filter(p => {
                         const unidadePauta = p.unidadeNome || p.origin || p.orgao;
@@ -2173,7 +2198,6 @@ class SIGEPApp {
                 });
             }
 
-            // NOVO: Mostra o botão "Trocar Unidade" somente se estiver no Modo Normal
             const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
             if (btnTrocarUnidade) {
                 if (modoAtual === 'normal') {
@@ -2359,8 +2383,8 @@ class SIGEPApp {
                 }
             }
             
-            this.iniciarMonitorEnvelopes();
-
+            // O monitor agora é disparado pelo listener de tempo real!
+            
             const appContainer = document.getElementById('app-container');
             if (appContainer && appContainer.classList.contains('hidden')) {
                 document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -2379,10 +2403,7 @@ class SIGEPApp {
     _teardownPauta() {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-        if (this.monitorInterval) {
-            clearInterval(this.monitorInterval);
-            this.monitorInterval = null;
-        }
+
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
         this.currentPauta = null;
@@ -2400,6 +2421,10 @@ class SIGEPApp {
         this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
+            
+            // NOVO: Atualiza a bolinha de servidores livres APENAS quando a fila muda
+            this.atualizarMonitorEnvelopes();
+
             setTimeout(() => { 
                 if (typeof PautaService.injectRoomSearches === 'function') {
                     PautaService.injectRoomSearches(this); 
@@ -2409,57 +2434,6 @@ class SIGEPApp {
             console.error("Erro no snapshot:", error);
             showNotification("Erro ao carregar dados em tempo real", "error");
         });
-    }
-
-    iniciarMonitorEnvelopes() {
-        if (this.monitorInterval) clearInterval(this.monitorInterval);
-        
-        const verificarDisponibilidade = () => {
-            if (!this.colaboradores || this.colaboradores.length === 0) return;
-
-            const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
-            
-            const colabsLivres = colabsAtivos.filter(c => {
-                const casosOcupando = this.allAssisted.filter(a => {
-                    const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
-                    const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
-                    return emAtendimentoNormal || pendenteAssinatura;
-                });
-                return casosOcupando.length === 0;
-            });
-
-            const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-            if (!headerActions) return;
-
-            const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-            
-            document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
-                if (btn.id !== btnId) btn.remove();
-            });
-
-            let btnEnvelope = document.getElementById(btnId);
-
-            if (colabsLivres.length > 0) {
-                if (!btnEnvelope) {
-                    btnEnvelope = document.createElement('button');
-                    btnEnvelope.id = btnId;
-                    btnEnvelope.onclick = () => {
-                        const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                        showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
-                    };
-                    headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-                }
-                
-                btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-                btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-                btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-            } else {
-                if (btnEnvelope) btnEnvelope.remove();
-            }
-        };
-
-        verificarDisponibilidade();
-        this.monitorInterval = setInterval(verificarDisponibilidade, 2500);
     }
 
     async deletePauta(pautaId, pautaName) {
