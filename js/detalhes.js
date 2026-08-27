@@ -1,8 +1,9 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
+ * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL + RATEIO)
  * Módulo de Detalhes do Assistido, Checklist de Documentos,
- * Acúmulo de Demandas, Captação Direta e Gerador de Texto
+ * Acúmulo de Demandas, Captação Direta, Gerador de Texto
+ * e Planilha de Gastos com Rateio Automático
  * ========================================================
  */
 
@@ -51,14 +52,24 @@ const INCOME_DOCS_STRUCTURED = [
 
 const COMMON_DOCS_FULL = [...BASE_DOCS, ...INCOME_DOCS_STRUCTURED];
 
-export const EXPENSE_CATEGORIES = [
-    { id: 'moradia', label: '1. MORADIA (Habitação)', desc: 'Aluguel, condomínio, IPTU, luz, água, gás.' },
-    { id: 'alimentacao', label: '2. ALIMENTAÇÃO', desc: 'Supermercado, feira, açougue, lanches, leites especiais.' },
-    { id: 'educacao', label: '3. EDUCAÇÃO', desc: 'Mensalidade escolar, material, uniforme, transporte escolar, cursos.' },
-    { id: 'saude', label: '4. SAÚDE', desc: 'Plano de saúde, medicamentos, consultas, tratamentos (dentista, psicólogo).' },
-    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE', desc: 'Roupas, calçados, fraldas, produtos de higiene pessoal.' },
-    { id: 'lazer', label: '6. LAZER E TRANSPORTE', desc: 'Passeios, festas, cinema, transporte público, combustível.' },
-    { id: 'outras', label: '7. OUTRAS DESPESAS', desc: 'Babá, pets, atividades extracurriculares, celular, internet.' }
+// ⭐ PLANILHA DE GASTOS SEPARADA POR TIPO (COM RATEIO AUTOMÁTICO)
+export const EXPENSE_CATEGORIES_COMUNS = [
+    { id: 'aluguel', label: 'Aluguel Residencial', desc: 'Valor total do imóvel' },
+    { id: 'condominio', label: 'Condomínio', desc: 'Taxa condominial' },
+    { id: 'iptu', label: 'IPTU', desc: 'Imposto predial' },
+    { id: 'luz', label: 'Energia Elétrica (Luz)', desc: 'Conta de luz da residência' },
+    { id: 'agua', label: 'Água / Saneamento', desc: 'Conta de água' },
+    { id: 'gas', label: 'Gás de Cozinha', desc: 'Botijão ou encanado' },
+    { id: 'internet', label: 'Internet Banda Larga', desc: 'Serviço de internet' },
+    { id: 'supermercado', label: 'Supermercado (Alimentação Geral)', desc: 'Compras do mês' }
+];
+
+export const EXPENSE_CATEGORIES_EXCLUSIVAS = [
+    { id: 'escola', label: 'Mensalidade Escolar / Creche', desc: 'Valor integral' },
+    { id: 'material_escolar', label: 'Material Escolar / Livros', desc: 'Despesa com material' },
+    { id: 'merenda', label: 'Merenda Escolar / Lanches', desc: 'Custo de lanches' },
+    { id: 'plano_saude', label: 'Plano de Saúde / Odontológico', desc: 'Mensalidade' },
+    { id: 'lazer_crianca', label: 'Lazer / Atividades Extracurriculares', desc: 'Passeios e cursos' }
 ];
 
 const ACTIONS_ALWAYS_EXPENSES = [
@@ -495,7 +506,7 @@ function renderChecklist(actionKey) {
                 <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
                     <span>🧮</span> Gerador de Texto para Petição (Gastos)
                 </h4>
-                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados e cria um texto pronto para o Word/SEI.</p>
+                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados (com rateio) e cria um texto pronto para o Word/SEI.</p>
             </div>
             <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
                 <span>📑</span>
@@ -686,8 +697,11 @@ function addExpenseButton(containerEl, saved) {
     expenseButton.id = 'expense-button-container';
     expenseButton.innerHTML = `<button id="btn-abrir-gastos" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700">+ Adicionar Planilha de Gastos</button>`;
     containerEl.appendChild(expenseButton);
-    
-    if (saved?.expenseData && Object.values(saved.expenseData).some(v => v && v !== 'R$ 0,00')) {
+
+    const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
+    const temGastoPreenchido = saved?.expenseData && todasCategorias.some(cat => saved.expenseData[cat.id] && saved.expenseData[cat.id] !== 'R$ 0,00');
+
+    if (temGastoPreenchido) {
         expenseButton.style.display = 'none';
         let expenseContainer = document.getElementById('expense-table-container');
         if (!expenseContainer) {
@@ -1096,37 +1110,72 @@ function initReuSaveButton() {
 }
 
 /* ========================================================
-   6. PLANILHA DE GASTOS
+   6. PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO
    ======================================================== */
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     div.id = 'expense-table';
-    
+
     div.innerHTML = `
-        <div class="flex items-center gap-3 mb-3">
+        <div class="flex items-center gap-3 mb-4 border-b pb-2">
             <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500" checked>
-            <label for="check-exibir-gastos" class="text-sm font-bold text-green-700 cursor-pointer">💰 PLANILHA DE GASTOS MENSAIS</label>
+            <label for="check-exibir-gastos" class="text-sm font-black text-green-800 uppercase">💰 PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO</label>
         </div>
         <div id="content-planilha-gastos">
-            <table class="w-full border-collapse">
-                ${EXPENSE_CATEGORIES.map(c => `
-                    <tr class="border-b border-green-100 last:border-0">
-                        <td class="py-3">
-                            <p class="text-[10px] font-bold text-green-800 uppercase">${c.label}</p>
-                            <p class="text-[9px] text-green-600 italic">${c.desc}</p>
-                        </td>
-                        <td class="py-3 pl-2">
-                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-white border border-green-200 rounded-lg text-right text-xs" placeholder="R$ 0,00" inputmode="numeric">
-                        </td>
-                    </tr>
-                `).join('')}
-            </table>
-            <div class="mt-4 flex justify-between font-black text-green-900 border-t border-green-200 pt-3 text-sm">
-                <span>TOTAL CALCULADO:</span>
-                <span id="expense-total">R$ 0,00</span>
+            <div class="mb-4 bg-white p-3 rounded-lg border border-green-200 flex items-center justify-between">
+                <div>
+                    <p class="text-xs font-bold text-slate-700 uppercase">Quantidade de Pessoas na Residência</p>
+                    <p class="text-[10px] text-slate-400">Usado para calcular a cota proporcional das contas da casa.</p>
+                </div>
+                <input type="number" id="expense-moradores" min="1" value="1" class="w-16 p-2 border border-green-300 rounded-lg text-center font-black text-sm bg-slate-50">
             </div>
-            <div class="mt-2 text-right"><button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
+
+            <h5 class="text-[10px] font-black uppercase text-green-700 mb-2">Gastos Comuns / Família (Serão Rateados)</h5>
+            <div class="space-y-2 mb-4">
+                ${EXPENSE_CATEGORIES_COMUNS.map(c => `
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 gap-2">
+                        <div class="flex-1">
+                            <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
+                            <p class="text-[9px] text-slate-400">${c.desc}</p>
+                        </div>
+                        <div class="w-32">
+                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-green-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <h5 class="text-[10px] font-black uppercase text-blue-700 mb-2">Gastos Exclusivos da Criança (100% Integrais)</h5>
+            <div class="space-y-2 mb-4">
+                ${EXPENSE_CATEGORIES_EXCLUSIVAS.map(c => `
+                    <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-blue-100 gap-2">
+                        <div class="flex-1">
+                            <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
+                            <p class="text-[9px] text-slate-400">${c.desc}</p>
+                        </div>
+                        <div class="w-32">
+                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-blue-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+
+            <div class="bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4 space-y-1">
+                <div class="flex justify-between text-xs text-slate-300">
+                    <span>Subtotal Rateio da Família:</span>
+                    <span id="subtotal-familia">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-300">
+                    <span>Subtotal Exclusivo Criança:</span>
+                    <span id="subtotal-crianca">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between items-center border-t border-slate-700 pt-2 mt-1">
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-400">NECESSIDADE MENSAL APURADA:</span>
+                    <span id="expense-total" class="text-lg font-black text-emerald-400">R$ 0,00</span>
+                </div>
+            </div>
+            <div class="mt-3 text-right"><button type="button" id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
         </div>
     `;
     initExpenseTableEvents(div);
@@ -1136,7 +1185,7 @@ function renderExpenseTable() {
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
     const contentGastos = div.querySelector('#content-planilha-gastos');
-    
+
     if (checkGastos && contentGastos) {
         checkGastos.addEventListener('change', function() {
             contentGastos.style.display = this.checked ? 'block' : 'none';
@@ -1144,21 +1193,46 @@ function initExpenseTableEvents(div) {
         });
     }
 
+    const calcularTotais = () => {
+        let totalFamilia = 0;
+        let totalCrianca = 0;
+        const moradores = parseInt(div.querySelector('#expense-moradores')?.value) || 1;
+
+        EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalFamilia += parseCurrency(el.value);
+        });
+
+        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalCrianca += parseCurrency(el.value);
+        });
+
+        const cotaFamilia = totalFamilia / moradores;
+        const totalGeral = cotaFamilia + totalCrianca;
+
+        const subFam = div.querySelector('#subtotal-familia');
+        const subCri = div.querySelector('#subtotal-crianca');
+        const totalEl = div.querySelector('#expense-total');
+        if (subFam) subFam.textContent = formatCurrency(cotaFamilia);
+        if (subCri) subCri.textContent = formatCurrency(totalCrianca);
+        if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+    };
+
+    div.querySelector('#expense-moradores')?.addEventListener('input', calcularTotais);
+
     div.querySelectorAll('.expense-input').forEach(inp => {
         inp.addEventListener('input', (e) => {
             let v = e.target.value.replace(/\D/g, '');
             e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            
-            let total = 0;
-            div.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
-            const totalEl = div.querySelector('#expense-total');
-            if(totalEl) totalEl.textContent = formatCurrency(total);
+            calcularTotais();
         });
     });
 
     setTimeout(() => {
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
-            getEl('expense-table-container').innerHTML = '';
+            const container = getEl('expense-table-container');
+            if (container) container.innerHTML = '';
             const btnBox = getEl('expense-button-container');
             if (btnBox) btnBox.style.display = 'block';
             updateSelectedCounter();
@@ -1205,11 +1279,13 @@ function getReuDataFromForm() {
 
 function getExpenseDataFromForm() {
     const d = {};
-    EXPENSE_CATEGORIES.forEach(cat => {
+    const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
+    todasCategorias.forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
         let valor = el ? el.value || '' : '';
         d[cat.id] = (!valor || valor.trim() === '') ? 'R$ 0,00' : valor;
     });
+    d.quantidadeMoradores = getEl('expense-moradores')?.value || '1';
     d.checkExibirGastos = getEl('check-exibir-gastos')?.checked || false;
     return d;
 }
@@ -1294,23 +1370,46 @@ function updateReuVisibility(d) {
 
 function fillExpenseData(d) {
     if (!d) return;
-    EXPENSE_CATEGORIES.forEach(cat => {
+    const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
+    todasCategorias.forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
         if (el && d[cat.id]) el.value = d[cat.id];
     });
-    
+    if (getEl('expense-moradores') && d.quantidadeMoradores) {
+        getEl('expense-moradores').value = d.quantidadeMoradores;
+    }
+
     const checkGastos = getEl('check-exibir-gastos'); 
     if (checkGastos && d.checkExibirGastos !== undefined) {
         checkGastos.checked = d.checkExibirGastos;
         const contentGastos = getEl('content-planilha-gastos'); 
         if (contentGastos) contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
     }
-    
-    let total = 0;
-    document.querySelectorAll('.expense-input').forEach(i => total += parseCurrency(i.value));
+
+    // Recalcula subtotais e total com rateio após preencher os campos salvos
+    const moradores = parseInt(getEl('expense-moradores')?.value) || 1;
+    let totalFamilia = 0;
+    let totalCrianca = 0;
+
+    EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+        const el = getEl(`expense-${c.id}`);
+        if (el) totalFamilia += parseCurrency(el.value);
+    });
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+        const el = getEl(`expense-${c.id}`);
+        if (el) totalCrianca += parseCurrency(el.value);
+    });
+
+    const cotaFamilia = totalFamilia / moradores;
+    const totalGeral = cotaFamilia + totalCrianca;
+
+    const subFam = getEl('subtotal-familia');
+    const subCri = getEl('subtotal-crianca');
     const totalEl = getEl('expense-total');
-    if(totalEl) totalEl.textContent = formatCurrency(total);
-    
+    if (subFam) subFam.textContent = formatCurrency(cotaFamilia);
+    if (subCri) subCri.textContent = formatCurrency(totalCrianca);
+    if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+
     updateSelectedCounter();
 }
 
@@ -1395,12 +1494,36 @@ function addReuToPdfData(documentosTextos, reu) {
 
 function addExpensesToPdfData(documentosTextos, gastos) {
     if (!gastos.checkExibirGastos) return;
-    documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS:' });
-    EXPENSE_CATEGORIES.forEach(cat => {
-        if (gastos[cat.id] && gastos[cat.id] !== 'R$ 0,00') {
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: ${gastos[cat.id]}` });
+
+    const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
+    const limpaMoeda = (v) => {
+        if (!v || v === 'R$ 0,00') return 0;
+        return parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    };
+
+    documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS (COM RATEIO):' });
+    documentosTextos.push({ id: 'gastos-moradores', text: `   • Quantidade de pessoas na residência: ${qtdMoradores}` });
+
+    let totalFamiliaCota = 0;
+    EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
+        const val = limpaMoeda(gastos[cat.id]);
+        if (val > 0) {
+            const cota = val / qtdMoradores;
+            totalFamiliaCota += cota;
+            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: Total ${gastos[cat.id]} / Cota (1/${qtdMoradores}): ${formatCurrency(cota)}` });
         }
     });
+
+    let totalCrianca = 0;
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
+        const val = limpaMoeda(gastos[cat.id]);
+        if (val > 0) {
+            totalCrianca += val;
+            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: ${gastos[cat.id]} (Integral)` });
+        }
+    });
+
+    documentosTextos.push({ id: 'gastos-total', text: `   • NECESSIDADE MENSAL APURADA: ${formatCurrency(totalFamiliaCota + totalCrianca)}` });
 }
 
 function collectCheckedDocuments() {
@@ -1513,7 +1636,7 @@ function closeAssistedDetailsModal() {
 }
 
 /* ========================================================
-   11. GERADOR DE TEXTO PARA PETIÇÃO (ALIMENTOS)
+   11. GERADOR DE TEXTO PARA PETIÇÃO (COM RATEIO)
    ======================================================== */
 window.gerarTextoDespesas = (assistidoId) => {
     // 1. Acha o assistido na base logada
@@ -1525,9 +1648,9 @@ window.gerarTextoDespesas = (assistidoId) => {
 
     const g = assisted.documentChecklist.expenseData;
     const nomeAssistido = assisted.name ? assisted.name.split(' ')[0] : 'O requerente';
-    
+
     // 2. Quantidade de moradores (se não tiver capturado, assume 1 para não dar erro)
-    const qtdMoradores = parseInt(g.quantidadeMoradores || 1); 
+    const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
 
     let gastosFamiliaHtml = '';
     let gastosCriancaHtml = '';
@@ -1544,23 +1667,22 @@ window.gerarTextoDespesas = (assistidoId) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
     };
 
-    // 3. SEPARAÇÃO DOS GASTOS DA TRIAGEM
-    // Moradia e Alimentação divididos pelo total de pessoas da casa
-    ['moradia', 'alimentacao', 'outras'].forEach(catId => {
-        const val = limpaMoeda(g[catId]);
+    // 3. GASTOS COMUNS DA FAMÍLIA — rateados pela quantidade de moradores
+    EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
+        const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
             const cota = val / qtdMoradores;
             totalFamilia += cota;
-            gastosFamiliaHtml += `<li>${catId.charAt(0).toUpperCase() + catId.slice(1)} (Total R$ ${formataMoeda(val)} / Cota da criança: <b>R$ ${formataMoeda(cota)}</b>)</li>`;
+            gastosFamiliaHtml += `<li>${cat.label} (Total R$ ${formataMoeda(val)} / Cota: <b>R$ ${formataMoeda(cota)}</b>)</li>`;
         }
     });
 
-    // Educação, Saúde, Vestuário e Lazer exclusivos da criança
-    ['educacao', 'saude', 'vestuario', 'lazer'].forEach(catId => {
-        const val = limpaMoeda(g[catId]);
+    // 4. GASTOS EXCLUSIVOS DA CRIANÇA — 100% integrais
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
+        const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
             totalExclusivoCrianca += val;
-            gastosCriancaHtml += `<li>${catId.charAt(0).toUpperCase() + catId.slice(1)} (Integral: <b>R$ ${formataMoeda(val)}</b>)</li>`;
+            gastosCriancaHtml += `<li>${cat.label} (Integral: <b>R$ ${formataMoeda(val)}</b>)</li>`;
         }
     });
 
@@ -1571,7 +1693,7 @@ window.gerarTextoDespesas = (assistidoId) => {
         return;
     }
 
-    // 4. MONTAGEM DO TEXTO JURÍDICO PARA A PETIÇÃO
+    // 5. MONTAGEM DO TEXTO JURÍDICO PARA A PETIÇÃO
     const textoGerado = `
 Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
 
@@ -1590,7 +1712,7 @@ ${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
 <i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>
     `.trim();
 
-    // 5. ABRIR MODAL COM O TEXTO PARA COPIAR
+    // 6. ABRIR MODAL COM O TEXTO PARA COPIAR
     exibirModalCopia(textoGerado);
 };
 
@@ -1763,5 +1885,6 @@ function renderSubjectSelection(selectionArea) {
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
-window.EXPENSE_CATEGORIES = EXPENSE_CATEGORIES;
+window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
+window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
