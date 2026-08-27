@@ -290,44 +290,138 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 
 export const PDFService = {
     
-    async generatePlanilhaGastosPDF(assistedName, expenseData) {
+        async generatePlanilhaGastosPDF(assistedName, expenseData) {
         try {
             await ensureJsPDF(); 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
+            // Adiciona a logo padrão do SIGEP no topo
+            const logoInfo = await addLogoHeader(doc, 20);
+            let y = Math.max(55, logoInfo.bottomY + 20);
+
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
-            doc.text("PLANILHA DE DESPESAS ATUAIS", doc.internal.pageSize.getWidth() / 2, 60, { align: "center" });
+            doc.text("PLANILHA DE GASTOS E NECESSIDADE MENSAIS", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+            y += 30;
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text(`Assistido(a): ${assistedName}`, 40, 90);
+            doc.text(`Assistido(a): ${assistedName.toUpperCase()}`, 40, y);
+            y += 18;
 
-            doc.autoTable({
-                startY: 110,
-                head: [["Categoria", "Valor Mensal (R$)"]],
-                body: [
-                    ["Moradia", formatCurrency(expenseData?.moradia)],
-                    ["Alimentação", formatCurrency(expenseData?.alimentacao)],
-                    ["Educação", formatCurrency(expenseData?.educacao)],
-                    ["Saúde", formatCurrency(expenseData?.saude)],
-                    ["Vestuário e Higiene", formatCurrency(expenseData?.vestuario)],
-                    ["Lazer e Transporte", formatCurrency(expenseData?.lazer)],
-                    ["Outras Despesas", formatCurrency(expenseData?.outras)]
-                ],
-                margin: { left: (doc.internal.pageSize.getWidth() - 430) / 2 },
-                theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] }
+            const moradores = expenseData?.quantidadeMoradores || '1';
+            doc.text(`Número de moradores na residência: ${moradores}`, 40, y);
+            y += 25;
+
+            // Transforma os dados salvos no Firebase em linhas para a tabela do AutoTable
+            const bodyRows = [];
+            let totalFamilia = 0;
+            let totalCrianca = 0;
+
+            const limpaMoeda = (valStr) => {
+                if (!valStr || valStr === 'R$ 0,00') return 0;
+                return parseFloat(String(valStr).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+            };
+
+            // Categorias Comuns (Rateadas)
+            const comuns = [
+                { id: 'aluguel', label: 'Aluguel Residencial' },
+                { id: 'condominio', label: 'Condomínio' },
+                { id: 'iptu', label: 'IPTU' },
+                { id: 'luz', label: 'Energia Elétrica (Luz)' },
+                { id: 'agua', label: 'Água / Saneamento' },
+                { id: 'gas', label: 'Gás de Cozinha' },
+                { id: 'internet', label: 'Internet Banda Larga' },
+                { id: 'supermercado', label: 'Supermercado (Alimentação)' }
+            ];
+
+            bodyRows.push([{ content: 'GASTOS COMUNS / FAMÍLIA (RATEADOS)', colSpan: 3, styles: { fillColor: [240, 253, 244], fontStyle: 'bold', textColor: [21, 128, 61] } }]);
+            
+            comuns.forEach(c => {
+                const valTotal = limpaMoeda(expenseData?.[c.id]);
+                const cotaParte = valTotal / parseInt(moradores || 1);
+                if (valTotal > 0) {
+                    totalFamilia += cotaParte;
+                    bodyRows.push([
+                        c.label, 
+                        formatCurrency(valTotal), 
+                        formatCurrency(cotaParte) + ` (1/${moradores})`
+                    ]);
+                }
             });
 
-            doc.save(`Planilha_Despesas_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
+            // Categorias Exclusivas da Criança
+            const exclusivas = [
+                { id: 'escola', label: 'Mensalidade Escolar / Creche' },
+                { id: 'material_escolar', label: 'Material Escolar / Livros' },
+                { id: 'merenda', label: 'Merenda Escolar / Lanches' },
+                { id: 'plano_saude', label: 'Plano de Saúde / Odontológico' },
+                { id: 'lazer_crianca', label: 'Lazer / Atividades Extracurriculares' }
+            ];
+
+            bodyRows.push([{ content: 'GASTOS EXCLUSIVOS DA CRIANÇA (INTEGRAIS)', colSpan: 3, styles: { fillColor: [239, 246, 255], fontStyle: 'bold', textColor: [29, 78, 216] } }]);
+
+            exclusivas.forEach(c => {
+                const valIntegral = limpaMoeda(expenseData?.[c.id]);
+                if (valIntegral > 0) {
+                    totalCrianca += valIntegral;
+                    bodyRows.push([
+                        c.label, 
+                        formatCurrency(valIntegral), 
+                        formatCurrency(valIntegral) + ' (Integral)'
+                    ]);
+                }
+            });
+
+            const totalGeral = totalFamilia + totalCrianca;
+
+            doc.autoTable({
+                startY: y,
+                head: [["Descrição Detalhada do Gasto", "Valor Total Família", "Gasto Proporcional / Integral"]],
+                body: bodyRows,
+                margin: { left: 40, right: 40 },
+                theme: 'grid',
+                headStyles: { fillColor: [22, 163, 74], halign: 'center', fontSize: 9 },
+                styles: { fontSize: 8, cellPadding: 5, valign: 'middle' },
+                columnStyles: { 
+                    1: { halign: 'right', cellWidth: 110 }, 
+                    2: { halign: 'right', cellWidth: 130 } 
+                }
+            });
+
+            let finalY = doc.lastAutoTable.finalY + 15;
+
+            // Quadro Resumo Final
+            doc.autoTable({
+                startY: finalY,
+                head: [[{ content: 'RESUMO DOS VALORES APURADOS', colSpan: 2, styles: { fillColor: [30, 41, 59], halign: 'center', fontStyle: 'bold' } }]],
+                body: [
+                    ["Subtotal - Gastos Proporcionais da Família (Cota)", formatCurrency(totalFamilia)],
+                    ["Subtotal - Gastos Exclusivos da Criança", formatCurrency(totalCrianca)],
+                    ["VALOR TOTAL DA NECESSIDADE MENSAL APURADA", formatCurrency(totalGeral)]
+                ],
+                margin: { left: 40, right: 40 },
+                theme: 'grid',
+                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+                columnStyles: { 
+                    0: { fontStyle: 'bold', cellWidth: 350 }, 
+                    1: { halign: 'right', fontStyle: 'bold', textColor: [22, 163, 74] } 
+                }
+            });
+
+            addFooter(doc, 1, 1);
+
+            doc.save(`Planilha_Gastos_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("Planilha PDF gerada com sucesso!", "success");
             return true;
         } catch (error) {
-            console.error("Erro PDF Planilha:", error);
+            console.error("Erro PDF Planilha de Gastos:", error);
+            if (window.showNotification) window.showNotification("Erro ao gerar PDF da planilha.", "error");
             return false;
         }
     },
+
 
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
