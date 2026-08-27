@@ -1194,12 +1194,72 @@ function renderExpenseTable() {
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
     const contentGastos = div.querySelector('#content-planilha-gastos');
-
+    
     if (checkGastos && contentGastos) {
         checkGastos.addEventListener('change', function() {
             contentGastos.style.display = this.checked ? 'block' : 'none';
             updateSelectedCounter();
         });
+    }
+
+    const calcularTotais = () => {
+        let totalFamilia = 0;
+        let totalCrianca = 0;
+        const moradores = parseInt(div.querySelector('#expense-moradores')?.value) || 1;
+
+        // Soma os gastos comuns da família
+        EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalFamilia += parseCurrency(el.value);
+        });
+
+        // Soma os gastos exclusivos da criança
+        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalCrianca += parseCurrency(el.value);
+        });
+
+        // Aplica o rateio proporcional da família pela quantidade de moradores
+        const cotaFamilia = totalFamilia / moradores;
+        const totalGeral = cotaFamilia + totalCrianca;
+
+        // Atualiza os campos visuais no rodapé da tabela
+        const subFamEl = div.querySelector('#subtotal-familia');
+        const subCriEl = div.querySelector('#subtotal-crianca');
+        const totalEl = div.querySelector('#expense-total');
+
+        if (subFamEl) subFamEl.textContent = formatCurrency(cotaFamilia);
+        if (subCriEl) subCriEl.textContent = formatCurrency(totalCrianca);
+        if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+    };
+
+    // Ouve alterações no input de quantidade de moradores
+    div.querySelector('#expense-moradores')?.addEventListener('input', calcularTotais);
+
+    // Ouve digitações em cada campo de dinheiro e aplica a máscara de Real (R$)
+    div.querySelectorAll('.expense-input').forEach(inp => {
+        inp.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+            calcularTotais();
+        });
+    });
+
+    // Conecta o botão de gerar PDF da planilha direto na mesa
+    setTimeout(() => {
+        div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
+            const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
+            const dadosGastos = getExpenseDataFromForm();
+            
+            if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
+                window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
+            } else {
+                showNotification("Motor de PDF não carregado.", "error");
+            }
+        });
+    }, 100);
+}
+
     }
 
     const calcularTotais = () => {
