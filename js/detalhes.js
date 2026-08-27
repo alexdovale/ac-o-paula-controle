@@ -2,7 +2,7 @@
  * ========================================================
  * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTEGRAL)
  * Módulo de Detalhes do Assistido, Checklist de Documentos,
- * Acúmulo de Demandas e Captação Direta do Cidadão
+ * Acúmulo de Demandas, Captação Direta e Gerador de Texto
  * ========================================================
  */
 
@@ -468,8 +468,8 @@ function renderChecklist(actionKey) {
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = ''; 
 
-   // ========================================================
-    // BOTÃO INTELIGENTE: CALCULADORA DE PENSÃO
+    // ========================================================
+    // BOTÃO INTELIGENTE: GERADOR DE TEXTO PARA PETIÇÃO (PENSÃO)
     // ========================================================
     const ASSUNTOS_PENSAO = [
         'alimentos_fixacao_majoracao_oferta',
@@ -477,24 +477,28 @@ function renderChecklist(actionKey) {
         'alimentos_avoengos',
         'divorcio_consensual',
         'divorcio_litigioso',
-        'investigacao_paternidade'
+        'investigacao_paternidade',
+        'guarda'
     ];
 
     const isLinkDoCidadao = window.location.pathname.includes('captacao');
 
+    // Só mostra na mesa do servidor/defensor e se o assunto bater com os de cima
     if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
         const calcContainer = document.createElement('div');
         calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
-        calcContainer.onclick = () => window.open('https://alexdovale.github.io/calculo-de-pens-o/', '_blank');
+        
+        calcContainer.onclick = () => window.gerarTextoDespesas(currentAssistedId); 
+        
         calcContainer.innerHTML = `
             <div>
                 <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
-                    <span>🧮</span> Calculadora de Pensão Alimentícia
+                    <span>🧮</span> Gerador de Texto para Petição (Gastos)
                 </h4>
-                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Use nossa ferramenta auxiliar para calcular valores e proporções rapidamente.</p>
+                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados e cria um texto pronto para o Word/SEI.</p>
             </div>
             <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" /></svg>
+                <span>📑</span>
             </div>
         `;
         containerEl.appendChild(calcContainer);
@@ -1509,7 +1513,136 @@ function closeAssistedDetailsModal() {
 }
 
 /* ========================================================
-   10. EXPORTS E INICIALIZAÇÃO
+   11. GERADOR DE TEXTO PARA PETIÇÃO (ALIMENTOS)
+   ======================================================== */
+window.gerarTextoDespesas = (assistidoId) => {
+    // 1. Acha o assistido na base logada
+    const assisted = allAssisted.find(a => a.id === assistidoId);
+    if (!assisted || !assisted.documentChecklist || !assisted.documentChecklist.expenseData) {
+        showNotification("Nenhuma despesa foi preenchida na triagem para este caso.", "error");
+        return;
+    }
+
+    const g = assisted.documentChecklist.expenseData;
+    const nomeAssistido = assisted.name ? assisted.name.split(' ')[0] : 'O requerente';
+    
+    // 2. Quantidade de moradores (se não tiver capturado, assume 1 para não dar erro)
+    const qtdMoradores = parseInt(g.quantidadeMoradores || 1); 
+
+    let gastosFamiliaHtml = '';
+    let gastosCriancaHtml = '';
+    let totalFamilia = 0;
+    let totalExclusivoCrianca = 0;
+
+    // Função de limpeza de moeda
+    const limpaMoeda = (valStr) => {
+        if (!valStr || valStr === 'R$ 0,00') return 0;
+        return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    };
+
+    const formataMoeda = (valor) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    };
+
+    // 3. SEPARAÇÃO DOS GASTOS DA TRIAGEM
+    // Moradia e Alimentação divididos pelo total de pessoas da casa
+    ['moradia', 'alimentacao', 'outras'].forEach(catId => {
+        const val = limpaMoeda(g[catId]);
+        if (val > 0) {
+            const cota = val / qtdMoradores;
+            totalFamilia += cota;
+            gastosFamiliaHtml += `<li>${catId.charAt(0).toUpperCase() + catId.slice(1)} (Total R$ ${formataMoeda(val)} / Cota da criança: <b>R$ ${formataMoeda(cota)}</b>)</li>`;
+        }
+    });
+
+    // Educação, Saúde, Vestuário e Lazer exclusivos da criança
+    ['educacao', 'saude', 'vestuario', 'lazer'].forEach(catId => {
+        const val = limpaMoeda(g[catId]);
+        if (val > 0) {
+            totalExclusivoCrianca += val;
+            gastosCriancaHtml += `<li>${catId.charAt(0).toUpperCase() + catId.slice(1)} (Integral: <b>R$ ${formataMoeda(val)}</b>)</li>`;
+        }
+    });
+
+    const totalFinal = totalFamilia + totalExclusivoCrianca;
+
+    if (totalFinal === 0) {
+        showNotification("Os valores de despesa estão zerados.", "warning");
+        return;
+    }
+
+    // 4. MONTAGEM DO TEXTO JURÍDICO PARA A PETIÇÃO
+    const textoGerado = `
+Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
+
+O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${qtdMoradores} pessoas), divididas da seguinte forma:
+
+**Cota-parte de Despesas Residenciais e Alimentares (Rateio de 1/${qtdMoradores}):**
+<ul>
+${gastosFamiliaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
+</ul>
+<i>Subtotal proporcional: R$ ${formataMoeda(totalFamilia)}</i>
+
+**Despesas Exclusivas (100% da necessidade):**
+<ul>
+${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
+</ul>
+<i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>
+    `.trim();
+
+    // 5. ABRIR MODAL COM O TEXTO PARA COPIAR
+    exibirModalCopia(textoGerado);
+};
+
+// MODAL RÁPIDO PARA O DEFENSOR COPIAR
+function exibirModalCopia(textoHtml) {
+    // Se o modal já existir, remove pra criar um fresco
+    const existing = document.getElementById('modal-texto-peticao');
+    if (existing) existing.remove();
+
+    const div = document.createElement('div');
+    div.id = "modal-texto-peticao";
+    div.className = "fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm";
+    div.innerHTML = `
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
+                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
+                    <span>📑</span> Texto Base para Petição
+                </h3>
+                <button onclick="document.getElementById('modal-texto-peticao').remove()" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            
+            <div class="p-6">
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-2">Trecho Gerado Pelo Sistema</p>
+                
+                <div id="caixa-texto-copia" class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 leading-relaxed font-serif max-h-64 overflow-y-auto">
+                    ${textoHtml}
+                </div>
+
+                <button id="btn-copiar-texto-peticao" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2">
+                    <span>📋</span> Copiar para a Área de Transferência
+                </button>
+            </div>
+        </div>
+    `;
+
+    document.body.appendChild(div);
+
+    // Botão de Copiar Texto (Limpa as tags de <b> e <li> pra ficar limpo no Word/SEI)
+    document.getElementById('btn-copiar-texto-peticao').onclick = () => {
+        const textoPuro = document.getElementById('caixa-texto-copia').innerText; // Pega só o texto liso
+        navigator.clipboard.writeText(textoPuro).then(() => {
+            const btn = document.getElementById('btn-copiar-texto-peticao');
+            btn.innerHTML = "<span>✅</span> COPIADO COM SUCESSO!";
+            btn.classList.replace('bg-emerald-600', 'bg-slate-800');
+            btn.classList.replace('hover:bg-emerald-700', 'hover:bg-slate-900');
+            setTimeout(() => document.getElementById('modal-texto-peticao').remove(), 1500);
+        });
+    };
+}
+
+/* ========================================================
+   12. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
 export function setupDetailsModal(config) {
     db = config.db;
