@@ -11,7 +11,7 @@ import CollaboratorService from './colaboradores.js';
 window.CollaboratorService = CollaboratorService;  
 import { ModalService } from './modal.js?v=20260707';
 import { NotesService } from './notes.js?v=20260313';
-import { ApiIntegration } from './apiIntegration.js'; // Ajuste o caminho se necessário
+// import { ApiIntegration } from './apiIntegration.js'; // Ajuste o caminho se necessário
 import { StatisticsService } from './estatisticas.js?v=20260313';
 import { PDFService } from './pdfService.js?v=novo_pdf_v2';
 import { EmailService } from './emailService.js?v=20260313';
