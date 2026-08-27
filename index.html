@@ -1513,6 +1513,36 @@
             observer.observe(document.body, { childList: true, subtree: true });
         });
     </script>
+
+    <!-- Modal de Digitalização Livre -->
+    <div id="modal-digitalizar-assistido" class="hidden fixed inset-0 bg-slate-900/80 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-emerald-600 p-5 text-white flex justify-between items-center">
+                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2"><span>📑</span> Adicionar Documento</h3>
+                <button onclick="document.getElementById('modal-digitalizar-assistido').classList.add('hidden')" class="text-emerald-200 hover:text-white text-2xl font-bold">&times;</button>
+            </div>
+            <div class="p-6 space-y-4">
+                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-800 font-bold text-center">
+                    Assistido: <span id="nome-assistido-digitalizacao" class="uppercase"></span>
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Título do Documento</label>
+                    <input type="text" id="input-titulo-doc" placeholder="Ex: RG, Petição Inicial..." class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1 font-bold text-slate-700">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Arquivo PDF/Foto</label>
+                    <input type="file" id="input-pdf-recepcao" accept=".pdf,image/*" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1">
+                </div>
+                <div>
+                    <label class="text-[10px] font-black text-slate-400 uppercase">Senha de Proteção (PIN)</label>
+                    <input type="password" id="input-senha-recepcao" placeholder="Ex: 1234" maxlength="6" class="w-full text-center text-lg font-bold p-3 border border-slate-200 rounded-xl bg-slate-50 mt-1 tracking-widest">
+                </div>
+                <button id="btn-enviar-documento-pauta" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg transition-all">
+                    Adicionar à Ficha
+                </button>
+            </div>
+        </div>
+    </div>
 </body>
 </html>
 
