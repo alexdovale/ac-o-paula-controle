@@ -778,7 +778,14 @@ export const UIService = {
 
     _getActionButtonsHtml(item) {
         return `
-            <div class="absolute top-2 right-2 flex items-center z-10">
+            <div class="absolute top-2 right-2 flex items-center z-10 gap-1">
+                <!-- INÍCIO DO BOTÃO DE DIGITALIZAR ADICIONADO -->
+                <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
+                    class="text-indigo-600 hover:text-indigo-800 p-1.5 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Adobe Scan)">
+                    <span class="text-sm">📸</span>
+                </button>
+                <!-- FIM DO BOTÃO -->
+
                 <div class="relative">
                     <button data-id="${item.id}" id="quick-toggle-${item.id}" class="quick-action-toggle text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200" title="Opções">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -1078,16 +1085,15 @@ export const UIService = {
                     if (!isNaN(arrivalDate)) {
                         const horaChegada = arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                         
-                        // --- CÁLCULO DO RELÓGIO SLIM (TERMÔMETRO DE ESPERA) ---
                         const diffMin = Math.floor((Date.now() - arrivalDate.getTime()) / 60000);
                         let clockColor = 'text-slate-500';
                         let clockIconAnim = '';
                         
                         if (diffMin >= 60) {
-                            clockColor = 'text-red-600 font-bold'; // Crítico: Vermelho
+                            clockColor = 'text-red-600 font-bold'; 
                             clockIconAnim = 'animate-pulse';
                         } else if (diffMin >= 30) {
-                            clockColor = 'text-amber-500 font-bold'; // Atenção: Amarelo
+                            clockColor = 'text-amber-500 font-bold'; 
                         }
                         
                         const hrs = Math.floor(Math.abs(diffMin) / 60);
@@ -1100,7 +1106,6 @@ export const UIService = {
                                 <span class="clock-text text-[10px] tracking-tight">${timeStr}</span>
                             </div>
                         ` : '';
-                        // --------------------------------------------------------
 
                         if (item.type === 'agendamento' && scheduledTimeSeguro !== '--:--') {
                             timeInfoHtml = `
@@ -1156,7 +1161,6 @@ export const UIService = {
                    </button>`
                 : '';
 
-            // --- LÓGICA DE EXIBIÇÃO DA TAG DE PRIORIDADE NA TELA ---
             let priorityTagHtml = '';
             let priorityBtnLabel = 'Prioridade';
             let priorityBtnClass = 'bg-red-500 hover:bg-red-600';
@@ -1166,7 +1170,6 @@ export const UIService = {
                 priorityBtnLabel = 'Urgência';
                 priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
             } else if (item.priority === 'RETORNO_RAPIDO') {
-                // AQUI ELE PUXA O TEXTO DIGITADO NO PROMPT
                 priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(priorityReasonSeguro || 'Aguardando')}</div>`;
                 priorityBtnLabel = 'Retorno';
                 priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
@@ -1350,7 +1353,6 @@ export const UIService = {
                         </button>
                    </div>`;
 
-            // --- LÓGICA DA TAG NO EM ATENDIMENTO ---
             let priorityTagHtml = '';
             if (item.priority === 'URGENTE') {
                 priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(item.priorityReason || 'URGÊNCIA')}</div>`;
@@ -1376,7 +1378,7 @@ export const UIService = {
 
                 <div class="text-center pt-2">
                     ${priorityTagHtml}
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-4">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2 mt-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
                     
@@ -2204,10 +2206,8 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     startRealtimeClocks() {
-        // Evita criar vários loops se a função for chamada de novo
         if (this._clocksInterval) return; 
         
-        // Roda a cada 30 segundos (30000ms) atualizando os tempos na tela silenciosamente
         this._clocksInterval = setInterval(() => {
             const clocks = document.querySelectorAll('.realtime-clock');
             const now = Date.now();
@@ -2235,18 +2235,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const mins = Math.abs(diffMin) % 60;
                 const timeStr = hrs > 0 ? `${hrs}h ${mins}m` : `${mins}m`;
 
-                // 1. Atualiza apenas o número do texto (sem piscar a tela)
                 const textEl = clock.querySelector('.clock-text');
                 if (textEl && textEl.textContent !== timeStr) {
                     textEl.textContent = timeStr;
                 }
 
-                // 2. Remove cores antigas e aplica a nova transição suave
                 clock.classList.remove('text-slate-500', 'text-amber-500', 'text-red-600', 'font-bold');
                 clock.classList.add(clockColorClass);
                 if (isBold) clock.classList.add('font-bold');
 
-                // 3. Controla a animação do coração batendo (pulse)
                 const iconEl = clock.querySelector('.clock-icon');
                 if (iconEl) {
                     if (isPulse) {
