@@ -81,7 +81,7 @@ export const AtendimentoExternoService = {
         }
 
         try {
-            // Busca os dados da pauta específica do link (pode ler sem estar 100% autenticado por causa da regra externa ou signInAnonymously)
+            // Busca os dados da pauta específica do link
             if (!auth.currentUser) await signInAnonymously(auth);
             
             const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
@@ -143,7 +143,6 @@ export const AtendimentoExternoService = {
         this.renderizarInterface(assistido, pautaData);
         this.setupListeners();
         
-        // Garante que dentro do atendimento ele conste como Ocupado
         this.atualizarBadgeHeader();
     },
 
@@ -177,7 +176,6 @@ export const AtendimentoExternoService = {
             (snap) => {
                 this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // NOTIFICAÇÃO: Dispara apenas a mensagem para os logados de novos casos na fila
                 if (!isInitialRender) {
                     snap.docChanges().forEach(change => {
                         if (change.type === 'added') {
@@ -193,7 +191,6 @@ export const AtendimentoExternoService = {
                 }
                 isInitialRender = false;
 
-                // Atualiza o Status LIVRE/OCUPADO automaticamente de acordo com a mesa
                 this.atualizarBadgeHeader();
 
                 if (this.modoVisualizacao === 'abas') {
@@ -293,7 +290,6 @@ export const AtendimentoExternoService = {
             });
         }
 
-        // Alternar modo
         document.getElementById('btn-voltar-dashboard')?.addEventListener('click', () => {
             this.modoVisualizacao = 'dashboard';
             this.iniciarDashboardUnificado();
@@ -371,8 +367,6 @@ export const AtendimentoExternoService = {
         `;
     },
 
-    // ─── ABAS ─────────────────────────────────────────────────────────────────
-
     setupAbasNavegacao() {
         const abas = [
             { id: 'minha-mesa',  btnId: 'btn-tab-minha-mesa',  cor: 'bg-amber-600' },
@@ -412,8 +406,6 @@ export const AtendimentoExternoService = {
         this._setupAcoesCards();
     },
 
-    // ── ABA 1: MINHA MESA ─────────────────────────────────────────────────────
-
     _renderMinhaMesa(container) {
         const meusCasos = this.todosAtendimentosPauta.filter(a =>
             a.status === 'emAtendimento' &&
@@ -435,8 +427,6 @@ export const AtendimentoExternoService = {
         </div>`;
     },
 
-    // ── ABA 2: AGUARDANDO ATENDIMENTO ─────────────────────────────────────────
-
     _renderAguardando(container) {
         const aguardando = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
 
@@ -457,8 +447,6 @@ export const AtendimentoExternoService = {
                 ${aguardando.map(a => this._htmlCardAba(a, 'puxar')).join('')}
             </div>`;
     },
-
-    // ── ABA 3: PAUTA ATUAL ────────────────────────────────────────────────────
 
     _renderPautaAtual(container) {
         const assistidos = this.todosAtendimentosPauta;
@@ -555,8 +543,6 @@ export const AtendimentoExternoService = {
         `;
     },
 
-    // ── CARD DAS ABAS ─────────────────────────────────────────────────────────
-
     _htmlCardAba(assistido, modo, pautaIdOverride = null) {
         const pid = pautaIdOverride || this.pautaId;
         const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: assistido.status };
@@ -614,8 +600,6 @@ export const AtendimentoExternoService = {
         });
     },
 
-    // ─── DEVOLVER ─────────────────────────────────────────────────────────────
-
     async devolverParaFila(pautaId, assistidoId) {
         if (!confirm("Devolver este caso para a fila de Aguardando? Outros colaboradores poderão assumí-lo.")) return;
 
@@ -652,8 +636,6 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── STATUS INTELIGENTE E AUTOMATIZADO ─────────────────────────────────────
-    
     atualizarBadgeHeader() {
         const badge = document.getElementById('badge-status-header');
         if (!badge) return;
@@ -681,8 +663,6 @@ export const AtendimentoExternoService = {
             }
         }
     },
-
-    // ─── DASHBOARD TRADICIONAL ─────────────────────────────────────────────────
 
     atualizarListasDoDashboard() {
         const container = document.getElementById('lista-dashboard-conteudo');
