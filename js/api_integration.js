@@ -117,19 +117,6 @@ const ApiIntegration = {
         }
     },
 
-    /**
-     * SIMULAÇÃO DE SINCRONIZAÇÃO VERDE (Função solicitada para evitar o erro no botão)
-     */
-    simularSincronizacaoVerde(pautaId) {
-        console.log(`🟢 [ApiIntegration] Sincronização verde acionada para a pauta: ${pautaId}`);
-        if (typeof showNotification === 'function') {
-            showNotification("Sincronização com o núcleo realizada com sucesso!", "success");
-        }
-        if (typeof playSound === 'function') {
-            playSound('notification');
-        }
-    },
-
     _toggleLoading(show, message = "") {
         const loader = document.getElementById('loading-container');
         if (loader) show ? loader.classList.remove('hidden') : loader.classList.add('hidden');
@@ -137,4 +124,3 @@ const ApiIntegration = {
 };
 
 window.ApiIntegration = ApiIntegration;
-export { ApiIntegration };
