@@ -1116,7 +1116,7 @@ function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     div.id = 'expense-table';
-
+    
     div.innerHTML = `
         <div class="flex items-center gap-3 mb-4 border-b pb-2">
             <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500" checked>
@@ -1175,12 +1175,21 @@ function renderExpenseTable() {
                     <span id="expense-total" class="text-lg font-black text-emerald-400">R$ 0,00</span>
                 </div>
             </div>
-            <div class="mt-3 text-right"><button type="button" id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
+
+            <!-- ⭐ BOTÃO DE GERAR APENAS A PLANILHA EM PDF NA MESA -->
+            <div class="mt-4 flex gap-2">
+                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                    <span>📄</span> Baixar Apenas Planilha (PDF)
+                </button>
+            </div>
+
+            <div class="mt-2 text-right"><button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
         </div>
     `;
     initExpenseTableEvents(div);
     return div;
 }
+
 
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
