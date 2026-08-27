@@ -97,6 +97,16 @@
                         </div>
                     </div>
 
+                    <!-- NOVO: PAINEL DE DOCUMENTOS DIGITALIZADOS NA RECEPÇÃO (COM SENHA) -->
+                    <div id="painel-documentos-seguros" class="hidden bg-slate-900 rounded-2xl p-4 shadow-md border border-slate-700 mt-4 animate-fade-in">
+                        <h4 class="text-xs font-black text-amber-400 uppercase tracking-widest flex items-center gap-2 mb-3">
+                            <span>📑</span> Documentos Digitalizados (Recepção)
+                        </h4>
+                        <div id="grid-documentos-seguros" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+                            <!-- Os botões de PDF da recepção preenchem aqui -->
+                        </div>
+                    </div>
+
                     <div id="area-colaborador" class="hidden">
                         <div class="flex flex-col justify-center items-center py-20 gap-3">
                             <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
@@ -131,6 +141,16 @@
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
+        // Função Global para solicitar a senha e abrir o PDF protegido
+        window.solicitarSenhaEAbriDoc = (url, senhaCorreta) => {
+            const digitada = prompt("🔒 Digite a senha de proteção deste documento:");
+            if (digitada === senhaCorreta) {
+                window.open(url, '_blank');
+            } else if (digitada !== null) {
+                alert("❌ Senha incorreta! O documento não pode ser aberto.");
+            }
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
             const searchLimpa = window.location.search.replace(/&amp;/g, '&');
             const urlParams = new URLSearchParams(searchLimpa);
@@ -146,8 +166,9 @@
                     onSnapshot(doc(db, "pautas", pautaId, "attendances", assistidoId), (snap) => {
                         if (!snap.exists()) return;
                         const data = snap.data();
-                        const fotos = data.documentChecklist?.fotosAnexadas || [];
                         
+                        // 1. Lógica das Fotos da Triagem
+                        const fotos = data.documentChecklist?.fotosAnexadas || [];
                         const painelServidor = document.getElementById('painel-fotos-servidor');
                         const gridFotos = document.getElementById('grid-fotos-recebidas');
 
@@ -161,6 +182,30 @@
                         } else {
                             painelServidor.classList.add('hidden');
                         }
+
+                        // 2. Lógica dos Documentos Digitalizados pela Recepção
+                        const documentosSeguros = data.documentosDigitalizados || [];
+                        const painelDocsSeguros = document.getElementById('painel-documentos-seguros');
+                        const gridDocsSeguros = document.getElementById('grid-documentos-seguros');
+
+                        if (documentosSeguros.length > 0) {
+                            painelDocsSeguros.classList.remove('hidden');
+                            gridDocsSeguros.innerHTML = documentosSeguros.map((docItem) => `
+                                <button onclick="solicitarSenhaEAbriDoc('${docItem.url}', '${docItem.senhaPin}')" 
+                                    class="bg-slate-800 hover:bg-indigo-600 border border-slate-700 text-white font-bold text-[10px] p-3 rounded-xl text-left shadow transition-all flex items-center justify-between">
+                                    <div class="truncate pr-2">
+                                        <p class="text-amber-300 uppercase font-black text-[11px]">${docItem.titulo || 'Documento'}</p>
+                                        <p class="text-slate-400 text-[9px] truncate">Arquivo: ${docItem.nomeArquivo || 'PDF'}</p>
+                                    </div>
+                                    <span class="bg-slate-900 text-white px-2.5 py-1.5 rounded-lg shrink-0 uppercase tracking-wider text-[9px] flex items-center gap-1">
+                                        <span>🔒</span> Abrir
+                                    </span>
+                                </button>
+                            `).join('');
+                        } else {
+                            painelDocsSeguros.classList.add('hidden');
+                        }
+
                     });
                 }
             } else {
