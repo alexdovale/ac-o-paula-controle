@@ -2849,3 +2849,14 @@ window.verResultados = async (coletaId) => {
     if (!window.app || !window.app.db) return;
     ColetasBiService.abrirResultados(window.app.db, coletaId);
 };
+
+// ============================================================
+// ADICIONE ISTO TEMPORARIAMENTE NO FIM DO SEU MAIN.JS PARA TESTAR
+// ============================================================
+window.ApiIntegration = {
+    simularSincronizacaoVerde: function(pautaId) {
+        console.log("Simulando sincronização verde para a pauta:", pautaId);
+        showNotification("Sincronização simulada com sucesso!", "success");
+        // Coloque aqui a lógica de atualização visual que você desejar
+    }
+};
