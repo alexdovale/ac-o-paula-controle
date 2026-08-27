@@ -1642,7 +1642,7 @@
                         btnEnviar.disabled = true;
 
                         try {
-                            const storage = getStorage();
+                            const storage = getStorage(window.app.db.app);
                             const timestamp = Date.now();
                             const path = `documentos_pautas/${pautaId}/${window.assistidoAlvoId}/${timestamp}_${file.name}`;
                             const storageRef = ref(storage, path);
