@@ -1657,12 +1657,17 @@ export async function openDetailsModal(config) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            if (!data.documentChecklist?.action && data.subject) {
-                const assuntoDetectado = descobrirAssuntoInteligente(data.subject);
+            // ⭐ DETECÇÃO INTELIGENTE IMEDIATA
+            // Verifica se o assistido ainda não tem ação no checklist, mas tem texto no assunto/matéria da pauta
+            const textoAssunto = data.subject || data.materia || data.assunto || '';
+            if (!data.documentChecklist?.action && textoAssunto) {
+                const assuntoDetectado = descobrirAssuntoInteligente(textoAssunto);
                 if (assuntoDetectado) {
+                    // Grava no Firebase igualzinho ao clique manual dos três pontinhos
                     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
                         "documentChecklist.action": assuntoDetectado,
-                        documentState: 'filling'
+                        documentState: 'filling',
+                        selectedAction: documentsData[assuntoDetectado]?.title || null
                     });
                     data.documentChecklist = data.documentChecklist || {};
                     data.documentChecklist.action = assuntoDetectado;
@@ -1690,6 +1695,7 @@ export async function openDetailsModal(config) {
 
     window._lastOpenedAssistedId = currentAssistedId;
     
+    // Se o checklist já tiver ação (ou se a IA acabou de gravar ali em cima), abre direto!
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
@@ -1702,6 +1708,7 @@ export async function openDetailsModal(config) {
     
     getEl('assisted-details-modal')?.classList.remove('hidden');
 }
+
 
 function renderSubjectSelection(selectionArea) {
     if (!selectionArea) return;
