@@ -1514,30 +1514,46 @@
         });
     </script>
 
-    <!-- Modal de Digitalização Livre -->
+    <!-- Modal de Digitalização Livre (Com Upload e Link) -->
     <div id="modal-digitalizar-assistido" class="hidden fixed inset-0 bg-slate-900/80 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
             <div class="bg-emerald-600 p-5 text-white flex justify-between items-center">
                 <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2"><span>📑</span> Adicionar Documento</h3>
                 <button onclick="document.getElementById('modal-digitalizar-assistido').classList.add('hidden')" class="text-emerald-200 hover:text-white text-2xl font-bold">&times;</button>
             </div>
+            
             <div class="p-6 space-y-4">
                 <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-800 font-bold text-center">
                     Assistido: <span id="nome-assistido-digitalizacao" class="uppercase"></span>
                 </div>
+
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase">Título do Documento</label>
                     <input type="text" id="input-titulo-doc" placeholder="Ex: RG, Petição Inicial..." class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1 font-bold text-slate-700">
                 </div>
-                <div>
+
+                <!-- SELETOR: UPLOAD OU LINK -->
+                <div class="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                    <button type="button" id="btn-tab-upload" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all">Upload de Arquivo</button>
+                    <button type="button" id="btn-tab-link" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">Colar Link Externo</button>
+                </div>
+
+                <div id="box-upload" class="block">
                     <label class="text-[10px] font-black text-slate-400 uppercase">Arquivo PDF/Foto</label>
                     <input type="file" id="input-pdf-recepcao" accept=".pdf,image/*" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1">
                 </div>
+
+                <div id="box-link" class="hidden">
+                    <label class="text-[10px] font-black text-slate-400 uppercase">URL / Link do Documento</label>
+                    <input type="url" id="input-link-externo" placeholder="https://..." class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1 font-mono text-blue-600">
+                </div>
+
                 <div>
                     <label class="text-[10px] font-black text-slate-400 uppercase">Senha de Proteção (PIN)</label>
                     <input type="password" id="input-senha-recepcao" placeholder="Ex: 1234" maxlength="6" class="w-full text-center text-lg font-bold p-3 border border-slate-200 rounded-xl bg-slate-50 mt-1 tracking-widest">
                 </div>
-                <button id="btn-enviar-documento-pauta" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg transition-all">
+
+                <button id="btn-enviar-documento-pauta" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95">
                     Adicionar à Ficha
                 </button>
             </div>
@@ -1550,8 +1566,31 @@
         import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         
         window.assistidoAlvoId = null;
+        let tipoEnvioAtual = 'upload'; // Pode ser 'upload' ou 'link'
 
-        // Abre o modal quando clica na câmera
+        // Lógica para alternar entre as abinhas de Upload e Link
+        const btnTabUpload = document.getElementById('btn-tab-upload');
+        const btnTabLink = document.getElementById('btn-tab-link');
+        const boxUpload = document.getElementById('box-upload');
+        const boxLink = document.getElementById('box-link');
+
+        btnTabUpload?.addEventListener('click', () => {
+            tipoEnvioAtual = 'upload';
+            btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all";
+            btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
+            boxUpload.classList.remove('hidden');
+            boxLink.classList.add('hidden');
+        });
+
+        btnTabLink?.addEventListener('click', () => {
+            tipoEnvioAtual = 'link';
+            btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all";
+            btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
+            boxLink.classList.remove('hidden');
+            boxUpload.classList.add('hidden');
+        });
+
+        // Abre o modal quando clica na câmera no card
         window.abrirModalDigitalizacao = (id, nome) => {
             const modal = document.getElementById('modal-digitalizar-assistido');
             if (modal) {
@@ -1559,7 +1598,12 @@
                 document.getElementById('nome-assistido-digitalizacao').textContent = nome;
                 document.getElementById('input-titulo-doc').value = '';
                 document.getElementById('input-pdf-recepcao').value = '';
+                document.getElementById('input-link-externo').value = '';
                 document.getElementById('input-senha-recepcao').value = '';
+                
+                // Reseta para a aba de upload por padrão
+                btnTabUpload?.click();
+                
                 modal.classList.remove('hidden');
             } else {
                 console.error("Modal não encontrado no HTML!");
@@ -1573,46 +1617,81 @@
             if(btnEnviar) {
                 btnEnviar.addEventListener('click', async () => {
                     const titulo = document.getElementById('input-titulo-doc').value.trim() || "Documento Digitalizado";
-                    const fileInput = document.getElementById('input-pdf-recepcao');
                     const senha = document.getElementById('input-senha-recepcao').value.trim();
-                    const file = fileInput.files[0];
                     const pautaId = window.app?.currentPauta?.id;
 
-                    if (!file || !senha || !pautaId || !window.assistidoAlvoId) {
-                        alert("Por favor, selecione o arquivo e informe a senha de proteção.");
+                    if (!senha || !pautaId || !window.assistidoAlvoId) {
+                        alert("Por favor, preencha a senha de proteção e certifique-se de que a pauta está ativa.");
                         return;
                     }
 
-                    btnEnviar.textContent = "ENVIANDO PARA A NUVEM...";
-                    btnEnviar.disabled = true;
+                    let urlFinal = "";
+                    let nomeArquivoFinal = "";
 
-                    try {
-                        const storage = getStorage();
-                        const timestamp = Date.now();
-                        const path = `documentos_pautas/${pautaId}/${window.assistidoAlvoId}/${timestamp}_${file.name}`;
-                        const storageRef = ref(storage, path);
+                    // Lógica para UPLOAD DE ARQUIVO
+                    if (tipoEnvioAtual === 'upload') {
+                        const fileInput = document.getElementById('input-pdf-recepcao');
+                        const file = fileInput.files[0];
                         
-                        await uploadBytes(storageRef, file);
-                        const downloadURL = await getDownloadURL(storageRef);
+                        if (!file) {
+                            alert("Por favor, selecione um arquivo para upload.");
+                            return;
+                        }
 
+                        btnEnviar.textContent = "ENVIANDO PARA A NUVEM...";
+                        btnEnviar.disabled = true;
+
+                        try {
+                            const storage = getStorage();
+                            const timestamp = Date.now();
+                            const path = `documentos_pautas/${pautaId}/${window.assistidoAlvoId}/${timestamp}_${file.name}`;
+                            const storageRef = ref(storage, path);
+                            
+                            await uploadBytes(storageRef, file);
+                            urlFinal = await getDownloadURL(storageRef);
+                            nomeArquivoFinal = file.name;
+                        } catch (e) {
+                            console.error("Erro ao fazer upload:", e);
+                            alert("Erro ao enviar documento para a nuvem.");
+                            btnEnviar.textContent = "Adicionar à Ficha";
+                            btnEnviar.disabled = false;
+                            return;
+                        }
+                    } 
+                    // Lógica para COLAR LINK
+                    else {
+                        const linkExterno = document.getElementById('input-link-externo').value.trim();
+                        if (!linkExterno) {
+                            alert("Por favor, cole a URL do documento.");
+                            return;
+                        }
+                        urlFinal = linkExterno;
+                        nomeArquivoFinal = "Link Externo";
+                        
+                        btnEnviar.textContent = "SALVANDO LINK...";
+                        btnEnviar.disabled = true;
+                    }
+
+                    // Adiciona na ficha do assistido no Firestore (Ocorre para ambos os fluxos)
+                    try {
                         const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", window.assistidoAlvoId);
                         await updateDoc(assistidoRef, {
                             documentosDigitalizados: arrayUnion({
-                                url: downloadURL,
+                                url: urlFinal,
                                 titulo: titulo,
-                                nomeArquivo: file.name,
+                                nomeArquivo: nomeArquivoFinal,
                                 senhaPin: senha,
                                 enviadoPor: window.app.currentUserName || "Recepção",
                                 dataEnvio: new Date().toISOString()
                             })
                         });
 
-                        alert("✅ Documento adicionado com sucesso! Pode digitalizar outro se precisar.");
+                        alert("✅ Documento adicionado com sucesso!");
                         document.getElementById('modal-digitalizar-assistido').classList.add('hidden');
                         
                     } catch (e) {
-                        console.error("Erro ao fazer upload:", e);
-                        alert("Erro ao enviar documento. Verifique o console.");
+                        console.error("Erro ao atualizar banco de dados:", e);
+                        alert("Erro ao salvar o documento na ficha do assistido.");
                     } finally {
                         btnEnviar.textContent = "Adicionar à Ficha";
                         btnEnviar.disabled = false;
@@ -1621,5 +1700,3 @@
             }
         });
     </script>
-</body>
-</html>
