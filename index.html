@@ -1543,6 +1543,83 @@
             </div>
         </div>
     </div>
+
+    <!-- SCRIPT DO MODAL DE DIGITALIZAÇÃO -->
+    <script type="module">
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
+        import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        window.assistidoAlvoId = null;
+
+        // Abre o modal quando clica na câmera
+        window.abrirModalDigitalizacao = (id, nome) => {
+            const modal = document.getElementById('modal-digitalizar-assistido');
+            if (modal) {
+                window.assistidoAlvoId = id;
+                document.getElementById('nome-assistido-digitalizacao').textContent = nome;
+                document.getElementById('input-titulo-doc').value = '';
+                document.getElementById('input-pdf-recepcao').value = '';
+                document.getElementById('input-senha-recepcao').value = '';
+                modal.classList.remove('hidden');
+            } else {
+                console.error("Modal não encontrado no HTML!");
+            }
+        };
+
+        // Salva o documento no Firebase
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnEnviar = document.getElementById('btn-enviar-documento-pauta');
+            
+            if(btnEnviar) {
+                btnEnviar.addEventListener('click', async () => {
+                    const titulo = document.getElementById('input-titulo-doc').value.trim() || "Documento Digitalizado";
+                    const fileInput = document.getElementById('input-pdf-recepcao');
+                    const senha = document.getElementById('input-senha-recepcao').value.trim();
+                    const file = fileInput.files[0];
+                    const pautaId = window.app?.currentPauta?.id;
+
+                    if (!file || !senha || !pautaId || !window.assistidoAlvoId) {
+                        alert("Por favor, selecione o arquivo e informe a senha de proteção.");
+                        return;
+                    }
+
+                    btnEnviar.textContent = "ENVIANDO PARA A NUVEM...";
+                    btnEnviar.disabled = true;
+
+                    try {
+                        const storage = getStorage();
+                        const timestamp = Date.now();
+                        const path = `documentos_pautas/${pautaId}/${window.assistidoAlvoId}/${timestamp}_${file.name}`;
+                        const storageRef = ref(storage, path);
+                        
+                        await uploadBytes(storageRef, file);
+                        const downloadURL = await getDownloadURL(storageRef);
+
+                        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", window.assistidoAlvoId);
+                        await updateDoc(assistidoRef, {
+                            documentosDigitalizados: arrayUnion({
+                                url: downloadURL,
+                                titulo: titulo,
+                                nomeArquivo: file.name,
+                                senhaPin: senha,
+                                enviadoPor: window.app.currentUserName || "Recepção",
+                                dataEnvio: new Date().toISOString()
+                            })
+                        });
+
+                        alert("✅ Documento adicionado com sucesso! Pode digitalizar outro se precisar.");
+                        document.getElementById('modal-digitalizar-assistido').classList.add('hidden');
+                        
+                    } catch (e) {
+                        console.error("Erro ao fazer upload:", e);
+                        alert("Erro ao enviar documento. Verifique o console.");
+                    } finally {
+                        btnEnviar.textContent = "Adicionar à Ficha";
+                        btnEnviar.disabled = false;
+                    }
+                });
+            }
+        });
+    </script>
 </body>
 </html>
-
