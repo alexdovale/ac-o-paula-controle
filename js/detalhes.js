@@ -260,12 +260,10 @@ const ensureAssistedId = () => {
     if (!currentAssistedId && _backupAssistedId) {
         currentAssistedId = _backupAssistedId;
         currentPautaId = _backupPautaId;
-        console.log("✅ ID recuperado do backup:", currentAssistedId);
     }
     if (!currentAssistedId && window._lastOpenedAssistedId) {
         currentAssistedId = window._lastOpenedAssistedId;
         currentPautaId = window._lastOpenedPautaId;
-        console.log("✅ ID recuperado do window:", currentAssistedId);
     }
     return currentAssistedId;
 };
@@ -479,9 +477,7 @@ function renderChecklist(actionKey) {
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = ''; 
 
-    // ========================================================
-    // BOTÃO INTELIGENTE: GERADOR DE TEXTO PARA PETIÇÃO (PENSÃO)
-    // ========================================================
+    // Botão Gerador de Texto para Petição
     const ASSUNTOS_PENSAO = [
         'alimentos_fixacao_majoracao_oferta',
         'alimentos_gravidicos',
@@ -494,19 +490,16 @@ function renderChecklist(actionKey) {
 
     const isLinkDoCidadao = window.location.pathname.includes('captacao');
 
-    // Só mostra na mesa do servidor/defensor e se o assunto bater com os de cima
     if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
         const calcContainer = document.createElement('div');
         calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
-        
         calcContainer.onclick = () => window.gerarTextoDespesas(currentAssistedId); 
-        
         calcContainer.innerHTML = `
             <div>
                 <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
                     <span>🧮</span> Gerador de Texto para Petição (Gastos)
                 </h4>
-                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados (com rateio) e cria um texto pronto para o Word/SEI.</p>
+                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados e cria um texto pronto para o Word/SEI.</p>
             </div>
             <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
                 <span>📑</span>
@@ -515,167 +508,15 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(calcContainer);
     }
 
-    // ========================================================
-    // SEÇÃO DE DADOS SOCIOECONÔMICOS DO ASSISTIDO PRINCIPAL
-    // ========================================================
-    const socioSection = document.createElement('div');
-    socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
-    socioSection.innerHTML = `
-        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
-        
-        <div class="mb-4">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
-            <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="">Selecione a ocupação</option>
-                ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-            </select>
-        </div>
-        
-        <div id="socio-profissao-container" class="mb-4 hidden">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
-            <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-        </div>
-        
-        <div class="mb-4">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
-            <select id="socio-estado-civil" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="">Selecione</option>
-                <option value="Solteiro(a)">Solteiro(a)</option>
-                <option value="Casado(a)">Casado(a)</option>
-                <option value="União Estável">União Estável</option>
-                <option value="Divorciado(a)">Divorciado(a)</option>
-                <option value="Viúvo(a)">Viúvo(a)</option>
-                <option value="Separado(a)">Separado(a)</option>
-            </select>
-        </div>
-        
-        <div class="mb-2">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">RENDA FAMILIAR (R$)</label>
-            <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
-            <div class="flex flex-wrap gap-3 mt-2">
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="CLT"> CLT
-                </label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO
-                </label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA
-                </label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
-                </label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO
-                </label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                    <input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS
-                </label>
-            </div>
-        </div>
-    `;
-    containerEl.appendChild(socioSection);
-    
-    const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
-    const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
-    const profissaoInput = socioSection.querySelector('#socio-profissao');
-    
-    if (ocupacaoSelect && profissaoContainer) {
-        const checkProfissaoVisibility = () => {
-            const valor = ocupacaoSelect.value;
-            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
-                                     valor === 'Empregado sem vínculo (Informal)' || 
-                                     valor === 'Autônomo';
-            
-            if (mostrarProfissao) {
-                profissaoContainer.classList.remove('hidden');
-            } else {
-                profissaoContainer.classList.add('hidden');
-                if (profissaoInput) profissaoInput.value = '';
-            }
-        };
-        
-        ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
-        checkProfissaoVisibility();
-    }
-    
-    const ganhosInput = socioSection.querySelector('#socio-ganhos');
-    if (ganhosInput) {
-        ganhosInput.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-        });
-    }
-
-    if (saved?.socioData) {
-        const socioSaved = saved.socioData;
-        if (socioSaved.ocupacao) ocupacaoSelect.value = socioSaved.ocupacao;
-        if (socioSaved.profissao && profissaoInput) profissaoInput.value = socioSaved.profissao;
-        if (socioSaved.estadoCivil) document.getElementById('socio-estado-civil').value = socioSaved.estadoCivil;
-        if (socioSaved.ganhos) document.getElementById('socio-ganhos').value = socioSaved.ganhos;
-        if (socioSaved.fonteRenda) {
-            const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
-            if (radio) radio.checked = true;
-        }
-        
-        if (ocupacaoSelect) {
-            const event = new Event('change');
-            ocupacaoSelect.dispatchEvent(event);
-        }
-    }
-
-    data.sections.forEach((section, sIdx) => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.className = "mb-6";
-        sectionDiv.innerHTML = `<h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">${section.title}</h4>`;
-        const ul = document.createElement('ul');
-        ul.className = 'space-y-1';
-
-        section.docs.forEach((docItem, dIdx) => {
-            const li = document.createElement('li');
-            if (typeof docItem === 'object' && docItem.type === 'title') {
-                li.innerHTML = `<div class="font-bold text-blue-700 text-[10px] mt-4 mb-2 bg-blue-50 p-2 rounded border-l-4 border-blue-400 uppercase tracking-tighter">${docItem.text}</div>`;
-            } else {
-                const docText = typeof docItem === 'string' ? docItem : docItem.text;
-                const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
-                const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
-                const savedType = saved?.docTypes ? saved.docTypes[id] : 'Físico';
-
-                li.innerHTML = `
-                    <div class="flex flex-col border-b border-gray-50 pb-1">
-                        <label class="checklist-row flex items-center gap-3 w-full cursor-pointer p-2 rounded-lg transition-all hover:bg-gray-50">
-                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 shadow-sm" ${isChecked}>
-                            <span class="text-sm text-gray-700 font-medium">${docText}</span>
-                        </label>
-                        <div id="type-${id}" class="ml-10 mt-1 flex gap-4 ${isChecked ? '' : 'hidden'}">
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO
-                            </label>
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL
-                            </label>
-                        </div>
-                    </div>`;
-            }
-            ul.appendChild(li);
-        });
-        sectionDiv.appendChild(ul);
-        containerEl.appendChild(sectionDiv);
-    });
-
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         addExpenseTable(containerEl, saved);
     } else {
         addExpenseButton(containerEl, saved);
     }
 
-    injectDemandasAdicionaisInterface(containerEl);
-
-    setupCheckboxEvents(containerEl);
-    setTimeout(checkReuVisibility, 100);
-    updateSelectedCounter();
-    
-    if (saved?.reuData) setTimeout(() => fillReuData(saved.reuData), 200);
+    containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
+        cb.addEventListener('change', () => updateSelectedCounter());
+    });
 }
 
 function addExpenseTable(containerEl, saved) {
@@ -749,7 +590,7 @@ function setupCheckboxEvents(containerEl) {
 }
 
 /* ========================================================
-   5. FORMULÁRIO DO RÉU (COM "NÃO SEI INFORMAR")
+   5. FORMULÁRIO DO RÉU
    ======================================================== */
 function renderReuForm(containerId) {
     const container = getEl(containerId);
@@ -1190,7 +1031,6 @@ function renderExpenseTable() {
     return div;
 }
 
-
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
     const contentGastos = div.querySelector('#content-planilha-gastos');
@@ -1200,66 +1040,6 @@ function initExpenseTableEvents(div) {
             contentGastos.style.display = this.checked ? 'block' : 'none';
             updateSelectedCounter();
         });
-    }
-
-    const calcularTotais = () => {
-        let totalFamilia = 0;
-        let totalCrianca = 0;
-        const moradores = parseInt(div.querySelector('#expense-moradores')?.value) || 1;
-
-        // Soma os gastos comuns da família
-        EXPENSE_CATEGORIES_COMUNS.forEach(c => {
-            const el = div.querySelector(`#expense-${c.id}`);
-            if (el) totalFamilia += parseCurrency(el.value);
-        });
-
-        // Soma os gastos exclusivos da criança
-        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
-            const el = div.querySelector(`#expense-${c.id}`);
-            if (el) totalCrianca += parseCurrency(el.value);
-        });
-
-        // Aplica o rateio proporcional da família pela quantidade de moradores
-        const cotaFamilia = totalFamilia / moradores;
-        const totalGeral = cotaFamilia + totalCrianca;
-
-        // Atualiza os campos visuais no rodapé da tabela
-        const subFamEl = div.querySelector('#subtotal-familia');
-        const subCriEl = div.querySelector('#subtotal-crianca');
-        const totalEl = div.querySelector('#expense-total');
-
-        if (subFamEl) subFamEl.textContent = formatCurrency(cotaFamilia);
-        if (subCriEl) subCriEl.textContent = formatCurrency(totalCrianca);
-        if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
-    };
-
-    // Ouve alterações no input de quantidade de moradores
-    div.querySelector('#expense-moradores')?.addEventListener('input', calcularTotais);
-
-    // Ouve digitações em cada campo de dinheiro e aplica a máscara de Real (R$)
-    div.querySelectorAll('.expense-input').forEach(inp => {
-        inp.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            calcularTotais();
-        });
-    });
-
-    // Conecta o botão de gerar PDF da planilha direto na mesa
-    setTimeout(() => {
-        div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
-            const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
-            const dadosGastos = getExpenseDataFromForm();
-            
-            if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
-                window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
-            } else {
-                showNotification("Motor de PDF não carregado.", "error");
-            }
-        });
-    }, 100);
-}
-
     }
 
     const calcularTotais = () => {
@@ -1297,6 +1077,20 @@ function initExpenseTableEvents(div) {
             calcularTotais();
         });
     });
+
+    // Conecta o botão de gerar PDF da planilha direto na mesa
+    setTimeout(() => {
+        div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
+            const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
+            const dadosGastos = getExpenseDataFromForm();
+            
+            if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
+                window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
+            } else {
+                showNotification("Motor de PDF não carregado.", "error");
+            }
+        });
+    }, 100);
 
     setTimeout(() => {
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
@@ -1455,7 +1249,6 @@ function fillExpenseData(d) {
         if (contentGastos) contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
     }
 
-    // Recalcula subtotais e total com rateio após preencher os campos salvos
     const moradores = parseInt(getEl('expense-moradores')?.value) || 1;
     let totalFamilia = 0;
     let totalCrianca = 0;
@@ -1708,7 +1501,6 @@ function closeAssistedDetailsModal() {
    11. GERADOR DE TEXTO PARA PETIÇÃO (COM RATEIO)
    ======================================================== */
 window.gerarTextoDespesas = (assistidoId) => {
-    // 1. Acha o assistido na base logada
     const assisted = allAssisted.find(a => a.id === assistidoId);
     if (!assisted || !assisted.documentChecklist || !assisted.documentChecklist.expenseData) {
         showNotification("Nenhuma despesa foi preenchida na triagem para este caso.", "error");
@@ -1717,8 +1509,6 @@ window.gerarTextoDespesas = (assistidoId) => {
 
     const g = assisted.documentChecklist.expenseData;
     const nomeAssistido = assisted.name ? assisted.name.split(' ')[0] : 'O requerente';
-
-    // 2. Quantidade de moradores (se não tiver capturado, assume 1 para não dar erro)
     const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
 
     let gastosFamiliaHtml = '';
@@ -1726,7 +1516,6 @@ window.gerarTextoDespesas = (assistidoId) => {
     let totalFamilia = 0;
     let totalExclusivoCrianca = 0;
 
-    // Função de limpeza de moeda
     const limpaMoeda = (valStr) => {
         if (!valStr || valStr === 'R$ 0,00') return 0;
         return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
@@ -1736,7 +1525,6 @@ window.gerarTextoDespesas = (assistidoId) => {
         return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
     };
 
-    // 3. GASTOS COMUNS DA FAMÍLIA — rateados pela quantidade de moradores
     EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
         const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
@@ -1746,7 +1534,6 @@ window.gerarTextoDespesas = (assistidoId) => {
         }
     });
 
-    // 4. GASTOS EXCLUSIVOS DA CRIANÇA — 100% integrais
     EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
         const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
@@ -1762,7 +1549,6 @@ window.gerarTextoDespesas = (assistidoId) => {
         return;
     }
 
-    // 5. MONTAGEM DO TEXTO JURÍDICO PARA A PETIÇÃO
     const textoGerado = `
 Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
 
@@ -1781,13 +1567,10 @@ ${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
 <i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>
     `.trim();
 
-    // 6. ABRIR MODAL COM O TEXTO PARA COPIAR
     exibirModalCopia(textoGerado);
 };
 
-// MODAL RÁPIDO PARA O DEFENSOR COPIAR
 function exibirModalCopia(textoHtml) {
-    // Se o modal já existir, remove pra criar um fresco
     const existing = document.getElementById('modal-texto-peticao');
     if (existing) existing.remove();
 
@@ -1819,14 +1602,12 @@ function exibirModalCopia(textoHtml) {
 
     document.body.appendChild(div);
 
-    // Botão de Copiar Texto (Limpa as tags de <b> e <li> pra ficar limpo no Word/SEI)
     document.getElementById('btn-copiar-texto-peticao').onclick = () => {
-        const textoPuro = document.getElementById('caixa-texto-copia').innerText; // Pega só o texto liso
+        const textoPuro = document.getElementById('caixa-texto-copia').innerText;
         navigator.clipboard.writeText(textoPuro).then(() => {
             const btn = document.getElementById('btn-copiar-texto-peticao');
             btn.innerHTML = "<span>✅</span> COPIADO COM SUCESSO!";
             btn.classList.replace('bg-emerald-600', 'bg-slate-800');
-            btn.classList.replace('hover:bg-emerald-700', 'hover:bg-slate-900');
             setTimeout(() => document.getElementById('modal-texto-peticao').remove(), 1500);
         });
     };
@@ -1876,6 +1657,18 @@ export async function openDetailsModal(config) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
+            if (!data.documentChecklist?.action && data.subject) {
+                const assuntoDetectado = descobrirAssuntoInteligente(data.subject);
+                if (assuntoDetectado) {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
+                        "documentChecklist.action": assuntoDetectado,
+                        documentState: 'filling'
+                    });
+                    data.documentChecklist = data.documentChecklist || {};
+                    data.documentChecklist.action = assuntoDetectado;
+                }
+            }
+
             if (data.numeroAgendamento && getEl('edit-assisted-num-agendamento')) {
                 getEl('edit-assisted-num-agendamento').value = data.numeroAgendamento;
             }
@@ -1957,3 +1750,4 @@ window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
 window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
+window.gerarTextoDespesas = window.gerarTextoDespesas;
