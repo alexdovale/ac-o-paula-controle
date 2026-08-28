@@ -446,6 +446,7 @@ export const PDFService = {
         }
     },
 
+    // MÉTODOS PARA RELATÓRIO DE ATENDIDOS COM SELEÇÃO DE COLUNAS
     async generateAtendidosPDF(arg1, arg2) {
         return new Promise((resolve) => {
             const modalId = 'pdf-column-selector-modal';
@@ -476,6 +477,13 @@ export const PDFService = {
                                 <input type="checkbox" value="numAgendamento" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Nº do Agendamento / Senha</span>
                             </label>
+                            
+                            <!-- ⭐ NOVA OPÇÃO: NÚMERO DO PROCESSO -->
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
+                                <input type="checkbox" value="numeroProcesso" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">Número do Processo</span>
+                            </label>
+
                             <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
                                 <input type="checkbox" value="scheduledTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Horário Agendado</span>
@@ -549,6 +557,7 @@ export const PDFService = {
             const logoInfo = await addLogoHeader(docPDF, 20);
             const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
+            // Ordenação
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
@@ -561,9 +570,11 @@ export const PDFService = {
             docPDF.text(`Data da Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
             docPDF.text(`Total: ${atendidosList.length} assistidos | Volume de Demandas (Múltiplas): ${totalAssuntos}`, 40, tituloY + 28);
 
+            // ⭐ DEFINIÇÃO MESTRE DAS COLUNAS (Agora com o Nº do Processo)
             const colDef = [
                 { key: 'name', label: 'Nome Completo' },
                 { key: 'numAgendamento', label: 'Nº Agend.' },
+                { key: 'numeroProcesso', label: 'Nº Processo' }, // <- Adicionado aqui
                 { key: 'scheduledTime', label: 'Agendado' },
                 { key: 'arrivalTime', label: 'Chegou' },
                 { key: 'attendedTime', label: 'Chamado/Fim' },
@@ -573,10 +584,13 @@ export const PDFService = {
                 { key: 'attendant', label: 'Atendente' }
             ];
 
+            // Filtra as colunas ativas (Nome é obrigatório)
             const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
 
+            // Monta o Header do AutoTable
             const head = [["#", ...activeCols.map(c => c.label)]];
 
+            // Monta o Body
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
                 const attendedDate = getSafeDate(item.attendedTime || item.attendedAt); 
@@ -596,9 +610,13 @@ export const PDFService = {
                     demandasStr = item.demandas.descricoes.join(', ');
                 }
 
+                // ⭐ MAPEIA O VALOR DO PROCESSO SE EXISTIR
+                const processoStr = item.numeroProcesso || item.processo || '---';
+
                 const rowData = {
                     name: cleanString(item.name).toUpperCase(),
                     numAgendamento: item.numAgendamento || item.numeroAgendamento || '---',
+                    numeroProcesso: cleanString(processoStr).toUpperCase(), // <- Mapeamento da nova coluna
                     scheduledTime: item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
                     arrivalTime: arrStr,
                     attendedTime: attStr,
@@ -628,7 +646,7 @@ export const PDFService = {
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle' },
                 columnStyles: { 
                     0: { cellWidth: 25 }, 
-                    1: { halign: 'left' }
+                    1: { halign: 'left' } // A coluna de Nome sempre será alinhada à esquerda
                 }
             });
 
