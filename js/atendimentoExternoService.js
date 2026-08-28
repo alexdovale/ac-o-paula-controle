@@ -758,6 +758,7 @@ export const AtendimentoExternoService = {
             }
 
         } else {
+            // AQUI É A TELA DE ESTAGIÁRIOS, RESIDENTES E SERVIDORES
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados    = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             const finalizados = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.attendedBy === this.colaboradorNome || a.enviadoPor === this.colaboradorNome));
@@ -1148,7 +1149,7 @@ export const AtendimentoExternoService = {
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-orange-300 group">
                     <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔙</span>
                     <span class="block font-bold text-slate-800">Devolver p/ Correção</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Retornar à mesa do Servidor</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Retornar à mesa de Origem</span>
                 </button>
             `;
         }
@@ -1202,7 +1203,7 @@ export const AtendimentoExternoService = {
             </div>
 
             <div id="config-devolver" class="hidden bg-orange-50 p-5 rounded-xl border border-orange-200 mb-6 shadow-inner">
-                <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Devolver para qual Servidor(a)?</label>
+                <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Devolver p/ qual Servidor(a) / Estagiário(a)?</label>
                 <select id="select-servidor-devolver" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white mb-4 outline-none focus:ring-2 focus:ring-orange-500 font-semibold text-slate-700 cursor-pointer"></select>
                 <label class="block text-[10px] font-black text-orange-700 uppercase tracking-widest mb-2">Motivo / Correção Exigida</label>
                 <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3.5 border border-gray-300 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-orange-500 resize-none" placeholder="Ex: Faltou qualificar a testemunha. Favor corrigir."></textarea>
@@ -1304,7 +1305,7 @@ export const AtendimentoExternoService = {
 
     povoarSelectsDinamicos() {
         const defensores = this.todosColaboradores.filter(c => c.cargo?.toLowerCase().includes('defensor'));
-        const servidores = this.todosColaboradores.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
+        const equipeTecnica = this.todosColaboradores.filter(c => !c.cargo?.toLowerCase().includes('defensor')); // Servidores, Estagiários, Residentes, etc
         const todosMenosEu = this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome);
 
         const preencher = (idSelect, lista, defaultOpt, valueToSelect = null) => {
@@ -1325,7 +1326,7 @@ export const AtendimentoExternoService = {
         preencher('select-transferir-colega', todosMenosEu, '--- ESCOLHA O COLEGA ---');
         
         const enviadoPorInicial = this.assistidoData?.enviadoPor || '';
-        preencher('select-servidor-devolver', servidores, '--- ESCOLHA O SERVIDOR ---', enviadoPorInicial);
+        preencher('select-servidor-devolver', equipeTecnica, '--- ESCOLHA O PROFISSIONAL ---', enviadoPorInicial);
     },
 
     async finalizarProcesso() {
@@ -1366,7 +1367,6 @@ export const AtendimentoExternoService = {
             const novoToken = this._gerarTokenSeguro();
             const timestampIso = new Date().toISOString();
 
-            // Puxa para si (no banco) de forma implícita ao salvar
             const atualizacaoDeResponsavel = {
                 assignedCollaborator: {
                     id: this.colaboradorId || this.colaboradorAtual?.id || '',
@@ -1375,11 +1375,11 @@ export const AtendimentoExternoService = {
             };
 
             if (this.fluxoSelecionado === 'direto') {
-                const enviadoPorServidor = this.assistidoData?.enviadoPor || null;
+                const enviadoPorColaborador = this.assistidoData?.enviadoPor || null;
                 
                 const mapaProdutividadeBI = {};
-                if (enviadoPorServidor) {
-                    mapaProdutividadeBI[enviadoPorServidor] = 1; 
+                if (enviadoPorColaborador) {
+                    mapaProdutividadeBI[enviadoPorColaborador] = 1; 
                 }
                 mapaProdutividadeBI[colabSeguro] = 1; 
 
@@ -1392,9 +1392,9 @@ export const AtendimentoExternoService = {
                     ...atualizacaoDeResponsavel,
                     status: statusDestinoFinal,
                     attendedBy: colabSeguro,                    
-                    enviadoPor: enviadoPorServidor,               
-                    trabalhosPorUsuario: mapaProdutividadeBI,      
-                    creatorEmail: enviadoPorServidor ? null : (this.colaboradorAtual?.email || null), 
+                    enviadoPor: enviadoPorColaborador,                
+                    trabalhosPorUsuario: mapaProdutividadeBI,       
+                    creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null), 
                     attendedAt: timestampIso,
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
@@ -1482,7 +1482,7 @@ export const AtendimentoExternoService = {
                 const serv = document.getElementById('select-servidor-devolver')?.value || '';
                 const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
                 if (!serv) { 
-                    alert("Selecione o servidor de destino."); 
+                    alert("Selecione o profissional de destino."); 
                     this.isProcessing = false;
                     btnFinalizar.disabled = false; 
                     btnFinalizar.textContent = "EXECUTAR AÇÃO"; 
@@ -1501,13 +1501,13 @@ export const AtendimentoExternoService = {
                     history: arrayUnion({
                         action: 'DEVOLVIDO_COM_ERRO',
                         by: colabSeguro,
-                        msg: nota || `Retornado para correção na mesa do Servidor(a) ${serv}`,
+                        msg: nota || `Retornado para correção na mesa de ${serv}`,
                         at: timestampIso
                     })
                 });
 
                 tituloSucesso = "Processo Devolvido!";
-                subtituloSucesso = `O servidor ${serv} deve corrigir o documento.`;
+                subtituloSucesso = `O colega ${serv} deve corrigir o documento.`;
             }
             else if (this.fluxoSelecionado === 'transferir') {
                 const colega = document.getElementById('select-transferir-colega')?.value || '';
@@ -1581,7 +1581,6 @@ export const AtendimentoExternoService = {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
             
-            // Retorna ao Dashboard após ação
             document.getElementById('btn-voltar-dashboard')?.click();
 
         } catch (error) {
