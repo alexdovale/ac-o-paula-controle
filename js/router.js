@@ -1,30 +1,38 @@
 // router.js
-// Sistema de roteamento SPA para o SIGEP App - Versão Completa e Integrada
+// Sistema de roteamento SPA completo para o SIGEP - Mapeamento Total de Ações
 
 export const ROUTES = {
-    LOGIN:            'login',
-    MODO_SELECTION:   'modo-selection',
-    PAUTA_SELECTION:  'pauta-selection',
-    APP:              'app',
-    DASHBOARD:        'dashboard',
-    ADMIN:            'admin',
-    RECEPCAO_CENTRAL: 'recepcao-central',
-    PAINEL_PUBLICO:   'painel-publico',
-    MEU_PERFIL:       'meu-perfil',
-    ATENDIMENTO_EXTERNO: 'atendimento-externo'
+    LOGIN:                  'login',
+    MODO_SELECTION:         'modo-selection',
+    PAUTA_SELECTION:        'pauta-selection',
+    APP:                    'app',                // Tela principal da pauta (colunas)
+    DASHBOARD:              'dashboard',          // Painel de métricas/estatísticas
+    ADMIN:                  'admin',              // Painel Administrativo
+    RECEPCAO_CENTRAL:       'recepcao-central',   // Recepção unificada
+    PAINEL_PUBLICO:         'painel-publico',     // TV / Painel da Sala de Espera
+    MEU_PERFIL:             'meu-perfil',         // Configurações do usuário logado
+    ATENDIMENTO_EXTERNO:    'atendimento-externo',// Mesa do colaborador (externa ou por link)
+    DETALHES_CASO:          'detalhes-caso',      // Modal/Tela de Checklist e Detalhes do Assistido
+    CAPTACAO_EXTERNA:       'captacao-externa',   // Tela do link do cidadão preencher
+    RELATORIO_PDF:          'relatorio-pdf',      // Visualizador ou gerador de relatórios
+    CONFIGURACAO_PAUTA:     'configuracao-pauta'  // Modal/Painel de edição de parâmetros da pauta
 };
 
 const ROUTE_GUARDS = {
-    [ROUTES.LOGIN]:             { requiresAuth: false },
-    [ROUTES.MODO_SELECTION]:    { requiresAuth: true },
-    [ROUTES.PAUTA_SELECTION]:   { requiresAuth: true },
-    [ROUTES.APP]:               { requiresAuth: true },
-    [ROUTES.DASHBOARD]:         { requiresAuth: true },
-    [ROUTES.ADMIN]:             { requiresAuth: true, roles: ['admin', 'superadmin'] },
-    [ROUTES.RECEPCAO_CENTRAL]:  { requiresAuth: true }, 
-    [ROUTES.PAINEL_PUBLICO]:    { requiresAuth: false },
+    [ROUTES.LOGIN]:               { requiresAuth: false },
+    [ROUTES.MODO_SELECTION]:      { requiresAuth: true },
+    [ROUTES.PAUTA_SELECTION]:     { requiresAuth: true },
+    [ROUTES.APP]:                 { requiresAuth: true },
+    [ROUTES.DASHBOARD]:           { requiresAuth: true },
+    [ROUTES.ADMIN]:               { requiresAuth: true, roles: ['admin', 'superadmin'] },
+    [ROUTES.RECEPCAO_CENTRAL]:    { requiresAuth: true }, 
+    [ROUTES.PAINEL_PUBLICO]:      { requiresAuth: false },
     [ROUTES.ATENDIMENTO_EXTERNO]: { requiresAuth: true },
-    [ROUTES.MEU_PERFIL]:        { requiresAuth: true }
+    [ROUTES.MEU_PERFIL]:          { requiresAuth: true },
+    [ROUTES.DETALHES_CASO]:       { requiresAuth: true },
+    [ROUTES.CAPTACAO_EXTERNA]:    { requiresAuth: false },
+    [ROUTES.RELATORIO_PDF]:       { requiresAuth: true },
+    [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true, roles: ['admin', 'superadmin', 'user'] }
 };
 
 const ALL_SCREEN_IDS = [
@@ -37,7 +45,9 @@ const ALL_SCREEN_IDS = [
     'recepcao-central-container',
     'painel-publico-container',
     'meu-perfil-container',
-    'atendimento-externo-container'
+    'atendimento-externo-container',
+    'assisted-details-modal',       // Tela/Modal de detalhes unificada
+    'configuracao-pauta-modal'      // Se houver container próprio
 ];
 
 export class SIGEPRouter {
@@ -53,22 +63,41 @@ export class SIGEPRouter {
     init() {
         if (this._listening) return;
         this._listening = true;
+
         window.addEventListener('popstate', (e) => {
             const state = e.state;
-            if (state?.route) this._execute(state.route, state.params || {}, false);
+            if (state?.route) {
+                this._execute(state.route, state.params || {}, false);
+            } else {
+                const urlParams = new URLSearchParams(window.location.search);
+                const routeFromUrl = urlParams.get('r') || ROUTES.MODO_SELECTION;
+                const params = Object.fromEntries(urlParams.entries());
+                this._execute(routeFromUrl, params, false);
+            }
         });
     }
 
     async navigate(route, params = {}, replace = false) {
-        const redirected = this._guard(route, params);
+        const targetRoute = ROUTE_GUARDS[route] ? route : ROUTES.PAUTA_SELECTION;
+
+        const redirected = this._guard(targetRoute, params);
         if (redirected) return this.navigate(redirected, {}, replace);
-        this._pushHistory(route, params, replace);
-        await this._execute(route, params, true);
+        
+        this._pushHistory(targetRoute, params, replace);
+        await this._execute(targetRoute, params, true);
     }
 
     async resolveInitialRoute() {
-        const url = new URLSearchParams(window.location.search);
-        if (url.get('painel') === 'true') {
+        const urlParams = new URLSearchParams(window.location.search);
+        
+        const urlRoute = urlParams.get('r');
+        if (urlRoute && ROUTE_GUARDS[urlRoute]) {
+            const params = Object.fromEntries(urlParams.entries());
+            await this.navigate(urlRoute, params, true);
+            return;
+        }
+
+        if (urlParams.get('painel') === 'true') {
             await this._execute(ROUTES.PAINEL_PUBLICO, {}, false);
             return;
         }
@@ -79,14 +108,18 @@ export class SIGEPRouter {
         const pautaType   = localStorage.getItem('lastPautaType');
 
         const routeMap = {
-            'app':              async () => {
+            'app': async () => {
                 if (pautaId && pautaName) await this.navigate(ROUTES.APP, { pautaId, pautaName, pautaType }, true);
                 else await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             },
-            'pauta-selection':  () => this.navigate(ROUTES.PAUTA_SELECTION, {}, true),
-            'dashboard':        () => this.navigate(ROUTES.DASHBOARD, {}, true),
-            'recepcao-central': () => this.navigate(ROUTES.RECEPCAO_CENTRAL, {}, true),
-            'admin':            () => this.navigate(ROUTES.ADMIN, {}, true),
+            'pauta-selection':    () => this.navigate(ROUTES.PAUTA_SELECTION, {}, true),
+            'dashboard':          () => this.navigate(ROUTES.DASHBOARD, {}, true),
+            'recepcao-central':   () => this.navigate(ROUTES.RECEPCAO_CENTRAL, {}, true),
+            'admin':              () => this.navigate(ROUTES.ADMIN, {}, true),
+            'atendimento-externo':() => this.navigate(ROUTES.ATENDIMENTO_EXTERNO, {
+                pautaId: localStorage.getItem('lastPautaId'),
+                colab: localStorage.getItem('lastColabName')
+            }, true)
         };
 
         if (savedScreen && routeMap[savedScreen]) await routeMap[savedScreen]();
@@ -118,24 +151,6 @@ export class SIGEPRouter {
             return ROUTES.PAUTA_SELECTION;
         }
 
-        if (route === ROUTES.APP) {
-            const modoAtual   = app.currentMode;
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
-
-            const pautaTipo = params.pautaTipo
-                           || localStorage.getItem('lastPautaTipo')
-                           || '';
-            const pautaType = params.pautaType
-                           || localStorage.getItem('lastPautaType')
-                           || 'normal';
-
-            const isEvento = tiposEvento.includes(String(pautaTipo).toLowerCase())
-                          || tiposEvento.includes(String(pautaType).toLowerCase());
-
-            if (modoAtual === 'normal' && isEvento)  return ROUTES.PAUTA_SELECTION;
-            if (modoAtual === 'evento' && !isEvento) return ROUTES.PAUTA_SELECTION;
-        }
-
         return null;
     }
 
@@ -149,10 +164,17 @@ export class SIGEPRouter {
     _buildUrl(route, params) {
         const base = window.location.pathname;
         const qs   = new URLSearchParams(window.location.search);
-        ['painel', 'r'].forEach(k => qs.delete(k));
+        
         qs.set('r', route);
-        if (params.pautaId) qs.set('pautaId', params.pautaId);
-        else qs.delete('pautaId');
+        
+        Object.keys(params).forEach(key => {
+            if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+                qs.set(key, params[key]);
+            } else if (params[key] === null) {
+                qs.delete(key);
+            }
+        });
+
         return `${base}?${qs.toString()}`;
     }
 
@@ -160,36 +182,41 @@ export class SIGEPRouter {
         this._currentRoute  = route;
         this._currentParams = params;
         if (saveToStorage) this._persistRoute(route, params);
+        
         const handler = this._handlers[route];
-        if (!handler) { console.warn(`[SIGEPRouter] Rota sem handler: "${route}"`); return; }
+        if (!handler) { 
+            console.warn(`[SIGEPRouter] Rota sem handler: "${route}". Redirecionando...`); 
+            await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+            return; 
+        }
         
         try {
             await handler(params);
         } catch (error) {
-            console.error(`[SIGEPRouter] Falha na rota ${route}:`, error);
+            console.error(`[SIGEPRouter] Falha na execução da rota ${route}:`, error);
             if (this._deps?.showNotification) {
-                this._deps.showNotification("Erro na interface: " + (error.message || "Erro desconhecido"), "error");
+                this._deps.showNotification("Erro na navegação: " + (error.message || "Erro desconhecido"), "error");
             }
         }
     }
 
     _persistRoute(route, params) {
         const screenMap = {
-            [ROUTES.LOGIN]:            'login',
-            [ROUTES.MODO_SELECTION]:   'modo-selection',
-            [ROUTES.PAUTA_SELECTION]:  'pauta-selection',
-            [ROUTES.APP]:              'app',
-            [ROUTES.DASHBOARD]:        'dashboard',
-            [ROUTES.ADMIN]:            'admin',
-            [ROUTES.RECEPCAO_CENTRAL]: 'recepcao-central',
-            [ROUTES.ATENDIMENTO_EXTERNO]: 'atendimento-externo'
+            [ROUTES.LOGIN]:               'login',
+            [ROUTES.MODO_SELECTION]:      'modo-selection',
+            [ROUTES.PAUTA_SELECTION]:     'pauta-selection',
+            [ROUTES.APP]:                 'app',
+            [ROUTES.DASHBOARD]:           'dashboard',
+            [ROUTES.ADMIN]:               'admin',
+            [ROUTES.RECEPCAO_CENTRAL]:    'recepcao-central',
+            [ROUTES.ATENDIMENTO_EXTERNO]: 'atendimento-externo',
+            [ROUTES.MEU_PERFIL]:          'meu-perfil'
         };
         if (screenMap[route]) localStorage.setItem('sigep_active_screen', screenMap[route]);
         if (route === ROUTES.APP && params.pautaId) {
-            localStorage.setItem('lastPautaId',   params.pautaId);
+            localStorage.setItem('lastPautaId',    params.pautaId);
             localStorage.setItem('lastPautaName', params.pautaName || '');
             localStorage.setItem('lastPautaType', params.pautaType || 'normal');
-            localStorage.setItem('lastPautaTipo', params.pautaTipo || '');
         }
     }
 
@@ -201,8 +228,6 @@ export class SIGEPRouter {
             [ROUTES.LOGIN]: async () => {
                 this._hideAllScreens();
                 document.getElementById('login-container')?.classList.remove('hidden');
-                document.getElementById('admin-panel-btn')?.classList.add('hidden');
-                document.getElementById('admin-btn-main')?.classList.add('hidden');
             },
             [ROUTES.MODO_SELECTION]: async () => {
                 this._hideAllScreens();
@@ -273,6 +298,23 @@ export class SIGEPRouter {
                 AtendimentoExternoService.colaboradorId = params.colabId || localStorage.getItem('sigep_colab_id') || '';
                 AtendimentoExternoService.modoVisualizacao = params.modo || 'abas';
                 await AtendimentoExternoService.init();
+            },
+            [ROUTES.DETALHES_CASO]: async (params) => {
+                // Abre diretamente a pauta e dispara a abertura do modal de detalhes do assistido
+                await this._handlers[ROUTES.APP](params);
+                if (params.assistidoId && window.openDetailsModal) {
+                    window.openDetailsModal({
+                        assistedId: params.assistidoId,
+                        pautaId: params.pautaId,
+                        allAssisted: app.allAssisted,
+                        db: app.db
+                    });
+                }
+            },
+            [ROUTES.CONFIGURACAO_PAUTA]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                const configBtn = document.getElementById('edit-pauta-config-btn');
+                if (configBtn) configBtn.click();
             }
         };
     }
