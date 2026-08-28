@@ -541,12 +541,31 @@ function addExpenseButton(containerEl, saved) {
 }
 
 /* ========================================================
-   5. PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO (ATUALIZADA)
+   5. PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO (ATUALIZADA E SEGURA)
    ======================================================== */
 function renderExpenseTable() {
     const div = document.createElement('div');
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     div.id = 'expense-table';
+    
+    // ⭐ VERIFICA SE ESTÁ NO LINK EXTERNO DO CIDADÃO
+    const isLinkDoCidadao = window.location.pathname.includes('captacao');
+
+    // Monta os botões administrativos (Word/SEI e PDF) APENAS se NÃO for o link do cidadão
+    let botoesAcaoHtml = '';
+    if (!isLinkDoCidadao) {
+        botoesAcaoHtml = `
+            <!-- ⭐ NOVOS BOTÕES PARA GERAR TABELA (EXCLUSIVOS DA MESA) -->
+            <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                <button type="button" id="btn-copiar-tabela" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                    <span>📋</span> Copiar Tabela (Para Word/SEI)
+                </button>
+                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                    <span>📄</span> Baixar PDF Limpo
+                </button>
+            </div>
+        `;
+    }
     
     div.innerHTML = `
         <div class="flex items-center gap-3 mb-4 border-b pb-2">
@@ -607,15 +626,7 @@ function renderExpenseTable() {
                 </div>
             </div>
 
-            <!-- ⭐ NOVOS BOTÕES PARA GERAR TABELA -->
-            <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                <button type="button" id="btn-copiar-tabela" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📋</span> Copiar Tabela (Para Word/SEI)
-                </button>
-                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📄</span> Baixar PDF Limpo
-                </button>
-            </div>
+            ${botoesAcaoHtml}
 
             <div class="mt-2 text-right"><button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
         </div>
@@ -623,6 +634,7 @@ function renderExpenseTable() {
     initExpenseTableEvents(div);
     return div;
 }
+
 
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
