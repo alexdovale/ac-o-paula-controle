@@ -19,26 +19,14 @@
             opacity: 0.7;
         }
         
-        /* Esconde os valores dos campos quando desabilitados por segurança */
         input:disabled, select:disabled, textarea:disabled {
             color: #9ca3af;
             font-style: italic;
-        }
-        
-        /* Impressão - não mostrar dados sensíveis */
-        @media print {
-            .print-hide {
-                display: none !important;
-            }
-            body {
-                visibility: hidden;
-            }
         }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen text-slate-800 font-sans pb-10 relative">
 
-    <!-- Contêiner de Notificações (Substitui os alerts) -->
     <div id="toast-container" class="fixed bottom-4 right-4 z-50 flex flex-col gap-2"></div>
 
     <div id="loading-screen" class="fixed inset-0 bg-white z-50 flex flex-col items-center justify-center">
@@ -346,6 +334,7 @@
                 </div>
             </section>
 
+            <!-- ⭐ SESSÃO DE GASTOS IDÊNTICA AO DETALHES.JS -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">6. PLANILHA DE GASTOS MENSAIS</h2>
                 
@@ -353,16 +342,40 @@
                     <div class="flex items-center gap-3">
                         <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500 pointer-events-none">
                         <label class="text-xs font-bold text-green-800 cursor-pointer pointer-events-none">
-                            PREENCHER DESPESAS
+                            PREENCHER DESPESAS / RATEIO
                         </label>
                     </div>
                 </div>
 
                 <div id="content-planilha-gastos" class="space-y-4" style="display: none;">
-                    <div id="gastos-container" class="space-y-3"></div>
-                    <div class="flex justify-between items-center bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4">
-                        <span class="text-xs font-black uppercase tracking-wider">TOTAL CALCULADO:</span>
-                        <span id="gasto-total" class="text-lg font-black">R$ 0,00</span>
+                    
+                    <div class="mb-4 bg-white p-3 rounded-lg border border-green-200 flex items-center justify-between">
+                        <div>
+                            <p class="text-xs font-bold text-slate-700 uppercase">Qtd. de Pessoas na Residência</p>
+                            <p class="text-[10px] text-slate-400">Para calcular a cota proporcional das contas.</p>
+                        </div>
+                        <input type="number" id="expense-moradores" min="1" value="1" class="w-16 p-2 border border-green-300 rounded-lg text-center font-black text-sm bg-slate-50">
+                    </div>
+
+                    <h5 class="text-[10px] font-black uppercase text-green-700 mb-2 mt-4">Gastos Comuns / Família (Serão Rateados)</h5>
+                    <div id="gastos-comuns-container" class="space-y-2 mb-4"></div>
+
+                    <h5 class="text-[10px] font-black uppercase text-blue-700 mb-2 mt-6">Gastos Exclusivos da Criança (100% Integrais)</h5>
+                    <div id="gastos-exclusivos-container" class="space-y-2 mb-4"></div>
+
+                    <div class="bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4 space-y-1">
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>Subtotal Rateio da Família:</span>
+                            <span id="subtotal-familia">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>Subtotal Exclusivo Criança:</span>
+                            <span id="subtotal-crianca">R$ 0,00</span>
+                        </div>
+                        <div class="flex justify-between items-center border-t border-slate-700 pt-2 mt-1">
+                            <span class="text-xs font-black uppercase tracking-wider text-emerald-400">NECESSIDADE MENSAL APURADA:</span>
+                            <span id="expense-total" class="text-lg font-black text-emerald-400">R$ 0,00</span>
+                        </div>
                     </div>
                 </div>
             </section>
@@ -393,10 +406,9 @@
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
         
-        // Importa direto do detalhes.js para manter as listas unificadas e sempre iguais à mesa
+        // Importa direto do detalhes.js as listas unificadas e sempre idênticas à mesa
         import { documentsData, EXPENSE_CATEGORIES_COMUNS, EXPENSE_CATEGORIES_EXCLUSIVAS } from './js/detalhes.js';
 
-        // Sistema Customizado de Notificações
         function showNotification(message, isError = true) {
             const toast = document.createElement('div');
             toast.className = `p-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all transform translate-y-0 opacity-100 ${isError ? 'bg-red-600' : 'bg-slate-800'}`;
@@ -703,37 +715,81 @@
                 return;
             }
 
-            // Renderiza as categorias combinadas importadas do detalhes.js
-            const containerGastos = document.getElementById('gastos-container');
-            const todasDespesas = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
-            
-            if (containerGastos && todasDespesas.length > 0) {
-                containerGastos.innerHTML = '';
-                todasDespesas.forEach(cat => {
-                    containerGastos.innerHTML += `
-                        <div class="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-lg">
-                            <div>
-                                <p class="text-[11px] font-bold text-green-800 uppercase">${cat.label}</p>
+            // ⭐ RENDERIZA GASTOS COMUNS (RATEIO)
+            const containerComuns = document.getElementById('gastos-comuns-container');
+            if (containerComuns && EXPENSE_CATEGORIES_COMUNS) {
+                containerComuns.innerHTML = '';
+                EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
+                    containerComuns.innerHTML += `
+                        <div class="flex justify-between items-center bg-white p-2.5 border border-green-100 rounded-lg gap-2">
+                            <div class="flex-1">
+                                <p class="text-[11px] font-bold text-slate-700 uppercase">${cat.label}</p>
                                 <p class="text-[9px] text-slate-400">${cat.desc}</p>
                             </div>
-                            <input type="text" id="gasto-${cat.id}" class="gasto-input w-28 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
+                            <div class="w-28">
+                                <input type="text" id="gasto-${cat.id}" class="gasto-input w-full p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
+                            </div>
                         </div>
                     `;
                 });
             }
 
+            // ⭐ RENDERIZA GASTOS EXCLUSIVOS (100%)
+            const containerExclusivos = document.getElementById('gastos-exclusivos-container');
+            if (containerExclusivos && EXPENSE_CATEGORIES_EXCLUSIVAS) {
+                containerExclusivos.innerHTML = '';
+                EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
+                    containerExclusivos.innerHTML += `
+                        <div class="flex justify-between items-center bg-white p-2.5 border border-blue-100 rounded-lg gap-2">
+                            <div class="flex-1">
+                                <p class="text-[11px] font-bold text-slate-700 uppercase">${cat.label}</p>
+                                <p class="text-[9px] text-slate-400">${cat.desc}</p>
+                            </div>
+                            <div class="w-28">
+                                <input type="text" id="gasto-${cat.id}" class="gasto-input w-full p-2 border border-blue-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-blue-500" placeholder="R$ 0,00" inputmode="numeric">
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+
+            // ⭐ LÓGICA DO CÁLCULO DE RATEIO
+            const calcularTotais = () => {
+                let totalFamilia = 0;
+                let totalCrianca = 0;
+                const moradores = parseInt(document.getElementById('expense-moradores')?.value) || 1;
+
+                EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+                    const el = document.getElementById(`gasto-${c.id}`);
+                    if (el) totalFamilia += parseFloat(el.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                });
+
+                EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+                    const el = document.getElementById(`gasto-${c.id}`);
+                    if (el) totalCrianca += parseFloat(el.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                });
+
+                const cotaFamilia = totalFamilia / moradores;
+                const totalGeral = cotaFamilia + totalCrianca;
+
+                const formatCurrency = (v) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+
+                const subFamEl = document.getElementById('subtotal-familia');
+                const subCriEl = document.getElementById('subtotal-crianca');
+                const totalEl = document.getElementById('expense-total');
+
+                if (subFamEl) subFamEl.textContent = formatCurrency(cotaFamilia);
+                if (subCriEl) subCriEl.textContent = formatCurrency(totalCrianca);
+                if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+            };
+
+            document.getElementById('expense-moradores')?.addEventListener('input', calcularTotais);
+
             document.querySelectorAll('.gasto-input').forEach(inp => {
                 inp.addEventListener('input', (e) => {
                     let v = e.target.value.replace(/\D/g, '');
                     e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-                    let total = 0;
-                    document.querySelectorAll('.gasto-input').forEach(i => {
-                        total += parseFloat(i.value.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-                    });
-                    const gastoTotal = document.getElementById('gasto-total');
-                    if (gastoTotal) {
-                        gastoTotal.textContent = new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total);
-                    }
+                    calcularTotais();
                 });
             });
 
@@ -842,7 +898,7 @@
                                         <input type="radio" name="type-${id}" value="Físico" ${typeVal === 'Físico' ? 'checked' : ''}> FÍSICO
                                     </label>
                                     <label class="flex items-center gap-1 text-[10px] font-bold text-slate-500 cursor-pointer">
-                                        <input type="radio" name="type-${id}" value="Digital" ${typeVal === 'Digital' ? 'checked' : ''}> DIGITAL (Celular)
+                                        <input type="radio" name="type-${id}" value="Digital" ${typeVal === 'Digital' ? 'checked' : ''}> DIGITAL (Celular/PDF)
                                     </label>
                                 </div>
                             </div>
@@ -940,7 +996,6 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
-        // Ouve eventos nos "Não Sei" do Reú
         const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
         const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
         if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
@@ -1018,11 +1073,11 @@
                     docTypes[cb.id] = radio ? radio.value : 'Físico';
                 });
 
-                // Agrupa despesas comuns e exclusivas importadas
+                // ⭐ PEGA OS DADOS DA PLANILHA PARA SALVAR NO FIREBASE
                 const todasDespesas = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
                 const gastos = { 
                     checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false,
-                    quantidadeMoradores: "1" 
+                    quantidadeMoradores: document.getElementById('expense-moradores')?.value || "1" 
                 };
                 todasDespesas.forEach(c => {
                     let input = document.getElementById(`gasto-${c.id}`);
