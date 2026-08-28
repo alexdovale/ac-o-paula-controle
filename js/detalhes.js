@@ -1,8 +1,9 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VERSÃO COMPLETA, DEFINITIVA E SEGURA)
- * Módulo de Detalhes do Assistido, Checklist Dinâmico,
- * Dados do Réu, Demandas Adicionais, PDF Unificado e Gastos.
+ * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTELIGENTE)
+ * Módulo de Detalhes do Assistido, Checklist de Documentos,
+ * Acúmulo de Demandas, Captação Direta, Gerador de Texto,
+ * Planilha de Gastos com Rateio e IA de Assunto Automático
  * ========================================================
  */
 
@@ -12,7 +13,68 @@ import { flatSubjects } from './assuntos.js';
 import { PDFService } from './pdfService.js';
 
 /* ========================================================
-   1. CONSTANTES E CONFIGURAÇÕES
+   CÉREBRO DE DETECÇÃO DE ASSUNTO (INTELIGÊNCIA AUTOMÁTICA)
+   Lê o texto livre do agendamento e deduz a ação correta
+   ======================================================== */
+function descobrirAssuntoInteligente(assuntoTexto) {
+    if (!assuntoTexto) return null;
+    
+    // Normaliza: tira acentos e joga para minúsculo
+    const txt = assuntoTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+
+    // PENSÃO / ALIMENTOS
+    if (txt.includes('alimento') || txt.includes('pensao') || txt.includes('oferta') || txt.includes('exoneracao') || txt.includes('revisao')) {
+        if (txt.includes('gravidic') || txt.includes('gestante')) return 'alimentos_gravidicos';
+        if (txt.includes('avo') || txt.includes('avoeng')) return 'alimentos_avoengos';
+        return 'alimentos_fixacao_majoracao_oferta';
+    }
+    
+    // DIVÓRCIO E SEPARAÇÃO
+    if (txt.includes('divorcio') || txt.includes('separacao')) {
+        if (txt.includes('consensual') || txt.includes('amigavel') || txt.includes('acordo')) return 'divorcio_consensual';
+        return 'divorcio_litigioso';
+    }
+    
+    // UNIÃO ESTÁVEL
+    if (txt.includes('uniao estavel') || txt.includes('companheir')) return 'uniao_estavel';
+    
+    // GUARDA E VISITAS
+    if (txt.includes('guarda')) return 'guarda';
+    if (txt.includes('visita') || txt.includes('convivencia')) return 'regulamentacao_convivencia';
+    
+    // INVESTIGAÇÃO DE PATERNIDADE (DNA)
+    if (txt.includes('paternidade') || txt.includes('maternidade') || txt.includes('dna') || txt.includes('reconhecimento')) {
+        return 'investigacao_paternidade';
+    }
+
+    // SAÚDE / OBRIGAÇÃO DE FAZER
+    if (txt.includes('obrigacao de fazer') || txt.includes('medicamento') || txt.includes('saude') || txt.includes('cirurgia') || txt.includes('internacao')) {
+        return 'obrigacao_fazer';
+    }
+
+    // INDENIZAÇÃO / DANOS
+    if (txt.includes('indenizacao') || txt.includes('dano') || txt.includes('moral') || txt.includes('material')) {
+        return 'indenizacao_danos';
+    }
+
+    // CURATELA / INTERDIÇÃO (TMO)
+    if (txt.includes('curatela') || txt.includes('interdicao') || txt.includes('tmo') || txt.includes('curador')) return 'curatela';
+    
+    // REGISTRO CIVIL
+    if (txt.includes('retificacao') || txt.includes('registro civil') || txt.includes('nome') || txt.includes('certidao')) return 'retificacao_registro_civil';
+    
+    // ALVARÁ
+    if (txt.includes('alvara') || txt.includes('residuos') || txt.includes('levantamento')) return 'alvara_valores';
+    
+    // VAGA EM CRECHE/ESCOLA
+    if (txt.includes('vaga') && (txt.includes('escola') || txt.includes('creche') || txt.includes('matricula'))) return 'vaga_escola_creche';
+
+    // Se não identificar nada, retorna null para você escolher na lista manualmente
+    return null;
+}
+
+/* ========================================================
+   1. CONSTANTES E CONFIGURAÇÕES DE DOCUMENTOS
    ======================================================== */
 const BASE_DOCS = [
     'Carteira de Identidade (RG) ou Habilitação (CNH)',
@@ -79,16 +141,21 @@ const ACTIONS_ALWAYS_EXPENSES = [
 ];
 
 const ACTIONS_WITH_WORK_INFO = [
-    'obrigacao_fazer', 'declaratoria_nulidade', 'indenizacao_danos', 'revisional_debito', 'exigir_contas',
-    'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'divorcio_litigioso',
-    'uniao_estavel', 'guarda', 'regulamentacao_convivencia', 'investigacao_paternidade'
+    'obrigacao_fazer', 'declaratoria_nulidade', 'indenizacao_danos', 'revisional_debito',
+    'exigir_contas', 'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos',
+    'alimentos_avoengos', 'divorcio_litigioso', 'uniao_estavel', 'guarda',
+    'regulamentacao_convivencia', 'investigacao_paternidade'
 ];
 
 const OCUPACOES = [
-    'Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo', 'Aposentado', 'Do lar',
-    'Pensionista', 'Beneficiário do INSS (BPC/LOAS)', 'Desempregado', 'Estudante'
+    'Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo',
+    'Aposentado', 'Do lar', 'Pensionista', 'Beneficiário do INSS (BPC/LOAS)',
+    'Desempregado', 'Estudante'
 ];
 
+/* ========================================================
+   2. BASE DE DADOS DE AÇÕES COMPLETA
+   ======================================================== */
 export const documentsData = {
     obrigacao_fazer: { title: 'Obrigação de Fazer', sections: [{ title: 'Base e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
     declaratoria_nulidade: { title: 'Declaratória de Nulidade', sections: [{ title: 'Base e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Documento a anular', 'Provas da ilegalidade'] }] },
@@ -136,13 +203,23 @@ const ensureAssistedId = () => {
 };
 
 const getEl = (id) => document.getElementById(id);
-const normalizeLocal = (str) => str ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() : '';
-function formatCurrency(v) { return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v); }
+
+const normalizeLocal = (str) => str 
+    ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() 
+    : '';
+
+function formatCurrency(v) {
+    return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(v);
+}
+
 function parseCurrency(s) {
     if (!s) return 0;
     return parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
+/* ========================================================
+   3.1 FUNÇÃO DE GERAÇÃO DE LINK DE CAPTAÇÃO
+   ======================================================== */
 export async function gerarLinkCaptacao() {
     const pautaId = currentPautaId;
     const assistidoId = currentAssistedId;
@@ -191,9 +268,8 @@ export async function gerarLinkCaptacao() {
 }
 
 /* ========================================================
-   4. FUNÇÕES DO CHECKLIST E CONDICIONAIS
+   4. FUNÇÕES DO CHECKLIST E DEMANDAS ADICIONAIS
    ======================================================== */
-
 function getDocTypesFromForm() {
     const docTypes = {};
     document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
@@ -235,7 +311,6 @@ async function updateDocumentState(state) {
     }
 }
 
-// ⭐ CONTROLA A EXIBIÇÃO DO FORMULÁRIO DO RÉU
 function checkReuVisibility() {
     const reuArea = getEl('address-editor-container');
     if (!reuArea) return;
@@ -260,7 +335,7 @@ function injectDemandasAdicionaisInterface(containerEl) {
     divDemanda.innerHTML = `
         <h4 class="text-sm font-bold text-violet-700 mb-2 flex items-center gap-1"><span>⚖️</span> Casos Acumulados no Atendimento</h4>
         <div class="flex gap-2 mb-3">
-            <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow p-2.5 border rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda do assuntos.js...">
+            <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow p-2.5 border rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda...">
             <datalist id="subjects-list-triagem-dinamico"></datalist>
             <button type="button" id="btn-add-demanda-triagem" class="bg-violet-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-violet-700 uppercase transition shadow-sm">Somar</button>
         </div>
@@ -287,6 +362,7 @@ function injectDemandasAdicionaisInterface(containerEl) {
             updateSelectedCounter();
         }
     };
+
     renderListaDemandasTriagem();
 }
 
@@ -316,108 +392,6 @@ function renderListaDemandasTriagem() {
     });
 }
 
-function renderAssistidoSocioeconomico(d = {}) {
-    return `
-        <div class="p-4 sm:p-6 bg-blue-50 border-2 border-blue-200 rounded-2xl shadow-sm mb-6 mt-4">
-            <h3 class="text-sm font-black text-blue-800 uppercase mb-4 flex items-center gap-2"><span>👤</span> 1. PERFIL SOCIOECONÔMICO DO ASSISTIDO</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div>
-                    <label class="text-[10px] font-black text-blue-600 uppercase">Ocupação / Vínculo</label>
-                    <select id="socio-ocupacao" class="w-full p-2 border border-blue-300 rounded-lg text-sm bg-white mt-1 outline-none focus:ring-2 focus:ring-blue-500 transition">
-                        <option value="">Selecione a ocupação para carregar os documentos...</option>
-                        ${OCUPACOES.map(opt => `<option value="${opt}" ${d.ocupacao === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-blue-600 uppercase">Profissão (Opcional)</label>
-                    <input type="text" id="socio-profissao" value="${d.profissao || ''}" class="w-full p-2 border border-blue-300 rounded-lg text-sm bg-white mt-1" placeholder="Ex: Pedreiro, Vendedora...">
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-blue-600 uppercase">Estado Civil</label>
-                    <select id="socio-estado-civil" class="w-full p-2 border border-blue-300 rounded-lg text-sm bg-white mt-1 outline-none">
-                        <option value="">Selecione...</option>
-                        ${['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a)'].map(opt => `<option value="${opt}" ${d.estadoCivil === opt ? 'selected' : ''}>${opt}</option>`).join('')}
-                    </select>
-                </div>
-                <div>
-                    <label class="text-[10px] font-black text-blue-600 uppercase">Ganhos Mensais (R$)</label>
-                    <input type="text" id="socio-ganhos" value="${d.ganhos || ''}" class="w-full p-2 border border-blue-300 rounded-lg text-sm bg-white mt-1" placeholder="R$ 0,00" inputmode="numeric">
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderDocumentosHTML(data, ocupacao, savedCheckedIds, savedDocTypes) {
-    let group = 0; 
-    if (['Empregado com vínculo (CLT)'].includes(ocupacao)) group = 1;
-    else if (['Aposentado', 'Pensionista', 'Beneficiário do INSS (BPC/LOAS)'].includes(ocupacao)) group = 2;
-    else if (['Empregado sem vínculo (Informal)', 'Autônomo'].includes(ocupacao)) group = 3;
-    else if (['Do lar', 'Desempregado', 'Estudante'].includes(ocupacao)) group = 4;
-
-    const docsGroup1 = ['1. TRABALHADOR FORMAL (CLT / SERVIDOR)', 'Contracheque (3 últimos meses)', 'Carteira de Trabalho (Física ou Digital - Print das telas)', 'Extrato Analítico do FGTS'];
-    const docsGroup2 = ['2. APOSENTADO / PENSIONISTA / BPC-LOAS', 'Extrato de Pagamento de Benefício (Portal Meu INSS)', 'Histórico de Crédito - HISCRE (Portal Meu INSS)', 'Extrato bancário da conta onde recebe o benefício'];
-    const docsGroup3 = ['3. AUTÔNOMO / TRABALHADOR INFORMAL', 'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)', 'Extratos Bancários (3 últimos meses)', 'Comprovante de Inscrição no CadÚnico'];
-    const docsGroup4 = ['4. DESEMPREGADO', 'Carteira de Trabalho (Página da baixa do último emprego)', 'Comprovante de Seguro-Desemprego (se estiver recebendo)', 'Declaração de Hipossuficiência (Informando ausência de renda)', 'Extrato do CNIS (Meu INSS - prova ausência de vínculo ativo)'];
-
-    let html = `<div class="p-4 sm:p-6 bg-white border-2 border-gray-200 rounded-2xl shadow-sm mb-6">
-        <h3 class="text-sm font-black text-gray-800 uppercase mb-4 flex items-center gap-2"><span>📂</span> 2. DOCUMENTOS DA TRIAGEM (CHECKLIST)</h3>`;
-
-    if (group === 0) {
-         html += `<div class="p-3 bg-yellow-50 border border-yellow-200 text-yellow-800 text-xs rounded-lg mb-4">
-                    ⚠️ <b>Atenção:</b> Preencha o "Ocupação / Vínculo" no Perfil Socioeconômico acima para exibir os itens (1 a 4) de comprovantes de renda.
-                  </div>`;
-    }
-
-    data.sections.forEach(sec => {
-        html += `<h4 class="text-xs font-bold text-gray-700 bg-gray-100 p-2 rounded mt-4 mb-2 uppercase border border-gray-200">${sec.title}</h4>`;
-        html += `<div class="space-y-1">`;
-        
-        sec.docs.forEach(docItem => {
-            const isObject = typeof docItem === 'object';
-            const text = isObject ? docItem.text : docItem;
-
-            if (docsGroup1.includes(text) && group !== 1) return;
-            if (docsGroup2.includes(text) && group !== 2) return;
-            if (docsGroup3.includes(text) && group !== 3) return;
-            if (docsGroup4.includes(text) && group !== 4) return;
-            
-            if (isObject && docItem.type === 'title') {
-                html += `<h5 class="text-[11px] font-black text-indigo-600 mt-4 mb-2 uppercase pl-1 border-l-2 border-indigo-600">${text}</h5>`;
-            } else {
-                const id = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
-                const isChecked = savedCheckedIds?.includes(id) ? 'checked' : '';
-                
-                let docTypeHtml = '';
-                if (isChecked) {
-                    const savedType = savedDocTypes?.[id] || 'Físico';
-                    docTypeHtml = `<div id="type-${id}" class="ml-6 mt-1 flex gap-3 text-[10px]"><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> Físico</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> Digital (PDF/Foto)</label></div>`;
-                } else {
-                    docTypeHtml = `<div id="type-${id}" class="hidden ml-6 mt-1 flex gap-3 text-[10px]"><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="type-${id}" value="Físico" checked> Físico</label><label class="flex items-center gap-1 cursor-pointer"><input type="radio" name="type-${id}" value="Digital"> Digital (PDF/Foto)</label></div>`;
-                }
-
-                html += `
-                    <div class="flex flex-col border-b border-gray-50 py-1.5 hover:bg-gray-50 transition-colors px-1">
-                        <label class="checklist-row flex items-start gap-3 cursor-pointer select-none group">
-                            <div class="relative flex items-center justify-center mt-0.5">
-                                <input type="checkbox" id="${id}" class="doc-checkbox peer sr-only" ${isChecked}>
-                                <div class="w-5 h-5 border-2 border-gray-300 rounded-md peer-checked:bg-indigo-600 peer-checked:border-indigo-600 transition-all flex items-center justify-center group-hover:border-indigo-400">
-                                    <svg class="w-3 h-3 text-white opacity-0 peer-checked:opacity-100 transition-opacity" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>
-                                </div>
-                            </div>
-                            <span class="text-xs sm:text-sm text-gray-700 font-medium group-hover:text-indigo-700 transition-colors">${text}</span>
-                        </label>
-                        ${docTypeHtml}
-                    </div>
-                `;
-            }
-        });
-        html += `</div>`;
-    });
-    html += `</div>`;
-    return html;
-}
-
 function renderChecklist(actionKey) {
     currentChecklistAction = actionKey;
     window.currentChecklistAction = actionKey; 
@@ -428,20 +402,26 @@ function renderChecklist(actionKey) {
     if (!containerEl) return;
 
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
-    const saved = assisted?.documentChecklist || {};
+    const saved = assisted?.documentChecklist;
 
     const titleEl = getEl('checklist-title');
     if (titleEl) titleEl.textContent = data.title;
     
     getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
     getEl('checklist-search-container')?.classList.remove('hidden');
-    
     containerEl.innerHTML = ''; 
 
-    // INJETA O PERFIL DO ASSISTIDO
-    containerEl.innerHTML = renderAssistidoSocioeconomico(saved?.socioData);
+    // Botão Gerador de Texto (Apenas para Defensorias de Família)
+    const ASSUNTOS_PENSAO = [
+        'alimentos_fixacao_majoracao_oferta',
+        'alimentos_gravidicos',
+        'alimentos_avoengos',
+        'divorcio_consensual',
+        'divorcio_litigioso',
+        'investigacao_paternidade',
+        'guarda'
+    ];
 
-    const ASSUNTOS_PENSAO = ['alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos', 'divorcio_consensual', 'divorcio_litigioso', 'investigacao_paternidade', 'guarda'];
     const isLinkDoCidadao = window.location.pathname.includes('captacao');
 
     if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
@@ -450,67 +430,157 @@ function renderChecklist(actionKey) {
         calcContainer.onclick = () => window.gerarTextoDespesas(currentAssistedId); 
         calcContainer.innerHTML = `
             <div>
-                <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2"><span>🧮</span> Gerador de Texto para Petição (Gastos)</h4>
+                <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
+                    <span>🧮</span> Gerador de Texto para Petição (Gastos)
+                </h4>
                 <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados e cria um texto pronto para o Word/SEI.</p>
             </div>
-            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3"><span>📑</span></div>
+            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
+                <span>📑</span>
+            </div>
         `;
         containerEl.appendChild(calcContainer);
     }
 
-    const docsContainer = document.createElement('div');
-    docsContainer.id = 'dynamic-docs-container';
-    containerEl.appendChild(docsContainer);
-
-    function updateDocsList() {
-        const ocupacao = getEl('socio-ocupacao')?.value || '';
-        docsContainer.innerHTML = renderDocumentosHTML(data, ocupacao, saved?.checkedIds, saved?.docTypes);
-        setupCheckboxEvents(docsContainer);
-        updateSelectedCounter();
-        checkReuVisibility(); // ⭐ GARANTE QUE O RÉU SEJA CHECADO APÓS ATUALIZAR LISTA
+    // Seção de Dados Socioeconômicos do Assistido
+    const socioSection = document.createElement('div');
+    socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
+    socioSection.innerHTML = `
+        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
+        <div class="mb-4">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
+            <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="">Selecione a ocupação</option>
+                ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
+            </select>
+        </div>
+        <div id="socio-profissao-container" class="mb-4 hidden">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
+            <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+        </div>
+        <div class="mb-4">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
+            <select id="socio-estado-civil" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                <option value="">Selecione</option>
+                <option value="Solteiro(a)">Solteiro(a)</option>
+                <option value="Casado(a)">Casado(a)</option>
+                <option value="União Estável">União Estável</option>
+                <option value="Divorciado(a)">Divorciado(a)</option>
+                <option value="Viúvo(a)">Viúvo(a)</option>
+                <option value="Separado(a)">Separado(a)</option>
+            </select>
+        </div>
+        <div class="mb-2">
+            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">RENDA FAMILIAR (R$)</label>
+            <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
+            <div class="flex flex-wrap gap-3 mt-2">
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="CLT"> CLT</label>
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
+                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS</label>
+            </div>
+        </div>
+    `;
+    containerEl.appendChild(socioSection);
+    
+    const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
+    const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
+    const profissaoInput = socioSection.querySelector('#socio-profissao');
+    
+    if (ocupacaoSelect && profissaoContainer) {
+        const checkProfissaoVisibility = () => {
+            const valor = ocupacaoSelect.value;
+            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                     valor === 'Empregado sem vínculo (Informal)' || 
+                                     valor === 'Autônomo';
+            
+            if (mostrarProfissao) {
+                profissaoContainer.classList.remove('hidden');
+            } else {
+                profissaoContainer.classList.add('hidden');
+                if (profissaoInput) profissaoInput.value = '';
+            }
+        };
+        ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
+        checkProfissaoVisibility();
+    }
+    
+    const ganhosInput = socioSection.querySelector('#socio-ganhos');
+    if (ganhosInput) {
+        ganhosInput.addEventListener('input', (e) => {
+            let v = e.target.value.replace(/\D/g, '');
+            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+        });
     }
 
-    setTimeout(() => {
-        const ocupacaoSelect = getEl('socio-ocupacao');
-        if (ocupacaoSelect) ocupacaoSelect.addEventListener('change', updateDocsList);
-        updateDocsList(); 
-
-        const ganhosInput = getEl('socio-ganhos');
-        if(ganhosInput) {
-            ganhosInput.addEventListener('input', (e) => {
-                let v = e.target.value.replace(/\D/g, '');
-                e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            });
+    if (saved?.socioData) {
+        const socioSaved = saved.socioData;
+        if (socioSaved.ocupacao) ocupacaoSelect.value = socioSaved.ocupacao;
+        if (socioSaved.profissao && profissaoInput) profissaoInput.value = socioSaved.profissao;
+        if (socioSaved.estadoCivil) document.getElementById('socio-estado-civil').value = socioSaved.estadoCivil;
+        if (socioSaved.ganhos) document.getElementById('socio-ganhos').value = socioSaved.ganhos;
+        if (socioSaved.fonteRenda) {
+            const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
+            if (radio) radio.checked = true;
         }
-    }, 100);
-
-    // INJETA O ACÚMULO DE DEMANDAS
-    if (!isLinkDoCidadao) {
-        injectDemandasAdicionaisInterface(containerEl);
+        if (ocupacaoSelect) {
+            const event = new Event('change');
+            ocupacaoSelect.dispatchEvent(event);
+        }
     }
 
-    // INJETA A PLANILHA DE GASTOS
+    data.sections.forEach((section, sIdx) => {
+        const sectionDiv = document.createElement('div');
+        sectionDiv.className = "mb-6";
+        sectionDiv.innerHTML = `<h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">${section.title}</h4>`;
+        const ul = document.createElement('ul');
+        ul.className = 'space-y-1';
+
+        section.docs.forEach((docItem, dIdx) => {
+            const li = document.createElement('li');
+            if (typeof docItem === 'object' && docItem.type === 'title') {
+                li.innerHTML = `<div class="font-bold text-blue-700 text-[10px] mt-4 mb-2 bg-blue-50 p-2 rounded border-l-4 border-blue-400 uppercase tracking-tighter">${docItem.text}</div>`;
+            } else {
+                const docText = typeof docItem === 'string' ? docItem : docItem.text;
+                const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
+                const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
+                const savedType = saved?.docTypes ? saved.docTypes[id] : 'Físico';
+
+                li.innerHTML = `
+                    <div class="flex flex-col border-b border-gray-50 pb-1">
+                        <label class="checklist-row flex items-center gap-3 w-full cursor-pointer p-2 rounded-lg transition-all hover:bg-gray-50">
+                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 shadow-sm" ${isChecked}>
+                            <span class="text-sm text-gray-700 font-medium">${docText}</span>
+                        </label>
+                        <div id="type-${id}" class="ml-10 mt-1 flex gap-4 ${isChecked ? '' : 'hidden'}">
+                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO
+                            </label>
+                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
+                                <input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL
+                            </label>
+                        </div>
+                    </div>`;
+            }
+            ul.appendChild(li);
+        });
+        sectionDiv.appendChild(ul);
+        containerEl.appendChild(sectionDiv);
+    });
+
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
         addExpenseTable(containerEl, saved);
     } else {
         addExpenseButton(containerEl, saved);
     }
-}
 
-function setupCheckboxEvents(containerEl) {
-    containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
-        cb.addEventListener('change', (e) => {
-            const t = getEl(`type-${e.target.id}`);
-            if (t) {
-                t.classList.toggle('hidden', !e.target.checked);
-                if (e.target.checked && !t.querySelector('input:checked')) {
-                    t.querySelector('input[value="Físico"]').checked = true;
-                }
-            }
-            updateSelectedCounter();
-            checkReuVisibility(); // ⭐ VERIFICA O RÉU AO CLICAR NO CHECKBOX
-        });
-    });
+    injectDemandasAdicionaisInterface(containerEl);
+    setupCheckboxEvents(containerEl);
+    setTimeout(checkReuVisibility, 100);
+    updateSelectedCounter();
+    if (saved?.reuData) setTimeout(() => fillReuData(saved.reuData), 200);
 }
 
 function addExpenseTable(containerEl, saved) {
@@ -549,36 +619,52 @@ function addExpenseButton(containerEl, saved) {
         expenseContainer.appendChild(renderExpenseTable());
         fillExpenseData(saved.expenseData);
     }
-    
+}
+
+function setupCheckboxEvents(containerEl) {
+    containerEl.querySelectorAll('.doc-checkbox').forEach(cb => {
+        cb.addEventListener('change', (e) => {
+            const t = getEl(`type-${e.target.id}`);
+            if (t) {
+                t.classList.toggle('hidden', !e.target.checked);
+                if (e.target.checked && !t.querySelector('input:checked')) {
+                    t.querySelector('input[value="Físico"]').checked = true;
+                }
+            }
+            updateSelectedCounter();
+            checkReuVisibility();
+        });
+    });
+
     setTimeout(() => {
         document.getElementById('btn-abrir-gastos')?.addEventListener('click', () => {
             document.getElementById('expense-button-container').style.display = 'none';
-            let expCont = document.getElementById('expense-table-container');
-            if (!expCont) {
-                expCont = document.createElement('div');
-                expCont.id = 'expense-table-container';
-                expCont.className = 'mt-4';
-                containerEl.appendChild(expCont);
+            let expenseContainer = document.getElementById('expense-table-container');
+            if (!expenseContainer) {
+                expenseContainer = document.createElement('div');
+                expenseContainer.id = 'expense-table-container';
+                expenseContainer.className = 'mt-4';
+                containerEl.appendChild(expenseContainer);
             }
-            expCont.innerHTML = '';
-            expCont.appendChild(renderExpenseTable());
+            expenseContainer.innerHTML = '';
+            expenseContainer.appendChild(renderExpenseTable());
             updateSelectedCounter();
         });
     }, 100);
 }
 
 /* ========================================================
-   5. FORMULÁRIO DO RÉU (TOTALMENTE RESTAURADO)
+   5. FORMULÁRIO DO RÉU
    ======================================================== */
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
 
     container.innerHTML = `
-        <div class="p-4 sm:p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-sm mt-6 mb-6">
+        <div class="p-4 sm:p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-sm mt-6">
             <div class="flex items-center gap-2 mb-4">
                 <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                <h3 class="text-sm font-black text-red-600 uppercase">DADOS DA PARTE CONTRÁRIA (RÉU) - ENDEREÇO PARA CITAÇÃO</h3>
+                <h3 class="text-sm font-black text-red-600 uppercase">DADOS DA PARTE CONTRÁRIA (RÉU)</h3>
             </div>
             
             <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4" style="border: 2px solid #f97316;">
@@ -611,9 +697,18 @@ function renderReuIdentificacao() {
         <div class="bg-white p-3 rounded-lg border border-gray-200 mb-4">
             <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-red-600 rounded"></span>1. IDENTIFICAÇÃO DO RÉU</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label><input type="text" id="nome-reu" placeholder="Nome completo do réu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">CPF</label><input type="text" id="cpf-reu" placeholder="000.000.000-00" maxlength="14" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">Telefone</label><input type="text" id="telefone-reu" placeholder="(21) 99999-9999" maxlength="15" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
+                <div class="md:col-span-2">
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
+                    <input type="text" id="nome-reu" placeholder="Nome completo do réu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">CPF</label>
+                    <input type="text" id="cpf-reu" placeholder="000.000.000-00" maxlength="14" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                </div>
+                <div>
+                    <label class="text-[9px] font-black text-gray-400 uppercase">Telefone</label>
+                    <input type="text" id="telefone-reu" placeholder="(21) 99999-9999" maxlength="15" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                </div>
             </div>
         </div>
     `;
@@ -632,7 +727,10 @@ function renderReuResidencial() {
                             <button type="button" id="buscar-cep-reu-btn" class="bg-red-600 text-white px-3 rounded-r-lg text-xs font-bold">Buscar</button>
                         </div>
                     </div>
-                    <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Logradouro</label><input type="text" id="rua-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
+                    <div class="md:col-span-2">
+                        <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro</label>
+                        <input type="text" id="rua-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
+                    </div>
                 </div>
                 <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
                     <div><label class="text-[9px] font-black text-gray-400 uppercase">Número</label><input type="text" id="numero-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
@@ -693,6 +791,7 @@ function renderReuSocioeconomico() {
                         </label>
                     </div>
                 </div>
+
                 <div id="reu-profissao-container" class="hidden">
                     <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -702,6 +801,7 @@ function renderReuSocioeconomico() {
                         </label>
                     </div>
                 </div>
+
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -719,6 +819,7 @@ function renderReuSocioeconomico() {
                         </label>
                     </div>
                 </div>
+
                 <div>
                     <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
                     <div class="flex flex-wrap gap-2 items-center mt-1">
@@ -727,16 +828,23 @@ function renderReuSocioeconomico() {
                             <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
                         </label>
                     </div>
+                    <div class="flex flex-wrap gap-3 mt-2">
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="CLT"> CLT</label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
+                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS</label>
+                    </div>
                 </div>
             </div>
         </div>
     `;
 }
 
-
 function renderUfOptions() {
     const ufs = ['RJ','SP','MG','ES','PR','SC','RS','BA','CE','PE','DF','GO','MT','MS','AM','PA','AC','AL','AP','MA','PB','PI','RN','RO','RR','SE','TO'];
-    return '<option value="">Selecionar UF</option>' + ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+    return '<option value="">UF</option>' + ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
 }
 
 function renderReuSaveButton() {
@@ -778,7 +886,9 @@ function initCepSearch() {
                     }
                     showNotification("Endereço sincronizado no SIGEP!", "success");
                 }
-            } catch (error) { showNotification("Erro na busca do CEP", "error"); }
+            } catch (error) {
+                showNotification("Erro na busca do CEP", "error");
+            }
         }
     }
 
@@ -811,7 +921,9 @@ function initReuSocioeconomicoEvents() {
     if (reuOcupacaoSelect && reuProfissaoContainer) {
         const checkReuProfissaoVisibility = () => {
             const valor = reuOcupacaoSelect.value;
-            const mostrarProfissao = ['Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo'].includes(valor);
+            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
+                                     valor === 'Empregado sem vínculo (Informal)' || 
+                                     valor === 'Autônomo';
             if (mostrarProfissao) {
                 reuProfissaoContainer.classList.remove('hidden');
             } else {
@@ -827,9 +939,12 @@ function initReuSocioeconomicoEvents() {
     if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
         reuOcupacaoNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
-                reuOcupacaoSelect.disabled = true; reuOcupacaoSelect.value = 'Não informado'; reuProfissaoContainer.classList.add('hidden');
+                reuOcupacaoSelect.disabled = true;
+                reuOcupacaoSelect.value = 'Não informado';
+                reuProfissaoContainer.classList.add('hidden');
             } else {
-                reuOcupacaoSelect.disabled = false; reuOcupacaoSelect.value = '';
+                reuOcupacaoSelect.disabled = false;
+                reuOcupacaoSelect.value = '';
             }
         });
     }
@@ -838,9 +953,11 @@ function initReuSocioeconomicoEvents() {
     if (reuProfissaoNaoSei && reuProfissaoInput) {
         reuProfissaoNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
-                reuProfissaoInput.disabled = true; reuProfissaoInput.value = 'Não informado';
+                reuProfissaoInput.disabled = true;
+                reuProfissaoInput.value = 'Não informado';
             } else {
-                reuProfissaoInput.disabled = false; reuProfissaoInput.value = '';
+                reuProfissaoInput.disabled = false;
+                reuProfissaoInput.value = '';
             }
         });
     }
@@ -850,9 +967,11 @@ function initReuSocioeconomicoEvents() {
     if (reuCivilNaoSei && reuCivilSelect) {
         reuCivilNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
-                reuCivilSelect.disabled = true; reuCivilSelect.value = 'Não informado';
+                reuCivilSelect.disabled = true;
+                reuCivilSelect.value = 'Não informado';
             } else {
-                reuCivilSelect.disabled = false; reuCivilSelect.value = '';
+                reuCivilSelect.disabled = false;
+                reuCivilSelect.value = '';
             }
         });
     }
@@ -861,9 +980,11 @@ function initReuSocioeconomicoEvents() {
     if (reuGanhosNaoSei && ganhosInput) {
         reuGanhosNaoSei.addEventListener('change', (e) => {
             if (e.target.checked) {
-                ganhosInput.disabled = true; ganhosInput.value = 'Não informado';
+                ganhosInput.disabled = true;
+                ganhosInput.value = 'Não informado';
             } else {
-                ganhosInput.disabled = false; ganhosInput.value = '';
+                ganhosInput.disabled = false;
+                ganhosInput.value = '';
             }
         });
     }
@@ -887,22 +1008,6 @@ function renderExpenseTable() {
     div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
     div.id = 'expense-table';
     
-    const isLinkDoCidadao = window.location.pathname.includes('captacao');
-    let botoesAcaoHtml = '';
-    
-    if (!isLinkDoCidadao) {
-        botoesAcaoHtml = `
-            <div class="mt-4 flex flex-col sm:flex-row gap-2">
-                <button type="button" id="btn-copiar-tabela" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📋</span> Copiar Tabela (Para Word/SEI)
-                </button>
-                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📄</span> Baixar PDF Limpo
-                </button>
-            </div>
-        `;
-    }
-    
     div.innerHTML = `
         <div class="flex items-center gap-3 mb-4 border-b pb-2">
             <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500" checked>
@@ -925,7 +1030,9 @@ function renderExpenseTable() {
                             <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
                             <p class="text-[9px] text-slate-400">${c.desc}</p>
                         </div>
-                        <div class="w-32"><input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-green-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric"></div>
+                        <div class="w-32">
+                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-green-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
+                        </div>
                     </div>
                 `).join('')}
             </div>
@@ -938,21 +1045,35 @@ function renderExpenseTable() {
                             <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
                             <p class="text-[9px] text-slate-400">${c.desc}</p>
                         </div>
-                        <div class="w-32"><input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-blue-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric"></div>
+                        <div class="w-32">
+                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-blue-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
+                        </div>
                     </div>
                 `).join('')}
             </div>
 
             <div class="bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4 space-y-1">
-                <div class="flex justify-between text-xs text-slate-300"><span>Subtotal Rateio da Família:</span><span id="subtotal-familia">R$ 0,00</span></div>
-                <div class="flex justify-between text-xs text-slate-300"><span>Subtotal Exclusivo Criança:</span><span id="subtotal-crianca">R$ 0,00</span></div>
+                <div class="flex justify-between text-xs text-slate-300">
+                    <span>Subtotal Rateio da Família:</span>
+                    <span id="subtotal-familia">R$ 0,00</span>
+                </div>
+                <div class="flex justify-between text-xs text-slate-300">
+                    <span>Subtotal Exclusivo Criança:</span>
+                    <span id="subtotal-crianca">R$ 0,00</span>
+                </div>
                 <div class="flex justify-between items-center border-t border-slate-700 pt-2 mt-1">
                     <span class="text-xs font-black uppercase tracking-wider text-emerald-400">NECESSIDADE MENSAL APURADA:</span>
                     <span id="expense-total" class="text-lg font-black text-emerald-400">R$ 0,00</span>
                 </div>
             </div>
 
-            ${botoesAcaoHtml}
+            <!-- ⭐ BOTÃO DE GERAR APENAS A PLANILHA EM PDF NA MESA -->
+            <div class="mt-4 flex gap-2">
+                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                    <span>📄</span> Baixar Apenas Planilha (PDF)
+                </button>
+            </div>
+
             <div class="mt-2 text-right"><button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
         </div>
     `;
@@ -972,11 +1093,19 @@ function initExpenseTableEvents(div) {
     }
 
     const calcularTotais = () => {
-        let totalFamilia = 0; let totalCrianca = 0;
+        let totalFamilia = 0;
+        let totalCrianca = 0;
         const moradores = parseInt(div.querySelector('#expense-moradores')?.value) || 1;
 
-        EXPENSE_CATEGORIES_COMUNS.forEach(c => { const el = div.querySelector(`#expense-${c.id}`); if (el) totalFamilia += parseCurrency(el.value); });
-        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const el = div.querySelector(`#expense-${c.id}`); if (el) totalCrianca += parseCurrency(el.value); });
+        EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalFamilia += parseCurrency(el.value);
+        });
+
+        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+            const el = div.querySelector(`#expense-${c.id}`);
+            if (el) totalCrianca += parseCurrency(el.value);
+        });
 
         const cotaFamilia = totalFamilia / moradores;
         const totalGeral = cotaFamilia + totalCrianca;
@@ -1003,22 +1132,16 @@ function initExpenseTableEvents(div) {
         div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
             const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
             const dadosGastos = getExpenseDataFromForm();
+            
             if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
                 window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
             } else {
-                showNotification("A função de PDF Limpo precisa ser atualizada no pdfService.js", "warning");
+                showNotification("Motor de PDF não carregado.", "error");
             }
         });
-        
-        div.querySelector('#btn-copiar-tabela')?.addEventListener('click', (e) => {
-            window.copiarTabelaGastos();
-            const btn = e.currentTarget;
-            const textoOriginal = btn.innerHTML;
-            btn.innerHTML = "<span>✅</span> COPIADO COM SUCESSO!";
-            btn.classList.replace('bg-slate-700', 'bg-green-600');
-            setTimeout(() => { btn.innerHTML = textoOriginal; btn.classList.replace('bg-green-600', 'bg-slate-700'); }, 2500);
-        });
+    }, 100);
 
+    setTimeout(() => {
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
             const container = getEl('expense-table-container');
             if (container) container.innerHTML = '';
@@ -1030,7 +1153,7 @@ function initExpenseTableEvents(div) {
 }
 
 /* ========================================================
-   7. DADOS GET/SET DO FORMULÁRIO E BANCO
+   7. FUNÇÕES DE DADOS (GET/SET)
    ======================================================== */
 function getReuDataFromForm() {
     return {
@@ -1066,48 +1189,6 @@ function getReuDataFromForm() {
     };
 }
 
-function fillReuData(d) {
-    if (!d) return;
-    const setValue = (id, val) => { const el = getEl(id); if (el) el.value = val || ''; };
-    
-    if (getEl('check-reu-unico')) getEl('check-reu-unico').checked = d.checkReuUnico || false;
-    setValue('nome-reu', d.nome); setValue('cpf-reu', d.cpf); setValue('telefone-reu', d.telefone);
-    setValue('cep-reu', d.cep); setValue('rua-reu', d.rua); setValue('numero-reu', d.numero);
-    setValue('complemento-reu', d.complemento); setValue('bairro-reu', d.bairro);
-    setValue('cidade-reu', d.cidade); setValue('estado-reu', d.uf); setValue('referencia-reu', d.referencia);
-    
-    setValue('empresa-reu', d.empresa); setValue('rua-comercial-reu', d.rua_comercial);
-    setValue('numero-comercial-reu', d.numero_comercial); setValue('complemento-comercial-reu', d.complemento_comercial);
-    setValue('bairro-comercial-reu', d.bairro_comercial); setValue('cidade-comercial-reu', d.cidade_comercial);
-    setValue('estado-comercial-reu', d.uf_comercial); setValue('cep-comercial-reu', d.cep_comercial);
-    
-    setValue('reu-ocupacao', d.ocupacao);
-    if (d.ocupacaoNaoSei) { const ocupNaoSei = getEl('reu-ocupacao-nao-sei'); if (ocupNaoSei) ocupNaoSei.checked = true; const ocupSelect = getEl('reu-ocupacao'); if (ocupSelect) ocupSelect.disabled = true; }
-    
-    setValue('reu-profissao', d.profissao);
-    if (d.profissaoNaoSei) { const profNaoSei = getEl('reu-profissao-nao-sei'); if (profNaoSei) profNaoSei.checked = true; const profInput = getEl('reu-profissao'); if (profInput) profInput.disabled = true; }
-    
-    setValue('reu-estado-civil', d.estadoCivil);
-    if (d.estadoCivilNaoSei) { const civilNaoSei = getEl('reu-estado-civil-nao-sei'); if (civilNaoSei) civilNaoSei.checked = true; const civilSelect = getEl('reu-estado-civil'); if (civilSelect) civilSelect.disabled = true; }
-    
-    setValue('reu-ganhos', d.ganhos);
-    if (d.ganhosNaoSei) { const ganhosNaoSei = getEl('reu-ganhos-nao-sei'); if (ganhosNaoSei) ganhosNaoSei.checked = true; const ganhosInput = getEl('reu-ganhos'); if (ganhosInput) ganhosInput.disabled = true; }
-    
-    if (d.fonteRenda) { const radio = document.querySelector(`input[name="reu-fonte-renda"][value="${d.fonteRenda}"]`); if (radio) radio.checked = true; }
-    
-    setTimeout(() => {
-        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
-        if (reuOcupacaoSelect && !d.ocupacaoNaoSei) { const event = new Event('change'); reuOcupacaoSelect.dispatchEvent(event); }
-        updateReuVisibility(d);
-    }, 100);
-}
-
-function updateReuVisibility(d) {
-    const contentCompleto = getEl('content-reu-completo'); 
-    if (contentCompleto) contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
-    updateSelectedCounter();
-}
-
 function getExpenseDataFromForm() {
     const d = {};
     const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
@@ -1121,6 +1202,84 @@ function getExpenseDataFromForm() {
     return d;
 }
 
+function fillReuData(d) {
+    if (!d) return;
+    const setValue = (id, val) => { const el = getEl(id); if (el) el.value = val || ''; };
+    
+    getEl('check-reu-unico').checked = d.checkReuUnico || false;
+    setValue('nome-reu', d.nome);
+    setValue('cpf-reu', d.cpf);
+    setValue('telefone-reu', d.telefone);
+    setValue('cep-reu', d.cep);
+    setValue('rua-reu', d.rua);
+    setValue('numero-reu', d.numero);
+    setValue('complemento-reu', d.complemento);
+    setValue('bairro-reu', d.bairro);
+    setValue('cidade-reu', d.cidade);
+    setValue('estado-reu', d.uf);
+    setValue('referencia-reu', d.referencia);
+    setValue('empresa-reu', d.empresa);
+    setValue('rua-comercial-reu', d.rua_comercial);
+    setValue('numero-comercial-reu', d.numero_comercial);
+    setValue('complemento-comercial-reu', d.complemento_comercial);
+    setValue('bairro-comercial-reu', d.bairro_comercial);
+    setValue('cidade-comercial-reu', d.cidade_comercial);
+    setValue('estado-comercial-reu', d.uf_comercial);
+    setValue('cep-comercial-reu', d.cep_comercial);
+    
+    setValue('reu-ocupacao', d.ocupacao);
+    if (d.ocupacaoNaoSei) {
+        const ocupNaoSei = getEl('reu-ocupacao-nao-sei');
+        if (ocupNaoSei) ocupNaoSei.checked = true;
+        const ocupSelect = getEl('reu-ocupacao');
+        if (ocupSelect) ocupSelect.disabled = true;
+    }
+    
+    setValue('reu-profissao', d.profissao);
+    if (d.profissaoNaoSei) {
+        const profNaoSei = getEl('reu-profissao-nao-sei');
+        if (profNaoSei) profNaoSei.checked = true;
+        const profInput = getEl('reu-profissao');
+        if (profInput) profInput.disabled = true;
+    }
+    
+    setValue('reu-estado-civil', d.estadoCivil);
+    if (d.estadoCivilNaoSei) {
+        const civilNaoSei = getEl('reu-estado-civil-nao-sei');
+        if (civilNaoSei) civilNaoSei.checked = true;
+        const civilSelect = getEl('reu-estado-civil');
+        if (civilSelect) civilSelect.disabled = true;
+    }
+    
+    setValue('reu-ganhos', d.ganhos);
+    if (d.ganhosNaoSei) {
+        const ganhosNaoSei = getEl('reu-ganhos-nao-sei');
+        if (ganhosNaoSei) ganhosNaoSei.checked = true;
+        const ganhosInput = getEl('reu-ganhos');
+        if (ganhosInput) ganhosInput.disabled = true;
+    }
+    
+    if (d.fonteRenda) {
+        const radio = document.querySelector(`input[name="reu-fonte-renda"][value="${d.fonteRenda}"]`);
+        if (radio) radio.checked = true;
+    }
+    
+    setTimeout(() => {
+        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
+        if (reuOcupacaoSelect && !d.ocupacaoNaoSei) {
+            const event = new Event('change');
+            reuOcupacaoSelect.dispatchEvent(event);
+        }
+        updateReuVisibility(d);
+    }, 100);
+}
+
+function updateReuVisibility(d) {
+    const contentCompleto = getEl('content-reu-completo'); 
+    if (contentCompleto) contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
+    updateSelectedCounter();
+}
+
 function fillExpenseData(d) {
     if (!d) return;
     const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
@@ -1128,7 +1287,9 @@ function fillExpenseData(d) {
         const el = getEl(`expense-${cat.id}`);
         if (el && d[cat.id]) el.value = d[cat.id];
     });
-    if (getEl('expense-moradores') && d.quantidadeMoradores) getEl('expense-moradores').value = d.quantidadeMoradores;
+    if (getEl('expense-moradores') && d.quantidadeMoradores) {
+        getEl('expense-moradores').value = d.quantidadeMoradores;
+    }
 
     const checkGastos = getEl('check-exibir-gastos'); 
     if (checkGastos && d.checkExibirGastos !== undefined) {
@@ -1138,22 +1299,38 @@ function fillExpenseData(d) {
     }
 
     const moradores = parseInt(getEl('expense-moradores')?.value) || 1;
-    let totalFamilia = 0, totalCrianca = 0;
-    EXPENSE_CATEGORIES_COMUNS.forEach(c => { const el = getEl(`expense-${c.id}`); if (el) totalFamilia += parseCurrency(el.value); });
-    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const el = getEl(`expense-${c.id}`); if (el) totalCrianca += parseCurrency(el.value); });
+    let totalFamilia = 0;
+    let totalCrianca = 0;
+
+    EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+        const el = getEl(`expense-${c.id}`);
+        if (el) totalFamilia += parseCurrency(el.value);
+    });
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+        const el = getEl(`expense-${c.id}`);
+        if (el) totalCrianca += parseCurrency(el.value);
+    });
 
     const cotaFamilia = totalFamilia / moradores;
-    if (getEl('subtotal-familia')) getEl('subtotal-familia').textContent = formatCurrency(cotaFamilia);
-    if (getEl('subtotal-crianca')) getEl('subtotal-crianca').textContent = formatCurrency(totalCrianca);
-    if (getEl('expense-total')) getEl('expense-total').textContent = formatCurrency(cotaFamilia + totalCrianca);
+    const totalGeral = cotaFamilia + totalCrianca;
+
+    const subFam = getEl('subtotal-familia');
+    const subCri = getEl('subtotal-crianca');
+    const totalEl = getEl('expense-total');
+    if (subFam) subFam.textContent = formatCurrency(cotaFamilia);
+    if (subCri) subCri.textContent = formatCurrency(totalCrianca);
+    if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+
     updateSelectedCounter();
 }
 
 /* ========================================================
-   8. PDF UNIFICADO DA TRIAGEM (COM RÉU E GASTOS)
+   8. FUNÇÕES DE AÇÃO DE PDF E SALVAMENTO
    ======================================================== */
+
 async function handlePdf() {
     if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
+        console.error("PDFService não disponível:", PDFService);
         showNotification("Erro: Motor de PDF não carregado. Recarregue a página.", "error");
         return;
     }
@@ -1171,7 +1348,8 @@ async function handlePdf() {
             ocupacao: document.getElementById('socio-ocupacao')?.value || '',
             profissao: document.getElementById('socio-profissao')?.value || '',
             estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-            ganhos: document.getElementById('socio-ganhos')?.value || ''
+            ganhos: document.getElementById('socio-ganhos')?.value || '',
+            fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
         };
         
         if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
@@ -1219,8 +1397,11 @@ function addReuToPdfData(documentosTextos, reu) {
     let ganhos = reu.ganhos;
     if (reu.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
     documentosTextos.push({ id: 'reu-ganhos-pdf', text: `   • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
+    
+    if (reu.fonteRenda) {
+        documentosTextos.push({ id: 'reu-fonte', text: `   • Fonte de Renda do Réu: ${reu.fonteRenda}` });
+    }
 }
-
 
 function addExpensesToPdfData(documentosTextos, gastos) {
     if (!gastos.checkExibirGastos) return;
@@ -1270,12 +1451,15 @@ function collectCheckedDocuments() {
     return documentos;
 }
 
-/* ========================================================
-   9. SALVAMENTO NO FIREBASE
-   ======================================================== */
 async function handleSave(closeModal = true) {
     ensureAssistedId();
+    
     if (!currentAssistedId || !currentPautaId || !db) {
+        console.error("❌ Erro ao salvar - IDs ausentes:", { 
+            currentAssistedId, 
+            currentPautaId, 
+            db: !!db 
+        });
         showNotification("Erro: assistido não identificado. Feche e reabra o modal.", "error");
         return;
     }
@@ -1287,7 +1471,8 @@ async function handleSave(closeModal = true) {
         ocupacao: document.getElementById('socio-ocupacao')?.value || '',
         profissao: document.getElementById('socio-profissao')?.value || '',
         estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-        ganhos: document.getElementById('socio-ganhos')?.value || ''
+        ganhos: document.getElementById('socio-ganhos')?.value || '',
+        fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
     };
     
     const payload = {
@@ -1326,16 +1511,22 @@ async function handleReset() {
     if (!confirm("Deseja apagar as qualificações e o checklist atual?")) return;
     try {
         await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { 
-            documentChecklist: null, documentState: null, selectedAction: null, demandas: null 
+            documentChecklist: null,
+            documentState: null,
+            selectedAction: null,
+            demandas: null
         });
         demandasAdicionaisLocais = [];
         window._lastOpenedAssistedId = null;
         currentChecklistAction = null;
-        handleBack();
+        handleBack(); // Retorna para a tela de botões permitindo "Mudar Assunto"
         showNotification("Triagem limpa.", "info");
-    } catch (e) { showNotification("Erro ao limpar", "error"); }
+    } catch (e) {
+        showNotification("Erro ao limpar", "error");
+    }
 }
 
+// ⭐ BOTÃO DE VOLTAR (Para caso a IA erre ou você queira Mudar o Assunto)
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
     getEl('document-checklist-view-header-actions')?.classList.add('hidden'); 
@@ -1346,127 +1537,47 @@ function handleBack() {
 
 function closeAssistedDetailsModal() {
     getEl('assisted-details-modal').classList.add('hidden');
-    currentAssistedId = null; currentPautaId = null; currentChecklistAction = null;
+    currentAssistedId = null;
+    currentPautaId = null;
+    currentChecklistAction = null;
     window._lastOpenedAssistedId = null; 
     demandasAdicionaisLocais = [];
     handleBack(); 
 }
 
 /* ========================================================
-   10. EXPORTADORES (WORD / SEI E TEXTO)
+   11. GERADOR DE TEXTO PARA PETIÇÃO (COM RATEIO)
    ======================================================== */
-window.copiarTabelaGastos = async () => {
-    const dados = getExpenseDataFromForm();
-    const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O Requerente';
-    const qtdMoradores = parseInt(dados.quantidadeMoradores || 1);
-
-    const limpaMoeda = (valStr) => {
-        if (!valStr || valStr === 'R$ 0,00') return 0;
-        return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    };
-    const formataMoeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-
-    let linhasComuns = '';
-    let totalFamilia = 0;
-    
-    EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
-        const val = limpaMoeda(dados[cat.id]);
-        if (val > 0) {
-            const cota = val / qtdMoradores;
-            totalFamilia += cota;
-            linhasComuns += `
-                <tr>
-                    <td style="border: 1px solid black; padding: 5px;">${cat.label}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center;">R$ ${formataMoeda(val)}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center;"><b>R$ ${formataMoeda(cota)}</b></td>
-                </tr>`;
-        }
-    });
-
-    let linhasExclusivas = '';
-    let totalCrianca = 0;
-
-    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
-        const val = limpaMoeda(dados[cat.id]);
-        if (val > 0) {
-            totalCrianca += val;
-            linhasExclusivas += `
-                <tr>
-                    <td style="border: 1px solid black; padding: 5px;" colspan="2">${cat.label}</td>
-                    <td style="border: 1px solid black; padding: 5px; text-align: center;"><b>R$ ${formataMoeda(val)}</b></td>
-                </tr>`;
-        }
-    });
-
-    const totalGeral = totalFamilia + totalCrianca;
-    if (totalGeral === 0) { showNotification("Preencha a planilha antes de copiar.", "warning"); return; }
-
-    const tabelaHTML = `
-        <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 11pt; color: black;">
-            <thead>
-                <tr>
-                    <th colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f2f2f2; text-align: center;">
-                        <b>DEMONSTRATIVO DE DESPESAS MENSAIS - ${nomeAssistido.toUpperCase()}</b>
-                    </th>
-                </tr>
-                <tr>
-                    <th style="border: 1px solid black; padding: 8px; text-align: left;">Descrição da Despesa</th>
-                    <th style="border: 1px solid black; padding: 8px; text-align: center;">Valor Integral</th>
-                    <th style="border: 1px solid black; padding: 8px; text-align: center;">Cota-Parte / Necessidade</th>
-                </tr>
-            </thead>
-            <tbody>
-                <tr>
-                    <td colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f9f9f9;">
-                        <b>1. Despesas Residenciais Comuns (Rateio em ${qtdMoradores} partes)</b>
-                    </td>
-                </tr>
-                ${linhasComuns || '<tr><td colspan="3" style="border: 1px solid black; padding: 5px; text-align: center;">Sem despesas comuns</td></tr>'}
-                <tr>
-                    <td colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f9f9f9;">
-                        <b>2. Despesas Exclusivas (Integral)</b>
-                    </td>
-                </tr>
-                ${linhasExclusivas || '<tr><td colspan="3" style="border: 1px solid black; padding: 5px; text-align: center;">Sem despesas exclusivas</td></tr>'}
-                <tr>
-                    <td colspan="2" style="border: 1px solid black; padding: 8px; text-align: right;"><b>TOTAL DA NECESSIDADE MENSAL APURADA:</b></td>
-                    <td style="border: 1px solid black; padding: 8px; text-align: center; background-color: #e6e6e6;"><b>R$ ${formataMoeda(totalGeral)}</b></td>
-                </tr>
-            </tbody>
-        </table><br>
-    `;
-
-    try {
-        const blobHtml = new Blob([tabelaHTML], { type: "text/html" });
-        const clipboardItem = new ClipboardItem({ "text/html": blobHtml });
-        await navigator.clipboard.write([clipboardItem]);
-        showNotification("Tabela copiada com sucesso! Cole (Ctrl+V) no Word ou SEI.", "success");
-    } catch (err) {
-        console.error('Falha ao copiar tabela: ', err);
-        showNotification("O navegador bloqueou a cópia. Tente novamente.", "error");
-    }
-};
-
 window.gerarTextoDespesas = (assistidoId) => {
     const assisted = allAssisted.find(a => a.id === assistidoId);
     if (!assisted || !assisted.documentChecklist || !assisted.documentChecklist.expenseData) {
-        showNotification("Nenhuma despesa foi preenchida na triagem para este caso.", "error"); return;
+        showNotification("Nenhuma despesa foi preenchida na triagem para este caso.", "error");
+        return;
     }
 
     const g = assisted.documentChecklist.expenseData;
     const nomeAssistido = assisted.name ? assisted.name.split(' ')[0] : 'O requerente';
     const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
 
-    let gastosFamiliaHtml = ''; let gastosCriancaHtml = '';
-    let totalFamilia = 0; let totalExclusivoCrianca = 0;
+    let gastosFamiliaHtml = '';
+    let gastosCriancaHtml = '';
+    let totalFamilia = 0;
+    let totalExclusivoCrianca = 0;
 
-    const limpaMoeda = (valStr) => { if (!valStr || valStr === 'R$ 0,00') return 0; return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0; };
-    const formataMoeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    const limpaMoeda = (valStr) => {
+        if (!valStr || valStr === 'R$ 0,00') return 0;
+        return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    };
+
+    const formataMoeda = (valor) => {
+        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+    };
 
     EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
         const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
-            const cota = val / qtdMoradores; totalFamilia += cota;
+            const cota = val / qtdMoradores;
+            totalFamilia += cota;
             gastosFamiliaHtml += `<li>${cat.label} (Total R$ ${formataMoeda(val)} / Cota: <b>R$ ${formataMoeda(cota)}</b>)</li>`;
         }
     });
@@ -1480,17 +1591,29 @@ window.gerarTextoDespesas = (assistidoId) => {
     });
 
     const totalFinal = totalFamilia + totalExclusivoCrianca;
-    if (totalFinal === 0) { showNotification("Os valores de despesa estão zerados.", "warning"); return; }
+
+    if (totalFinal === 0) {
+        showNotification("Os valores de despesa estão zerados.", "warning");
+        return;
+    }
 
     const textoGerado = `
-Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
+Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
+
 O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${qtdMoradores} pessoas), divididas da seguinte forma:
+
 **Cota-parte de Despesas Residenciais e Alimentares (Rateio de 1/${qtdMoradores}):**
-<ul>${gastosFamiliaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}</ul>
+<ul>
+${gastosFamiliaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
+</ul>
 <i>Subtotal proporcional: R$ ${formataMoeda(totalFamilia)}</i>
+
 **Despesas Exclusivas (100% da necessidade):**
-<ul>${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}</ul>
-<i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>`.trim();
+<ul>
+${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
+</ul>
+<i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>
+    `.trim();
 
     exibirModalCopia(textoGerado);
 };
@@ -1505,18 +1628,26 @@ function exibirModalCopia(textoHtml) {
     div.innerHTML = `
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
             <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2"><span>📑</span> Texto Base para Petição</h3>
+                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
+                    <span>📑</span> Texto Base para Petição
+                </h3>
                 <button onclick="document.getElementById('modal-texto-peticao').remove()" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
             </div>
+            
             <div class="p-6">
                 <p class="text-[10px] uppercase font-black text-slate-400 mb-2">Trecho Gerado Pelo Sistema</p>
-                <div id="caixa-texto-copia" class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 leading-relaxed font-serif max-h-64 overflow-y-auto">${textoHtml}</div>
-                <button id="btn-copiar-texto-peticao" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all flex justify-center items-center gap-2">
+                
+                <div id="caixa-texto-copia" class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 leading-relaxed font-serif max-h-64 overflow-y-auto">
+                    ${textoHtml}
+                </div>
+
+                <button id="btn-copiar-texto-peticao" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2">
                     <span>📋</span> Copiar para a Área de Transferência
                 </button>
             </div>
         </div>
     `;
+
     document.body.appendChild(div);
 
     document.getElementById('btn-copiar-texto-peticao').onclick = () => {
@@ -1531,16 +1662,23 @@ function exibirModalCopia(textoHtml) {
 }
 
 /* ========================================================
-   11. INICIALIZAÇÃO
+   12. EXPORTS E INICIALIZAÇÃO
    ======================================================== */
 export function setupDetailsModal(config) {
     db = config.db;
     getEl('close-assisted-details-modal-btn').onclick = closeAssistedDetailsModal;
+    
+    // Conecta o botão "Voltar" (Trocar Assunto) à função handleBack
     getEl('back-to-action-selection-btn').onclick = handleBack;
+    
     getEl('save-checklist-btn').onclick = () => handleSave(true);
     getEl('print-checklist-btn').onclick = handlePdf; 
     getEl('reset-checklist-btn').onclick = handleReset;
-    const btnCaptacao = getEl('btn-gerar-captacao'); if (btnCaptacao) btnCaptacao.onclick = gerarLinkCaptacao;
+    
+    const btnCaptacao = getEl('btn-gerar-captacao');
+    if (btnCaptacao) {
+        btnCaptacao.onclick = gerarLinkCaptacao;
+    }
     
     const searchInput = getEl('checklist-search');
     if (searchInput) {
@@ -1555,16 +1693,41 @@ export function setupDetailsModal(config) {
 }
 
 export async function openDetailsModal(config) {
-    currentAssistedId = config.assistedId; currentPautaId = config.pautaId;
-    allAssisted = config.allAssisted || []; db = config.db || window.app?.db;
+    currentAssistedId = config.assistedId;
+    currentPautaId = config.pautaId;
+    allAssisted = config.allAssisted || [];
+    db = config.db || window.app?.db;
     
-    _backupAssistedId = currentAssistedId; _backupPautaId = currentPautaId;
-    window._lastOpenedAssistedId = currentAssistedId; window._lastOpenedPautaId = currentPautaId;
+    _backupAssistedId = currentAssistedId;
+    _backupPautaId = currentPautaId;
+    window._lastOpenedAssistedId = currentAssistedId;
+    window._lastOpenedPautaId = currentPautaId;
     
     try {
         const docSnap = await getDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId));
         if (docSnap.exists()) {
             const data = docSnap.data();
+            
+            // ⭐ MAGIA DA INTELIGÊNCIA: Analisa o texto do Assunto e joga direto pro lugar certo
+            const textoAssunto = data.subject || data.materia || data.assunto || '';
+            if (!data.documentChecklist?.action && textoAssunto) {
+                const assuntoDetectado = descobrirAssuntoInteligente(textoAssunto);
+                
+                if (assuntoDetectado) {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
+                        "documentChecklist.action": assuntoDetectado,
+                        documentState: 'filling',
+                        selectedAction: documentsData[assuntoDetectado]?.title || null
+                    });
+                    data.documentChecklist = data.documentChecklist || {};
+                    data.documentChecklist.action = assuntoDetectado;
+                }
+            }
+
+            if (data.numeroAgendamento && getEl('edit-assisted-num-agendamento')) {
+                getEl('edit-assisted-num-agendamento').value = data.numeroAgendamento;
+            }
+
             demandasAdicionaisLocais = (data.demandas && data.demandas.descricoes) ? [...data.demandas.descricoes] : [];
             const idx = allAssisted.findIndex(a => a.id === currentAssistedId);
             if (idx !== -1) allAssisted[idx] = { id: currentAssistedId, ...data };
@@ -1574,20 +1737,22 @@ export async function openDetailsModal(config) {
     
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) return;
+    
     if (getEl('assisted-details-name')) getEl('assisted-details-name').textContent = assisted.name;
     
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
+
     window._lastOpenedAssistedId = currentAssistedId;
     
+    // Aqui ele verifica se a IA já definiu o assunto (ou se você já tinha escolhido antes). 
+    // Se sim, pula direto pra tela de preenchimento (checklist). 
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
         renderChecklist(assisted.documentChecklist.action);
-        
-        // ⭐ GARANTE QUE OS DADOS ORIGINAIS SEJAM PREENCHIDOS APÓS RENDERIZAR A TELA
-        if (assisted.documentChecklist.reuData) fillReuData(assisted.documentChecklist.reuData);
     } else {
+        // Se a IA não reconheceu as palavras, mostra a lista para você clicar.
         checklistView?.classList.add('hidden');
         selectionArea?.classList.remove('hidden');
         renderSubjectSelection(selectionArea);
@@ -1601,7 +1766,7 @@ function renderSubjectSelection(selectionArea) {
     selectionArea.innerHTML = `
         <div class="p-2 sm:p-4">
             <div class="mb-4"><input type="text" id="subject-search-input" placeholder="🔍 Buscar assunto no SIGEP..." class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none"></div>
-            <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-60">Selecione o Assunto</p>
+            <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-60">Selecione o Assunto (Ou digite para filtrar)</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 action-grid max-h-[50vh] overflow-y-auto p-1"></div>
         </div>
     `;
@@ -1619,7 +1784,13 @@ function renderSubjectSelection(selectionArea) {
             btn.textContent = title;
             btn.onclick = async (e) => {
                 e.preventDefault();
-                try { await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { "documentChecklist.action": key, documentState: 'filling' }); } catch (err) { console.error(err); }
+                try {
+                    await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
+                        "documentChecklist.action": key,
+                        documentState: 'filling',
+                        selectedAction: title
+                    });
+                } catch (err) { console.error(err); }
                 renderChecklist(key);
                 selectionArea.classList.add('hidden');
                 getEl('document-checklist-view').classList.remove('hidden');
@@ -1639,4 +1810,3 @@ window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
 window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
 window.gerarTextoDespesas = window.gerarTextoDespesas;
-window.copiarTabelaGastos = window.copiarTabelaGastos;
