@@ -292,7 +292,7 @@ export const PDFService = {
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text(`Requerente/Assistido(a): ${assistedName.toUpperCase()}`, 40, y);
+            doc.text(`Representante Legal: ${assistedName.toUpperCase()}`, 40, y);
             y += 18;
 
             const moradores = expenseData?.quantidadeMoradores || '1';
