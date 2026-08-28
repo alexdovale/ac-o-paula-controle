@@ -21,6 +21,8 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
 }
 
 export const UIService = {
+    _collapsedRooms: new Set(), // Armazena a memória de quais salas estão minimizadas (fechadas)
+
     showScreen(screenName) {
         document.getElementById('loading-container')?.classList.toggle('hidden', screenName !== 'loading');
         document.getElementById('login-container')?.classList.toggle('hidden', screenName !== 'login');
@@ -629,6 +631,7 @@ export const UIService = {
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
+        // Atribui uma ordem absoluta apenas para referência global
         rawAguardando.forEach((a, i) => a.absoluteOrder = i + 1);
         rawEmAtendimento.forEach((a, i) => a.absoluteOrder = i + 1);
 
@@ -645,7 +648,10 @@ export const UIService = {
         this.clearContainers();
 
         this.renderPautaColumn(lists.pauta);
+        
+        // ⭐ COLUNA AGUARDANDO (Agora com numeração inteligente por sala)
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
+        
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
         this.renderFaltososColumn(lists.faltosos);
@@ -779,12 +785,10 @@ export const UIService = {
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10 gap-1">
-                <!-- INÍCIO DO BOTÃO DE DIGITALIZAR ADICIONADO -->
                 <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
                     class="text-indigo-600 hover:text-indigo-800 p-1.5 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Adobe Scan)">
                     <span class="text-sm">📸</span>
                 </button>
-                <!-- FIM DO BOTÃO -->
 
                 <div class="relative">
                     <button data-id="${item.id}" id="quick-toggle-${item.id}" class="quick-action-toggle text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200" title="Opções">
@@ -915,6 +919,7 @@ export const UIService = {
         return card;
     },
 
+    // ⭐ RENDERIZAÇÃO DA COLUNA AGUARDANDO (AGORA COM ACORDEÃO E NUMERAÇÃO LOCAL)
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
@@ -925,65 +930,142 @@ export const UIService = {
         }
 
         container.innerHTML = '';
+        this._collapsedRooms = this._collapsedRooms || new Set();
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
                 const peopleInRoom = items.filter(a => a.room === roomName);
                 if (peopleInRoom.length === 0) return;
 
+                const isCollapsed = this._collapsedRooms.has(roomName);
+
                 const roomGroup = document.createElement('div');
-                roomGroup.className = "mb-4 border border-slate-200 rounded-lg overflow-hidden bg-slate-50 room-group-container shadow-sm";
+                roomGroup.className = "mb-4 border border-slate-200 rounded-lg overflow-hidden bg-white room-group-container shadow-sm";
 
                 roomGroup.innerHTML = `
-                    <div class="bg-blue-100 p-2 border-b border-blue-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center px-1">
-                            <h4 class="font-bold text-blue-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                    <div class="room-header cursor-pointer bg-blue-100 p-2.5 border-b border-blue-200 flex justify-between items-center select-none hover:bg-blue-200 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <svg class="chevron-icon w-4 h-4 text-blue-700 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                            <h4 class="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
                                 <span>🏢</span> ${escapeHTML(roomName)}
                             </h4>
-                            <span class="bg-blue-200 text-blue-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleInRoom.length}</span>
                         </div>
-                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-1.5 text-xs border border-blue-200 rounded outline-none focus:ring-2 focus:ring-blue-50 bg-white">
+                        <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">${peopleInRoom.length}</span>
                     </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                    <div class="room-content bg-slate-50 p-2 ${isCollapsed ? 'hidden' : ''}">
+                        <input type="search" placeholder="Pesquisar nesta sala..." class="room-search-input w-full p-2 text-xs border border-blue-200 rounded-md outline-none focus:ring-2 focus:ring-blue-500 bg-white mb-2 shadow-sm">
+                        <div class="room-cards-wrapper space-y-2"></div>
+                    </div>
                 `;
+
+                const header = roomGroup.querySelector('.room-header');
+                const content = roomGroup.querySelector('.room-content');
+                const chevron = roomGroup.querySelector('.chevron-icon');
+
+                header.addEventListener('click', () => {
+                    const isNowCollapsed = content.classList.toggle('hidden');
+                    if (isNowCollapsed) {
+                        chevron.classList.replace('rotate-0', '-rotate-90');
+                        this._collapsedRooms.add(roomName);
+                    } else {
+                        chevron.classList.replace('-rotate-90', 'rotate-0');
+                        this._collapsedRooms.delete(roomName);
+                    }
+                });
 
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
 
                 peopleInRoom.forEach((item, index) => {
+                    item.roomOrder = index + 1; // ⭐ INJETA O NÚMERO INDEPENDENTE DA SALA
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
                     if (card) cardsWrapper.appendChild(card);
+                });
+
+                // Lógica de pesquisa interna da sala
+                const searchInput = roomGroup.querySelector('.room-search-input');
+                searchInput.addEventListener('input', (e) => {
+                    const term = normalizeText(e.target.value);
+                    const cards = cardsWrapper.querySelectorAll('.assisted-card');
+                    cards.forEach(card => {
+                        const cardId = card.getAttribute('data-id');
+                        const cardItem = peopleInRoom.find(p => p.id === cardId);
+                        if (cardItem) {
+                            const isMatch = this.searchFilter(cardItem, term);
+                            card.style.display = isMatch ? 'block' : 'none';
+                        }
+                    });
                 });
 
                 container.appendChild(roomGroup);
             });
 
+            // Agrupamento para quem está "Sem Sala"
             const peopleNoRoom = items.filter(a => !a.room || !currentPautaData.rooms.includes(a.room));
             if (peopleNoRoom.length > 0) {
+                const roomName = "Sem Sala Definida";
+                const isCollapsed = this._collapsedRooms.has(roomName);
+
                 const roomGroupNoRoom = document.createElement('div');
-                roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-red-50 room-group-container shadow-sm";
+                roomGroupNoRoom.className = "mb-4 border border-red-200 rounded-lg overflow-hidden bg-white room-group-container shadow-sm";
 
                 roomGroupNoRoom.innerHTML = `
-                    <div class="bg-red-100 p-2 border-b border-red-200 flex flex-col gap-2">
-                        <div class="flex justify-between items-center px-1">
-                            <h4 class="font-bold text-red-800 text-xs uppercase tracking-wider flex items-center gap-1">
+                    <div class="room-header cursor-pointer bg-red-100 p-2.5 border-b border-red-200 flex justify-between items-center select-none hover:bg-red-200 transition-colors">
+                        <div class="flex items-center gap-2">
+                            <svg class="chevron-icon w-4 h-4 text-red-700 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
+                            <h4 class="font-bold text-red-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
                                 <span>⚠️</span> Sem Sala Definida
                             </h4>
-                            <span class="bg-red-200 text-red-800 text-[10px] font-bold px-2 py-0.5 rounded-full">${peopleNoRoom.length}</span>
                         </div>
-                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-1.5 text-xs border border-red-200 rounded outline-none focus:ring-2 focus:ring-red-500 bg-white">
+                        <span class="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">${peopleNoRoom.length}</span>
                     </div>
-                    <div class="p-2 space-y-2 room-cards-wrapper"></div>
+                    <div class="room-content bg-slate-50 p-2 ${isCollapsed ? 'hidden' : ''}">
+                        <input type="search" placeholder="Pesquisar sem sala..." class="room-search-input w-full p-2 text-xs border border-red-200 rounded-md outline-none focus:ring-2 focus:ring-red-500 bg-white mb-2 shadow-sm">
+                        <div class="room-cards-wrapper space-y-2"></div>
+                    </div>
                 `;
+
+                const header = roomGroupNoRoom.querySelector('.room-header');
+                const content = roomGroupNoRoom.querySelector('.room-content');
+                const chevron = roomGroupNoRoom.querySelector('.chevron-icon');
+
+                header.addEventListener('click', () => {
+                    const isNowCollapsed = content.classList.toggle('hidden');
+                    if (isNowCollapsed) {
+                        chevron.classList.replace('rotate-0', '-rotate-90');
+                        this._collapsedRooms.add(roomName);
+                    } else {
+                        chevron.classList.replace('-rotate-90', 'rotate-0');
+                        this._collapsedRooms.delete(roomName);
+                    }
+                });
 
                 const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
                 peopleNoRoom.forEach((item, index) => {
+                    item.roomOrder = index + 1; // ⭐ INJETA O NÚMERO INDEPENDENTE
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
                     if (card) cardsWrapperNoRoom.appendChild(card);
                 });
+
+                // Lógica de pesquisa da sala "Sem sala"
+                const searchInput = roomGroupNoRoom.querySelector('.room-search-input');
+                searchInput.addEventListener('input', (e) => {
+                    const term = normalizeText(e.target.value);
+                    const cards = cardsWrapperNoRoom.querySelectorAll('.assisted-card');
+                    cards.forEach(card => {
+                        const cardId = card.getAttribute('data-id');
+                        const cardItem = peopleNoRoom.find(p => p.id === cardId);
+                        if (cardItem) {
+                            const isMatch = this.searchFilter(cardItem, term);
+                            card.style.display = isMatch ? 'block' : 'none';
+                        }
+                    });
+                });
+
                 container.appendChild(roomGroupNoRoom);
             }
 
         } else {
+            // Se NÃO for multisala, renderiza a fila padrão com ordem contínua
             items.forEach((item, index) => {
                 const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
                 if (card) container.appendChild(card);
@@ -1137,7 +1219,9 @@ export const UIService = {
                 }
             }
 
-            const numeroOrdem = item.absoluteOrder || (index + 1);
+            // ⭐ USO DO ROOMORDER: Primeiro a ordem da sala, depois global, ou index original
+            const numeroOrdem = item.roomOrder || item.absoluteOrder || (index + 1);
+            
             const numeroBadge = `
                 <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
                     ${numeroOrdem}
