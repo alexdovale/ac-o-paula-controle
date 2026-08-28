@@ -1,5 +1,5 @@
 // router.js
-// Sistema de roteamento SPA completo para o SIGEP - Rastreamento Total de Cliques e Ações
+// Sistema de roteamento SPA completo para o SIGEP - Cobertura Total de Telas, Modais e Menus de Ação
 
 export const ROUTES = {
     LOGIN:                  'login',
@@ -16,7 +16,16 @@ export const ROUTES = {
     CAPTACAO_EXTERNA:       'captacao-externa',   
     RELATORIO_PDF:          'relatorio-pdf',      
     CONFIGURACAO_PAUTA:     'configuracao-pauta',
-    FILTRO_PAUTA:           'filtro-pauta'
+    FILTRO_PAUTA:           'filtro-pauta',
+    // --- NOVAS ROTAS DO MENU DE AÇÕES E MODAIS ---
+    MONITOR_EQUIPE:         'monitor-equipe',
+    COMPARTILHAMENTO:       'compartilhamento',
+    TOTEM:                  'totem',
+    ESTATISTICAS:           'estatisticas',
+    EDITAR_NOME_PAUTA:      'editar-nome-pauta',
+    COMPARTILHAR_PAUTA:     'compartilhar-pauta',
+    COLABORADORES_PAUTA:    'colaboradores-pauta',
+    ANOTACOES_PAUTA:        'anotacoes-pauta'
 };
 
 const ROUTE_GUARDS = {
@@ -34,7 +43,15 @@ const ROUTE_GUARDS = {
     [ROUTES.CAPTACAO_EXTERNA]:    { requiresAuth: false },
     [ROUTES.RELATORIO_PDF]:       { requiresAuth: true },
     [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true },
-    [ROUTES.FILTRO_PAUTA]:        { requiresAuth: true }
+    [ROUTES.FILTRO_PAUTA]:        { requiresAuth: true },
+    [ROUTES.MONITOR_EQUIPE]:      { requiresAuth: true },
+    [ROUTES.COMPARTILHAMENTO]:    { requiresAuth: true },
+    [ROUTES.TOTEM]:               { requiresAuth: true },
+    [ROUTES.ESTATISTICAS]:        { requiresAuth: true },
+    [ROUTES.EDITAR_NOME_PAUTA]:   { requiresAuth: true },
+    [ROUTES.COMPARTILHAR_PAUTA]:  { requiresAuth: true },
+    [ROUTES.COLABORADORES_PAUTA]: { requiresAuth: true },
+    [ROUTES.ANOTACOES_PAUTA]:     { requiresAuth: true }
 };
 
 const ALL_SCREEN_IDS = [
@@ -310,11 +327,43 @@ export class SIGEPRouter {
                 document.getElementById('edit-pauta-config-btn')?.click();
             },
             [ROUTES.FILTRO_PAUTA]: async (params) => {
-                // Rota utilitária para registrar alterações de filtros na URL
                 if (params.filter && app) {
                     app.currentPautaFilter = params.filter;
                     await app.loadPautasWithFilter();
                 }
+            },
+            // --- HANDLERS PARA O MENU VERDE DE AÇÕES ---
+            [ROUTES.MONITOR_EQUIPE]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('btn-painel-geral-externo')?.click();
+            },
+            [ROUTES.COMPARTILHAMENTO]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('share-pauta-btn')?.click();
+            },
+            [ROUTES.TOTEM]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('open-totem-btn')?.click();
+            },
+            [ROUTES.ESTATISTICAS]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('view-stats-btn')?.click();
+            },
+            [ROUTES.EDITAR_NOME_PAUTA]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('edit-pauta-name-btn')?.click();
+            },
+            [ROUTES.COMPARTILHAR_PAUTA]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('manage-members-btn')?.click();
+            },
+            [ROUTES.COLABORADORES_PAUTA]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('manage-collaborators-btn')?.click();
+            },
+            [ROUTES.ANOTACOES_PAUTA]: async (params) => {
+                await this._handlers[ROUTES.APP](params);
+                document.getElementById('notes-btn')?.click();
             }
         };
     }
