@@ -112,71 +112,56 @@ class SIGEPApp {
     }
 
     // ============================================================
-    // MÉTODOS DE COMPATIBILIDADE LEGADA (ROUTER WRAPPERS)
-    // Previne crashes se arquivos como auth.js tentarem chamar métodos antigos
+    // MÉTODOS DE COMPATIBILIDADE LEGADA E RENDERIZAÇÃO
     // ============================================================
     showPautaSelectionScreen() {
-        // Esconde TODOS os containers principais
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
         document.getElementById('coletas-container')?.classList.add('hidden');
         document.getElementById('meu-perfil-container')?.classList.add('hidden');
-        
-        // Mostra o container de seleção de pautas
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
     }
     
     showAppScreen() {
-        if (this.router) this.router.navigate(ROUTES.APP);
+        if (this.router) this.router.navigate(ROUTES.APP, {}, false);
     }
     
     showLoginScreen() {
-        if (this.router) this.router.navigate(ROUTES.LOGIN);
+        if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false);
     }
     
     showDashboardScreen() {
-        if (this.router) this.router.navigate(ROUTES.DASHBOARD);
+        if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false);
     }
     
     showRecepcaoCentralScreen() {
-        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
+        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
     }
 
-    // ============================================================
-    // ADMIN EM TELA CHEIA (IGUAL DASHBOARD)
-    // ============================================================
-    
     showAdminScreen() {
-        // Esconde TODOS os outros containers
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
         document.getElementById('coletas-container')?.classList.add('hidden');
-        
-        // Mostra a tela do admin
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.remove('hidden');
-        
-        // Renderiza o conteúdo
         this.renderAdminContent();
     }
 
-
     showColetasScreen() {
-        // Esconde todos
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('modo-selection-screen')?.classList.add('hidden');
         document.getElementById('admin-container')?.classList.add('hidden');
         document.getElementById('meu-perfil-container')?.classList.add('hidden');
-        
-        // Mostra Coletas e carrega a lista
         document.getElementById('coletas-container')?.classList.remove('hidden');
         this.listarColetas();
     }
+
     renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
@@ -195,7 +180,6 @@ class SIGEPApp {
                 </button>
             </div>
             
-            <!-- Seção de Usuários Pendentes -->
             <div class="mb-8">
                 <div class="mb-4">
                     <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -205,7 +189,6 @@ class SIGEPApp {
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Usuários do Sistema -->
             <div class="mt-8">
                 <div class="mb-4">
                     <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
@@ -227,7 +210,6 @@ class SIGEPApp {
                 <div id="pagination-usuarios" class="mt-4"></div>
             </div>
             
-            <!-- Seção de Auditoria -->
             <div class="mt-8 pt-4 border-t">
                 <div class="flex flex-wrap gap-3 mb-4">
                     <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
@@ -267,17 +249,9 @@ class SIGEPApp {
             </div>
         `;
         
-        // Chamadas de inicialização
-        if (typeof setupAdminSearch === 'function') {
-            setupAdminSearch();
-        }
-        
-        if (typeof loadUsersList === 'function') {
-            loadUsersList(this.db);
-        }
-        if (typeof populateUserFilter === 'function') {
-            populateUserFilter(this.db);
-        }
+        if (typeof setupAdminSearch === 'function') setupAdminSearch();
+        if (typeof loadUsersList === 'function') loadUsersList(this.db);
+        if (typeof populateUserFilter === 'function') populateUserFilter(this.db);
         this.setupAdminPanelEvents();
     }
 
@@ -296,8 +270,9 @@ class SIGEPApp {
             }
         });
         
+        // BOTÃO VOLTAR DO ADMIN - AGORA COM ROUTER
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen();
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
         
         document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
@@ -335,7 +310,6 @@ class SIGEPApp {
         document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            
             this.abrirModalSelecaoUnidade();
         });
     
@@ -344,7 +318,6 @@ class SIGEPApp {
             localStorage.setItem('sigep_current_mode', 'evento');
             localStorage.removeItem('sigep_app_state');
             
-            // Modo Evento vai direto, ignorando unidades
             await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             this.applyRoleBasedUI();
             showNotification('Modo Evento ativado', 'info', 3000);
@@ -359,7 +332,6 @@ class SIGEPApp {
         select.innerHTML = '<option value="todas">Carregando...</option>';
         modal.classList.remove('hidden');
 
-        // Carrega as unidades
         const userUnidades = this.currentUser?.unidades || [];
         const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
 
@@ -395,13 +367,11 @@ class SIGEPApp {
             select.innerHTML = html;
         }
 
-        // Restaura a última seleção se existir
         if (this.currentUnidadeExibicao) {
             const options = Array.from(select.options).map(opt => opt.value);
             if (options.includes(this.currentUnidadeExibicao)) select.value = this.currentUnidadeExibicao;
         }
 
-        // Ações dos botões
         document.getElementById('cancel-unidade-modal').onclick = () => {
             modal.classList.add('hidden');
         };
@@ -420,7 +390,7 @@ class SIGEPApp {
 
     voltarParaSelecaoModo() {
         this._teardownPauta();
-        this.router.navigate(ROUTES.MODO_SELECTION);
+        this.router.navigate(ROUTES.MODO_SELECTION, {}, false);
         showNotification('Modo alterado com sucesso!', 'info', 2000);
     }
 
@@ -616,16 +586,40 @@ class SIGEPApp {
             PautaService.callNextAssisted(this);
         });
 
+        // ========================================================
+        // ROTAS PRINCIPAIS DE NAVEGAÇÃO E BOTÕES DE VOLTAR
+        // ========================================================
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.DASHBOARD);
+            this.router.navigate(ROUTES.DASHBOARD, {}, false);
         });
 
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION);
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });       
 
-        document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            await this.router.navigate(ROUTES.RECEPCAO_CENTRAL);
+        document.getElementById('btn-recepcao-central')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
+        });
+
+        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.MEU_PERFIL, {}, false);
+        });
+
+        document.getElementById('perfil-back-btn')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
+        });
+
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
+        if (adminPanelBtnPautaSelection) {
+            adminPanelBtnPautaSelection.addEventListener('click', () => {
+                this.router.navigate(ROUTES.ADMIN, {}, false);
+            });
+        }
+        
+        // Voltar de dentro da pauta para a seleção
+        document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+            this._teardownPauta();
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
         document.getElementById('btn-trocar-modo')?.addEventListener('click', () => {
@@ -642,7 +636,6 @@ class SIGEPApp {
 
         document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
             const modoAtual = this.currentMode;
-            
             if (modoAtual === 'evento') {
                 const tipoEvento = await this.mostrarSeletorTipoEvento();
                 if (!tipoEvento) return;
@@ -659,6 +652,157 @@ class SIGEPApp {
             }
         });
 
+        // ========================================================
+        // ROTAS DO MENU VERDE DE "AÇÕES" DA PAUTA
+        // ========================================================
+        document.getElementById('btn-painel-geral-externo')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.MONITOR_EQUIPE, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (typeof PainelGeralService !== 'undefined') {
+                PainelGeralService.abrirPainel(this);
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
+            } else {
+                showNotification("Módulo do painel não carregado.", "error");
+            }
+        });
+
+        document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('share-modal');
+            if (modal) {
+                const toggle = document.getElementById('share-toggle');
+                const maskCheck = document.getElementById('mask-names-check');
+                if (this.currentPautaData) {
+                    toggle.checked = this.currentPautaData.isPublic || false;
+                    maskCheck.checked = this.currentPautaData.maskNames || false;
+                    const statusText = document.getElementById('share-status-text');
+                    const linkContainer = document.getElementById('share-link-container');
+                    statusText.textContent = toggle.checked ? "Público" : "Privado";
+                    if (toggle.checked) {
+                        linkContainer.classList.remove('hidden');
+                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                        document.getElementById('share-link-input').value = link;
+                        document.getElementById('open-external-btn').href = link;
+                    } else {
+                        linkContainer.classList.add('hidden');
+                    }
+                }
+                modal.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (this.currentPauta) {
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const totemUrl = `${baseUrl}/totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
+            } else {
+                if(window.showNotification) showNotification("Nenhuma pauta selecionada.", "error");
+            }
+        });
+
+        document.getElementById('view-stats-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.ESTATISTICAS, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('statistics-modal');
+            if (!modal) {
+                showNotification("Modal de estatísticas não encontrado", "error");
+                return;
+            }
+            if (this.allAssisted && this.currentPauta?.name) {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                } else {
+                    showNotification("Erro ao carregar estatísticas", "error");
+                }
+            } else {
+                showNotification("Carregue uma pauta primeiro", "info");
+            }
+        });
+
+        document.getElementById('edit-pauta-name-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.EDITAR_NOME_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+            document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
+        });
+
+        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.CONFIGURACAO_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('bi-links-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const containerBi = document.getElementById('container-bi-links');
+                if (containerBi && this.currentPautaData && window.ColetasBuilderService) {
+                    containerBi.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                    const btnAdicionarParceiro = document.getElementById('bi-btn-adicionar-parceiro');
+                    if (btnAdicionarParceiro) {
+                        btnAdicionarParceiro.addEventListener('click', () => {
+                            window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                        });
+                    }
+                }
+            }
+        });
+
+        document.getElementById('manage-members-btn')?.addEventListener('click', async (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COMPARTILHAR_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (typeof ModalService?.openMembersModal === 'function') {
+                await ModalService.openMembersModal(this);
+            } else {
+                showNotification("Erro ao abrir gerenciar membros", "error");
+            }
+        });
+
+        document.getElementById('manage-collaborators-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COLABORADORES_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            CollaboratorService.openModal(this);
+        });
+
+        // O listener de Notas e Anotações já é gerido pelo NotesService, mas injetamos o router aqui
+        document.getElementById('notes-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                e.stopImmediatePropagation();
+                this.router.navigate(ROUTES.ANOTACOES_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+        });
+
+        // ========================================================
+        // RESTANTE DOS EVENT LISTENERS DA PAUTA
+        // ========================================================
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
         const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
@@ -877,11 +1021,6 @@ class SIGEPApp {
             document.getElementById('scheduled-time-wrapper').classList.add('hidden');
         });
 
-        document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
-            this._teardownPauta();
-            this.router.navigate(ROUTES.PAUTA_SELECTION);
-        });
-
         document.getElementById('tab-agendamento')?.addEventListener('click', () => {
             UIService.switchTab('agendamento', this);
         });
@@ -891,69 +1030,6 @@ class SIGEPApp {
         });
 
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
-
-        document.getElementById('btn-painel-geral-externo')?.addEventListener('click', () => {
-            if (typeof PainelGeralService !== 'undefined') {
-                PainelGeralService.abrirPainel(this);
-                const actionsPanel = document.getElementById('actions-panel');
-                if (actionsPanel) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                }
-            } else {
-                showNotification("Módulo do painel não carregado.", "error");
-            }
-        });
-        
-        document.getElementById('share-pauta-btn')?.addEventListener('click', () => {
-            const modal = document.getElementById('share-modal');
-            if (modal) {
-                const toggle = document.getElementById('share-toggle');
-                const maskCheck = document.getElementById('mask-names-check');
-                
-                if (this.currentPautaData) {
-                    toggle.checked = this.currentPautaData.isPublic || false;
-                    maskCheck.checked = this.currentPautaData.maskNames || false;
-                    
-                    const statusText = document.getElementById('share-status-text');
-                    const linkContainer = document.getElementById('share-link-container');
-                    
-                    statusText.textContent = toggle.checked ? "Público" : "Privado";
-                    
-                    if (toggle.checked) {
-                        linkContainer.classList.remove('hidden');
-                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
-                        document.getElementById('share-link-input').value = link;
-                        document.getElementById('open-external-btn').href = link;
-                    } else {
-                        linkContainer.classList.add('hidden');
-                    }
-                }
-                modal.classList.remove('hidden');
-            }
-        });
-
-        // ABRIR O TOTEM DE AUTOATENDIMENTO EM NOVA ABA
-        document.getElementById('open-totem-btn')?.addEventListener('click', () => {
-            if (this.currentPauta) {
-                // Pega a URL do sistema e monta o link do totem com o ID da pauta atual
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const totemUrl = `${baseUrl}/totem.html?pautaId=${this.currentPauta.id}&r=app`;
-                
-                // Abre o totem em uma nova aba
-                window.open(totemUrl, '_blank');
-                
-                // Fecha o menuzinho verde de "Ações" para deixar a tela limpa
-                const actionsPanel = document.getElementById('actions-panel');
-                if (actionsPanel) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                }
-            } else {
-                if(window.showNotification) showNotification("Nenhuma pauta selecionada.", "error");
-            }
-        });
 
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
@@ -1000,55 +1076,6 @@ class SIGEPApp {
             } catch (error) {
                 showNotification("Erro ao salvar configuração.", "error");
             }
-        });
-
-        document.getElementById('view-stats-btn')?.addEventListener('click', () => {
-            const modal = document.getElementById('statistics-modal');
-            if (!modal) {
-                showNotification("Modal de estatísticas não encontrado", "error");
-                return;
-            }
-            if (this.allAssisted && this.currentPauta?.name) {
-                if (typeof StatisticsService?.showModal === 'function') {
-                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
-                } else {
-                    showNotification("Erro ao carregar estatísticas", "error");
-                }
-            } else {
-                showNotification("Carregue uma pauta primeiro", "info");
-            }
-        });
-
-        // Evento que abre o Construtor na tela da Pauta
-        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
-            const modal = document.getElementById('bi-links-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                
-                const containerBi = document.getElementById('container-bi-links');
-                if (containerBi && this.currentPautaData && window.ColetasBuilderService) {
-                    containerBi.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
-                    
-                    const btnAdicionarParceiro = document.getElementById('bi-btn-adicionar-parceiro');
-                    if (btnAdicionarParceiro) {
-                        btnAdicionarParceiro.addEventListener('click', () => {
-                            window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
-                        });
-                    }
-                }
-            }
-        });
-
-        document.getElementById('manage-members-btn')?.addEventListener('click', async () => {
-            if (typeof ModalService?.openMembersModal === 'function') {
-                await ModalService.openMembersModal(this);
-            } else {
-                showNotification("Erro ao abrir gerenciar membros", "error");
-            }
-        });
-
-        document.getElementById('manage-collaborators-btn')?.addEventListener('click', () => {
-            CollaboratorService.openModal(this);
         });
 
         document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
@@ -1772,20 +1799,6 @@ class SIGEPApp {
             this.router.navigate(ROUTES.MEU_PERFIL);
         });
 
-        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
-        if (adminPanelBtnPautaSelection) {
-            adminPanelBtnPautaSelection.addEventListener('click', () => {
-                this.showAdminScreen();
-            });
-        }
-        
-        const adminBackBtn = document.getElementById('admin-back-to-pautas-btn');
-        if (adminBackBtn) {
-            adminBackBtn.addEventListener('click', () => {
-                this.showPautaSelectionScreen();
-            });
-        }
-
         document.addEventListener('click', (e) => {
             const adminModal = document.getElementById('admin-modal');
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
@@ -1843,7 +1856,6 @@ class SIGEPApp {
         // --- INICIALIZA O MÓDULO DE COLETAS ---
         this.setupColetas();
         
-        // NOVO: Adiciona a ação do botão de Trocar Unidade
         document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => {
             this.abrirModalSelecaoUnidade();
         });
@@ -1898,11 +1910,12 @@ class SIGEPApp {
 
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            this.showColetasScreen(); // Chama a tela cheia
+            this.router.navigate(ROUTES.PAINEL_PUBLICO, {}, false); // Apenas um fallback. Substitua pela rota certa se existir no router
+            this.showColetasScreen();
         });
 
         document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen(); // Volta para a tela inicial
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
         document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
@@ -2147,9 +2160,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // NOVO: loadPautasWithFilter OTIMIZADO COM PROMISE.ALL
-    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -2173,11 +2183,9 @@ class SIGEPApp {
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
 
             if (isAdmin) {
-                // Admin: Faz uma única requisição limpa para todas as pautas
                 const snapAll = await getDocs(collection(this.db, "pautas"));
                 snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
             } else {
-                // Usuário Normal: Dispara as duas buscas ao mesmo tempo (Paralelo) = Mais rápido!
                 const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
                 const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
                 
@@ -2405,8 +2413,6 @@ class SIGEPApp {
                 }
             }
             
-            // O monitor agora é disparado pelo listener de tempo real!
-            
             const appContainer = document.getElementById('app-container');
             if (appContainer && appContainer.classList.contains('hidden')) {
                 document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -2444,7 +2450,6 @@ class SIGEPApp {
             this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             UIService.renderAssistedLists(this);
             
-            // NOVO: Atualiza a bolinha de servidores livres APENAS quando a fila muda
             this.atualizarMonitorEnvelopes();
 
             setTimeout(() => { 
@@ -2851,13 +2856,9 @@ window.verResultados = async (coletaId) => {
     ColetasBiService.abrirResultados(window.app.db, coletaId);
 };
 
-// ============================================================
-// ADICIONE ISTO TEMPORARIAMENTE NO FIM DO SEU MAIN.JS PARA TESTAR
-// ============================================================
 window.ApiIntegration = {
     simularSincronizacaoVerde: function(pautaId) {
         console.log("Simulando sincronização verde para a pauta:", pautaId);
         showNotification("Sincronização simulada com sucesso!", "success");
-        // Coloque aqui a lógica de atualização visual que você desejar
     }
 };
