@@ -1219,11 +1219,8 @@ function addReuToPdfData(documentosTextos, reu) {
     let ganhos = reu.ganhos;
     if (reu.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
     documentosTextos.push({ id: 'reu-ganhos-pdf', text: `   • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
-    
-    if (reu.fonteRenda) {
-        documentosTextos.push({ id: 'reu-fonte', text: `   • Fonte de Renda do Réu: ${reu.fonteRenda}` });
-    }
 }
+
 
 function addExpensesToPdfData(documentosTextos, gastos) {
     if (!gastos.checkExibirGastos) return;
