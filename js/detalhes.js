@@ -727,19 +727,12 @@ function renderReuSocioeconomico() {
                             <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
                         </label>
                     </div>
-                    <div class="flex flex-wrap gap-3 mt-2">
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="CLT"> CLT</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS</label>
-                    </div>
                 </div>
             </div>
         </div>
     `;
 }
+
 
 function renderUfOptions() {
     const ufs = ['RJ','SP','MG','ES','PR','SC','RS','BA','CE','PE','DF','GO','MT','MS','AM','PA','AC','AL','AP','MA','PB','PI','RN','RO','RR','SE','TO'];
