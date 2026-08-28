@@ -1,21 +1,22 @@
 // router.js
-// Sistema de roteamento SPA completo para o SIGEP - Mapeamento Total de Ações
+// Sistema de roteamento SPA completo para o SIGEP - Rastreamento Total de Cliques e Ações
 
 export const ROUTES = {
     LOGIN:                  'login',
     MODO_SELECTION:         'modo-selection',
     PAUTA_SELECTION:        'pauta-selection',
-    APP:                    'app',                // Tela principal da pauta (colunas)
-    DASHBOARD:              'dashboard',          // Painel de métricas/estatísticas
-    ADMIN:                  'admin',              // Painel Administrativo
-    RECEPCAO_CENTRAL:       'recepcao-central',   // Recepção unificada
-    PAINEL_PUBLICO:         'painel-publico',     // TV / Painel da Sala de Espera
-    MEU_PERFIL:             'meu-perfil',         // Configurações do usuário logado
-    ATENDIMENTO_EXTERNO:    'atendimento-externo',// Mesa do colaborador (externa ou por link)
-    DETALHES_CASO:          'detalhes-caso',      // Modal/Tela de Checklist e Detalhes do Assistido
-    CAPTACAO_EXTERNA:       'captacao-externa',   // Tela do link do cidadão preencher
-    RELATORIO_PDF:          'relatorio-pdf',      // Visualizador ou gerador de relatórios
-    CONFIGURACAO_PAUTA:     'configuracao-pauta'  // Modal/Painel de edição de parâmetros da pauta
+    APP:                    'app',                
+    DASHBOARD:              'dashboard',          
+    ADMIN:                  'admin',              
+    RECEPCAO_CENTRAL:       'recepcao-central',   
+    PAINEL_PUBLICO:         'painel-publico',     
+    MEU_PERFIL:             'meu-perfil',         
+    ATENDIMENTO_EXTERNO:    'atendimento-externo',
+    DETALHES_CASO:          'detalhes-caso',      
+    CAPTACAO_EXTERNA:       'captacao-externa',   
+    RELATORIO_PDF:          'relatorio-pdf',      
+    CONFIGURACAO_PAUTA:     'configuracao-pauta',
+    FILTRO_PAUTA:           'filtro-pauta'
 };
 
 const ROUTE_GUARDS = {
@@ -32,7 +33,8 @@ const ROUTE_GUARDS = {
     [ROUTES.DETALHES_CASO]:       { requiresAuth: true },
     [ROUTES.CAPTACAO_EXTERNA]:    { requiresAuth: false },
     [ROUTES.RELATORIO_PDF]:       { requiresAuth: true },
-    [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true, roles: ['admin', 'superadmin', 'user'] }
+    [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true },
+    [ROUTES.FILTRO_PAUTA]:        { requiresAuth: true }
 };
 
 const ALL_SCREEN_IDS = [
@@ -46,8 +48,7 @@ const ALL_SCREEN_IDS = [
     'painel-publico-container',
     'meu-perfil-container',
     'atendimento-externo-container',
-    'assisted-details-modal',       // Tela/Modal de detalhes unificada
-    'configuracao-pauta-modal'      // Se houver container próprio
+    'assisted-details-modal'
 ];
 
 export class SIGEPRouter {
@@ -79,7 +80,6 @@ export class SIGEPRouter {
 
     async navigate(route, params = {}, replace = false) {
         const targetRoute = ROUTE_GUARDS[route] ? route : ROUTES.PAUTA_SELECTION;
-
         const redirected = this._guard(targetRoute, params);
         if (redirected) return this.navigate(redirected, {}, replace);
         
@@ -116,10 +116,6 @@ export class SIGEPRouter {
             'dashboard':          () => this.navigate(ROUTES.DASHBOARD, {}, true),
             'recepcao-central':   () => this.navigate(ROUTES.RECEPCAO_CENTRAL, {}, true),
             'admin':              () => this.navigate(ROUTES.ADMIN, {}, true),
-            'atendimento-externo':() => this.navigate(ROUTES.ATENDIMENTO_EXTERNO, {
-                pautaId: localStorage.getItem('lastPautaId'),
-                colab: localStorage.getItem('lastColabName')
-            }, true)
         };
 
         if (savedScreen && routeMap[savedScreen]) await routeMap[savedScreen]();
@@ -185,7 +181,6 @@ export class SIGEPRouter {
         
         const handler = this._handlers[route];
         if (!handler) { 
-            console.warn(`[SIGEPRouter] Rota sem handler: "${route}". Redirecionando...`); 
             await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             return; 
         }
@@ -193,10 +188,7 @@ export class SIGEPRouter {
         try {
             await handler(params);
         } catch (error) {
-            console.error(`[SIGEPRouter] Falha na execução da rota ${route}:`, error);
-            if (this._deps?.showNotification) {
-                this._deps.showNotification("Erro na navegação: " + (error.message || "Erro desconhecido"), "error");
-            }
+            console.error(`[SIGEPRouter] Falha na rota ${route}:`, error);
         }
     }
 
@@ -242,7 +234,11 @@ export class SIGEPRouter {
                     deps.UIService.renderPautaFilters(
                         'filters-container',
                         app.currentPautaFilter || 'all',
-                        (val) => { app.currentPautaFilter = val; app.loadPautasWithFilter(); },
+                        (val) => { 
+                            app.currentPautaFilter = val; 
+                            app.loadPautasWithFilter(); 
+                            this.navigate(ROUTES.FILTRO_PAUTA, { filter: val }, false);
+                        },
                         app
                     );
                 }
@@ -294,13 +290,11 @@ export class SIGEPRouter {
                 AtendimentoExternoService.db = app.db;
                 AtendimentoExternoService.auth = app.auth;
                 AtendimentoExternoService.pautaId = params.pautaId || localStorage.getItem('lastPautaId');
-                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName') || localStorage.getItem('sigep_colab_nome');
-                AtendimentoExternoService.colaboradorId = params.colabId || localStorage.getItem('sigep_colab_id') || '';
+                AtendimentoExternoService.colaboradorNome = params.colab || localStorage.getItem('lastColabName');
                 AtendimentoExternoService.modoVisualizacao = params.modo || 'abas';
                 await AtendimentoExternoService.init();
             },
             [ROUTES.DETALHES_CASO]: async (params) => {
-                // Abre diretamente a pauta e dispara a abertura do modal de detalhes do assistido
                 await this._handlers[ROUTES.APP](params);
                 if (params.assistidoId && window.openDetailsModal) {
                     window.openDetailsModal({
@@ -313,8 +307,14 @@ export class SIGEPRouter {
             },
             [ROUTES.CONFIGURACAO_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
-                const configBtn = document.getElementById('edit-pauta-config-btn');
-                if (configBtn) configBtn.click();
+                document.getElementById('edit-pauta-config-btn')?.click();
+            },
+            [ROUTES.FILTRO_PAUTA]: async (params) => {
+                // Rota utilitária para registrar alterações de filtros na URL
+                if (params.filter && app) {
+                    app.currentPautaFilter = params.filter;
+                    await app.loadPautasWithFilter();
+                }
             }
         };
     }
