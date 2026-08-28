@@ -159,7 +159,7 @@
                 <div id="checklist-area" class="space-y-3"></div>
             </section>
 
-            <!-- 4. FOTO DO DOCUMENTO (CÂMERA INTELIGENTE COM ANÁLISE DE ILUMINAÇÃO) -->
+            <!-- 4. FOTO DO DOCUMENTO (CÂMERA INTELIGENTE) -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-indigo-600 uppercase mb-2 border-b pb-2 flex items-center justify-between">
                     <span>📸 4. FOTO DO DOCUMENTO (RG / CPF)</span>
@@ -392,9 +392,11 @@
         import { getFirestore, doc, getDoc, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
-        import { EXPENSE_CATEGORIES } from './js/detalhes.js';
+        
+        // Importa direto do detalhes.js para manter as listas unificadas e sempre iguais à mesa
+        import { documentsData, EXPENSE_CATEGORIES_COMUNS, EXPENSE_CATEGORIES_EXCLUSIVAS } from './js/detalhes.js';
 
-        // Sistema Customizado de Notificações para evitar o uso de 'alert()'
+        // Sistema Customizado de Notificações
         function showNotification(message, isError = true) {
             const toast = document.createElement('div');
             toast.className = `p-4 rounded-xl shadow-lg text-sm font-bold text-white transition-all transform translate-y-0 opacity-100 ${isError ? 'bg-red-600' : 'bg-slate-800'}`;
@@ -413,29 +415,23 @@
                     toast.classList.add('opacity-0', 'translate-y-2');
                     setTimeout(() => toast.remove(), 300);
                 }, 4000);
-            } else {
-                console.warn("Notificação:", message);
             }
         }
 
-        const documentsData = window.documentsData;
-
         if (!documentsData) {
-            console.error("documentsData não carregado! Verifique o detalhes.js");
-            showNotification("Erro ao carregar o sistema. Recarregue a página.");
+            showNotification("Erro ao carregar configurações do sistema. Tente recarregar a página.");
         }
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
 
-        // VARIÁVEIS GLOBAIS
         let pautaId, assistedId, actionKey, delegationToken;
         let formSubmitted = false;
         let realtimeUnsubscribe = null;
         let fotosAnexadasParaEnvio = [];
 
-        // ===================== CÂMERA INTELIGENTE (ANÁLISE DE ILUMINAÇÃO) =====================
+        // ===================== CÂMERA INTELIGENTE =====================
         let streamCamera = null;
         const videoEl = document.getElementById('video-preview');
         const canvasEl = document.getElementById('canvas-captura');
@@ -459,7 +455,6 @@
                     videoEl.srcObject = streamCamera;
                     iniciarAnaliseQualidade();
                 } catch (err) {
-                    console.error("Erro câmera:", err);
                     showNotification("Não foi possível acessar a câmera. Verifique as permissões.");
                     containerCam.classList.add('hidden');
                     btnIniciarCamera.classList.remove('hidden');
@@ -554,7 +549,6 @@
                             </div>
                         `;
                     } catch (err) {
-                        console.error("Erro upload:", err);
                         showNotification("Erro ao enviar foto. Tente novamente.");
                         document.getElementById('upload-loading').classList.add('hidden');
                         btnIniciarCamera.classList.remove('hidden');
@@ -562,7 +556,7 @@
                 }, 'image/jpeg', 0.85);
             };
         }
-        // ===================== FIM CÂMERA INTELIGENTE =====================
+        // ===================== FIM CÂMERA =====================
 
         const maskPhone = (v) => v.replace(/\D/g, "").replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{4})$/, "$1-$2");
         const maskCEP = (v) => v.replace(/\D/g, "").replace(/(\d{5})(\d)/, "$1-$2");
@@ -574,7 +568,6 @@
         document.getElementById('cep-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
         document.getElementById('cep-comercial-reu')?.addEventListener('input', (e) => e.target.value = maskCEP(e.target.value));
 
-        // Máscara para renda familiar
         const ganhosInput = document.getElementById('socio-ganhos');
         if (ganhosInput) {
             ganhosInput.addEventListener('input', (e) => {
@@ -601,7 +594,6 @@
                     if (profissaoInput) profissaoInput.value = '';
                 }
             };
-            
             ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
             checkProfissaoVisibility();
         }
@@ -637,13 +629,10 @@
             document.querySelectorAll('.doc-checkbox, .custom-checkbox, #check-reu-unico, #check-exibir-gastos').forEach(cb => {
                 if (cb) {
                     cb.disabled = true;
-                    if (cb.parentElement) {
-                        cb.parentElement.style.opacity = '0.5';
-                    }
+                    if (cb.parentElement) cb.parentElement.style.opacity = '0.5';
                 }
             });
 
-            // Protege a área da câmera após o envio
             pararCamera();
             containerCam?.classList.add('hidden');
             btnCapturar?.classList.add('hidden');
@@ -656,7 +645,6 @@
 
         function bloquearFormulario(motivo) {
             if (formSubmitted) return;
-            
             formSubmitted = true;
             const form = document.getElementById('form-captacao');
             const btn = document.getElementById('btn-enviar');
@@ -668,24 +656,19 @@
             if (form) {
                 form.querySelectorAll('input, select, textarea, button').forEach(el => {
                     el.disabled = true;
-                    if (el.tagName !== 'BUTTON') {
-                        el.classList.add('bg-gray-100', 'cursor-not-allowed');
-                    }
+                    if (el.tagName !== 'BUTTON') el.classList.add('bg-gray-100', 'cursor-not-allowed');
                 });
             }
-            
             if (btn) {
                 btn.disabled = true;
                 btn.textContent = "🔒 FORMULÁRIO FINALIZADO";
                 btn.classList.add('bg-gray-500', 'cursor-not-allowed');
                 btn.classList.remove('sigep-gradient', 'hover:scale-95');
             }
-            
             if (blockedMsg && blockedMsgText) {
-                blockedMsgText.textContent = motivo || "Seus dados foram enviados com segurança e não estão mais disponíveis nesta tela.";
+                blockedMsgText.textContent = motivo || "Seus dados foram enviados com segurança.";
                 blockedMsg.classList.remove('hidden');
             }
-            
             if (realtimeUnsubscribe) {
                 realtimeUnsubscribe();
                 realtimeUnsubscribe = null;
@@ -698,13 +681,12 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     if (data.documentState === 'pre_triagem_concluida' || data.documentState === 'saved') {
-                        bloquearFormulario("Este formulário já foi enviado anteriormente. Seus dados estão protegidos.");
+                        bloquearFormulario("Este formulário já foi enviado anteriormente.");
                         return true;
                     }
                 }
                 return false;
             } catch (error) {
-                console.error("Erro ao verificar envio:", error);
                 return false;
             }
         }
@@ -716,21 +698,25 @@
             delegationToken = params.get('token');
 
             if (!pautaId || !assistedId || !delegationToken) {
-                showNotification("Link inválido ou de segurança ausente. Por favor, solicite um novo link oficial da Defensoria.");
+                showNotification("Link inválido ou de segurança ausente. Solicite um novo link oficial.");
                 document.getElementById('loading-screen')?.classList.add('hidden');
                 return;
             }
 
+            // Renderiza as categorias combinadas importadas do detalhes.js
             const containerGastos = document.getElementById('gastos-container');
-            if (containerGastos && EXPENSE_CATEGORIES) {
-                EXPENSE_CATEGORIES.forEach(cat => {
+            const todasDespesas = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
+            
+            if (containerGastos && todasDespesas.length > 0) {
+                containerGastos.innerHTML = '';
+                todasDespesas.forEach(cat => {
                     containerGastos.innerHTML += `
                         <div class="flex justify-between items-center bg-white p-2 border border-slate-100 rounded-lg">
                             <div>
                                 <p class="text-[11px] font-bold text-green-800 uppercase">${cat.label}</p>
                                 <p class="text-[9px] text-slate-400">${cat.desc}</p>
                             </div>
-                            <input type="text" id="gasto-${cat.id}" class="gasto-input w-24 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
+                            <input type="text" id="gasto-${cat.id}" class="gasto-input w-28 p-2 border border-green-200 rounded-lg text-right text-xs font-bold text-slate-700 outline-none focus:border-green-500" placeholder="R$ 0,00" inputmode="numeric">
                         </div>
                     `;
                 });
@@ -756,11 +742,9 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     
-                    const numAgendamento = data.numeroAgendamento || data.numAgendamento || data.assistedManualNumAgendamento || '';
                     if (document.getElementById('num-agendamento')) {
-                        document.getElementById('num-agendamento').value = numAgendamento;
+                        document.getElementById('num-agendamento').value = data.numeroAgendamento || data.numAgendamento || '';
                     }
-                    
                     if (data.name) document.getElementById('nome-assistido').value = data.name;
                     if (data.telefone) document.getElementById('telefone-assistido').value = data.telefone;
 
@@ -773,11 +757,6 @@
                         if (socio.fonteRenda) {
                             const radio = document.querySelector(`input[name="socio-fonte-renda"][value="${socio.fonteRenda}"]`);
                             if (radio) radio.checked = true;
-                        }
-                        
-                        if (ocupacaoSelect) {
-                            const event = new Event('change');
-                            ocupacaoSelect.dispatchEvent(event);
                         }
                     }
 
@@ -797,7 +776,7 @@
                     } else {
                         const checklistArea = document.getElementById('checklist-area');
                         if (checklistArea) {
-                            checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto ainda não definido pela Defensoria. Siga para o próximo passo.</div>`;
+                            checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto não definido pela Defensoria. Prossiga com o preenchimento.</div>`;
                         }
                     }
 
@@ -818,30 +797,14 @@
                     document.getElementById('loading-screen')?.classList.add('hidden');
                     document.getElementById('app-content')?.classList.remove('hidden');
                     
-                    const jaEnviado = await checkIfAlreadySubmitted();
-                    
-                    if (!jaEnviado) {
-                        setTimeout(() => {
-                            const docRef = doc(db, "pautas", pautaId, "attendances", assistedId);
-                            import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js").then(({ onSnapshot }) => {
-                                realtimeUnsubscribe = onSnapshot(docRef, (snapshot) => {
-                                    if (snapshot.exists() && !formSubmitted) {
-                                        const snapData = snapshot.data();
-                                        if (snapData.documentState === 'pre_triagem_concluida' || snapData.documentState === 'saved') {
-                                            bloquearFormulario("Seus dados foram registrados com sucesso! Esta página está protegida.");
-                                        }
-                                    }
-                                });
-                            });
-                        }, 1000);
-                    }
+                    await checkIfAlreadySubmitted();
                 } else {
                     document.getElementById('loading-screen')?.classList.add('hidden');
-                    showNotification("Agendamento não encontrado. Verifique se o link está correto.");
+                    showNotification("Agendamento não encontrado.");
                 }
             } catch (error) {
-                console.error("Erro:", error);
-                showNotification("Erro ao conectar com a Defensoria.");
+                document.getElementById('loading-screen')?.classList.add('hidden');
+                showNotification("Erro ao conectar com a base de dados.");
             }
         }
 
@@ -851,7 +814,6 @@
             if (!data || !container) return;
 
             container.innerHTML = '';
-
             data.sections.forEach((section, sIdx) => {
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = "mb-4";
@@ -880,7 +842,7 @@
                                         <input type="radio" name="type-${id}" value="Físico" ${typeVal === 'Físico' ? 'checked' : ''}> FÍSICO
                                     </label>
                                     <label class="flex items-center gap-1 text-[10px] font-bold text-slate-500 cursor-pointer">
-                                        <input type="radio" name="type-${id}" value="Digital" ${typeVal === 'Digital' ? 'checked' : ''}> DIGITAL (Celular/PDF)
+                                        <input type="radio" name="type-${id}" value="Digital" ${typeVal === 'Digital' ? 'checked' : ''}> DIGITAL (Celular)
                                     </label>
                                 </div>
                             </div>
@@ -913,23 +875,15 @@
             if (docCounter) docCounter.textContent = `${count} MARCADOS`;
         }
 
-        const checkReuUnico = document.getElementById('check-reu-unico');
-        const contentReu = document.getElementById('content-reu-completo');
-        if (checkReuUnico && contentReu) {
-            checkReuUnico.addEventListener('change', function() {
-                if (formSubmitted) return;
-                contentReu.style.display = this.checked ? 'block' : 'none';
-            });
-        }
+        document.getElementById('check-reu-unico')?.addEventListener('change', function() {
+            if (formSubmitted) return;
+            document.getElementById('content-reu-completo').style.display = this.checked ? 'block' : 'none';
+        });
 
-        const checkExibirGastos = document.getElementById('check-exibir-gastos');
-        const contentGastos = document.getElementById('content-planilha-gastos');
-        if (checkExibirGastos && contentGastos) {
-            checkExibirGastos.addEventListener('change', function() {
-                if (formSubmitted) return;
-                contentGastos.style.display = this.checked ? 'block' : 'none';
-            });
-        }
+        document.getElementById('check-exibir-gastos')?.addEventListener('change', function() {
+            if (formSubmitted) return;
+            document.getElementById('content-planilha-gastos').style.display = this.checked ? 'block' : 'none';
+        });
 
         async function buscarCepAPI(cepInputId, isComercial = false) {
             const cepInput = document.getElementById(cepInputId);
@@ -970,10 +924,10 @@
                         if (estado) estado.value = data.uf || '';
                     }
                 } else {
-                    showNotification("CEP não encontrado na base de dados.");
+                    showNotification("CEP não encontrado.");
                 }
             } catch (e) { 
-                showNotification("Erro ao buscar CEP. Verifique sua conexão."); 
+                showNotification("Erro ao buscar CEP. Verifique a internet."); 
             }
             
             btn.textContent = originalText;
@@ -986,36 +940,15 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
-        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
-        const reuProfissaoContainer = document.getElementById('reu-profissao-container');
-        const reuProfissaoInput = document.getElementById('reu-profissao');
-        
-        if (reuOcupacaoSelect && reuProfissaoContainer) {
-            const checkReuProfissaoVisibility = () => {
-                const valor = reuOcupacaoSelect.value;
-                const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
-                                         valor === 'Empregado sem vínculo (Informal)' || 
-                                         valor === 'Autônomo';
-                
-                if (mostrarProfissao) {
-                    reuProfissaoContainer.classList.remove('hidden');
-                } else {
-                    reuProfissaoContainer.classList.add('hidden');
-                    if (reuProfissaoInput) reuProfissaoInput.value = '';
-                }
-            };
-            
-            reuOcupacaoSelect.addEventListener('change', checkReuProfissaoVisibility);
-            checkReuProfissaoVisibility();
-        }
-
+        // Ouve eventos nos "Não Sei" do Reú
         const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
+        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
         if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
             reuOcupacaoNaoSei.addEventListener('change', (e) => {
                 if (e.target.checked) {
                     reuOcupacaoSelect.disabled = true;
                     reuOcupacaoSelect.value = 'Não informado';
-                    reuProfissaoContainer.classList.add('hidden');
+                    document.getElementById('reu-profissao-container')?.classList.add('hidden');
                 } else {
                     reuOcupacaoSelect.disabled = false;
                     reuOcupacaoSelect.value = '';
@@ -1024,6 +957,7 @@
         }
 
         const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
+        const reuProfissaoInput = document.getElementById('reu-profissao');
         if (reuProfissaoNaoSei && reuProfissaoInput) {
             reuProfissaoNaoSei.addEventListener('change', (e) => {
                 if (e.target.checked) {
@@ -1064,22 +998,11 @@
             });
         }
 
-        if (reuGanhosInput) {
-            reuGanhosInput.addEventListener('input', (e) => {
-                let v = e.target.value.replace(/\D/g, '');
-                e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            });
-        }
-
         const form = document.getElementById('form-captacao');
         if (form) {
             form.addEventListener('submit', async (e) => {
                 e.preventDefault();
-                
-                if (formSubmitted) {
-                    showNotification("Este formulário já foi enviado.", false);
-                    return;
-                }
+                if (formSubmitted) return;
                 
                 const btn = document.getElementById('btn-enviar');
                 if (!btn) return;
@@ -1095,13 +1018,16 @@
                     docTypes[cb.id] = radio ? radio.value : 'Físico';
                 });
 
-                const gastos = { checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false };
-                if (EXPENSE_CATEGORIES) {
-                    EXPENSE_CATEGORIES.forEach(c => {
-                        let input = document.getElementById(`gasto-${c.id}`);
-                        gastos[c.id] = input ? (input.value || 'R$ 0,00') : 'R$ 0,00';
-                    });
-                }
+                // Agrupa despesas comuns e exclusivas importadas
+                const todasDespesas = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
+                const gastos = { 
+                    checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false,
+                    quantidadeMoradores: "1" 
+                };
+                todasDespesas.forEach(c => {
+                    let input = document.getElementById(`gasto-${c.id}`);
+                    gastos[c.id] = input ? (input.value || 'R$ 0,00') : 'R$ 0,00';
+                });
 
                 const socioData = {
                     ocupacao: document.getElementById('socio-ocupacao')?.value || '',
@@ -1133,23 +1059,19 @@
                     cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
                     uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
                     ocupacao: document.getElementById('reu-ocupacao')?.value || '',
-                    ocupacaoNaoSei: document.getElementById('reu-ocupacao-nao-sei')?.checked || false,
                     profissao: document.getElementById('reu-profissao')?.value || '',
-                    profissaoNaoSei: document.getElementById('reu-profissao-nao-sei')?.checked || false,
                     estadoCivil: document.getElementById('reu-estado-civil')?.value || '',
-                    estadoCivilNaoSei: document.getElementById('reu-estado-civil-nao-sei')?.checked || false,
                     ganhos: document.getElementById('reu-ganhos')?.value || '',
-                    ganhosNaoSei: document.getElementById('reu-ganhos-nao-sei')?.checked || false,
-                    fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
+                    fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || '',
+                    ocupacaoNaoSei: document.getElementById('reu-ocupacao-nao-sei')?.checked || false,
+                    profissaoNaoSei: document.getElementById('reu-profissao-nao-sei')?.checked || false,
+                    estadoCivilNaoSei: document.getElementById('reu-estado-civil-nao-sei')?.checked || false,
+                    ganhosNaoSei: document.getElementById('reu-ganhos-nao-sei')?.checked || false
                 };
 
-                // AQUI FOI REMOVIDO O "NAME" PARA NÃO BATER NA REGRA DE SEGURANÇA
                 const payload = {
                     telefone: document.getElementById('telefone-assistido')?.value || '',
-                    
-                    // ⭐ O SEGREDO ESTÁ AQUI: Enviando o Token capturado para o Firebase!
                     delegationToken: delegationToken, 
-                    
                     documentChecklist: {
                         action: actionKey,
                         checkedIds: checkedIds,
@@ -1166,17 +1088,12 @@
 
                 try {
                     await updateDoc(doc(db, "pautas", pautaId, "attendances", assistedId), payload);
-                    
-                    // BLOQUEAR E LIMPAR TUDO APÓS ENVIO
-                    bloquearFormulario("Seus dados foram enviados com sucesso e estão protegidos!");
-                    
-                    // Mostrar tela de sucesso
+                    bloquearFormulario("Seus dados foram enviados com sucesso!");
                     document.getElementById('app-content')?.classList.add('hidden');
                     document.getElementById('success-screen')?.classList.remove('hidden');
-                    
                 } catch (error) {
                     console.error("Erro ao salvar:", error);
-                    showNotification("Erro de permissão ou conexão ao enviar dados. Tente novamente.");
+                    showNotification("Erro ao enviar dados. Verifique a internet e tente novamente.");
                     btn.innerHTML = `<svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"></path></svg> ENVIAR DADOS`;
                     btn.disabled = false;
                 }
