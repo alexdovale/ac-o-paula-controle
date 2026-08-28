@@ -1,9 +1,8 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VERSÃO COMPLETA, CORRIGIDA E DINÂMICA)
- * Módulo de Detalhes do Assistido, Checklist de Documentos,
- * Acúmulo de Demandas, Captação Direta, Gerador de Texto,
- * Perfil Socioeconômico e Planilha de Gastos.
+ * DETALHES.JS - SIGEP (VERSÃO COMPLETA E DINÂMICA)
+ * Módulo de Detalhes do Assistido, Checklist Dinâmico,
+ * Captação, Gerador de Texto e Planilha de Gastos (PDF/Word).
  * ========================================================
  */
 
@@ -80,22 +79,6 @@ const ACTIONS_ALWAYS_EXPENSES = [
     'guarda'
 ];
 
-const ACTIONS_WITH_WORK_INFO = [
-    'obrigacao_fazer',
-    'declaratoria_nulidade',
-    'indenizacao_danos',
-    'revisional_debito',
-    'exigir_contas',
-    'alimentos_fixacao_majoracao_oferta',
-    'alimentos_gravidicos',
-    'alimentos_avoengos',
-    'divorcio_litigioso',
-    'uniao_estavel',
-    'guarda',
-    'regulamentacao_convivencia',
-    'investigacao_paternidade'
-];
-
 // ⭐ OPÇÕES DE OCUPAÇÃO
 const OCUPACOES = [
     'Empregado com vínculo (CLT)',
@@ -143,7 +126,6 @@ let allAssisted = [];
 let currentChecklistAction = null; 
 let demandasAdicionaisLocais = []; 
 
-// ⭐ VARIÁVEIS DE BACKUP PARA RECUPERAÇÃO
 let _backupAssistedId = null;
 let _backupPautaId = null;
 
@@ -559,7 +541,7 @@ function addExpenseButton(containerEl, saved) {
 }
 
 /* ========================================================
-   5. PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO
+   5. PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO (ATUALIZADA)
    ======================================================== */
 function renderExpenseTable() {
     const div = document.createElement('div');
@@ -625,9 +607,13 @@ function renderExpenseTable() {
                 </div>
             </div>
 
-            <div class="mt-4 flex gap-2">
+            <!-- ⭐ NOVOS BOTÕES PARA GERAR TABELA -->
+            <div class="mt-4 flex flex-col sm:flex-row gap-2">
+                <button type="button" id="btn-copiar-tabela" class="flex-1 bg-slate-700 hover:bg-slate-800 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                    <span>📋</span> Copiar Tabela (Para Word/SEI)
+                </button>
                 <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📄</span> Baixar Apenas Planilha (PDF)
+                    <span>📄</span> Baixar PDF Limpo
                 </button>
             </div>
 
@@ -686,13 +672,30 @@ function initExpenseTableEvents(div) {
     });
 
     setTimeout(() => {
+        // Evento PDF Limpo
         div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
             const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
             const dadosGastos = getExpenseDataFromForm();
             if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
                 window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
+            } else {
+                showNotification("A função de PDF Limpo precisa ser atualizada no pdfService.js", "warning");
             }
         });
+        
+        // Evento Copiar Tabela
+        div.querySelector('#btn-copiar-tabela')?.addEventListener('click', (e) => {
+            window.copiarTabelaGastos();
+            const btn = e.currentTarget;
+            const textoOriginal = btn.innerHTML;
+            btn.innerHTML = "<span>✅</span> COPIADO COM SUCESSO!";
+            btn.classList.replace('bg-slate-700', 'bg-green-600');
+            setTimeout(() => {
+                btn.innerHTML = textoOriginal;
+                btn.classList.replace('bg-green-600', 'bg-slate-700');
+            }, 2500);
+        });
+
         div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
             const container = getEl('expense-table-container');
             if (container) container.innerHTML = '';
@@ -820,8 +823,109 @@ function closeAssistedDetailsModal() {
 }
 
 /* ========================================================
-   7. GERADOR DE TEXTO PARA PETIÇÃO
+   7. GERADORES (TEXTO PARA PETIÇÃO E TABELA WORD/SEI)
    ======================================================== */
+
+// ⭐ NOVO: FUNÇÃO PARA COPIAR A TABELA FORMATADA (HTML) PARA A ÁREA DE TRANSFERÊNCIA
+window.copiarTabelaGastos = async () => {
+    const dados = getExpenseDataFromForm();
+    const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O Requerente';
+    const qtdMoradores = parseInt(dados.quantidadeMoradores || 1);
+
+    const limpaMoeda = (valStr) => {
+        if (!valStr || valStr === 'R$ 0,00') return 0;
+        return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+    };
+    const formataMoeda = (valor) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
+
+    let linhasComuns = '';
+    let totalFamilia = 0;
+    
+    EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
+        const val = limpaMoeda(dados[cat.id]);
+        if (val > 0) {
+            const cota = val / qtdMoradores;
+            totalFamilia += cota;
+            linhasComuns += `
+                <tr>
+                    <td style="border: 1px solid black; padding: 5px;">${cat.label}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center;">R$ ${formataMoeda(val)}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center;"><b>R$ ${formataMoeda(cota)}</b></td>
+                </tr>`;
+        }
+    });
+
+    let linhasExclusivas = '';
+    let totalCrianca = 0;
+
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
+        const val = limpaMoeda(dados[cat.id]);
+        if (val > 0) {
+            totalCrianca += val;
+            linhasExclusivas += `
+                <tr>
+                    <td style="border: 1px solid black; padding: 5px;" colspan="2">${cat.label}</td>
+                    <td style="border: 1px solid black; padding: 5px; text-align: center;"><b>R$ ${formataMoeda(val)}</b></td>
+                </tr>`;
+        }
+    });
+
+    const totalGeral = totalFamilia + totalCrianca;
+
+    if (totalGeral === 0) {
+        showNotification("Preencha a planilha antes de copiar.", "warning");
+        return;
+    }
+
+    const tabelaHTML = `
+        <table style="border-collapse: collapse; width: 100%; font-family: Arial, sans-serif; font-size: 11pt; color: black;">
+            <thead>
+                <tr>
+                    <th colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f2f2f2; text-align: center;">
+                        <b>DEMONSTRATIVO DE DESPESAS MENSAIS - ${nomeAssistido.toUpperCase()}</b>
+                    </th>
+                </tr>
+                <tr>
+                    <th style="border: 1px solid black; padding: 8px; text-align: left;">Descrição da Despesa</th>
+                    <th style="border: 1px solid black; padding: 8px; text-align: center;">Valor Integral</th>
+                    <th style="border: 1px solid black; padding: 8px; text-align: center;">Cota-Parte / Necessidade</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f9f9f9;">
+                        <b>1. Despesas Residenciais Comuns (Rateio em ${qtdMoradores} partes)</b>
+                    </td>
+                </tr>
+                ${linhasComuns || '<tr><td colspan="3" style="border: 1px solid black; padding: 5px; text-align: center;">Sem despesas comuns</td></tr>'}
+                
+                <tr>
+                    <td colspan="3" style="border: 1px solid black; padding: 8px; background-color: #f9f9f9;">
+                        <b>2. Despesas Exclusivas (Integral)</b>
+                    </td>
+                </tr>
+                ${linhasExclusivas || '<tr><td colspan="3" style="border: 1px solid black; padding: 5px; text-align: center;">Sem despesas exclusivas</td></tr>'}
+                
+                <tr>
+                    <td colspan="2" style="border: 1px solid black; padding: 8px; text-align: right;"><b>TOTAL DA NECESSIDADE MENSAL APURADA:</b></td>
+                    <td style="border: 1px solid black; padding: 8px; text-align: center; background-color: #e6e6e6;"><b>R$ ${formataMoeda(totalGeral)}</b></td>
+                </tr>
+            </tbody>
+        </table>
+        <br>
+    `;
+
+    try {
+        const blobHtml = new Blob([tabelaHTML], { type: "text/html" });
+        const clipboardItem = new ClipboardItem({ "text/html": blobHtml });
+        await navigator.clipboard.write([clipboardItem]);
+        showNotification("Tabela copiada com sucesso! Cole (Ctrl+V) no Word ou SEI.", "success");
+    } catch (err) {
+        console.error('Falha ao copiar tabela: ', err);
+        showNotification("O navegador bloqueou a cópia. Tente novamente.", "error");
+    }
+};
+
 window.gerarTextoDespesas = (assistidoId) => {
     const assisted = allAssisted.find(a => a.id === assistidoId);
     if (!assisted || !assisted.documentChecklist || !assisted.documentChecklist.expenseData) {
@@ -1022,3 +1126,4 @@ window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
 window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
 window.gerarTextoDespesas = window.gerarTextoDespesas;
+window.copiarTabelaGastos = window.copiarTabelaGastos;
