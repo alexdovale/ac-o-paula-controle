@@ -78,9 +78,9 @@
                 <h2 class="text-xs font-black text-blue-700 uppercase mb-4 border-b pb-2">2. PERFIL SOCIOECONÔMICO</h2>
                 <div class="space-y-4">
                     <div>
-                        <label class="text-[10px] font-black text-gray-500 uppercase">OCUPAÇÃO</label>
+                        <label class="text-[10px] font-black text-gray-500 uppercase">OCUPAÇÃO / VÍNCULO EMPREGATÍCIO</label>
                         <select id="socio-ocupacao" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500">
-                            <option value="">Selecione a ocupação</option>
+                            <option value="">Selecione para carregar os documentos...</option>
                             <option value="Empregado com vínculo (CLT)">Empregado com vínculo (CLT)</option>
                             <option value="Empregado sem vínculo (Informal)">Empregado sem vínculo (Informal)</option>
                             <option value="Autônomo">Autônomo</option>
@@ -112,27 +112,16 @@
                     </div>
 
                     <div>
-                        <label class="text-[10px] font-black text-gray-500 uppercase">RENDA FAMILIAR (R$)</label>
+                        <label class="text-[10px] font-black text-gray-500 uppercase">GANHOS MENSAIS LÍQUIDOS (R$)</label>
                         <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-3 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none focus:ring-2 focus:ring-blue-500" inputmode="numeric">
-                        <div class="flex flex-wrap gap-3 mt-3">
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="CLT"> CLT
-                            </label>
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO
-                            </label>
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA
-                            </label>
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
-                            </label>
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO
-                            </label>
-                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer">
-                                <input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS
-                            </label>
+                        <div class="flex flex-wrap gap-3 mt-3 hidden">
+                            <!-- Escondido temporariamente por requerer lógica aprofundada -->
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="CLT"> CLT</label>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
+                            <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS</label>
                         </div>
                     </div>
                 </div>
@@ -140,10 +129,11 @@
 
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-green-700 uppercase mb-2 border-b pb-2 flex items-center justify-between">
-                    <span>3. DOCUMENTOS</span>
+                    <span>3. DOCUMENTOS DO ATENDIMENTO</span>
                     <span id="doc-counter" class="text-[10px] bg-green-100 text-green-800 px-2 py-1 rounded-full">0 MARCADOS</span>
                 </h2>
                 <p class="text-[11px] text-slate-500 mb-4 leading-tight">Marque os documentos que você já possui e indique se estão em formato físico (papel) ou digital (celular/PDF).</p>
+                
                 <div id="checklist-area" class="space-y-3"></div>
             </section>
 
@@ -308,33 +298,13 @@
                                         <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
                                     </label>
                                 </div>
-                                <div class="flex flex-wrap gap-3 mt-2">
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="CLT"> CLT
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO
-                                    </label>
-                                    <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer">
-                                        <input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS
-                                    </label>
-                                </div>
                             </div>
                         </div>
                     </div>
                 </div>
             </section>
 
-            <!-- ⭐ SESSÃO DE GASTOS IDÊNTICA AO DETALHES.JS -->
+            <!-- ⭐ SESSÃO DE GASTOS -->
             <section class="bg-white p-5 rounded-2xl shadow-sm border border-slate-200">
                 <h2 class="text-xs font-black text-green-700 uppercase mb-4 border-b pb-2">6. PLANILHA DE GASTOS MENSAIS</h2>
                 
@@ -406,7 +376,7 @@
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
         
-        // Importa direto do detalhes.js as listas unificadas e sempre idênticas à mesa
+        // Importa as constantes compartilhadas
         import { documentsData, EXPENSE_CATEGORIES_COMUNS, EXPENSE_CATEGORIES_EXCLUSIVAS } from './js/detalhes.js';
 
         function showNotification(message, isError = true) {
@@ -430,10 +400,6 @@
             }
         }
 
-        if (!documentsData) {
-            showNotification("Erro ao carregar configurações do sistema. Tente recarregar a página.");
-        }
-
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
         const storage = getStorage(app);
@@ -442,6 +408,7 @@
         let formSubmitted = false;
         let realtimeUnsubscribe = null;
         let fotosAnexadasParaEnvio = [];
+        let isChecklistInitialized = false;
 
         // ===================== CÂMERA INTELIGENTE =====================
         let streamCamera = null;
@@ -605,9 +572,13 @@
                     profissaoContainer.classList.add('hidden');
                     if (profissaoInput) profissaoInput.value = '';
                 }
+                
+                // ⭐ RE-RENDERIZA O CHECKLIST SE A OCUPAÇÃO MUDAR (Divulgação Progressiva Inteligente)
+                if (isChecklistInitialized && actionKey) {
+                    window.updateChecklistView();
+                }
             };
             ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
-            checkProfissaoVisibility();
         }
 
         function limparDadosSensiveis() {
@@ -715,7 +686,7 @@
                 return;
             }
 
-            // ⭐ RENDERIZA GASTOS COMUNS (RATEIO)
+            // Renderiza Gastos Comuns (Rateio)
             const containerComuns = document.getElementById('gastos-comuns-container');
             if (containerComuns && EXPENSE_CATEGORIES_COMUNS) {
                 containerComuns.innerHTML = '';
@@ -734,7 +705,7 @@
                 });
             }
 
-            // ⭐ RENDERIZA GASTOS EXCLUSIVOS (100%)
+            // Renderiza Gastos Exclusivos (100%)
             const containerExclusivos = document.getElementById('gastos-exclusivos-container');
             if (containerExclusivos && EXPENSE_CATEGORIES_EXCLUSIVAS) {
                 containerExclusivos.innerHTML = '';
@@ -753,7 +724,7 @@
                 });
             }
 
-            // ⭐ LÓGICA DO CÁLCULO DE RATEIO
+            // Lógica do Cálculo de Rateio
             const calcularTotais = () => {
                 let totalFamilia = 0;
                 let totalCrianca = 0;
@@ -784,7 +755,6 @@
             };
 
             document.getElementById('expense-moradores')?.addEventListener('input', calcularTotais);
-
             document.querySelectorAll('.gasto-input').forEach(inp => {
                 inp.addEventListener('input', (e) => {
                     let v = e.target.value.replace(/\D/g, '');
@@ -807,13 +777,12 @@
                     if (data.documentChecklist?.socioData) {
                         const socio = data.documentChecklist.socioData;
                         if (socio.ocupacao) document.getElementById('socio-ocupacao').value = socio.ocupacao;
-                        if (socio.profissao) document.getElementById('socio-profissao').value = socio.profissao;
+                        if (socio.profissao) {
+                            document.getElementById('socio-profissao').value = socio.profissao;
+                            document.getElementById('socio-profissao-container').classList.remove('hidden');
+                        }
                         if (socio.estadoCivil) document.getElementById('socio-estado-civil').value = socio.estadoCivil;
                         if (socio.ganhos) document.getElementById('socio-ganhos').value = socio.ganhos;
-                        if (socio.fonteRenda) {
-                            const radio = document.querySelector(`input[name="socio-fonte-renda"][value="${socio.fonteRenda}"]`);
-                            if (radio) radio.checked = true;
-                        }
                     }
 
                     if (data.selectedAction || data.documentChecklist?.action) {
@@ -829,10 +798,11 @@
                     if (data.documentChecklist?.action) {
                         actionKey = data.documentChecklist.action;
                         renderChecklist(actionKey, data.documentChecklist.checkedIds || [], data.documentChecklist.docTypes || {});
+                        isChecklistInitialized = true;
                     } else {
                         const checklistArea = document.getElementById('checklist-area');
                         if (checklistArea) {
-                            checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center">Assunto não definido pela Defensoria. Prossiga com o preenchimento.</div>`;
+                            checklistArea.innerHTML = `<div class="p-3 bg-orange-50 text-orange-800 text-xs rounded-lg text-center font-bold">Assunto não definido. Prossiga com os demais campos.</div>`;
                         }
                     }
 
@@ -864,23 +834,52 @@
             }
         }
 
+        // ⭐ FUNÇÃO INTELIGENTE DE RENDERIZAÇÃO DO CHECKLIST (IDÊNTICA À DA MESA)
         function renderChecklist(key, savedIds, savedTypes) {
             const data = documentsData[key];
             const container = document.getElementById('checklist-area');
             if (!data || !container) return;
 
+            const ocupacao = document.getElementById('socio-ocupacao')?.value || '';
+            let group = 0; 
+            if (['Empregado com vínculo (CLT)'].includes(ocupacao)) group = 1;
+            else if (['Aposentado', 'Pensionista', 'Beneficiário do INSS (BPC/LOAS)'].includes(ocupacao)) group = 2;
+            else if (['Empregado sem vínculo (Informal)', 'Autônomo'].includes(ocupacao)) group = 3;
+            else if (['Do lar', 'Desempregado', 'Estudante'].includes(ocupacao)) group = 4;
+
+            const docsGroup1 = ['1. TRABALHADOR FORMAL (CLT / SERVIDOR)', 'Contracheque (3 últimos meses)', 'Carteira de Trabalho (Física ou Digital - Print das telas)', 'Extrato Analítico do FGTS'];
+            const docsGroup2 = ['2. APOSENTADO / PENSIONISTA / BPC-LOAS', 'Extrato de Pagamento de Benefício (Portal Meu INSS)', 'Histórico de Crédito - HISCRE (Portal Meu INSS)', 'Extrato bancário da conta onde recebe o benefício'];
+            const docsGroup3 = ['3. AUTÔNOMO / TRABALHADOR INFORMAL', 'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)', 'Extratos Bancários (3 últimos meses)', 'Comprovante de Inscrição no CadÚnico'];
+            const docsGroup4 = ['4. DESEMPREGADO', 'Carteira de Trabalho (Página da baixa do último emprego)', 'Comprovante de Seguro-Desemprego (se estiver recebendo)', 'Declaração de Hipossuficiência (Informando ausência de renda)', 'Extrato do CNIS (Meu INSS - prova ausência de vínculo ativo)'];
+
             container.innerHTML = '';
-            data.sections.forEach((section, sIdx) => {
+            
+            if (group === 0) {
+                container.innerHTML += `<div class="p-3 bg-amber-50 border border-amber-200 text-amber-800 text-xs rounded-lg mb-4 text-center font-medium">
+                    ⚠️ <b>ATENÇÃO:</b> Selecione sua "Ocupação / Vínculo" no Perfil Socioeconômico acima para liberar a lista correta de documentos que você precisa anexar.
+                </div>`;
+            }
+
+            data.sections.forEach((section) => {
                 const sectionDiv = document.createElement('div');
                 sectionDiv.className = "mb-4";
                 sectionDiv.innerHTML = `<h3 class="text-[10px] font-black text-slate-400 uppercase mb-2 border-b pb-1">${section.title}</h3>`;
                 
-                section.docs.forEach((docItem, dIdx) => {
-                    if (typeof docItem === 'object' && docItem.type === 'title') {
-                        sectionDiv.innerHTML += `<div class="text-[10px] font-bold text-blue-600 bg-blue-50 p-2 rounded mt-2 mb-1 uppercase">${docItem.text}</div>`;
+                section.docs.forEach((docItem) => {
+                    const isObject = typeof docItem === 'object';
+                    const text = isObject ? docItem.text : docItem;
+
+                    if (docsGroup1.includes(text) && group !== 1) return;
+                    if (docsGroup2.includes(text) && group !== 2) return;
+                    if (docsGroup3.includes(text) && group !== 3) return;
+                    if (docsGroup4.includes(text) && group !== 4) return;
+
+                    if (isObject && docItem.type === 'title') {
+                        sectionDiv.innerHTML += `<div class="text-[10px] font-bold text-blue-600 bg-blue-50 p-2 rounded mt-2 mb-1 uppercase">${text}</div>`;
                     } else {
-                        const docText = typeof docItem === 'string' ? docItem : docItem.text;
-                        const id = `doc-${key}-${sIdx}-${dIdx}`; 
+                        // ⭐ Geração exata da ID para corresponder ao Firebase
+                        const id = text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '');
+                        
                         const isChecked = savedIds.includes(id);
                         const typeVal = savedTypes[id] || 'Físico';
 
@@ -891,7 +890,7 @@
                                     <div class="w-5 h-5 border-2 border-slate-300 rounded bg-white mt-0.5 flex-shrink-0 flex items-center justify-center transition-colors">
                                         <svg class="w-3 h-3 text-white hidden" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
                                     </div>
-                                    <span class="text-[11px] font-medium text-slate-700 leading-tight">${docText}</span>
+                                    <span class="text-[11px] font-medium text-slate-700 leading-tight">${text}</span>
                                 </label>
                                 <div id="type-box-${id}" class="bg-slate-50 border-t border-slate-100 p-2 flex gap-4 justify-center ${isChecked ? '' : 'hidden'}">
                                     <label class="flex items-center gap-1 text-[10px] font-bold text-slate-500 cursor-pointer">
@@ -909,6 +908,21 @@
             });
             updateDocCounter();
         }
+
+        // ⭐ FUNÇÃO QUE RECARREGA A LISTA SALVANDO O ESTADO ATUAL (Ao trocar a ocupação)
+        window.updateChecklistView = function() {
+            if (!actionKey) return;
+            const currentCheckedIds = [];
+            const currentDocTypes = {};
+            
+            document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
+                currentCheckedIds.push(cb.id);
+                const radio = document.querySelector(`input[name="type-${cb.id}"]:checked`);
+                currentDocTypes[cb.id] = radio ? radio.value : 'Físico';
+            });
+
+            renderChecklist(actionKey, currentCheckedIds, currentDocTypes);
+        };
 
         window.toggleDocType = function(id) {
             if (formSubmitted) return;
@@ -996,63 +1010,6 @@
         const btnBuscarCepCom = document.getElementById('btn-buscar-cep-com');
         if (btnBuscarCepCom) btnBuscarCepCom.onclick = () => buscarCepAPI('cep-comercial-reu', true);
 
-        const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
-        const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
-        if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
-            reuOcupacaoNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    reuOcupacaoSelect.disabled = true;
-                    reuOcupacaoSelect.value = 'Não informado';
-                    document.getElementById('reu-profissao-container')?.classList.add('hidden');
-                } else {
-                    reuOcupacaoSelect.disabled = false;
-                    reuOcupacaoSelect.value = '';
-                }
-            });
-        }
-
-        const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
-        const reuProfissaoInput = document.getElementById('reu-profissao');
-        if (reuProfissaoNaoSei && reuProfissaoInput) {
-            reuProfissaoNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    reuProfissaoInput.disabled = true;
-                    reuProfissaoInput.value = 'Não informado';
-                } else {
-                    reuProfissaoInput.disabled = false;
-                    reuProfissaoInput.value = '';
-                }
-            });
-        }
-
-        const reuCivilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
-        const reuCivilSelect = document.getElementById('reu-estado-civil');
-        if (reuCivilNaoSei && reuCivilSelect) {
-            reuCivilNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    reuCivilSelect.disabled = true;
-                    reuCivilSelect.value = 'Não informado';
-                } else {
-                    reuCivilSelect.disabled = false;
-                    reuCivilSelect.value = '';
-                }
-            });
-        }
-
-        const reuGanhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
-        const reuGanhosInput = document.getElementById('reu-ganhos');
-        if (reuGanhosNaoSei && reuGanhosInput) {
-            reuGanhosNaoSei.addEventListener('change', (e) => {
-                if (e.target.checked) {
-                    reuGanhosInput.disabled = true;
-                    reuGanhosInput.value = 'Não informado';
-                } else {
-                    reuGanhosInput.disabled = false;
-                    reuGanhosInput.value = '';
-                }
-            });
-        }
-
         const form = document.getElementById('form-captacao');
         if (form) {
             form.addEventListener('submit', async (e) => {
@@ -1073,7 +1030,6 @@
                     docTypes[cb.id] = radio ? radio.value : 'Físico';
                 });
 
-                // ⭐ PEGA OS DADOS DA PLANILHA PARA SALVAR NO FIREBASE
                 const todasDespesas = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
                 const gastos = { 
                     checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked || false,
