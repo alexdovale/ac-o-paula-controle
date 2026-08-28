@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA ATUALIZADA
+// js/pdfService.js - VERSÃO DEFINITIVA ATUALIZADA (LIMPA)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -75,7 +75,6 @@ const getAttendantNameForPDF = (item) => {
     return 'N/A';
 };
 
-// Função auxiliar para ordenar por horário de agendamento (Ex: "09:00", "13:30")
 const sortByScheduledTime = (a, b) => {
     const timeA = a.scheduledTime || '';
     const timeB = b.scheduledTime || '';
@@ -86,14 +85,10 @@ const sortByScheduledTime = (a, b) => {
     return timeA.localeCompare(timeB);
 };
 
-// LOGOS TRANSFORMADAS EM RAW GITHUB
 const LOGO_ATA_RAW = "https://raw.githubusercontent.com/alexdovale/Calculadora-de-Acervo-Documental/main/logo%20(2).png";
 const LOGO_DEMAIS_PDF_RAW = "https://raw.githubusercontent.com/alexdovale/ponto.codoc/main/imagem.png";
-
-// Proporção padrão mantida
 const LOGO_DEFENSORIA_RATIO = 535 / 120;
 
-// Função auxiliar para carregar imagens de URLs externas de forma assíncrona
 const loadImage = (url) => {
     return new Promise((resolve, reject) => {
         const img = new Image();
@@ -104,7 +99,6 @@ const loadImage = (url) => {
     });
 };
 
-// FUNÇÃO: Adiciona a logo nos demais relatórios/estatísticas (Exceção da Ata)
 const addLogoHeader = async (doc, startY = 15) => {
     const larguraDesejada = 45;
     const alturaMaxima = 35; 
@@ -120,27 +114,21 @@ const addLogoHeader = async (doc, startY = 15) => {
 
         doc.addImage(img, 'PNG', 40, startY, larguraDesejada, alturaProporcional);
 
-        return {
-            success: true,
-            height: alturaProporcional,
-            bottomY: startY + alturaProporcional
-        };
+        return { success: true, height: alturaProporcional, bottomY: startY + alturaProporcional };
     } catch (e) {
         console.error("❌ Erro ao renderizar a logo do SIGEP:", e);
         return { success: false, height: 0, bottomY: startY };
     }
 };
 
-// FUNÇÃO: Adiciona rodapé padrão
 const addFooter = (doc, pageNumber, totalPages) => {
     const pageHeight = doc.internal.pageSize.getHeight();
     doc.setFontSize(8);
     doc.setTextColor(150, 150, 150);
-    doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | ${new Date().toLocaleString('pt-BR')} | Página ${pageNumber}`, 
+    doc.text(`Sistema de Gerenciamento de Pauta | Impresso em ${new Date().toLocaleString('pt-BR')} | Página ${pageNumber}`, 
              doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
 };
 
-// FUNÇÃO: buildAtaAcaoSocialPDF - EXCLUSIVA COM LOGO DA ATA CENTRALIZADA
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
     console.log("📄 Iniciando geração da Ata Social...");
     
@@ -164,7 +152,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         const xPos = (pageWidth - logoWidth) / 2;
         
         doc.addImage(img, 'PNG', xPos, 8, logoWidth, logoHeight);
-        console.log("✅ Logo RAW inserida com sucesso no PDF da Ata!");
     } catch(e) { 
         console.error("❌ Erro ao inserir logo RAW no PDF da Ata:", e); 
     }
@@ -280,8 +267,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
             doc.line(20, lineY, 190, lineY);
         }
     }
-    
-    console.log("✅ Ata Social gerada com sucesso!");
 };
 
 // ========================================================
@@ -290,31 +275,30 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 
 export const PDFService = {
     
-        async generatePlanilhaGastosPDF(assistedName, expenseData) {
+    async generatePlanilhaGastosPDF(assistedName, expenseData) {
         try {
             await ensureJsPDF(); 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // Adiciona a logo padrão do SIGEP no topo
-            const logoInfo = await addLogoHeader(doc, 20);
-            let y = Math.max(55, logoInfo.bottomY + 20);
+            // ⭐ LOGO REMOVIDA PARA O PADRÃO PETIÇÃO
+            let y = 60; // Margem superior padrão
 
+            // TÍTULO LIMPO E FORMAL
             doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("PLANILHA DE GASTOS E NECESSIDADE MENSAIS", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
+            doc.setFontSize(12);
+            doc.text("DEMONSTRATIVO DE DESPESAS MENSAIS", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
             y += 30;
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text(`Assistido(a): ${assistedName.toUpperCase()}`, 40, y);
+            doc.text(`Requerente/Assistido(a): ${assistedName.toUpperCase()}`, 40, y);
             y += 18;
 
             const moradores = expenseData?.quantidadeMoradores || '1';
-            doc.text(`Número de moradores na residência: ${moradores}`, 40, y);
+            doc.text(`Quantidade de pessoas na residência (Base para rateio): ${moradores}`, 40, y);
             y += 25;
 
-            // Transforma os dados salvos no Firebase em linhas para a tabela do AutoTable
             const bodyRows = [];
             let totalFamilia = 0;
             let totalCrianca = 0;
@@ -336,7 +320,8 @@ export const PDFService = {
                 { id: 'supermercado', label: 'Supermercado (Alimentação)' }
             ];
 
-            bodyRows.push([{ content: 'GASTOS COMUNS / FAMÍLIA (RATEADOS)', colSpan: 3, styles: { fillColor: [240, 253, 244], fontStyle: 'bold', textColor: [21, 128, 61] } }]);
+            // Cabeçalho da Seção sem cores gritantes
+            bodyRows.push([{ content: '1. Despesas Residenciais Comuns (Rateadas)', colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0, 0, 0] } }]);
             
             comuns.forEach(c => {
                 const valTotal = limpaMoeda(expenseData?.[c.id]);
@@ -346,12 +331,12 @@ export const PDFService = {
                     bodyRows.push([
                         c.label, 
                         formatCurrency(valTotal), 
-                        formatCurrency(cotaParte) + ` (1/${moradores})`
+                        formatCurrency(cotaParte) + ` (Cota 1/${moradores})`
                     ]);
                 }
             });
 
-            // Categorias Exclusivas da Criança
+            // Categorias Exclusivas
             const exclusivas = [
                 { id: 'escola', label: 'Mensalidade Escolar / Creche' },
                 { id: 'material_escolar', label: 'Material Escolar / Livros' },
@@ -360,7 +345,7 @@ export const PDFService = {
                 { id: 'lazer_crianca', label: 'Lazer / Atividades Extracurriculares' }
             ];
 
-            bodyRows.push([{ content: 'GASTOS EXCLUSIVOS DA CRIANÇA (INTEGRAIS)', colSpan: 3, styles: { fillColor: [239, 246, 255], fontStyle: 'bold', textColor: [29, 78, 216] } }]);
+            bodyRows.push([{ content: '2. Despesas Exclusivas (Integrais)', colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0, 0, 0] } }]);
 
             exclusivas.forEach(c => {
                 const valIntegral = limpaMoeda(expenseData?.[c.id]);
@@ -376,17 +361,18 @@ export const PDFService = {
 
             const totalGeral = totalFamilia + totalCrianca;
 
+            // AutoTable Principal com estilo oficial/preto e branco
             doc.autoTable({
                 startY: y,
-                head: [["Descrição Detalhada do Gasto", "Valor Total Família", "Gasto Proporcional / Integral"]],
+                head: [["Descrição da Despesa", "Valor Total Referência", "Valor Apurado (Necessidade)"]],
                 body: bodyRows,
                 margin: { left: 40, right: 40 },
                 theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], halign: 'center', fontSize: 9 },
-                styles: { fontSize: 8, cellPadding: 5, valign: 'middle' },
+                headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: 'center', fontSize: 10, lineColor: [0,0,0], lineWidth: 0.5 },
+                styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0] },
                 columnStyles: { 
-                    1: { halign: 'right', cellWidth: 110 }, 
-                    2: { halign: 'right', cellWidth: 130 } 
+                    1: { halign: 'center', cellWidth: 110 }, 
+                    2: { halign: 'center', cellWidth: 130 } 
                 }
             });
 
@@ -395,25 +381,27 @@ export const PDFService = {
             // Quadro Resumo Final
             doc.autoTable({
                 startY: finalY,
-                head: [[{ content: 'RESUMO DOS VALORES APURADOS', colSpan: 2, styles: { fillColor: [30, 41, 59], halign: 'center', fontStyle: 'bold' } }]],
                 body: [
-                    ["Subtotal - Gastos Proporcionais da Família (Cota)", formatCurrency(totalFamilia)],
-                    ["Subtotal - Gastos Exclusivos da Criança", formatCurrency(totalCrianca)],
-                    ["VALOR TOTAL DA NECESSIDADE MENSAL APURADA", formatCurrency(totalGeral)]
+                    ["Subtotal (Gastos Proporcionais / Rateados)", formatCurrency(totalFamilia)],
+                    ["Subtotal (Gastos Exclusivos / Integrais)", formatCurrency(totalCrianca)],
+                    [{ content: "TOTAL DA NECESSIDADE MENSAL APURADA", styles: { fontStyle: 'bold' } }, { content: formatCurrency(totalGeral), styles: { fontStyle: 'bold' } }]
                 ],
                 margin: { left: 40, right: 40 },
                 theme: 'grid',
-                styles: { fontSize: 9, cellPadding: 6, valign: 'middle' },
+                styles: { fontSize: 9, cellPadding: 6, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0] },
                 columnStyles: { 
-                    0: { fontStyle: 'bold', cellWidth: 350 }, 
-                    1: { halign: 'right', fontStyle: 'bold', textColor: [22, 163, 74] } 
+                    0: { cellWidth: 350 }, 
+                    1: { halign: 'center' } 
                 }
             });
 
-            addFooter(doc, 1, 1);
+            // Footer removido para evitar carimbo temporal do sistema na petição,
+            // ou mantido apenas como marcador de página, se preferir. 
+            // (Comentei a chamada do Footer padrão para ficar 100% limpo)
+            // addFooter(doc, 1, 1);
 
-            doc.save(`Planilha_Gastos_${(assistedName||'Assistido').replace(/\s+/g, '_')}.pdf`);
-            if (window.showNotification) window.showNotification("Planilha PDF gerada com sucesso!", "success");
+            doc.save(`Demonstrativo_Despesas_${(assistedName||'Requerente').replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("PDF Padrão gerado com sucesso!", "success");
             return true;
         } catch (error) {
             console.error("Erro PDF Planilha de Gastos:", error);
@@ -421,7 +409,6 @@ export const PDFService = {
             return false;
         }
     },
-
 
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
         try {
@@ -459,7 +446,6 @@ export const PDFService = {
         }
     },
 
-    // MÉTODOS PARA RELATÓRIO DE ATENDIDOS COM SELEÇÃO DE COLUNAS
     async generateAtendidosPDF(arg1, arg2) {
         return new Promise((resolve) => {
             const modalId = 'pdf-column-selector-modal';
@@ -563,7 +549,6 @@ export const PDFService = {
             const logoInfo = await addLogoHeader(docPDF, 20);
             const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
-            // Ordenação
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
@@ -576,7 +561,6 @@ export const PDFService = {
             docPDF.text(`Data da Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
             docPDF.text(`Total: ${atendidosList.length} assistidos | Volume de Demandas (Múltiplas): ${totalAssuntos}`, 40, tituloY + 28);
 
-            // Definição Mestre das Colunas
             const colDef = [
                 { key: 'name', label: 'Nome Completo' },
                 { key: 'numAgendamento', label: 'Nº Agend.' },
@@ -589,13 +573,10 @@ export const PDFService = {
                 { key: 'attendant', label: 'Atendente' }
             ];
 
-            // Filtra as colunas ativas (Nome é obrigatório)
             const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
 
-            // Monta o Header do AutoTable
             const head = [["#", ...activeCols.map(c => c.label)]];
 
-            // Monta o Body
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
                 const attendedDate = getSafeDate(item.attendedTime || item.attendedAt); 
@@ -638,8 +619,6 @@ export const PDFService = {
                 }]);
             }
 
-            // A largura das colunas se ajustará automaticamente baseada na seleção
-            // Fixamos apenas a largura da coluna do número "#" e alinhamento do Nome
             docPDF.autoTable({
                 head: head,
                 body: body,
@@ -649,7 +628,7 @@ export const PDFService = {
                 styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle' },
                 columnStyles: { 
                     0: { cellWidth: 25 }, 
-                    1: { halign: 'left' } // A coluna 1 (Nome) sempre será alinhada à esquerda
+                    1: { halign: 'left' }
                 }
             });
 
