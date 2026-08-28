@@ -1,7 +1,7 @@
 // js/pautaConfig.js - SERVIÇO DE CRIAÇÃO E CONFIGURAÇÃO DE PAUTAS (SIGEP)
 
 import {
-    collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, Timestamp
+    collection, addDoc, updateDoc, doc, getDoc, getDocs, query, where, Timestamp, writeBatch
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { logAction } from './admin.js';
@@ -205,6 +205,12 @@ export const PautaConfigService = {
 
         const roomConfig = document.getElementById('room-config-container');
         if (roomConfig) {
+            // Garante que a caixa de salas volte para o modal de criação se tiver sido movida para a edição antes
+            const createModalSpace = createModal.querySelector('.space-y-4') || createModal.querySelector('.p-4');
+            if (createModalSpace && !createModalSpace.contains(roomConfig)) {
+                createModalSpace.appendChild(roomConfig);
+            }
+
             if (type === 'multisala') {
                 roomConfig.classList.remove('hidden');
                 app.customRoomsList = [];
@@ -242,7 +248,7 @@ export const PautaConfigService = {
         }
 
         list.innerHTML = app.customRoomsList.map((room, i) => `
-            <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm shadow-sm">
+            <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm shadow-sm mb-2">
                 <span class="font-semibold text-slate-700">🏢 ${room}</span>
                 <button class="remove-room-btn text-red-500 hover:text-red-700 text-xs font-bold" data-index="${i}">Remover</button>
             </div>
@@ -418,6 +424,41 @@ export const PautaConfigService = {
         if (dateInput && pautaData.dataOperacao) {
             dateInput.value = pautaData.dataOperacao;
         }
+
+        // ⭐ LÓGICA PARA EXIBIR/ESCONDER E CARREGAR SALAS NA EDIÇÃO
+        const app = this._app;
+        const roomConfig = document.getElementById('room-config-container');
+        
+        if (roomConfig) {
+            // Move o container para dentro do modal de edição na seção correta
+            const typeSelectionAreaEdit = document.querySelector('#edit-pauta-config-modal .space-y-4') || document.querySelector('#edit-pauta-config-modal .p-5');
+            if (typeSelectionAreaEdit && !typeSelectionAreaEdit.contains(roomConfig)) {
+                typeSelectionAreaEdit.appendChild(roomConfig);
+            }
+
+            if (tipoAtual === 'multisala') {
+                roomConfig.classList.remove('hidden');
+                app.customRoomsList = pautaData.customRooms || pautaData.rooms || [];
+                this._renderCustomRooms();
+            } else {
+                roomConfig.classList.add('hidden');
+            }
+        }
+
+        // Escuta mudanças no tipo de pauta na janela de edição para mostrar/esconder na hora
+        document.querySelectorAll('input[name="edit-pauta-type"]').forEach(r => {
+            r.addEventListener('change', (e) => {
+                if (roomConfig) {
+                    if (e.target.value === 'multisala') {
+                        roomConfig.classList.remove('hidden');
+                        app.customRoomsList = pautaData.customRooms || pautaData.rooms || [];
+                        this._renderCustomRooms();
+                    } else {
+                        roomConfig.classList.add('hidden');
+                    }
+                }
+            });
+        });
     },
 
     // ── CRIAÇÃO ────────────────────────────────────────────────────────────────
@@ -569,6 +610,15 @@ export const PautaConfigService = {
                 useDistributionFlow: newDist,
             };
             if (newDate) updates.dataOperacao = newDate;
+
+            // ⭐ SALVA AS SALAS SE O NOVO TIPO FOR MULTISALA
+            if (newType === 'multisala') {
+                updates.customRooms = app.customRoomsList || [];
+                updates.rooms = app.customRoomsList || [];
+            } else {
+                updates.customRooms = [];
+                updates.rooms = [];
+            }
 
             // 1. Atualiza no banco de dados (Firebase)
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), updates);
