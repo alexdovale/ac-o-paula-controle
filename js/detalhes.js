@@ -1548,15 +1548,10 @@ function closeAssistedDetailsModal() {
 /* ========================================================
    11. GERADOR DE TEXTO PARA PETIÇÃO (COM RATEIO)
    ======================================================== */
-window.gerarTextoDespesas = (assistidoId) => {
-    const assisted = allAssisted.find(a => a.id === assistidoId);
-    if (!assisted || !assisted.documentChecklist || !assisted.documentChecklist.expenseData) {
-        showNotification("Nenhuma despesa foi preenchida na triagem para este caso.", "error");
-        return;
-    }
-
-    const g = assisted.documentChecklist.expenseData;
-    const nomeAssistido = assisted.name ? assisted.name.split(' ')[0] : 'O requerente';
+window.gerarTextoDespesas = () => {
+    // Agora o sistema lê os valores DIRETAMENTE do que está digitado na tela!
+    const g = getExpenseDataFromForm();
+    const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O requerente';
     const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
 
     let gastosFamiliaHtml = '';
@@ -1593,7 +1588,7 @@ window.gerarTextoDespesas = (assistidoId) => {
     const totalFinal = totalFamilia + totalExclusivoCrianca;
 
     if (totalFinal === 0) {
-        showNotification("Os valores de despesa estão zerados.", "warning");
+        showNotification("Atenção: Os valores de despesa estão zerados. Preencha a planilha.", "warning");
         return;
     }
 
