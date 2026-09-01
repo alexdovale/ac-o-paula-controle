@@ -1,5 +1,5 @@
 // js/router.js
-// Sistema de roteamento SPA completo para o SIGEP - Otimizado (Anti-Ghosting, Guards e Loading)
+// Sistema de roteamento SPA completo para o SIGEP - Otimizado (Anti-Ghosting, Guards, Loading e Fix de Login)
 
 export const ROUTES = {
     LOGIN:                  'login',
@@ -187,10 +187,18 @@ export class SIGEPRouter {
         const isAuth     = !!app.auth?.currentUser;
         const isApproved = user?.status === 'approved';
 
+        // 1. Se a rota exige login e o usuário NÃO está logado -> Vai para o Login
         if (guard.requiresAuth && (!isAuth || !isApproved)) {
             return ROUTES.LOGIN;
         }
 
+        // 2. 🛠️ CORREÇÃO: Se o usuário JÁ ESTÁ LOGADO e a URL tenta forçar a tela de login -> Joga pra dentro do app!
+        if (route === ROUTES.LOGIN && isAuth && isApproved) {
+            const savedScreen = localStorage.getItem('sigep_active_screen');
+            return (savedScreen && savedScreen !== ROUTES.LOGIN) ? savedScreen : ROUTES.MODO_SELECTION;
+        }
+
+        // 3. Verifica permissões de Perfil (Ex: áreas de Admin)
         if (guard.roles && !guard.roles.includes(user?.role)) {
             if (this._deps.showNotification) {
                 this._deps.showNotification('Acesso bloqueado: Seu perfil não tem permissão para acessar esta área.', 'error');
