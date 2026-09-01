@@ -1061,11 +1061,13 @@ class SIGEPApp {
 
             let baseConstraints = [];
 
-            if (modoAtual === 'evento') {
+            // 🛠️ CORREÇÃO: Só aplica o filtro restrito de tipo se realmente estivermos no modo evento 
+            // E o usuário não estiver limpando os filtros globais
+            if (modoAtual === 'evento' && !filterOptions) {
                 baseConstraints.push(where("type", "in", tiposEvento));
             }
 
-            if (modoAtual === 'normal' && this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
+            if (modoAtual === 'normal' && this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas' && !filterOptions) {
                 baseConstraints.push(where("unidadeNome", "==", this.currentUnidadeExibicao));
             }
 
