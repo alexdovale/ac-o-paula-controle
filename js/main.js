@@ -164,23 +164,93 @@ class SIGEPApp {
     }
 
     // 🔥 ADMIN RENDERIZADO VIA HTML EXTERNO (DESACOPLADO DO MAIN)
+    // 🔥 ADMIN RENDERIZADO DIRETAMENTE (SEM FETCH, EVITA ERROS DE CORS LOCAL)
     async renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
         
-        try {
-            const response = await fetch('./admin-panel.html');
-            if (response.ok) {
-                container.innerHTML = await response.text();
-            } else {
-                container.innerHTML = '<p class="text-red-500 p-4">Erro ao carregar o painel do administrador.</p>';
-                return;
-            }
-        } catch (error) {
-            console.error("Erro ao buscar admin-panel.html:", error);
-            container.innerHTML = '<p class="text-red-500 p-4">Erro de rede ao carregar o painel do administrador.</p>';
-            return;
-        }
+        container.innerHTML = `
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+            </div>
+            
+            <div class="mb-6 flex flex-wrap gap-3">
+                <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>🏢</span> Gerenciar Unidades / Órgãos
+                </button>
+                <button id="btn-recepcoes-master" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>🏛️</span> Gerenciar Recepções (Unidades de Apoio)
+                </button>
+            </div>
+            
+            <div class="mb-8">
+                <div class="mb-4">
+                    <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
+                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
+                <div id="pending-users-list" class="space-y-2"></div>
+                <div id="pagination-pendentes" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8">
+                <div class="mb-4">
+                    <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="p-3 text-left">Usuário / Perfil Atual</th>
+                                <th class="p-3 text-center">Unidades</th>
+                                <th class="p-3 text-center">Alterar Permissão</th>
+                                <th class="p-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="pagination-usuarios" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t">
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
+                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
+                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
+                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
+                </div>
+                
+                <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+                    <div id="search-logs" class="w-full sm:w-80"></div>
+                    <div id="page-size-logs"></div>
+                </div>
+                
+                <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                    <select id="filter-log-user"><option value="all">Todos usuários</option></select>
+                    <select id="filter-log-action"><option value="all">Todas ações</option></select>
+                    <input type="date" id="filter-log-start">
+                    <input type="date" id="filter-log-end">
+                </div>
+                <div id="audit-logs-container" class="hidden overflow-x-auto">
+                    <div class="border rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="p-3">Data/Hora</th>
+                                    <th>Usuário</th>
+                                    <th>Ação</th>
+                                    <th>Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-logs-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="pagination-logs" class="mt-4"></div>
+                <div id="dashboard-results" class="hidden mt-6"></div>
+            </div>
+        `;
         
         // Entrega o controle de eventos para o AdminService
         if (AdminService?.setupAdminEvents) {
