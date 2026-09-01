@@ -2,235 +2,287 @@ import {
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, 
     signOut, 
-    sendPasswordResetEmail, 
-    reauthenticateWithCredential, 
-    EmailAuthProvider 
+    sendPasswordResetEmail 
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { doc, setDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-import { showNotification, playSound } from './utils.js';
-import { PautaService } from './pauta.js';
+import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { showNotification } from './utils.js';
 import { UIService } from './ui.js';
 
 export const AuthService = {
-    /**
-     * Realiza login do usuário com tratamento para novos códigos do Firebase
-     */
+    
     async login(app) {
-        const email = document.getElementById('login-email')?.value.trim();
-        const password = document.getElementById('login-password')?.value;
-        const errorDiv = document.getElementById('auth-error');
+        const emailInput = document.getElementById('login-email');
+        const passwordInput = document.getElementById('login-password');
+        const btn = document.getElementById('login-btn');
         
+        if (!emailInput || !passwordInput) return;
+        
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
         if (!email || !password) {
-            if (errorDiv) {
-                errorDiv.textContent = 'Preencha email e senha.';
-                errorDiv.classList.remove('hidden');
-            }
-            return;
+            return showNotification("Preencha todos os campos para entrar.", "warning");
         }
 
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin inline-block mr-2">↻</span> Entrando...`;
+        }
+        
         try {
             await signInWithEmailAndPassword(app.auth, email, password);
-            if (errorDiv) errorDiv.classList.add('hidden');
+            // O redirecionamento é feito automaticamente pelo listener onAuthStateChanged no main.js
         } catch (error) {
-            console.error("Login failed:", error.code);
-            if (errorDiv) {
-                let mensagem = 'Email ou senha inválidos.';
-                
-                if (error.code === 'auth/invalid-credential') {
-                    mensagem = 'E-mail ou senha incorretos.';
-                } else if (error.code === 'auth/user-not-found') {
-                    mensagem = 'Usuário não encontrado.';
-                } else if (error.code === 'auth/wrong-password') {
-                    mensagem = 'Senha incorreta.';
-                } else if (error.code === 'auth/too-many-requests') {
-                    mensagem = 'Muitas tentativas falhas. Tente novamente mais tarde.';
-                } else if (error.code === 'auth/network-request-failed') {
-                    mensagem = 'Erro de rede. Verifique sua conexão.';
-                }
-                
-                errorDiv.textContent = mensagem;
-                errorDiv.classList.remove('hidden');
-                playSound('error');
+            console.error("Login erro:", error);
+            showNotification(this.getErrorMessage(error.code), "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Entrar';
             }
         }
     },
 
-    /**
-     * Registra um novo usuário e cria documento no Firestore
-     */
     async register(app) {
-        const name = document.getElementById('register-name')?.value.trim();
-        const email = document.getElementById('register-email')?.value.trim();
-        const password = document.getElementById('register-password')?.value;
-        const errorDiv = document.getElementById('auth-error');
+        const nameInput = document.getElementById('register-name');
+        const emailInput = document.getElementById('register-email');
+        const passwordInput = document.getElementById('register-password');
+        const btn = document.getElementById('register-btn');
 
-        if (!name || !email || !password) {
-            if (errorDiv) {
-                errorDiv.textContent = 'Preencha todos os campos.';
-                errorDiv.classList.remove('hidden');
-            }
-            return;
+        if (!nameInput || !emailInput || !passwordInput) return;
+        
+        const nome = nameInput.value.trim();
+        const email = emailInput.value.trim();
+        const password = passwordInput.value;
+
+        if (!nome || !email || !password) {
+            return showNotification("Preencha todos os campos.", "warning");
+        }
+        if (password.length < 6) {
+            return showNotification("A senha deve ter no mínimo 6 caracteres.", "warning");
         }
 
-        if (password.length < 6) {
-            if (errorDiv) {
-                errorDiv.textContent = 'A senha deve ter pelo menos 6 caracteres.';
-                errorDiv.classList.remove('hidden');
-            }
-            return;
+        if (btn) {
+            btn.disabled = true;
+            btn.innerHTML = `<span class="animate-spin inline-block mr-2">↻</span> Criando conta...`;
         }
 
         try {
+            // Criação da conta no Authentication
             const userCredential = await createUserWithEmailAndPassword(app.auth, email, password);
             const user = userCredential.user;
 
+            // 🛡️ SEGURANÇA (Hardcoded Role Assignment):
+            // O payload é construído no servidor forçando 'user' e 'pending'. 
+            // Invasores não conseguem forjar requisições via console do navegador com {role: 'admin'}
             await setDoc(doc(app.db, "users", user.uid), {
-                name: name,
+                nome: nome,
                 email: email,
-                uid: user.uid,
-                status: 'pending',
-                role: 'user',
-                unidades: [],  // ← ADICIONAR CAMPO UNIDADES VAZIO
-                createdAt: new Date().toISOString(),
-                preferences: {
-                    enableSoundsSuccess: true,
-                    enableSoundsError: true,
-                    showToastsSuccess: true,
-                    showToastsError: true
-                }
+                role: 'user',        // Perfil restrito obrigatório
+                status: 'pending',   // Bloqueado até aprovação de admin
+                createdAt: new Date().toISOString()
             });
 
-            if (errorDiv) errorDiv.classList.add('hidden');
-            showNotification('Conta criada! Aguarde aprovação do administrador.', 'success');
+            showNotification("Conta criada com sucesso! Aguarde a aprovação do administrador.", "success", 5000);
             
-            const loginTabBtn = document.getElementById('login-tab-btn');
-            if (loginTabBtn) loginTabBtn.click();
+            // Força o logout imediatamente, pois o usuário ainda é 'pending'
+            await this.logout(app.auth); 
+            
+            if (typeof UIService.toggleAuthTabs === 'function') {
+                UIService.toggleAuthTabs('login');
+            }
+            
+            // Limpa formulário
+            nameInput.value = '';
+            emailInput.value = '';
+            passwordInput.value = '';
 
         } catch (error) {
-            console.error("Registration error:", error.code);
-            if (errorDiv) {
-                let mensagem = 'Erro ao criar conta.';
-                if (error.code === 'auth/email-already-in-use') mensagem = 'Este email já está em uso.';
-                if (error.code === 'auth/invalid-email') mensagem = 'Email inválido.';
-                
-                errorDiv.textContent = mensagem;
-                errorDiv.classList.remove('hidden');
+            console.error("Erro no registro:", error);
+            showNotification(this.getErrorMessage(error.code), "error");
+        } finally {
+            if (btn) {
+                btn.disabled = false;
+                btn.textContent = 'Criar Conta';
             }
         }
     },
 
-    /**
-     * Faz logout limpando estados
-     */
-    async logout(auth) {
-        try {
-            await signOut(auth);
-            localStorage.removeItem('lastPautaId');
-            localStorage.removeItem('lastPautaType');
-        } catch (error) {
-            console.error("Logout error", error);
-            showNotification("Erro ao sair.", "error");
-        }
-    },
-
-    /**
-     * Envia email de recuperação
-     */
-    async resetPassword(auth) {
-        const email = prompt("Digite seu email para redefinir a senha:");
-        if (!email) return;
-        
-        try {
-            await sendPasswordResetEmail(auth, email);
-            showNotification("Email de redefinição enviado!", "success");
-        } catch (error) {
-            console.error("Reset error:", error.code);
-            showNotification("Erro ao enviar email de recuperação.", "error");
-        }
-    },
-
-    /**
-     * Gerencia o que o usuário vê baseado no Firestore (Aprovado/Pendente)
-     * CORRIGIDO PARA INCLUIR O CAMPO UNIDADES
-     */
     async handleAuthState(app, user) {
         try {
-            // Migração temporária
-            const oldRef = doc(app.db, "users", user.uid);
-            const newRef = doc(app.db, "usuarios", user.uid);
+            // 🚀 PERFORMANCE OTIMIZADA: Apenas uma leitura direta e objetiva no Firestore
+            const userDoc = await getDoc(doc(app.db, "users", user.uid));
             
-            const newSnap = await getDoc(newRef);
-            
-            if (!newSnap.exists()) {
-                const oldSnap = await getDoc(oldRef);
-                if (oldSnap.exists()) {
-                    await setDoc(newRef, oldSnap.data());
-                    console.log("Migração de documento concluída para: usuarios/" + user.uid);
-                }
-            }
-
-            const userDocRef = doc(app.db, "usuarios", user.uid);
-            const userDoc = await getDoc(userDocRef);
-
             if (userDoc.exists()) {
                 const userData = userDoc.data();
                 
-                // 🔥 CORREÇÃO: Garantir que o campo unidades seja incluído
-                app.currentUser = {
-                    uid: user.uid,
-                    email: user.email,
-                    name: userData.name || user.email,
-                    role: userData.role || 'user',
-                    status: userData.status || 'pending',
-                    unidades: userData.unidades || [],  // ← LINHA CRUCIAL!
-                    preferences: userData.preferences || {}
-                };
-                
-                app.currentUserName = app.currentUser.name || user.email;
-
-                // Debug: Verificar se as unidades foram carregadas
-                console.log("✅ Usuário carregado com unidades:", app.currentUser.unidades);
-
-                const isAdmin = userData.role === 'admin' || userData.role === 'superadmin';
-                document.getElementById('admin-panel-btn')?.classList.toggle('hidden', !isAdmin);
-
-                if (userData.status === 'approved') {
-                    const lastPautaId = localStorage.getItem('lastPautaId');
-                    
-                    if (lastPautaId) {
-                        const pautaSnap = await getDoc(doc(app.db, "pautas", lastPautaId));
-                        if (pautaSnap.exists() && pautaSnap.data().members?.includes(user.uid)) {
-                            await app.loadPauta(lastPautaId, pautaSnap.data().name, pautaSnap.data().type);
-                            return;
-                        }
-                    }
-                    app.showPautaSelectionScreen();
-                } else {
-                    UIService.showScreen('loading');
-                    const loadingText = document.getElementById('loading-text');
-                    if (loadingText) {
-                        loadingText.innerHTML = `
-                            <div class="text-center p-4">
-                                <p class="text-xl font-bold text-orange-600">Acesso Pendente</p>
-                                <p class="mt-2 text-gray-600">Olá, <b>${app.currentUserName}</b>!</p>
-                                <p class="text-xs text-gray-500 mt-2">Sua conta aguarda aprovação de um administrador para liberar o acesso ao SIGEP.</p>
-                                <button id="btn-logout-pending" class="mt-6 bg-gray-200 text-gray-700 px-6 py-2 rounded-lg hover:bg-gray-300 font-bold transition">
-                                    Sair / Trocar de Conta
-                                </button>
-                            </div>
-                        `;
-                        document.getElementById('btn-logout-pending')?.addEventListener('click', () => this.logout(app.auth));
-                    }
-                    const loader = document.querySelector('.loader');
-                    if (loader) loader.style.display = 'none';
+                // Valida o status do cadastro (Default Deny/Acesso Pendente)
+                if (userData.status === 'pending') {
+                    showNotification("Sua conta está em análise e aguarda aprovação de um Administrador.", "warning", 6000);
+                    await this.logout(app.auth);
+                    return;
                 }
+                
+                if (userData.status === 'rejected') {
+                    showNotification("Seu acesso ao sistema foi recusado.", "error", 6000);
+                    await this.logout(app.auth);
+                    return;
+                }
+
+                // Acesso Aprovado - Configura a Sessão Local
+                app.currentUser = { uid: user.uid, email: user.email, ...userData };
+                app.currentUserName = userData.nome || user.email.split('@')[0];
+                
             } else {
-                console.warn("Perfil Firestore não encontrado.");
-                this.logout(app.auth);
+                // Cenário raro: o usuário foi criado no Firebase Console, mas não possui doc correspondente no Firestore.
+                console.warn("Perfil Firestore não encontrado. Criando base de restrição (pending).");
+                await setDoc(doc(app.db, "users", user.uid), {
+                    nome: user.email.split('@')[0],
+                    email: user.email,
+                    role: 'user',
+                    status: 'pending',
+                    createdAt: new Date().toISOString()
+                });
+                
+                showNotification("Perfil estruturado no banco, aguardando aprovação.", "info");
+                await this.logout(app.auth);
             }
         } catch (error) {
             console.error("Auth state error:", error);
-            showNotification("Erro ao validar seu perfil.", "error");
+            showNotification("Erro ao validar seu perfil de acesso.", "error");
+        }
+    },
+
+    async logout(auth) {
+        try {
+            await signOut(auth);
+            
+            // Limpa dados em cache do localStorage para evitar fantasmas na troca de contas
+            localStorage.removeItem('sigep_current_mode');
+            localStorage.removeItem('sigep_unidade_ativa');
+            localStorage.removeItem('sigep_app_state');
+            localStorage.removeItem('lastPautaId');
+            
+        } catch (error) {
+            console.error("Erro ao deslogar:", error);
+        }
+    },
+
+    async resetPassword(auth) {
+        const loginEmailInput = document.getElementById('login-email');
+        let emailValue = loginEmailInput ? loginEmailInput.value.trim() : '';
+
+        // Se o email não estiver no input de login, abre um modal interativo no lugar do prompt nativo
+        if (!emailValue) {
+            emailValue = await this.showCustomPrompt(
+                "Redefinir Senha", 
+                "Digite o seu e-mail cadastrado. Enviaremos um link seguro para a criação de uma nova senha."
+            );
+        }
+
+        if (!emailValue) return; // Usuário cancelou ou deixou em branco
+
+        try {
+            await sendPasswordResetEmail(auth, emailValue);
+            showNotification("E-mail de recuperação enviado! Verifique sua caixa de entrada e spam.", "success");
+        } catch (error) {
+            console.error("Erro ao resetar senha:", error);
+            showNotification(this.getErrorMessage(error.code), "error");
+        }
+    },
+
+    showCustomPrompt(title, message) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] px-4 opacity-0 transition-opacity duration-300';
+            
+            const modal = document.createElement('div');
+            modal.className = 'bg-white rounded-2xl p-6 w-full max-w-md shadow-2xl transform scale-95 transition-all duration-300';
+            
+            modal.innerHTML = `
+                <div class="flex items-center gap-3 mb-3 text-indigo-600">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 7a2 2 0 012 2m4 0a6 6 0 01-7.743 5.743L11 17H9v2H7v2H4a1 1 0 01-1-1v-2.586a1 1 0 01.293-.707l5.964-5.964A6 6 0 1121 9z"></path></svg>
+                    <h3 class="text-xl font-bold text-slate-800">${title}</h3>
+                </div>
+                <p class="text-sm text-slate-600 mb-5 leading-relaxed">${message}</p>
+                <input type="email" id="prompt-input" class="w-full px-4 py-3 rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6 outline-none transition-all shadow-sm" placeholder="seu@email.com" autocomplete="email">
+                <div class="flex gap-3 justify-end">
+                    <button id="prompt-cancel" class="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors text-sm font-bold">Cancelar</button>
+                    <button id="prompt-confirm" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors text-sm font-bold shadow-md">Enviar Link</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Animação de entrada
+            requestAnimationFrame(() => {
+                overlay.classList.remove('opacity-0');
+                modal.classList.remove('scale-95');
+            });
+
+            const input = modal.querySelector('#prompt-input');
+            const btnCancel = modal.querySelector('#prompt-cancel');
+            const btnConfirm = modal.querySelector('#prompt-confirm');
+
+            setTimeout(() => input.focus(), 150);
+
+            const closeModal = (value) => {
+                overlay.classList.add('opacity-0');
+                modal.classList.add('scale-95');
+                setTimeout(() => overlay.remove(), 300);
+                resolve(value);
+            };
+
+            btnCancel.addEventListener('click', () => closeModal(null));
+            btnConfirm.addEventListener('click', () => closeModal(input.value.trim()));
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') closeModal(input.value.trim());
+            });
+        });
+    },
+
+    setupEvents(app) {
+        document.getElementById('login-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.login(app);
+        });
+
+        document.getElementById('register-form')?.addEventListener('submit', (e) => {
+            e.preventDefault();
+            this.register(app);
+        });
+
+        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.resetPassword(app.auth);
+        });
+
+        document.getElementById('login-tab-btn')?.addEventListener('click', () => {
+            if (typeof UIService.toggleAuthTabs === 'function') UIService.toggleAuthTabs('login');
+        });
+
+        document.getElementById('register-tab-btn')?.addEventListener('click', () => {
+            if (typeof UIService.toggleAuthTabs === 'function') UIService.toggleAuthTabs('register');
+        });
+
+        document.querySelectorAll('#logout-btn-main, #logout-btn-app, .logout-action').forEach(btn => {
+            if (btn) btn.addEventListener('click', () => this.logout(app.auth));
+        });
+    },
+
+    getErrorMessage(errorCode) {
+        switch (errorCode) {
+            case 'auth/invalid-email': return 'O e-mail digitado não é válido.';
+            case 'auth/user-disabled': return 'Este usuário foi desativado por um administrador.';
+            case 'auth/user-not-found': return 'Não encontramos uma conta cadastrada com este e-mail.';
+            case 'auth/wrong-password': return 'Senha incorreta. Tente novamente.';
+            case 'auth/email-already-in-use': return 'Este e-mail já está sendo utilizado por outra conta.';
+            case 'auth/weak-password': return 'A senha informada é muito fraca (use no mínimo 6 caracteres).';
+            case 'auth/invalid-credential': return 'E-mail ou senha incorretos.';
+            case 'auth/too-many-requests': return 'Muitas tentativas falhas. Tente novamente mais tarde.';
+            case 'auth/network-request-failed': return 'Erro de conexão. Verifique sua internet.';
+            default: return `Ocorreu um erro na autenticação (${errorCode}).`;
         }
     }
 };
