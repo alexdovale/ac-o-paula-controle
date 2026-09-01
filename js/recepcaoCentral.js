@@ -1,3 +1,5 @@
+// js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO)
+
 import {
     collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
@@ -148,6 +150,12 @@ export const RecepcaoCentralService = {
     
         container.innerHTML = `
             <div class="max-w-5xl mx-auto px-4 py-12">
+                <div class="flex justify-center mb-6">
+                    <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-4 shadow-md">
+                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-10 w-auto object-contain">
+                    </div>
+                </div>
+                
                 <div class="text-center mb-10">
                     <h2 class="text-3xl font-black text-slate-800 tracking-tight">Selecione sua Recepção</h2>
                     <p class="text-slate-500 mt-2">Escolha qual área ou fluxo você irá operar agora.</p>
@@ -283,8 +291,8 @@ export const RecepcaoCentralService = {
                 <!-- Header Superior Minimalista -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                     <div class="flex items-center gap-4">
-                        <div class="w-12 h-12 rounded-xl flex items-center justify-center text-2xl bg-white border border-slate-200 shadow-sm shrink-0">
-                            ${contexto.icone}
+                        <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-[#0d1117] border border-slate-700 shadow-md shrink-0 overflow-hidden">
+                            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-8 w-auto object-contain">
                         </div>
                         <div>
                             <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">${contexto.titulo}</h1>
@@ -350,7 +358,7 @@ export const RecepcaoCentralService = {
         this._renderGrade();
         this._renderSumario();
         this._setupInteracoes();
-        this._setupBuscaGlobal(); // Já ativa a busca global direto no input principal
+        this._setupBuscaGlobal();
 
         document.getElementById('rc-trocar-recepcao')?.addEventListener('click', async () => {
             this._cancelarListeners();
@@ -542,8 +550,8 @@ export const RecepcaoCentralService = {
 
         document.getElementById('rc-grade-pautas').classList.add('hidden');
         document.getElementById('rc-sumario').classList.add('hidden');
-        document.querySelector('.recepcao-central-wrap > div.flex.mb-8').classList.add('hidden'); // esconde input de busca da main
-        document.querySelector('.recepcao-central-wrap > div.overflow-x-auto').classList.add('hidden'); // esconde abas de filtro
+        document.querySelector('.recepcao-central-wrap > div.flex.mb-8').classList.add('hidden'); 
+        document.querySelector('.recepcao-central-wrap > div.overflow-x-auto').classList.add('hidden'); 
 
         const foco = document.getElementById('rc-painel-foco');
         foco.classList.remove('hidden');
