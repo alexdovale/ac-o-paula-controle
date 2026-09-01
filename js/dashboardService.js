@@ -1,4 +1,4 @@
-// js/dashboardService.js - DASHBOARD GLOBAL DO USUÁRIO (MODERNIZADO)
+// js/dashboardService.js - DASHBOARD GLOBAL DO USUÁRIO (OTIMIZADO COM PARALELISMO)
 
 import { collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
@@ -32,7 +32,7 @@ export const DashboardService = {
                 <div class="flex flex-col items-center justify-center py-20 animate-pulse">
                     <div class="w-16 h-16 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mb-4"></div>
                     <h3 class="text-lg font-bold text-slate-700">Consolidando seus dados...</h3>
-                    <p class="text-sm text-slate-500 mt-2">Isso pode levar alguns segundos dependendo do volume de pautas.</p>
+                    <p class="text-sm text-slate-500 mt-2">Buscando métricas e pautas em segundo plano.</p>
                 </div>
             `;
         }
@@ -41,7 +41,7 @@ export const DashboardService = {
     },
 
     /**
-     * Carrega e processa os dados para o Dashboard.
+     * Carrega e processa os dados para o Dashboard de forma otimizada.
      */
     async loadDashboardData() {
         if (!this.appInstance || !this.appInstance.db) {
@@ -66,14 +66,12 @@ export const DashboardService = {
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
             
             if (modoAtual === 'normal') {
-                // Modo Normal: APENAS pautas que NÃO são de evento
                 pautas = pautas.filter(p => {
                     let tipoPauta = p.tipo || p.type || 'normal';
                     tipoPauta = String(tipoPauta).toLowerCase();
                     return !tiposEvento.includes(tipoPauta);
                 });
             } else if (modoAtual === 'evento') {
-                // Modo Evento: APENAS pautas que SÃO de evento
                 pautas = pautas.filter(p => {
                     let tipoPauta = p.tipo || p.type || '';
                     tipoPauta = String(tipoPauta).toLowerCase();
@@ -82,7 +80,7 @@ export const DashboardService = {
             }
 
             // ============================================================
-            // FILTRO DE UNIDADES VINCULADAS E OUTROS DA TELA PRINCIPAL
+            // FILTRO DE UNIDADES VINCULADAS E OUTROS
             // ============================================================
             const currentFilter = this.appInstance.currentPautaFilter || 'all';
             const currentUserData = this.appInstance.currentUser || {};
@@ -103,8 +101,6 @@ export const DashboardService = {
             } else if (currentFilter === 'shared') {
                 pautas = pautas.filter(p => p.members?.includes(currentUser.email) && p.owner !== currentUser.uid);
             }
-            
-            console.log(`📊 Dashboard - Modo: ${modoAtual}, Filtro Ativo: ${currentFilter}, Pautas filtradas: ${pautas.length}`);
     
             let metricas = {
                 ativas: 0,
@@ -115,47 +111,52 @@ export const DashboardService = {
                 faltosos: 0
             };
     
-            const pautasProcessadas = [];
             const now = new Date();
-    
-            for (const pauta of pautas) {
+            const pautasAtivas = pautas.filter(pauta => {
+                if (!pauta.createdAt) return true;
                 const creationDate = new Date(pauta.createdAt);
                 const expirationDate = new Date(creationDate);
                 expirationDate.setDate(creationDate.getDate() + 7);
-    
-                if (now <= expirationDate) {
-                    metricas.ativas++;
-                    
-                    const attendancesRef = collection(db, "pautas", pauta.id, "attendances");
-                    const attSnapshot = await getDocs(attendancesRef);
-                    const attendances = attSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-    
-                    const aguardando = attendances.filter(a => a.status === 'aguardando').length;
-                    const emMesa = attendances.filter(a => a.status === 'emAtendimento' || a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao').length;
-                    const atendidos = attendances.filter(a => a.status === 'atendido').length;
-                    const faltosos = attendances.filter(a => a.status === 'faltoso').length;
-    
-                    metricas.total += attendances.length;
-                    metricas.aguardando += aguardando;
-                    metricas.emMesa += emMesa;
-                    metricas.concluidos += atendidos;
-                    metricas.faltosos += faltosos;
-    
-                    pautasProcessadas.push({
-                        id: pauta.id,
-                        name: pauta.name,
-                        type: pauta.type,
-                        // ATUALIZADO: Usando unidadeNome conforme consta no main.js
-                        unidade: pauta.unidadeNome || pauta.unidade || pauta.origin || pauta.orgao || "Unidade não informada",
-                        isOwner: pauta.owner === currentUser.uid,
-                        total: attendances.length,
-                        aguardando,
-                        emMesa,
-                        atendidos,
-                        faltosos,
-                    });
-                }
-            }
+                return now <= expirationDate;
+            });
+
+            metricas.ativas = pautasAtivas.length;
+
+            // 🛠️ OTIMIZAÇÃO: Busca todas as attendances de todas as pautas em PARALELO (Muito mais rápido!)
+            const pautasProcessadasPromises = pautasAtivas.map(async (pauta) => {
+                const attendancesRef = collection(db, "pautas", pauta.id, "attendances");
+                const attSnapshot = await getDocs(attendancesRef);
+                const attendances = attSnapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+
+                const aguardando = attendances.filter(a => a.status === 'aguardando').length;
+                const emMesa = attendances.filter(a => a.status === 'emAtendimento' || a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao').length;
+                const atendidos = attendances.filter(a => a.status === 'atendido').length;
+                const faltosos = attendances.filter(a => a.status === 'faltoso').length;
+
+                return {
+                    id: pauta.id,
+                    name: pauta.name,
+                    type: pauta.type,
+                    unidade: pauta.unidadeNome || pauta.unidade || pauta.origin || pauta.orgao || "Unidade não informada",
+                    isOwner: pauta.owner === currentUser.uid,
+                    total: attendances.length,
+                    aguardando,
+                    emMesa,
+                    atendidos,
+                    faltosos,
+                };
+            });
+
+            const pautasProcessadas = await Promise.all(pautasProcessadasPromises);
+
+            // Soma as métricas globais baseada no array processado
+            pautasProcessadas.forEach(p => {
+                metricas.total += p.total;
+                metricas.aguardando += p.aguardando;
+                metricas.emMesa += p.emMesa;
+                metricas.concluidos += p.atendidos;
+                metricas.faltosos += p.faltosos;
+            });
     
             this.renderDashboard({ metricas, pautas: pautasProcessadas.sort((a,b) => a.name.localeCompare(b.name)) });
     
@@ -187,12 +188,12 @@ export const DashboardService = {
                     <div class="absolute top-0 left-0 w-1 h-full ${pauta.isOwner ? 'bg-indigo-500' : 'bg-slate-300'} group-hover:w-1.5 transition-all"></div>
                     
                     <div class="flex justify-between items-start mb-4 pl-2 w-full gap-2">
-                        <div class="min-w-0 flex-1"> <!-- min-w-0 evita que o flexbox quebre o truncate -->
+                        <div class="min-w-0 flex-1">
                             <h4 class="font-black text-slate-800 text-base sm:text-lg leading-tight group-hover:text-indigo-700 transition-colors truncate" title="${pauta.name}">${pauta.name}</h4>
-                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.unidade}"> ${pauta.unidade}</p>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? ' Criada por você' : ' Compartilhada'}</span>
+                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.unidade}">📍 ${pauta.unidade}</p>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? '👤 Criada por você' : '🤝 Compartilhada'}</span>
                         </div>
-                        <span class="bg-slate-100 text-slate-600 text-xs font-black px-2 py-1 rounded-lg shrink-0">
+                        <span class="bg-slate-100 text-slate-600 text-xs font-black px-2.5 py-1 rounded-lg shrink-0">
                             ${pauta.total}
                         </span>
                     </div>
