@@ -1,5 +1,5 @@
 // js/router.js
-// Sistema de roteamento SPA completo para o SIGEP - Otimizado (Anti-Ghosting, Guards, Loading e Fix de Login)
+// Sistema de roteamento SPA completo para o SIGEP - Prioridade Absoluta para URLs (Deep Linking)
 
 export const ROUTES = {
     LOGIN:                  'login',
@@ -77,7 +77,7 @@ export class SIGEPRouter {
         this._currentParams = {};
         this._handlers = this._buildHandlers();
         this._listening = false;
-        this._isNavigating = false; // 🛠️ Lock de Navegação (Evita Telas Sobrepostas)
+        this._isNavigating = false; 
     }
 
     init() {
@@ -98,11 +98,10 @@ export class SIGEPRouter {
     }
 
     async navigate(route, params = {}, replace = false) {
-        if (this._isNavigating) return; // 🛠️ Bloqueia múltiplos cliques rápidos
+        if (this._isNavigating) return; 
         
         const targetRoute = ROUTE_GUARDS[route] ? route : ROUTES.PAUTA_SELECTION;
         
-        // 🛠️ Proteção de Rota (Guard)
         const redirected = this._guard(targetRoute, params);
         if (redirected) {
             return this.navigate(redirected, {}, replace);
@@ -114,13 +113,14 @@ export class SIGEPRouter {
             this._pushHistory(targetRoute, params, replace);
             await this._execute(targetRoute, params, true);
         } finally {
-            this._isNavigating = false; // 🛠️ Libera o lock após a renderização
+            this._isNavigating = false; 
         }
     }
 
     async resolveInitialRoute() {
         const urlParams = new URLSearchParams(window.location.search);
         
+        // 🛠️ REGRA SUPREMA: Se a URL tem uma rota explícita, ELA MANDA em tudo (Ignora o localStorage!)
         const urlRoute = urlParams.get('r');
         if (urlRoute && ROUTE_GUARDS[urlRoute]) {
             const params = Object.fromEntries(urlParams.entries());
@@ -133,6 +133,7 @@ export class SIGEPRouter {
             return;
         }
 
+        // Se a URL estiver limpa, aí sim usamos o histórico local
         const savedScreen = localStorage.getItem('sigep_active_screen');
         const pautaId     = localStorage.getItem('lastPautaId');
         const pautaName   = localStorage.getItem('lastPautaName');
@@ -164,7 +165,7 @@ export class SIGEPRouter {
             const el = document.getElementById(id);
             if (el) {
                 el.classList.add('hidden');
-                el.classList.remove('animate-fade-in'); // Limpa animações residuais
+                el.classList.remove('animate-fade-in'); 
             }
         });
     }
@@ -174,7 +175,7 @@ export class SIGEPRouter {
         const el = document.getElementById(id);
         if (el) {
             el.classList.remove('hidden');
-            el.classList.add('animate-fade-in'); // 🛠️ Transição suave
+            el.classList.add('animate-fade-in'); 
         }
     }
 
@@ -187,18 +188,15 @@ export class SIGEPRouter {
         const isAuth     = !!app.auth?.currentUser;
         const isApproved = user?.status === 'approved';
 
-        // 1. Se a rota exige login e o usuário NÃO está logado -> Vai para o Login
         if (guard.requiresAuth && (!isAuth || !isApproved)) {
             return ROUTES.LOGIN;
         }
 
-        // 2. 🛠️ CORREÇÃO: Se o usuário JÁ ESTÁ LOGADO e a URL tenta forçar a tela de login -> Joga pra dentro do app!
         if (route === ROUTES.LOGIN && isAuth && isApproved) {
             const savedScreen = localStorage.getItem('sigep_active_screen');
             return (savedScreen && savedScreen !== ROUTES.LOGIN) ? savedScreen : ROUTES.MODO_SELECTION;
         }
 
-        // 3. Verifica permissões de Perfil (Ex: áreas de Admin)
         if (guard.roles && !guard.roles.includes(user?.role)) {
             if (this._deps.showNotification) {
                 this._deps.showNotification('Acesso bloqueado: Seu perfil não tem permissão para acessar esta área.', 'error');
@@ -286,7 +284,6 @@ export class SIGEPRouter {
         const app  = this._app;
         const deps = this._deps;
 
-        // 🛠️ Helper para esperar renderização
         const waitForUI = () => new Promise(resolve => setTimeout(resolve, 150));
 
         return {
