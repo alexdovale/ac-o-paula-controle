@@ -92,9 +92,7 @@ class SIGEPApp {
             DashboardService.init(this);
             await this.setupOfflinePersistence();
             
-            // 🛠️ REFATORAÇÃO: Chamando o novo setup fragmentado
             this.setupEventListeners();
-            
             this.setupAuthListener();       // dispara resolveInitialRoute() internamente
     
             setupDetailsModal({ db: this.db });
@@ -165,147 +163,29 @@ class SIGEPApp {
         this.listarColetas();
     }
 
-    renderAdminContent() {
+    // 🔥 ADMIN RENDERIZADO VIA HTML EXTERNO (DESACOPLADO DO MAIN)
+    async renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
         
-        container.innerHTML = `
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
-            </div>
-            
-            <div class="mb-6 flex flex-wrap gap-3">
-                <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                    <span>🏢</span> Gerenciar Unidades / Órgãos
-                </button>
-                <button id="btn-recepcoes-master" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                    <span>🏛️</span> Gerenciar Recepções (Unidades de Apoio)
-                </button>
-            </div>
-            
-            <div class="mb-8">
-                <div class="mb-4">
-                    <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
-                </div>
-                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
-                <div id="pending-users-list" class="space-y-2"></div>
-                <div id="pagination-pendentes" class="mt-4"></div>
-            </div>
-            
-            <div class="mt-8">
-                <div class="mb-4">
-                    <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
-                </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
-                <div class="overflow-x-auto">
-                    <table class="w-full text-sm border-collapse">
-                        <thead class="bg-slate-100">
-                            <tr>
-                                <th class="p-3 text-left">Usuário / Perfil Atual</th>
-                                <th class="p-3 text-center">Unidades</th>
-                                <th class="p-3 text-center">Alterar Permissão</th>
-                                <th class="p-3 text-center">Ações</th>
-                            </tr>
-                        </thead>
-                        <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
-                    </table>
-                </div>
-                <div id="pagination-usuarios" class="mt-4"></div>
-            </div>
-            
-            <div class="mt-8 pt-4 border-t">
-                <div class="flex flex-wrap gap-3 mb-4">
-                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
-                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
-                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
-                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
-                </div>
-                
-                <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
-                    <div id="search-logs" class="w-full sm:w-80"></div>
-                    <div id="page-size-logs"></div>
-                </div>
-                
-                <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
-                    <select id="filter-log-user"><option value="all">Todos usuários</option></select>
-                    <select id="filter-log-action"><option value="all">Todas ações</option></select>
-                    <input type="date" id="filter-log-start">
-                    <input type="date" id="filter-log-end">
-                </div>
-                <div id="audit-logs-container" class="hidden overflow-x-auto">
-                    <div class="border rounded-xl overflow-hidden">
-                        <table class="w-full text-sm">
-                            <thead class="bg-slate-100">
-                                <tr>
-                                    <th class="p-3">Data/Hora</th>
-                                    <th>Usuário</th>
-                                    <th>Ação</th>
-                                    <th>Detalhes</th>
-                                </tr>
-                            </thead>
-                            <tbody id="audit-logs-table-body"></tbody>
-                        </table>
-                    </div>
-                </div>
-                <div id="pagination-logs" class="mt-4"></div>
-                <div id="dashboard-results" class="hidden mt-6"></div>
-            </div>
-        `;
-        
-        if (typeof setupAdminSearch === 'function') setupAdminSearch();
-        if (typeof loadUsersList === 'function') loadUsersList(this.db);
-        if (typeof populateUserFilter === 'function') populateUserFilter(this.db);
-        this.setupAdminPanelEvents();
-    }
-
-    setupAdminPanelEvents() {
-        document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
-            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
-                ImportadorOrgaosService.abrirModalMaster(this);
-            } else if (typeof abrirGerenciadorUnidades === 'function') {
-                abrirGerenciadorUnidades(this.db);
+        try {
+            const response = await fetch('./admin-panel.html');
+            if (response.ok) {
+                container.innerHTML = await response.text();
+            } else {
+                container.innerHTML = '<p class="text-red-500 p-4">Erro ao carregar o painel do administrador.</p>';
+                return;
             }
-        });
+        } catch (error) {
+            console.error("Erro ao buscar admin-panel.html:", error);
+            container.innerHTML = '<p class="text-red-500 p-4">Erro de rede ao carregar o painel do administrador.</p>';
+            return;
+        }
         
-        document.getElementById('btn-recepcoes-master')?.addEventListener('click', () => {
-            if (window.abrirModalGerenciarRecepcoesGlobal) {
-                window.abrirModalGerenciarRecepcoesGlobal();
-            }
-        });
-        
-        document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
-        });
-        
-        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('view-audit-logs-btn');
-            if (btn) {
-                btn.textContent = "Carregando...";
-                btn.disabled = true;
-            }
-            await loadAuditLogs(this.db);
-            if (btn) {
-                btn.textContent = "🔍 Carregar Logs";
-                btn.disabled = false;
-            }
-        });
-        
-        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-            cleanupOldData(this.db);
-        });
-        
-        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-            loadDashboardData(this.db);
-        });
-        
-        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-            exportAuditLogsPDF(this.db);
-        });
-        
-        document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(this.db));
+        // Entrega o controle de eventos para o AdminService
+        if (AdminService?.setupAdminEvents) {
+            AdminService.setupAdminEvents(this);
+        }
     }
 
     setupModoListeners() {
@@ -538,11 +418,7 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // NOVO BLOCO DE GERENCIAMENTO DE EVENTOS (REFATORADO)
-    // ============================================================
     setupEventListeners() {
-        // Quebramos a função monstruosa em blocos lógicos focados e fáceis de dar manutenção
         this.setupAuthEvents();
         this.setupNavigationEvents();
         this.setupPautaMenuEvents();
@@ -559,24 +435,7 @@ class SIGEPApp {
     }
 
     setupAuthEvents() {
-        document.getElementById('login-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.login(this);
-        });
-        document.getElementById('register-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.register(this);
-        });
-        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            AuthService.resetPassword(this.auth);
-        });
-        document.getElementById('login-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('login'));
-        document.getElementById('register-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('register'));
-        
-        document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
-            if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
-        });
+        AuthService.setupEvents(this);
     }
 
     setupNavigationEvents() {
@@ -610,13 +469,11 @@ class SIGEPApp {
             document.getElementById('pauta-type-modal')?.classList.remove('hidden');
         });
 
-        // Evento que fecha modais e dropdowns ao clicar fora
         document.addEventListener('click', (e) => {
             const adminModal = document.getElementById('admin-modal');
             const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
             const actionsToggle = document.getElementById('actions-toggle');
             
-            // Verifica os painéis suspensos (dropdowns)
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !actionsToggle?.contains(e.target)) {
                 actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
@@ -630,7 +487,6 @@ class SIGEPApp {
             }
         });
         
-        // Voltar login
         document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
             localStorage.removeItem('sigep_active_screen');
             localStorage.removeItem('sigep_app_state');
@@ -819,7 +675,6 @@ class SIGEPApp {
             }
         });
 
-        // Fechar/Reabrir/Zerar Pauta
         const openCloseModal = (isReopen) => {
             document.getElementById('close-modal-title').textContent = isReopen ? 'Reabrir Pauta' : 'Fechar Pauta';
             document.getElementById('close-pauta-password').value = '';
@@ -868,9 +723,8 @@ class SIGEPApp {
         });
 
         document.body.addEventListener('click', (e) => {
-            PautaService.handleCardActions(e, this); // Handler principal dos cards
+            PautaService.handleCardActions(e, this);
             
-            // Tratamento específico de remoção de membro compartilhado
             const removeBtn = e.target.closest('.remove-member-btn');
             if (removeBtn) {
                 const email = removeBtn.dataset.email;
@@ -890,7 +744,6 @@ class SIGEPApp {
             }
         });
 
-        // Configuração de Botões de Modais de Atendimento
         this._bindModalConfirmation('confirm-edit-assisted-btn', async () => {
             const name = document.getElementById('edit-assisted-name')?.value.trim();
             if (!name) return showNotification("O nome não pode ficar em branco.", "error");
@@ -940,7 +793,6 @@ class SIGEPApp {
             document.getElementById('arrival-modal')?.classList.add('hidden');
         });
         
-        // Finalização (Atendido) e Delegação
         document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
             const nomeFinal = document.getElementById('attendant-select')?.value || null;
             const useDist = this.currentPautaData?.useDistributionFlow === true;
@@ -964,12 +816,10 @@ class SIGEPApp {
             document.getElementById('attendant-modal')?.classList.add('hidden');
         });
         
-        // Delegação
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const isAcaoRapida = ['reagendar', 'agendar', 'consulta', 'outros'].includes(window.assistedTipoAcao);
             if (!isAcaoRapida && window.selectedCollaboratorId === null) return showNotification("Selecione um colaborador.", "warning");
             
-            // Verifica o toggle de silenciamento do dashboard ou do preferences
             const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || document.getElementById('toggle-silent-mode')?.checked;
             
             if (isAcaoRapida) {
@@ -1044,12 +894,10 @@ class SIGEPApp {
         document.getElementById('file-upload')?.addEventListener('change', (e) => PautaService.handleCSVUpload(e, this));
         document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
         
-        // Filtros (Busca em Tempo Real)
         ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
             document.getElementById(id)?.addEventListener('input', () => UIService.renderAssistedLists(this));
         });
 
-        // Geradores de Relatório e PDF
         const handlePDF = (type) => {
             const nomePauta = this.currentPauta?.name || 'Pauta';
             if (type === 'atendidos') PDFService.generateAtendidosPDF((this.allAssisted || []).filter(a => a.status === 'atendido'), nomePauta);
@@ -1065,7 +913,6 @@ class SIGEPApp {
         document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => handlePDF('faltosos'));
         document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => handlePDF('colaboradores'));
 
-        // Modais de Criação de Ata
         document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
             document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
             document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
@@ -1086,7 +933,6 @@ class SIGEPApp {
             handler(this.currentPauta?.name, this.colaboradores, this.allAssisted.filter(a => a.status === 'atendido'), data);
         });
 
-        // Formulário de novo colaborador
         document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
             e.preventDefault();
             const nome = document.getElementById('collaborator-name-modal')?.value.trim();
@@ -1100,16 +946,13 @@ class SIGEPApp {
     }
 
     setupGlobalModalsAndFooterEvents() {
-        // Fechar qualquer modal usando botões padrão
         document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
             if (btn) btn.addEventListener('click', (e) => e.target.closest('.fixed')?.classList.add('hidden'));
         });
 
-        // Botões do Rodapé
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
-        // Chips Interativos
         document.querySelectorAll('.p-chip').forEach(chip => {
             chip.addEventListener('click', function(e) {
                 e.preventDefault();
@@ -1118,14 +961,10 @@ class SIGEPApp {
         });
     }
 
-    // Helper interno para bind rápido de botões de modais
     _bindModalConfirmation(btnId, callback) {
         document.getElementById(btnId)?.addEventListener('click', callback);
     }
 
-    // ============================================================
-    // FIRESTORE QUERY OPTIMIZATION (Filtro Direto no Banco)
-    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -1150,7 +989,6 @@ class SIGEPApp {
             const modoAtual = this.currentMode;
             const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
 
-            // CONSTRUINDO A QUERY ANTES DE BAIXAR (Corta custos de leitura)
             let baseConstraints = [];
 
             if (modoAtual === 'evento') {
@@ -1179,19 +1017,14 @@ class SIGEPApp {
                     const snapUser = await getDocs(qUser);
                     snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
                 } catch (queryError) {
-                    console.error("Erro na Query! Você provavelmente precisa criar um Índice no Firebase.", queryError);
-                    pautasList.innerHTML = `<p class="col-span-full text-center text-red-500 font-bold mt-4">Aviso para o Desenvolvedor: Abra o console (F12) e clique no link gerado pelo Firebase para criar o Índice Composto desta busca.</p>`;
+                    console.error("Erro na Query! Crie o índice sugerido pelo console (F12).", queryError);
+                    pautasList.innerHTML = `<p class="col-span-full text-center text-red-500 font-bold mt-4">Abra o console (F12) e clique no link gerado pelo Firebase para criar o Índice Composto necessário.</p>`;
                     return;
                 }
-            }
-
-            if (pautasMap.size === 0 && !isAdmin) {
-                console.warn("Nenhuma pauta encontrada (já filtrada no banco).");
             }
             
             let pautas = Array.from(pautasMap.values());
             
-            // FILTRO FINO NO FRONTEND (O que o banco não pôde filtrar)
             if (modoAtual === 'normal') {
                 pautas = pautas.filter(p => {
                     let tipoPauta = p.tipo || p.type || 'normal';
@@ -1711,7 +1544,7 @@ window.exportAuditLogsPDF = exportAuditLogsPDF;
 window.loadDashboardData = loadDashboardData;
 window.populateUserFilter = populateUserFilter;
 window.setupAdminSearch = setupAdminSearch;
-window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
+window.abrirGerenciadorUnidades = abrirGerenciarUnidades;
 window.abrirImportadorUnidades = abrirImportadorUnidades;
 window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
 
