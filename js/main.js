@@ -1057,52 +1057,50 @@ class SIGEPApp {
             let pautasMap = new Map();
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
             const modoAtual = this.currentMode;
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
 
-            let baseConstraints = [];
-
-            // 🛠️ CORREÇÃO: Só aplica o filtro restrito de tipo se realmente estivermos no modo evento 
-            // E o usuário não estiver limpando os filtros globais
-            if (modoAtual === 'evento' && !filterOptions) {
-                baseConstraints.push(where("type", "in", tiposEvento));
-            }
-
-            if (modoAtual === 'normal' && this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas' && !filterOptions) {
-                baseConstraints.push(where("unidadeNome", "==", this.currentUnidadeExibicao));
-            }
-
+            // 🛠️ BUSCA SEGURA: Traz todas as pautas do usuário sem restrições de query compostas no Firebase
+            let qUser;
             if (isAdmin) {
-                const qAdmin = query(collection(this.db, "pautas"), ...baseConstraints);
-                const snapAll = await getDocs(qAdmin);
-                snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+                qUser = query(collection(this.db, "pautas"));
             } else {
-                const qUser = query(
+                qUser = query(
                     collection(this.db, "pautas"),
                     or(
                         where("owner", "==", user.uid),
                         where("members", "array-contains", user.uid)
-                    ),
-                    ...baseConstraints
+                    )
                 );
-                
-                try {
-                    const snapUser = await getDocs(qUser);
-                    snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-                } catch (queryError) {
-                    console.error("Erro na Query! Crie o índice sugerido pelo console (F12).", queryError);
-                    pautasList.innerHTML = `<p class="col-span-full text-center text-red-500 font-bold mt-4">Abra o console (F12) e clique no link gerado pelo Firebase para criar o Índice Composto necessário.</p>`;
-                    return;
-                }
             }
+            
+            const snapUser = await getDocs(qUser);
+            snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
             
             let pautas = Array.from(pautasMap.values());
             
-            if (modoAtual === 'normal') {
+            // 🛠️ DEFINIÇÃO AMPLA DOS TIPOS DE EVENTO (Cobre qualquer variação de cadastro: maiúsculo, minúsculo ou acentuado)
+            const tiposEventoValidos = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento', 'mutirao_atendimento'];
+
+            // 🛠️ FILTRAGEM INTELIGENTE NO FRONT-END
+            if (modoAtual === 'evento') {
                 pautas = pautas.filter(p => {
-                    let tipoPauta = p.tipo || p.type || 'normal';
-                    tipoPauta = String(tipoPauta).toLowerCase();
-                    return !tiposEvento.includes(tipoPauta);
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    // Se estiver no modo evento, aceita se contiver qualquer termo de evento ou se o nome da pauta contiver 'mutirão' / 'plantão'
+                    return tiposEventoValidos.some(t => tipoPauta.includes(t)) || 
+                           String(p.name || '').toLowerCase().includes('mutirão') || 
+                           String(p.name || '').toLowerCase().includes('plantão');
                 });
+            } else {
+                pautas = pautas.filter(p => {
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    const ehMutiraoNoNome = String(p.name || '').toLowerCase().includes('mutirão') || String(p.name || '').toLowerCase().includes('plantão');
+                    // No modo normal, exibe tudo o que NÃO for explicitamente um evento ou mutirão no nome
+                    return !tiposEventoValidos.some(t => tipoPauta.includes(t)) && !ehMutiraoNoNome;
+                });
+            }
+
+            // Filtro por unidade ativa, se houver
+            if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
+                pautas = pautas.filter(p => p.unidadeNome === this.currentUnidadeExibicao);
             }
 
             const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
