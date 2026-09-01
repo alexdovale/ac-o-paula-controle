@@ -1853,6 +1853,22 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
+// REGISTRO DO SERVICE WORKER (PWA)
+// ============================================================
+if ('serviceWorker' in navigator) {
+    window.addEventListener('load', () => {
+        navigator.serviceWorker.register('./sw.js')
+            .then((reg) => {
+                console.log('[SIGEP PWA] Service Worker registrado com sucesso, escopo:', reg.scope);
+            })
+            .catch((err) => {
+                console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err);
+            });
+    });
+}
+
+
+// ============================================================
 // EVENTO blur para CEP
 // ============================================================
 document.addEventListener('blur', async (e) => {
