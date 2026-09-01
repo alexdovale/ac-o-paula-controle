@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO COMPLETA E ATUALIZADA (COM CHECKLIST DINÂMICO)
+// js/pauta.js - VERSÃO REFATORADA (COM ACTION MAP E CHECKLIST DINÂMICO)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -834,7 +834,7 @@ export const PautaService = {
         if (!assisted || assisted.status !== 'aguardando') return 'N/A';
         
         if (assisted.priority === 'URGENTE') return 'URGENTE';
-        if (assisted.priority === 'RETORNO_RAPIDO') return 'RETORNO_RAPIDO'; // <--- Nova regra de retorno
+        if (assisted.priority === 'RETORNO_RAPIDO') return 'RETORNO_RAPIDO';
 
         if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
             try {
@@ -859,7 +859,7 @@ export const PautaService = {
     getPriorityClass(priority) {
         const classes = {
             'URGENTE': 'priority-urgente', 
-            'RETORNO_RAPIDO': 'priority-retorno', // <--- Injeta a borda roxa
+            'RETORNO_RAPIDO': 'priority-retorno', 
             'Máxima': 'priority-maxima',   
             'Média': 'priority-media',     
             'Mínima': 'priority-minima'    
@@ -881,7 +881,6 @@ export const PautaService = {
             return item.checkInOrder || agora;
         };
 
-        // PESO DA PRIORIDADE: Urgente (3) vence Retorno (2), que vence fila normal (1)
         const getPriorityWeight = (p) => {
             if (p === 'URGENTE') return 3;
             if (p === 'RETORNO_RAPIDO') return 2;
@@ -894,7 +893,7 @@ export const PautaService = {
             return [...list].sort((a, b) => {
                 const wA = getPriorityWeight(a.priority);
                 const wB = getPriorityWeight(b.priority);
-                if (wA !== wB) return wB - wA; // Pesos maiores vão pro topo primeiro
+                if (wA !== wB) return wB - wA; 
                 return getTempoChegada(a) - getTempoChegada(b);
             });
         }
@@ -935,7 +934,6 @@ export const PautaService = {
         };
 
         return [...list].sort((a, b) => {
-            // Força a matemática dos pesos logo no início de todas as lógicas de ordem
             const wA = getPriorityWeight(a.priority);
             const wB = getPriorityWeight(b.priority);
             if (wA !== wB) return wB - wA; 
@@ -979,16 +977,6 @@ export const PautaService = {
 
             return (a.scheduledTime || '').localeCompare(b.scheduledTime || '') || (getTempoChegada(a) - getTempoChegada(b));
         });
-    },
-
-    getPriorityClass(priority) {
-        const classes = {
-            'URGENTE': 'priority-urgente', 
-            'Máxima': 'priority-maxima',   
-            'Média': 'priority-media',     
-            'Mínima': 'priority-minima'    
-        };
-        return classes[priority] || '';
     },
 
     setupManualSort(app) {
@@ -1075,6 +1063,10 @@ export const PautaService = {
         if (valorAtual) select.value = valorAtual;
     },
 
+    // ============================================================
+    // 🛠️ MÓDULO DE AÇÕES DO CARD (REFATORADO COM ACTION MAP)
+    // ============================================================
+
     handleCardActions(e, app) {
         const button = e.target.closest('button');
         if (!button) return;
@@ -1085,23 +1077,14 @@ export const PautaService = {
         const currentUserRole = app.currentUser?.role;
         const isApoio = currentUserRole === 'apoio';
 
+        // Validação centralizada de permissões para perfil "Apoio"
         const acoesProibidasApoio = [
-            'return-to-pauta-btn',
-            'return-to-pauta-from-faltoso-btn',
-            'return-to-aguardando-btn',
-            'return-to-aguardando-from-emAtendimento-btn',
-            'return-to-aguardando-from-dist-btn',
-            'return-from-atendido-btn',
-            'delete-btn',
-            'select-collaborator-btn',
-            'attend-directly-from-aguardando-btn',
-            'delegate-finalization-btn',
-            'edit-assisted-btn',
-            'edit-attendant-btn',
-            'manage-demands-btn',
-            'toggle-confirmed-atendido',
-            'toggle-confirmed-faltoso',
-            'update-doc-status-btn'
+            'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
+            'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
+            'return-from-atendido-btn', 'delete-btn', 'select-collaborator-btn',
+            'attend-directly-from-aguardando-btn', 'delegate-finalization-btn', 'edit-assisted-btn', 
+            'edit-attendant-btn', 'manage-demands-btn', 'toggle-confirmed-atendido', 
+            'toggle-confirmed-faltoso', 'update-doc-status-btn'
         ];
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
@@ -1111,388 +1094,315 @@ export const PautaService = {
             return;
         }
 
+        // Lógica do Quick Menu Toggle
         if (button.classList.contains('quick-action-toggle')) {
-            e.stopPropagation();
-            const menuId = `quick-menu-${id}`;
-            const menu = document.getElementById(menuId);
-            
-            if (!menu) return;
-            
-            this.closeAllQuickMenus(menuId);
-            
-            const isHidden = menu.classList.contains('hidden');
-            menu.classList.toggle('hidden');
-            
-            button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
-            
-            if (!menu.classList.contains('hidden')) {
-                setTimeout(() => {
-                    const firstItem = menu.querySelector('.quick-action-item');
-                    if (firstItem) firstItem.focus();
-                }, 100);
-                
-                setTimeout(() => {
-                    const clickOutsideHandler = (event) => {
-                        if (!menu.contains(event.target) && !button.contains(event.target)) {
-                            menu.classList.add('hidden');
-                            button.setAttribute('aria-expanded', 'false');
-                            document.removeEventListener('click', clickOutsideHandler);
-                        }
-                    };
-                    document.addEventListener('click', clickOutsideHandler);
-                }, 0);
-            }
-            return;
+            return this.handleMenuToggle(e, button, id);
         }
 
+        const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
+        if (!assisted) return; // Segurança caso o card não exista mais
+
+        // Lógica das Ações Rápidas (Agendamento/Consulta)
         if (button.classList.contains('quick-action-item') && !button.classList.contains('update-doc-status-btn')) {
-            e.stopPropagation();
-            
-            if (isApoio) {
-                showNotification("Acesso restrito: Ações rápidas de encerramento são bloqueadas para Apoio.", "warning");
-                return;
-            }
-
-            const actionKey = `${id}-${button.dataset.tipo}`;
-            if (!this.canPerformAction(actionKey)) return;
-            
-            const tipoAcao = button.dataset.tipo;
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            if (!assisted) {
-                showNotification("Erro: Assistido não encontrado", "error");
-                return;
-            }
-            
-            const menu = document.getElementById(`quick-menu-${id}`);
-            if (menu) {
-                menu.classList.add('hidden');
-                const toggle = document.getElementById(`quick-toggle-${id}`);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
-            
-            const tipoMap = {
-                'reagendar': 'Reagendamento',
-                'agendar': 'Agendamento',
-                'consulta': 'Consulta Processual',
-                'outros': 'Outros Assuntos'
-            };
-            
-            const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
-            
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = tipoAcao;
-            window.assistedTipoDescricao = tipoDescricao;
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) {
-                nameElement.textContent = assisted.name || '';
-            }
-            
-            showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) {
-                        searchInput.value = '';
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-
-                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                        UIService.preencherListaColaboradoresModal(app);
-                    }
-                    
-                    const firstInput = modal.querySelector('input, button, [tabindex="0"]');
-                    if (firstInput) firstInput.focus();
-                }, 150);
-            }
-            return;
+            return this.handleQuickActionItem(app, button, id, assisted);
         }
 
-        // ==========================================
-        // LÓGICA DO MINI-MODAL DE STATUS DA TRIAGEM E CHECKLIST
-        // ==========================================
-        if (button.classList.contains('update-doc-status-btn')) {
-            e.stopPropagation();
-            
-            // Fecha o menu de 3 pontinhos
-            const menu = document.getElementById(`quick-menu-${id}`);
-            if (menu) {
-                menu.classList.add('hidden');
-                const toggle = document.getElementById(`quick-toggle-${id}`);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
-            }
+        // Dicionário de Ações Mapeadas
+        const actionMap = {
+            'update-doc-status-btn': () => this.actionUpdateDocStatus(button, id, assisted),
+            'check-in-btn': () => this.actionCheckIn(id),
+            'faltou-btn': () => this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName),
+            'toggle-confirmed-atendido': () => this.actionToggleConfirmed(app, id, assisted),
+            'toggle-confirmed-faltoso': () => this.actionToggleConfirmed(app, id, assisted),
+            'return-to-pauta-btn': () => this.actionReturnToPauta(app, id),
+            'return-to-pauta-from-faltoso-btn': () => this.updateStatus(app.db, app.currentPauta.id, id, { status: 'pauta' }, app.currentUserName),
+            'return-to-aguardando-btn': () => this.updateStatus(app.db, app.currentPauta.id, id, { status: 'aguardando', attendant: null, attendedTime: null }, app.currentUserName),
+            'return-to-aguardando-from-emAtendimento-btn': () => this.actionReturnToAguardandoFromAtendimento(app, id, assisted),
+            'return-to-aguardando-from-dist-btn': () => this.updateStatus(app.db, app.currentPauta.id, id, { status: 'aguardando', distributionStatus: null }, app.currentUserName),
+            'delete-btn': () => { if (confirm("Tem certeza?")) this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName); },
+            'set-retorno-rapido-btn': () => this.actionSetRetornoRapido(app, id, assisted),
+            'priority-btn': () => this.actionTogglePriority(app, id, assisted),
+            'select-collaborator-btn': () => this.actionSelectCollaborator(app, id, assisted),
+            'attend-directly-from-aguardando-btn': () => this.actionAttendDirectly(app, id, assisted),
+            'delegate-finalization-btn': () => this.actionDelegateFinalization(id, assisted),
+            'edit-assisted-btn': () => this.actionEditAssisted(app, id, assisted),
+            'edit-attendant-btn': () => this.actionEditAttendant(app, id, assisted),
+            'manage-demands-btn': () => this.actionManageDemands(id, assisted),
+            'view-details-btn': () => { if (window.openDetailsModal) window.openDetailsModal({ assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted, db: app.db }); },
+            'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted)
+        };
 
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                window.assistedIdToHandle = id;
+        // Identifica qual botão foi clicado e dispara a função correspondente
+        const activeActionKey = Object.keys(actionMap).find(key => button.classList.contains(key));
+        
+        if (activeActionKey) {
+            // Evita a propagação em botões de status específicos
+            if (['update-doc-status-btn', 'toggle-confirmed-atendido', 'toggle-confirmed-faltoso'].includes(activeActionKey)) {
+                e.stopPropagation();
+            }
+            actionMap[activeActionKey]();
+        }
+    },
+
+    // ── MÉTODOS EXTRAÍDOS PARA MANTER O CÓDIGO LIMPO E ESCALÁVEL ──
+
+    handleMenuToggle(e, button, id) {
+        e.stopPropagation();
+        const menuId = `quick-menu-${id}`;
+        const menu = document.getElementById(menuId);
+        if (!menu) return;
+        
+        this.closeAllQuickMenus(menuId);
+        const isHidden = menu.classList.contains('hidden');
+        menu.classList.toggle('hidden');
+        button.setAttribute('aria-expanded', isHidden ? 'true' : 'false');
+        
+        if (!menu.classList.contains('hidden')) {
+            setTimeout(() => {
+                const clickOutsideHandler = (event) => {
+                    if (!menu.contains(event.target) && !button.contains(event.target)) {
+                        menu.classList.add('hidden');
+                        button.setAttribute('aria-expanded', 'false');
+                        document.removeEventListener('click', clickOutsideHandler);
+                    }
+                };
+                document.addEventListener('click', clickOutsideHandler);
+            }, 0);
+        }
+    },
+
+    handleQuickActionItem(app, button, id, assisted) {
+        const actionKey = `${id}-${button.dataset.tipo}`;
+        if (!this.canPerformAction(actionKey)) return;
+        
+        const tipoAcao = button.dataset.tipo;
+        const menu = document.getElementById(`quick-menu-${id}`);
+        if (menu) {
+            menu.classList.add('hidden');
+            const toggle = document.getElementById(`quick-toggle-${id}`);
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        }
+        
+        const tipoMap = { 'reagendar': 'Reagendamento', 'agendar': 'Agendamento', 'consulta': 'Consulta Processual', 'outros': 'Outros Assuntos' };
+        const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
+        
+        window.assistedIdToHandle = id;
+        window.assistedNameToHandle = assisted.name || '';
+        window.assistedTipoAcao = tipoAcao;
+        window.assistedTipoDescricao = tipoDescricao;
+        
+        const nameElement = document.getElementById('assisted-to-attend-name');
+        if (nameElement) nameElement.textContent = assisted.name || '';
+        
+        showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
+        
+        const modal = document.getElementById('select-collaborator-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                    UIService.preencherListaColaboradoresModal(app);
+                }
+                const firstInput = modal.querySelector('input, button, [tabindex="0"]');
+                if (firstInput) firstInput.focus();
+            }, 150);
+        }
+    },
+
+    actionUpdateDocStatus(button, id, assisted) {
+        const menu = document.getElementById(`quick-menu-${id}`);
+        if (menu) {
+            menu.classList.add('hidden');
+            const toggle = document.getElementById(`quick-toggle-${id}`);
+            if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        }
+
+        window.assistedIdToHandle = id;
+        const statusAtual = assisted.docWorkflowStatus || 'Pendente';
+        const containerButtons = document.getElementById('doc-status-buttons-container');
+        const checklistContainer = document.getElementById('doc-status-checklist-container');
+        const modalStatus = document.getElementById('doc-status-modal');
+        
+        if (containerButtons && modalStatus) {
+            const etapas = [
+                { val: 'Pendente', icon: '⚪' }, { val: 'Assistido Orientado', icon: '🗣️' },
+                { val: 'Preenchendo Dados', icon: '✍️' }, { val: 'Documentação Recebida', icon: '📂' },
+                { val: 'Falta Digitalizar', icon: '🖨️' }, { val: 'Digitalizado', icon: '💻' },
+                { val: 'Inserido no Verde/CNP', icon: '✅' }
+            ];
+
+            let botoesHtml = '';
+            etapas.forEach(etapa => {
+                const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
+                const cssClass = isSelected ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
+                botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
+            });
+
+            containerButtons.innerHTML = botoesHtml;
+
+            if (checklistContainer) {
+                const textoLimpo = (assisted.subject || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
+                const regrasDocumentos = {
+                    "divorcio": { gatilhos: ["divorcio", "separacao", "dissolucao", "casamento"], docs: [{ nome: "Certidão de Casamento", obrigatorio: true }, { nome: "Certidão de Nascimento dos filhos (se houver)", obrigatorio: false }, { nome: "Relação de Bens (Documentos de imóveis, carros)", obrigatorio: false }] },
+                    "alimentos": { gatilhos: ["alimento", "pensao", "revisao", "exoneracao", "guarda"], docs: [{ nome: "Certidão de Nascimento do(s) menor(es)", obrigatorio: true }, { nome: "Comprovantes de despesas (escola, farmácia)", obrigatorio: false }] },
+                    "saude": { gatilhos: ["saude", "medicamento", "cirurgia", "internacao", "vaga", "sus"], docs: [{ nome: "Laudo Médico atualizado (com CID)", obrigatorio: true }, { nome: "Receituário / Negativa do SUS", obrigatorio: true }] }
+                };
                 
-                const statusAtual = assisted.docWorkflowStatus || 'Pendente';
-                const containerButtons = document.getElementById('doc-status-buttons-container');
-                const checklistContainer = document.getElementById('doc-status-checklist-container');
-                const modalStatus = document.getElementById('doc-status-modal');
-                
-                if (containerButtons && modalStatus) {
-                    // 1. GERAR BOTÕES DE STATUS
-                    const etapas = [
-                        { val: 'Pendente', icon: '⚪' },
-                        { val: 'Assistido Orientado', icon: '🗣️' },
-                        { val: 'Preenchendo Dados', icon: '✍️' },
-                        { val: 'Documentação Recebida', icon: '📂' },
-                        { val: 'Falta Digitalizar', icon: '🖨️' },
-                        { val: 'Digitalizado', icon: '💻' },
-                        { val: 'Inserido no Verde/CNP', icon: '✅' }
-                    ];
-
-                    let botoesHtml = '';
-                    etapas.forEach(etapa => {
-                        const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
-                        const cssClass = isSelected 
-                            ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' 
-                            : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
-                        
-                        botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
-                    });
-
-                    containerButtons.innerHTML = botoesHtml;
-
-                    // 2. GERAR CHECKLIST INTELIGENTE POR ASSUNTO
-                    if (checklistContainer) {
-                        const assuntoDigitado = assisted.subject || "";
-                        // Normaliza (tira acentos e joga pra minúscula) para evitar erros
-                        const textoLimpo = assuntoDigitado.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
-                        
-                        // Dicionário de Mapeamento
-                        const regrasDocumentos = {
-                            "divorcio": {
-                                gatilhos: ["divorcio", "separacao", "dissolucao", "casamento"],
-                                docs: [
-                                    { nome: "Certidão de Casamento", obrigatorio: true },
-                                    { nome: "Certidão de Nascimento dos filhos (se houver)", obrigatorio: false },
-                                    { nome: "Relação de Bens (Documentos de imóveis, carros)", obrigatorio: false }
-                                ]
-                            },
-                            "alimentos": {
-                                gatilhos: ["alimento", "pensao", "revisao", "exoneracao", "guarda"],
-                                docs: [
-                                    { nome: "Certidão de Nascimento do(s) menor(es)", obrigatorio: true },
-                                    { nome: "Comprovantes de despesas (escola, farmácia)", obrigatorio: false }
-                                ]
-                            },
-                            "saude": {
-                                gatilhos: ["saude", "medicamento", "cirurgia", "internacao", "vaga", "sus"],
-                                docs: [
-                                    { nome: "Laudo Médico atualizado (com CID)", obrigatorio: true },
-                                    { nome: "Receituário / Negativa do SUS", obrigatorio: true }
-                                ]
-                            }
-                        };
-                        
-                        let docsDinamicos = [];
-                        for (const chave in regrasDocumentos) {
-                            if (regrasDocumentos[chave].gatilhos.some(palavra => textoLimpo.includes(palavra))) {
-                                docsDinamicos = regrasDocumentos[chave].docs;
-                                break;
-                            }
-                        }
-
-                        // Renderizador de HTML do Checkbox
-                        const renderCheck = (doc) => `
-                            <label class="flex items-start gap-2 cursor-pointer group mb-1.5">
-                                <input type="checkbox" class="mt-0.5 w-4 h-4 ${doc.obrigatorio ? 'text-blue-600' : 'text-slate-400'} border-slate-300 rounded focus:ring-blue-500 transition-colors">
-                                <span class="text-[11px] md:text-xs ${doc.obrigatorio ? 'font-semibold text-slate-700' : 'text-slate-500 italic'} leading-tight group-hover:text-blue-700 transition-colors">
-                                    ${escapeHTML(doc.nome)} ${!doc.obrigatorio ? `<span class="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-normal border border-slate-200">Facultativo</span>` : ''}
-                                </span>
-                            </label>
-                        `;
-
-                        let checkHtml = `<p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Conferência de Documentos</p>`;
-                        
-                        // Base Universal
-                        checkHtml += renderCheck({nome: "Identidade (RG/CNH) e CPF", obrigatorio: true});
-                        checkHtml += renderCheck({nome: "Comprovante de Residência atualizado", obrigatorio: true});
-                        checkHtml += renderCheck({nome: "Comprovante de Renda", obrigatorio: true});
-
-                        // Específicos da Matéria
-                        docsDinamicos.forEach(d => checkHtml += renderCheck(d));
-
-                        // Facultativos Universais
-                        checkHtml += `<div class="mt-3 pt-2 border-t border-slate-100"></div>`;
-                        checkHtml += renderCheck({nome: "Declaração de Imposto de Renda", obrigatorio: false});
-                        checkHtml += renderCheck({nome: "Afirmação de Hipossuficiência", obrigatorio: false});
-                        checkHtml += renderCheck({nome: "Dados do Réu (Qualificação)", obrigatorio: false});
-
-                        checklistContainer.innerHTML = checkHtml;
-                        checklistContainer.classList.remove('hidden');
+                let docsDinamicos = [];
+                for (const chave in regrasDocumentos) {
+                    if (regrasDocumentos[chave].gatilhos.some(palavra => textoLimpo.includes(palavra))) {
+                        docsDinamicos = regrasDocumentos[chave].docs; break;
                     }
-
-                    modalStatus.classList.remove('hidden');
                 }
-            }
-            return;
-        }
 
-        if (button.classList.contains('check-in-btn')) {
+                const renderCheck = (doc) => `
+                    <label class="flex items-start gap-2 cursor-pointer group mb-1.5">
+                        <input type="checkbox" class="mt-0.5 w-4 h-4 ${doc.obrigatorio ? 'text-blue-600' : 'text-slate-400'} border-slate-300 rounded focus:ring-blue-500 transition-colors">
+                        <span class="text-[11px] md:text-xs ${doc.obrigatorio ? 'font-semibold text-slate-700' : 'text-slate-500 italic'} leading-tight group-hover:text-blue-700 transition-colors">
+                            ${escapeHTML(doc.nome)} ${!doc.obrigatorio ? `<span class="text-[9px] bg-slate-100 text-slate-400 px-1.5 py-0.5 rounded ml-1 font-normal border border-slate-200">Facultativo</span>` : ''}
+                        </span>
+                    </label>`;
+
+                let checkHtml = `<p class="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-3">Conferência de Documentos</p>`;
+                checkHtml += renderCheck({nome: "Identidade (RG/CNH) e CPF", obrigatorio: true});
+                checkHtml += renderCheck({nome: "Comprovante de Residência atualizado", obrigatorio: true});
+                checkHtml += renderCheck({nome: "Comprovante de Renda", obrigatorio: true});
+                docsDinamicos.forEach(d => checkHtml += renderCheck(d));
+                checkHtml += `<div class="mt-3 pt-2 border-t border-slate-100"></div>`;
+                checkHtml += renderCheck({nome: "Declaração de Imposto de Renda", obrigatorio: false});
+                checkHtml += renderCheck({nome: "Afirmação de Hipossuficiência", obrigatorio: false});
+                
+                checklistContainer.innerHTML = checkHtml;
+                checklistContainer.classList.remove('hidden');
+            }
+            modalStatus.classList.remove('hidden');
+        }
+    },
+
+    actionCheckIn(id) {
+        window.assistedIdToHandle = id;
+        const modal = document.getElementById('arrival-modal');
+        if (modal) {
+            document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+            modal.classList.remove('hidden');
+        }
+    },
+
+    actionToggleConfirmed(app, id, assisted) {
+        const novoEstado = !assisted.isConfirmed;
+        this.updateStatus(app.db, app.currentPauta.id, id, { isConfirmed: novoEstado }, app.currentUserName);
+    },
+
+    actionReturnToPauta(app, id) {
+        this.updateStatus(app.db, app.currentPauta.id, id, {
+            status: 'pauta', arrivalTime: null, priority: null, assignedCollaborator: null,
+            inAttendanceTime: null, room: null, distributionStatus: null
+        }, app.currentUserName);
+    },
+
+    actionReturnToAguardandoFromAtendimento(app, id, assisted) {
+        this.updateStatus(app.db, app.currentPauta.id, id, {
+            status: 'aguardando', assignedCollaborator: null, delegatedBy: null,
+            delegatedAt: null, inAttendanceTime: null, distributionStatus: null
+        }, app.currentUserName);
+        
+        if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+            try {
+                const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+            } catch (e) {
+                console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+            }
+        }
+        if (assisted && assisted.assignedCollaborator) {
+            showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
+        }
+    },
+
+    actionSetRetornoRapido(app, id, assisted) {
+        const motivo = prompt("Qual o motivo da pausa na pauta?\n(Ex: Foi tirar xerox, Aguardando a 2ª parte chegar, etc)");
+        if (motivo === null) return; 
+        
+        const razaoSalva = motivo.trim() === "" ? "Aguardando Retorno" : motivo.trim();
+        this.updateStatus(app.db, app.currentPauta.id, id, {
+            status: 'aguardando', priority: 'RETORNO_RAPIDO', priorityReason: razaoSalva,
+            assignedCollaborator: null, delegatedBy: null, delegatedAt: null,
+            inAttendanceTime: null, distributionStatus: null
+        }, app.currentUserName);
+        
+        showNotification(`Assistido pausado: ${razaoSalva}`, "info");
+    },
+
+    actionTogglePriority(app, id, assisted) {
+        if (assisted && (assisted.priority === 'URGENTE' || assisted.priority === 'RETORNO_RAPIDO')) {
+            if (confirm("Remover a marcação especial desta pessoa?")) {
+                this.updateStatus(app.db, app.currentPauta.id, id, { priority: null, priorityReason: null }, app.currentUserName);
+            }
+        } else {
             window.assistedIdToHandle = id;
-            const modal = document.getElementById('arrival-modal');
+            const modal = document.getElementById('priority-reason-modal');
             if (modal) {
-                document.getElementById('arrival-time-input').value = new Date().toTimeString().slice(0,5);
+                document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
+                document.getElementById('priority-reason-input').value = '';
                 modal.classList.remove('hidden');
             }
         }
+    },
 
-        if (button.classList.contains('faltou-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, { status: 'faltoso' }, app.currentUserName);
+    actionSelectCollaborator(app, id, assisted) {
+        if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
+            PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
         }
-
-        if (button.classList.contains('toggle-confirmed-atendido') || button.classList.contains('toggle-confirmed-faltoso')) {
-            e.stopPropagation();
-            
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-
-            const novoEstado = !assisted.isConfirmed;
-
-            this.updateStatus(app.db, app.currentPauta.id, id, { 
-                isConfirmed: novoEstado 
-            }, app.currentUserName);
-            
-            return;
-        }
-
-        if (button.classList.contains('return-to-pauta-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta',
-                arrivalTime: null,
-                priority: null,
-                assignedCollaborator: null,
-                inAttendanceTime: null,
-                room: null,
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-pauta-from-faltoso-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'pauta'
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                attendant: null,
-                attendedTime: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-emAtendimento-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            }, app.currentUserName);
-            
-            if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
-                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                } catch (e) {
-                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+        
+        window.assistedIdToHandle = id;
+        window.assistedNameToHandle = assisted.name || '';
+        window.assistedTipoAcao = 'delegar';
+        
+        const nameElement = document.getElementById('assisted-to-attend-name');
+        if (nameElement) nameElement.textContent = assisted.name || '';
+        
+        const modal = document.getElementById('select-collaborator-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-            }
-            
-            if (assisted && assisted.assignedCollaborator) {
-                showNotification(`Delegação para ${assisted.assignedCollaborator.name} removida`, "info");
-            }
-        }
-
-        if (button.classList.contains('return-to-aguardando-from-dist-btn')) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                distributionStatus: null
-            }, app.currentUserName);
-        }
-
-        if (button.classList.contains('delete-btn')) {
-            if (confirm("Tem certeza?")) {
-                this.deleteAssisted(app.db, app.currentPauta.id, id, app.currentUserName);
-            }
-        }
-
-        // --- AÇÃO DO BOTÃO DE PAUSAR / RETORNO ---
-        if (button.classList.contains('set-retorno-rapido-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            // Abre uma caixinha para o usuário digitar o motivo
-            const motivo = prompt("Qual o motivo da pausa na pauta?\n(Ex: Foi tirar xerox, Aguardando a 2ª parte chegar, etc)");
-            
-            // Se ele clicar em "Cancelar" na caixinha, aborta a ação
-            if (motivo === null) return; 
-            
-            // Se ele não digitar nada, coloca um texto padrão. Se digitar, salva o que ele digitou.
-            const razaoSalva = motivo.trim() === "" ? "Aguardando Retorno" : motivo.trim();
-
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardando',
-                priority: 'RETORNO_RAPIDO',
-                priorityReason: razaoSalva, // Salva o texto personalizado aqui!
-                assignedCollaborator: null,
-                delegatedBy: null,
-                delegatedAt: null,
-                inAttendanceTime: null,
-                distributionStatus: null
-            }, app.currentUserName);
-            
-            showNotification(`Assistido pausado: ${razaoSalva}`, "info");
-        }
-
-        // --- ATUALIZAR O BOTÃO DE PRIORIDADE PARA CONSEGUIR LIMPAR O RETORNO ---
-        if (button.classList.contains('priority-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted && (assisted.priority === 'URGENTE' || assisted.priority === 'RETORNO_RAPIDO')) {
-                if (confirm("Remover a marcação especial desta pessoa?")) {
-                    this.updateStatus(app.db, app.currentPauta.id, id, {
-                        priority: null,
-                        priorityReason: null
-                    }, app.currentUserName);
+                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                    UIService.preencherListaColaboradoresModal(app);
                 }
-            } else {
-                window.assistedIdToHandle = id;
-                const modal = document.getElementById('priority-reason-modal');
-                if (modal) {
-                    document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-                    document.getElementById('priority-reason-input').value = '';
-                    modal.classList.remove('hidden');
-                }
-            }
+                if (searchInput) searchInput.focus();
+            }, 150);
         }
+    },
 
-        if (button.classList.contains('select-collaborator-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
+    actionAttendDirectly(app, id, assisted) {
+        const useDist = app.currentPautaData?.useDistributionFlow === true;
+        const timestampIso = new Date().toISOString();
+
+        if (useDist) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
+            }, app.currentUserName);
+            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+        } else {
             if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
                 PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
             }
-            
+
             window.assistedIdToHandle = id;
             window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'delegar';
+            window.assistedTipoAcao = 'atender_direto';
             
             const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) {
-                nameElement.textContent = assisted.name || '';
-            }
+            if (nameElement) nameElement.textContent = assisted.name || '';
             
             const modal = document.getElementById('select-collaborator-modal');
             if (modal) {
@@ -1503,248 +1413,154 @@ export const PautaService = {
                         searchInput.value = '';
                         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
-
-                    if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                        UIService.preencherListaColaboradoresModal(app);
+                    if (typeof window.UIService !== 'undefined' && typeof window.UIService.preencherListaColaboradoresModal === 'function') {
+                        window.UIService.preencherListaColaboradoresModal(app);
+                    } else if (typeof app.UIService !== 'undefined' && typeof app.UIService.preencherListaColaboradoresModal === 'function') {
+                        app.UIService.preencherListaColaboradoresModal(app);
                     }
-                    
                     if (searchInput) searchInput.focus();
                 }, 150);
             }
         }
+    },
 
-        if (button.classList.contains('attend-directly-from-aguardando-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            const useDist = app.currentPautaData?.useDistributionFlow === true;
-            const timestampIso = new Date().toISOString();
+    actionDelegateFinalization(id, assisted) {
+        window.assistedIdToHandle = id;
+        const processInput = document.getElementById('dist-process-number');
+        if (processInput) processInput.value = assisted.numeroProcesso || '';
+        
+        const modal = document.getElementById('distribution-finish-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            document.getElementById('confirm-dist-finish-btn').onclick = async () => {
+                const cnpDigitado = processInput.value.trim();
+                const timestampIso = new Date().toISOString();
+                
+                const servidorResponsavel = assisted.enviadoPor || window.app.currentUserName || "Servidor";
+                const defensorResponsavel = assisted.attendedBy || assisted.defensorResponsavel || window.app.currentUserName || "Defensor";
 
-            if (useDist) {
-                this.updateStatus(app.db, app.currentPauta.id, id, {
-                    status: 'aguardandoDistribuicao',
-                    distributionStatus: 'pending',
-                    inAttendanceTime: timestampIso
-                }, app.currentUserName);
-                showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
-            } else {
-                if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
-                    PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
-                }
+                const mapaProdutividadeBI = {};
+                mapaProdutividadeBI[servidorResponsavel] = 1;
+                mapaProdutividadeBI[defensorResponsavel] = 1;
 
-                window.assistedIdToHandle = id;
-                window.assistedNameToHandle = assisted.name || '';
-                window.assistedTipoAcao = 'atender_direto';
-                
-                const nameElement = document.getElementById('assisted-to-attend-name');
-                if (nameElement) {
-                    nameElement.textContent = assisted.name || '';
-                }
-                
-                const modal = document.getElementById('select-collaborator-modal');
-                if (modal) {
-                    modal.classList.remove('hidden');
-                    setTimeout(() => {
-                        const searchInput = document.getElementById('collaborator-search-input');
-                        if (searchInput) {
-                            searchInput.value = '';
-                            searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                        }
-
-                        if (typeof window.UIService !== 'undefined' && typeof window.UIService.preencherListaColaboradoresModal === 'function') {
-                            window.UIService.preencherListaColaboradoresModal(app);
-                        } else if (typeof app.UIService !== 'undefined' && typeof app.UIService.preencherListaColaboradoresModal === 'function') {
-                            app.UIService.preencherListaColaboradoresModal(app);
-                        }
-                        
-                        if (searchInput) searchInput.focus();
-                    }, 150);
-                }
-            }
-        }
-
-        if (button.classList.contains('delegate-finalization-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (!assisted) return;
-            
-            window.assistedIdToHandle = id;
-            const processInput = document.getElementById('dist-process-number');
-            if (processInput) processInput.value = assisted.numeroProcesso || '';
-            
-            const modal = document.getElementById('distribution-finish-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                
-                document.getElementById('confirm-dist-finish-btn').onclick = async () => {
-                    const cnpDigitado = processInput.value.trim();
-                    const timestampIso = new Date().toISOString();
-                    
-                    const servidorResponsavel = assisted.enviadoPor || app.currentUserName || "Servidor";
-                    const defensorResponsavel = assisted.attendedBy || assisted.defensorResponsavel || app.currentUserName || "Defensor";
-
-                    const mapaProdutividadeBI = {};
-                    mapaProdutividadeBI[servidorResponsavel] = 1;
-                    mapaProdutividadeBI[defensorResponsavel] = 1;
-
-                    await updateDoc(doc(app.db, "pautas", app.currentPauta.id, "attendances", id), {
-                        status: 'atendido',
-                        numeroProcesso: cnpDigitado,
-                        trabalhosPorUsuario: mapaProdutividadeBI,
-                        finalizadoPeloColaborador: true,
-                        distributionStatus: 'completed',
-                        attendedAt: timestampIso
-                    });
-                    
-                    modal.classList.add('hidden');
-                    showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
-                };
-            }
-        }
-
-        if (button.classList.contains('edit-assisted-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                document.getElementById('edit-assisted-name').value = assisted.name || '';
-                document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
-                document.getElementById('edit-assisted-num-agendamento').value = assisted.numAgendamento || '';
-                document.getElementById('edit-assisted-subject').value = assisted.subject || '';
-                document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
-                
-                const roomSelect = document.getElementById('edit-room-select');
-                if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
-                    roomSelect.value = assisted.room;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('edit-attendant-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                this.preencherSelectColaboradores(app, 'edit-attendant-select');
-                
-                const select = document.getElementById('edit-attendant-select');
-                if (select) {
-                    let nomeAtendente = '';
-                    if (assisted.attendedBy) {
-                        nomeAtendente = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
-                    } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
-                        nomeAtendente = assisted.assignedCollaborator.name;
-                    } else if (assisted.attendant) {
-                        nomeAtendente = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
-                    }
-                    const options = Array.from(select.options).map(opt => opt.value);
-                    if (options.includes(nomeAtendente)) select.value = nomeAtendente;
-                }
-                
-                window.assistedIdToHandle = id;
-                if (document.getElementById('edit-attendant-modal')) document.getElementById('edit-attendant-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('manage-demands-btn')) {
-            const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            if (assisted) {
-                window.assistedIdToHandle = id;
-                document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
-                
-                const infoDiv = document.createElement('div');
-                infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
-                
-                let infoHtml = '';
-                
-                let atendenteNome = 'Não informado';
-                if (assisted.attendedBy) {
-                    atendenteNome = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
-                } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
-                    atendenteNome = assisted.assignedCollaborator.name;
-                } else if (assisted.attendant) {
-                    atendenteNome = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
-                }
-                
-                if (atendenteNome !== 'Não informado') {
-                    infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${escapeHTML(atendenteNome)}</p>`;
-                }
-                
-                if (assisted.delegatedBy) {
-                    infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${escapeHTML(assisted.delegatedBy)}`;
-                    if (atendenteNome !== 'Não informado' && atendenteNome !== assisted.delegatedBy) {
-                        infoHtml += ` para ${escapeHTML(atendenteNome)}`;
-                    }
-                    infoHtml += `</p>`;
-                }
-                if (assisted.demandas && assisted.demandas.descricoes && assisted.demandas.descricoes.length > 0) {
-                    infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
-                }
-                
-                if (infoHtml) {
-                    infoDiv.innerHTML = infoHtml;
-                    const modal = document.getElementById('demands-modal');
-                    const existingInfo = modal.querySelector('.attendance-info');
-                    if (existingInfo) existingInfo.remove();
-                    infoDiv.classList.add('attendance-info');
-                    const demandsListContainer = modal.querySelector('.demands-list-container');
-                    if (demandsListContainer) modal.insertBefore(infoDiv, demandsListContainer);
-                }
-                
-                const container = document.getElementById('demands-modal-list-container');
-                if (container) {
-                    container.innerHTML = '';
-                    const demands = (assisted.demandas && assisted.demandas.descricoes) || [];
-                    if (demands.length === 0) {
-                        container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-                    } else {
-                        demands.forEach(demand => {
-                            const li = document.createElement('li');
-                            li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
-                            li.innerHTML = `<span>${escapeHTML(demand)}</span><button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>`;
-                            container.appendChild(li);
-                        });
-                    }
-                }
-                if (document.getElementById('demands-modal')) document.getElementById('demands-modal').classList.remove('hidden');
-            }
-        }
-
-        if (button.classList.contains('view-details-btn')) {
-            if (window.openDetailsModal) {
-                window.openDetailsModal({
-                    assistedId: id,
-                    pautaId: app.currentPauta && app.currentPauta.id,
-                    allAssisted: app.allAssisted
+                await updateDoc(doc(window.app.db, "pautas", window.app.currentPauta.id, "attendances", id), {
+                    status: 'atendido', numeroProcesso: cnpDigitado, trabalhosPorUsuario: mapaProdutividadeBI,
+                    finalizadoPeloColaborador: true, distributionStatus: 'completed', attendedAt: timestampIso
                 });
-            } else {
-                showNotification("Erro ao abrir detalhes", "error");
-            }
-        }
-
-        if (button.classList.contains('return-from-atendido-btn')) {
-            const currentAssisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-            
-            const statusDestino = this.getDestinoRetorno(app);
-
-            let updateData = {
-                status: statusDestino,
-                attendedBy: null,
-                attendedAt: null,
-                finalizadoPeloColaborador: false,
-                distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
+                
+                modal.classList.add('hidden');
+                showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
             };
-
-            this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-            
-            if (currentAssisted?.assignedCollaborator?.id && currentAssisted.assignedCollaborator.id !== 'manual') {
-                try {
-                    const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", currentAssisted.assignedCollaborator.id);
-                    updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
-                } catch (e) {
-                    console.warn("Aviso: Falha ao resetar status do colaborador.", e);
-                }
-            }
-            showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
         }
+    },
+
+    actionEditAssisted(app, id, assisted) {
+        document.getElementById('edit-assisted-name').value = assisted.name || '';
+        document.getElementById('edit-assisted-cpf').value = assisted.cpf || '';
+        document.getElementById('edit-assisted-num-agendamento').value = assisted.numAgendamento || '';
+        document.getElementById('edit-assisted-subject').value = assisted.subject || '';
+        document.getElementById('edit-scheduled-time').value = assisted.scheduledTime || '';
+        
+        const roomSelect = document.getElementById('edit-room-select');
+        if (roomSelect && assisted.room && app.currentPautaData?.type === 'multisala') {
+            roomSelect.value = assisted.room;
+        }
+        
+        window.assistedIdToHandle = id;
+        if (document.getElementById('edit-assisted-modal')) document.getElementById('edit-assisted-modal').classList.remove('hidden');
+    },
+
+    actionEditAttendant(app, id, assisted) {
+        this.preencherSelectColaboradores(app, 'edit-attendant-select');
+        const select = document.getElementById('edit-attendant-select');
+        if (select) {
+            let nomeAtendente = '';
+            if (assisted.attendedBy) {
+                nomeAtendente = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
+            } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
+                nomeAtendente = assisted.assignedCollaborator.name;
+            } else if (assisted.attendant) {
+                nomeAtendente = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
+            }
+            const options = Array.from(select.options).map(opt => opt.value);
+            if (options.includes(nomeAtendente)) select.value = nomeAtendente;
+        }
+        
+        window.assistedIdToHandle = id;
+        if (document.getElementById('edit-attendant-modal')) document.getElementById('edit-attendant-modal').classList.remove('hidden');
+    },
+
+    actionManageDemands(id, assisted) {
+        window.assistedIdToHandle = id;
+        document.getElementById('demands-assisted-name-modal').textContent = assisted.name || '';
+        
+        const infoDiv = document.createElement('div');
+        infoDiv.className = "mb-4 p-3 bg-gray-50 rounded-lg text-sm";
+        let infoHtml = '';
+        
+        let atendenteNome = 'Não informado';
+        if (assisted.attendedBy) {
+            atendenteNome = typeof assisted.attendedBy === 'object' ? (assisted.attendedBy.nome || assisted.attendedBy.name) : assisted.attendedBy;
+        } else if (assisted.assignedCollaborator && assisted.assignedCollaborator.name) {
+            atendenteNome = assisted.assignedCollaborator.name;
+        } else if (assisted.attendant) {
+            atendenteNome = typeof assisted.attendant === 'object' ? (assisted.attendant.nome || assisted.attendant.name) : assisted.attendant;
+        }
+        
+        if (atendenteNome !== 'Não informado') infoHtml += `<p><span class="font-semibold">Atendido por:</span> ${escapeHTML(atendenteNome)}</p>`;
+        if (assisted.delegatedBy) {
+            infoHtml += `<p><span class="font-semibold">Delegado por:</span> ${escapeHTML(assisted.delegatedBy)}`;
+            if (atendenteNome !== 'Não informado' && atendenteNome !== assisted.delegatedBy) infoHtml += ` para ${escapeHTML(atendenteNome)}`;
+            infoHtml += `</p>`;
+        }
+        if (assisted.demandas?.descricoes?.length > 0) infoHtml += `<p><span class="font-semibold">Demandas registradas:</span> ${assisted.demandas.descricoes.length}</p>`;
+        
+        if (infoHtml) {
+            infoDiv.innerHTML = infoHtml;
+            const modal = document.getElementById('demands-modal');
+            const existingInfo = modal.querySelector('.attendance-info');
+            if (existingInfo) existingInfo.remove();
+            infoDiv.classList.add('attendance-info');
+            const demandsListContainer = modal.querySelector('.demands-list-container');
+            if (demandsListContainer) modal.insertBefore(infoDiv, demandsListContainer);
+        }
+        
+        const container = document.getElementById('demands-modal-list-container');
+        if (container) {
+            container.innerHTML = '';
+            const demands = (assisted.demandas && assisted.demandas.descricoes) || [];
+            if (demands.length === 0) {
+                container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
+            } else {
+                demands.forEach(demand => {
+                    const li = document.createElement('li');
+                    li.className = 'flex justify-between items-center p-2 bg-white rounded-md text-xs md:text-sm';
+                    li.innerHTML = `<span>${escapeHTML(demand)}</span><button class="remove-demand-item-btn text-red-500 text-[10px] md:text-xs">Remover</button>`;
+                    container.appendChild(li);
+                });
+            }
+        }
+        if (document.getElementById('demands-modal')) document.getElementById('demands-modal').classList.remove('hidden');
+    },
+
+    actionReturnFromAtendido(app, id, assisted) {
+        const statusDestino = this.getDestinoRetorno(app);
+        let updateData = {
+            status: statusDestino, attendedBy: null, attendedAt: null,
+            finalizadoPeloColaborador: false, distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
+        };
+
+        this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
+        
+        if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+            try {
+                const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
+                updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
+            } catch (e) {
+                console.warn("Aviso: Falha ao resetar status do colaborador.", e);
+            }
+        }
+        showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
     }
 };
 
