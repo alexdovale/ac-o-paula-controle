@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO DEFINITIVA ATUALIZADA (LIMPA)
+// js/pdfService.js - VERSÃO OTIMIZADA (UX, PERFORMANCE E TEXT WRAPPING)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -17,6 +17,9 @@ const ensureJsPDF = async () => {
         });
     }
 };
+
+// Pausa assíncrona para liberar o navegador e renderizar a UI (Evita o congelamento da aba)
+const yieldThread = () => new Promise(resolve => setTimeout(resolve, 50));
 
 const cleanString = (str) => String(str || '').replace(/"/g, '');
 
@@ -184,6 +187,9 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     const larguraIdentificador = 30;
     const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
 
+    // Respiro na thread para não congelar UI
+    await yieldThread();
+
     if (defensores.length > 0) {
         doc.autoTable({
             startY: currentY + 1,
@@ -195,7 +201,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                 ],
                 ...defensores.map(c => [
-                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2, overflow: 'linebreak' } },
                     { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
                     { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
                 ])
@@ -220,7 +226,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
                     { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
                 ],
                 ...servidores.map(c => [
-                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2, overflow: 'linebreak' } },
                     { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
                     { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
                 ])
@@ -267,6 +273,8 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
             doc.line(20, lineY, 190, lineY);
         }
     }
+    
+    // Sem chamada do addFooter aqui, respeitando a Ata oficial
 };
 
 // ========================================================
@@ -276,15 +284,14 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 export const PDFService = {
     
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
+        if (window.showNotification) window.showNotification("Gerando demonstrativo, aguarde...", "info");
         try {
             await ensureJsPDF(); 
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
-            // ⭐ LOGO REMOVIDA PARA O PADRÃO PETIÇÃO
-            let y = 60; // Margem superior padrão
+            let y = 60;
 
-            // TÍTULO LIMPO E FORMAL
             doc.setFont("helvetica", "bold");
             doc.setFontSize(12);
             doc.text("DEMONSTRATIVO DE DESPESAS MENSAIS", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
@@ -308,7 +315,6 @@ export const PDFService = {
                 return parseFloat(String(valStr).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
             };
 
-            // Categorias Comuns (Rateadas)
             const comuns = [
                 { id: 'aluguel', label: 'Aluguel Residencial' },
                 { id: 'condominio', label: 'Condomínio' },
@@ -320,7 +326,6 @@ export const PDFService = {
                 { id: 'supermercado', label: 'Supermercado (Alimentação)' }
             ];
 
-            // Cabeçalho da Seção sem cores gritantes
             bodyRows.push([{ content: '1. Despesas Residenciais Comuns (Rateadas)', colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0, 0, 0] } }]);
             
             comuns.forEach(c => {
@@ -336,7 +341,6 @@ export const PDFService = {
                 }
             });
 
-            // Categorias Exclusivas
             const exclusivas = [
                 { id: 'escola', label: 'Mensalidade Escolar / Creche' },
                 { id: 'material_escolar', label: 'Material Escolar / Livros' },
@@ -361,7 +365,8 @@ export const PDFService = {
 
             const totalGeral = totalFamilia + totalCrianca;
 
-            // AutoTable Principal com estilo oficial/preto e branco
+            await yieldThread();
+
             doc.autoTable({
                 startY: y,
                 head: [["Descrição da Despesa", "Valor Total Referência", "Valor Apurado (Necessidade)"]],
@@ -369,7 +374,7 @@ export const PDFService = {
                 margin: { left: 40, right: 40 },
                 theme: 'grid',
                 headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: 'center', fontSize: 10, lineColor: [0,0,0], lineWidth: 0.5 },
-                styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0] },
+                styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0], overflow: 'linebreak' },
                 columnStyles: { 
                     1: { halign: 'center', cellWidth: 110 }, 
                     2: { halign: 'center', cellWidth: 130 } 
@@ -378,7 +383,6 @@ export const PDFService = {
 
             let finalY = doc.lastAutoTable.finalY + 15;
 
-            // Quadro Resumo Final
             doc.autoTable({
                 startY: finalY,
                 body: [
@@ -395,11 +399,6 @@ export const PDFService = {
                 }
             });
 
-            // Footer removido para evitar carimbo temporal do sistema na petição,
-            // ou mantido apenas como marcador de página, se preferir. 
-            // (Comentei a chamada do Footer padrão para ficar 100% limpo)
-            // addFooter(doc, 1, 1);
-
             doc.save(`Demonstrativo_Despesas_${(assistedName||'Requerente').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("PDF Padrão gerado com sucesso!", "success");
             return true;
@@ -411,6 +410,7 @@ export const PDFService = {
     },
 
     async generateAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        if (window.showNotification) window.showNotification("Gerando Ata Social, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -419,15 +419,18 @@ export const PDFService = {
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("Ata gerada com sucesso!", "success");
             return true;
             
         } catch (error) {
             console.error("Erro ao gerar Ata Social:", error);
+            if (window.showNotification) window.showNotification("Falha ao gerar Ata Social.", "error");
             return false;
         }
     },
 
     async previewAtaAcaoSocial(pautaName, colaboradores, atendidos, dadosExtras = {}) {
+        if (window.showNotification) window.showNotification("Preparando pré-visualização, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -442,11 +445,11 @@ export const PDFService = {
             
         } catch (error) {
             console.error("Erro ao gerar Preview da Ata Social:", error);
+            if (window.showNotification) window.showNotification("Falha na pré-visualização.", "error");
             return false;
         }
     },
 
-    // MÉTODOS PARA RELATÓRIO DE ATENDIDOS COM SELEÇÃO DE COLUNAS
     async generateAtendidosPDF(arg1, arg2) {
         return new Promise((resolve) => {
             const modalId = 'pdf-column-selector-modal';
@@ -477,13 +480,10 @@ export const PDFService = {
                                 <input type="checkbox" value="numAgendamento" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Nº do Agendamento / Senha</span>
                             </label>
-                            
-                            <!-- ⭐ NOVA OPÇÃO: NÚMERO DO PROCESSO -->
                             <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
                                 <input type="checkbox" value="numeroProcesso" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Número do Processo</span>
                             </label>
-
                             <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
                                 <input type="checkbox" value="scheduledTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
                                 <span class="font-bold text-slate-700 text-sm">Horário Agendado</span>
@@ -557,7 +557,6 @@ export const PDFService = {
             const logoInfo = await addLogoHeader(docPDF, 20);
             const tituloY = Math.max(55, logoInfo.bottomY + 20);
 
-            // Ordenação
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
             docPDF.setFontSize(18);
@@ -570,11 +569,10 @@ export const PDFService = {
             docPDF.text(`Data da Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
             docPDF.text(`Total: ${atendidosList.length} assistidos | Volume de Demandas (Múltiplas): ${totalAssuntos}`, 40, tituloY + 28);
 
-            // ⭐ DEFINIÇÃO MESTRE DAS COLUNAS (Agora com o Nº do Processo)
             const colDef = [
                 { key: 'name', label: 'Nome Completo' },
                 { key: 'numAgendamento', label: 'Nº Agend.' },
-                { key: 'numeroProcesso', label: 'Nº Processo' }, // <- Adicionado aqui
+                { key: 'numeroProcesso', label: 'Nº Processo' },
                 { key: 'scheduledTime', label: 'Agendado' },
                 { key: 'arrivalTime', label: 'Chegou' },
                 { key: 'attendedTime', label: 'Chamado/Fim' },
@@ -584,13 +582,12 @@ export const PDFService = {
                 { key: 'attendant', label: 'Atendente' }
             ];
 
-            // Filtra as colunas ativas (Nome é obrigatório)
             const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
-
-            // Monta o Header do AutoTable
             const head = [["#", ...activeCols.map(c => c.label)]];
 
-            // Monta o Body
+            // Respiro na thread antes de varrer centenas de dados
+            await yieldThread();
+
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
                 const attendedDate = getSafeDate(item.attendedTime || item.attendedAt); 
@@ -610,13 +607,12 @@ export const PDFService = {
                     demandasStr = item.demandas.descricoes.join(', ');
                 }
 
-                // ⭐ MAPEIA O VALOR DO PROCESSO SE EXISTIR
                 const processoStr = item.numeroProcesso || item.processo || '---';
 
                 const rowData = {
                     name: cleanString(item.name).toUpperCase(),
                     numAgendamento: item.numAgendamento || item.numeroAgendamento || '---',
-                    numeroProcesso: cleanString(processoStr).toUpperCase(), // <- Mapeamento da nova coluna
+                    numeroProcesso: cleanString(processoStr).toUpperCase(),
                     scheduledTime: item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
                     arrivalTime: arrStr,
                     attendedTime: attStr,
@@ -637,16 +633,20 @@ export const PDFService = {
                 }]);
             }
 
+            // Garante que o navegador atualize a UI antes do AutoTable (que é pesado)
+            await yieldThread();
+
             docPDF.autoTable({
                 head: head,
                 body: body,
                 startY: tituloY + 45,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74], halign: 'center' },
-                styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle' },
+                // overflow: 'linebreak' força textos grandes a não cortarem
+                styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle', overflow: 'linebreak' },
                 columnStyles: { 
                     0: { cellWidth: 25 }, 
-                    1: { halign: 'left' } // A coluna de Nome sempre será alinhada à esquerda
+                    1: { halign: 'left' } 
                 }
             });
 
@@ -663,6 +663,7 @@ export const PDFService = {
     },
     
     async generateFaltososPDF(arg1, arg2) {
+        if (window.showNotification) window.showNotification("Gerando lista de faltosos, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -687,6 +688,8 @@ export const PDFService = {
 
             const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às"]];
 
+            await yieldThread();
+
             const body = faltososList.map((item, index) => {
                 const logTime = getSafeDate(item.lastActionTimestamp);
                 const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
@@ -701,6 +704,8 @@ export const PDFService = {
             });
 
             if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic' } }]);
+
+            await yieldThread();
 
             docPDF.autoTable({
                 head: head,
@@ -721,11 +726,13 @@ export const PDFService = {
             return true;
         } catch (error) {
             console.error("Erro PDF Faltosos:", error);
+            if (window.showNotification) window.showNotification("Erro ao gerar PDF de faltosos.", "error");
             return false;
         }
     },
 
     async generateCollaboratorsPDF(arg1, arg2, arg3) {
+        if (window.showNotification) window.showNotification("Gerando lista de equipe, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -750,6 +757,7 @@ export const PDFService = {
 
             if (!colaboradores || colaboradores.length === 0) {
                 console.warn("Nenhum colaborador na lista para gerar PDF.");
+                if (window.showNotification) window.showNotification("Nenhum colaborador encontrado.", "warning");
                 return false;
             }
 
@@ -792,6 +800,8 @@ export const PDFService = {
             const tableData = [];
             let currentEquipe = null;
 
+            await yieldThread();
+
             sortedColaboradores.forEach(c => {
                 const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
                 
@@ -816,13 +826,15 @@ export const PDFService = {
             docPDF.setFontSize(10);
             docPDF.text(`PAUTA: ${pautaNome.toUpperCase()}`, 14, tituloY + 15);
 
+            await yieldThread();
+
             docPDF.autoTable({
                 head: header,
                 body: tableData,
                 startY: tituloY + 30,
                 theme: 'striped',
                 headStyles: { fillColor: [22, 163, 74] },
-                styles: { fontSize: 9, halign: 'center', valign: 'middle' }
+                styles: { fontSize: 9, halign: 'center', valign: 'middle', overflow: 'linebreak' }
             });
 
             addFooter(docPDF, 1, 1);
@@ -831,11 +843,13 @@ export const PDFService = {
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
+            if (window.showNotification) window.showNotification("Erro ao gerar PDF de equipe.", "error");
             return false;
         }
     },
     
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
+        if (window.showNotification) window.showNotification("Gerando checklist, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
@@ -894,6 +908,8 @@ export const PDFService = {
                 });
                 y += 20;
             }
+
+            await yieldThread();
 
             if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
                 const g = checklistData.expenseData;
@@ -1046,9 +1062,11 @@ export const PDFService = {
             }
 
             doc.save(`Checklist_SIGEP_${assistedName.replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("Checklist exportado!", "success");
             return true;
         } catch (err) {
             console.error("Erro crítico na montagem do PDF textual:", err);
+            if (window.showNotification) window.showNotification("Falha ao exportar checklist.", "error");
             return false;
         }
     }
