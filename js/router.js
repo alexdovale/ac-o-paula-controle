@@ -1,5 +1,5 @@
-// router.js
-// Sistema de roteamento SPA completo para o SIGEP - Cobertura Total de Telas, Modais e Menus de Ação
+// js/router.js
+// Sistema de roteamento SPA completo para o SIGEP - Otimizado (Anti-Ghosting, Guards e Loading)
 
 export const ROUTES = {
     LOGIN:                  'login',
@@ -17,7 +17,8 @@ export const ROUTES = {
     RELATORIO_PDF:          'relatorio-pdf',      
     CONFIGURACAO_PAUTA:     'configuracao-pauta',
     FILTRO_PAUTA:           'filtro-pauta',
-    // --- NOVAS ROTAS DO MENU DE AÇÕES E MODAIS ---
+    
+    // --- ROTAS DO MENU DE AÇÕES E MODAIS ---
     MONITOR_EQUIPE:         'monitor-equipe',
     COMPARTILHAMENTO:       'compartilhamento',
     TOTEM:                  'totem',
@@ -76,6 +77,7 @@ export class SIGEPRouter {
         this._currentParams = {};
         this._handlers = this._buildHandlers();
         this._listening = false;
+        this._isNavigating = false; // 🛠️ Lock de Navegação (Evita Telas Sobrepostas)
     }
 
     init() {
@@ -96,12 +98,24 @@ export class SIGEPRouter {
     }
 
     async navigate(route, params = {}, replace = false) {
-        const targetRoute = ROUTE_GUARDS[route] ? route : ROUTES.PAUTA_SELECTION;
-        const redirected = this._guard(targetRoute, params);
-        if (redirected) return this.navigate(redirected, {}, replace);
+        if (this._isNavigating) return; // 🛠️ Bloqueia múltiplos cliques rápidos
         
-        this._pushHistory(targetRoute, params, replace);
-        await this._execute(targetRoute, params, true);
+        const targetRoute = ROUTE_GUARDS[route] ? route : ROUTES.PAUTA_SELECTION;
+        
+        // 🛠️ Proteção de Rota (Guard)
+        const redirected = this._guard(targetRoute, params);
+        if (redirected) {
+            return this.navigate(redirected, {}, replace);
+        }
+        
+        this._isNavigating = true;
+
+        try {
+            this._pushHistory(targetRoute, params, replace);
+            await this._execute(targetRoute, params, true);
+        } finally {
+            this._isNavigating = false; // 🛠️ Libera o lock após a renderização
+        }
     }
 
     async resolveInitialRoute() {
@@ -135,8 +149,11 @@ export class SIGEPRouter {
             'admin':              () => this.navigate(ROUTES.ADMIN, {}, true),
         };
 
-        if (savedScreen && routeMap[savedScreen]) await routeMap[savedScreen]();
-        else await this.navigate(ROUTES.MODO_SELECTION, {}, true);
+        if (savedScreen && routeMap[savedScreen]) {
+            await routeMap[savedScreen]();
+        } else {
+            await this.navigate(ROUTES.MODO_SELECTION, {}, true);
+        }
     }
 
     get currentRoute()  { return this._currentRoute; }
@@ -144,8 +161,21 @@ export class SIGEPRouter {
 
     _hideAllScreens() {
         ALL_SCREEN_IDS.forEach(id => {
-            document.getElementById(id)?.classList.add('hidden');
+            const el = document.getElementById(id);
+            if (el) {
+                el.classList.add('hidden');
+                el.classList.remove('animate-fade-in'); // Limpa animações residuais
+            }
         });
+    }
+
+    _showScreen(id) {
+        this._hideAllScreens();
+        const el = document.getElementById(id);
+        if (el) {
+            el.classList.remove('hidden');
+            el.classList.add('animate-fade-in'); // 🛠️ Transição suave
+        }
     }
 
     _guard(route, params = {}) {
@@ -157,10 +187,14 @@ export class SIGEPRouter {
         const isAuth     = !!app.auth?.currentUser;
         const isApproved = user?.status === 'approved';
 
-        if (guard.requiresAuth && (!isAuth || !isApproved)) return ROUTES.LOGIN;
+        if (guard.requiresAuth && (!isAuth || !isApproved)) {
+            return ROUTES.LOGIN;
+        }
 
         if (guard.roles && !guard.roles.includes(user?.role)) {
-            this._deps.showNotification('Acesso não permitido para seu perfil.', 'error');
+            if (this._deps.showNotification) {
+                this._deps.showNotification('Acesso bloqueado: Seu perfil não tem permissão para acessar esta área.', 'error');
+            }
             return ROUTES.PAUTA_SELECTION;
         }
 
@@ -170,8 +204,11 @@ export class SIGEPRouter {
     _pushHistory(route, params, replace) {
         const state = { route, params };
         const url   = this._buildUrl(route, params);
-        if (replace) window.history.replaceState(state, '', url);
-        else         window.history.pushState(state, '', url);
+        if (replace) {
+            window.history.replaceState(state, '', url);
+        } else {
+            window.history.pushState(state, '', url);
+        }
     }
 
     _buildUrl(route, params) {
@@ -205,7 +242,11 @@ export class SIGEPRouter {
         try {
             await handler(params);
         } catch (error) {
-            console.error(`[SIGEPRouter] Falha na rota ${route}:`, error);
+            console.error(`[SIGEPRouter] Falha crítica na rota ${route}:`, error);
+            if (this._deps.showNotification) {
+                this._deps.showNotification('Erro ao carregar a tela solicitada.', 'error');
+            }
+            this._showScreen('pauta-selection-container');
         }
     }
 
@@ -221,11 +262,15 @@ export class SIGEPRouter {
             [ROUTES.ATENDIMENTO_EXTERNO]: 'atendimento-externo',
             [ROUTES.MEU_PERFIL]:          'meu-perfil'
         };
-        if (screenMap[route]) localStorage.setItem('sigep_active_screen', screenMap[route]);
+        
+        if (screenMap[route]) {
+            localStorage.setItem('sigep_active_screen', screenMap[route]);
+        }
+        
         if (route === ROUTES.APP && params.pautaId) {
             localStorage.setItem('lastPautaId',    params.pautaId);
-            localStorage.setItem('lastPautaName', params.pautaName || '');
-            localStorage.setItem('lastPautaType', params.pautaType || 'normal');
+            localStorage.setItem('lastPautaName',  params.pautaName || '');
+            localStorage.setItem('lastPautaType',  params.pautaType || 'normal');
         }
     }
 
@@ -233,20 +278,24 @@ export class SIGEPRouter {
         const app  = this._app;
         const deps = this._deps;
 
+        // 🛠️ Helper para esperar renderização
+        const waitForUI = () => new Promise(resolve => setTimeout(resolve, 150));
+
         return {
             [ROUTES.LOGIN]: async () => {
-                this._hideAllScreens();
-                document.getElementById('login-container')?.classList.remove('hidden');
+                this._showScreen('login-container');
             },
+            
             [ROUTES.MODO_SELECTION]: async () => {
-                this._hideAllScreens();
-                document.getElementById('modo-selection-screen')?.classList.remove('hidden');
+                this._showScreen('modo-selection-screen');
                 app.applyRoleBasedUI();
             },
+            
             [ROUTES.PAUTA_SELECTION]: async () => {
                 if (app.currentPauta) app._teardownPauta();
-                this._hideAllScreens();
-                document.getElementById('pauta-selection-container')?.classList.remove('hidden');
+                
+                this._showScreen('pauta-selection-container');
+                
                 if (deps.UIService?.renderPautaFilters) {
                     deps.UIService.renderPautaFilters(
                         'filters-container',
@@ -262,47 +311,51 @@ export class SIGEPRouter {
                 await app.loadPautasWithFilter();
                 app.applyRoleBasedUI();
             },
+            
             [ROUTES.APP]: async ({ pautaId, pautaName, pautaType } = {}) => {
                 const id   = pautaId   || localStorage.getItem('lastPautaId');
                 const name = pautaName || localStorage.getItem('lastPautaName');
                 const type = pautaType || localStorage.getItem('lastPautaType');
+                
                 if (id && name) {
                     if (!app.currentPauta || app.currentPauta.id !== id) {
                         await app.loadPauta(id, name, type);
                     }
-                    this._hideAllScreens();
-                    document.getElementById('app-container')?.classList.remove('hidden');
+                    this._showScreen('app-container');
                 } else {
                     await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
                 }
             },
+            
             [ROUTES.DASHBOARD]: async () => {
-                this._hideAllScreens();
+                this._showScreen('dashboard-container');
                 deps.DashboardService.showDashboardScreen();
                 localStorage.setItem('sigep_active_screen', 'dashboard');
             },
+            
             [ROUTES.ADMIN]: async () => {
-                this._hideAllScreens();
-                document.getElementById('admin-container')?.classList.remove('hidden');
+                this._showScreen('admin-container');
                 app.renderAdminContent();
             },
+            
             [ROUTES.RECEPCAO_CENTRAL]: async () => {
-                this._hideAllScreens();
+                this._showScreen('recepcao-central-container');
                 await deps.RecepçãoCentralService.abrir(app);
             },
+            
             [ROUTES.PAINEL_PUBLICO]: async () => {
-                this._hideAllScreens();
+                this._showScreen('painel-publico-container');
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(app);
             },
+            
             [ROUTES.MEU_PERFIL]: async () => {
-                this._hideAllScreens();
-                document.getElementById('meu-perfil-container')?.classList.remove('hidden');
+                this._showScreen('meu-perfil-container');
                 if (deps.PerfilService) await deps.PerfilService.carregarDados(app);
             },
+            
             [ROUTES.ATENDIMENTO_EXTERNO]: async (params) => {
-                this._hideAllScreens();
-                document.getElementById('atendimento-externo-container')?.classList.remove('hidden');
+                this._showScreen('atendimento-externo-container');
                 const { AtendimentoExternoService } = await import('./atendimentoExternoService.js');
                 AtendimentoExternoService.db = app.db;
                 AtendimentoExternoService.auth = app.auth;
@@ -311,6 +364,7 @@ export class SIGEPRouter {
                 AtendimentoExternoService.modoVisualizacao = params.modo || 'abas';
                 await AtendimentoExternoService.init();
             },
+            
             [ROUTES.DETALHES_CASO]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
                 if (params.assistidoId && window.openDetailsModal) {
@@ -322,47 +376,59 @@ export class SIGEPRouter {
                     });
                 }
             },
+            
             [ROUTES.CONFIGURACAO_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('edit-pauta-config-btn')?.click();
             },
+            
             [ROUTES.FILTRO_PAUTA]: async (params) => {
                 if (params.filter && app) {
                     app.currentPautaFilter = params.filter;
                     await app.loadPautasWithFilter();
                 }
             },
-            // --- HANDLERS PARA O MENU VERDE DE AÇÕES ---
+
+            // --- HANDLERS PARA O MENU VERDE DE AÇÕES (ASSÍNCRONOS) ---
             [ROUTES.MONITOR_EQUIPE]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('btn-painel-geral-externo')?.click();
             },
             [ROUTES.COMPARTILHAMENTO]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('share-pauta-btn')?.click();
             },
             [ROUTES.TOTEM]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('open-totem-btn')?.click();
             },
             [ROUTES.ESTATISTICAS]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('view-stats-btn')?.click();
             },
             [ROUTES.EDITAR_NOME_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('edit-pauta-name-btn')?.click();
             },
             [ROUTES.COMPARTILHAR_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('manage-members-btn')?.click();
             },
             [ROUTES.COLABORADORES_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('manage-collaborators-btn')?.click();
             },
             [ROUTES.ANOTACOES_PAUTA]: async (params) => {
                 await this._handlers[ROUTES.APP](params);
+                await waitForUI();
                 document.getElementById('notes-btn')?.click();
             }
         };
