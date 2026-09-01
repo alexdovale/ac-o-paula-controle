@@ -1,4 +1,4 @@
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (PADRÃO SIGEP)
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -22,6 +22,7 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
 
 export const UIService = {
     _collapsedRooms: new Set(), // Armazena a memória de quais salas estão minimizadas (fechadas)
+    _clocksInterval: null, // Armazena a referência do relógio em tempo real
 
     showScreen(screenName) {
         document.getElementById('loading-container')?.classList.toggle('hidden', screenName !== 'loading');
@@ -90,14 +91,17 @@ export const UIService = {
         if (!select) return;
         const currentVal = select.value;
         select.innerHTML = '<option value="">-- Selecione um profissional --</option>';
+        
+        const fragment = document.createDocumentFragment();
         if (app.colaboradores && app.colaboradores.length > 0) {
             app.colaboradores.forEach(c => {
                 const opt = document.createElement('option');
                 opt.value = c.nome;
                 opt.textContent = `${c.nome} (${c.cargo})`;
-                select.appendChild(opt);
+                fragment.appendChild(opt);
             });
         }
+        select.appendChild(fragment);
         if (currentVal) select.value = currentVal;
     },
 
@@ -110,6 +114,8 @@ export const UIService = {
         container.innerHTML = '';
         window.selectedCollaboratorId = null;
         window.selectedCollaboratorName = null;
+        
+        const fragment = document.createDocumentFragment();
         
         const btnNaoAtribuir = document.createElement('button');
         btnNaoAtribuir.className = "collaborator-item w-full text-left p-3 mb-3 bg-white border border-slate-200 rounded-xl hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-3 shadow-sm";
@@ -129,7 +135,7 @@ export const UIService = {
             window.selectedCollaboratorName = null;
             this.destacarSelecao(container, btnNaoAtribuir);
         };
-        container.appendChild(btnNaoAtribuir);
+        fragment.appendChild(btnNaoAtribuir);
 
         const colabs = app?.colaboradores || window.app?.colaboradores || [];
 
@@ -141,7 +147,7 @@ export const UIService = {
                 <span class="font-bold text-slate-500">Nenhum colaborador carregado.</span>
                 <span class="text-xs">Verifique a aba <b>Ações → Colaboradores</b> no painel.</span>
             `;
-            container.appendChild(msg);
+            fragment.appendChild(msg);
         } else {
             colabs.forEach(c => {
                 try {
@@ -179,10 +185,12 @@ export const UIService = {
                         this.destacarSelecao(container, btn);
                     };
                     
-                    container.appendChild(btn);
+                    fragment.appendChild(btn);
                 } catch (err) {}
             });
         }
+        
+        container.appendChild(fragment);
 
         if (searchInput) {
             const applyFilter = (term) => {
@@ -315,15 +323,12 @@ export const UIService = {
                                 const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
                                 if (nome) html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
                             });
-                            html += `</optgroup>`;
-                            html += `<optgroup label=" Todas as Unidades do Sistema">`;
+                            html += `</optgroup><optgroup label=" Todas as Unidades do Sistema">`;
                         }
                         allUnidades.forEach(nome => {
                             html += `<option value="${escapeHTML(nome)}"> ${escapeHTML(nome)}</option>`;
                         });
-                        if (userUnidades.length > 0) {
-                            html += `</optgroup>`;
-                        }
+                        if (userUnidades.length > 0) html += `</optgroup>`;
                         selectUnidade.innerHTML = html;
                     }).catch(err => {
                         console.error("Erro ao carregar unidades do sistema:", err);
@@ -631,7 +636,6 @@ export const UIService = {
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-        // Atribui uma ordem absoluta apenas para referência global
         rawAguardando.forEach((a, i) => a.absoluteOrder = i + 1);
         rawEmAtendimento.forEach((a, i) => a.absoluteOrder = i + 1);
 
@@ -648,10 +652,7 @@ export const UIService = {
         this.clearContainers();
 
         this.renderPautaColumn(lists.pauta);
-        
-        // ⭐ COLUNA AGUARDANDO (Agora com numeração inteligente por sala)
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
-        
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
         this.renderAtendidosColumn(lists.atendidos);
         this.renderFaltososColumn(lists.faltosos);
@@ -843,9 +844,11 @@ export const UIService = {
             return;
         }
 
+        const fragment = document.createDocumentFragment();
         items.forEach(item => {
-            container.appendChild(this.createPautaCard(item));
+            fragment.appendChild(this.createPautaCard(item));
         });
+        container.appendChild(fragment);
     },
 
     createPautaCard(item) {
@@ -919,7 +922,6 @@ export const UIService = {
         return card;
     },
 
-    // ⭐ RENDERIZAÇÃO DA COLUNA AGUARDANDO (AGORA COM ACORDEÃO E NUMERAÇÃO LOCAL)
     renderAguardandoColumn(items, currentPautaData, colaboradores) {
         const container = document.getElementById('aguardando-list');
         if (!container) return;
@@ -931,6 +933,8 @@ export const UIService = {
 
         container.innerHTML = '';
         this._collapsedRooms = this._collapsedRooms || new Set();
+        
+        const fragment = document.createDocumentFragment();
 
         if (currentPautaData?.type === 'multisala' && currentPautaData.rooms?.length > 0) {
             currentPautaData.rooms.forEach(roomName => {
@@ -974,14 +978,15 @@ export const UIService = {
                 });
 
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
+                const cardsFrag = document.createDocumentFragment();
 
                 peopleInRoom.forEach((item, index) => {
-                    item.roomOrder = index + 1; // ⭐ INJETA O NÚMERO INDEPENDENTE DA SALA
+                    item.roomOrder = index + 1;
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) cardsWrapper.appendChild(card);
+                    if (card) cardsFrag.appendChild(card);
                 });
+                cardsWrapper.appendChild(cardsFrag);
 
-                // Lógica de pesquisa interna da sala
                 const searchInput = roomGroup.querySelector('.room-search-input');
                 searchInput.addEventListener('input', (e) => {
                     const term = normalizeText(e.target.value);
@@ -996,10 +1001,9 @@ export const UIService = {
                     });
                 });
 
-                container.appendChild(roomGroup);
+                fragment.appendChild(roomGroup);
             });
 
-            // Agrupamento para quem está "Sem Sala"
             const peopleNoRoom = items.filter(a => !a.room || !currentPautaData.rooms.includes(a.room));
             if (peopleNoRoom.length > 0) {
                 const roomName = "Sem Sala Definida";
@@ -1040,13 +1044,14 @@ export const UIService = {
                 });
 
                 const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
+                const noRoomFrag = document.createDocumentFragment();
                 peopleNoRoom.forEach((item, index) => {
-                    item.roomOrder = index + 1; // ⭐ INJETA O NÚMERO INDEPENDENTE
+                    item.roomOrder = index + 1;
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                    if (card) cardsWrapperNoRoom.appendChild(card);
+                    if (card) noRoomFrag.appendChild(card);
                 });
+                cardsWrapperNoRoom.appendChild(noRoomFrag);
 
-                // Lógica de pesquisa da sala "Sem sala"
                 const searchInput = roomGroupNoRoom.querySelector('.room-search-input');
                 searchInput.addEventListener('input', (e) => {
                     const term = normalizeText(e.target.value);
@@ -1061,16 +1066,17 @@ export const UIService = {
                     });
                 });
 
-                container.appendChild(roomGroupNoRoom);
+                fragment.appendChild(roomGroupNoRoom);
             }
 
         } else {
-            // Se NÃO for multisala, renderiza a fila padrão com ordem contínua
             items.forEach((item, index) => {
                 const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
-                if (card) container.appendChild(card);
+                if (card) fragment.appendChild(card);
             });
         }
+        
+        container.appendChild(fragment);
     },
 
     createAguardandoCard(item, currentPautaData, colaboradores, index) {
@@ -1219,7 +1225,6 @@ export const UIService = {
                 }
             }
 
-            // ⭐ USO DO ROOMORDER: Primeiro a ordem da sala, depois global, ou index original
             const numeroOrdem = item.roomOrder || item.absoluteOrder || (index + 1);
             
             const numeroBadge = `
@@ -1330,10 +1335,15 @@ export const UIService = {
             return;
         }
 
+        container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        
         items.forEach((item, index) => {
             const card = this.createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index);
-            if (card) container.appendChild(card);
+            if (card) fragment.appendChild(card);
         });
+        
+        container.appendChild(fragment);
     },
 
     createEmAtendimentoCard(item, currentPautaData, pautaId, userName, index) {
@@ -1497,11 +1507,15 @@ export const UIService = {
         }
 
         container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        
         items.forEach(item => {
             if (!item) return;
             const card = this.createAtendidoCard(item);
-            if (card) container.appendChild(card);
+            if (card) fragment.appendChild(card);
         });
+        
+        container.appendChild(fragment);
     },
 
     createAtendidoCard(item) {
@@ -1630,6 +1644,8 @@ export const UIService = {
         }
 
         container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
+        
         items.forEach(item => {
             const currentUserRole = window.app?.currentUser?.role;
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
@@ -1707,8 +1723,10 @@ export const UIService = {
 
                 ${this._getStandardizedFooterHtml(item)}
             `;
-            container.appendChild(card);
+            fragment.appendChild(card);
         });
+        
+        container.appendChild(fragment);
     },
 
     renderDistribuicaoColumn(items, pautaId, userName) {
@@ -1726,6 +1744,7 @@ export const UIService = {
         }
 
         container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
 
         const groups = {};
         items.forEach(item => {
@@ -1758,6 +1777,7 @@ export const UIService = {
             `;
             groupDiv.innerHTML = headerHtml;
             const cardsWrapper = groupDiv.querySelector('.room-cards-wrapper');
+            const cardsFrag = document.createDocumentFragment();
 
             groups[defensor].forEach((item, index) => {
                 const currentUserRole = window.app?.currentUser?.role;
@@ -1901,11 +1921,14 @@ export const UIService = {
 
                     ${this._getStandardizedFooterHtml(item)}
                 `;
-                cardsWrapper.appendChild(card);
+                cardsFrag.appendChild(card);
             });
 
-            container.appendChild(groupDiv);
+            cardsWrapper.appendChild(cardsFrag);
+            fragment.appendChild(groupDiv);
         });
+        
+        container.appendChild(fragment);
     },
 
     setupFooterModals() {
@@ -2086,6 +2109,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         }
 
         container.innerHTML = '';
+        const fragment = document.createDocumentFragment();
 
         pautas.forEach(pauta => {
             const isOwner = pauta.owner === userId;
@@ -2192,8 +2216,10 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 }
             };
 
-            container.appendChild(card);
+            fragment.appendChild(card);
         });
+        
+        container.appendChild(fragment);
     },
 
     applyPopoutMode() {
@@ -2289,8 +2315,15 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
         });
     },
 
+    stopRealtimeClocks() {
+        if (this._clocksInterval) {
+            clearInterval(this._clocksInterval);
+            this._clocksInterval = null;
+        }
+    },
+
     startRealtimeClocks() {
-        if (this._clocksInterval) return; 
+        this.stopRealtimeClocks(); // Garante que nunca haverá mais de um relógio rodando (evita vazamento de memória)
         
         this._clocksInterval = setInterval(() => {
             const clocks = document.querySelectorAll('.realtime-clock');
