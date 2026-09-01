@@ -1,5 +1,3 @@
-// js/admin.js - MÓDULO DE AUDITORIA, SEGURANÇA, REGISTROS DO BI E GERENCIAMENTO DE UNIDADES (SIGEP)
-
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
     query, orderBy, limit, where, writeBatch, setDoc
@@ -471,10 +469,6 @@ export const abrirGerenciadorUnidades = async (db) => {
     document.getElementById('btn-importar-unidades-massa')?.addEventListener('click', () => { fechar(); abrirImportadorUnidades(db); });
 };
 
-// ============================================================
-// MÓDULO: GERENCIAR RECEPÇÕES GLOBAIS (UNIDADES DE APOIO)
-// ============================================================
-
 const abrirModalGerenciarRecepcoesGlobal = async (app) => {
     const { db } = app;
     const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
@@ -503,11 +497,9 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
     const fechar = () => modal.remove();
     document.getElementById('fechar-gerenciador-recepcoes').onclick = fechar;
 
-    // ── BUG 2 CORRIGIDO: container buscado APÓS o await para evitar race condition ──
     const renderizarTelaAdmin = async () => {
         const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
 
-        // Verifica se o modal ainda está no DOM após o await
         const container = document.getElementById('painel-conteudo-recepcoes');
         if (!container) return;
 
@@ -779,9 +771,8 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
         }
     };
 
-    // ── BUG 1 CORRIGIDO: renderizarTelaAdmin agora está dentro do escopo correto ──
     await renderizarTelaAdmin();
-}; // fecha abrirModalGerenciarRecepcoesGlobal
+};
 
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     const isEdicao = !!unidade;
@@ -1007,9 +998,9 @@ function renderAprovadosTable(db) {
                 </td>
                 <td class="px-3 py-3">
                     <select id="role-select-${user.id}" class="w-full text-xs border rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold cursor-pointer">
-                        <option value="user"       ${user.role === 'user'       ? 'selected' : ''}>👤 Usuário</option>
-                        <option value="apoio"      ${user.role === 'apoio'      ? 'selected' : ''}>🤝 Apoio</option>
-                        <option value="admin"      ${user.role === 'admin'      ? 'selected' : ''}>🛡️ Admin</option>
+                        <option value="user"        ${user.role === 'user'        ? 'selected' : ''}>👤 Usuário</option>
+                        <option value="apoio"       ${user.role === 'apoio'       ? 'selected' : ''}>🤝 Apoio</option>
+                        <option value="admin"       ${user.role === 'admin'       ? 'selected' : ''}>🛡️ Admin</option>
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
                         <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
                     </select>
@@ -1396,17 +1387,56 @@ export const populateUserFilter = async (db) => {
 
 export const setupAdminEvents = (app) => {
     globalApp = app;
-    const btnGlobal = document.getElementById('btn-recepcoes-master');
-    if (btnGlobal) {
-        btnGlobal.addEventListener('click', () => {
-            abrirModalGerenciarRecepcoesGlobal(globalApp);
-        });
-    }
+
+    // 1. Inicializa as buscas e tabelas do painel automaticamente
+    setupAdminSearch();
+    loadUsersList(app.db);
+    populateUserFilter(app.db);
+
+    // 2. Eventos dos botões principais do topo
+    document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
+        if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.abrirModalMaster === 'function') {
+            window.ImportadorOrgaosService.abrirModalMaster(app);
+        } else {
+            abrirGerenciadorUnidades(app.db);
+        }
+    });
+
+    document.getElementById('btn-recepcoes-master')?.addEventListener('click', () => {
+        abrirModalGerenciarRecepcoesGlobal(app);
+    });
+
+    document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
+        if (app.router) app.router.navigate('pauta-selection', {}, false);
+    });
+
+    // 3. Botões de Ações de Auditoria e BI
+    document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
+        const btn = document.getElementById('view-audit-logs-btn');
+        if (btn) { btn.textContent = "Carregando..."; btn.disabled = true; }
+        await loadAuditLogs(app.db);
+        if (btn) { btn.textContent = "🔍 Carregar Logs"; btn.disabled = false; }
+    });
+
+    document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
+        cleanupOldData(app.db);
+    });
+
+    document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
+        loadDashboardData(app.db);
+    });
+
+    document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
+        exportAuditLogsPDF(app.db);
+    });
+
+    // 4. Listeners para os Filtros de Logs
+    document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(app.db));
+    document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(app.db));
+    document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(app.db));
+    document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
 };
 
-// ============================================================
-// GLOBAIS
-// ============================================================
 window.approveUser = (userId) => {
     if (globalApp) approveUser(globalApp.db, userId);
     else console.error("App não inicializado");
@@ -1433,7 +1463,7 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
-    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
+    if (globalApp) abrirGerenciarUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
 
@@ -1484,8 +1514,6 @@ window.exportAuditLogsPDF = () => {
 
 window.setupAdminSearch = () => setupAdminSearch();
 
-// ── BUG 3 CORRIGIDO: renderEstruturaAtual removida do AdminService
-//    (é importada de outro módulo, não deve ser reexportada aqui)
 export const AdminService = {
     carregarUnidades,
     criarUnidade,
