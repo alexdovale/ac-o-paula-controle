@@ -1,21 +1,36 @@
 {
-  "name": "SIGEP - Gestão de Pauta",
+  "name": "SIGEP - Sistema de Gerenciamento de Pauta",
   "short_name": "SIGEP",
+  "description": "Sistema profissional de gerenciamento de pautas, filas e atendimento.",
   "start_url": "./index.html",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#f0f2f5",
   "theme_color": "#16a34a",
   "orientation": "portrait-primary",
+  "lang": "pt-BR",
+  "categories": ["productivity", "business"],
   "icons": [
     {
       "src": "https://alexdovale.github.io/ponto.codoc/imagem.png",
       "sizes": "192x192",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
     },
     {
       "src": "https://alexdovale.github.io/ponto.codoc/imagem.png",
       "sizes": "512x512",
-      "type": "image/png"
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "shortcuts": [
+    {
+      "name": "Recepção Central",
+      "short_name": "Recepção",
+      "description": "Acessar a Recepção Central",
+      "url": "./index.html?r=recepcao-central",
+      "icons": [{ "src": "https://alexdovale.github.io/ponto.codoc/imagem.png", "sizes": "192x192" }]
     }
   ]
 }
