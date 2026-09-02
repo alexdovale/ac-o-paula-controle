@@ -1082,10 +1082,16 @@ export const approveUser = async (db, userId) => {
 
 export const updateUserRole = async (db, userId) => {
     try {
-        // Tenta achar o select pelo ID padrão ou busca dentro da mesma linha da tabela
-        let selectElement = document.getElementById(`role-select-${userId}`);
+        // Blindagem: Se o 'db' vier como string (ID), inverte os parâmetros por segurança
+        let database = db;
+        let targetId = userId;
+        if (typeof database === 'string' && typeof targetId !== 'string') {
+            database = userId;
+            targetId = db;
+        }
+
+        let selectElement = document.getElementById(`role-select-${targetId}`);
         if (!selectElement) {
-            // Fallback: procura o select mais próximo do botão que foi clicado
             const btn = event?.target;
             const row = btn?.closest('tr');
             if (row) {
@@ -1101,14 +1107,14 @@ export const updateUserRole = async (db, userId) => {
         const role = selectElement.value;
         const novoStatus = role === 'suspended' ? 'suspended' : 'approved';
         
-        await updateDoc(doc(db, "users", userId), { 
+        await updateDoc(doc(database, "users", targetId), { 
             role: role, 
             status: novoStatus,
             updatedAt: new Date().toISOString()
         });
         
         showNotification("Perfil atualizado com sucesso.", "success");
-        await loadUsersList(db);
+        await loadUsersList(database);
     } catch (e) { 
         console.error("Erro ao atualizar perfil:", e);
         showNotification("Erro ao atualizar: " + e.message, "error"); 
