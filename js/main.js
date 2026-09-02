@@ -1059,12 +1059,24 @@ class SIGEPApp {
             const modoAtual = this.currentMode;
 
             // 🛠️ BUSCA SEGURA: Traz todas as pautas do usuário sem restrições de query compostas no Firebase
+            // 🛠️ BUSCA SEGURA E ISOLADA POR ÓRGÃO (MULTI-TENANT)
             let qUser;
-            if (isAdmin) {
+            const orgaoDoUsuario = this.currentUser.orgaoId;
+
+            if (isAdmin && this.currentUser.role === 'superadmin_global') {
+                // APENAS você (dono do sistema) vê todas as pautas de todos os clientes
                 qUser = query(collection(this.db, "pautas"));
-            } else {
+            } else if (isAdmin) {
+                // Admin de um órgão vê todas as pautas APENAS do seu órgão
                 qUser = query(
                     collection(this.db, "pautas"),
+                    where("orgaoId", "==", orgaoDoUsuario)
+                );
+            } else {
+                // Operador comum vê as pautas onde é dono ou membro, MAS restrito ao seu órgão
+                qUser = query(
+                    collection(this.db, "pautas"),
+                    where("orgaoId", "==", orgaoDoUsuario),
                     or(
                         where("owner", "==", user.uid),
                         where("members", "array-contains", user.uid)
@@ -1500,10 +1512,17 @@ class SIGEPApp {
             if (docSnap.exists()) {
                 const userData = docSnap.data();
                 this.currentUser = { ...this.currentUser, ...userData }; 
+                
+                // 🔒 CAPTURA O TENANT (ÓRGÃO) DO USUÁRIO
+                // Se for um usuário antigo sem órgão, cai no 'padrao_dprj' temporariamente
+                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
+                
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
                 this.applyRoleBasedUI(); 
             }
-        } catch (error) { console.error("Erro ao carregar perfil:", error); }
+        } catch (error) { 
+            console.error("Erro ao carregar perfil:", error); 
+        }
     }
 
     applyRoleBasedUI() {
