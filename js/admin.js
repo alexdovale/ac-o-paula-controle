@@ -869,7 +869,8 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 export const loadUsersList = async (db) => {
     try {
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
-        const meuTenant = globalApp?.currentUser?.orgaoId;
+        // 🔒 BLINDAGEM CONTRA UNDEFINED: Se não houver órgão, assume 'padrao_dprj' por segurança
+        const meuTenant = globalApp?.currentUser?.orgaoId || 'padrao_dprj';
         
         const allUsers = [];
         
