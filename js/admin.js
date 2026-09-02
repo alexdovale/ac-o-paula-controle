@@ -29,6 +29,10 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
             userEmail: auth.currentUser.email || 'email@desconhecido',
             userId: auth.currentUser.uid || 'uid_desconhecido',
             userName: userName || auth.currentUser.email || 'Desconhecido',
+            
+            // 🔒 INJEÇÃO MULTI-TENANT: Grava a qual órgão esta ação pertence
+            orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj',
+            
             timestamp: new Date().toISOString()
         };
         await addDoc(collection(db, "audit_logs"), logData);
@@ -877,9 +881,31 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 
 export const loadUsersList = async (db) => {
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        const meuTenant = globalApp?.currentUser?.orgaoId;
+        
         const allUsers = [];
-        snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+        
+        if (isAdminGlobal) {
+            // SuperAdmin vê tudo
+            const snapshot = await getDocs(collection(db, "users"));
+            snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+        } else {
+            // 🔒 Admin do órgão vê apenas os usuários do próprio órgão
+            const qOrg = query(collection(db, "users"), where("orgaoId", "==", meuTenant));
+            const snapOrg = await getDocs(qOrg);
+            snapOrg.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
+            
+            // 🔒 E busca também pendentes "órfãos" (sem orgaoId) para poder adotá-los
+            const qPend = query(collection(db, "users"), where("status", "==", "pending"));
+            const snapPend = await getDocs(qPend);
+            snapPend.forEach(doc => {
+                const u = doc.data();
+                if (!u.orgaoId && !allUsers.some(existing => existing.id === doc.id)) {
+                    allUsers.push({ id: doc.id, ...u });
+                }
+            });
+        }
         
         let pendentes = allUsers.filter(u => u.status === 'pending');
         let aprovados = allUsers.filter(u => u.status !== 'pending');
@@ -972,7 +998,7 @@ function renderAprovadosTable(db) {
         'admin':      { label: '🛡️ Admin',      color: 'bg-blue-100 text-blue-800 border-blue-300'   },
         'user':       { label: '👤 Usuário',    color: 'bg-green-100 text-green-800 border-green-300' },
         'apoio':      { label: '🤝 Apoio',      color: 'bg-amber-100 text-amber-800 border-amber-300' },
-        'suspended':  { label: '🚫 Suspenso',   color: 'bg-red-100 text-red-800 border-red-300'       },
+        'suspended':  { label: '🚫 Suspenso',   color: 'bg-red-100 text-red-800 border-red-300'        },
     };
 
     tableBody.innerHTML = paginated.map(user => {
@@ -1048,10 +1074,20 @@ function renderAprovadosTable(db) {
 export const approveUser = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "users", userId), { status: 'approved', role: role, approvedAt: new Date().toISOString() });
-        showNotification("Usuário aprovado!");
+        const orgaoIdAdmin = globalApp?.currentUser?.orgaoId || 'padrao_dprj';
+        
+        await updateDoc(doc(db, "users", userId), { 
+            status: 'approved', 
+            role: role, 
+            orgaoId: orgaoIdAdmin, // 🔒 ADOÇÃO: Usuário aprovado vira propriedade do órgão do Admin
+            approvedAt: new Date().toISOString() 
+        });
+        
+        showNotification("Usuário aprovado e vinculado ao seu órgão!");
         await loadUsersList(db);
-    } catch (e) { showNotification("Erro ao aprovar.", "error"); }
+    } catch (e) { 
+        showNotification("Erro ao aprovar.", "error"); 
+    }
 };
 
 export const updateUserRole = async (db, userId) => {
@@ -1093,13 +1129,23 @@ export const loadLogFilters = async (db) => {
     try {
         const userSelect = document.getElementById('filter-log-user');
         const actionSelect = document.getElementById('filter-log-action');
+        
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        const meuTenant = globalApp?.currentUser?.orgaoId;
+
         if (userSelect) {
-            const usersSnap = await getDocs(collection(db, "users"));
+            let usersQuery = collection(db, "users");
+            if (!isAdminGlobal) usersQuery = query(usersQuery, where("orgaoId", "==", meuTenant));
+            
+            const usersSnap = await getDocs(usersQuery);
             userSelect.innerHTML = '<option value="all">Todos os usuários</option>';
             usersSnap.forEach(doc => { const user = doc.data(); if (user.email) userSelect.appendChild(new Option(user.name || user.email, user.email)); });
         }
         if (actionSelect) {
-            const logsSnap = await getDocs(collection(db, "audit_logs"));
+            let logsQuery = collection(db, "audit_logs");
+            if (!isAdminGlobal) logsQuery = query(logsQuery, where("orgaoId", "==", meuTenant));
+            
+            const logsSnap = await getDocs(logsQuery);
             const actions = new Set();
             logsSnap.forEach(doc => { const action = doc.data().action; if (action) actions.add(action); });
             actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
@@ -1129,17 +1175,26 @@ export const loadAuditLogs = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
+        // Traz as últimas 5000 ações
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(5000));
         const snapshot = await getDocs(q);
+
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        const meuTenant = globalApp?.currentUser?.orgaoId;
 
         let filteredLogs = [];
         snapshot.forEach((docSnap) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
+            
+            // 🔒 Filtro em memória para não forçar criação de index complexo no firebase
+            if (!isAdminGlobal && log.orgaoId !== meuTenant) return;
+            
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
             if (actionFilter && actionFilter !== 'all' && log.action !== actionFilter) return;
             if (startDate && log.timestamp < startDate) return;
             if (endDate && log.timestamp > endDate + "T23:59:59") return;
+            
             filteredLogs.push(log);
         });
         
@@ -1259,15 +1314,36 @@ export const cleanupOldData = async (db) => {
     try {
         const limitDate = new Date();
         limitDate.setDate(limitDate.getDate() - 7);
-        const pautas = await getDocs(collection(db, "pautas"));
+        
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        let pautasQuery = collection(db, "pautas");
+        
+        if (!isAdminGlobal) {
+            pautasQuery = query(pautasQuery, where("orgaoId", "==", globalApp.currentUser.orgaoId));
+        }
+        
+        const pautas = await getDocs(pautasQuery);
         let count = 0; let statsCount = 0;
+        
         for (const pautaDoc of pautas.docs) {
             const pautaData = pautaDoc.data();
             const attRef = collection(db, "pautas", pautaDoc.id, "attendances");
             const q = query(attRef, where("createdAt", "<", limitDate.toISOString()));
             const snapshot = await getDocs(q);
             if (!snapshot.empty) {
-                const stats = { pautaName: pautaData.name || 'Sem nome', creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido', dataReferencia: limitDate.toISOString(), diaSemana: limitDate.getDay(), total: snapshot.size, atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length, faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length, assuntos: {}, atendentes: {} };
+                const stats = { 
+                    pautaName: pautaData.name || 'Sem nome', 
+                    creatorEmail: pautaData.ownerEmail || pautaData.memberEmails?.[0] || 'Desconhecido', 
+                    dataReferencia: limitDate.toISOString(), 
+                    diaSemana: limitDate.getDay(), 
+                    total: snapshot.size, 
+                    atendidos: snapshot.docs.filter(d => d.data().status === 'atendido').length, 
+                    faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length, 
+                    assuntos: {}, 
+                    atendentes: {},
+                    orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj' // 🔒 Salva a estatística para o órgão
+                };
+                
                 snapshot.docs.forEach(d => {
                     const data = d.data();
                     const sub = data.subject || 'Não informado';
@@ -1276,6 +1352,7 @@ export const cleanupOldData = async (db) => {
                     if (data.attendedBy) profissionalNome = typeof data.attendedBy === 'object' ? (data.attendedBy.nome || data.attendedBy.name) : data.attendedBy;
                     if (profissionalNome) stats.atendentes[profissionalNome] = (stats.atendentes[profissionalNome] || 0) + 1;
                 });
+                
                 await addDoc(collection(db, "estatisticas_permanentes"), stats);
                 statsCount++;
                 const batch = writeBatch(db);
@@ -1307,8 +1384,16 @@ export const loadDashboardData = async (db) => {
             return;
         }
         
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        const meuTenant = globalApp?.currentUser?.orgaoId;
+
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         let filteredData = [...rawData];
+        
+        // 🔒 Filtra as estatísticas apenas para o órgão do Admin
+        if (!isAdminGlobal) {
+            filteredData = filteredData.filter(d => d.orgaoId === meuTenant);
+        }
         
         if (start) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia >= start);
         if (end) filteredData = filteredData.filter(d => d.dataReferencia && d.dataReferencia <= end + "T23:59:59");
@@ -1379,7 +1464,14 @@ export const populateUserFilter = async (db) => {
     const select = document.getElementById('stats-filter-user');
     if (!select) return;
     try {
-        const snapshot = await getDocs(collection(db, "users"));
+        const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
+        let usersQuery = collection(db, "users");
+        
+        if (!isAdminGlobal) {
+            usersQuery = query(usersQuery, where("orgaoId", "==", globalApp.currentUser.orgaoId));
+        }
+        
+        const snapshot = await getDocs(usersQuery);
         select.innerHTML = '<option value="all">Todos os Usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
@@ -1536,4 +1628,4 @@ export const AdminService = {
     abrirModalGerenciarRecepcoesGlobal,
 };
 
-console.log("✅ AdminService (Hub de Unidades e Recepções Independentes) registrado no window com sucesso.");
+console.log("✅ AdminService (Hub de Unidades e Recepções Independentes com Multi-Tenant) registrado com sucesso.");
