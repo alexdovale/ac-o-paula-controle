@@ -29,10 +29,7 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
             userEmail: auth.currentUser.email || 'email@desconhecido',
             userId: auth.currentUser.uid || 'uid_desconhecido',
             userName: userName || auth.currentUser.email || 'Desconhecido',
-            
-            // 🔒 INJEÇÃO MULTI-TENANT: Grava a qual órgão esta ação pertence
-            orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj',
-            
+            orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj', // 🔒 INJEÇÃO MULTI-TENANT
             timestamp: new Date().toISOString()
         };
         await addDoc(collection(db, "audit_logs"), logData);
@@ -40,6 +37,10 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
         console.error("❌ Erro ao registrar log:", error); 
     }
 };
+
+// ==========================================
+// GESTÃO DE UNIDADES
+// ==========================================
 
 export const carregarUnidades = async (db) => {
     try {
@@ -879,6 +880,10 @@ function renderSearchInput(containerId, placeholder, onSearch) {
     }
 }
 
+// ==========================================
+// GESTÃO DE USUÁRIOS E MULTI-TENANT
+// ==========================================
+
 export const loadUsersList = async (db) => {
     try {
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
@@ -887,16 +892,13 @@ export const loadUsersList = async (db) => {
         const allUsers = [];
         
         if (isAdminGlobal) {
-            // SuperAdmin vê tudo
             const snapshot = await getDocs(collection(db, "users"));
             snapshot.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
         } else {
-            // 🔒 Admin do órgão vê apenas os usuários do próprio órgão
             const qOrg = query(collection(db, "users"), where("orgaoId", "==", meuTenant));
             const snapOrg = await getDocs(qOrg);
             snapOrg.forEach(doc => allUsers.push({ id: doc.id, ...doc.data() }));
             
-            // 🔒 E busca também pendentes "órfãos" (sem orgaoId) para poder adotá-los
             const qPend = query(collection(db, "users"), where("status", "==", "pending"));
             const snapPend = await getDocs(qPend);
             snapPend.forEach(doc => {
@@ -1125,6 +1127,10 @@ export const deleteUser = async (db, userId) => {
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
 
+// ==========================================
+// AUDITORIA E LOGS
+// ==========================================
+
 export const loadLogFilters = async (db) => {
     try {
         const userSelect = document.getElementById('filter-log-user');
@@ -1175,7 +1181,6 @@ export const loadAuditLogs = async (db) => {
         const startDate = document.getElementById('filter-log-start')?.value;
         const endDate = document.getElementById('filter-log-end')?.value;
 
-        // Traz as últimas 5000 ações
         const q = query(logsRef, orderBy("timestamp", "desc"), limit(5000));
         const snapshot = await getDocs(q);
 
@@ -1187,7 +1192,7 @@ export const loadAuditLogs = async (db) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
             
-            // 🔒 Filtro em memória para não forçar criação de index complexo no firebase
+            // Filtro em memória para não forçar criação de index complexo no firebase
             if (!isAdminGlobal && log.orgaoId !== meuTenant) return;
             
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
@@ -1309,6 +1314,10 @@ export const exportAuditLogsPDF = async (db) => {
     } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
 };
 
+// ==========================================
+// DASHBOARD E ESTATÍSTICAS
+// ==========================================
+
 export const cleanupOldData = async (db) => {
     if (!confirm("Isso apagará dados com mais de 7 dias. Confirmar?")) return;
     try {
@@ -1390,7 +1399,6 @@ export const loadDashboardData = async (db) => {
         let rawData = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
         let filteredData = [...rawData];
         
-        // 🔒 Filtra as estatísticas apenas para o órgão do Admin
         if (!isAdminGlobal) {
             filteredData = filteredData.filter(d => d.orgaoId === meuTenant);
         }
@@ -1477,15 +1485,161 @@ export const populateUserFilter = async (db) => {
     } catch (e) {}
 };
 
+// ============================================================================
+// 👑 PAINEL DO DONO (GESTAO DE TENANTS / ÓRGÃOS) - EXCLUSIVO SUPERADMIN_GLOBAL
+// ============================================================================
+
+export const carregarOrgaos = async (db) => {
+    try {
+        const snapshot = await getDocs(collection(db, "orgaos_clientes"));
+        return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+    } catch (error) {
+        return [];
+    }
+};
+
+export const abrirGerenciadorTenants = async (db) => {
+    if (globalApp?.currentUser?.role !== 'superadmin_global') {
+        showNotification("Acesso negado. Apenas o Dono do Sistema pode gerenciar clientes.", "error");
+        return;
+    }
+
+    let orgaos = await carregarOrgaos(db);
+    
+    const renderLista = () => {
+        const container = document.getElementById('lista-tenants-admin');
+        if (!container) return;
+        
+        if (orgaos.length === 0) {
+            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400">Nenhum cliente/órgão cadastrado.</div>';
+            return;
+        }
+        
+        container.innerHTML = orgaos.map(org => `
+            <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
+                <div class="flex justify-between items-start mb-4">
+                    <div>
+                        <h4 class="font-black text-slate-800 text-lg leading-tight">${escapeHTML(org.nome)}</h4>
+                        <p class="text-xs font-mono text-slate-500 mt-1 bg-slate-100 px-2 py-0.5 rounded inline-block">ID: ${escapeHTML(org.id)}</p>
+                    </div>
+                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${org.ativo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
+                        ${org.ativo !== false ? 'Ativo' : 'Bloqueado'}
+                    </span>
+                </div>
+                
+                <div class="pt-4 border-t border-slate-100 flex gap-2">
+                    <button class="btn-toggle-tenant flex-1 ${org.ativo !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'} font-bold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${org.ativo !== false}">
+                        ${org.ativo !== false ? '🚫 Bloquear Acesso' : '✅ Desbloquear'}
+                    </button>
+                </div>
+            </div>
+        `).join('');
+        
+        container.querySelectorAll('.btn-toggle-tenant').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                const isAtivo = btn.dataset.ativo === 'true';
+                const novoStatus = !isAtivo;
+                const acao = novoStatus ? 'Desbloquear' : 'Bloquear';
+                
+                if (confirm(`Tem certeza que deseja ${acao} este cliente? ${novoStatus ? '' : 'Isso impedirá o acesso de todos os usuários deste órgão.'}`)) {
+                    btn.disabled = true;
+                    btn.textContent = 'Processando...';
+                    try {
+                        await updateDoc(doc(db, "orgaos_clientes", btn.dataset.id), { ativo: novoStatus, updatedAt: new Date().toISOString() });
+                        showNotification(`Cliente ${acao.toLowerCase()}o com sucesso!`, "success");
+                        orgaos = await carregarOrgaos(db);
+                        renderLista();
+                    } catch (e) {
+                        showNotification("Erro ao alterar status.", "error");
+                        btn.disabled = false;
+                    }
+                }
+            });
+        });
+    };
+    
+    const modal = document.createElement('div');
+    modal.id = 'gerenciador-tenants-modal';
+    modal.className = 'fixed inset-0 bg-slate-900/80 z-[1000] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
+    modal.innerHTML = `
+        <div class="bg-slate-50 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-gradient-to-r from-amber-600 to-orange-500 px-8 py-6 flex justify-between items-center shrink-0">
+                <div>
+                    <h2 class="text-2xl font-black text-white flex items-center gap-3">👑 Gestão de Clientes (Tenants)</h2>
+                    <p class="text-amber-100 text-sm mt-1">Crie e gerencie os órgãos independentes do seu SaaS.</p>
+                </div>
+                <button id="fechar-gerenciador-tenants" class="text-white/60 hover:text-white text-4xl leading-none">&times;</button>
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-8">
+                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
+                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><span>➕</span> Cadastrar Novo Cliente</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div class="md:col-span-2">
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Nome do Órgão / Prefeitura</label>
+                            <input type="text" id="novo-tenant-nome" placeholder="Ex: Prefeitura de Petrópolis" class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
+                        </div>
+                        <div>
+                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ação</label>
+                            <button id="btn-salvar-tenant" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-sm">Criar Cliente</button>
+                        </div>
+                    </div>
+                </div>
+                
+                <h3 class="font-bold text-slate-800 mb-4 text-lg">Clientes Ativos na Plataforma</h3>
+                <div id="lista-tenants-admin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    renderLista();
+    
+    document.getElementById('fechar-gerenciador-tenants').addEventListener('click', () => modal.remove());
+    
+    document.getElementById('btn-salvar-tenant').addEventListener('click', async () => {
+        const inputNome = document.getElementById('novo-tenant-nome');
+        const nome = inputNome.value.trim();
+        
+        if (!nome) {
+            showNotification("Digite o nome do cliente.", "error");
+            return;
+        }
+        
+        const btn = document.getElementById('btn-salvar-tenant');
+        btn.disabled = true;
+        btn.textContent = 'Criando...';
+        
+        try {
+            const tenantId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
+            
+            await setDoc(doc(db, "orgaos_clientes", tenantId), {
+                id: tenantId,
+                nome: nome,
+                ativo: true,
+                createdAt: new Date().toISOString()
+            });
+            
+            showNotification(`Cliente "${nome}" criado com sucesso!`, "success");
+            inputNome.value = '';
+            orgaos = await carregarOrgaos(db);
+            renderLista();
+            
+        } catch (error) {
+            showNotification("Erro ao criar cliente.", "error");
+        } finally {
+            btn.disabled = false;
+            btn.textContent = 'Criar Cliente';
+        }
+    });
+};
+
 export const setupAdminEvents = (app) => {
     globalApp = app;
 
-    // 1. Inicializa as buscas e tabelas do painel automaticamente
     setupAdminSearch();
     loadUsersList(app.db);
     populateUserFilter(app.db);
 
-    // 2. Eventos dos botões principais do topo
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.abrirModalMaster === 'function') {
             window.ImportadorOrgaosService.abrirModalMaster(app);
@@ -1502,7 +1656,6 @@ export const setupAdminEvents = (app) => {
         if (app.router) app.router.navigate('pauta-selection', {}, false);
     });
 
-    // 3. Botões de Ações de Auditoria e BI
     document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
         const btn = document.getElementById('view-audit-logs-btn');
         if (btn) { btn.textContent = "Carregando..."; btn.disabled = true; }
@@ -1522,11 +1675,24 @@ export const setupAdminEvents = (app) => {
         exportAuditLogsPDF(app.db);
     });
 
-    // 4. Listeners para os Filtros de Logs
     document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
+
+    // 👑 INJEÇÃO DO BOTÃO DE GESTÃO DE CLIENTES (APENAS PARA SUPERADMIN GLOBAL)
+    const isAdminGlobal = app?.currentUser?.role === 'superadmin_global';
+    if (isAdminGlobal) {
+        const btnContainer = document.getElementById('btn-unidades-master')?.parentElement;
+        if (btnContainer && !document.getElementById('btn-gerenciar-tenants')) {
+            const btnTenants = document.createElement('button');
+            btnTenants.id = 'btn-gerenciar-tenants';
+            btnTenants.className = 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm ml-auto';
+            btnTenants.innerHTML = '👑 Gestão de Clientes (Tenants)';
+            btnTenants.onclick = () => abrirGerenciadorTenants(app.db);
+            btnContainer.appendChild(btnTenants);
+        }
+    }
 };
 
 window.approveUser = (userId) => {
@@ -1555,7 +1721,7 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
-    if (globalApp) abrirGerenciarUnidades(globalApp.db);
+    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
 
@@ -1624,6 +1790,8 @@ export const AdminService = {
     updateUserRole,
     toggleSuspendUser,
     deleteUser,
+    carregarOrgaos,
+    abrirGerenciadorTenants,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
 };
