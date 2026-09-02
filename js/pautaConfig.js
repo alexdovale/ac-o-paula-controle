@@ -510,6 +510,10 @@ export const PautaConfigService = {
         try {
             const novaPautaData = {
                 name: pautaName,
+                
+                // 🔒 INJEÇÃO DO MULTI-TENANT (ÓRGÃO DO USUÁRIO)
+                orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
+                
                 // CORRIGIDO: unidade nula em modo evento
                 unidadeId: isEvento ? null : unidadeId,
                 unidadeNome: isEvento ? null : unidadeNome,
@@ -740,6 +744,10 @@ export const PautaConfigService = {
             try {
                 const novaPauta = {
                     name: item.name,
+                    
+                    // 🔒 INJEÇÃO DO MULTI-TENANT NA CRIAÇÃO EM LOTE
+                    orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
+                    
                     type: item.type || DEFAULTS.type,
                     tipo: item.tipo || DEFAULTS.tipo,
                     owner: user.uid,
