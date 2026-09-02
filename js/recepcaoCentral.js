@@ -1,4 +1,4 @@
-// js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO)
+// js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO E MULTI-TENANT)
 
 import {
     collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
@@ -1008,7 +1008,9 @@ export const RecepcaoCentralService = {
                 type: 'avulso',
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
-                priority: prioridadeSelecionada || null
+                priority: prioridadeSelecionada || null,
+                // 🔒 GARANTIA DE INJEÇÃO DO ÓRGÃO (MULTI-TENANT)
+                orgaoId: this._app.currentUser?.orgaoId || 'padrao_dprj'
             };
 
             const app = this._app;
