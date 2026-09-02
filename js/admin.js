@@ -1082,11 +1082,27 @@ export const approveUser = async (db, userId) => {
 
 export const updateUserRole = async (db, userId) => {
     try {
-        const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
-        await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
-        showNotification("Perfil atualizado.", "success");
+        const selectElement = document.getElementById(`role-select-${userId}`);
+        if (!selectElement) {
+            showNotification("Elemento de seleção não encontrado.", "error");
+            return;
+        }
+        
+        const role = selectElement.value;
+        const novoStatus = role === 'suspended' ? 'suspended' : 'approved';
+        
+        await updateDoc(doc(db, "users", userId), { 
+            role: role, 
+            status: novoStatus,
+            updatedAt: new Date().toISOString()
+        });
+        
+        showNotification("Perfil atualizado com sucesso.", "success");
         await loadUsersList(db);
-    } catch (e) { showNotification("Erro ao atualizar.", "error"); }
+    } catch (e) { 
+        console.error("Erro detalhado ao atualizar perfil:", e);
+        showNotification("Erro ao atualizar: " + e.message, "error"); 
+    }
 };
 
 export const toggleSuspendUser = async (db, userId, isSuspended) => {
