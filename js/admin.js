@@ -22,24 +22,24 @@ export const logAction = async (db, auth, userName, currentPautaId, actionType, 
     try {
         if (!auth?.currentUser) return;
         const logData = {
-            action: actionType || 'AÇÃO_DESCONHECIDA',
+            action: actionType || 'ACAO_DESCONHECIDA',
             details: details || 'Sem detalhes',
             targetId: targetId || null,
             pautaId: currentPautaId || 'N/A',
             userEmail: auth.currentUser.email || 'email@desconhecido',
             userId: auth.currentUser.uid || 'uid_desconhecido',
             userName: userName || auth.currentUser.email || 'Desconhecido',
-            orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj', // 🔒 INJEÇÃO MULTI-TENANT
+            orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj',
             timestamp: new Date().toISOString()
         };
         await addDoc(collection(db, "audit_logs"), logData);
     } catch (error) { 
-        console.error("❌ Erro ao registrar log:", error); 
+        console.error("Erro ao registrar log:", error); 
     }
 };
 
 // ==========================================
-// GESTÃO DE UNIDADES
+// GESTAO DE UNIDADES
 // ==========================================
 
 export const carregarUnidades = async (db) => {
@@ -72,7 +72,7 @@ export const criarUnidade = async (db, dados) => {
             atualizadoEm: new Date().toISOString(),
             ativo: true
         });
-        showNotification(`Unidade "${dados.nome}" criada com sucesso!`, "success");
+        showNotification(`Unidade "${dados.nome}" criada com sucesso.`, "success");
         return { id: unidadeId, ...dados };
     } catch (error) {
         showNotification("Erro ao criar unidade: " + error.message, "error");
@@ -86,7 +86,7 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
             ...dados,
             atualizadoEm: new Date().toISOString()
         });
-        showNotification(`Unidade "${dados.nome}" atualizada!`, "success");
+        showNotification(`Unidade "${dados.nome}" atualizada.`, "success");
         return true;
     } catch (error) {
         showNotification("Erro ao atualizar unidade: " + error.message, "error");
@@ -95,7 +95,7 @@ export const atualizarUnidade = async (db, unidadeId, dados) => {
 };
 
 export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
-    if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão acesso.`)) return false;
+    if (!confirm(`Tem certeza que deseja excluir a unidade "${unidadeNome}"?\n\nUsuários vinculados a esta unidade perderão o acesso.`)) return false;
     try {
         await updateDoc(doc(db, "unidades", unidadeId), { 
             ativo: false, 
@@ -118,9 +118,9 @@ export const excluirUnidade = async (db, unidadeId, unidadeNome) => {
         
         if (usuariosAfetados > 0) {
             await batch.commit();
-            showNotification(`Unidade "${unidadeNome}" desativada e removida de ${usuariosAfetados} usuário(s)!`, "info");
+            showNotification(`Unidade "${unidadeNome}" desativada e removida de ${usuariosAfetados} usuário(s).`, "info");
         } else {
-            showNotification(`Unidade "${unidadeNome}" desativada!`, "info");
+            showNotification(`Unidade "${unidadeNome}" desativada.`, "info");
         }
         return true;
     } catch (error) {
@@ -191,7 +191,7 @@ const importarUnidadesEmMassa = async (db, unidades) => {
         await criarUnidade(db, unidade);
         criadas++;
     }
-    showNotification(`✅ ${criadas} unidade(s) importada(s)! ${duplicadas} duplicada(s) ignorada(s).`, criadas > 0 ? 'success' : 'warning');
+    showNotification(`${criadas} unidade(s) importada(s). ${duplicadas} duplicada(s) ignorada(s).`, criadas > 0 ? 'success' : 'warning');
 };
 
 export const abrirImportadorUnidades = async (db) => {
@@ -199,56 +199,56 @@ export const abrirImportadorUnidades = async (db) => {
     modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-blue-800 to-blue-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2"><span>📁</span> Importar Unidades em Massa</h2>
-                </div>
-                <button id="fechar-importador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
+                <h2 class="text-base font-bold text-white tracking-wide">Importação em Massa de Unidades</h2>
+                <button id="fechar-importador-unidades" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <div class="flex border-b">
-                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-blue-600 border-b-2 border-blue-600" data-tab="upload">📤 Upload</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="modelo">📄 Modelo</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="manual">✏️ Manual</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-bold text-sm text-gray-500" data-tab="estrutura">🏛️ Estrutura Atual</button>
+                <div class="flex border-b border-slate-200">
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-900 border-b-2 border-slate-900" data-tab="upload">Upload de Arquivo</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="modelo">Layout Padrão</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="manual">Entrada Manual</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="estrutura">Estrutura Atual</button>
                 </div>
                 <div id="painel-upload-unidades" class="space-y-4">
-                    <div class="border-2 border-dashed border-blue-300 rounded-2xl p-8 text-center">
+                    <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50">
                         <input type="file" id="arquivo-unidades" accept=".csv,.json" class="hidden">
-                        <button id="btn-selecionar-arquivo-unidades" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg">📂 Selecionar Arquivo</button>
+                        <button id="btn-selecionar-arquivo-unidades" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-lg text-xs transition">Selecionar Arquivo (CSV/JSON)</button>
                     </div>
-                    <div id="info-arquivo-unidades" class="hidden p-4 bg-green-50 rounded-xl border border-green-200">
-                        <p class="text-green-700 font-bold">✅ Arquivo carregado!</p>
-                        <p id="info-arquivo-unidades-detalhes" class="text-sm text-green-600 mt-1"></p>
+                    <div id="info-arquivo-unidades" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                        <p class="text-emerald-800 font-bold text-xs">Arquivo validado com sucesso.</p>
+                        <p id="info-arquivo-unidades-detalhes" class="text-xs text-emerald-600 mt-1"></p>
                         <div class="mt-3 flex gap-3">
-                            <button id="btn-previsualizar-unidades" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">👁️ Pré-visualizar</button>
-                            <button id="btn-importar-unidades" class="bg-green-600 text-white px-4 py-2 rounded-lg font-bold">🚀 Importar</button>
+                            <button id="btn-previsualizar-unidades" class="bg-white border border-emerald-300 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-semibold">Pré-visualizar</button>
+                            <button id="btn-importar-unidades" class="bg-emerald-600 text-white px-3 py-1.5 rounded-lg text-xs font-semibold">Executar Importação</button>
                         </div>
                     </div>
                     <div id="preview-unidades" class="hidden">
-                        <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto">
-                            <table class="w-full text-sm"><thead class="bg-slate-200"><tr><th class="p-2">Nome</th><th class="p-2">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
+                        <div class="bg-slate-50 rounded-xl p-4 max-h-60 overflow-y-auto border border-slate-200">
+                            <table class="w-full text-xs"><thead class="bg-slate-100 text-slate-600"><tr><th class="p-2 text-left">Nome</th><th class="p-2 text-left">Sigla</th></tr></thead><tbody id="preview-unidades-tbody"></tbody></table>
                         </div>
                     </div>
                 </div>
                 <div id="painel-modelo-unidades" class="hidden space-y-4">
-                    <div class="bg-slate-50 rounded-xl p-6">
-                        <h3 class="font-bold text-lg mb-4">📄 Formato Esperado</h3>
-                        <pre class="bg-gray-800 text-white p-4 rounded-lg overflow-x-auto text-xs"><code>nome,sigla,endereco,telefone,email\n"DP Caxias","Defensoria Pública - Duque de Caxias","Av. Presidente Kennedy...</code></pre>
+                    <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                        <p class="text-xs font-semibold text-slate-700 mb-2">Estrutura esperada do arquivo CSV:</p>
+                        <pre class="bg-slate-900 text-slate-100 p-4 rounded-lg overflow-x-auto text-[11px] font-mono"><code>nome,sigla,endereco,telefone,email
+"Defensoria Caxias","DPDC","Av. Presidente Kennedy...","(21) 0000-0000","contato@dperj.br"</code></pre>
                     </div>
                 </div>
                 <div id="painel-manual-unidades" class="hidden space-y-4">
-                    <div class="bg-slate-50 rounded-xl p-6">
-                        <textarea id="manual-unidades-text" rows="6" class="w-full p-3 border rounded-lg font-mono text-sm" placeholder="sigla|nome|endereco|telefone|email"></textarea>
-                        <button id="btn-importar-manual-unidades" class="mt-4 bg-green-600 text-white px-6 py-2 rounded-lg font-bold">Importar</button>
+                    <div class="bg-slate-50 rounded-xl p-5 border border-slate-200">
+                        <label class="block text-xs font-semibold text-slate-600 mb-2">Insira os dados separados por pipe (|): sigla|nome|endereco|telefone|email</label>
+                        <textarea id="manual-unidades-text" rows="6" class="w-full p-3 border border-slate-300 rounded-lg font-mono text-xs focus:ring-1 focus:ring-slate-900 outline-none" placeholder="DPDC|Defensoria Caxias|Av. Presidente Kennedy|(21) 0000-0000|contato@dperj.br"></textarea>
+                        <button id="btn-importar-manual-unidades" class="mt-4 bg-slate-900 text-white px-5 py-2 rounded-lg text-xs font-semibold">Processar Entrada</button>
                     </div>
                 </div>
-                <div id="painel-estrutura-unidades" class="hidden space-y-4" style="min-height: 500px;">
+                <div id="painel-estrutura-unidades" class="hidden space-y-4" style="min-height: 400px;">
                     <div id="meu-container-estrutura" class="w-full"></div>
                 </div>
             </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0">
-                <button id="fechar-importador-unidades-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Fechar</button>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-200 shrink-0">
+                <button id="fechar-importador-unidades-footer" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Fechar</button>
             </div>
         </div>
     `;
@@ -261,10 +261,10 @@ export const abrirImportadorUnidades = async (db) => {
         tab.addEventListener('click', () => {
             const aba = tab.dataset.tab;
             document.querySelectorAll('.tab-importador-unidades').forEach(t => {
-                t.classList.remove('text-blue-600', 'border-b-2', 'border-blue-600');
-                t.classList.add('text-gray-500');
+                t.classList.remove('text-slate-900', 'border-b-2', 'border-slate-900');
+                t.classList.add('text-slate-500');
             });
-            tab.classList.add('text-blue-600', 'border-b-2', 'border-blue-600');
+            tab.classList.add('text-slate-900', 'border-b-2', 'border-slate-900');
             document.getElementById('painel-upload-unidades').classList.add('hidden');
             document.getElementById('painel-modelo-unidades').classList.add('hidden');
             document.getElementById('painel-manual-unidades').classList.add('hidden');
@@ -292,14 +292,14 @@ export const abrirImportadorUnidades = async (db) => {
             if (extensao === 'csv') unidades = await parseCSVUnidades(file);
             else if (extensao === 'json') unidades = await parseJSONUnidades(file);
             dadosImportados = unidades;
-            document.getElementById('info-arquivo-unidades-detalhes').textContent = `Arquivo: ${file.name} | ${unidades.length} unidade(s)`;
+            document.getElementById('info-arquivo-unidades-detalhes').textContent = `Arquivo: ${file.name} | Total: ${unidades.length} registros`;
             document.getElementById('info-arquivo-unidades').classList.remove('hidden');
-        } catch (error) { showNotification("Erro ao ler arquivo", "error"); }
+        } catch (error) { showNotification("Erro ao processar arquivo.", "error"); }
     });
     
     document.getElementById('btn-previsualizar-unidades')?.addEventListener('click', () => {
         if (!dadosImportados?.length) return;
-        document.getElementById('preview-unidades-tbody').innerHTML = dadosImportados.slice(0, 10).map(u => `<tr class="border-b"><td class="p-2">${escapeHTML(u.nome)}</td><td class="p-2">${escapeHTML(u.sigla || '-')}</td></tr>`).join('');
+        document.getElementById('preview-unidades-tbody').innerHTML = dadosImportados.slice(0, 10).map(u => `<tr class="border-b border-slate-100"><td class="p-2 text-slate-700">${escapeHTML(u.nome)}</td><td class="p-2 text-slate-500">${escapeHTML(u.sigla || '-')}</td></tr>`).join('');
         document.getElementById('preview-unidades').classList.remove('hidden');
     });
     
@@ -335,31 +335,31 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
             .filter(u => u.unidades?.some(un => un.unidadeId === unidadeId) && u.status !== 'pending' && u.role !== 'suspended');
 
         modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh] animate-fadeIn">
-                <div class="bg-gradient-to-r from-emerald-700 to-emerald-600 px-6 py-4 text-white flex justify-between items-center shrink-0">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
+                <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-black text-lg">Usuários Vinculados</h3>
-                        <p class="text-emerald-100 text-sm mt-1">${escapeHTML(unidadeNome)}</p>
+                        <h3 class="font-bold text-sm tracking-wide">Usuários Vinculados</h3>
+                        <p class="text-slate-400 text-xs mt-0.5">${escapeHTML(unidadeNome)}</p>
                     </div>
-                    <button id="fechar-usuarios-unidade" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                    <button id="fechar-usuarios-unidade" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
                 </div>
                 <div class="p-4 overflow-y-auto flex-1">
                     ${usuariosVinculados.length > 0 
                         ? `<div class="space-y-2">
                             ${usuariosVinculados.map(u => `
-                            <div class="p-3 bg-gray-50 rounded-xl border border-gray-100 flex justify-between items-center">
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
                                 <div>
-                                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(u.name || 'Sem nome')}</p>
-                                    <p class="text-xs text-gray-500">${escapeHTML(u.email || '')}</p>
+                                    <p class="font-bold text-slate-800 text-xs">${escapeHTML(u.name || 'Sem nome')}</p>
+                                    <p class="text-[11px] text-slate-500">${escapeHTML(u.email || '')}</p>
                                 </div>
-                                <span class="text-[9px] bg-slate-200 text-slate-700 px-2 py-0.5 rounded-full uppercase">${u.role || 'user'}</span>
+                                <span class="text-[10px] bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded font-mono uppercase">${u.role || 'user'}</span>
                             </div>`).join('')}
                           </div>`
-                        : '<div class="text-center py-12 text-gray-400">Nenhum usuário.</div>'
+                        : '<div class="text-center py-12 text-slate-400 text-xs">Nenhum usuário vinculado.</div>'
                     }
                 </div>
-                <div class="p-4 border-t bg-gray-50 flex justify-end shrink-0">
-                    <button id="fechar-usuarios-unidade-footer" class="bg-gray-200 hover:bg-gray-300 px-5 py-2 rounded-xl text-sm font-bold">Fechar</button>
+                <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end shrink-0">
+                    <button id="fechar-usuarios-unidade-footer" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Fechar</button>
                 </div>
             </div>
         `;
@@ -386,31 +386,31 @@ export const abrirGerenciadorUnidades = async (db) => {
         if (!container) return;
         
         if (filtradas.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400">Nenhuma unidade encontrada.</div>';
+            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400 text-xs">Nenhuma unidade encontrada.</div>';
             return;
         }
         
         container.innerHTML = filtradas.map(unidade => `
-            <div class="border rounded-xl p-4 bg-white shadow-sm hover:shadow-md transition-all duration-200">
+            <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:border-slate-300 transition-all">
                 <div class="flex justify-between items-start">
-                    <div class="flex-1">
-                        <h4 class="font-bold text-slate-800 text-base">${escapeHTML(unidade.nome)}</h4>
-                        <p class="text-xs text-slate-500">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
-                        ${unidade.endereco ? `<p class="text-[10px] text-slate-400 mt-1">📍 ${escapeHTML(unidade.endereco)}</p>` : ''}
+                    <div class="flex-1 min-w-0 pr-2">
+                        <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(unidade.nome)}</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
+                        ${unidade.endereco ? `<p class="text-[11px] text-slate-400 mt-1 truncate">Local: ${escapeHTML(unidade.endereco)}</p>` : ''}
                     </div>
-                    <div class="flex gap-1 flex-wrap justify-end max-w-[120px]">
-                        <button class="btn-ver-usuarios text-emerald-600 hover:text-emerald-800 p-1.5 rounded-full hover:bg-emerald-50 transition-all" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Ver usuários vinculados">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <div class="flex gap-1 shrink-0">
+                        <button class="btn-ver-usuarios text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Visualizar membros">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                         </button>
-                        <button class="btn-editar-unidade text-blue-500 hover:text-blue-700 p-1.5 rounded-full hover:bg-blue-50 transition-all" 
+                        <button class="btn-editar-unidade text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" 
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" 
-                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}" title="Editar Unidade">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}" title="Editar">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
                         </button>
-                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-full hover:bg-red-50 transition-all" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir Unidade">
-                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                        <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition" 
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
                         </button>
                     </div>
                 </div>
@@ -441,26 +441,24 @@ export const abrirGerenciadorUnidades = async (db) => {
     
     const modal = document.createElement('div');
     modal.id = 'gerenciador-unidades-modal';
-    modal.className = 'fixed inset-0 bg-black/70 z-[700] flex items-center justify-center p-4 overflow-y-auto';
+    modal.className = 'fixed inset-0 bg-black/70 z-[700] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-slate-800 to-slate-700 px-6 py-4 flex justify-between items-center shrink-0">
-                <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2">Gerenciar Unidades / Órgãos</h2>
-                </div>
-                <button id="fechar-gerenciador-unidades" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
+                <h2 class="text-base font-bold text-white tracking-wide">Gerenciamento de Unidades e Órgãos</h2>
+                <button id="fechar-gerenciador-unidades" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            <div class="flex-1 overflow-y-auto p-6">
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="🔍 Pesquisar unidade..." class="w-full p-2 pl-8 border rounded-lg text-sm"></div>
-                    <div class="flex gap-3">
-                        <button id="btn-importar-unidades-massa" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2"><span>📁</span> Importar em Massa</button>
-                        <button id="btn-nova-unidade" class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition flex items-center gap-2"><span>➕</span> Nova Unidade</button>
+                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="Pesquisar unidade..." class="w-full p-2.5 pl-9 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-slate-900"></div>
+                    <div class="flex gap-2 w-full sm:w-auto">
+                        <button id="btn-importar-unidades-massa" class="flex-1 sm:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">Importação em Massa</button>
+                        <button id="btn-nova-unidade" class="flex-1 sm:flex-none bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">Nova Unidade</button>
                     </div>
                 </div>
-                <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-4"></div>
+                <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
             </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t shrink-0"><button id="fechar-gerenciador-unidades-footer" class="bg-gray-300 text-gray-700 px-4 py-2 rounded-lg">Fechar</button></div>
+            <div class="bg-slate-50 px-6 py-4 flex justify-end border-t border-slate-200 shrink-0"><button id="fechar-gerenciador-unidades-footer" class="bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Fechar</button></div>
         </div>
     `;
     document.body.appendChild(modal);
@@ -479,18 +477,18 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
     const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
 
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm animate-fade-in';
+    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
     modal.innerHTML = `
-        <div class="bg-slate-50 rounded-3xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative animate-fade-in">
-            <div class="bg-gradient-to-r from-purple-900 to-indigo-800 px-8 py-6 flex justify-between items-center shrink-0">
+        <div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
                 <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-3"><span>🏛️</span> Unidades de Apoio (Recepções)</h2>
-                    <p class="text-slate-300 text-sm mt-1">Crie e gerencie Recepções que atuam como Hubs para várias Unidades/DPs</p>
+                    <h2 class="text-base font-bold text-white tracking-wide">Unidades de Apoio e Recepções</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Configuração de hubs operacionais e distribuição de atendimento</p>
                 </div>
-                <button id="fechar-gerenciador-recepcoes" class="text-white/60 hover:text-white text-4xl leading-none transition-colors">&times;</button>
+                <button id="fechar-gerenciador-recepcoes" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-8" id="painel-conteudo-recepcoes">
+            <div class="flex-1 overflow-y-auto p-6" id="painel-conteudo-recepcoes">
                 <div class="flex justify-center items-center h-40">
                     <div class="loader-small mx-auto mb-4"></div>
                 </div>
@@ -509,75 +507,64 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
         if (!container) return;
 
         let html = `
-            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-8 gap-4">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
                 <div>
-                    <h3 class="font-black text-slate-800 text-xl">Gestão Global de Recepções</h3>
-                    <p class="text-sm text-slate-500 mt-1">Defina quais unidades cada Recepção atende e quem são os servidores lotados nelas.</p>
+                    <h3 class="font-bold text-slate-800 text-sm">Gestão de Recepções</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Vincule unidades operacionais e defina equipes alocadas.</p>
                 </div>
-                <button id="btn-nova-recepcao-custom" class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-6 py-3 rounded-xl transition-all shadow-md hover:shadow-lg flex items-center gap-2 shrink-0">
-                    <span class="text-lg">+</span> Nova Recepção (Apoio)
+                <button id="btn-nova-recepcao-custom" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
+                    + Nova Recepção
                 </button>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${recepcoes.length === 0 ? `
-                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-3xl border-2 border-dashed border-slate-200">
-                        <span class="text-6xl mb-4">🪑</span>
-                        <h4 class="text-lg font-bold text-slate-700">Nenhuma Unidade de Apoio configurada</h4>
-                        <p class="text-slate-500 text-sm mt-1">Clique em "Nova Recepção" para criar a primeira.</p>
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+                        <p class="text-xs text-slate-500 font-medium">Nenhuma recepção configurada no sistema.</p>
                     </div>
                 ` : recepcoes.map(rec => `
-                    <div class="bg-white border border-slate-200 rounded-3xl p-6 shadow-sm hover:shadow-xl transition-all relative flex flex-col h-full group">
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all relative flex flex-col h-full">
                         <div class="absolute top-4 right-4">
-                            <span class="text-[9px] font-black px-3 py-1 rounded-full uppercase tracking-widest shadow-sm border
-                                ${rec.tipo === 'central' ? 'bg-amber-100 text-amber-700 border-amber-200' : 'bg-slate-100 text-slate-500 border-slate-200 group-hover:bg-indigo-50 group-hover:text-indigo-600 transition-colors'}">
-                                ${rec.tipo === 'central' ? '🏛️ Central' : '⚡ Espec'}
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${rec.tipo === 'central' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                                ${rec.tipo === 'central' ? 'Central' : 'Específica'}
                             </span>
                         </div>
                         
-                        <div class="flex items-center gap-4 mb-5">
-                            <div class="w-14 h-14 bg-slate-50 rounded-2xl border border-slate-100 flex items-center justify-center text-3xl shadow-inner group-hover:scale-110 transition-transform">
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-lg">
                                 ${rec.icone || '📋'}
                             </div>
-                            <div class="flex-1 min-w-0 pr-16">
-                                <h4 class="font-black text-slate-800 text-lg leading-tight truncate">${escapeHTML(rec.nome)}</h4>
-                                <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-1">${rec.andar ? escapeHTML(rec.andar) : 'Apoio Global'}</p>
+                            <div class="flex-1 min-w-0 pr-12">
+                                <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">${rec.andar ? escapeHTML(rec.andar) : 'Global'}</p>
                             </div>
                         </div>
                         
-                        <div class="mb-6 flex-1 bg-slate-50 rounded-2xl p-4 border border-slate-100">
-                            <div class="mb-3">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏢</span> Unidades Atendidas</p>
-                                <div class="flex flex-wrap gap-1.5">
+                        <div class="mb-4 flex-1 bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-2.5 text-xs">
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Unidades Vinculadas</span>
+                                <div class="text-slate-700 font-medium truncate">
                                     ${(rec.unidadesVinculadas || []).length > 0 
-                                        ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm">${rec.unidadesVinculadas.length} Unidade(s)</span>`
-                                        : (rec.unidadeNome ? `<span class="bg-indigo-100 text-indigo-800 border border-indigo-200 text-[10px] font-bold px-2 py-0.5 rounded-lg shadow-sm truncate max-w-full">${escapeHTML(rec.unidadeNome)}</span>` : '<span class="text-xs text-slate-400 italic">Nenhuma unidade vinculada</span>')}
+                                        ? `${rec.unidadesVinculadas.length} unidade(s) associada(s)`
+                                        : (rec.unidadeNome ? escapeHTML(rec.unidadeNome) : '<span class="text-slate-400 italic">Nenhuma</span>')}
                                 </div>
                             </div>
-                            <div class="mb-3">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🏷️</span> Grupos</p>
-                                <div class="flex flex-wrap gap-1.5">
-                                    ${(rec.grupos || []).length > 0 
-                                        ? rec.grupos.slice(0,3).map(g => `<span class="bg-white text-slate-600 border border-slate-200 text-[10px] font-bold px-2 py-0.5 rounded-lg uppercase shadow-sm">${escapeHTML(g)}</span>`).join('') + (rec.grupos.length > 3 ? `<span class="text-[10px] text-slate-400">...</span>` : '')
-                                        : '<span class="text-xs text-slate-400 italic">Todos</span>'}
-                                </div>
-                            </div>
-                            <div class="pt-3 border-t border-slate-200 flex justify-between items-center">
-                                <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest">Servidores Lotados</p>
-                                <span class="bg-green-100 text-green-700 font-black px-2.5 py-0.5 rounded-full text-xs">${(rec.membros || []).length}</span>
+                            <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membros Autorizados</span>
+                                <span class="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full text-[10px]">${(rec.membros || []).length}</span>
                             </div>
                         </div>
                         
-                        <div class="grid grid-cols-2 gap-2 mt-auto">
-                            <button class="btn-vincular-usuarios bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2.5 rounded-xl text-sm transition shadow-sm col-span-2 flex items-center justify-center gap-2" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">
-                                <span>👥</span> Lotar Servidores (Acessos)
+                        <div class="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-100">
+                            <button class="btn-vincular-usuarios bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2 rounded-xl text-xs transition col-span-2 flex items-center justify-center gap-1.5" data-id="${rec.id}">
+                                Gerenciar Lotação de Equipe
                             </button>
-                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center gap-1.5" data-id="${rec.id}">
-                                <span>✏️</span> Editar
+                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}">
+                                Editar
                             </button>
-                            <div class="flex gap-2">
-                                <button class="btn-link-recepcao flex-1 bg-blue-50 hover:bg-blue-100 text-blue-600 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center" data-id="${rec.id}" title="Copiar Link da TV">🔗</button>
-                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-bold py-2 rounded-xl text-sm transition flex items-center justify-center" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir Recepção">🗑️</button>
+                            <div class="flex gap-1.5">
+                                <button class="btn-link-recepcao flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}" title="Copiar link da TV">Link TV</button>
+                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir">Excluir</button>
                             </div>
                         </div>
                     </div>
@@ -605,13 +592,12 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
 
         container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if (confirm(`Tem certeza que deseja excluir permanentemente a Unidade de Apoio "${btn.dataset.nome}"?`)) {
+                if (confirm(`Confirma a exclusão da recepção "${btn.dataset.nome}"?`)) {
                     try {
                         await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
-                        showNotification("Recepção excluída com sucesso!", "success");
+                        showNotification("Recepção excluída.", "success");
                         renderizarTelaAdmin();
                     } catch (error) {
-                        console.error("Erro ao excluir:", error);
                         showNotification("Erro ao excluir recepção.", "error");
                     }
                 }
@@ -631,7 +617,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="max-w-3xl mx-auto bg-white p-8 rounded-3xl shadow-sm border border-slate-200">
+            <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
                 ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [])}
             </div>
         `;
@@ -651,23 +637,20 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
 
     const abrirModalVincularUsuarios = async (recepcao) => {
         const modalVinculo = document.createElement('div');
-        modalVinculo.className = 'fixed inset-0 bg-slate-900/80 z-[900] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+        modalVinculo.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 backdrop-blur-sm';
         modalVinculo.innerHTML = `
-            <div class="bg-white rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh]">
-                <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col h-[80vh]">
+                <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-black text-white text-lg">Lotar Servidores: ${escapeHTML(recepcao.nome)}</h3>
-                        <p class="text-indigo-200 text-xs mt-0.5">Selecione quem pode acessar e trabalhar nesta unidade de apoio.</p>
+                        <h3 class="font-bold text-sm">Lotação de Servidores: ${escapeHTML(recepcao.nome)}</h3>
+                        <p class="text-slate-400 text-xs mt-0.5">Selecione os usuários com permissão operacional</p>
                     </div>
-                    <button class="fechar-vinculo text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+                    <button class="fechar-vinculo text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
                 </div>
                 
-                <div class="p-4 border-b border-slate-100 bg-slate-50 shrink-0">
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                        <input type="text" id="busca-membros-recepcao" placeholder="Buscar usuário pelo nome ou email..." 
-                            class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-400 text-sm">
-                    </div>
+                <div class="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                    <input type="text" id="busca-membros-recepcao" placeholder="Filtrar por nome ou e-mail..." 
+                        class="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-slate-900">
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
@@ -675,10 +658,10 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                 </div>
                 
                 <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
-                    <span id="contagem-membros" class="text-sm font-bold text-slate-500"></span>
-                    <div class="flex gap-3">
-                        <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-5 py-2.5 rounded-xl transition text-sm">Cancelar</button>
-                        <button id="salvar-vinculo" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-6 py-2.5 rounded-xl transition text-sm shadow-md">Salvar Lotação</button>
+                    <span id="contagem-membros" class="text-xs font-semibold text-slate-500"></span>
+                    <div class="flex gap-2">
+                        <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg text-xs">Cancelar</button>
+                        <button id="salvar-vinculo" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2 rounded-lg text-xs shadow-sm">Salvar Alterações</button>
                     </div>
                 </div>
             </div>
@@ -705,22 +688,22 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                 );
 
                 if (filtrados.length === 0) {
-                    listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 font-bold">Nenhum usuário encontrado.</p>';
+                    listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 text-xs font-semibold">Nenhum registro encontrado.</p>';
                     return;
                 }
 
                 listContainer.innerHTML = `
-                    <div class="space-y-2">
+                    <div class="space-y-1.5">
                         ${filtrados.map(u => {
                             const isChecked = membrosAtuais.includes(u.id);
                             return `
-                                <label class="flex items-center gap-3 p-3 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-indigo-300 transition-colors ${isChecked ? 'ring-1 ring-indigo-500 border-indigo-500 bg-indigo-50/20' : ''}">
-                                    <input type="checkbox" class="cb-membro w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500" value="${u.id}" ${isChecked ? 'checked' : ''}>
+                                <label class="flex items-center gap-3 p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition ${isChecked ? 'border-slate-900 bg-slate-50' : ''}">
+                                    <input type="checkbox" class="cb-membro w-4 h-4 text-slate-900 rounded focus:ring-0" value="${u.id}" ${isChecked ? 'checked' : ''}>
                                     <div class="flex-1 min-w-0">
-                                        <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(u.name || 'Sem nome')}</p>
+                                        <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(u.name || 'Sem nome')}</p>
                                         <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
                                     </div>
-                                    <span class="text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${u.role === 'admin' || u.role === 'superadmin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'}">${u.role || 'user'}</span>
+                                    <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">${u.role || 'user'}</span>
                                 </label>
                             `;
                         }).join('')}
@@ -728,13 +711,13 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                 `;
 
                 listContainer.querySelectorAll('.cb-membro').forEach(cb => {
-                    cb.addEventListener('change', (e) => {
+                    cb.addEventListener('change', () => {
                         const label = cb.closest('label');
                         if (cb.checked) {
-                            label.classList.add('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                            label.classList.add('border-slate-900', 'bg-slate-50');
                             if (!membrosAtuais.includes(cb.value)) membrosAtuais.push(cb.value);
                         } else {
-                            label.classList.remove('ring-1', 'ring-indigo-500', 'border-indigo-500', 'bg-indigo-50/20');
+                            label.classList.remove('border-slate-900', 'bg-slate-50');
                             membrosAtuais = membrosAtuais.filter(id => id !== cb.value);
                         }
                         atualizarContador();
@@ -744,7 +727,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
 
             const atualizarContador = () => {
                 const el = document.getElementById('contagem-membros');
-                if (el) el.textContent = `${membrosAtuais.length} servidor(es) lotado(s)`;
+                if (el) el.textContent = `${membrosAtuais.length} servidor(es) selecionado(s)`;
             };
 
             renderUsuarios();
@@ -760,19 +743,19 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
 
                 try {
                     await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
-                    showNotification("Lotação atualizada com sucesso!", "success");
+                    showNotification("Lotação atualizada.", "success");
                     fecharVinculo();
                     renderizarTelaAdmin();
                 } catch (error) {
-                    showNotification("Erro ao salvar.", "error");
+                    showNotification("Erro ao salvar lotação.", "error");
                     btn.disabled = false;
-                    btn.textContent = 'Salvar Lotação';
+                    btn.textContent = 'Salvar Alterações';
                 }
             });
 
         } catch (err) {
             const listContainer = document.getElementById('lista-usuarios-vinculo');
-            if (listContainer) listContainer.innerHTML = '<p class="text-center text-red-500 py-10 font-bold">Erro ao carregar usuários.</p>';
+            if (listContainer) listContainer.innerHTML = '<p class="text-center text-red-500 py-10 text-xs font-semibold">Erro ao carregar dados.</p>';
         }
     };
 
@@ -782,23 +765,23 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
 const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     const isEdicao = !!unidade;
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/60 z-[800] flex items-center justify-center p-4';
+    modal.className = 'fixed inset-0 bg-black/60 z-[800] flex items-center justify-center p-4 backdrop-blur-sm';
     modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md max-h-[90vh] overflow-y-auto">
-            <div class="bg-slate-800 px-6 py-4 sticky top-0 flex justify-between items-center">
-                <h3 class="text-white font-black text-lg">${isEdicao ? 'Editar Unidade' : 'Nova Unidade'}</h3>
-                <button class="fechar-form-unidade text-white/60 hover:text-white text-3xl leading-none">&times;</button>
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-sm tracking-wide">${isEdicao ? 'Editar Unidade' : 'Cadastrar Nova Unidade'}</h3>
+                <button class="fechar-form-unidade text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
-            <div class="p-6 space-y-4">
-                <div><label class="block text-sm font-bold text-slate-700 mb-1">Nome da Unidade *</label><input type="text" id="unidade-nome" value="${unidade?.nome || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: Defensoria Pública - Duque de Caxias"></div>
-                <div><label class="block text-sm font-bold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${unidade?.sigla || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Ex: DP Caxias"></div>
-                <div><label class="block text-sm font-bold text-slate-700 mb-1">Endereço</label><input type="text" id="unidade-endereco" value="${unidade?.endereco || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="Endereço completo"></div>
-                <div><label class="block text-sm font-bold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${unidade?.telefone || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="(21) 1234-5678"></div>
-                <div><label class="block text-sm font-bold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${unidade?.email || ''}" class="w-full p-3 border rounded-lg text-sm" placeholder="contato@dperj.br"></div>
+            <div class="p-6 space-y-3.5 text-xs">
+                <div><label class="block font-semibold text-slate-700 mb-1">Nome *</label><input type="text" id="unidade-nome" value="${unidade?.nome || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: Defensoria Caxias"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${unidade?.sigla || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: DPDC"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Endereço</label><input type="text" id="unidade-endereco" value="${unidade?.endereco || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Logradouro completo"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${unidade?.telefone || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="(00) 0000-0000"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${unidade?.email || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="email@dominio.br"></div>
             </div>
-            <div class="bg-slate-50 px-6 py-4 flex justify-end gap-3 sticky bottom-0">
-                <button class="fechar-form-unidade bg-gray-300 px-4 py-2 rounded-lg">Cancelar</button>
-                <button id="btn-salvar-unidade" class="bg-green-600 text-white px-6 py-2 rounded-lg hover:bg-green-700 font-bold">${isEdicao ? 'Salvar' : 'Criar'}</button>
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end gap-2 border-t border-slate-200">
+                <button class="fechar-form-unidade bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Cancelar</button>
+                <button id="btn-salvar-unidade" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${isSalvarText => isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
             </div>
         </div>
     `;
@@ -807,7 +790,7 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     modal.querySelectorAll('.fechar-form-unidade').forEach(btn => btn.addEventListener('click', fechar));
     document.getElementById('btn-salvar-unidade')?.addEventListener('click', async () => {
         const nome = document.getElementById('unidade-nome').value.trim();
-        if (!nome) { showNotification("Nome da unidade é obrigatório", "error"); return; }
+        if (!nome) { showNotification("Nome da unidade é obrigatório.", "error"); return; }
         const dados = { nome, sigla: document.getElementById('unidade-sigla').value.trim(), endereco: document.getElementById('unidade-endereco').value.trim(), telefone: document.getElementById('unidade-telefone').value.trim(), email: document.getElementById('unidade-email').value.trim() };
         if (isEdicao) await atualizarUnidade(db, unidade.id, dados);
         else await criarUnidade(db, dados);
@@ -820,10 +803,10 @@ function renderPagination(containerId, currentPage, totalPages, onPageChange) {
     const container = document.getElementById(containerId);
     if (!container) return;
     if (totalPages <= 1) { container.innerHTML = ''; return; }
-    let html = '<div class="flex items-center justify-center gap-2 mt-4">';
-    html += `<button class="pag-btn px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold transition" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:50%;cursor:not-allowed"' : ''}>◀ Anterior</button>`;
-    html += `<span class="px-3 py-1 text-xs font-bold text-gray-600">Página ${currentPage} de ${totalPages}</span>`;
-    html += `<button class="pag-btn px-3 py-1 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-xs font-bold transition" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:50%;cursor:not-allowed"' : ''}>Próxima ▶</button>`;
+    let html = '<div class="flex items-center justify-center gap-1.5 mt-4">';
+    html += `<button class="pag-btn px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Anterior</button>`;
+    html += `<span class="px-2 py-1 text-xs font-medium text-slate-500">Pág. ${currentPage} de ${totalPages}</span>`;
+    html += `<button class="pag-btn px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Próxima</button>`;
     html += '</div>';
     container.innerHTML = html;
     container.querySelectorAll('.pag-btn').forEach(btn => {
@@ -838,14 +821,13 @@ function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
     if (!container) return;
     container.innerHTML = `
         <div class="flex items-center gap-2">
-            <span class="text-xs text-gray-500">Mostrar:</span>
-            <select id="page-size-select-${containerId}" class="text-xs border rounded-lg px-2 py-1 bg-white">
+            <span class="text-xs text-slate-500">Exibir:</span>
+            <select id="page-size-select-${containerId}" class="text-xs border border-slate-300 rounded px-2 py-1 bg-white outline-none">
                 <option value="5" ${currentSize === 5 ? 'selected' : ''}>5</option>
                 <option value="10" ${currentSize === 10 ? 'selected' : ''}>10</option>
                 <option value="15" ${currentSize === 15 ? 'selected' : ''}>15</option>
                 <option value="20" ${currentSize === 20 ? 'selected' : ''}>20</option>
             </select>
-            <span class="text-xs text-gray-500">itens</span>
         </div>
     `;
     const select = document.getElementById(`page-size-select-${containerId}`);
@@ -859,9 +841,9 @@ function renderSearchInput(containerId, placeholder, onSearch) {
     if (!container) return;
     container.innerHTML = `
         <div class="relative">
-            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 border rounded-lg text-sm">
-            <span class="absolute left-2 top-1/2 -translate-y-1/2 text-gray-400">🔍</span>
-            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 hidden">✕</button>
+            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
+            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden">✕</button>
         </div>
     `;
     const input = document.getElementById(`search-input-${containerId}`);
@@ -881,7 +863,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 }
 
 // ==========================================
-// GESTÃO DE USUÁRIOS E MULTI-TENANT
+// GESTAO DE USUARIOS E MULTI-TENANT
 // ==========================================
 
 export const loadUsersList = async (db) => {
@@ -943,27 +925,29 @@ function renderPendentesList(db) {
     const totalPages = Math.ceil(pendentes.length / pageSize);
     
     if (pendentes.length === 0) {
-        pendingList.innerHTML = '<div class="text-center py-8 text-gray-400 bg-gray-50 rounded-xl">✅ Nenhum usuário pendente</div>';
+        pendingList.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">Nenhum cadastro pendente de aprovação.</div>';
         document.getElementById('pagination-pendentes')?.classList.add('hidden');
         return;
     }
     
     pendingList.innerHTML = paginated.map(user => `
-        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 bg-white rounded-xl border mb-3 shadow-sm gap-3">
-            <div class="flex-1">
-                <p class="font-bold text-orange-600 flex items-center gap-2">⏳ ${escapeHTML(user.name || 'Sem nome')} <span class="bg-yellow-100 text-yellow-800 text-[9px] px-2 py-0.5 rounded-full">Pendente</span></p>
-                <p class="text-xs text-gray-500 mt-0.5">${escapeHTML(user.email)}</p>
+        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-white rounded-xl border border-slate-200 mb-2 shadow-sm gap-3">
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2">
+                    <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(user.name || 'Sem nome')} (${escapeHTML(user.email)})</p>
+                    <span class="bg-amber-100 text-amber-800 text-[9px] font-mono px-2 py-0.5 rounded">Pendente</span>
+                </div>
             </div>
-            <div class="flex items-center gap-2 flex-wrap">
-                <select id="role-select-${user.id}" class="text-[10px] border rounded p-1 bg-gray-50">
-                    <option value="user" ${user.role === 'user' ? 'selected' : ''}>Usuário</option>
-                    <option value="apoio" ${user.role === 'apoio' ? 'selected' : ''}>Apoio</option>
-                    <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Admin</option>
-                    <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
-                    <option value="suspended" ${user.role === 'suspended' ? 'selected' : ''}>⚠️ Suspenso</option>
+            <div class="flex items-center gap-2 shrink-0">
+                <select id="role-select-${user.id}" class="text-[11px] border border-slate-300 rounded-lg p-1.5 bg-slate-50 outline-none font-medium">
+                    <option value="user">Usuário</option>
+                    <option value="apoio">Apoio</option>
+                    <option value="admin">Administrador</option>
+                    <option value="superadmin">Superadmin</option>
+                    <option value="suspended">Suspenso</option>
                 </select>
-                <button onclick="window.approveUser('${user.id}')" class="bg-green-600 text-white px-3 py-1.5 rounded text-[10px] font-bold">APROVAR</button>
-                <button onclick="window.deleteUser('${user.id}')" class="text-red-500 text-[10px] hover:underline">REJEITAR</button>
+                <button onclick="window.approveUser('${user.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">Aprovar</button>
+                <button onclick="window.deleteUser('${user.id}')" class="text-red-500 hover:text-red-700 px-2 py-1.5 text-xs font-semibold">Rejeitar</button>
             </div>
         </div>
     `).join('');
@@ -990,64 +974,67 @@ function renderAprovadosTable(db) {
     const totalPages = Math.ceil(aprovados.length / pageSize);
 
     if (aprovados.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400">Nenhum usuário encontrado</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-slate-400 text-xs">Nenhum registro encontrado.</td></tr>';
         document.getElementById('pagination-usuarios')?.classList.add('hidden');
         return;
     }
 
     const roleConfig = {
-        'superadmin': { label: '⭐ Superadmin', color: 'bg-purple-100 text-purple-800 border-purple-300' },
-        'admin':      { label: '🛡️ Admin',      color: 'bg-blue-100 text-blue-800 border-blue-300'   },
-        'user':       { label: '👤 Usuário',    color: 'bg-green-100 text-green-800 border-green-300' },
-        'apoio':      { label: '🤝 Apoio',      color: 'bg-amber-100 text-amber-800 border-amber-300' },
-        'suspended':  { label: '🚫 Suspenso',   color: 'bg-red-100 text-red-800 border-red-300'        },
+        'superadmin_global': { label: 'Superadmin Global', color: 'bg-amber-100 text-amber-900 border-amber-300 font-bold' },
+        'superadmin': { label: 'Superadmin', color: 'bg-purple-100 text-purple-800 border-purple-300' },
+        'admin':      { label: 'Administrador', color: 'bg-blue-100 text-blue-800 border-blue-300'   },
+        'user':       { label: 'Usuário',    color: 'bg-slate-100 text-slate-700 border-slate-200' },
+        'apoio':      { label: 'Apoio',      color: 'bg-indigo-100 text-indigo-800 border-indigo-200' },
+        'suspended':  { label: 'Suspenso',   color: 'bg-red-100 text-red-800 border-red-200'        },
     };
 
     tableBody.innerHTML = paginated.map(user => {
         const cfg = roleConfig[user.role] || roleConfig['user'];
         const unidadesCount = user.unidades?.length || 0;
         const isSuspended = user.role === 'suspended' || user.status === 'suspended';
-        const rowClass = isSuspended ? 'opacity-60 bg-red-50' : 'hover:bg-gray-50';
+        const rowClass = isSuspended ? 'opacity-60 bg-red-50/50' : 'hover:bg-slate-50/60';
 
         return `
-            <tr class="border-b ${rowClass} transition">
+            <tr class="border-b border-slate-200 ${rowClass} transition">
                 <td class="px-3 py-3">
-                    <p class="font-bold text-gray-800 text-sm">${escapeHTML(user.name || 'Sem nome')}</p>
-                    <p class="text-xs text-gray-400">${escapeHTML(user.email)}</p>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded-full text-[9px] font-bold border mt-1 ${cfg.color}">
+                    <p class="font-bold text-slate-800 text-xs">${escapeHTML(user.name || 'Sem nome')}</p>
+                    <p class="text-[11px] text-slate-400">${escapeHTML(user.email)}</p>
+                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold border mt-1 ${cfg.color}">
                         ${cfg.label}
                     </span>
+                    ${user.orgaoId ? `<span class="text-[9px] text-slate-400 block mt-0.5 font-mono">Órgão: ${escapeHTML(user.orgaoId)}</span>` : ''}
                 </td>
                 <td class="px-3 py-3 text-center">
-                    <button class="btn-gerenciar-unidades bg-indigo-50 hover:bg-indigo-100 text-indigo-700 border border-indigo-200 px-3 py-1.5 rounded-lg text-[10px] font-bold flex items-center gap-1 mx-auto transition"
-                        data-userid="${user.id}" title="Gerenciar unidades vinculadas">
-                        🏢 ${unidadesCount} unidade(s)
+                    <button class="btn-gerenciar-unidades bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 mx-auto transition shadow-sm"
+                        data-userid="${user.id}" title="Vincular unidades">
+                        Unidades (${unidadesCount})
                     </button>
                 </td>
                 <td class="px-3 py-3">
-                    <select id="role-select-${user.id}" class="w-full text-xs border rounded-lg p-2 bg-white focus:ring-2 focus:ring-blue-500 outline-none font-bold cursor-pointer">
-                        <option value="user"        ${user.role === 'user'        ? 'selected' : ''}>👤 Usuário</option>
-                        <option value="apoio"       ${user.role === 'apoio'       ? 'selected' : ''}>🤝 Apoio</option>
-                        <option value="admin"       ${user.role === 'admin'       ? 'selected' : ''}>🛡️ Admin</option>
-                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>⭐ Superadmin</option>
-                        <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>🚫 Suspenso</option>
+                    <select id="role-select-${user.id}" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none font-medium cursor-pointer">
+                        <option value="user"        ${user.role === 'user'        ? 'selected' : ''}>Usuário</option>
+                        <option value="apoio"       ${user.role === 'apoio'       ? 'selected' : ''}>Apoio</option>
+                        <option value="admin"       ${user.role === 'admin'       ? 'selected' : ''}>Administrador</option>
+                        <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
+                        <option value="superadmin_global" ${user.role === 'superadmin_global' ? 'selected' : ''}>Superadmin Global</option>
+                        <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>Suspenso</option>
                     </select>
                 </td>
                 <td class="px-3 py-3">
-                    <div class="flex flex-col gap-1.5 min-w-[110px]">
+                    <div class="flex flex-col gap-1.5 min-w-[120px]">
                         <button onclick="window.updateUserRole('${user.id}')"
-                            class="bg-blue-600 hover:bg-blue-700 text-white px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition shadow-sm">
-                            💾 Salvar Perfil
+                            class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition shadow-sm">
+                            Atualizar Perfil
                         </button>
                         <button onclick="window.toggleSuspendUser('${user.id}', ${isSuspended})"
                             class="${isSuspended
-                                ? 'bg-green-100 hover:bg-green-200 text-green-700 border-green-300'
-                                : 'bg-orange-100 hover:bg-orange-200 text-orange-700 border-orange-300'} border px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
-                            ${isSuspended ? '✅ Reativar' : '⏸️ Suspender'}
+                                ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300'
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-300'} border px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
+                            ${isSuspended ? 'Reativar Conta' : 'Suspender Conta'}
                         </button>
                         <button onclick="window.deleteUser('${user.id}')"
-                            class="bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-[10px] font-bold w-full transition">
-                            🗑️ Excluir
+                            class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
+                            Remover
                         </button>
                     </div>
                 </td>
@@ -1058,7 +1045,7 @@ function renderAprovadosTable(db) {
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, btn.dataset.userid);
-            else showNotification("Erro: app não inicializado", "error");
+            else showNotification("Erro de inicialização.", "error");
         });
     });
 
@@ -1081,14 +1068,14 @@ export const approveUser = async (db, userId) => {
         await updateDoc(doc(db, "users", userId), { 
             status: 'approved', 
             role: role, 
-            orgaoId: orgaoIdAdmin, // 🔒 ADOÇÃO: Usuário aprovado vira propriedade do órgão do Admin
+            orgaoId: orgaoIdAdmin, 
             approvedAt: new Date().toISOString() 
         });
         
-        showNotification("Usuário aprovado e vinculado ao seu órgão!");
+        showNotification("Usuário aprovado e vinculado com sucesso.", "success");
         await loadUsersList(db);
     } catch (e) { 
-        showNotification("Erro ao aprovar.", "error"); 
+        showNotification("Erro ao processar aprovação.", "error"); 
     }
 };
 
@@ -1096,7 +1083,7 @@ export const updateUserRole = async (db, userId) => {
     try {
         const role = document.getElementById(`role-select-${userId}`)?.value || 'user';
         await updateDoc(doc(db, "users", userId), { role: role, status: role === 'suspended' ? 'suspended' : 'approved' });
-        showNotification(`Cargo atualizado!`);
+        showNotification("Perfil atualizado.", "success");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao atualizar.", "error"); }
 };
@@ -1104,7 +1091,7 @@ export const updateUserRole = async (db, userId) => {
 export const toggleSuspendUser = async (db, userId, isSuspended) => {
     const novoRole   = isSuspended ? 'user'      : 'suspended';
     const novoStatus = isSuspended ? 'approved'  : 'suspended';
-    const msg        = isSuspended ? 'Usuário reativado com sucesso!' : 'Usuário suspenso!';
+    const msg        = isSuspended ? 'Conta reativada.' : 'Conta suspensa.';
     try {
         await updateDoc(doc(db, "users", userId), {
             role: novoRole,
@@ -1119,10 +1106,10 @@ export const toggleSuspendUser = async (db, userId, isSuspended) => {
 };
 
 export const deleteUser = async (db, userId) => {
-    if (!confirm("Excluir este usuário?")) return;
+    if (!confirm("Confirma a remoção definitiva deste usuário?")) return;
     try {
         await deleteDoc(doc(db, "users", userId));
-        showNotification("Usuário removido.");
+        showNotification("Usuário removido.", "success");
         await loadUsersList(db);
     } catch (e) { showNotification("Erro ao remover.", "error"); }
 };
@@ -1157,7 +1144,7 @@ export const loadLogFilters = async (db) => {
             actionSelect.innerHTML = '<option value="all">Todas as ações</option>';
             Array.from(actions).sort().forEach(action => actionSelect.appendChild(new Option(action, action)));
         }
-    } catch (error) { console.error("Erro ao carregar filtros de log:", error); }
+    } catch (error) { console.error("Erro ao carregar filtros:", error); }
 };
 
 export const loadAuditLogs = async (db) => {
@@ -1169,7 +1156,7 @@ export const loadAuditLogs = async (db) => {
     if (!logsContainer || !tableBody) return;
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8"><p class="text-xs text-gray-400 mt-2">Buscando histórico...</p></td></tr>';
+    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-xs text-slate-400">Carregando registros...</td></tr>';
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
@@ -1192,7 +1179,6 @@ export const loadAuditLogs = async (db) => {
             const log = docSnap.data();
             if (!log.timestamp) return;
             
-            // Filtro em memória para não forçar criação de index complexo no firebase
             if (!isAdminGlobal && log.orgaoId !== meuTenant) return;
             
             if (userFilter && userFilter !== 'all' && log.userEmail !== userFilter) return;
@@ -1209,8 +1195,7 @@ export const loadAuditLogs = async (db) => {
         if (pdfBtn && filteredLogs.length > 0) pdfBtn.classList.remove('hidden');
         
     } catch (error) {
-        console.error("Erro ao carregar logs:", error);
-        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-8 text-red-500">Erro ao carregar registros</td></tr>`;
+        tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-xs text-red-500">Erro ao carregar registros.</td></tr>`;
     }
 };
 
@@ -1234,31 +1219,24 @@ function renderLogsTable(db) {
     const totalPages = Math.ceil(logs.length / pageSize);
     
     if (logs.length === 0) {
-        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-8 text-gray-400 text-xs">Nenhum registro encontrado</td></tr>';
+        tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-xs text-slate-400">Nenhum registro encontrado.</td></tr>';
         document.getElementById('pagination-logs')?.classList.add('hidden');
         return;
     }
     
     tableBody.innerHTML = paginated.map(log => {
-        let formattedDate = 'Data inválida';
+        let formattedDate = '-';
         try {
             const date = new Date(log.timestamp);
             if (!isNaN(date.getTime())) formattedDate = date.toLocaleString('pt-BR');
         } catch (e) {}
         
-        let actionColor = 'bg-indigo-100 text-indigo-700 border border-indigo-200';
-        const action = (log.action || '').toLowerCase();
-        if (action.includes('erro') || action.includes('error') || action.includes('falha')) actionColor = 'bg-red-600 text-white border border-red-700 font-black animate-pulse';
-        else if (action.includes('delete') || action.includes('apagou') || action.includes('remove')) actionColor = 'bg-red-100 text-red-700 border border-red-200';
-        else if (action.includes('create') || action.includes('criou') || action.includes('add')) actionColor = 'bg-green-100 text-green-700 border border-green-200';
-        else if (action.includes('update') || action.includes('edit') || action.includes('atualiz')) actionColor = 'bg-blue-100 text-blue-700 border border-blue-200';
-        
         return `
-            <tr class="border-b hover:bg-gray-50 transition">
-                <td class="px-3 py-2 whitespace-nowrap text-[10px] text-gray-600">${escapeHTML(formattedDate)}</td>
-                <td class="px-3 py-2"><p class="font-bold text-gray-800 text-[11px]">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
-                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[9px] ${actionColor} uppercase shadow-sm">${escapeHTML(log.action || 'AÇÃO')}</span></td>
-                <td class="px-3 py-2 text-[10px] text-gray-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[8px] text-gray-400">Pauta: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
+            <tr class="border-b border-slate-200 hover:bg-slate-50 transition">
+                <td class="px-3 py-2 whitespace-nowrap text-[11px] text-slate-600 font-mono">${escapeHTML(formattedDate)}</td>
+                <td class="px-3 py-2"><p class="font-bold text-slate-800 text-xs">${escapeHTML(log.userName || log.userEmail || 'Desconhecido')}</p></td>
+                <td class="px-3 py-2 text-center"><span class="px-2 py-0.5 rounded text-[10px] font-mono bg-slate-100 text-slate-700 border border-slate-200 uppercase">${escapeHTML(log.action || 'ACAO')}</span></td>
+                <td class="px-3 py-2 text-xs text-slate-600 max-w-xs break-words">${escapeHTML(log.details || '-')}${log.pautaId && log.pautaId !== 'N/A' ? `<br><span class="text-[9px] text-slate-400 font-mono">ID: ${escapeHTML(log.pautaId.substring(0,8))}</span>` : ''}</td>
             </tr>
         `;
     }).join('');
@@ -1275,17 +1253,17 @@ function renderLogsTable(db) {
 }
 
 export const setupAdminSearch = () => {
-    renderSearchInput('search-pendentes', 'Buscar usuário pendente...', (val) => {
+    renderSearchInput('search-pendentes', 'Pesquisar pendentes...', (val) => {
         adminFilters.pendentes.search = val;
         adminFilters.pendentes.page = 1;
         if (globalApp) loadUsersList(globalApp.db);
     });
-    renderSearchInput('search-usuarios', 'Buscar usuário...', (val) => {
+    renderSearchInput('search-usuarios', 'Pesquisar usuários...', (val) => {
         adminFilters.usuarios.search = val;
         adminFilters.usuarios.page = 1;
         if (globalApp) loadUsersList(globalApp.db);
     });
-    renderSearchInput('search-logs', 'Buscar logs...', (val) => {
+    renderSearchInput('search-logs', 'Pesquisar logs...', (val) => {
         adminFilters.logs.search = val;
         adminFilters.logs.page = 1;
         if (globalApp) renderLogsTable(globalApp.db);
@@ -1293,33 +1271,33 @@ export const setupAdminSearch = () => {
 };
 
 export const exportAuditLogsPDF = async (db) => {
-    showNotification("Gerando PDF da Auditoria...", "info");
+    showNotification("Gerando relatório PDF...", "info");
     try {
         const { jsPDF } = window.jspdf;
         const docPDF = new jsPDF({ orientation: 'landscape' });
         const logs = cachedLogs;
-        if (logs.length === 0) { showNotification("Nenhum log para exportar.", "warning"); return; }
-        docPDF.setFontSize(18); docPDF.setTextColor(55, 65, 81);
-        docPDF.text("Relatorio de Auditoria - SIGEP", 14, 20);
+        if (logs.length === 0) { showNotification("Nenhum registro para exportar.", "warning"); return; }
+        docPDF.setFontSize(16); docPDF.setTextColor(55, 65, 81);
+        docPDF.text("Relatório de Auditoria Operacional - SIGEP", 14, 20);
         
         const body = logs.slice(0, 500).map(log => [
-            log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : 'Invalida',
+            log.timestamp ? new Date(log.timestamp).toLocaleString('pt-BR') : '-',
             `${log.userName || log.userEmail || 'Desconhecido'}`,
             log.action || '-',
             (log.details || '-').substring(0, 100)
         ]);
-        docPDF.autoTable({ head: [['Data/Hora', 'Usuario', 'Acao', 'Detalhes']], body: body, startY: 45, theme: 'striped' });
+        docPDF.autoTable({ head: [['Data/Hora', 'Usuário', 'Ação', 'Detalhes']], body: body, startY: 35, theme: 'striped' });
         docPDF.save(`Auditoria_SIGEP_${new Date().toISOString().slice(0,10)}.pdf`);
-        showNotification("PDF gerado!");
+        showNotification("Relatório exportado.", "success");
     } catch (error) { showNotification("Erro ao gerar PDF.", "error"); }
 };
 
 // ==========================================
-// DASHBOARD E ESTATÍSTICAS
+// DASHBOARD E INTELIGENCIA (BI)
 // ==========================================
 
 export const cleanupOldData = async (db) => {
-    if (!confirm("Isso apagará dados com mais de 7 dias. Confirmar?")) return;
+    if (!confirm("Confirma a compactação de dados com mais de 7 dias para o BI?")) return;
     try {
         const limitDate = new Date();
         limitDate.setDate(limitDate.getDate() - 7);
@@ -1350,7 +1328,7 @@ export const cleanupOldData = async (db) => {
                     faltosos: snapshot.docs.filter(d => d.data().status === 'faltoso').length, 
                     assuntos: {}, 
                     atendentes: {},
-                    orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj' // 🔒 Salva a estatística para o órgão
+                    orgaoId: globalApp?.currentUser?.orgaoId || 'padrao_dprj' 
                 };
                 
                 snapshot.docs.forEach(d => {
@@ -1370,9 +1348,9 @@ export const cleanupOldData = async (db) => {
                 count += snapshot.size;
             }
         }
-        showNotification(`Sucesso! ${count} registros limpos.`);
+        showNotification(`Compactação concluída: ${count} registros consolidados.`, "success");
         if (window.loadDashboardData) window.loadDashboardData();
-    } catch (error) { showNotification("Erro: " + error.message, "error"); }
+    } catch (error) { showNotification("Erro na compactação: " + error.message, "error"); }
 };
 
 export const loadDashboardData = async (db) => {
@@ -1384,12 +1362,12 @@ export const loadDashboardData = async (db) => {
     if (!resultsArea) return;
 
     resultsArea.classList.remove('hidden');
-    resultsArea.innerHTML = '<div class="text-center py-8"><div class="loader-small mx-auto mb-4"></div><p class="text-gray-600 mt-2">Carregando dados do BI...</p></div>';
+    resultsArea.innerHTML = '<div class="text-center py-6 text-xs text-slate-500">Calculando indicadores executivos...</div>';
     
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
         if (snapshot.empty) {
-            resultsArea.innerHTML = `<div class="text-center py-12 bg-white rounded-lg border shadow-sm"><h3 class="text-xl font-bold text-gray-800 mb-2">BI ainda vazio!</h3><p class="text-sm text-gray-500">Nenhum dado permanente foi gerado ainda.</p></div>`;
+            resultsArea.innerHTML = `<div class="text-center py-8 bg-white rounded-xl border border-slate-200 text-xs text-slate-500">Nenhum dado analítico consolidado encontrado.</div>`;
             return;
         }
         
@@ -1421,28 +1399,28 @@ export const loadDashboardData = async (db) => {
         
         resultsArea.innerHTML = `
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                <div class="p-4 bg-blue-50 rounded-lg text-center border border-blue-100 shadow-sm">
-                    <p class="text-[9px] text-blue-600 font-bold uppercase tracking-widest">Demandado</p>
-                    <h4 class="text-2xl font-black text-blue-800 mt-1">${totalGeral}</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
+                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Demanda Total</p>
+                    <h4 class="text-xl font-black text-slate-800 mt-1">${totalGeral}</h4>
                 </div>
-                <div class="p-4 bg-green-50 rounded-lg text-center border border-green-100 shadow-sm">
-                    <p class="text-[9px] text-green-600 font-bold uppercase tracking-widest">Atendidos</p>
-                    <h4 class="text-2xl font-black text-green-800 mt-1">${totalAtendidos}</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
+                    <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Atendimentos Realizados</p>
+                    <h4 class="text-xl font-black text-emerald-700 mt-1">${totalAtendidos}</h4>
                 </div>
-                <div class="p-4 bg-orange-50 rounded-lg text-center border border-orange-100 shadow-sm">
-                    <p class="text-[9px] text-orange-600 font-bold uppercase tracking-widest">Absenteísmo</p>
-                    <h4 class="text-2xl font-black text-orange-800 mt-1">${taxa}%</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
+                    <p class="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Taxa de Absenteísmo</p>
+                    <h4 class="text-xl font-black text-amber-700 mt-1">${taxa}%</h4>
                 </div>
             </div>
             
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-6">
-                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
-                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Top Assuntos</h5>
-                    <div id="dash-subjects-list" class="space-y-3 text-xs"></div>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+                    <h5 class="text-[11px] font-bold mb-3 uppercase text-slate-500 tracking-wider border-b border-slate-100 pb-2">Principais Assuntos</h5>
+                    <div id="dash-subjects-list" class="space-y-2 text-xs"></div>
                 </div>
-                <div class="border border-slate-200 rounded-xl p-5 bg-white shadow-sm">
-                    <h5 class="text-[10px] font-black mb-4 uppercase text-slate-400 tracking-widest border-b border-slate-100 pb-3">Produtividade da Equipe</h5>
-                    <div id="dash-users-list" class="space-y-3 text-xs"></div>
+                <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm">
+                    <h5 class="text-[11px] font-bold mb-3 uppercase text-slate-500 tracking-wider border-b border-slate-100 pb-2">Produtividade por Atendente</h5>
+                    <div id="dash-users-list" class="space-y-2 text-xs"></div>
                 </div>
             </div>
         `;
@@ -1450,11 +1428,11 @@ export const loadDashboardData = async (db) => {
         const renderRanking = (elementId, dataMap) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
-            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-slate-400 py-4 italic">Sem dados suficientes.</p>'; return; }
+            if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-slate-400 py-3 text-xs italic">Sem dados suficientes.</p>'; return; }
             el.innerHTML = sorted.map(([name, count]) => `
-                <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100">
-                    <span class="truncate pr-2 font-bold text-slate-700">${escapeHTML(name)}</span>
-                    <span class="font-black text-indigo-700 bg-indigo-100 border border-indigo-200 px-2.5 py-1 rounded-md text-[10px]">${count}</span>
+                <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 text-xs">
+                    <span class="truncate pr-2 font-medium text-slate-700">${escapeHTML(name)}</span>
+                    <span class="font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded text-[11px]">${count}</span>
                 </div>
             `).join('');
         };
@@ -1463,8 +1441,7 @@ export const loadDashboardData = async (db) => {
         renderRanking('dash-users-list', mapUsers);
         
     } catch (error) { 
-        console.error("Erro no BI:", error);
-        resultsArea.innerHTML = `<div class="text-center py-8 text-red-500 font-bold border border-red-200 bg-red-50 rounded-xl">Erro ao processar dados: ${error.message}</div>`; 
+        resultsArea.innerHTML = `<div class="text-center py-6 text-xs text-red-500 font-semibold border border-red-200 bg-red-50 rounded-xl">Erro ao carregar BI: ${error.message}</div>`; 
     }
 };
 
@@ -1480,13 +1457,13 @@ export const populateUserFilter = async (db) => {
         }
         
         const snapshot = await getDocs(usersQuery);
-        select.innerHTML = '<option value="all">Todos os Usuários</option>';
+        select.innerHTML = '<option value="all">Todos os usuários</option>';
         snapshot.forEach(d => { if (d.data().email) select.appendChild(new Option(d.data().name || d.data().email, d.data().email)); });
     } catch (e) {}
 };
 
 // ============================================================================
-// 👑 PAINEL DO DONO (GESTAO DE TENANTS / ÓRGÃOS) - EXCLUSIVO SUPERADMIN_GLOBAL
+// GESTAO DE CLIENTES / TENANTS (EXCLUSIVO SUPERADMIN_GLOBAL)
 // ============================================================================
 
 export const carregarOrgaos = async (db) => {
@@ -1500,7 +1477,7 @@ export const carregarOrgaos = async (db) => {
 
 export const abrirGerenciadorTenants = async (db) => {
     if (globalApp?.currentUser?.role !== 'superadmin_global') {
-        showNotification("Acesso negado. Apenas o Dono do Sistema pode gerenciar clientes.", "error");
+        showNotification("Acesso restrito a administradores globais.", "error");
         return;
     }
 
@@ -1511,27 +1488,25 @@ export const abrirGerenciadorTenants = async (db) => {
         if (!container) return;
         
         if (orgaos.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400">Nenhum cliente/órgão cadastrado.</div>';
+            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400 text-xs">Nenhum cliente cadastrado.</div>';
             return;
         }
         
         container.innerHTML = orgaos.map(org => `
-            <div class="border rounded-xl p-5 bg-white shadow-sm hover:shadow-md transition-all duration-200 flex flex-col justify-between">
-                <div class="flex justify-between items-start mb-4">
-                    <div>
-                        <h4 class="font-black text-slate-800 text-lg leading-tight">${escapeHTML(org.nome)}</h4>
-                        <p class="text-xs font-mono text-slate-500 mt-1 bg-slate-100 px-2 py-0.5 rounded inline-block">ID: ${escapeHTML(org.id)}</p>
+            <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
+                <div>
+                    <div class="flex justify-between items-start mb-2">
+                        <h4 class="font-bold text-slate-800 text-sm">${escapeHTML(org.nome)}</h4>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${org.ativo !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
+                            ${org.ativo !== false ? 'Ativo' : 'Bloqueado'}
+                        </span>
                     </div>
-                    <span class="px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${org.ativo !== false ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}">
-                        ${org.ativo !== false ? 'Ativo' : 'Bloqueado'}
-                    </span>
+                    <p class="text-[11px] font-mono text-slate-400 mb-4">Identificador: ${escapeHTML(org.id)}</p>
                 </div>
                 
-                <div class="pt-4 border-t border-slate-100 flex gap-2">
-                    <button class="btn-toggle-tenant flex-1 ${org.ativo !== false ? 'bg-red-50 text-red-600 hover:bg-red-100' : 'bg-green-50 text-green-600 hover:bg-green-100'} font-bold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${org.ativo !== false}">
-                        ${org.ativo !== false ? '🚫 Bloquear Acesso' : '✅ Desbloquear'}
-                    </button>
-                </div>
+                <button class="btn-toggle-tenant w-full ${org.ativo !== false ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'} font-semibold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${org.ativo !== false}">
+                    ${org.ativo !== false ? 'Bloquear Acesso' : 'Desbloquear Acesso'}
+                </button>
             </div>
         `).join('');
         
@@ -1539,18 +1514,18 @@ export const abrirGerenciadorTenants = async (db) => {
             btn.addEventListener('click', async () => {
                 const isAtivo = btn.dataset.ativo === 'true';
                 const novoStatus = !isAtivo;
-                const acao = novoStatus ? 'Desbloquear' : 'Bloquear';
+                const acao = novoStatus ? 'desbloquear' : 'bloquear';
                 
-                if (confirm(`Tem certeza que deseja ${acao} este cliente? ${novoStatus ? '' : 'Isso impedirá o acesso de todos os usuários deste órgão.'}`)) {
+                if (confirm(`Confirma a alteração para ${acao} este cliente?`)) {
                     btn.disabled = true;
-                    btn.textContent = 'Processando...';
+                    btn.textContent = 'Salvando...';
                     try {
                         await updateDoc(doc(db, "orgaos_clientes", btn.dataset.id), { ativo: novoStatus, updatedAt: new Date().toISOString() });
-                        showNotification(`Cliente ${acao.toLowerCase()}o com sucesso!`, "success");
+                        showNotification("Status do cliente atualizado.", "success");
                         orgaos = await carregarOrgaos(db);
                         renderLista();
                     } catch (e) {
-                        showNotification("Erro ao alterar status.", "error");
+                        showNotification("Erro ao atualizar status.", "error");
                         btn.disabled = false;
                     }
                 }
@@ -1560,34 +1535,30 @@ export const abrirGerenciadorTenants = async (db) => {
     
     const modal = document.createElement('div');
     modal.id = 'gerenciador-tenants-modal';
-    modal.className = 'fixed inset-0 bg-slate-900/80 z-[1000] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
+    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
     modal.innerHTML = `
-        <div class="bg-slate-50 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
-            <div class="bg-gradient-to-r from-amber-600 to-orange-500 px-8 py-6 flex justify-between items-center shrink-0">
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0 border-b border-slate-800">
                 <div>
-                    <h2 class="text-2xl font-black text-white flex items-center gap-3">👑 Gestão de Clientes (Tenants)</h2>
-                    <p class="text-amber-100 text-sm mt-1">Crie e gerencie os órgãos independentes do seu SaaS.</p>
+                    <h2 class="font-bold text-sm tracking-wide">Gestão Corporativa de Clientes (Tenants)</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Painel de controle de órgãos e prefeituras contratantes</p>
                 </div>
-                <button id="fechar-gerenciador-tenants" class="text-white/60 hover:text-white text-4xl leading-none">&times;</button>
+                <button id="fechar-gerenciador-tenants" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
             </div>
             
-            <div class="flex-1 overflow-y-auto p-8">
-                <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 mb-8">
-                    <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2"><span>➕</span> Cadastrar Novo Cliente</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div class="md:col-span-2">
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Nome do Órgão / Prefeitura</label>
-                            <input type="text" id="novo-tenant-nome" placeholder="Ex: Prefeitura de Petrópolis" class="w-full p-3 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-amber-500 outline-none">
-                        </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1">Ação</label>
-                            <button id="btn-salvar-tenant" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition shadow-sm">Criar Cliente</button>
-                        </div>
+            <div class="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
+                <div class="bg-white p-5 rounded-xl border border-slate-200 shadow-sm">
+                    <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3">Cadastrar Novo Cliente</h3>
+                    <div class="flex flex-col sm:flex-row gap-3">
+                        <input type="text" id="novo-tenant-nome" placeholder="Nome do Órgão ou Cliente (Ex: Prefeitura de Maricá)" class="flex-1 p-2.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
+                        <button id="btn-salvar-tenant" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-xs transition shrink-0">Cadastrar Cliente</button>
                     </div>
                 </div>
                 
-                <h3 class="font-bold text-slate-800 mb-4 text-lg">Clientes Ativos na Plataforma</h3>
-                <div id="lista-tenants-admin" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4"></div>
+                <div>
+                    <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3">Clientes Cadastrados</h3>
+                    <div id="lista-tenants-admin" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
+                </div>
             </div>
         </div>
     `;
@@ -1601,13 +1572,13 @@ export const abrirGerenciadorTenants = async (db) => {
         const nome = inputNome.value.trim();
         
         if (!nome) {
-            showNotification("Digite o nome do cliente.", "error");
+            showNotification("Informe o nome do cliente.", "error");
             return;
         }
         
         const btn = document.getElementById('btn-salvar-tenant');
         btn.disabled = true;
-        btn.textContent = 'Criando...';
+        btn.textContent = 'Salvando...';
         
         try {
             const tenantId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -1619,16 +1590,16 @@ export const abrirGerenciadorTenants = async (db) => {
                 createdAt: new Date().toISOString()
             });
             
-            showNotification(`Cliente "${nome}" criado com sucesso!`, "success");
+            showNotification("Cliente cadastrado com sucesso.", "success");
             inputNome.value = '';
             orgaos = await carregarOrgaos(db);
             renderLista();
             
         } catch (error) {
-            showNotification("Erro ao criar cliente.", "error");
+            showNotification("Erro ao cadastrar cliente.", "error");
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Criar Cliente';
+            btn.textContent = 'Cadastrar Cliente';
         }
     });
 };
@@ -1660,7 +1631,7 @@ export const setupAdminEvents = (app) => {
         const btn = document.getElementById('view-audit-logs-btn');
         if (btn) { btn.textContent = "Carregando..."; btn.disabled = true; }
         await loadAuditLogs(app.db);
-        if (btn) { btn.textContent = "🔍 Carregar Logs"; btn.disabled = false; }
+        if (btn) { btn.textContent = "Carregar Logs"; btn.disabled = false; }
     });
 
     document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
@@ -1680,15 +1651,15 @@ export const setupAdminEvents = (app) => {
     document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
 
-    // 👑 INJEÇÃO DO BOTÃO DE GESTÃO DE CLIENTES (APENAS PARA SUPERADMIN GLOBAL)
-    const isAdminGlobal = app?.currentUser?.role === 'superadmin_global';
-    if (isAdminGlobal) {
+    // INJECAO DO BOTAO DE GESTAO DE CLIENTES (EXCLUSIVO PARA SUPERADMIN_GLOBAL)
+    const roleUsuario = app?.currentUser?.role;
+    if (roleUsuario === 'superadmin_global') {
         const btnContainer = document.getElementById('btn-unidades-master')?.parentElement;
         if (btnContainer && !document.getElementById('btn-gerenciar-tenants')) {
             const btnTenants = document.createElement('button');
             btnTenants.id = 'btn-gerenciar-tenants';
-            btnTenants.className = 'bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm ml-auto';
-            btnTenants.innerHTML = '👑 Gestão de Clientes (Tenants)';
+            btnTenants.className = 'bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 ml-auto';
+            btnTenants.innerHTML = 'Gestão de Clientes';
             btnTenants.onclick = () => abrirGerenciadorTenants(app.db);
             btnContainer.appendChild(btnTenants);
         }
@@ -1721,7 +1692,7 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
-    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
+    if (globalApp) abrirGerenciarUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
 
@@ -1796,4 +1767,4 @@ export const AdminService = {
     abrirModalGerenciarRecepcoesGlobal,
 };
 
-console.log("✅ AdminService (Hub de Unidades e Recepções Independentes com Multi-Tenant) registrado com sucesso.");
+console.log("AdminService executivo com suporte Multi-Tenant registrado.");
