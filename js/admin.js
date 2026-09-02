@@ -513,7 +513,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                     <p class="text-xs text-slate-500 mt-0.5">Vincule unidades operacionais e defina equipes alocadas.</p>
                 </div>
                 <button id="btn-nova-recepcao-custom" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
-                    + Nova Recepção
+                    Nova Recepção
                 </button>
             </div>
             
@@ -532,7 +532,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                         
                         <div class="flex items-center gap-3 mb-4">
                             <div class="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-lg">
-                                ${rec.icone || '📋'}
+                                📋
                             </div>
                             <div class="flex-1 min-w-0 pr-12">
                                 <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</h4>
@@ -781,7 +781,7 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
             </div>
             <div class="bg-slate-50 px-6 py-3.5 flex justify-end gap-2 border-t border-slate-200">
                 <button class="fechar-form-unidade bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Cancelar</button>
-                <button id="btn-salvar-unidade" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${isSalvarText => isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
+                <button id="btn-salvar-unidade" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
             </div>
         </div>
     `;
@@ -869,8 +869,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 export const loadUsersList = async (db) => {
     try {
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
-        // 🔒 BLINDAGEM CONTRA UNDEFINED: Se não houver órgão, assume 'padrao_dprj' por segurança
-        const meuTenant = globalApp?.currentUser?.orgaoId || 'padrao_dprj';
+        const meuTenant = globalApp?.currentUser?.orgaoId || 'padrao_dprj'; // Blindagem contra undefined
         
         const allUsers = [];
         
@@ -1082,25 +1081,32 @@ export const approveUser = async (db, userId) => {
 
 export const updateUserRole = async (db, userId) => {
     try {
-        // Blindagem: Se o 'db' vier como string (ID), inverte os parâmetros por segurança
-        let database = db;
+        // Se a instância do banco não veio válida, busca do globalApp ou de window.app
+        const database = db && typeof db === 'object' ? db : (globalApp?.db || window.app?.db);
+        
+        if (!database) {
+            showNotification("Erro crítico: Instância do banco de dados não encontrada.", "error");
+            return;
+        }
+
         let targetId = userId;
-        if (typeof database === 'string' && typeof targetId !== 'string') {
-            database = userId;
-            targetId = db;
+        // Se o userId veio invertido ou vazio, tenta extrair do evento
+        if (!targetId || typeof targetId !== 'string') {
+            const btn = window.event?.target;
+            targetId = btn?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || targetId;
         }
 
         let selectElement = document.getElementById(`role-select-${targetId}`);
         if (!selectElement) {
-            const btn = event?.target;
+            const btn = window.event?.target;
             const row = btn?.closest('tr');
             if (row) {
                 selectElement = row.querySelector('select');
             }
         }
 
-        if (!selectElement) {
-            showNotification("Erro: Campo de seleção de perfil não localizado.", "error");
+        if (!selectElement || !targetId) {
+            showNotification("Erro: Não foi possível identificar o usuário ou o campo de perfil.", "error");
             return;
         }
         
@@ -1116,7 +1122,7 @@ export const updateUserRole = async (db, userId) => {
         showNotification("Perfil atualizado com sucesso.", "success");
         await loadUsersList(database);
     } catch (e) { 
-        console.error("Erro ao atualizar perfil:", e);
+        console.error("Erro detalhado ao atualizar perfil:", e);
         showNotification("Erro ao atualizar: " + e.message, "error"); 
     }
 };
@@ -1704,9 +1710,12 @@ window.approveUser = (userId) => {
     else console.error("App não inicializado");
 };
 
-window.updateUserRole = (userId) => {
-    if (globalApp) updateUserRole(globalApp.db, userId);
-    else console.error("App não inicializado");
+window.updateUserRole = (dbOrUserId, possibleUserId) => {
+    // Permite lidar com flexibilidade de parâmetros
+    const db = typeof dbOrUserId === 'object' ? dbOrUserId : (globalApp?.db || null);
+    const userId = typeof dbOrUserId === 'string' ? dbOrUserId : possibleUserId;
+    if (db && userId) updateUserRole(db, userId);
+    else console.error("Erro na chamada: instâncias não localizadas.");
 };
 
 window.toggleSuspendUser = (userId, isSuspended) => {
@@ -1800,4 +1809,4 @@ export const AdminService = {
     abrirModalGerenciarRecepcoesGlobal,
 };
 
-console.log("AdminService executivo com suporte Multi-Tenant registrado.");
+console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
