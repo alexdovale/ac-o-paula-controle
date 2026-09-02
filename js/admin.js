@@ -1082,9 +1082,19 @@ export const approveUser = async (db, userId) => {
 
 export const updateUserRole = async (db, userId) => {
     try {
-        const selectElement = document.getElementById(`role-select-${userId}`);
+        // Tenta achar o select pelo ID padrão ou busca dentro da mesma linha da tabela
+        let selectElement = document.getElementById(`role-select-${userId}`);
         if (!selectElement) {
-            showNotification("Elemento de seleção não encontrado.", "error");
+            // Fallback: procura o select mais próximo do botão que foi clicado
+            const btn = event?.target;
+            const row = btn?.closest('tr');
+            if (row) {
+                selectElement = row.querySelector('select');
+            }
+        }
+
+        if (!selectElement) {
+            showNotification("Erro: Campo de seleção de perfil não localizado.", "error");
             return;
         }
         
@@ -1100,7 +1110,7 @@ export const updateUserRole = async (db, userId) => {
         showNotification("Perfil atualizado com sucesso.", "success");
         await loadUsersList(db);
     } catch (e) { 
-        console.error("Erro detalhado ao atualizar perfil:", e);
+        console.error("Erro ao atualizar perfil:", e);
         showNotification("Erro ao atualizar: " + e.message, "error"); 
     }
 };
