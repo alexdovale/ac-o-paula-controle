@@ -674,10 +674,11 @@ export const PautaService = {
             
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
-            const isAdmin = (userData && userData.role === 'admin') || (userData && userData.role === 'superadmin');
-            
-            if (pautaData.owner !== user.uid && !isAdmin) {
-                showNotification("Você não tem permissão para apagar esta pauta", "error");
+            const isSuperAdminGlobal = userData?.role === 'superadmin';
+            const isAdminDoOrgao = userData?.role === 'admin' && userData?.orgaoId === pautaData.orgaoId;
+                        
+            if (pautaData.owner !== user.uid && !isSuperAdminGlobal && !isAdminDoOrgao) {
+                showNotification("Acesso restrito: Você não tem permissão para apagar pautas deste órgão.", "error");
                 return false;
             }
 
