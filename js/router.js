@@ -35,7 +35,7 @@ const ROUTE_GUARDS = {
     [ROUTES.PAUTA_SELECTION]:     { requiresAuth: true },
     [ROUTES.APP]:                 { requiresAuth: true },
     [ROUTES.DASHBOARD]:           { requiresAuth: true },
-    [ROUTES.ADMIN]:               { requiresAuth: true, roles: ['admin', 'superadmin'] },
+    [ROUTES.ADMIN]:               { requiresAuth: true, roles: ['admin', 'superadmin', 'superadmin_global'] },
     [ROUTES.RECEPCAO_CENTRAL]:    { requiresAuth: true }, 
     [ROUTES.PAINEL_PUBLICO]:      { requiresAuth: false },
     [ROUTES.ATENDIMENTO_EXTERNO]: { requiresAuth: true },
@@ -120,7 +120,7 @@ export class SIGEPRouter {
     async resolveInitialRoute() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // 🛠️ REGRA SUPREMA: Se a URL tem uma rota explícita, ELA MANDA em tudo (Ignora o localStorage!)
+        // 1. REGRA SUPREMA: Se a URL tem uma rota explícita (?r=...), ELA MANDA em tudo
         const urlRoute = urlParams.get('r');
         if (urlRoute && ROUTE_GUARDS[urlRoute]) {
             const params = Object.fromEntries(urlParams.entries());
@@ -128,33 +128,44 @@ export class SIGEPRouter {
             return;
         }
 
+        // 1.5 Tratamento específico para o painel público antigo via parâmetro
         if (urlParams.get('painel') === 'true') {
             await this._execute(ROUTES.PAINEL_PUBLICO, {}, false);
             return;
         }
 
-        // Se a URL estiver limpa, aí sim usamos o histórico local
+        // 2. Verifica se a página foi RECARREGADA propositalmente (F5 / Refresh)
+        const isReload = window.performance && 
+            window.performance.getEntriesByType("navigation").some(nav => nav.type === "reload");
+
+        // Pega as últimas informações salvas no navegador
         const savedScreen = localStorage.getItem('sigep_active_screen');
         const pautaId     = localStorage.getItem('lastPautaId');
         const pautaName   = localStorage.getItem('lastPautaName');
         const pautaType   = localStorage.getItem('lastPautaType');
 
-        const routeMap = {
-            'app': async () => {
-                if (pautaId && pautaName) await this.navigate(ROUTES.APP, { pautaId, pautaName, pautaType }, true);
-                else await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
-            },
-            'pauta-selection':    () => this.navigate(ROUTES.PAUTA_SELECTION, {}, true),
-            'dashboard':          () => this.navigate(ROUTES.DASHBOARD, {}, true),
-            'recepcao-central':   () => this.navigate(ROUTES.RECEPCAO_CENTRAL, {}, true),
-            'admin':              () => this.navigate(ROUTES.ADMIN, {}, true),
-        };
+        // Se FOI um recarregamento (F5) E existe uma tela salva, restaura de onde parou
+        if (isReload && savedScreen) {
+            const routeMap = {
+                'app': async () => {
+                    if (pautaId && pautaName) await this.navigate(ROUTES.APP, { pautaId, pautaName, pautaType }, true);
+                    else await this.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+                },
+                'pauta-selection':    () => this.navigate(ROUTES.PAUTA_SELECTION, {}, true),
+                'dashboard':          () => this.navigate(ROUTES.DASHBOARD, {}, true),
+                'recepcao-central':   () => this.navigate(ROUTES.RECEPCAO_CENTRAL, {}, true),
+                'admin':              () => this.navigate(ROUTES.ADMIN, {}, true),
+            };
 
-        if (savedScreen && routeMap[savedScreen]) {
-            await routeMap[savedScreen]();
-        } else {
-            await this.navigate(ROUTES.MODO_SELECTION, {}, true);
+            if (routeMap[savedScreen]) {
+                await routeMap[savedScreen]();
+                return;
+            }
         }
+
+        // 3. Acesso LIMPO (link principal sem parâmetros, nova aba, ou primeiro acesso do dia)
+        // Ignora o localStorage e manda para a tela inicial padrão do sistema!
+        await this.navigate(ROUTES.MODO_SELECTION, {}, true);
     }
 
     get currentRoute()  { return this._currentRoute; }
