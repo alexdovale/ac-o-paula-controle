@@ -10,8 +10,9 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
     const style = document.createElement('style');
     style.id = 'sigep-ui-fixes';
     style.innerHTML = `
-        /* Remove o delay de 300ms ao clicar em botões no celular, deixando super ágil */
-        button, a, select, .touch-manipulation { touch-action: manipulation !important; }
+        /* Remove o delay de 300ms ao clicar em botões no celular e o piscar cinza de toque nativo */
+        * { -webkit-tap-highlight-color: transparent; }
+        button, a, select, input[type="file"], .touch-manipulation { touch-action: manipulation !important; }
         
         /* Corrige o vazamento do modal de confirmar chegada no celular */
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
@@ -787,8 +788,11 @@ export const UIService = {
         return `
             <div class="absolute top-2 right-2 flex items-center z-10 gap-1">
                 <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
-                    class="text-indigo-600 hover:text-indigo-800 p-1.5 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Adobe Scan)">
-                    <span class="text-sm">📸</span>
+                    class="text-indigo-600 hover:text-indigo-800 p-2 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Scanner)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
                 </button>
 
                 <div class="relative">
@@ -1144,7 +1148,7 @@ export const UIService = {
                     roomDropdownHtml = `
                         <div class="flex flex-col items-center justify-center w-full mt-2">
                             <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
-                            <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
+                            <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-50 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
                                 <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
                                 ${options}
                             </select>
