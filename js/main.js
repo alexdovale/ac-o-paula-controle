@@ -2,6 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+// 🔥 OTIMIZAÇÃO: A importação do 'or' foi adicionada aqui para permitir as consultas compostas
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -65,6 +66,7 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         
+        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         this.currentUnidadeExibicao = localStorage.getItem('sigep_unidade_ativa') || 'todas';
         
@@ -77,8 +79,13 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
     
+            // ── Inicializa o router antes de qualquer verificação de URL ──
             this.router = new SIGEPRouter(this, {
-                UIService, DashboardService, RecepçãoCentralService, PerfilService, showNotification,
+                UIService,
+                DashboardService,
+                RecepçãoCentralService,
+                PerfilService,
+                showNotification,
             });
             this.router.init();
     
@@ -86,7 +93,7 @@ class SIGEPApp {
             await this.setupOfflinePersistence();
             
             this.setupEventListeners();
-            this.setupAuthListener();
+            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -105,6 +112,9 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // MÉTODOS DE COMPATIBILIDADE LEGADA E RENDERIZAÇÃO
+    // ============================================================
     showPautaSelectionScreen() {
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
@@ -115,10 +125,21 @@ class SIGEPApp {
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
     }
     
-    showAppScreen() { if (this.router) this.router.navigate(ROUTES.APP, {}, false); }
-    showLoginScreen() { if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false); }
-    showDashboardScreen() { if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false); }
-    showRecepcaoCentralScreen() { if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false); }
+    showAppScreen() {
+        if (this.router) this.router.navigate(ROUTES.APP, {}, false);
+    }
+    
+    showLoginScreen() {
+        if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false);
+    }
+    
+    showDashboardScreen() {
+        if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false);
+    }
+    
+    showRecepcaoCentralScreen() {
+        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
+    }
 
     showAdminScreen() {
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -142,6 +163,8 @@ class SIGEPApp {
         this.listarColetas();
     }
 
+    // 🔥 ADMIN RENDERIZADO VIA HTML EXTERNO (DESACOPLADO DO MAIN)
+    // 🔥 ADMIN RENDERIZADO DIRETAMENTE (SEM FETCH, EVITA ERROS DE CORS LOCAL)
     async renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
@@ -229,67 +252,16 @@ class SIGEPApp {
             </div>
         `;
         
-        if (typeof setupAdminSearch === 'function') setupAdminSearch();
-        if (typeof loadUsersList === 'function') loadUsersList(this.db);
-        if (typeof populateUserFilter === 'function') populateUserFilter(this.db);
-        this.setupAdminPanelEvents();
-    }
-
-    setupAdminPanelEvents() {
-        document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
-            if (ImportadorOrgaosService && typeof ImportadorOrgaosService.abrirModalMaster === 'function') {
-                ImportadorOrgaosService.abrirModalMaster(this);
-            } else if (typeof abrirGerenciadorUnidades === 'function') {
-                abrirGerenciadorUnidades(this.db);
-            }
-        });
-        
-        document.getElementById('btn-recepcoes-master')?.addEventListener('click', () => {
-            if (window.abrirModalGerenciarRecepcoesGlobal) {
-                window.abrirModalGerenciarRecepcoesGlobal();
-            }
-        });
-        
-        document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
-        });
-        
-        document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
-            const btn = document.getElementById('view-audit-logs-btn');
-            if (btn) {
-                btn.textContent = "Carregando...";
-                btn.disabled = true;
-            }
-            await loadAuditLogs(this.db);
-            if (btn) {
-                btn.textContent = "🔍 Carregar Logs";
-                btn.disabled = false;
-            }
-        });
-        
-        document.getElementById('cleanup-old-data-btn')?.addEventListener('click', () => {
-            cleanupOldData(this.db);
-        });
-        
-        document.getElementById('btn-load-dashboard')?.addEventListener('click', () => {
-            loadDashboardData(this.db);
-        });
-        
-        document.getElementById('export-audit-pdf-btn')?.addEventListener('click', () => {
-            exportAuditLogsPDF(this.db);
-        });
-        
-        document.getElementById('filter-log-user')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-action')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(this.db));
-        document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(this.db));
+        // Entrega o controle de eventos para o AdminService
+        if (AdminService?.setupAdminEvents) {
+            AdminService.setupAdminEvents(this);
+        }
     }
 
     setupModoListeners() {
         document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
             this.currentMode = 'normal';
             localStorage.setItem('sigep_current_mode', 'normal');
-            
             this.abrirModalSelecaoUnidade();
         });
     
@@ -385,12 +357,15 @@ class SIGEPApp {
                     <div class="space-y-3">
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
                             <div class="font-bold"> Mutirão</div>
+                            <div class="text-xs text-gray-500">Evento concentrado com múltiplos atendimentos</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="plantao">
                             <div class="font-bold"> Plantão</div>
+                            <div class="text-xs text-gray-500">Atendimento emergencial contínuo</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="acao_social">
                             <div class="font-bold"> Ação Social</div>
+                            <div class="text-xs text-gray-500">Atividade comunitária externa</div>
                         </button>
                     </div>
                     <button id="cancel-tipo-evento" class="mt-4 w-full p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
@@ -466,13 +441,9 @@ class SIGEPApp {
 
     hideLoadingScreen() {
         const idsDeCarregamento = [
-            'loading-screen', 
-            'global-loader', 
-            'splash-screen', 
-            'loading-container',
-            'auth-loading-spinner'
+            'loading-screen', 'global-loader', 'splash-screen', 
+            'loading-container', 'auth-loading-spinner'
         ];
-
         idsDeCarregamento.forEach(id => {
             const loader = document.getElementById(id);
             if (loader) {
@@ -486,19 +457,9 @@ class SIGEPApp {
         try {
             await enableMultiTabIndexedDbPersistence(this.db);
         } catch (err) {
-            if (err.code == 'failed-precondition') {
-                console.warn('⚠️ Múltiplas abas detectadas, mas o MultiTab deve lidar com isso nativamente.');
-            } else if (err.code == 'unimplemented') {
-                console.warn('⚠️ Navegador não suporta persistência offline.');
-            } else {
-                console.error('⚠️ Falha de integridade no cache local.', err.message);
-            }
+            console.warn('⚠️ Cache/Offline warning:', err.code);
         }
-    
-        window.addEventListener('offline', () => {
-            document.getElementById('offline-indicator')?.classList.remove('hidden');
-        });
-    
+        window.addEventListener('offline', () => document.getElementById('offline-indicator')?.classList.remove('hidden'));
         window.addEventListener('online', () => {
             document.getElementById('offline-indicator')?.classList.add('hidden');
             showNotification("Conexão restabelecida!", "success");
@@ -519,11 +480,7 @@ class SIGEPApp {
                 if (response.ok) {
                     const html = await response.text();
                     const container = document.querySelector(item.selector);
-                    if (container) {
-                        container.innerHTML = html; 
-                    }
-                } else {
-                    console.warn(`Arquivo não encontrado (local): ${item.url}. Usando os textos padrão embutidos.`);
+                    if (container) container.innerHTML = html; 
                 }
             } catch (error) {
                 console.error(`Erro ao tentar buscar ${item.url}:`, error);
@@ -531,30 +488,36 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // CENTRAL DE EVENTOS GLOBAIS (LIMPA E OTIMIZADA)
-    // ============================================================
     setupEventListeners() {
-        // Autenticação
-        document.getElementById('login-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.login(this); });
-        document.getElementById('register-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.register(this); });
-        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => { e.preventDefault(); AuthService.resetPassword(this.auth); });
-        document.getElementById('login-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('login'));
-        document.getElementById('register-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('register'));
-        document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
-            if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
-        });
+        this.setupAuthEvents();
+        this.setupNavigationEvents();
+        this.setupPautaMenuEvents();
+        this.setupPautaSettingsEvents();
+        this.setupAttendanceEvents();
+        this.setupChecklistEvents();
+        this.setupMiscEvents();
+        this.setupGlobalModalsAndFooterEvents();
+        
+        NotesService.setup();
+        UIService.setupFooterModals();
+        this.setupSubjectsAutocomplete();
+        this.setupColetas();
+    }
 
-        // Navegação via Router (Botões Comuns)
+    setupAuthEvents() {
+        AuthService.setupEvents(this);
+    }
+
+    setupNavigationEvents() {
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.DASHBOARD, {}, false));
         document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));       
         document.getElementById('btn-recepcao-central')?.addEventListener('click', () => this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false));
+        
         document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.MEU_PERFIL, {}, false));
         document.getElementById('perfil-back-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));
         
-        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
-        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.addEventListener('click', () => this.router.navigate(ROUTES.ADMIN, {}, false));
-
+        document.getElementById('admin-panel-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.ADMIN, {}, false));
+        
         document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
             this._teardownPauta();
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
@@ -576,9 +539,38 @@ class SIGEPApp {
             document.getElementById('pauta-type-modal')?.classList.remove('hidden');
         });
 
-        // ========================================================
-        // ROTAS DO MENU VERDE DE "AÇÕES" DA PAUTA (CORRIGIDO)
-        // ========================================================
+        document.addEventListener('click', (e) => {
+            const adminModal = document.getElementById('admin-modal');
+            const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+            const actionsToggle = document.getElementById('actions-toggle');
+            
+            const actionsPanel = document.getElementById('actions-panel');
+            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !actionsToggle?.contains(e.target)) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            
+            const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+            if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
+                 pautaSettingsPanel.classList.add('hidden');
+                 document.getElementById('pauta-settings-arrow')?.classList.remove('rotate-180');
+            }
+        });
+        
+        document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
+            localStorage.removeItem('sigep_active_screen');
+            localStorage.removeItem('sigep_app_state');
+            document.getElementById('modo-selection-screen')?.classList.add('hidden');
+            document.getElementById('login-container')?.classList.remove('hidden');
+            if(window.app && window.app.logout) window.app.logout();
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({}, '', cleanUrl);
+        });
+    }
+
+    setupPautaMenuEvents() {
+        document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
+
         document.getElementById('btn-painel-geral-externo')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.MONITOR_EQUIPE, { pautaId: this.currentPauta.id }, false);
@@ -586,13 +578,6 @@ class SIGEPApp {
             }
             if (typeof PainelGeralService !== 'undefined') {
                 PainelGeralService.abrirPainel(this);
-                const actionsPanel = document.getElementById('actions-panel');
-                if (actionsPanel) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                }
-            } else {
-                showNotification("Módulo do painel não carregado.", "error");
             }
         });
 
@@ -602,27 +587,20 @@ class SIGEPApp {
                 return;
             }
             const modal = document.getElementById('share-modal');
-            if (modal) {
-                const toggle = document.getElementById('share-toggle');
-                const maskCheck = document.getElementById('mask-names-check');
-                if (this.currentPautaData) {
-                    if (toggle) toggle.checked = this.currentPautaData.isPublic || false;
-                    if (maskCheck) maskCheck.checked = this.currentPautaData.maskNames || false;
-                    
-                    const statusText = document.getElementById('share-status-text');
-                    const linkContainer = document.getElementById('share-link-container');
-                    
-                    if (statusText && toggle) statusText.textContent = toggle.checked ? "Público" : "Privado";
-                    
-                    if (toggle && toggle.checked) {
-                        if (linkContainer) linkContainer.classList.remove('hidden');
-                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
-                        if (document.getElementById('share-link-input')) document.getElementById('share-link-input').value = link;
-                        if (document.getElementById('open-external-btn')) document.getElementById('open-external-btn').href = link;
-                    } else {
-                        if (linkContainer) linkContainer.classList.add('hidden');
-                    }
+            if (modal && this.currentPautaData) {
+                document.getElementById('share-toggle').checked = this.currentPautaData.isPublic || false;
+                document.getElementById('mask-names-check').checked = this.currentPautaData.maskNames || false;
+                
+                const isPublic = this.currentPautaData.isPublic;
+                document.getElementById('share-status-text').textContent = isPublic ? "Público" : "Privado";
+                
+                if (isPublic) {
+                    document.getElementById('share-link-container').classList.remove('hidden');
+                    const link = `${window.location.origin}${window.location.pathname.replace('index.html', '')}acompanhamento.html?id=${this.currentPauta.id}`;
+                    document.getElementById('share-link-input').value = link;
+                    document.getElementById('open-external-btn').href = link;
+                } else {
+                    document.getElementById('share-link-container').classList.add('hidden');
                 }
                 modal.classList.remove('hidden');
             }
@@ -634,16 +612,8 @@ class SIGEPApp {
                 return;
             }
             if (this.currentPauta) {
-                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                const totemUrl = `${baseUrl}/totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
                 window.open(totemUrl, '_blank');
-                const actionsPanel = document.getElementById('actions-panel');
-                if (actionsPanel) {
-                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                }
-            } else {
-                if(window.showNotification) showNotification("Nenhuma pauta selecionada.", "error");
             }
         });
 
@@ -652,19 +622,8 @@ class SIGEPApp {
                 this.router.navigate(ROUTES.ESTATISTICAS, { pautaId: this.currentPauta.id }, false);
                 return;
             }
-            const modal = document.getElementById('statistics-modal');
-            if (!modal) {
-                showNotification("Modal de estatísticas não encontrado", "error");
-                return;
-            }
-            if (this.allAssisted && this.currentPauta?.name) {
-                if (typeof StatisticsService?.showModal === 'function') {
-                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
-                } else {
-                    showNotification("Erro ao carregar estatísticas", "error");
-                }
-            } else {
-                showNotification("Carregue uma pauta primeiro", "info");
+            if (this.allAssisted && typeof StatisticsService?.showModal === 'function') {
+                StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
             }
         });
 
@@ -685,15 +644,11 @@ class SIGEPApp {
             const modal = document.getElementById('bi-links-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                const containerBi = document.getElementById('container-bi-links');
-                if (containerBi && this.currentPautaData && window.ColetasBuilderService) {
-                    containerBi.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
-                    const btnAdicionarParceiro = document.getElementById('bi-btn-adicionar-parceiro');
-                    if (btnAdicionarParceiro) {
-                        btnAdicionarParceiro.addEventListener('click', () => {
-                            window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
-                        });
-                    }
+                if (window.ColetasBuilderService && this.currentPautaData) {
+                    document.getElementById('container-bi-links').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                    document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
+                        window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                    });
                 }
             }
         });
@@ -703,11 +658,7 @@ class SIGEPApp {
                 this.router.navigate(ROUTES.COMPARTILHAR_PAUTA, { pautaId: this.currentPauta.id }, false);
                 return;
             }
-            if (typeof ModalService?.openMembersModal === 'function') {
-                await ModalService.openMembersModal(this);
-            } else {
-                showNotification("Erro ao abrir gerenciar membros", "error");
-            }
+            if (typeof ModalService?.openMembersModal === 'function') await ModalService.openMembersModal(this);
         });
 
         document.getElementById('manage-collaborators-btn')?.addEventListener('click', (e) => {
@@ -725,411 +676,259 @@ class SIGEPApp {
                 return;
             }
         });
+    }
 
-        // ========================================================
-        // DELEGAÇÃO DE EVENTOS PARA MODAIS DINÂMICOS (COMPARTILHAMENTO)
-        // ========================================================
-        document.body.addEventListener('change', async (e) => {
-            // 1. TOGGLE DO LINK PÚBLICO
-            if (e.target.id === 'share-toggle') {
-                if (!this.currentPauta) return;
-                
-                const isPublic = e.target.checked;
-                const statusText = document.getElementById('share-status-text');
-                const linkContainer = document.getElementById('share-link-container');
-                
-                if (statusText) statusText.textContent = isPublic ? "Público" : "Privado";
-                
-                if (isPublic) {
-                    if (linkContainer) linkContainer.classList.remove('hidden');
-                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
-                    
-                    const inputLink = document.getElementById('share-link-input');
-                    const btnExternal = document.getElementById('open-external-btn');
-                    if (inputLink) inputLink.value = link;
-                    if (btnExternal) btnExternal.href = link;
-                } else {
-                    if (linkContainer) linkContainer.classList.add('hidden');
-                }
-                
-                try {
-                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                    await updateDoc(pautaRef, { isPublic: isPublic });
-                    if (this.currentPautaData) this.currentPautaData.isPublic = isPublic;
-                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.", "success");
-                } catch (error) {
-                    console.error("Erro ao atualizar status.", error);
-                    showNotification("Erro ao atualizar status.", "error");
-                }
-            }
-
-            // 2. TOGGLE DE OCULTAR NOMES (LGPD)
-            if (e.target.id === 'mask-names-check') {
-                if (!this.currentPauta) return;
-                const mask = e.target.checked;
-                try {
-                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                    await updateDoc(pautaRef, { maskNames: mask });
-                    if (this.currentPautaData) this.currentPautaData.maskNames = mask;
-                    showNotification("Configuração de privacidade atualizada.", "success");
-                } catch (error) {
-                    showNotification("Erro ao salvar configuração.", "error");
-                }
-            }
-        });
-
-        document.body.addEventListener('click', (e) => {
-            // 3. BOTÃO DE COPIAR LINK
-            if (e.target.closest('#copy-share-link-btn')) {
-                const input = document.getElementById('share-link-input');
-                if (input) {
-                    input.select();
-                    navigator.clipboard.writeText(input.value);
-                    showNotification("Link copiado para a área de transferência!", "info");
-                }
-            }
-        });
-
-        // Configurações das colunas da Pauta
+    setupPautaSettingsEvents() {
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
         if (pautaSettingsToggle && pautaSettingsPanel) {
             pautaSettingsToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
                 pautaSettingsPanel.classList.toggle('hidden');
-                if (!pautaSettingsPanel.classList.contains('hidden')) {
-                    this.loadColumnPreferences();
-                }
+                if (!pautaSettingsPanel.classList.contains('hidden')) this.loadColumnPreferences();
             });
         }
+
         document.getElementById('toggle-em-atendimento')?.addEventListener('change', () => this.saveColumnPreferences());
         document.getElementById('toggle-distribuicao')?.addEventListener('change', () => this.saveColumnPreferences());
         document.getElementById('toggle-faltosos')?.addEventListener('change', () => this.saveColumnPreferences());
 
-        // Ações Restantes (Salas, Fechar/Zerar, Atendimentos, etc.)
         document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
             const listContainer = document.getElementById('manage-rooms-list');
             if (!listContainer) return;
-            
             listContainer.innerHTML = '';
             
-            if (this.currentPautaData?.type === 'multisala' && this.customRoomsList && this.customRoomsList.length > 0) {
+            if (this.currentPautaData?.type === 'multisala' && this.customRoomsList?.length > 0) {
                 this.customRoomsList.forEach((room) => {
                     const div = document.createElement('div');
                     div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
-                    div.innerHTML = `
-                        <span class="text-gray-500"></span>
-                        <input type="text" class="room-edit-input flex-1 p-2 border border-gray-300 rounded text-sm focus:ring-2 focus:ring-blue-500 outline-none" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">
-                    `;
+                    div.innerHTML = `<input type="text" class="room-edit-input flex-1 p-2 border rounded" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">`;
                     listContainer.appendChild(div);
                 });
-            } else {
-                listContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhuma sala configurada ou a pauta não é Multi-Salas.</p>';
             }
             document.getElementById('manage-rooms-modal')?.classList.remove('hidden');
         });
-
-        document.getElementById('cancel-manage-rooms-btn')?.addEventListener('click', () => {
-            document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-        });
-
+        
         document.getElementById('save-manage-rooms-btn')?.addEventListener('click', async () => {
             const inputs = document.querySelectorAll('.room-edit-input');
             const newRoomsList = [];
             const roomChanges = []; 
-            
             inputs.forEach(input => {
                 const newName = input.value.trim();
-                const oldName = input.dataset.original;
                 if (newName) {
                     newRoomsList.push(newName);
-                    if (newName !== oldName) {
-                        roomChanges.push({ oldName, newName });
-                    }
+                    if (newName !== input.dataset.original) roomChanges.push({ oldName: input.dataset.original, newName });
                 }
             });
 
-            if (newRoomsList.length === 0 && inputs.length > 0) {
-                showNotification("A lista de salas não pode ficar vazia.", "error");
-                return;
-            }
-
             try {
-                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                await updateDoc(pautaRef, {
-                    customRooms: newRoomsList,
-                    rooms: newRoomsList
-                });
-                
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { customRooms: newRoomsList, rooms: newRoomsList });
                 this.customRoomsList = newRoomsList;
-                if (this.currentPautaData) {
-                    this.currentPautaData.customRooms = newRoomsList;
-                    this.currentPautaData.rooms = newRoomsList;
-                }
+                if (this.currentPautaData) this.currentPautaData.customRooms = newRoomsList;
 
                 if (roomChanges.length > 0) {
                     const batch = writeBatch(this.db);
                     let hasChanges = false;
-                    
                     this.allAssisted.forEach(assisted => {
-                        if (assisted.room) {
-                            const change = roomChanges.find(c => c.oldName === assisted.room);
-                            if (change) {
-                                const attRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", assisted.id);
-                                batch.update(attRef, { room: change.newName });
-                                hasChanges = true;
-                            }
+                        const change = roomChanges.find(c => c.oldName === assisted.room);
+                        if (change) {
+                            batch.update(doc(this.db, "pautas", this.currentPauta.id, "attendances", assisted.id), { room: change.newName });
+                            hasChanges = true;
                         }
                     });
-                    
                     if (hasChanges) await batch.commit();
                 }
-
                 document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                showNotification("Salas updated com sucesso!", "success");
-                
-                if (typeof UIService.renderAssistedLists === 'function') {
-                    UIService.renderAssistedLists(this);
-                }
-                if (typeof PautaService.populateRoomSelects === 'function') {
-                    PautaService.populateRoomSelects(this);
-                }
+                if (typeof UIService.renderAssistedLists === 'function') UIService.renderAssistedLists(this);
             } catch (error) {
-                console.error("Erro ao salvar salas:", error);
                 showNotification("Erro ao atualizar salas.", "error");
             }
         });
 
-        document.getElementById('close-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('close-modal-title').textContent = 'Fechar Pauta';
-            document.getElementById('close-modal-message').textContent = 'Para fechar esta pauta, confirme sua senha. Nenhum membro poderá fazer alterações até que você a reabra.';
+        const openCloseModal = (isReopen) => {
+            document.getElementById('close-modal-title').textContent = isReopen ? 'Reabrir Pauta' : 'Fechar Pauta';
             document.getElementById('close-pauta-password').value = '';
-            document.getElementById('confirm-close-pauta-btn').textContent = 'Confirmar';
+            document.getElementById('confirm-close-pauta-btn').textContent = isReopen ? 'Reabrir' : 'Confirmar';
             document.getElementById('close-pauta-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('close-modal-title').textContent = 'Reabrir Pauta';
-            document.getElementById('close-modal-message').textContent = 'Para reabrir esta pauta, confirme sua senha.';
-            document.getElementById('close-pauta-password').value = '';
-            document.getElementById('confirm-close-pauta-btn').textContent = 'Reabrir';
-            document.getElementById('close-pauta-modal').classList.remove('hidden');
-        });
-
+        };
+        document.getElementById('close-pauta-btn')?.addEventListener('click', () => openCloseModal(false));
+        document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => openCloseModal(true));
+        
         document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
             const password = document.getElementById('close-pauta-password')?.value;
-            const errorDiv = document.getElementById('close-auth-error');
-            if (errorDiv) errorDiv.classList.add('hidden');
-
             const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
             const user = this.auth.currentUser;
             
-            if (!user || user.uid !== this.currentPautaOwnerId) {
-                showNotification("Você não tem permissão para esta ação.", "error");
-                document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                return;
-            }
+            if (!user || user.uid !== this.currentPautaOwnerId) return showNotification("Sem permissão.", "error");
 
             try {
-                const credential = EmailAuthProvider.credential(user.email, password);
-                await reauthenticateWithCredential(user, credential);
-                
-                const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                await updateDoc(pautaRef, { isClosed: !isReopen });
-                
+                await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isClosed: !isReopen });
                 this.isPautaClosed = !isReopen;
                 UIService.togglePautaLock(this);
-
-                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'} com sucesso.`, 'success', 5000);
                 document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                
+                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'}.`, 'success');
             } catch (error) {
-                if (errorDiv) {
-                    errorDiv.textContent = 'Senha incorreta. Tente novamente.';
-                    errorDiv.classList.remove('hidden');
-                }
-                showNotification("Falha na autenticação.", "error");
+                showNotification("Senha incorreta.", "error");
             }
         });
-
-        document.getElementById('cancel-close-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('close-pauta-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('reset-all-btn')?.addEventListener('click', () => {
-            document.getElementById('reset-confirm-modal').classList.remove('hidden');
-        });
-
+        
+        document.getElementById('reset-all-btn')?.addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
         document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-            const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-            const snapshot = await getDocs(attendanceCollectionRef);
-            
-            if (snapshot.empty) {
-                showNotification("A pauta já está vazia.", "info");
-                document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                return;
-            }
-            
+            const snapshot = await getDocs(collection(this.db, "pautas", this.currentPauta.id, "attendances"));
             const batch = writeBatch(this.db);
             snapshot.docs.forEach(doc => batch.delete(doc.ref));
             await batch.commit();
-            
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
             showNotification("Pauta zerada com sucesso.", "success");
-            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
         });
+    }
 
-        document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
-            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-        });
-
+    setupAttendanceEvents() {
+        document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => PautaService.callNextAssisted(this));
+        
         document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
-            if (typeof PautaService.addAssisted === 'function') {
-                PautaService.addAssisted(this);
-            } else {
-                showNotification("Esta ação requer atualização no código do serviço de pauta.", "warning");
-                const modalAdd = document.getElementById('add-assisted-modal');
-                if (modalAdd) {
-                    modalAdd.classList.remove('hidden');
-                }
-            }
-        });
-
-        document.getElementById('file-upload')?.addEventListener('change', (e) => {
-            PautaService.handleCSVUpload(e, this);
-        });
-
-        document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
-
-        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search', 'distribuicao-search'].forEach(id => {
-            const element = document.getElementById(id);
-            if (element) {
-                element.addEventListener('input', () => {
-                    UIService.renderAssistedLists(this);
-                });
-            }
-        });
-
-        document.getElementById('download-pdf-btn')?.addEventListener('click', () => {
-            const atendidosArray = (this.allAssisted || []).filter(a => a.status === 'atendido');
-            const nomePauta = this.currentPauta?.name || 'Pauta';
-            PDFService.generateAtendidosPDF(atendidosArray, nomePauta);
-        });
-
-        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => {
-            const faltososArray = (this.allAssisted || []).filter(a => a.status === 'faltoso');
-            if (faltososArray.length === 0) {
-                showNotification("Nenhum assistido faltoso registrado para emitir o relatório.", "info");
-                return;
-            }
-            const nomePauta = this.currentPauta?.name || 'Pauta';
-            PDFService.generateFaltososPDF(faltososArray, nomePauta);
-        });
-
-        document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => {
-            const nomePauta = this.currentPauta?.name || 'Pauta';
-            const listaAtendimentos = this.allAssisted || [];
-            PDFService.generateCollaboratorsPDF(this.colaboradores, listaAtendimentos, nomePauta);
-        });
-
-        document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
-            CollaboratorService.clearAll(this);
+            if (typeof PautaService.addAssisted === 'function') PautaService.addAssisted(this);
+            else document.getElementById('add-assisted-modal')?.classList.remove('hidden');
         });
 
         document.body.addEventListener('click', (e) => {
             PautaService.handleCardActions(e, this);
-        });
-
-        document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
-            e.preventDefault();
-            const nome = document.getElementById('collaborator-name-modal')?.value.trim();
-            if (!nome) {
-                showNotification("Nome obrigatório", "error");
-                return;
-            }
-            const data = {
-                nome: nome,
-                cargo: document.getElementById('collaborator-role-modal')?.value,
-                equipe: document.getElementById('collaborator-team-modal')?.value,
-                email: document.getElementById('collaborator-email-modal')?.value || '',
-                telefone: document.getElementById('collaborator-phone-modal')?.value || '',
-                transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
-            };
-            await CollaboratorService.saveCollaborator(this, data);
-        });
-        
-        document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
-            if (btn) {
-                btn.addEventListener('click', (e) => {
-                    const modal = e.target.closest('.fixed');
-                    if (modal) modal.classList.add('hidden');
-                });
-            }
-        });
-
-        document.querySelectorAll('.p-chip').forEach(chip => {
-            chip.addEventListener('click', function(e) {
-                e.preventDefault();
-                this.classList.toggle('selected');
-            });
-        });
-
-        document.getElementById('confirm-priority-reason-btn')?.addEventListener('click', async () => {
-            const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected'))
-                                       .map(chip => chip.dataset.value);
-            const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
             
+            const removeBtn = e.target.closest('.remove-member-btn');
+            if (removeBtn) {
+                const email = removeBtn.dataset.email;
+                if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
+                    return showNotification("O dono da pauta não pode ser removido!", "error");
+                }
+                if (confirm(`Remover ${email} da pauta?`)) {
+                    getDocs(query(collection(this.db, "users"), where("email", "==", email))).then(async snapshot => {
+                        if (!snapshot.empty) {
+                            await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { 
+                                members: arrayRemove(snapshot.docs[0].id), memberEmails: arrayRemove(email) 
+                            });
+                            if (typeof ModalService?.openMembersModal === 'function') await ModalService.openMembersModal(this);
+                        }
+                    });
+                }
+            }
+        });
+
+        this._bindModalConfirmation('confirm-edit-assisted-btn', async () => {
+            const name = document.getElementById('edit-assisted-name')?.value.trim();
+            if (!name) return showNotification("O nome não pode ficar em branco.", "error");
+            
+            const updatedData = {
+                name: name,
+                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
+                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+            };
+            const roomSelect = document.getElementById('edit-room-select');
+            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) updatedData.room = roomSelect.value || null;
+            
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
+            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+        });
+
+        this._bindModalConfirmation('confirm-priority-reason-btn', async () => {
+            const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected')).map(chip => chip.dataset.value);
+            const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
             let finalReason = selectedChips.join(', ');
-            if (customReason) {
-                finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
-            }
+            if (customReason) finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
 
-            if (!finalReason) { 
-                showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
-                return; 
-            }
-
-            if (!window.assistedIdToHandle) {
-                showNotification("ID do assistido não encontrado.", "error");
-                return;
-            }
-
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                { priority: 'URGENTE', priorityReason: finalReason },
-                this.currentUserName
-            );
-
-            document.querySelectorAll('.p-chip').forEach(c => c.classList.remove('selected'));
-            document.getElementById('priority-reason-input').value = '';
-            document.getElementById('priority-reason-modal')?.classList.add('hidden');
-            showNotification("Prioridade Ativada!", "success");
-        });
-
-        document.getElementById('cancel-priority-reason-btn')?.addEventListener('click', () => {
+            if (!finalReason) return showNotification("Selecione um motivo.", "error");
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { priority: 'URGENTE', priorityReason: finalReason }, this.currentUserName);
             document.getElementById('priority-reason-modal')?.classList.add('hidden');
         });
 
-        document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
-            if (typeof window.switchToActionSelectionView === 'function') {
-                window.switchToActionSelectionView();
-            }
+        this._bindModalConfirmation('save-demands-btn', async () => {
+            const items = document.getElementById('demands-modal-list-container')?.querySelectorAll('li') || [];
+            const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { demandas: { quantidade: descricoes.length, descricoes: descricoes } }, this.currentUserName);
+            document.getElementById('demands-modal')?.classList.add('hidden');
+        });
+
+        this._bindModalConfirmation('confirm-arrival-btn', async () => {
+            const time = document.getElementById('arrival-time-input')?.value;
+            if (!time) return showNotification("Informe o horário", "error");
+            const arrivalDate = new Date();
+            arrivalDate.setHours(...time.split(':'), 0, 0);
+            
+            const roomSelect = document.getElementById('arrival-room-select');
+            const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { status: 'aguardando', arrivalTime: arrivalDate.toISOString(), checkInOrder: Date.now(), room: room }, this.currentUserName);
+            document.getElementById('arrival-modal')?.classList.add('hidden');
         });
         
+        document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
+            const nomeFinal = document.getElementById('attendant-select')?.value || null;
+            const useDist = this.currentPautaData?.useDistributionFlow === true;
+            const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+
+            let attendantData = nomeFinal;
+            const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+            if (selectedCollab) attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+
+            const mapaProdutividadeBI = {};
+            if (novoStatus === 'atendido') {
+                mapaProdutividadeBI[this.currentUserName || "Servidor"] = 1; 
+                if (nomeFinal) mapaProdutividadeBI[nomeFinal] = 1;
+            }
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { 
+                status: novoStatus, attendant: attendantData, enviadoPor: this.currentUserName || "Servidor",
+                attendedBy: nomeFinal, trabalhosPorUsuario: novoStatus === 'atendido' ? mapaProdutividadeBI : null, attendedTime: new Date().toISOString() 
+            }, this.currentUserName);
+            
+            document.getElementById('attendant-modal')?.classList.add('hidden');
+        });
+        
+        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+            const isAcaoRapida = ['reagendar', 'agendar', 'consulta', 'outros'].includes(window.assistedTipoAcao);
+            if (!isAcaoRapida && window.selectedCollaboratorId === null) return showNotification("Selecione um colaborador.", "warning");
+            
+            const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || document.getElementById('toggle-silent-mode')?.checked;
+            
+            if (isAcaoRapida) {
+                await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                    status: 'atendido', attendedBy: window.selectedCollaboratorName || this.currentUserName,
+                    enviadoPor: this.currentUserName || 'Sistema', inAttendanceTime: new Date().toISOString(),
+                    tipoAcaoRapida: window.assistedTipoDescricao, finalizadoPeloColaborador: true
+                }, this.currentUserName);
+            } else if (window.assistedTipoAcao === 'atender_direto') {
+                await PautaService.finishAttendance(this, window.assistedIdToHandle, window.selectedCollaboratorName || this.currentUserName, []);
+            } else {
+                let colabData = null, emailDestino = null;
+                const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+                
+                if (window.selectedCollaboratorName) {
+                    const collab = this.colaboradores?.find(c => c.nome === window.selectedCollaboratorName);
+                    emailDestino = collab?.email || null;
+                    colabData = { id: window.selectedCollaboratorId, name: window.selectedCollaboratorName, email: emailDestino };
+                }
+
+                await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                    status: 'emAtendimento', assignedCollaborator: colabData, enviadoPor: this.currentUserName || 'Sistema',
+                    inAttendanceTime: new Date().toISOString(), ...(window.selectedCollaboratorName && { delegationToken: novoToken })
+                }, this.currentUserName);
+
+                if (emailDestino && !isSilentMode) {
+                    EmailService.sendDelegationEmail(emailDestino, window.selectedCollaboratorName, window.assistedNameToHandle, this.currentUserName, this.currentPauta.id, window.assistedIdToHandle, novoToken);
+                }
+            }
+            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+        });
+    }
+
+    setupChecklistEvents() {
         document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
             const assistedId = window.assistedIdToHandle || window.currentAssistedId;
-            if (!assistedId) {
-                showNotification("Erro: assistido não identificado", "error");
-                return;
-            }
-            
             const container = document.getElementById('checklist-container');
             const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
-                id: cb.id,
-                text: cb.closest('label').querySelector('span').textContent,
-                type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
+                id: cb.id, type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
             }));
 
             const checklistData = {
@@ -1140,508 +939,148 @@ class SIGEPApp {
                 expenseData: window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {}
             };
 
-            try {
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
-                    documentChecklist: checklistData,
-                    documentState: 'saved'
-                });
-                showNotification("Checklist salvo com sucesso!", "success");
-            } catch (error) {
-                console.error("Erro ao salvar:", error);
-                showNotification("Erro ao salvar checklist", "error");
-            }
+            await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
+                documentChecklist: checklistData, documentState: 'saved'
+            });
+            showNotification("Checklist salvo com sucesso!", "success");
         });
 
-        document.getElementById('close-assisted-details-modal-btn')?.addEventListener('click', () => {
-            document.getElementById('assisted-details-modal').classList.add('hidden');
-        });
-        
         document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
             const { handlePdf } = await import('./detalhes.js');
-            if (typeof handlePdf === 'function') {
-                await handlePdf();
-            } else {
-                showNotification("Erro: Motor de emissão do checklist não carregado.", "error");
-            }
+            if (typeof handlePdf === 'function') await handlePdf();
         });
         
         document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
-            if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.")) {
-                if (typeof window.switchToActionSelectionView === 'function') {
-                    window.switchToActionSelectionView();
-                }
+            if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.") && typeof window.switchToActionSelectionView === 'function') {
+                window.switchToActionSelectionView();
             }
         });
-
-        document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
-            const select = document.getElementById('attendant-select');
-            const attendantName = select?.value;
-            const nomeFinal = attendantName || null;
-            const useDist = this.currentPautaData?.useDistributionFlow === true;
-            const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
-
-            let attendantData = nomeFinal;
-            if (nomeFinal) {
-                const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
-                if (selectedCollab) {
-                    attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
-                }
-            }
-
-            const mapaProdutividadeBI = {};
-            const servidorResponsavel = this.currentUserName || "Servidor";
-            if (novoStatus === 'atendido') {
-                mapaProdutividadeBI[servidorResponsavel] = 1; 
-                if (nomeFinal) mapaProdutividadeBI[nomeFinal] = 1;
-            }
-
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                { 
-                    status: novoStatus, 
-                    attendant: attendantData, 
-                    enviadoPor: servidorResponsavel,
-                    attendedBy: nomeFinal,
-                    trabalhosPorUsuario: novoStatus === 'atendido' ? mapaProdutividadeBI : null,
-                    attendedTime: new Date().toISOString() 
-                },
-                this.currentUserName
-            );
-            
-            document.getElementById('attendant-modal')?.classList.add('hidden');
-            showNotification(novoStatus === 'atendido' ? "Atendimento finalizado!" : "Enviado para Distribuição ⚖️", "success");
-        });
-
-        document.getElementById('cancel-attendant-btn')?.addEventListener('click', () => {
-            document.getElementById('attendant-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
-            const select = document.getElementById('edit-attendant-select');
-            const attendantName = select?.value;
-            
-            if (!attendantName) {
-                showNotification("Selecione um profissional", "error");
-                return;
-            }
-            
-            const selectedCollab = this.colaboradores?.find(c => c.nome === attendantName);
-            let attendantData = selectedCollab ? 
-                { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe } : 
-                attendantName;
-
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                { attendant: attendantData },
-                this.currentUserName
-            );
-            
-            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-            showNotification("Atendente atualizado com sucesso!", "success");
-        });
-
-        document.getElementById('cancel-edit-attendant-btn')?.addEventListener('click', () => {
-            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
-            const collaboratorId = window.selectedCollaboratorId;
-            const collaboratorName = window.selectedCollaboratorName || null;
-            const acoesRapidas = ['reagendar', 'agendar', 'consulta', 'outros'];
-            const isAcaoRapida = acoesRapidas.includes(window.assistedTipoAcao);
-
-            if (!isAcaoRapida && collaboratorId === null) { 
-                showNotification("Selecione um colaborador ou 'Não atribuir'.", "warning");
-                return;
-            }
-
-            const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || 
-                      (document.getElementById('toggle-silent-mode')?.checked || 
-                       document.getElementById('silent-mode-toggle')?.checked) || false;
-
-            const idAssistidoAtual = window.assistedIdToHandle;
-            const nomeAssistidoAtual = window.assistedNameToHandle;
-
-            if (isAcaoRapida) {
-                const tipoDescricao = window.assistedTipoDescricao || window.assistedTipoAcao || 'Ação rápida';
-                const atendenteFinal = collaboratorName || this.currentUserName;
-
-                await PautaService.updateStatus(
-                    this.db,
-                    this.currentPauta.id,
-                    idAssistidoAtual,
-                    {
-                        status: 'atendido',
-                        attendedBy: atendenteFinal,
-                        enviadoPor: this.currentUserName || 'Sistema',
-                        attendedAt: new Date().toISOString(),
-                        inAttendanceTime: new Date().toISOString(),
-                        isConfirmed: false,
-                        finalizadoPeloColaborador: true,
-                        distributionStatus: 'completed',
-                        tipoAcaoRapida: tipoDescricao,
-                        assignedCollaborator: collaboratorName ? { id: collaboratorId, name: collaboratorName } : null
-                    },
-                    this.currentUserName
-                );
-                showNotification(`${nomeAssistidoAtual} marcado como atendido por ${atendenteFinal} (${tipoDescricao}).`, "success");
-            } else if (window.assistedTipoAcao === 'atender_direto') {
-                const atendenteFinal = collaboratorName || this.currentUserName;
-                await PautaService.finishAttendance(this, idAssistidoAtual, atendenteFinal, []);
-                showNotification(`${nomeAssistidoAtual} marcado como atendido por ${atendenteFinal}.`, "success");
-            } else { 
-                let collaboratorData = null;
-                let emailDestino = null;
-                
-                const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
-
-                if (collaboratorName) {
-                    const selectedCollab = this.colaboradores?.find(c => c.nome === collaboratorName);
-                    emailDestino = selectedCollab?.email || null;
-                    
-                    collaboratorData = { id: collaboratorId, name: collaboratorName, email: emailDestino };
-                }
-
-                const updatePayload = {
-                    status: 'emAtendimento',
-                    assignedCollaborator: collaboratorData,
-                    enviadoPor: this.currentUserName || 'Sistema',
-                    inAttendanceTime: new Date().toISOString()
-                };
-
-                if (collaboratorName) {
-                    updatePayload.delegationToken = novoToken; 
-                }
-
-                await PautaService.updateStatus(
-                    this.db,
-                    this.currentPauta.id,
-                    idAssistidoAtual, 
-                    updatePayload,
-                    this.currentUserName
-                );
-                
-                if (emailDestino && !isSilentMode) {
-                    showNotification("Disparando notificação para o e-mail cadastrado...", "info");
-                    try {
-                        await EmailService.sendDelegationEmail(
-                            emailDestino, 
-                            collaboratorName, 
-                            nomeAssistidoAtual, 
-                            this.currentUserName,
-                            this.currentPauta.id, 
-                            idAssistidoAtual, 
-                            novoToken 
-                        );
-                    } catch(e) {
-                        console.error("Erro no envio auto:", e);
-                    }
-                } else if (emailDestino && isSilentMode) {
-                    showNotification(`Card movido para ${collaboratorName} silenciosamente (E-mail poupado).`, "success");
-                } else {
-                    showNotification(`${nomeAssistidoAtual} delegado com sucesso.`, "success"); 
-                }
-            }
-            
-            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-            window.assistedIdToHandle = null;
-            window.assistedNameToHandle = null;
-            window.assistedTipoAcao = null;
-            window.assistedTipoDescricao = null;
-            window.selectedCollaboratorId = null; 
-            window.selectedCollaboratorName = null;
-        });
-
-        document.getElementById('cancel-select-collaborator-btn')?.addEventListener('click', () => {
-            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
-            window.selectedCollaboratorId = null;
-            window.selectedCollaboratorName = null;
-            window.assistedTipoAcao = null;
-            window.assistedTipoDescricao = null;
-        });
-
-        document.getElementById('confirm-arrival-btn')?.addEventListener('click', async () => {
-            const time = document.getElementById('arrival-time-input')?.value;
-            if (!time) {
-                showNotification("Informe o horário", "error");
-                return;
-            }
-            const [hours, minutes] = time.split(':');
-            const arrivalDate = new Date();
-            arrivalDate.setHours(parseInt(hours), parseInt(minutes), 0, 0);
-
-            const roomSelect = document.getElementById('arrival-room-select');
-            const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
-
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                { status: 'aguardando', arrivalTime: arrivalDate.toISOString(), checkInOrder: Date.now(), room: room },
-                this.currentUserName
-            );
-
-            document.getElementById('arrival-modal')?.classList.add('hidden');
-            showNotification("Chegada registrada com sucesso!", "success");
-        });
-
-        document.getElementById('cancel-arrival-btn')?.addEventListener('click', () => {
-            document.getElementById('arrival-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('confirm-edit-assisted-btn')?.addEventListener('click', async () => {
-            const name = document.getElementById('edit-assisted-name')?.value.trim();
-            if (!name) {
-                showNotification("O nome não pode ficar em branco.", "error");
-                return;
-            }
-            
-            const updatedData = {
-                name: name,
-                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
-                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
-                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
-                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
-            };
-            
-            const roomSelect = document.getElementById('edit-room-select');
-            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) {
-                updatedData.room = roomSelect.value || null;
-            }
-            
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                updatedData,
-                this.currentUserName
-            );
-            
-            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
-            showNotification("Dados atualizados com sucesso!", "success");
-        });
-
-        document.getElementById('cancel-edit-assisted-btn')?.addEventListener('click', () => {
-            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('demands-modal-add-demand-btn')?.addEventListener('click', () => {
-            const input = document.getElementById('demands-modal-new-demand-input');
-            const text = input?.value.trim();
-            if (text) {
-                const container = document.getElementById('demands-modal-list-container');
-                if (container) {
-                    if (container.querySelector('p.text-gray-500')) {
-                        container.innerHTML = '';
-                    }
-                    const li = document.createElement('li');
-                    li.className = 'flex justify-between items-center p-2 bg-white rounded-md';
-                    li.innerHTML = `<span>${escapeHTML(text)}</span><button class="remove-demand-item-btn text-red-500 text-xs">Remover</button>`;
-                    container.appendChild(li);
-                    input.value = '';
-                    input.focus();
-                }
-            }
-        });
-
-        document.getElementById('demands-modal-list-container')?.addEventListener('click', (e) => {
-            if (e.target.classList.contains('remove-demand-item-btn')) {
-                const li = e.target.closest('li');
-                if (li) li.remove();
-                
-                const container = document.getElementById('demands-modal-list-container');
-                if (container && container.children.length === 0) {
-                    container.innerHTML = '<p class="text-gray-500 text-center">Nenhuma demanda adicional.</p>';
-                }
-            }
-        });
-
-        document.getElementById('save-demands-btn')?.addEventListener('click', async () => {
-            const container = document.getElementById('demands-modal-list-container');
-            const items = container?.querySelectorAll('li') || [];
-            const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
-            
-            await PautaService.updateStatus(
-                this.db,
-                this.currentPauta.id,
-                window.assistedIdToHandle,
-                { demandas: { quantidade: descricoes.length, descricoes: descricoes } },
-                this.currentUserName
-            );
-            
-            showNotification("Demandas salvas com sucesso!", "success");
-            document.getElementById('demands-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('cancel-demands-btn')?.addEventListener('click', () => {
-            document.getElementById('demands-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('close-demands-modal-btn')?.addEventListener('click', () => {
-            document.getElementById('demands-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-            const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
-            const snapshot = await getDocs(attendanceCollectionRef);
-            
-            if (snapshot.empty) {
-                showNotification("A pauta já está vazia.", "info");
-                document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-                return;
-            }
-            
-            const batch = writeBatch(this.db);
-            snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            
-            showNotification("Pauta zerada com sucesso.", "success");
-            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
-            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('confirm-edit-pauta-btn')?.addEventListener('click', async () => {
-            const newName = document.getElementById('edit-pauta-name-input')?.value.trim();
-            if (newName && this.currentPauta?.id) {
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { name: newName });
-                document.getElementById('pauta-title').textContent = newName;
-                showNotification("Nome da pauta atualizado.", "success");
-                document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-            } else {
-                showNotification("O nome não pode ser vazio.", "error");
-            }
-        });
-
-        document.getElementById('cancel-edit-pauta-btn')?.addEventListener('click', () => {
-            document.getElementById('edit-pauta-modal')?.classList.add('hidden');
-        });
-
-        document.getElementById('send-delegate-email-btn')?.addEventListener('click', async () => {
-            const emailInput = document.getElementById('collaborator-email-input');
-            const emailDestino = emailInput?.value.trim();
-            
-            if (!emailDestino) {
-                showNotification("Por favor, insira o e-mail.", "error");
-                return;
-            }
-
-            const btn = document.getElementById('send-delegate-email-btn');
-            if (btn) { btn.disabled = true; btn.textContent = "Enviando..."; }
-
-            let nomeColega = window.collaboratorNameForDelegation;
-            if (!nomeColega || nomeColega === "Não informado" || nomeColega === "undefined") {
-                nomeColega = "Colega Colaborador";
-            }
-
-            const idAssistidoAtual = window.assistedIdForDelegation;
-            const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
-
-            try {
-                const docRef = doc(this.db, "pautas", this.currentPauta.id, "attendances", idAssistidoAtual);
-                await updateDoc(docRef, { delegationToken: novoToken });
-
-                await EmailService.sendDelegationEmail(
-                    emailDestino, 
-                    nomeColega, 
-                    window.assistedNameForDelegation, 
-                    this.currentUserName,
-                    this.currentPauta.id, 
-                    idAssistidoAtual, 
-                    novoToken
-                );
-
-                document.getElementById('delegate-email-modal')?.classList.add('hidden');
-                if (emailInput) emailInput.value = '';
-                showNotification("E-mail enviado e acesso liberado!", "success");
-            } catch (error) {
-                showNotification("Falha no envio do e-mail.", "error");
-            } finally {
-                if (btn) { btn.disabled = false; btn.textContent = "Enviar E-mail"; }
-            }
-        });
-
-        document.getElementById('cancel-delegate-email-btn')?.addEventListener('click', () => {
-            document.getElementById('delegate-email-modal')?.classList.add('hidden');
-        });
-
-        // Eventos globais de fechar modais
-        document.addEventListener('click', (e) => {
-            const adminModal = document.getElementById('admin-modal');
-            const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
-            const adminActionsToggle = document.getElementById('actions-toggle');     
-            const adminPanelBtn = document.getElementById('admin-panel-btn');         
-            const adminBtnMain = document.getElementById('admin-btn-main');            
-
-            if ((adminModal && adminModal.contains(e.target)) ||
-                (adminPanelToggle && adminPanelToggle.contains(e.target)) ||
-                (adminActionsToggle && adminActionsToggle.contains(e.target)) ||
-                (adminPanelBtn && adminPanelBtn.contains(e.target)) ||
-                (adminBtnMain && adminBtnMain.contains(e.target))) {
-                return; 
-            }
-
-            const actionsPanel = document.getElementById('actions-panel');
-            const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
-
-            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !document.getElementById('actions-toggle')?.contains(e.target)) {
-                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-            }
-            if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
-                 pautaSettingsPanel.classList.add('hidden');
-                 const pautaSettingsArrow = document.getElementById('pauta-settings-arrow'); 
-                 if (pautaSettingsArrow) pautaSettingsArrow.classList.remove('rotate-180');
-            }
-
-            if (adminModal && !adminModal.classList.contains('hidden')) {
-                adminModal.classList.add('hidden');
-                const adminArrow = document.getElementById('actions-arrow'); 
-                if (adminArrow) adminArrow.classList.remove('rotate-180');
-            }
-        });
-
-        document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
-            localStorage.removeItem('sigep_active_screen');
-            localStorage.removeItem('sigep_app_state');
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.pushState({}, '', cleanUrl);
-            if (window.app && window.app.logout) window.app.logout();
+        document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
+            if (typeof window.switchToActionSelectionView === 'function') window.switchToActionSelectionView();
         });
     }
 
-    // ============================================================
-    // DEMAIS FUNÇÕES DE CLASSE (INTACTAS)
-    // ============================================================
+    setupMiscEvents() {
+        document.getElementById('file-upload')?.addEventListener('change', (e) => PautaService.handleCSVUpload(e, this));
+        document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
+        
+        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', () => UIService.renderAssistedLists(this));
+        });
+
+        const handlePDF = (type) => {
+            const nomePauta = this.currentPauta?.name || 'Pauta';
+            if (type === 'atendidos') PDFService.generateAtendidosPDF((this.allAssisted || []).filter(a => a.status === 'atendido'), nomePauta);
+            if (type === 'faltosos') {
+                const f = (this.allAssisted || []).filter(a => a.status === 'faltoso');
+                if (f.length === 0) return showNotification("Nenhum assistido faltoso.", "info");
+                PDFService.generateFaltososPDF(f, nomePauta);
+            }
+            if (type === 'colaboradores') PDFService.generateCollaboratorsPDF(this.colaboradores, this.allAssisted || [], nomePauta);
+        };
+        document.getElementById('download-pdf-btn')?.addEventListener('click', () => handlePDF('atendidos'));
+        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', () => handlePDF('atendidos'));
+        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => handlePDF('faltosos'));
+        document.getElementById('download-collaborators-pdf-modal')?.addEventListener('click', () => handlePDF('colaboradores'));
+
+        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+            document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
+            document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ata-total').value = this.allAssisted.filter(a => a.status === 'atendido').length;
+            document.getElementById('ata-social-modal').classList.remove('hidden');
+        });
+        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
+            const data = { 
+                acao: document.getElementById('ata-acao-nome')?.value, 
+                endereco: document.getElementById('ata-endereco')?.value, 
+                data: document.getElementById('ata-data')?.value, 
+                orgao: document.getElementById('ata-orgao')?.value, 
+                totalAtendimentos: document.getElementById('ata-total')?.value 
+            };
+            if (!data.acao || !data.endereco || !data.data || !data.orgao) return showNotification("Preencha os campos obrigatórios.", "error");
+            document.getElementById('ata-social-modal').classList.add('hidden');
+            const handler = confirm("Deseja VISUALIZAR a Ata antes de baixar?") ? PDFService.previewAtaAcaoSocial : PDFService.generateAtaAcaoSocial;
+            handler(this.currentPauta?.name, this.colaboradores, this.allAssisted.filter(a => a.status === 'atendido'), data);
+        });
+
+        document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('collaborator-name-modal')?.value.trim();
+            if (!nome) return showNotification("Nome obrigatório", "error");
+            await CollaboratorService.saveCollaborator(this, {
+                nome: nome, cargo: document.getElementById('collaborator-role-modal')?.value,
+                equipe: document.getElementById('collaborator-team-modal')?.value, email: document.getElementById('collaborator-email-modal')?.value || '',
+                telefone: document.getElementById('collaborator-phone-modal')?.value || '', transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
+            });
+        });
+    }
+
+    setupGlobalModalsAndFooterEvents() {
+        document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
+            if (btn) btn.addEventListener('click', (e) => e.target.closest('.fixed')?.classList.add('hidden'));
+        });
+
+        document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
+        document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
+
+        document.querySelectorAll('.p-chip').forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.classList.toggle('selected');
+            });
+        });
+    }
+
+    _bindModalConfirmation(btnId, callback) {
+        document.getElementById(btnId)?.addEventListener('click', callback);
+    }
+
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
+        
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
         
         try {
+            const userDoc = await getDoc(doc(this.db, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                this.currentUser = { ...this.currentUser, ...userData };
+            }
+        } catch (err) {
+            console.warn("Aviso: erro ao buscar dados adicional do usuário.", err);
+        }
+    
+        try {
             let pautasMap = new Map();
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+            const modoAtual = this.currentMode;
 
+            // 🛠️ BUSCA SEGURA: Traz todas as pautas do usuário sem restrições de query compostas no Firebase
+            // 🛠️ BUSCA SEGURA E ISOLADA POR ÓRGÃO (MULTI-TENANT)
             let qUser;
             const orgaoDoUsuario = this.currentUser.orgaoId;
 
             if (isAdmin && this.currentUser.role === 'superadmin_global') {
+                // APENAS você (dono do sistema) vê todas as pautas de todos os clientes
                 qUser = query(collection(this.db, "pautas"));
             } else if (isAdmin) {
-                qUser = query(collection(this.db, "pautas"), where("orgaoId", "==", orgaoDoUsuario));
+                // Admin de um órgão vê todas as pautas APENAS do seu órgão
+                qUser = query(
+                    collection(this.db, "pautas"),
+                    where("orgaoId", "==", orgaoDoUsuario)
+                );
             } else {
+                // Operador comum vê as pautas onde é dono ou membro, MAS restrito ao seu órgão
                 qUser = query(
                     collection(this.db, "pautas"),
                     where("orgaoId", "==", orgaoDoUsuario),
-                    or(where("owner", "==", user.uid), where("members", "array-contains", user.uid))
+                    or(
+                        where("owner", "==", user.uid),
+                        where("members", "array-contains", user.uid)
+                    )
                 );
             }
             
@@ -1649,11 +1088,15 @@ class SIGEPApp {
             snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
             
             let pautas = Array.from(pautasMap.values());
+            
+            // 🛠️ DEFINIÇÃO AMPLA DOS TIPOS DE EVENTO (Cobre qualquer variação de cadastro: maiúsculo, minúsculo ou acentuado)
             const tiposEventoValidos = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento', 'mutirao_atendimento'];
 
-            if (this.currentMode === 'evento') {
+            // 🛠️ FILTRAGEM INTELIGENTE NO FRONT-END
+            if (modoAtual === 'evento') {
                 pautas = pautas.filter(p => {
                     const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    // Se estiver no modo evento, aceita se contiver qualquer termo de evento ou se o nome da pauta contiver 'mutirão' / 'plantão'
                     return tiposEventoValidos.some(t => tipoPauta.includes(t)) || 
                            String(p.name || '').toLowerCase().includes('mutirão') || 
                            String(p.name || '').toLowerCase().includes('plantão');
@@ -1662,17 +1105,19 @@ class SIGEPApp {
                 pautas = pautas.filter(p => {
                     const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
                     const ehMutiraoNoNome = String(p.name || '').toLowerCase().includes('mutirão') || String(p.name || '').toLowerCase().includes('plantão');
+                    // No modo normal, exibe tudo o que NÃO for explicitamente um evento ou mutirão no nome
                     return !tiposEventoValidos.some(t => tipoPauta.includes(t)) && !ehMutiraoNoNome;
                 });
             }
 
+            // Filtro por unidade ativa, se houver
             if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
                 pautas = pautas.filter(p => p.unidadeNome === this.currentUnidadeExibicao);
             }
 
             const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
             if (btnTrocarUnidade) {
-                if (this.currentMode === 'normal') {
+                if (modoAtual === 'normal') {
                     btnTrocarUnidade.classList.remove('hidden');
                     btnTrocarUnidade.classList.add('flex');
                 } else {
@@ -1705,7 +1150,6 @@ class SIGEPApp {
                     case 'unidades':
                         const userUnidades = this.currentUser?.unidades || [];
                         const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
-                        
                         if (!isAdminFiltro && userUnidades.length > 0) {
                             const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
                             filteredPautas = filteredPautas.filter(pauta => userUnidadesNomes.includes(pauta.unidadeNome));
@@ -1759,15 +1203,518 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = `<p class="col-span-full text-center text-red-500">Erro: ${error.message}</p>`;
         }
     }
+
+    async loadPauta(pautaId, pautaName, pautaType) {
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                const pautaData = pautaDoc.data();
+                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
+                const expirationDate = new Date(dataBase);
+                expirationDate.setDate(dataBase.getDate() + 7);
+                if (new Date() > expirationDate) {
+                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao verificar expiração:", error);
+        }
+
+        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+        document.getElementById('pauta-title').textContent = pautaName;
+
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                this.currentPautaData = pautaDoc.data();
+                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
+                this.currentPautaOwnerId = this.currentPautaData.owner;
+                this.isPautaClosed = this.currentPautaData.isClosed || false;
+                
+                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                    this.customRoomsList = this.currentPautaData.customRooms;
+                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                    this.customRoomsList = this.currentPautaData.rooms;
+                } else {
+                    this.customRoomsList = [];
+                }
+
+                setTimeout(() => { UIService.togglePautaLock(this); }, 100);
+                this.loadColumnPreferences();
+                this.applyRoleBasedUI();
+                
+                const btnManageRooms = document.getElementById('btn-manage-rooms');
+                if (btnManageRooms) {
+                    btnManageRooms.classList.toggle('hidden', this.currentPautaData.type !== 'multisala');
+                }
+
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
+                }
+            }
+
+            this.setupRealtimeListener(pautaId);
+            
+            if (typeof CollaboratorService?.setupListener === 'function') {
+                CollaboratorService.setupListener(this, pautaId);
+            } else if (typeof window.CollaboratorService?.setupListener === 'function') {
+                window.CollaboratorService.setupListener(this, pautaId);
+            }
+            
+            const appContainer = document.getElementById('app-container');
+            if (appContainer && appContainer.classList.contains('hidden')) {
+                document.getElementById('pauta-selection-container')?.classList.add('hidden');
+                document.getElementById('dashboard-container')?.classList.add('hidden');
+                document.getElementById('admin-container')?.classList.add('hidden');
+                document.getElementById('modo-selection-screen')?.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+            }
+
+        } catch (error) {
+            console.error("Erro ao carregar pauta:", error);
+            showNotification("Erro ao carregar pauta", "error");
+        }
+    }
+
+    _teardownPauta() {
+        if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
+        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
+
+        this.currentPauta = null;
+        this.allAssisted  = [];
+        this.colaboradores = [];
+
+        localStorage.removeItem('lastPautaId');
+        localStorage.removeItem('lastPautaName');
+        localStorage.removeItem('lastPautaType');
+    }
+
+    setupRealtimeListener(pautaId) {
+        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(this);
+            this.atualizarMonitorEnvelopes();
+
+            setTimeout(() => { 
+                if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); 
+            }, 150);
+        }, (error) => {
+            console.error("Erro no snapshot:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
+        });
+    }
+
+    async deletePauta(pautaId, pautaName) {
+        const pautaRef = doc(this.db, "pautas", pautaId);
+        const pautaSnap = await getDoc(pautaRef);
+        
+        if (!pautaSnap.exists()) return showNotification("Pauta não encontrada!", "error");
+        
+        const pautaData = pautaSnap.data();
+        const currentUserId = this.auth.currentUser?.uid;
+        
+        if (pautaData.owner !== currentUserId && this.currentUser?.role !== 'admin' && this.currentUser?.role !== 'superadmin') {
+            return showNotification("Você não tem permissão para excluir esta pauta!", "error");
+        }
+        
+        if (!confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
+        
+        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
+        
+        try {
+            const attendancesSnap = await getDocs(collection(this.db, "pautas", pautaId, "attendances"));
+            const batch = writeBatch(this.db);
+            let operationCount = 0;
+            
+            for (const doc of attendancesSnap.docs) {
+                batch.delete(doc.ref);
+                operationCount++;
+                if (operationCount >= 490) { await batch.commit(); operationCount = 0; }
+            }
+            if (operationCount > 0) await batch.commit();
+            await deleteDoc(pautaRef);
+            
+            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
+            await this.loadPautasWithFilter();
+            
+        } catch (error) {
+            console.error("Erro ao excluir pauta:", error);
+            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
+        }
+    }
+    
+    atualizarMonitorEnvelopes() {
+        if (!this.colaboradores || this.colaboradores.length === 0) return;
+
+        const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+        const colabsLivres = colabsAtivos.filter(c => {
+            const casosOcupando = this.allAssisted.filter(a => {
+                const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                return emAtendimentoNormal || pendenteAssinatura;
+            });
+            return casosOcupando.length === 0;
+        });
+
+        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+        if (!headerActions) return;
+
+        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnId) btn.remove(); });
+
+        let btnEnvelope = document.getElementById(btnId);
+
+        if (colabsLivres.length > 0) {
+            if (!btnEnvelope) {
+                btnEnvelope = document.createElement('button');
+                btnEnvelope.id = btnId;
+                btnEnvelope.onclick = () => {
+                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                };
+                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+            }
+            
+            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+            btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+        } else {
+            if (btnEnvelope) btnEnvelope.remove();
+        }
+    }
+
+    setupColetas() {
+        document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.PAINEL_PUBLICO, {}, false); 
+            this.showColetasScreen();
+        });
+
+        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
+        });
+
+        document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
+            const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
+            if (!nome) return;
+
+            try {
+                const novaColeta = {
+                    nomeDaColeta: nome, dicionarioDeCampos: [], linksExternos: [],
+                    criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
+                    criadoEm: new Date().toISOString()
+                };
+                
+                await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
+                showNotification("Nova coleta criada com sucesso!", "success");
+                this.listarColetas();
+            } catch (error) {
+                showNotification("Erro ao criar coleta no banco de dados.", "error");
+            }
+        });
+    }
+
+    async listarColetas() {
+        const container = document.getElementById('lista-de-coletas');
+        if (!container) return;
+        
+        container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
+
+        try {
+            const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
+            if (querySnapshot.empty) {
+                container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
+                return;
+            }
+
+            let html = '';
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                html += `
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
+                        <div>
+                            <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1">📚 ${data.dicionarioDeCampos?.length || 0} campos cadastrados | 🔗 ${data.linksExternos?.length || 0} links gerados</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">⚙️ Configurar</button>
+                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">📈 Resultados</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<p class="text-center text-red-500 py-4 font-bold">Erro ao carregar do servidor.</p>';
+        }
+    }
+
+    setupSubjectsAutocomplete() {
+        const datalist = document.getElementById('subjects-list');
+        if (!datalist) return;
+        flatSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.value;
+            datalist.appendChild(option);
+        });
+
+        const subjectInput = document.getElementById('assisted-subject');
+        const descriptionBox = document.getElementById('subject-description');
+        
+        if (subjectInput) {
+            subjectInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = flatSubjects.filter(item => item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
+                datalist.innerHTML = '';
+                filtered.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.value;
+                    datalist.appendChild(option);
+                });
+            });
+
+            subjectInput.addEventListener('change', () => {
+                const value = subjectInput.value;
+                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
+                subjectInput.value = selectedText;
+
+                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
+                if (found?.description && descriptionBox) {
+                    descriptionBox.textContent = found.description;
+                    descriptionBox.classList.remove('hidden');
+                } else if (descriptionBox) {
+                    descriptionBox.classList.add('hidden');
+                }
+            });
+        }
+
+        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
+            const value = subjectInput?.value || '';
+            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
+            if (found?.description && descriptionBox) {
+                descriptionBox.textContent = found.description;
+                descriptionBox.classList.toggle('hidden');
+            } else if (descriptionBox) {
+                descriptionBox.textContent = 'Selecione um assunto válido.';
+                descriptionBox.classList.remove('hidden');
+            }
+        });
+    }
+
+    async loadUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) return;
+        try {
+            const docSnap = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                this.currentUser = { ...this.currentUser, ...userData }; 
+                
+                // 🔒 CAPTURA O TENANT (ÓRGÃO) DO USUÁRIO
+                // Se for um usuário antigo sem órgão, cai no 'padrao_dprj' temporariamente
+                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
+                
+                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
+                this.applyRoleBasedUI(); 
+            }
+        } catch (error) { 
+            console.error("Erro ao carregar perfil:", error); 
+        }
+    }
+
+    applyRoleBasedUI() {
+        if (!this.currentUser) return;
+        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin');
+        document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
+    }
+
+    async openUserPreferencesModal() {
+        if (!this.auth?.currentUser) return showNotification("Você precisa estar logado.", "error");
+
+        const nameInput = document.getElementById('pref-user-name');
+        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
+        
+        const emailInput = document.getElementById('pref-user-email');
+        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
+
+        await this.loadUserPreferences(); 
+
+        const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
+        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
+        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
+        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
+        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
+        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
+        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
+        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
+        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
+
+        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
+    }
+
+    applyUserPreferences() {
+        console.log("⚙️ Aplicando preferências:", this.userPreferences);
+    }
+
+    getDefaultNotificationPreferences() {
+        return {
+            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
+            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
+        };
+    }
+
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
+
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
+
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
+
+    applyColumnPreferences(preferences) {
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
+
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
+        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
+        
+        if (faltososColumn) {
+            const pautaColumn = document.getElementById('pauta-column');
+            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            }
+        }
+    }
 }
 
-// Inicia o App
+// ============================================================
+// INICIALIZAÇÃO GLOBAL E COMPATIBILIDADE LEGADA
+// ============================================================
+
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 window.app = new SIGEPApp();
 
+window.renderEstruturaAtual = renderEstruturaAtual;
+window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
+window.abrirGerenciarUnidades = abrirGerenciarUnidadesUsuario;
+
+window.loadUsersList = loadUsersList;
+window.cleanupOldData = cleanupOldData;
+window.approveUser = approveUser;
+window.updateUserRole = updateUserRole;
+window.deleteUser = deleteUser;
+window.loadAuditLogs = loadAuditLogs;
+window.exportAuditLogsPDF = exportAuditLogsPDF;
+window.loadDashboardData = loadDashboardData;
+window.populateUserFilter = populateUserFilter;
+window.setupAdminSearch = setupAdminSearch;
+window.abrirGerenciadorUnidades = abrirGerenciarUnidades;
+window.abrirImportadorUnidades = abrirImportadorUnidades;
+window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
+
+window.switchToChecklistView = function() {
+    document.getElementById('document-action-selection')?.classList.add('hidden');
+    document.getElementById('document-checklist-view')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.remove('hidden');
+    document.getElementById('checklist-search-container')?.classList.remove('hidden');
+};
+
+window.switchToActionSelectionView = function() {
+    document.getElementById('document-checklist-view')?.classList.add('hidden');
+    document.getElementById('document-action-selection')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.add('hidden');
+    document.getElementById('checklist-search-container')?.classList.add('hidden');
+};
+
+window.getReuDataFromForm = function() {
+    return {
+        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+        nome: document.getElementById('nome-reu')?.value || '',
+        cpf: document.getElementById('cpf-reu')?.value || '',
+        telefone: document.getElementById('telefone-reu')?.value || '',
+        cep: document.getElementById('cep-reu')?.value || '',
+        rua: document.getElementById('rua-reu')?.value || '',
+        numero: document.getElementById('numero-reu')?.value || '',
+        complemento: document.getElementById('complemento-reu')?.value || '',
+        bairro: document.getElementById('bairro-reu')?.value || '',
+        cidade: document.getElementById('cidade-reu')?.value || '',
+        uf: document.getElementById('estado-reu')?.value || '',
+        referencia: document.getElementById('referencia-reu')?.value || '',
+        empresa: document.getElementById('empresa-reu')?.value || '',
+        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+    };
+};
+
+window.getExpenseDataFromForm = function() {
+    return {
+        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+        moradia: document.getElementById('expense-moradia')?.value || '',
+        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+        educacao: document.getElementById('expense-educacao')?.value || '',
+        saude: document.getElementById('expense-saude')?.value || '',
+        vestuario: document.getElementById('expense-vestuario')?.value || '',
+        lazer: document.getElementById('expense-lazer')?.value || '',
+        outras: document.getElementById('expense-outras')?.value || ''
+    };
+};
+
+window.sortColaboradores = function(criterio) {
+    if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
+        CollaboratorService.sortColaboradores(window.app, criterio);
+    } else {
+        if (!window.app || !window.app.colaboradores) return;
+        
+        window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
+        const direction = window._sortColabDir === 'asc' ? 1 : -1;
+        
+        window.app.colaboradores.sort((a, b) => {
+            let valA = (a[criterio] || '').toString().toLowerCase();
+            let valB = (b[criterio] || '').toString().toLowerCase();
+            if (valA < valB) return -1 * direction;
+            if (valA > valB) return 1 * direction;
+            return 0;
+        });
+        
+        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
+            CollaboratorService.renderModalList(window.app);
+        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
+            CollaboratorService.updateList(window.app);
+        }
+    }
+};
+
 // ============================================================
-// EVENTOS DOMContentLoaded - APENAS LÓGICA VISUAL ESTÁTICA
+// EVENTOS DOMContentLoaded
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
@@ -1791,6 +1738,13 @@ document.addEventListener('DOMContentLoaded', function() {
     if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
     if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
 
+    const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
+    document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
+    document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
+    document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
+    document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
+    document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
+    
     const loginContainer = document.getElementById('login-container');
     const footerLinks = document.getElementById('footer-links');
     const footerInner = document.getElementById('footer-inner-container');
@@ -1811,6 +1765,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.classList.add('is-logged-out');
             }
         };
+        
         updateFooterVisibility();
         const observer = new MutationObserver(updateFooterVisibility);
         observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
@@ -1855,6 +1810,14 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginContainer) {
         authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
     }
+
+    const originalConsoleError = console.error;
+    console.error = function() {
+        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
+            if (document.body.classList.contains('is-logged-out')) return;
+        }
+        originalConsoleError.apply(console, arguments);
+    };
 
     const tabAgendamento = document.getElementById('tab-agendamento');
     const tabAvulso = document.getElementById('tab-avulso');
@@ -1901,19 +1864,32 @@ document.addEventListener('DOMContentLoaded', function() {
 
         observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
         observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
+        
+        if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
+            toggleExclusiveTabs(tabAgendamento, tabAvulso);
+        }
     }
 });
 
 // ============================================================
-// WIDGETS E REGISTROS LEVES
+// REGISTRO DO SERVICE WORKER (PWA)
 // ============================================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .catch((err) => { console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err); });
+            .then((reg) => {
+                console.log('[SIGEP PWA] Service Worker registrado com sucesso, escopo:', reg.scope);
+            })
+            .catch((err) => {
+                console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err);
+            });
     });
 }
 
+
+// ============================================================
+// EVENTO blur para CEP
+// ============================================================
 document.addEventListener('blur', async (e) => {
     if (e.target.id === 'cep-reu') {
         const cep = e.target.value.replace(/\D/g, '');
@@ -1936,8 +1912,45 @@ document.addEventListener('blur', async (e) => {
     }
 }, true);
 
+
+// ============================================================
+// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS (BI)
+// ============================================================
+
+window.abrirConstrutor = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "formularios_coleta", coletaId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists() && window.ColetasBuilderService) {
+            const container = document.getElementById('container-construtor-coleta');
+            
+            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data(), coletaId);
+            container.classList.remove('hidden');
+            
+            window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
+            
+            document.getElementById('coletas-container').querySelector('.overflow-y-auto, div.bg-white')?.scrollBy({ top: 300, behavior: 'smooth' });
+        } else {
+            showNotification("Erro: Serviço construtor não carregado.", "error");
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification("Erro ao carregar estrutura da coleta.", "error");
+    }
+};
+
+window.verResultados = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    ColetasBiService.abrirResultados(window.app.db, coletaId);
+};
+
 window.ApiIntegration = {
     simularSincronizacaoVerde: function(pautaId) {
+        console.log("Simulando sincronização verde para a pauta:", pautaId);
         showNotification("Sincronização simulada com sucesso!", "success");
     }
 };
