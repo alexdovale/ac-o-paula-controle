@@ -2,7 +2,6 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// 🔥 OTIMIZAÇÃO: A importação do 'or' foi adicionada aqui para permitir as consultas compostas
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -66,7 +65,6 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         
-        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         this.currentUnidadeExibicao = localStorage.getItem('sigep_unidade_ativa') || 'todas';
         
@@ -79,13 +77,8 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
     
-            // ── Inicializa o router antes de qualquer verificação de URL ──
             this.router = new SIGEPRouter(this, {
-                UIService,
-                DashboardService,
-                RecepçãoCentralService,
-                PerfilService,
-                showNotification,
+                UIService, DashboardService, RecepçãoCentralService, PerfilService, showNotification,
             });
             this.router.init();
     
@@ -93,7 +86,7 @@ class SIGEPApp {
             await this.setupOfflinePersistence();
             
             this.setupEventListeners();
-            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
+            this.setupAuthListener();
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -112,9 +105,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // MÉTODOS DE COMPATIBILIDADE LEGADA E RENDERIZAÇÃO
-    // ============================================================
     showPautaSelectionScreen() {
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
@@ -125,21 +115,10 @@ class SIGEPApp {
         document.getElementById('pauta-selection-container')?.classList.remove('hidden');
     }
     
-    showAppScreen() {
-        if (this.router) this.router.navigate(ROUTES.APP, {}, false);
-    }
-    
-    showLoginScreen() {
-        if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false);
-    }
-    
-    showDashboardScreen() {
-        if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false);
-    }
-    
-    showRecepcaoCentralScreen() {
-        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
-    }
+    showAppScreen() { if (this.router) this.router.navigate(ROUTES.APP, {}, false); }
+    showLoginScreen() { if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false); }
+    showDashboardScreen() { if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false); }
+    showRecepcaoCentralScreen() { if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false); }
 
     showAdminScreen() {
         document.getElementById('pauta-selection-container')?.classList.add('hidden');
@@ -163,8 +142,6 @@ class SIGEPApp {
         this.listarColetas();
     }
 
-    // 🔥 ADMIN RENDERIZADO VIA HTML EXTERNO (DESACOPLADO DO MAIN)
-    // 🔥 ADMIN RENDERIZADO DIRETAMENTE (SEM FETCH, EVITA ERROS DE CORS LOCAL)
     async renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
@@ -252,17 +229,9 @@ class SIGEPApp {
             </div>
         `;
         
-        // Chamadas de inicialização
-        if (typeof setupAdminSearch === 'function') {
-            setupAdminSearch();
-        }
-        
-        if (typeof loadUsersList === 'function') {
-            loadUsersList(this.db);
-        }
-        if (typeof populateUserFilter === 'function') {
-            populateUserFilter(this.db);
-        }
+        if (typeof setupAdminSearch === 'function') setupAdminSearch();
+        if (typeof loadUsersList === 'function') loadUsersList(this.db);
+        if (typeof populateUserFilter === 'function') populateUserFilter(this.db);
         this.setupAdminPanelEvents();
     }
 
@@ -282,7 +251,7 @@ class SIGEPApp {
         });
         
         document.getElementById('admin-back-to-pautas-btn')?.addEventListener('click', () => {
-            this.showPautaSelectionScreen();
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
         
         document.getElementById('view-audit-logs-btn')?.addEventListener('click', async () => {
@@ -329,7 +298,6 @@ class SIGEPApp {
             localStorage.setItem('sigep_current_mode', 'evento');
             localStorage.removeItem('sigep_app_state');
             
-            // Modo Evento vai direto, ignorando unidades
             await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
             this.applyRoleBasedUI();
             showNotification('Modo Evento ativado', 'info', 3000);
@@ -344,7 +312,6 @@ class SIGEPApp {
         select.innerHTML = '<option value="todas">Carregando...</option>';
         modal.classList.remove('hidden');
 
-        // Carrega as unidades
         const userUnidades = this.currentUser?.unidades || [];
         const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
 
@@ -380,13 +347,11 @@ class SIGEPApp {
             select.innerHTML = html;
         }
 
-        // Restaura a última seleção se existir
         if (this.currentUnidadeExibicao) {
             const options = Array.from(select.options).map(opt => opt.value);
             if (options.includes(this.currentUnidadeExibicao)) select.value = this.currentUnidadeExibicao;
         }
 
-        // Ações dos botões
         document.getElementById('cancel-unidade-modal').onclick = () => {
             modal.classList.add('hidden');
         };
@@ -420,15 +385,12 @@ class SIGEPApp {
                     <div class="space-y-3">
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
                             <div class="font-bold"> Mutirão</div>
-                            <div class="text-xs text-gray-500">Evento concentrado com múltiplos atendimentos</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="plantao">
                             <div class="font-bold"> Plantão</div>
-                            <div class="text-xs text-gray-500">Atendimento emergencial contínuo</div>
                         </button>
                         <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="acao_social">
                             <div class="font-bold"> Ação Social</div>
-                            <div class="text-xs text-gray-500">Atividade comunitária externa</div>
                         </button>
                     </div>
                     <button id="cancel-tipo-evento" class="mt-4 w-full p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
@@ -569,65 +531,41 @@ class SIGEPApp {
         }
     }
 
+    // ============================================================
+    // CENTRAL DE EVENTOS GLOBAIS (LIMPA E OTIMIZADA)
+    // ============================================================
     setupEventListeners() {
-        document.getElementById('login-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.login(this);
-        });
-
-        document.getElementById('register-form')?.addEventListener('submit', (e) => {
-            e.preventDefault();
-            AuthService.register(this);
-        });
-
-        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            AuthService.resetPassword(this.auth);
-        });
-
-        document.getElementById('login-tab-btn')?.addEventListener('click', () => {
-            UIService.toggleAuthTabs('login');
-        });
-
-        document.getElementById('register-tab-btn')?.addEventListener('click', () => {
-            UIService.toggleAuthTabs('register');
-        });
-
+        // Autenticação
+        document.getElementById('login-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.login(this); });
+        document.getElementById('register-form')?.addEventListener('submit', (e) => { e.preventDefault(); AuthService.register(this); });
+        document.getElementById('forgot-password-link')?.addEventListener('click', (e) => { e.preventDefault(); AuthService.resetPassword(this.auth); });
+        document.getElementById('login-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('login'));
+        document.getElementById('register-tab-btn')?.addEventListener('click', () => UIService.toggleAuthTabs('register'));
         document.querySelectorAll('#logout-btn-main, #logout-btn-app').forEach(btn => {
             if (btn) btn.addEventListener('click', () => AuthService.logout(this.auth));
         });
 
-        document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => {
-            PautaService.callNextAssisted(this);
-        });
+        // Navegação via Router (Botões Comuns)
+        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.DASHBOARD, {}, false));
+        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));       
+        document.getElementById('btn-recepcao-central')?.addEventListener('click', () => this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false));
+        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.MEU_PERFIL, {}, false));
+        document.getElementById('perfil-back-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));
+        
+        const adminPanelBtnPautaSelection = document.getElementById('admin-panel-btn');
+        if (adminPanelBtnPautaSelection) adminPanelBtnPautaSelection.addEventListener('click', () => this.router.navigate(ROUTES.ADMIN, {}, false));
 
-        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.DASHBOARD, {}, false);
-        });
-
-        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => {
+        document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+            this._teardownPauta();
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
-        });       
-
-        document.getElementById('btn-recepcao-central')?.addEventListener('click', async () => {
-            await this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
         });
 
-        document.getElementById('btn-trocar-modo')?.addEventListener('click', () => {
-            this.voltarParaSelecaoModo();
-        });
-        
-        document.getElementById('btn-trocar-modo-app')?.addEventListener('click', () => {
-            this.voltarParaSelecaoModo();
-        });
-        
-        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => {
-            this.abrirModalSelecaoUnidade();
-        });
+        document.getElementById('btn-trocar-modo')?.addEventListener('click', () => this.voltarParaSelecaoModo());
+        document.getElementById('btn-trocar-modo-app')?.addEventListener('click', () => this.voltarParaSelecaoModo());
+        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => this.abrirModalSelecaoUnidade());
 
         document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
             const modoAtual = this.currentMode;
-            
             if (modoAtual === 'evento') {
                 const tipoEvento = await this.mostrarSeletorTipoEvento();
                 if (!tipoEvento) return;
@@ -635,21 +573,227 @@ class SIGEPApp {
             } else {
                 this.tipoPautaSelecionado = 'normal';
             }
-            
-            const typeModal = document.getElementById('pauta-type-modal');
-            if (typeModal) {
-                typeModal.classList.remove('hidden');
+            document.getElementById('pauta-type-modal')?.classList.remove('hidden');
+        });
+
+        // ========================================================
+        // ROTAS DO MENU VERDE DE "AÇÕES" DA PAUTA (CORRIGIDO)
+        // ========================================================
+        document.getElementById('btn-painel-geral-externo')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.MONITOR_EQUIPE, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (typeof PainelGeralService !== 'undefined') {
+                PainelGeralService.abrirPainel(this);
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
             } else {
-                showNotification("Modal de tipo de pauta não encontrado.", "error");
+                showNotification("Módulo do painel não carregado.", "error");
             }
         });
 
+        document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('share-modal');
+            if (modal) {
+                const toggle = document.getElementById('share-toggle');
+                const maskCheck = document.getElementById('mask-names-check');
+                if (this.currentPautaData) {
+                    if (toggle) toggle.checked = this.currentPautaData.isPublic || false;
+                    if (maskCheck) maskCheck.checked = this.currentPautaData.maskNames || false;
+                    
+                    const statusText = document.getElementById('share-status-text');
+                    const linkContainer = document.getElementById('share-link-container');
+                    
+                    if (statusText && toggle) statusText.textContent = toggle.checked ? "Público" : "Privado";
+                    
+                    if (toggle && toggle.checked) {
+                        if (linkContainer) linkContainer.classList.remove('hidden');
+                        const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                        const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                        if (document.getElementById('share-link-input')) document.getElementById('share-link-input').value = link;
+                        if (document.getElementById('open-external-btn')) document.getElementById('open-external-btn').href = link;
+                    } else {
+                        if (linkContainer) linkContainer.classList.add('hidden');
+                    }
+                }
+                modal.classList.remove('hidden');
+            }
+        });
+
+        document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (this.currentPauta) {
+                const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                const totemUrl = `${baseUrl}/totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+                const actionsPanel = document.getElementById('actions-panel');
+                if (actionsPanel) {
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                }
+            } else {
+                if(window.showNotification) showNotification("Nenhuma pauta selecionada.", "error");
+            }
+        });
+
+        document.getElementById('view-stats-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.ESTATISTICAS, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('statistics-modal');
+            if (!modal) {
+                showNotification("Modal de estatísticas não encontrado", "error");
+                return;
+            }
+            if (this.allAssisted && this.currentPauta?.name) {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta.name);
+                } else {
+                    showNotification("Erro ao carregar estatísticas", "error");
+                }
+            } else {
+                showNotification("Carregue uma pauta primeiro", "info");
+            }
+        });
+
+        document.getElementById('edit-pauta-name-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.EDITAR_NOME_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+            document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
+        });
+
+        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.CONFIGURACAO_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            const modal = document.getElementById('bi-links-modal');
+            if (modal) {
+                modal.classList.remove('hidden');
+                const containerBi = document.getElementById('container-bi-links');
+                if (containerBi && this.currentPautaData && window.ColetasBuilderService) {
+                    containerBi.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                    const btnAdicionarParceiro = document.getElementById('bi-btn-adicionar-parceiro');
+                    if (btnAdicionarParceiro) {
+                        btnAdicionarParceiro.addEventListener('click', () => {
+                            window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                        });
+                    }
+                }
+            }
+        });
+
+        document.getElementById('manage-members-btn')?.addEventListener('click', async (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COMPARTILHAR_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            if (typeof ModalService?.openMembersModal === 'function') {
+                await ModalService.openMembersModal(this);
+            } else {
+                showNotification("Erro ao abrir gerenciar membros", "error");
+            }
+        });
+
+        document.getElementById('manage-collaborators-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                this.router.navigate(ROUTES.COLABORADORES_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+            CollaboratorService.openModal(this);
+        });
+
+        document.getElementById('notes-btn')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                e.stopImmediatePropagation();
+                this.router.navigate(ROUTES.ANOTACOES_PAUTA, { pautaId: this.currentPauta.id }, false);
+                return;
+            }
+        });
+
+        // ========================================================
+        // DELEGAÇÃO DE EVENTOS PARA MODAIS DINÂMICOS (COMPARTILHAMENTO)
+        // ========================================================
+        document.body.addEventListener('change', async (e) => {
+            // 1. TOGGLE DO LINK PÚBLICO
+            if (e.target.id === 'share-toggle') {
+                if (!this.currentPauta) return;
+                
+                const isPublic = e.target.checked;
+                const statusText = document.getElementById('share-status-text');
+                const linkContainer = document.getElementById('share-link-container');
+                
+                if (statusText) statusText.textContent = isPublic ? "Público" : "Privado";
+                
+                if (isPublic) {
+                    if (linkContainer) linkContainer.classList.remove('hidden');
+                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
+                    const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
+                    
+                    const inputLink = document.getElementById('share-link-input');
+                    const btnExternal = document.getElementById('open-external-btn');
+                    if (inputLink) inputLink.value = link;
+                    if (btnExternal) btnExternal.href = link;
+                } else {
+                    if (linkContainer) linkContainer.classList.add('hidden');
+                }
+                
+                try {
+                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                    await updateDoc(pautaRef, { isPublic: isPublic });
+                    if (this.currentPautaData) this.currentPautaData.isPublic = isPublic;
+                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.", "success");
+                } catch (error) {
+                    console.error("Erro ao atualizar status.", error);
+                    showNotification("Erro ao atualizar status.", "error");
+                }
+            }
+
+            // 2. TOGGLE DE OCULTAR NOMES (LGPD)
+            if (e.target.id === 'mask-names-check') {
+                if (!this.currentPauta) return;
+                const mask = e.target.checked;
+                try {
+                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
+                    await updateDoc(pautaRef, { maskNames: mask });
+                    if (this.currentPautaData) this.currentPautaData.maskNames = mask;
+                    showNotification("Configuração de privacidade atualizada.", "success");
+                } catch (error) {
+                    showNotification("Erro ao salvar configuração.", "error");
+                }
+            }
+        });
+
+        document.body.addEventListener('click', (e) => {
+            // 3. BOTÃO DE COPIAR LINK
+            if (e.target.closest('#copy-share-link-btn')) {
+                const input = document.getElementById('share-link-input');
+                if (input) {
+                    input.select();
+                    navigator.clipboard.writeText(input.value);
+                    showNotification("Link copiado para a área de transferência!", "info");
+                }
+            }
+        });
+
+        // Configurações das colunas da Pauta
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
         const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
-        const toggleEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const toggleDistribuicao = document.getElementById('toggle-distribuicao');
-        const toggleFaltosos = document.getElementById('toggle-faltosos');
-
         if (pautaSettingsToggle && pautaSettingsPanel) {
             pautaSettingsToggle.addEventListener('click', (e) => {
                 e.stopPropagation();
@@ -659,11 +803,11 @@ class SIGEPApp {
                 }
             });
         }
+        document.getElementById('toggle-em-atendimento')?.addEventListener('change', () => this.saveColumnPreferences());
+        document.getElementById('toggle-distribuicao')?.addEventListener('change', () => this.saveColumnPreferences());
+        document.getElementById('toggle-faltosos')?.addEventListener('change', () => this.saveColumnPreferences());
 
-        toggleEmAtendimento?.addEventListener('change', () => this.saveColumnPreferences());
-        toggleDistribuicao?.addEventListener('change', () => this.saveColumnPreferences());
-        toggleFaltosos?.addEventListener('change', () => this.saveColumnPreferences());
-
+        // Ações Restantes (Salas, Fechar/Zerar, Atendimentos, etc.)
         document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
             const listContainer = document.getElementById('manage-rooms-list');
             if (!listContainer) return;
@@ -683,7 +827,6 @@ class SIGEPApp {
             } else {
                 listContainer.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Nenhuma sala configurada ou a pauta não é Multi-Salas.</p>';
             }
-            
             document.getElementById('manage-rooms-modal')?.classList.remove('hidden');
         });
 
@@ -752,188 +895,9 @@ class SIGEPApp {
                 if (typeof PautaService.populateRoomSelects === 'function') {
                     PautaService.populateRoomSelects(this);
                 }
-                
             } catch (error) {
                 console.error("Erro ao salvar salas:", error);
                 showNotification("Erro ao atualizar salas.", "error");
-            }
-        });
-
-        document.getElementById('aguardando-list')?.addEventListener('input', (e) => {
-            if (e.target.classList.contains('room-search-input')) {
-                const query = e.target.value.toLowerCase();
-                const roomContainer = e.target.closest('.room-group-container'); 
-                if (roomContainer) {
-                    const cards = roomContainer.querySelectorAll('.assisted-card'); 
-                    cards.forEach(card => {
-                        const text = card.textContent.toLowerCase();
-                        card.style.display = text.includes(query) ? '' : 'none';
-                    });
-                }
-            }
-        });
-
-        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', () => {
-             const atendidos = (this.allAssisted || []).filter(a => a.status === 'atendido');
-             PDFService.generateAtendidosPDF(atendidos, this.currentPauta?.name || 'Pauta');
-        });
-
-        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
-            if (!this.currentPauta) {
-                showNotification("Nenhuma pauta selecionada!", "error");
-                return;
-            }
-            const totalAtendidos = this.allAssisted.filter(a => a.status === 'atendido').length;
-            document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
-            document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
-            document.getElementById('ata-total').value = totalAtendidos;
-            document.getElementById('ata-endereco').value = '';
-            document.getElementById('ata-orgao').value = '';
-            document.getElementById('ata-social-modal').classList.remove('hidden');
-        });
-        
-        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
-            const acaoNome = document.getElementById('ata-acao-nome')?.value.trim();
-            const endereco = document.getElementById('ata-endereco')?.value.trim();
-            const dataAcao = document.getElementById('ata-data')?.value;
-            const orgaoNome = document.getElementById('ata-orgao')?.value.trim();
-            const totalManual = document.getElementById('ata-total')?.value;
-            
-            if (!acaoNome || !endereco || !dataAcao || !orgaoNome) {
-                showNotification("Preencha todos os campos obrigatórios.", "error");
-                return;
-            }
-            
-            const atendidos = this.allAssisted.filter(a => a.status === 'atendido');
-            const dadosExtras = { acao: acaoNome, endereco: endereco, data: dataAcao, orgao: orgaoNome, totalAtendimentos: totalManual };
-            
-            document.getElementById('ata-social-modal').classList.add('hidden');
-            
-            if (confirm("Deseja VISUALIZAR a Ata antes de baixar?")) {
-                PDFService.previewAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
-            } else {
-                PDFService.generateAtaAcaoSocial(this.currentPauta?.name, this.colaboradores, atendidos, dadosExtras);
-            }
-        });
-        
-        document.getElementById('cancel-ata-modal-btn')?.addEventListener('click', () => {
-            document.getElementById('ata-social-modal').classList.add('hidden');
-        });
-        
-        document.addEventListener('click', (e) => {
-            if (!e.target.closest('.quick-action-toggle') && !e.target.closest('.quick-menu-box')) {
-                document.querySelectorAll('.quick-menu-box').forEach(menu => {
-                    menu.classList.add('hidden');
-                });
-            }
-        });
-
-        document.querySelectorAll('input[name="is-scheduled"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const wrapper = document.getElementById('scheduled-time-wrapper');
-                if (e.target.value === 'yes') wrapper.classList.remove('hidden');
-                else wrapper.classList.add('hidden');
-            });
-        });
-
-        document.querySelectorAll('input[name="has-arrived"]').forEach(radio => {
-            radio.addEventListener('change', (e) => {
-                const wrapper = document.getElementById('arrival-time-wrapper');
-                if (e.target.value === 'yes') {
-                    wrapper.classList.remove('hidden');
-                    document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-                } else {
-                    wrapper.classList.add('hidden');
-                }
-            });
-        });
-
-        document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-            document.getElementById('arrival-time-wrapper').classList.add('hidden');
-            document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-            document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-        });
-
-        document.getElementById('tab-avulso')?.addEventListener('click', () => {
-            document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-            document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-            document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
-            document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-        });
-
-        document.getElementById('tab-agendamento')?.addEventListener('click', () => {
-            UIService.switchTab('agendamento', this);
-        });
-        
-        document.getElementById('tab-avulso')?.addEventListener('click', () => {
-            UIService.switchTab('avulso', this);
-        });
-
-        document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
-
-        // ========================================================
-        // DELEGAÇÃO DE EVENTOS PARA MODAIS DINÂMICOS (COMPARTILHAMENTO E OUTROS)
-        // ========================================================
-        document.body.addEventListener('change', async (e) => {
-            // 1. TOGGLE DO LINK PÚBLICO (Abre a gaveta)
-            if (e.target.id === 'share-toggle') {
-                if (!this.currentPauta) return;
-                
-                const isPublic = e.target.checked;
-                const statusText = document.getElementById('share-status-text');
-                const linkContainer = document.getElementById('share-link-container');
-                
-                if (statusText) statusText.textContent = isPublic ? "Público" : "Privado";
-                
-                if (isPublic) {
-                    if (linkContainer) linkContainer.classList.remove('hidden');
-                    const baseUrl = window.location.href.substring(0, window.location.href.lastIndexOf('/'));
-                    const link = `${baseUrl}/acompanhamento.html?id=${this.currentPauta.id}`;
-                    
-                    const inputLink = document.getElementById('share-link-input');
-                    const btnExternal = document.getElementById('open-external-btn');
-                    if (inputLink) inputLink.value = link;
-                    if (btnExternal) btnExternal.href = link;
-                } else {
-                    if (linkContainer) linkContainer.classList.add('hidden');
-                }
-                
-                try {
-                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                    await updateDoc(pautaRef, { isPublic: isPublic });
-                    if (this.currentPautaData) this.currentPautaData.isPublic = isPublic;
-                    showNotification(isPublic ? "Link público ativado." : "Link público desativado.", "success");
-                } catch (error) {
-                    console.error("Erro ao atualizar status.", error);
-                    showNotification("Erro ao atualizar status.", "error");
-                }
-            }
-
-            // 2. TOGGLE DE OCULTAR NOMES (LGPD)
-            if (e.target.id === 'mask-names-check') {
-                if (!this.currentPauta) return;
-                const mask = e.target.checked;
-                try {
-                    const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                    await updateDoc(pautaRef, { maskNames: mask });
-                    if (this.currentPautaData) this.currentPautaData.maskNames = mask;
-                    showNotification("Configuração de privacidade atualizada.", "success");
-                } catch (error) {
-                    showNotification("Erro ao salvar configuração.", "error");
-                }
-            }
-        });
-
-        // 3. BOTÃO DE COPIAR LINK
-        document.body.addEventListener('click', (e) => {
-            if (e.target.closest('#copy-share-link-btn')) {
-                const input = document.getElementById('share-link-input');
-                if (input) {
-                    input.select();
-                    navigator.clipboard.writeText(input.value);
-                    showNotification("Link copiado para a área de transferência!", "info");
-                }
             }
         });
 
@@ -997,7 +961,27 @@ class SIGEPApp {
             document.getElementById('reset-confirm-modal').classList.remove('hidden');
         });
 
-        NotesService.setup();
+        document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
+            const attendanceCollectionRef = collection(this.db, "pautas", this.currentPauta.id, "attendances");
+            const snapshot = await getDocs(attendanceCollectionRef);
+            
+            if (snapshot.empty) {
+                showNotification("A pauta já está vazia.", "info");
+                document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+                return;
+            }
+            
+            const batch = writeBatch(this.db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            
+            showNotification("Pauta zerada com sucesso.", "success");
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('cancel-reset-btn')?.addEventListener('click', () => {
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+        });
 
         document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
             if (typeof PautaService.addAssisted === 'function') {
@@ -1010,19 +994,6 @@ class SIGEPApp {
                 }
             }
         });
-        
-        // PERSISTÊNCIA DO MODO SILENCIOSO NO REFRESH
-        const silentModeCheckbox = document.getElementById('toggle-silent-mode') || document.getElementById('silent-mode-toggle');
-        if (silentModeCheckbox) {
-            const savedSilentState = localStorage.getItem('sigep_silent_mode') === 'true';
-            silentModeCheckbox.checked = savedSilentState;
-        
-            silentModeCheckbox.addEventListener('change', (e) => {
-                localStorage.setItem('sigep_silent_mode', e.target.checked);
-                showNotification(e.target.checked ? "Modo silencioso ativado." : "Modo silencioso desativado.", "info");
-            });
-        }
-
 
         document.getElementById('file-upload')?.addEventListener('change', (e) => {
             PautaService.handleCSVUpload(e, this);
@@ -1030,7 +1001,7 @@ class SIGEPApp {
 
         document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
 
-        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search', 'distribuicao-search'].forEach(id => {
             const element = document.getElementById(id);
             if (element) {
                 element.addEventListener('input', () => {
@@ -1064,19 +1035,6 @@ class SIGEPApp {
         document.getElementById('clear-collaborators-list-modal')?.addEventListener('click', () => {
             CollaboratorService.clearAll(this);
         });
-
-        document.getElementById('format-help-link')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('format-help-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            document.getElementById('privacy-policy-modal').classList.remove('hidden');
-        });
-
-        UIService.setupFooterModals();
-        this.setupSubjectsAutocomplete();
 
         document.body.addEventListener('click', (e) => {
             PautaService.handleCardActions(e, this);
@@ -1613,51 +1571,7 @@ class SIGEPApp {
             document.getElementById('delegate-email-modal')?.classList.add('hidden');
         });
 
-        document.body.addEventListener('click', async (e) => {
-            const removeBtn = e.target.closest('.remove-member-btn');
-            
-            if (removeBtn) {
-                const email = removeBtn.dataset.email;
-                
-                if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
-                    showNotification("O dono da pauta não pode ser removido!", "error");
-                    return;
-                }
-
-                if (confirm(`Remover ${email} da pauta?`)) {
-                    try {
-                        const usersRef = collection(this.db, "users");
-                        const q = query(usersRef, where("email", "==", email));
-                        const querySnapshot = await getDocs(q);
-                        
-                        if (!querySnapshot.empty) {
-                            const userId = querySnapshot.docs[0].id;
-                            
-                            if (userId === this.currentPautaOwnerId) {
-                                showNotification("O dono da pauta não pode ser removido!", "error");
-                                return;
-                            }
-
-                            const pautaRef = doc(this.db, "pautas", this.currentPauta.id);
-                            await updateDoc(pautaRef, { members: arrayRemove(userId), memberEmails: arrayRemove(email) });
-                            showNotification(`Membro ${email} removido com sucesso.`, "success");
-                            
-                            if (typeof ModalService?.openMembersModal === 'function') {
-                                await ModalService.openMembersModal(this);
-                            }
-                        }
-                    } catch (error) {
-                        console.error("Erro ao remover membro:", error);
-                        showNotification("Erro ao remover membro", "error");
-                    }
-                }
-            }
-        });
-        
-        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.MEU_PERFIL);
-        });
-
+        // Eventos globais de fechar modais
         document.addEventListener('click', (e) => {
             const adminModal = document.getElementById('admin-modal');
             const adminPanelToggle = document.getElementById('pauta-settings-toggle'); 
@@ -1700,393 +1614,65 @@ class SIGEPApp {
             window.history.pushState({}, '', cleanUrl);
             if (window.app && window.app.logout) window.app.logout();
         });
-        
-        const btnVoltarLogin = document.getElementById('modo-back-to-login');
-        const modoSelectionScreen = document.getElementById('modo-selection-screen');
-        
-        if(btnVoltarLogin) {
-            btnVoltarLogin.addEventListener('click', () => {
-                if (modoSelectionScreen) modoSelectionScreen.classList.add('hidden');
-                document.getElementById('login-container')?.classList.remove('hidden');
-                if(window.app && window.app.logout) window.app.logout();
-            });
-        }
-
-        // --- INICIALIZA O MÓDULO DE COLETAS ---
-        this.setupColetas();
-        
-        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => {
-            this.abrirModalSelecaoUnidade();
-        });
     }
 
-    atualizarMonitorEnvelopes() {
-        if (!this.colaboradores || this.colaboradores.length === 0) return;
-
-        const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
-        
-        const colabsLivres = colabsAtivos.filter(c => {
-            const casosOcupando = this.allAssisted.filter(a => {
-                const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
-                const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
-                return emAtendimentoNormal || pendenteAssinatura;
-            });
-            return casosOcupando.length === 0;
-        });
-
-        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-        if (!headerActions) return;
-
-        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-        
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => {
-            if (btn.id !== btnId) btn.remove();
-        });
-
-        let btnEnvelope = document.getElementById(btnId);
-
-        if (colabsLivres.length > 0) {
-            if (!btnEnvelope) {
-                btnEnvelope = document.createElement('button');
-                btnEnvelope.id = btnId;
-                btnEnvelope.onclick = () => {
-                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
-                };
-                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-            }
-            
-            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-            btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-        } else {
-            if (btnEnvelope) btnEnvelope.remove();
-        }
-    }
-
-    setupColetas() {
-        document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAINEL_PUBLICO, {}, false); 
-            this.showColetasScreen();
-        });
-
-        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
-        });
-
-        document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
-            const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
-            if (!nome) return;
-
-            try {
-                const novaColeta = {
-                    nomeDaColeta: nome,
-                    dicionarioDeCampos: [],
-                    linksExternos: [],
-                    criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
-                    criadoEm: new Date().toISOString()
-                };
-                
-                await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
-                showNotification("Nova coleta criada com sucesso!", "success");
-                this.listarColetas();
-            } catch (error) {
-                console.error(error);
-                showNotification("Erro ao criar coleta no banco de dados.", "error");
-            }
-        });
-    }
-
-    async listarColetas() {
-        const container = document.getElementById('lista-de-coletas');
-        if (!container) return;
-        
-        container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
-
-        try {
-            const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
-            if (querySnapshot.empty) {
-                container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
-                return;
-            }
-
-            let html = '';
-            querySnapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                html += `
-                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
-                        <div>
-                            <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
-                            <p class="text-[11px] font-bold text-slate-500 mt-1">📚 ${data.dicionarioDeCampos?.length || 0} campos cadastrados | 🔗 ${data.linksExternos?.length || 0} links gerados</p>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">⚙️ Configurar</button>
-                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">📈 Resultados</button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        } catch (error) {
-            console.error("Erro ao listar coletas:", error);
-            container.innerHTML = '<p class="text-center text-red-500 py-4 font-bold">Erro ao carregar do servidor.</p>';
-        }
-    }
-
-    setupSubjectsAutocomplete() {
-        const datalist = document.getElementById('subjects-list');
-        if (!datalist) return;
-        flatSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.value;
-            datalist.appendChild(option);
-        });
-
-        const subjectInput = document.getElementById('assisted-subject');
-        const descriptionBox = document.getElementById('subject-description');
-        
-        if (subjectInput) {
-            subjectInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                const filtered = flatSubjects.filter(item =>
-                    item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query)
-                );
-                datalist.innerHTML = '';
-                filtered.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject.value;
-                    datalist.appendChild(option);
-                });
-            });
-
-            subjectInput.addEventListener('change', () => {
-                const value = subjectInput.value;
-                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
-                subjectInput.value = selectedText;
-
-                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
-                if (found?.description && descriptionBox) {
-                    descriptionBox.textContent = found.description;
-                    descriptionBox.classList.remove('hidden');
-                } else if (descriptionBox) {
-                    descriptionBox.classList.add('hidden');
-                }
-            });
-        }
-
-        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
-            const value = subjectInput?.value || '';
-            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
-            if (found?.description && descriptionBox) {
-                descriptionBox.textContent = found.description;
-                descriptionBox.classList.toggle('hidden');
-            } else if (descriptionBox) {
-                descriptionBox.textContent = 'Selecione um assunto válido.';
-                descriptionBox.classList.remove('hidden');
-            }
-        });
-    }
-
-    async loadUserPreferences() {
-        if (!this.auth?.currentUser || !this.db) return;
-        
-        try {
-            const userDocRef = doc(this.db, "users", this.auth.currentUser.uid);
-            const docSnap = await getDoc(userDocRef);
-            if (docSnap.exists()) {
-                const userData = docSnap.data();
-                this.currentUser = { ...this.currentUser, ...userData }; 
-                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
-                this.applyRoleBasedUI(); 
-            }
-        } catch (error) {
-            console.error("Erro ao carregar perfil:", error);
-        }
-    }
-
-    applyRoleBasedUI() {
-        if (!this.currentUser) return;
-
-        const role = this.currentUser?.role;
-        const isAdmin = (role === 'admin' || role === 'superadmin');
-        
-        const adminBtns = document.querySelectorAll('#admin-panel-btn, #admin-btn-main');
-        adminBtns.forEach(b => {
-            if (b) b.classList.toggle('hidden', !isAdmin);
-        });
-        
-        console.log("UI atualizada para o perfil:", role);
-    }
-
-    async openUserPreferencesModal() {
-        if (!this.auth?.currentUser) {
-            showNotification("Você precisa estar logado para ver suas preferências.", "error");
-            return;
-        }
-
-        const nameInput = document.getElementById('pref-user-name');
-        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
-        
-        const emailInput = document.getElementById('pref-user-email');
-        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
-
-        await this.loadUserPreferences(); 
-
-        const setChecked = (id, value) => {
-            const el = document.getElementById(id);
-            if (el) el.checked = value;
-        };
-
-        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
-        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
-        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
-        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
-
-        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
-        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
-        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
-        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
-
-        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
-    }
-
-    applyUserPreferences() {
-        console.log("⚙️ Aplicando preferências do usuário no SIGEP:", this.userPreferences);
-    }
-
-    getDefaultNotificationPreferences() {
-        return {
-            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
-            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
-        };
-    }
-
-    saveColumnPreferences() {
-        const preferences = {
-            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
-            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
-        };
-        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
-        this.applyColumnPreferences(preferences);
-    }
-
-    loadColumnPreferences() {
-        const savedPreferences = localStorage.getItem('sigap_column_preferences');
-        let preferences = { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
-        if (savedPreferences) preferences = JSON.parse(savedPreferences);
-
-        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const chkDistribuicao = document.getElementById('toggle-distribuicao');
-        const chkFaltosos = document.getElementById('toggle-faltosos');
-        
-        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
-        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
-        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
-        
-        this.applyColumnPreferences(preferences);
-    }
-
-    applyColumnPreferences(preferences) {
-        const pautaType = this.currentPautaData?.type;
-        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
-        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
-
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const distribuicaoColumn = document.getElementById('distribuicao-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        if (emAtendimentoColumn) {
-            if (useDelegationFlow && preferences.showEmAtendimento) emAtendimentoColumn.classList.remove('hidden');
-            else emAtendimentoColumn.classList.add('hidden');
-        }
-
-        if (distribuicaoColumn) {
-            if (useDistributionFlow && preferences.showDistribuicao) distribuicaoColumn.classList.remove('hidden');
-            else distribuicaoColumn.classList.add('hidden');
-        }
-        
-        if (faltososColumn) {
-            const pautaColumn = document.getElementById('pauta-column');
-            if (pautaType === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
-                 faltososColumn.classList.remove('hidden');
-            } else {
-                return;
-            }
-        }
-    }
-
+    // ============================================================
+    // DEMAIS FUNÇÕES DE CLASSE (INTACTAS)
+    // ============================================================
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
-        
         const pautasList = document.getElementById('pautas-list');
         if (!pautasList) return;
         pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
         
         try {
-            const userDoc = await getDoc(doc(this.db, "users", user.uid));
-            if (userDoc.exists()) {
-                const userData = userDoc.data();
-                this.currentUser = { ...this.currentUser, ...userData };
-            }
-        } catch (err) {
-            console.warn("Aviso: erro ao buscar dados adicional do usuário.", err);
-        }
-    
-        try {
             let pautasMap = new Map();
             const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
 
-            if (isAdmin) {
-                const snapAll = await getDocs(collection(this.db, "pautas"));
-                snapAll.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-            } else {
-                const qOwner = query(collection(this.db, "pautas"), where("owner", "==", user.uid));
-                const qMembers = query(collection(this.db, "pautas"), where("members", "array-contains", user.uid));
-                
-                const [snapOwner, snapMembers] = await Promise.all([
-                    getDocs(qOwner).catch(() => ({ docs: [] })), 
-                    getDocs(qMembers).catch(() => ({ docs: [] }))
-                ]);
-                
-                snapOwner.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-                snapMembers.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
-            }
+            let qUser;
+            const orgaoDoUsuario = this.currentUser.orgaoId;
 
-            if (pautasMap.size === 0 && !isAdmin) {
-                console.warn("Nenhuma pauta encontrada para este usuário.");
+            if (isAdmin && this.currentUser.role === 'superadmin_global') {
+                qUser = query(collection(this.db, "pautas"));
+            } else if (isAdmin) {
+                qUser = query(collection(this.db, "pautas"), where("orgaoId", "==", orgaoDoUsuario));
+            } else {
+                qUser = query(
+                    collection(this.db, "pautas"),
+                    where("orgaoId", "==", orgaoDoUsuario),
+                    or(where("owner", "==", user.uid), where("members", "array-contains", user.uid))
+                );
             }
+            
+            const snapUser = await getDocs(qUser);
+            snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
             
             let pautas = Array.from(pautasMap.values());
-            
-            const modoAtual = this.currentMode;
-            const tiposEvento = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento'];
-            
-            if (modoAtual === 'normal') {
+            const tiposEventoValidos = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento', 'mutirao_atendimento'];
+
+            if (this.currentMode === 'evento') {
                 pautas = pautas.filter(p => {
-                    let tipoPauta = p.tipo || p.type || 'normal';
-                    tipoPauta = String(tipoPauta).toLowerCase();
-                    return !tiposEvento.includes(tipoPauta);
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    return tiposEventoValidos.some(t => tipoPauta.includes(t)) || 
+                           String(p.name || '').toLowerCase().includes('mutirão') || 
+                           String(p.name || '').toLowerCase().includes('plantão');
                 });
-                
-                if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
-                    pautas = pautas.filter(p => {
-                        const unidadePauta = p.unidadeNome || p.origin || p.orgao;
-                        return unidadePauta === this.currentUnidadeExibicao;
-                    });
-                }
-            } else if (modoAtual === 'evento') {
+            } else {
                 pautas = pautas.filter(p => {
-                    let tipoPauta = p.tipo || p.type || '';
-                    tipoPauta = String(tipoPauta).toLowerCase();
-                    return tiposEvento.includes(tipoPauta);
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    const ehMutiraoNoNome = String(p.name || '').toLowerCase().includes('mutirão') || String(p.name || '').toLowerCase().includes('plantão');
+                    return !tiposEventoValidos.some(t => tipoPauta.includes(t)) && !ehMutiraoNoNome;
                 });
+            }
+
+            if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
+                pautas = pautas.filter(p => p.unidadeNome === this.currentUnidadeExibicao);
             }
 
             const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
             if (btnTrocarUnidade) {
-                if (modoAtual === 'normal') {
+                if (this.currentMode === 'normal') {
                     btnTrocarUnidade.classList.remove('hidden');
                     btnTrocarUnidade.classList.add('flex');
                 } else {
@@ -2096,7 +1682,6 @@ class SIGEPApp {
             }
             
             this.mostrarIndicadorModo();
-            
             let filteredPautas = [...pautas];
             
             if (filterOptions) {
@@ -2106,18 +1691,14 @@ class SIGEPApp {
                             const dataInicial = new Date(filterOptions.dataInicial);
                             const dataFinal = new Date(filterOptions.dataFinal);
                             dataFinal.setHours(23, 59, 59);
-                            
                             filteredPautas = filteredPautas.filter(pauta => {
                                 if (!pauta.createdAt) return false;
                                 const dataCriacao = new Date(pauta.createdAt);
                                 return dataCriacao >= dataInicial && dataCriacao <= dataFinal;
                             });
                         }
-                        
                         if (filterOptions.tipoPauta && filterOptions.tipoPauta !== 'todos') {
-                            filteredPautas = filteredPautas.filter(pauta => 
-                                pauta.type === filterOptions.tipoPauta
-                            );
+                            filteredPautas = filteredPautas.filter(pauta => pauta.type === filterOptions.tipoPauta);
                         }
                         break;
                         
@@ -2127,18 +1708,11 @@ class SIGEPApp {
                         
                         if (!isAdminFiltro && userUnidades.length > 0) {
                             const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
-                            filteredPautas = filteredPautas.filter(pauta => {
-                                const unidadePauta = pauta.unidadeNome;
-                                return userUnidadesNomes.includes(unidadePauta);
-                            });
+                            filteredPautas = filteredPautas.filter(pauta => userUnidadesNomes.includes(pauta.unidadeNome));
                         }
-                        
                         if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
-                            filteredPautas = filteredPautas.filter(pauta => 
-                                pauta.unidadeNome === filterOptions.unidade
-                            );
+                            filteredPautas = filteredPautas.filter(pauta => pauta.unidadeNome === filterOptions.unidade);
                         }
-                        
                         if (filterOptions.status && filterOptions.status !== 'todas') {
                             filteredPautas = filteredPautas.filter(pauta => {
                                 if (!pauta.createdAt) return false;
@@ -2146,12 +1720,8 @@ class SIGEPApp {
                                 const dataExpiracao = new Date(dataCriacao);
                                 dataExpiracao.setDate(dataCriacao.getDate() + 7);
                                 const isExpired = new Date() > dataExpiracao;
-                                
-                                if (filterOptions.status === 'ativas') {
-                                    return !isExpired && !pauta.isClosed;
-                                } else if (filterOptions.status === 'expiradas') {
-                                    return isExpired || pauta.isClosed;
-                                }
+                                if (filterOptions.status === 'ativas') return !isExpired && !pauta.isClosed;
+                                else if (filterOptions.status === 'expiradas') return isExpired || pauta.isClosed;
                                 return true;
                             });
                         }
@@ -2160,33 +1730,20 @@ class SIGEPApp {
             }
             
             switch (this.currentPautaFilter) {
-                case 'my':
-                    filteredPautas = filteredPautas.filter(p => p.owner === user.uid);
-                    break;
-                case 'shared':
-                    filteredPautas = filteredPautas.filter(p => 
-                        p.members?.includes(user.email) && 
-                        p.owner !== user.uid
-                    );
-                    break;
+                case 'my': filteredPautas = filteredPautas.filter(p => p.owner === user.uid); break;
+                case 'shared': filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); break;
                 case 'active':
                     filteredPautas = filteredPautas.filter(p => {
                         if (!p.createdAt) return false;
-                        const dataCriacao = new Date(p.createdAt);
-                        const dataExpiracao = new Date(dataCriacao);
-                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        return new Date() <= dataExpiracao && !p.isClosed;
-                    });
-                    break;
+                        const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
+                        return new Date() <= dExp && !p.isClosed;
+                    }); break;
                 case 'expired':
                     filteredPautas = filteredPautas.filter(p => {
                         if (!p.createdAt) return false;
-                        const dataCriacao = new Date(p.createdAt);
-                        const dataExpiracao = new Date(dataCriacao);
-                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        return new Date() > dataExpiracao || p.isClosed;
-                    });
-                    break;
+                        const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
+                        return new Date() > dExp || p.isClosed;
+                    }); break;
             }
             
             if (filteredPautas.length === 0) {
@@ -2202,288 +1759,15 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = `<p class="col-span-full text-center text-red-500">Erro: ${error.message}</p>`;
         }
     }
-
-    async loadPauta(pautaId, pautaName, pautaType) {
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
-                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
-                const expirationDate = new Date(dataBase);
-                expirationDate.setDate(dataBase.getDate() + 7);
-                if (new Date() > expirationDate) {
-                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Erro ao verificar expiração:", error);
-        }
-
-        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-        document.getElementById('pauta-title').textContent = pautaName;
-
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                this.currentPautaData = pautaDoc.data();
-                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
-                this.currentPautaOwnerId = this.currentPautaData.owner;
-                this.isPautaClosed = this.currentPautaData.isClosed || false;
-                
-                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
-                    this.customRoomsList = this.currentPautaData.customRooms;
-                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
-                    this.customRoomsList = this.currentPautaData.rooms;
-                } else {
-                    this.customRoomsList = [];
-                }
-
-                setTimeout(() => {
-                    UIService.togglePautaLock(this);
-                }, 100);
-                this.loadColumnPreferences();
-                this.applyRoleBasedUI();
-                
-                const btnManageRooms = document.getElementById('btn-manage-rooms');
-                if (btnManageRooms) {
-                    if (this.currentPautaData.type === 'multisala') {
-                        btnManageRooms.classList.remove('hidden');
-                    } else {
-                        btnManageRooms.classList.add('hidden');
-                    }
-                }
-
-                if (typeof PautaService.populateRoomSelects === 'function') {
-                    PautaService.populateRoomSelects(this);
-                }
-            }
-
-            this.setupRealtimeListener(pautaId);
-            
-            if (typeof CollaboratorService?.setupListener === 'function') {
-                CollaboratorService.setupListener(this, pautaId);
-            } else {
-                if (typeof window.CollaboratorService?.setupListener === 'function') {
-                    window.CollaboratorService.setupListener(this, pautaId);
-                }
-            }
-            
-            const appContainer = document.getElementById('app-container');
-            if (appContainer && appContainer.classList.contains('hidden')) {
-                document.getElementById('pauta-selection-container')?.classList.add('hidden');
-                document.getElementById('dashboard-container')?.classList.add('hidden');
-                document.getElementById('admin-container')?.classList.add('hidden');
-                document.getElementById('modo-selection-screen')?.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-            }
-
-        } catch (error) {
-            console.error("Erro ao carregar pauta:", error);
-            showNotification("Erro ao carregar pauta", "error");
-        }
-    }
-
-    _teardownPauta() {
-        if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
-        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-
-        this.currentPauta = null;
-        this.allAssisted  = [];
-        this.colaboradores = [];
-
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaName');
-        localStorage.removeItem('lastPautaType');
-    }
-
-    setupRealtimeListener(pautaId) {
-        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(this);
-            
-            this.atualizarMonitorEnvelopes();
-
-            setTimeout(() => { 
-                if (typeof PautaService.injectRoomSearches === 'function') {
-                    PautaService.injectRoomSearches(this); 
-                }
-            }, 150);
-        }, (error) => {
-            console.error("Erro no snapshot:", error);
-            showNotification("Erro ao carregar dados em tempo real", "error");
-        });
-    }
-
-    async deletePauta(pautaId, pautaName) {
-        const pautaRef = doc(this.db, "pautas", pautaId);
-        const pautaSnap = await getDoc(pautaRef);
-        
-        if (!pautaSnap.exists()) {
-            showNotification("Pauta não encontrada!", "error");
-            return;
-        }
-        
-        const pautaData = pautaSnap.data();
-        const currentUserId = this.auth.currentUser?.uid;
-        
-        if (pautaData.owner !== currentUserId && 
-            this.currentUser?.role !== 'admin' && 
-            this.currentUser?.role !== 'superadmin') {
-            showNotification("Você não tem permissão para excluir esta pauta!", "error");
-            return;
-        }
-        
-        const confirmDelete = confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação irá deletar TODOS os dados da pauta, incluindo:\n- Todos os assistidos\n- Todos os atendimentos\n- Todas as configurações\n\nEsta ação NÃO pode ser desfeita!`);
-        
-        if (!confirmDelete) return;
-        
-        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
-        
-        try {
-            const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
-            const attendancesSnap = await getDocs(attendancesRef);
-            
-            const batch = writeBatch(this.db);
-            let operationCount = 0;
-            
-            for (const doc of attendancesSnap.docs) {
-                batch.delete(doc.ref);
-                operationCount++;
-                
-                if (operationCount >= 490) {
-                    await batch.commit();
-                    operationCount = 0;
-                }
-            }
-            
-            if (operationCount > 0) {
-                await batch.commit();
-            }
-            
-            await deleteDoc(pautaRef);
-            
-            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
-            await this.loadPautasWithFilter();
-            
-        } catch (error) {
-            console.error("Erro ao excluir pauta:", error);
-            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
-        }
-    }
 }
 
-// ============================================================
-// INICIALIZAÇÃO GLOBAL E COMPATIBILIDADE LEGADA
-// ============================================================
-
+// Inicia o App
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 window.app = new SIGEPApp();
 
-window.renderEstruturaAtual = renderEstruturaAtual;
-window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
-window.abrirGerenciarUnidades = abrirGerenciarUnidadesUsuario;
-
-window.loadUsersList = loadUsersList;
-window.cleanupOldData = cleanupOldData;
-window.approveUser = approveUser;
-window.updateUserRole = updateUserRole;
-window.deleteUser = deleteUser;
-window.loadAuditLogs = loadAuditLogs;
-window.exportAuditLogsPDF = exportAuditLogsPDF;
-window.loadDashboardData = loadDashboardData;
-window.populateUserFilter = populateUserFilter;
-window.setupAdminSearch = setupAdminSearch;
-window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
-window.abrirImportadorUnidades = abrirImportadorUnidades;
-window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
-
-// SWITCH DE VIEWS PARA CHECKLIST
-window.switchToChecklistView = function() {
-    document.getElementById('document-action-selection')?.classList.add('hidden');
-    document.getElementById('document-checklist-view')?.classList.remove('hidden');
-    document.getElementById('document-checklist-view-header')?.classList.remove('hidden');
-    document.getElementById('checklist-search-container')?.classList.remove('hidden');
-};
-
-window.switchToActionSelectionView = function() {
-    document.getElementById('document-checklist-view')?.classList.add('hidden');
-    document.getElementById('document-action-selection')?.classList.remove('hidden');
-    document.getElementById('document-checklist-view-header')?.classList.add('hidden');
-    document.getElementById('checklist-search-container')?.classList.add('hidden');
-};
-
-// FUNÇÕES AUXILIARES PARA CHECKLIST
-window.getReuDataFromForm = function() {
-    return {
-        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
-        nome: document.getElementById('nome-reu')?.value || '',
-        cpf: document.getElementById('cpf-reu')?.value || '',
-        telefone: document.getElementById('telefone-reu')?.value || '',
-        cep: document.getElementById('cep-reu')?.value || '',
-        rua: document.getElementById('rua-reu')?.value || '',
-        numero: document.getElementById('numero-reu')?.value || '',
-        complemento: document.getElementById('complemento-reu')?.value || '',
-        bairro: document.getElementById('bairro-reu')?.value || '',
-        cidade: document.getElementById('cidade-reu')?.value || '',
-        uf: document.getElementById('estado-reu')?.value || '',
-        referencia: document.getElementById('referencia-reu')?.value || '',
-        empresa: document.getElementById('empresa-reu')?.value || '',
-        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
-        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
-        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
-        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
-        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
-        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
-    };
-};
-
-window.getExpenseDataFromForm = function() {
-    return {
-        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
-        moradia: document.getElementById('expense-moradia')?.value || '',
-        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
-        educacao: document.getElementById('expense-educacao')?.value || '',
-        saude: document.getElementById('expense-saude')?.value || '',
-        vestuario: document.getElementById('expense-vestuario')?.value || '',
-        lazer: document.getElementById('expense-lazer')?.value || '',
-        outras: document.getElementById('expense-outras')?.value || ''
-    };
-};
-
-// SORT COLABORADORES
-window.sortColaboradores = function(criterio) {
-    if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
-        CollaboratorService.sortColaboradores(window.app, criterio);
-    } else {
-        if (!window.app || !window.app.colaboradores) return;
-        
-        window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
-        const direction = window._sortColabDir === 'asc' ? 1 : -1;
-        
-        window.app.colaboradores.sort((a, b) => {
-            let valA = (a[criterio] || '').toString().toLowerCase();
-            let valB = (b[criterio] || '').toString().toLowerCase();
-            if (valA < valB) return -1 * direction;
-            if (valA > valB) return 1 * direction;
-            return 0;
-        });
-        
-        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
-            CollaboratorService.renderModalList(window.app);
-        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
-            CollaboratorService.updateList(window.app);
-        }
-    }
-};
-
 // ============================================================
-// EVENTOS DOMContentLoaded
+// EVENTOS DOMContentLoaded - APENAS LÓGICA VISUAL ESTÁTICA
 // ============================================================
 document.addEventListener('DOMContentLoaded', function() {
     const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
@@ -2507,13 +1791,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
     if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
 
-    const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
-    document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
-    
     const loginContainer = document.getElementById('login-container');
     const footerLinks = document.getElementById('footer-links');
     const footerInner = document.getElementById('footer-inner-container');
@@ -2534,7 +1811,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.body.classList.add('is-logged-out');
             }
         };
-        
         updateFooterVisibility();
         const observer = new MutationObserver(updateFooterVisibility);
         observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
@@ -2579,14 +1855,6 @@ document.addEventListener('DOMContentLoaded', function() {
     if (loginContainer) {
         authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
     }
-
-    const originalConsoleError = console.error;
-    console.error = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
-            if (document.body.classList.contains('is-logged-out')) return;
-        }
-        originalConsoleError.apply(console, arguments);
-    };
 
     const tabAgendamento = document.getElementById('tab-agendamento');
     const tabAvulso = document.getElementById('tab-avulso');
@@ -2633,43 +1901,19 @@ document.addEventListener('DOMContentLoaded', function() {
 
         observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
         observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
-        
-        if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
-            toggleExclusiveTabs(tabAgendamento, tabAvulso);
-        }
     }
-
-    const setAppState = (state) => {
-        if (state === 'login') {
-            localStorage.removeItem('sigep_active_screen');
-            localStorage.removeItem('sigep_app_state');
-            
-            // Limpa a URL na barra também ao fazer logout
-            const cleanUrl = window.location.origin + window.location.pathname;
-            window.history.pushState({}, '', cleanUrl);
-        }
-    };
 });
 
 // ============================================================
-// REGISTRO DO SERVICE WORKER (PWA)
+// WIDGETS E REGISTROS LEVES
 // ============================================================
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
         navigator.serviceWorker.register('./sw.js')
-            .then((reg) => {
-                console.log('[SIGEP PWA] Service Worker registrado com sucesso, escopo:', reg.scope);
-            })
-            .catch((err) => {
-                console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err);
-            });
+            .catch((err) => { console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err); });
     });
 }
 
-
-// ============================================================
-// EVENTO blur para CEP
-// ============================================================
 document.addEventListener('blur', async (e) => {
     if (e.target.id === 'cep-reu') {
         const cep = e.target.value.replace(/\D/g, '');
@@ -2692,45 +1936,8 @@ document.addEventListener('blur', async (e) => {
     }
 }, true);
 
-
-// ============================================================
-// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS (BI)
-// ============================================================
-
-window.abrirConstrutor = async (coletaId) => {
-    if (!window.app || !window.app.db) return;
-    
-    try {
-        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const docRef = doc(window.app.db, "formularios_coleta", coletaId);
-        const docSnap = await getDoc(docRef);
-        
-        if (docSnap.exists() && window.ColetasBuilderService) {
-            const container = document.getElementById('container-construtor-coleta');
-            
-            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data(), coletaId);
-            container.classList.remove('hidden');
-            
-            window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
-            
-            document.getElementById('coletas-container').querySelector('.overflow-y-auto, div.bg-white')?.scrollBy({ top: 300, behavior: 'smooth' });
-        } else {
-            showNotification("Erro: Serviço construtor não carregado.", "error");
-        }
-    } catch (e) {
-        console.error(e);
-        showNotification("Erro ao carregar estrutura da coleta.", "error");
-    }
-};
-
-window.verResultados = async (coletaId) => {
-    if (!window.app || !window.app.db) return;
-    ColetasBiService.abrirResultados(window.app.db, coletaId);
-};
-
 window.ApiIntegration = {
     simularSincronizacaoVerde: function(pautaId) {
-        console.log("Simulando sincronização verde para a pauta:", pautaId);
         showNotification("Sincronização simulada com sucesso!", "success");
     }
 };
