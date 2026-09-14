@@ -1346,9 +1346,7 @@ export const UIService = {
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        <div class="${atenderButton ? '' : 'col-span-2'} w-full flex">
-                            ${priorityButtonHtml}
-                        </div>
+                        ${atenderButton ? priorityButtonHtml : `<div class="col-span-2 w-full">${priorityButtonHtml}</div>`}
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
