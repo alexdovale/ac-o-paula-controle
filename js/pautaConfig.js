@@ -624,8 +624,53 @@ export const PautaConfigService = {
                 updates.rooms = [];
             }
 
-            // 1. Atualiza no banco de dados (Firebase)
+            // 1. Atualiza as configurações da pauta no banco de dados
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), updates);
+
+            // 🚀 INÍCIO DA NOVA LÓGICA: MOVER ASSISTIDOS SE DESATIVAR COLUNAS
+            const batch = writeBatch(app.db);
+            let hasBatchUpdates = false;
+
+            if (app.allAssisted && app.allAssisted.length > 0) {
+                const now = new Date().toISOString();
+
+                app.allAssisted.forEach(assistido => {
+                    let needsUpdate = false;
+                    const status = assistido.status;
+
+                    // Se DESATIVOU a Distribuição e o assistido estava lá
+                    if (!newDist && (status === 'aguardandoDistribuicao' || status === 'aguardandoCorrecao' || status === 'aguardandoNumero')) {
+                        needsUpdate = true;
+                    }
+                    
+                    // Se DESATIVOU a Delegação (Em Atendimento) e o assistido estava lá
+                    if (!newDelegation && status === 'emAtendimento') {
+                        needsUpdate = true;
+                    }
+
+                    // Se o assistido precisa ser movido
+                    if (needsUpdate) {
+                        const assistidoRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", assistido.id);
+                        batch.update(assistidoRef, {
+                            status: 'atendido',
+                            attendedAt: now, // Marca a hora que foi finalizado
+                            lastActionTimestamp: now,
+                            lastActionBy: app.currentUserName || 'Sistema (Mudança de Config)'
+                        });
+                        hasBatchUpdates = true;
+                        
+                        // Atualiza a memória local para a tela piscar instantaneamente
+                        assistido.status = 'atendido';
+                        assistido.attendedAt = now;
+                    }
+                });
+
+                // Se encontrou alguém para atualizar, dispara o lote (batch) de uma vez só
+                if (hasBatchUpdates) {
+                    await batch.commit();
+                }
+            }
+            // 🛑 FIM DA NOVA LÓGICA
 
             // 2. Atualiza a memória local da aplicação instantaneamente
             Object.assign(app.currentPautaData, updates);
