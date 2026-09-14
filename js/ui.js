@@ -266,6 +266,7 @@ export const UIService = {
                 <div class="flex-1 min-w-[250px]">
                     <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Origem / Unidade</label>
                     <select id="filter-unidade-select" class="w-full p-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="todas">Todas as Unidades</option>
                         ${unidadesOptions}
                     </select>
                 </div>
@@ -638,7 +639,7 @@ export const UIService = {
         // 🔥 CORREÇÃO: Pula o número caso o usuário esteja pausado (RETORNO_RAPIDO)
         let globalCounter = 1;
         rawAguardando.forEach((a) => {
-            if (a.priority === 'RETORNO_RAPIDO') a.absoluteOrder = '⏸️';
+            if (a.priority === 'RETORNO_RAPIDO') a.absoluteOrder = 'pause';
             else a.absoluteOrder = globalCounter++;
         });
         
@@ -881,7 +882,7 @@ export const UIService = {
             priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
         }
 
-        return `<button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm mt-2 w-full" ${canEditPriority ? '' : 'disabled'}>
+        return `<button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm w-full h-full flex items-center justify-center" ${canEditPriority ? '' : 'disabled'}>
             ${priorityBtnLabel}
         </button>`;
     },
@@ -1049,10 +1050,9 @@ export const UIService = {
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
                 const cardsFrag = document.createDocumentFragment();
 
-                // 🔥 CORREÇÃO: Respeita o pulo do pausado dentro da sala
                 let roomCounter = 1;
                 peopleInRoom.forEach((item) => {
-                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = '⏸️';
+                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = 'pause';
                     else item.roomOrder = roomCounter++;
                     
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores);
@@ -1121,7 +1121,7 @@ export const UIService = {
                 
                 let noRoomCounter = 1;
                 peopleNoRoom.forEach((item) => {
-                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = '⏸️';
+                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = 'pause';
                     else item.roomOrder = noRoomCounter++;
                     
                     const card = this.createAguardandoCard(item, currentPautaData, colaboradores);
@@ -1279,12 +1279,16 @@ export const UIService = {
                 }
             }
 
-            const numeroOrdem = item.roomOrder || item.absoluteOrder || '⏸️';
-            const corBadge = (numeroOrdem === '⏸️') ? 'bg-purple-600' : 'bg-green-600';
+            const numeroOrdem = item.roomOrder || item.absoluteOrder || 'pause';
+            const corBadge = (numeroOrdem === 'pause') ? 'bg-purple-600' : 'bg-green-600';
             
+            const displayBadge = numeroOrdem === 'pause' 
+                ? `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16"><path d="M5.5 3.5A1.5 1.5 0 0 1 7 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5zm5 0A1.5 1.5 0 0 1 12 5v6a1.5 1.5 0 0 1-3 0V5a1.5 1.5 0 0 1 1.5-1.5z"/></svg>`
+                : numeroOrdem;
+
             const numeroBadge = `
                 <div class="absolute -left-2 -top-2 w-8 h-8 ${corBadge} text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
-                    ${numeroOrdem}
+                    ${displayBadge}
                 </div>
             `;
 
@@ -1297,7 +1301,7 @@ export const UIService = {
             ` : '';
 
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full h-full border border-blue-700 transition-all active:scale-95 tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
                     </svg>
@@ -1343,7 +1347,7 @@ export const UIService = {
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        <div class="${atenderButton ? '' : 'col-span-2 w-full'}">${priorityButtonHtml}</div>
+                        ${atenderButton ? `<div>${priorityButtonHtml}</div>` : `<div class="col-span-2 w-full">${priorityButtonHtml}</div>`}
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
@@ -1460,7 +1464,6 @@ export const UIService = {
             ` : '';
             
             const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
-            const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
 
             const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
@@ -1472,7 +1475,6 @@ export const UIService = {
                                 Finalizar / Avançar
                             </button>
                         </div>
-                        ${priorityButtonHtml}
                         <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide mt-1">
                             Mover para Fila
                         </button>
@@ -1481,7 +1483,6 @@ export const UIService = {
                         </button>
                    </div>`
                 : `<div class="mt-4 flex flex-col gap-2">
-                        ${priorityButtonHtml}
                         <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                             👁️ Ver Detalhes / Checklist
                         </button>
@@ -1614,7 +1615,6 @@ export const UIService = {
             ` : '';
             
             const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
-            const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
 
             card.innerHTML = `
                 <div class="absolute top-3 right-3 z-10">
@@ -1660,7 +1660,6 @@ export const UIService = {
                         <button data-id="${item.id}" class="edit-attendant-btn flex-1 min-w-[70px] bg-slate-100 text-emerald-600 font-bold py-2 rounded-lg hover:bg-emerald-50 transition border border-slate-200 shadow-sm" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
                         ${canDelete ? `<button data-id="${item.id}" class="delete-btn flex-1 min-w-[70px] bg-red-50 text-red-600 font-bold py-2 rounded-lg hover:bg-red-100 transition border border-red-100 shadow-sm">Deletar</button>` : ''}
                     </div>
-                    <div class="w-full mt-2 px-2">${priorityButtonHtml}</div>
                 </div>
 
                 ${item.arquivoPdfConteudo ? `
