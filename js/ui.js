@@ -5,7 +5,7 @@ import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// INJEÇÃO DE CORREÇÕES GLOBAIS PARA MOBILE (Agilidade de Toque e Modais)
+// INJEÇÃO DE CORREÇÕES GLOBAIS PARA MOBILE, ESTILOS E COMPORTAMENTOS DOS CAMPOS
 if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes')) {
     const style = document.createElement('style');
     style.id = 'sigep-ui-fixes';
@@ -17,8 +17,58 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         /* Corrige o vazamento do modal de confirmar chegada no celular */
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
+
+        /* ESTILOS PARA O BOTÃO MAXIMIZAR (Garante tela cheia perfeita) */
+        .column-maximized {
+            position: fixed !important;
+            top: 0 !important;
+            left: 0 !important;
+            width: 100vw !important;
+            height: 100vh !important;
+            z-index: 99999 !important;
+            background-color: #f8fafc !important; /* Tailwind slate-50 */
+            padding: 1.5rem !important;
+            overflow-y: auto !important;
+            margin: 0 !important;
+            border-radius: 0 !important;
+            box-shadow: none !important;
+        }
+        .column-maximized > * {
+            max-width: 1000px !important;
+            margin-left: auto !important;
+            margin-right: auto !important;
+        }
+        .column-wrapper-base {
+            transition: all 0.3s ease-in-out;
+        }
     `;
     document.head.appendChild(style);
+
+    // CORREÇÃO: Lógica para abrir/fechar os campos de "Horário Agendado" e "Chegada"
+    document.addEventListener('change', (e) => {
+        if (e.target.name === 'is-scheduled') {
+            const wrapper = document.getElementById('scheduled-time-wrapper');
+            if (wrapper) {
+                if (e.target.value === 'yes') wrapper.classList.remove('hidden');
+                else wrapper.classList.add('hidden');
+            }
+        }
+        if (e.target.name === 'has-arrived') {
+            const wrapper = document.getElementById('arrival-time-wrapper');
+            if (wrapper) {
+                if (e.target.value === 'yes') {
+                    wrapper.classList.remove('hidden');
+                    const timeInput = document.getElementById('arrival-time');
+                    // Preenche automaticamente a hora atual se estiver vazio
+                    if (timeInput && !timeInput.value) {
+                        timeInput.value = new Date().toTimeString().slice(0, 5);
+                    }
+                } else {
+                    wrapper.classList.add('hidden');
+                }
+            }
+        }
+    });
 }
 
 export const UIService = {
