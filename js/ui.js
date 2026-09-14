@@ -22,8 +22,8 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
 }
 
 export const UIService = {
-    _collapsedRooms: new Set(), // Armazena a memória de quais salas estão minimizadas (fechadas)
-    _clocksInterval: null, // Armazena a referência do relógio em tempo real
+    _collapsedRooms: new Set(), 
+    _clocksInterval: null, 
 
     showScreen(screenName) {
         document.getElementById('loading-container')?.classList.toggle('hidden', screenName !== 'loading');
@@ -69,21 +69,20 @@ export const UIService = {
 
     getAttendantName(item) {
         if (!item) return 'Não informado';
-
         if (item.attendedBy) {
             const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
             if (name) return String(name).trim();
         }
-
         if (item.assignedCollaborator && item.assignedCollaborator.name) {
             return String(item.assignedCollaborator.name).trim();
         }
-
         if (item.attendant) {
             const name = typeof item.attendant === 'object' ? (item.attendant.nome || item.attendant.name) : item.attendant;
             if (name) return String(name).trim();
         }
-
+        if (item.defensorResponsavel) {
+            return String(item.defensorResponsavel).trim();
+        }
         return 'Não informado';
     },
 
@@ -109,7 +108,6 @@ export const UIService = {
     preencherListaColaboradoresModal(app) {
         const container = document.getElementById('collaborator-selection-list') || document.getElementById('collaborators-list-container');
         const searchInput = document.getElementById('collaborator-search-input');
-        
         if (!container) return;
         
         container.innerHTML = '';
@@ -637,7 +635,13 @@ export const UIService = {
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-        rawAguardando.forEach((a, i) => a.absoluteOrder = i + 1);
+        // 🔥 CORREÇÃO: Pula o número caso o usuário esteja pausado (RETORNO_RAPIDO)
+        let globalCounter = 1;
+        rawAguardando.forEach((a) => {
+            if (a.priority === 'RETORNO_RAPIDO') a.absoluteOrder = '⏸️';
+            else a.absoluteOrder = globalCounter++;
+        });
+        
         rawEmAtendimento.forEach((a, i) => a.absoluteOrder = i + 1);
 
         const lists = {
@@ -655,9 +659,9 @@ export const UIService = {
         this.renderPautaColumn(lists.pauta);
         this.renderAguardandoColumn(lists.aguardando, currentPautaData, colaboradores);
         this.renderEmAtendimentoColumn(lists.emAtendimento, currentPautaData, app.currentPauta?.id, app.currentUserName);
-        this.renderAtendidosColumn(lists.atendidos);
+        this.renderAtendidosColumn(lists.atendidos, currentPautaData);
         this.renderFaltososColumn(lists.faltosos);
-        this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName);
+        this.renderDistribuicaoColumn(lists.distribuicao, app.currentPauta?.id, app.currentUserName, currentPautaData);
 
         this.togglePautaLock(app);
 
@@ -820,18 +824,16 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Consulta
                         </button>
                         <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                        <!-- Classe quick-action-item REMOVIDA AQUI -->
                         <button data-id="${item.id}" class="update-doc-status-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
                             Status da Triagem
                         </button>
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
-                        <!-- Classe quick-action-item REMOVIDA AQUI também -->
                         <button data-id="${item.id}" class="edit-assisted-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Dados
                         </button>
@@ -839,6 +841,67 @@ export const UIService = {
                 </div>
             </div>
         `;
+    },
+
+    _getRoomDropdownHtml(item, currentPautaData, canEditPriority) {
+        if (currentPautaData?.type === 'multisala') {
+            const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
+            if (availableRooms.length > 0 && canEditPriority) {
+                const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
+                return `
+                    <div class="flex flex-col items-center justify-center w-full mt-2">
+                        <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
+                        <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-500 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
+                            <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
+                            ${options}
+                        </select>
+                    </div>
+                `;
+            } else if (item.room) {
+                return `
+                    <div class="flex flex-col items-center justify-center w-full mt-2">
+                        <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Sala Atual</label>
+                        <span class="bg-purple-50 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 shadow-sm">${escapeHTML(item.room)}</span>
+                    </div>
+                `;
+            }
+        }
+        return '';
+    },
+
+    _getPriorityButtonHtml(item, canEditPriority) {
+        let priorityBtnLabel = 'Prioridade';
+        let priorityBtnClass = 'bg-red-500 hover:bg-red-600';
+        
+        if (item.priority === 'URGENTE') {
+            priorityBtnLabel = 'Urgência';
+            priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
+        } else if (item.priority === 'RETORNO_RAPIDO') {
+            priorityBtnLabel = 'Retorno';
+            priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
+        }
+
+        return `<button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm mt-2 w-full" ${canEditPriority ? '' : 'disabled'}>
+            ${priorityBtnLabel}
+        </button>`;
+    },
+
+    _setupRoomSelectListener(card, item) {
+        const roomSelect = card.querySelector('.change-room-select');
+        if (roomSelect) {
+            roomSelect.addEventListener('change', (e) => {
+                const newRoom = e.target.value || null;
+                if (window.app && window.app.db && window.app.currentPauta) {
+                    PautaService.updateStatus(
+                        window.app.db,
+                        window.app.currentPauta.id,
+                        item.id,
+                        { room: newRoom },
+                        window.app.currentUserName || 'Sistema'
+                    );
+                }
+            });
+        }
     },
 
     renderPautaColumn(items) {
@@ -986,9 +1049,13 @@ export const UIService = {
                 const cardsWrapper = roomGroup.querySelector('.room-cards-wrapper');
                 const cardsFrag = document.createDocumentFragment();
 
-                peopleInRoom.forEach((item, index) => {
-                    item.roomOrder = index + 1;
-                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+                // 🔥 CORREÇÃO: Respeita o pulo do pausado dentro da sala
+                let roomCounter = 1;
+                peopleInRoom.forEach((item) => {
+                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = '⏸️';
+                    else item.roomOrder = roomCounter++;
+                    
+                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores);
                     if (card) cardsFrag.appendChild(card);
                 });
                 cardsWrapper.appendChild(cardsFrag);
@@ -1051,9 +1118,13 @@ export const UIService = {
 
                 const cardsWrapperNoRoom = roomGroupNoRoom.querySelector('.room-cards-wrapper');
                 const noRoomFrag = document.createDocumentFragment();
-                peopleNoRoom.forEach((item, index) => {
-                    item.roomOrder = index + 1;
-                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+                
+                let noRoomCounter = 1;
+                peopleNoRoom.forEach((item) => {
+                    if (item.priority === 'RETORNO_RAPIDO') item.roomOrder = '⏸️';
+                    else item.roomOrder = noRoomCounter++;
+                    
+                    const card = this.createAguardandoCard(item, currentPautaData, colaboradores);
                     if (card) noRoomFrag.appendChild(card);
                 });
                 cardsWrapperNoRoom.appendChild(noRoomFrag);
@@ -1076,8 +1147,8 @@ export const UIService = {
             }
 
         } else {
-            items.forEach((item, index) => {
-                const card = this.createAguardandoCard(item, currentPautaData, colaboradores, index);
+            items.forEach((item) => {
+                const card = this.createAguardandoCard(item, currentPautaData, colaboradores);
                 if (card) fragment.appendChild(card);
             });
         }
@@ -1085,7 +1156,7 @@ export const UIService = {
         container.appendChild(fragment);
     },
 
-    createAguardandoCard(item, currentPautaData, colaboradores, index) {
+    createAguardandoCard(item, currentPautaData, colaboradores) {
         try {
             if (!item || !item.id) return null;
 
@@ -1141,30 +1212,7 @@ export const UIService = {
             const scheduledTimeSeguro = item.scheduledTime || '--:--';
             const priorityReasonSeguro = item.priorityReason || '';
 
-            let roomDropdownHtml = '';
-            if (currentPautaData?.type === 'multisala') {
-                const availableRooms = currentPautaData.rooms || currentPautaData.customRooms || [];
-
-                if (availableRooms.length > 0 && canEditPriority) {
-                    const options = availableRooms.map(r => `<option value="${escapeHTML(r)}" ${item.room === r ? 'selected' : ''}>${escapeHTML(r)}</option>`).join('');
-                    roomDropdownHtml = `
-                        <div class="flex flex-col items-center justify-center w-full mt-2">
-                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Mudar Sala</label>
-                            <select class="change-room-select bg-purple-50 hover:bg-purple-100 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 outline-none cursor-pointer focus:ring-1 focus:ring-purple-50 max-w-[130px] truncate transition-colors shadow-sm" title="Mudar Sala do Assistido">
-                                <option value="" ${!item.room ? 'selected' : ''}>Sem Sala</option>
-                                ${options}
-                            </select>
-                        </div>
-                    `;
-                } else if (item.room) {
-                    roomDropdownHtml = `
-                        <div class="flex flex-col items-center justify-center w-full mt-2">
-                            <label class="text-[8px] font-bold text-gray-400 uppercase tracking-wider mb-0.5">Sala Atual</label>
-                            <span class="bg-purple-50 text-purple-700 text-[10px] px-2 py-1 rounded-md font-bold border border-purple-200 shadow-sm">${escapeHTML(item.room)}</span>
-                        </div>
-                    `;
-                }
-            }
+            const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
 
             let timeInfoHtml = `
                 <div class="inline-flex items-center justify-center gap-1.5 bg-blue-50/80 border border-blue-100 text-blue-800 px-3 py-1.5 rounded-lg text-xs shadow-sm">
@@ -1231,10 +1279,11 @@ export const UIService = {
                 }
             }
 
-            const numeroOrdem = item.roomOrder || item.absoluteOrder || (index + 1);
+            const numeroOrdem = item.roomOrder || item.absoluteOrder || '⏸️';
+            const corBadge = (numeroOrdem === '⏸️') ? 'bg-purple-600' : 'bg-green-600';
             
             const numeroBadge = `
-                <div class="absolute -left-2 -top-2 w-8 h-8 bg-green-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
+                <div class="absolute -left-2 -top-2 w-8 h-8 ${corBadge} text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
                     ${numeroOrdem}
                 </div>
             `;
@@ -1257,18 +1306,13 @@ export const UIService = {
                 : '';
 
             let priorityTagHtml = '';
-            let priorityBtnLabel = 'Prioridade';
-            let priorityBtnClass = 'bg-red-500 hover:bg-red-600';
-            
             if (item.priority === 'URGENTE') {
                 priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro || 'URGÊNCIA')}</div>`;
-                priorityBtnLabel = 'Urgência';
-                priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
             } else if (item.priority === 'RETORNO_RAPIDO') {
                 priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(priorityReasonSeguro || 'Aguardando')}</div>`;
-                priorityBtnLabel = 'Retorno';
-                priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
             }
+            
+            const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
 
             card.innerHTML = `
                 ${numeroBadge}
@@ -1299,9 +1343,7 @@ export const UIService = {
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        <button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm ${atenderButton ? '' : 'col-span-2'}" ${canEditPriority ? '' : 'disabled'}>
-                            ${priorityBtnLabel}
-                        </button>
+                        <div class="${atenderButton ? '' : 'col-span-2 w-full'}">${priorityButtonHtml}</div>
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
@@ -1309,21 +1351,7 @@ export const UIService = {
                 ${this._getStandardizedFooterHtml(item)}
             `;
 
-            const roomSelect = card.querySelector('.change-room-select');
-            if (roomSelect) {
-                roomSelect.addEventListener('change', (e) => {
-                    const newRoom = e.target.value || null;
-                    if (window.app && window.app.db && window.app.currentPauta) {
-                        PautaService.updateStatus(
-                            window.app.db,
-                            window.app.currentPauta.id,
-                            item.id,
-                            { room: newRoom },
-                            window.app.currentUserName || 'Sistema'
-                        );
-                    }
-                });
-            }
+            this._setupRoomSelectListener(card, item);
 
             return card;
         } catch (error) {
@@ -1357,6 +1385,7 @@ export const UIService = {
             const currentUserRole = window.app?.currentUser?.role;
             const canDelegateOrFinalize = currentUserRole !== 'apoio';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
 
             const isDelegated = !!(item.assignedCollaborator && item.assignedCollaborator.name);
             const canDelegate = canDelegateOrFinalize && !isDelegated;
@@ -1429,6 +1458,9 @@ export const UIService = {
                     </span>
                 </div>
             ` : '';
+            
+            const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
+            const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
 
             const buttonsContainerHtml = canDelegateOrFinalize
                 ? `<div class="mt-4 flex flex-col gap-2">
@@ -1440,7 +1472,8 @@ export const UIService = {
                                 Finalizar / Avançar
                             </button>
                         </div>
-                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide">
+                        ${priorityButtonHtml}
+                        <button data-id="${item.id}" class="return-to-aguardando-from-emAtendimento-btn bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition active:scale-95 uppercase tracking-wide mt-1">
                             Mover para Fila
                         </button>
                         <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-1 text-center underline w-full">
@@ -1448,6 +1481,7 @@ export const UIService = {
                         </button>
                    </div>`
                 : `<div class="mt-4 flex flex-col gap-2">
+                        ${priorityButtonHtml}
                         <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
                             👁️ Ver Detalhes / Checklist
                         </button>
@@ -1485,6 +1519,7 @@ export const UIService = {
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
+                        ${roomDropdownHtml}
                         ${docWorkflowBadge}
                     </div>
 
@@ -1496,6 +1531,8 @@ export const UIService = {
 
                 ${this._getStandardizedFooterHtml(item)}
             `;
+            
+            this._setupRoomSelectListener(card, item);
             return card;
         } catch (error) {
             console.error("Erro ao criar card de em atendimento:", error, item);
@@ -1503,7 +1540,7 @@ export const UIService = {
         }
     },
 
-    renderAtendidosColumn(items) {
+    renderAtendidosColumn(items, currentPautaData) {
         const container = document.getElementById('atendidos-list');
         if (!container) return;
 
@@ -1517,20 +1554,21 @@ export const UIService = {
         
         items.forEach(item => {
             if (!item) return;
-            const card = this.createAtendidoCard(item);
+            const card = this.createAtendidoCard(item, currentPautaData);
             if (card) fragment.appendChild(card);
         });
         
         container.appendChild(fragment);
     },
 
-    createAtendidoCard(item) {
+    createAtendidoCard(item, currentPautaData) {
         try {
             const currentUserRole = window.app?.currentUser?.role;
             const canManageDemandsOrEditAttendant = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
             const card = document.createElement('div');
@@ -1574,6 +1612,9 @@ export const UIService = {
                     </span>
                 </div>
             ` : '';
+            
+            const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
+            const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
 
             card.innerHTML = `
                 <div class="absolute top-3 right-3 z-10">
@@ -1605,6 +1646,7 @@ export const UIService = {
                     <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
+                        ${roomDropdownHtml}
                         ${docWorkflowBadge}
                     </div>
                 </div>
@@ -1618,6 +1660,7 @@ export const UIService = {
                         <button data-id="${item.id}" class="edit-attendant-btn flex-1 min-w-[70px] bg-slate-100 text-emerald-600 font-bold py-2 rounded-lg hover:bg-emerald-50 transition border border-slate-200 shadow-sm" ${canManageDemandsOrEditAttendant ? '' : 'disabled'}>Atendente</button>
                         ${canDelete ? `<button data-id="${item.id}" class="delete-btn flex-1 min-w-[70px] bg-red-50 text-red-600 font-bold py-2 rounded-lg hover:bg-red-100 transition border border-red-100 shadow-sm">Deletar</button>` : ''}
                     </div>
+                    <div class="w-full mt-2 px-2">${priorityButtonHtml}</div>
                 </div>
 
                 ${item.arquivoPdfConteudo ? `
@@ -1633,6 +1676,8 @@ export const UIService = {
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
+            
+            this._setupRoomSelectListener(card, item);
             return card;
         } catch (error) {
             console.error("Erro ao criar card de atendido:", error, item);
@@ -1735,7 +1780,7 @@ export const UIService = {
         container.appendChild(fragment);
     },
 
-    renderDistribuicaoColumn(items, pautaId, userName) {
+    renderDistribuicaoColumn(items, pautaId, userName, currentPautaData) {
         const container = document.getElementById('distribuicao-list');
         if (!container) return;
 
@@ -1789,6 +1834,7 @@ export const UIService = {
                 const currentUserRole = window.app?.currentUser?.role;
                 const canManageDistribution = currentUserRole !== 'apoio';
                 const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
+                const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
                 const numAgendamento = item.numAgendamento || item.numeroAgendamento || item.assistedManualNumAgendamento || '';
                 const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
 
@@ -1873,6 +1919,9 @@ export const UIService = {
                         </svg>
                     </button>` : '';
 
+                const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
+                const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
+
                 const actionControlsHtml = canManageDistribution
                     ? `<div class="mt-4 flex flex-col gap-2">
                             <div class="grid grid-cols-2 gap-2">
@@ -1883,12 +1932,14 @@ export const UIService = {
                                     Concluir
                                 </button>
                             </div>
-                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide border border-slate-200">
+                            ${priorityButtonHtml}
+                            <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide border border-slate-200 mt-1">
                                 Reverter para Fila
                             </button>
                        </div>`
                     : `<div class="mt-4">
-                            <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors uppercase tracking-wide">
+                            ${priorityButtonHtml}
+                            <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors uppercase tracking-wide mt-2">
                                 👁️ Ver Detalhes / Checklist
                             </button>
                        </div>`;
@@ -1909,6 +1960,7 @@ export const UIService = {
                         <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                             ${timeInfoHtml}
                             ${badgeAgendamentoHtml}
+                            ${roomDropdownHtml}
                             ${docWorkflowBadge}
                         </div>
                     </div>
@@ -1927,6 +1979,8 @@ export const UIService = {
 
                     ${this._getStandardizedFooterHtml(item)}
                 `;
+                
+                this._setupRoomSelectListener(card, item);
                 cardsFrag.appendChild(card);
             });
 
@@ -2329,7 +2383,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     },
 
     startRealtimeClocks() {
-        this.stopRealtimeClocks(); // Garante que nunca haverá mais de um relógio rodando (evita vazamento de memória)
+        this.stopRealtimeClocks(); 
         
         this._clocksInterval = setInterval(() => {
             const clocks = document.querySelectorAll('.realtime-clock');
