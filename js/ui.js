@@ -746,6 +746,7 @@ export const UIService = {
 
         const termLower = normalizeText(term);
 
+        // Formata os horários para o padrão HH:MM que aparece na tela
         const arrivalTimeFormatted = assisted.arrivalTime ?
             new Date(assisted.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '';
 
@@ -758,8 +759,9 @@ export const UIService = {
         const attendantName = this.getAttendantName(assisted);
         const demandsText = assisted.demandas?.descricoes ? assisted.demandas.descricoes.join(' ') : '';
 
+        // 🚀 A MÁGICA ACONTECE AQUI: Adicionamos absolutamente TUDO que compõe o card
         const searchableString = normalizeText(`
-            ${assisted.numeroAgendamento || assisted.assistedManualNumAgendamento || ''}
+            ${assisted.numeroAgendamento || assisted.assistedManualNumAgendamento || assisted.numAgendamento || ''}
             ${assisted.name || ''}
             ${assisted.cpf || ''}
             ${assisted.subject || ''}
@@ -771,6 +773,14 @@ export const UIService = {
             ${demandsText}
             ${assisted.room || ''}
             ${assisted.status || ''}
+            ${assisted.priority || ''}
+            ${assisted.priorityReason || ''}
+            ${assisted.numeroProcesso || ''}
+            ${assisted.selectedAction || ''}
+            ${assisted.notasRevisao || ''}
+            ${assisted.historicoTransferencia || ''}
+            ${assisted.tipoAcaoRapida || ''}
+            ${assisted.docWorkflowStatus || ''}
         `);
 
         return searchableString.includes(termLower);
