@@ -1,10 +1,4 @@
-Entendido! Para resolver isso, reformulei a lógica de maximização.
-Agora, em vez de apenas travar a tela em um formato rígido, o botão Maximizar vai transformar a coluna em uma janela flutuante no estilo "modal arrastável" (draggable):
- * Ela vai abrir ocupando a maior parte da tela (aproveitando toda a largura sem aquele limite de 1000px).
- * O cabeçalho da coluna funcionará como uma barra de arrastar (quando você passar o mouse no título da coluna maximizada, verá o cursor de "mover").
- * Você poderá clicar no cabeçalho e arrastar a janela para qualquer lugar da tela.
- * Adicionei também suporte para redimensionamento manual (você pode puxar o canto inferior direito para ajustar o tamanho como quiser).
-Abaixo está o seu arquivo ui.js completo com essa nova implementação nativa. Copie e substitua:
+
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
