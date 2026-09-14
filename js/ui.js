@@ -636,7 +636,6 @@ export const UIService = {
         rawAtendidos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
         rawFaltosos.sort((a, b) => (a.scheduledTime || '23:59').localeCompare(b.scheduledTime || '23:59'));
 
-        // 🔥 CORREÇÃO: Pula o número caso o usuário esteja pausado (RETORNO_RAPIDO)
         let globalCounter = 1;
         rawAguardando.forEach((a) => {
             if (a.priority === 'RETORNO_RAPIDO') a.absoluteOrder = 'pause';
@@ -872,17 +871,17 @@ export const UIService = {
 
     _getPriorityButtonHtml(item, canEditPriority) {
         let priorityBtnLabel = 'Prioridade';
-        let priorityBtnClass = 'bg-red-500 hover:bg-red-600';
+        let priorityBtnClass = 'bg-red-500 hover:bg-red-600 border border-transparent';
         
         if (item.priority === 'URGENTE') {
             priorityBtnLabel = 'Urgência';
-            priorityBtnClass = 'bg-orange-600 hover:bg-orange-700';
+            priorityBtnClass = 'bg-orange-600 hover:bg-orange-700 border border-transparent';
         } else if (item.priority === 'RETORNO_RAPIDO') {
             priorityBtnLabel = 'Retorno';
-            priorityBtnClass = 'bg-purple-600 hover:bg-purple-700';
+            priorityBtnClass = 'bg-purple-600 hover:bg-purple-700 border border-transparent';
         }
 
-        return `<button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold py-2.5 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm w-full h-full flex items-center justify-center" ${canEditPriority ? '' : 'disabled'}>
+        return `<button data-id="${item.id}" class="priority-btn ${priorityBtnClass} text-white font-bold h-10 rounded-lg text-xs uppercase tracking-wide transition active:scale-95 shadow-sm w-full flex items-center justify-center" ${canEditPriority ? '' : 'disabled'}>
             ${priorityBtnLabel}
         </button>`;
     },
@@ -1301,7 +1300,7 @@ export const UIService = {
             ` : '';
 
             const atenderButton = canAttend
-                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full h-full border border-blue-700 transition-all active:scale-95 tracking-wide">
+                ? `<button data-id="${item.id}" data-name="${escapeHTML(nomeSeguro)}" class="${attendBtnClass} bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white font-bold h-10 rounded-lg text-xs uppercase shadow-sm flex items-center justify-center gap-1.5 w-full border border-blue-700 transition-all active:scale-95 tracking-wide">
                     <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="currentColor" viewBox="0 0 16 16">
                       <path d="M12.5 16a3.5 3.5 0 1 0 0-7 3.5 3.5 0 0 0 0 7Zm1.679-4.493-1.335 2.226a.75.75 0 0 1-1.174.144l-.774-.773a.5.5 0 0 1 .708-.708l.547.548 1.17-1.951a.5.5 0 1 1 .858.514ZM11 5a3 3 0 1 1-6 0 3 3 0 0 1 6 0ZM8 7a2 2 0 1 0 0-4 2 2 0 0 0 0 4Zm.256 7a4.474 4.474 0 0 1-.229-1.004H3c.001-.246.154-.986.832-1.664C4.484 10.68 5.711 10 8 10c.26 0 .507.009.74.025.226-.341.496-.65.804-.918C9.077 9.038 8.564 9 8 9c-5 0-6 3-6 4s1 1 1 1h5.256Z"/>
                     </svg>
@@ -1347,7 +1346,9 @@ export const UIService = {
                     
                     <div class="mt-4 grid grid-cols-2 gap-2">
                         ${atenderButton}
-                        ${atenderButton ? `<div>${priorityButtonHtml}</div>` : `<div class="col-span-2 w-full">${priorityButtonHtml}</div>`}
+                        <div class="${atenderButton ? '' : 'col-span-2'} w-full flex">
+                            ${priorityButtonHtml}
+                        </div>
                         <button data-id="${item.id}" class="return-to-pauta-btn col-span-2 bg-slate-100 text-slate-700 font-bold py-2 rounded-lg text-[10px] hover:bg-slate-200 transition-colors uppercase tracking-wide border border-slate-200 shadow-sm mt-1">Voltar para Pauta</button>
                     </div>
                     <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-[11px] font-bold mt-2 text-center underline block w-full">Ver Detalhes do Caso</button>
