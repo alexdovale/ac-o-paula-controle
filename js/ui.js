@@ -5,7 +5,7 @@ import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// INJEÇÃO DE CORREÇÕES GLOBAIS PARA MOBILE, ESTILOS E COMPORTAMENTOS DOS CAMPOS
+// INJEÇÃO DE CORREÇÕES GLOBAIS PARA MOBILE E ESTILOS COMPORTAMENTAIS
 if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes')) {
     const style = document.createElement('style');
     style.id = 'sigep-ui-fixes';
@@ -18,33 +18,30 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
 
-        /* ESTILOS PARA O BOTÃO MAXIMIZAR (Garante tela cheia perfeita) */
+        /* ESTILOS PARA O BOTÃO MAXIMIZAR (Janela Flutuante e Arrastável) */
         .column-maximized {
             position: fixed !important;
-            top: 0 !important;
-            left: 0 !important;
-            width: 100vw !important;
-            height: 100vh !important;
             z-index: 99999 !important;
             background-color: #f8fafc !important; /* Tailwind slate-50 */
             padding: 1.5rem !important;
             overflow-y: auto !important;
             margin: 0 !important;
-            border-radius: 0 !important;
-            box-shadow: none !important;
+            border-radius: 0.75rem !important;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
+            border: 2px solid #cbd5e1 !important;
+            resize: both !important; /* Permite redimensionar a janela puxando a quina inferior */
         }
+        /* Garante que o conteúdo expanda e aproveite a largura inteira do monitor */
         .column-maximized > * {
-            max-width: 1000px !important;
-            margin-left: auto !important;
-            margin-right: auto !important;
-        }
-        .column-wrapper-base {
-            transition: all 0.3s ease-in-out;
+            max-width: 100% !important;
+            width: 100% !important;
+            margin-left: 0 !important;
+            margin-right: 0 !important;
         }
     `;
     document.head.appendChild(style);
 
-    // CORREÇÃO: Lógica para abrir/fechar os campos de "Horário Agendado" e "Chegada"
+    // Lógica para abrir/fechar os campos de "Horário Agendado" e "Chegada"
     document.addEventListener('change', (e) => {
         if (e.target.name === 'is-scheduled') {
             const wrapper = document.getElementById('scheduled-time-wrapper');
@@ -2398,18 +2395,64 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
                 headerFlex.appendChild(btnGroup);
 
+                // LÓGICA DE MAXIMIZAR ARRASTÁVEL
                 btnGroup.querySelector('.btn-maximize').onclick = (e) => {
                     e.stopPropagation();
                     const isMax = container.classList.contains('column-maximized');
                     
-                    document.querySelectorAll('.column-maximized').forEach(el => el.classList.remove('column-maximized'));
+                    // Reseta tudo e fecha outras janelas ativas
+                    document.querySelectorAll('.column-maximized').forEach(el => {
+                        el.classList.remove('column-maximized');
+                        el.style.top = ''; el.style.left = ''; el.style.width = ''; el.style.height = '';
+                    });
                     
                     if (!isMax) {
                         container.classList.add('column-maximized');
                         document.body.style.overflow = 'hidden'; 
+                        
+                        // Configura o tamanho grande inicial (80% da tela)
+                        container.style.width = '80vw';
+                        container.style.height = '85vh';
+                        container.style.top = '7.5vh';
+                        container.style.left = '10vw';
+
+                        // Atribui o arrasto ao header da coluna
+                        headerFlex.style.cursor = 'move';
+                        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
+                        
+                        headerFlex.onmousedown = (e) => {
+                            // Previne que o arrasto ative se clicar nos próprios botões
+                            if (e.target.closest('button')) return;
+                            e.preventDefault();
+                            pos3 = e.clientX;
+                            pos4 = e.clientY;
+                            
+                            document.onmouseup = () => {
+                                document.onmouseup = null;
+                                document.onmousemove = null;
+                            };
+                            
+                            document.onmousemove = (e) => {
+                                e.preventDefault();
+                                pos1 = pos3 - e.clientX;
+                                pos2 = pos4 - e.clientY;
+                                pos3 = e.clientX;
+                                pos4 = e.clientY;
+                                container.style.top = (container.offsetTop - pos2) + "px";
+                                container.style.left = (container.offsetLeft - pos1) + "px";
+                            };
+                        };
+                        
                     } else {
                         container.classList.remove('column-maximized');
+                        container.style.width = '';
+                        container.style.height = '';
+                        container.style.top = '';
+                        container.style.left = '';
                         document.body.style.overflow = '';
+                        
+                        headerFlex.style.cursor = '';
+                        headerFlex.onmousedown = null;
                     }
                 };
 
