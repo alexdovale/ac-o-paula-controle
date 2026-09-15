@@ -1,4 +1,3 @@
-
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
@@ -1664,16 +1663,18 @@ export const UIService = {
             const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
 
             card.innerHTML = `
-                <div class="absolute top-3 right-3 z-10">
-                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-7 h-7 rounded-full border flex items-center justify-center ${confirmButton} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Verde">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 16 16" fill="currentColor">
+                <div class="absolute top-2 left-2 z-10">
+                    <button data-id="${item.id}" class="toggle-confirmed-atendido w-8 h-8 rounded-full border flex items-center justify-center ${confirmButton} shadow-sm transition-all" ${canToggleConfirmed ? '' : 'disabled'} title="Marcar/Desmarcar no Verde">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
                             <path d="M12.736 3.97a.733.733 0 0 1 1.047 0c.286.289.29.756.01.105L7.882 12.5a.733.733 0 0 1-1.065.04L3.257 8.375a.733.733 0 0 1 1.064-.04l2.254 2.255Z"/>
                         </svg>
                     </button>
                 </div>
 
+                ${this._getActionButtonsHtml(item)}
+
                 <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2 mt-4">${escapeHTML(item.name || '')}</p>
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
                     ${item.tipoAcaoRapida ? (() => {
