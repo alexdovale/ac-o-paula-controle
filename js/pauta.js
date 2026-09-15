@@ -868,6 +868,9 @@ export const PautaService = {
         return classes[priority] || '';
     },
 
+    // ============================================================
+    // LÓGICA DE ORDENAÇÃO DA FILA DE AGUARDANDO
+    // ============================================================
     sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
         if (!list || !list.length) return [];
 
@@ -887,17 +890,6 @@ export const PautaService = {
             if (p === 'RETORNO_RAPIDO') return 2;
             return 1;
         };
-
-        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
-        
-        if (orderType === 'chegada') {
-            return [...list].sort((a, b) => {
-                const wA = getPriorityWeight(a.priority);
-                const wB = getPriorityWeight(b.priority);
-                if (wA !== wB) return wB - wA; 
-                return getTempoChegada(a) - getTempoChegada(b);
-            });
-        }
 
         const isAtrasado = (item) => {
             if (item.type !== 'agendamento' || !item.scheduledTime || !item.arrivalTime) return false;
@@ -934,11 +926,36 @@ export const PautaService = {
             return item.scheduledTime;
         };
 
+        // Identifica os alertas para exibição na UI antes de ordenar
+        list.forEach(item => {
+            item._alertaAtraso = isAtrasado(item);
+            item._alertaEspera = isEsperandoMuito(item);
+        });
+
+        // Retorna a lista manualmente ordenada (Drag and Drop)
+        if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
+
+        // Retorna a lista ordenada por quem chegou primeiro (Ordem de Chegada)
+        if (orderType === 'chegada') {
+            return [...list].sort((a, b) => {
+                const wA = getPriorityWeight(a.priority);
+                const wB = getPriorityWeight(b.priority);
+                if (wA !== wB) return wB - wA; 
+                return getTempoChegada(a) - getTempoChegada(b);
+            });
+        }
+
+        // ==========================================
+        // ORDENAÇÃO FLEXÍVEL / PADRÃO / COM ALERTAS
+        // (Garante que os pontuais não percam a vez para os atrasados)
+        // ==========================================
         return [...list].sort((a, b) => {
+            // 1. Prioridades Absolutas (Urgência e Retorno sempre no topo)
             const wA = getPriorityWeight(a.priority);
             const wB = getPriorityWeight(b.priority);
             if (wA !== wB) return wB - wA; 
 
+            // Se for do tipo proporcional, alterna entre pontuais e atrasados (ex: a cada 3 pontuais atende 1 atrasado)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -961,12 +978,17 @@ export const PautaService = {
                 if (isTardeA !== isTardeB) return isTardeA ? 1 : -1;
             }
 
-            a._alertaAtraso = isAtrasado(a);
-            a._alertaEspera = isEsperandoMuito(a);
-            b._alertaAtraso = isAtrasado(b);
-            b._alertaEspera = isEsperandoMuito(b);
-
             if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
+                
+                // 2. Proteção aos Pontuais (Pontual sempre ganha do Atrasado/Encaixe)
+                const atrasadoA = isAtrasado(a);
+                const atrasadoB = isAtrasado(b);
+
+                if (!atrasadoA && atrasadoB) return -1; // A é pontual, B é atrasado -> A sobe
+                if (atrasadoA && !atrasadoB) return 1;  // A é atrasado, B é pontual -> B sobe
+
+                // 3. Se ambos têm a mesma condição (ambos pontuais ou ambos atrasados), 
+                // ordena pelo horário que seria o correto de atendimento.
                 const horaA = getHoraParaOrdenacao(a);
                 const horaB = getHoraParaOrdenacao(b);
                 
