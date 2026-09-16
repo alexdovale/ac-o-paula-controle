@@ -238,9 +238,9 @@ class SIGEPApp {
                             <thead class="bg-slate-100">
                                 <tr>
                                     <th class="p-3">Data/Hora</th>
-                                    <th>Usuário</th>
-                                    <th>Ação</th>
-                                    <th>Detalhes</th>
+                                    <th class="p-3">Usuário</th>
+                                    <th class="p-3">Ação</th>
+                                    <th class="p-3">Detalhes</th>
                                 </tr>
                             </thead>
                             <tbody id="audit-logs-table-body"></tbody>
@@ -606,6 +606,47 @@ class SIGEPApp {
             }
         });
 
+        // 🌟 NOVO: Lógica da Chavinha de Compartilhamento
+        document.getElementById('share-toggle')?.addEventListener('change', (e) => {
+            const isPublic = e.target.checked;
+            const statusText = document.getElementById('share-status-text');
+            const linkContainer = document.getElementById('share-link-container');
+            const linkInput = document.getElementById('share-link-input');
+            const openBtn = document.getElementById('open-external-btn');
+
+            if (isPublic) {
+                statusText.textContent = 'Público';
+                statusText.classList.remove('text-gray-900');
+                statusText.classList.add('text-pink-600');
+                linkContainer.classList.remove('hidden');
+                
+                const pautaId = this.currentPauta?.id || 'ID_DA_PAUTA';
+                const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+                const shareUrl = `${baseUrl}acompanhamento.html?id=${pautaId}`;
+                
+                if (linkInput) linkInput.value = shareUrl;
+                if (openBtn) openBtn.href = shareUrl;
+            } else {
+                statusText.textContent = 'Privado';
+                statusText.classList.remove('text-pink-600');
+                statusText.classList.add('text-gray-900');
+                linkContainer.classList.add('hidden');
+            }
+        });
+
+        // 🌟 NOVO: Copiar link de Compartilhamento
+        document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+            const linkInput = document.getElementById('share-link-input');
+            if (linkInput && linkInput.value) {
+                navigator.clipboard.writeText(linkInput.value);
+                if (window.showNotification) {
+                    window.showNotification("Link público copiado com sucesso!", "success");
+                } else {
+                    alert("Link copiado!");
+                }
+            }
+        });
+
         document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
@@ -645,6 +686,7 @@ class SIGEPApp {
             if (modal) {
                 modal.classList.remove('hidden');
                 if (window.ColetasBuilderService && this.currentPautaData) {
+                    // 🔥 CORREÇÃO: Usando container-bi-links-pauta para não dar "null"
                     document.getElementById('container-bi-links-pauta').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
                     document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
                         window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
