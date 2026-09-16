@@ -14,7 +14,7 @@ const TEMPLATES_KEY = 'sigep_pauta_templates';
 
 const DEFAULTS = {
     ordemAtendimento: 'flexivel', // <-- O PADRÃO É O FLEXÍVEL (ENCAIXE)
-    toleranciaMinutos: 15,        // <-- TOLERÂNCIA PADRÃO
+    toleranciaMinutos: 15,        // <-- TOLERÂNCIA PADRÃO (15 MINUTOS)
     useDelegationFlow: false,
     useDistributionFlow: false,
     type: 'agendamento',
@@ -353,7 +353,7 @@ export const PautaConfigService = {
         }
     },
 
-    // INJEÇÃO DA TOLERÂNCIA NA EDIÇÃO
+    // INJEÇÃO DA TOLERÂNCIA NA EDIÇÃO (DINÂMICO)
     _injetarCampoToleranciaEdicao(pautaData) {
         let tolInput = document.getElementById('edit-pauta-tolerancia-input');
 
@@ -368,7 +368,7 @@ export const PautaConfigService = {
                     <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
-                // Insere logo após o input de data no modal de edição
+                // Insere logo após a div do input de data no modal de edição
                 dateInput.parentNode.parentNode.insertBefore(tolContainer, dateInput.parentNode.nextSibling);
                 tolInput = document.getElementById('edit-pauta-tolerancia-input');
             }
@@ -384,7 +384,6 @@ export const PautaConfigService = {
         let modoContainer = document.getElementById('pauta-modo-container');
 
         if (!modoContainer) {
-            // Tenta inserir após a tolerância, ou data
             const tolContainer = document.getElementById('pauta-tolerancia-container');
             const dateInput = document.getElementById('create-pauta-date-input');
             const refElement = tolContainer || (dateInput ? dateInput.parentNode : null);
@@ -457,7 +456,7 @@ export const PautaConfigService = {
             dateInput.value = pautaData.dataOperacao;
         }
 
-        // PREENCHE A TOLERÂNCIA NA EDIÇÃO
+        // PREENCHE A TOLERÂNCIA NA EDIÇÃO (Cria o campo na tela de edição dinamicamente)
         this._injetarCampoToleranciaEdicao(pautaData);
 
         const app = this._app;
@@ -632,7 +631,7 @@ export const PautaConfigService = {
         const newDist       = document.getElementById('edit-use-distribution')?.checked || false;
         const newDate       = document.getElementById('edit-pauta-date-input')?.value || '';
 
-        // CAPTURA A TOLERÂNCIA DA EDIÇÃO
+        // CAPTURA A TOLERÂNCIA DA EDIÇÃO QUE FOI INJETADA DINAMICAMENTE
         const tolInputVal   = parseInt(document.getElementById('edit-pauta-tolerancia-input')?.value);
         const newTol        = isNaN(tolInputVal) ? DEFAULTS.toleranciaMinutos : tolInputVal;
 
