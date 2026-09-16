@@ -294,14 +294,14 @@ const todosOsModaisHTML = `
                         <input type="radio" name="edit-ordem" value="flexivel_alerta" class="h-4 w-4 text-orange-600 focus:ring-orange-500">
                         <span class="ml-3">
                             <span class="font-semibold text-sm sm:text-base">Flexível c/ Alertas (Pisca-Alerta)</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Avisa visualmente atrasos e esperas longas.</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Avisa atrasos visualmente. Garante a prioridade absoluta de quem é pontual.</span>
                         </span>
                     </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50 border-l-4 border-l-blue-500">
                         <input type="radio" name="edit-ordem" value="flexivel" class="h-4 w-4 text-blue-600 focus:ring-blue-500">
                         <span class="ml-3">
                             <span class="font-semibold text-sm sm:text-base">Flexível (Encaixe)</span>
-                            <span class="block text-[10px] sm:text-xs text-gray-500">Atrasou vira encaixe na hora que chegou.</span>
+                            <span class="block text-[10px] sm:text-xs text-gray-500">Pontuais não perdem a vez. Atrasados viram encaixe na ordem de chegada.</span>
                         </span>
                     </label>
                     <label class="flex items-center p-3 border rounded-lg cursor-pointer hover:bg-gray-50">
