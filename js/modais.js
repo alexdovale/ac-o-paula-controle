@@ -3,7 +3,7 @@ const todosOsModaisHTML = `
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
         <div class="bg-white p-5 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4 text-center">Bem-vindo ao SIGEP</h2>
-            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Para continuing, precisamos da sua confirmação sobre o uso do sistema.</p>
+            <p class="text-sm sm:text-base text-gray-600 text-center mb-6">Para continuar, precisamos da sua confirmação sobre o uso do sistema.</p>
             <div class="space-y-4 mb-8 bg-gray-50 p-4 rounded-xl border border-gray-200">
                 <label class="flex items-start cursor-pointer group">
                     <input type="checkbox" id="lgpd-check-termos" class="mt-1 h-5 w-5 text-green-600 border-gray-300 rounded focus:ring-green-500">
@@ -342,6 +342,13 @@ const todosOsModaisHTML = `
                 </div>
             </div>
 
+            <!-- INSERÇÃO DA TOLERÂNCIA AQUI! -->
+            <div class="mb-4 sm:mb-6">
+                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">⏳ Tolerância de Atraso</h3>
+                <label class="block text-[10px] sm:text-xs text-gray-500 mb-1">Tempo limite (em minutos) antes de virar encaixe:</label>
+                <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+            </div>
+
             <div class="mb-6">
                 <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">Fluxo de Atendimento</h3>
                 <div class="space-y-2">
@@ -389,7 +396,7 @@ const todosOsModaisHTML = `
                     <input type="radio" name="ordemAtendimento" value="flexivel_alerta" class="h-5 w-5 text-orange-600 focus:ring-orange-500">
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800 text-sm sm:text-base">Flexível c/ Alertas (Pisca-Alerta)</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Destaca quem está atrasado (vermelho) ou esperando há muito tempo (amarelo).</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Avisa atrasos visualmente. Garante a prioridade absoluta de quem é pontual.</span>
                     </span>
                 </label>
 
@@ -397,7 +404,7 @@ const todosOsModaisHTML = `
                     <input type="radio" name="ordemAtendimento" value="flexivel" class="h-5 w-5 text-blue-600 focus:ring-blue-500" checked>
                     <span class="ml-3">
                         <span class="font-semibold text-gray-800 text-sm sm:text-base">Agendamento Flexível (Encaixe)</span>
-                        <span class="block text-xs sm:text-sm text-gray-500">Atrasos perdem a vez, mas viram encaixes na hora real da chegada.</span>
+                        <span class="block text-xs sm:text-sm text-gray-500">Pontuais não perdem a vez. Atrasados viram encaixe na ordem de chegada.</span>
                     </span>
                 </label>
 
@@ -742,7 +749,7 @@ const todosOsModaisHTML = `
     <div id="edit-attendant-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-xl shadow-xl w-full max-w-md max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
             <h2 class="text-xl sm:text-2xl font-bold mb-4">Editar Atendente</h2>
-            <p class="mb-4 text-sm sm:text-base text-gray-600">Selecione o profissional que realizou o atendimento:</p>
+            <p class="mb-4 text-sm sm:text-base text-gray-600">Selecione o novo atendente responsável</p>
             
             <select id="edit-attendant-select" class="w-full p-3 border border-gray-300 rounded-lg mb-6 bg-white text-sm sm:text-base">
                 <option value="">-- Selecione um profissional --</option>
@@ -750,7 +757,7 @@ const todosOsModaisHTML = `
             
             <div class="flex flex-col-reverse sm:flex-row sm:justify-end gap-3 sm:space-x-4">
                 <button id="cancel-edit-attendant-btn" class="w-full sm:w-auto bg-gray-300 text-gray-800 font-bold py-2.5 px-6 rounded-lg hover:bg-gray-400">Cancelar</button>
-                <button id="confirm-edit-attendant-btn" class="w-full sm:w-auto bg-green-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-green-700">Salvar</button>
+                <button id="confirm-edit-attendant-btn" class="w-full sm:w-auto bg-amber-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-amber-700">Salvar</button>
             </div>
         </div>
     </div>
@@ -836,7 +843,7 @@ const todosOsModaisHTML = `
                     <h3 class="text-base sm:text-lg font-semibold">Exemplo:</h3>
                     <button id="copy-csv-example-btn" class="bg-gray-200 text-gray-800 text-xs font-semibold py-1.5 px-3 rounded-lg hover:bg-gray-300 w-full sm:w-auto">Copiar Exemplo</button>
                 </div>
-                <pre class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto"><code id="csv-example-code" class="whitespace-pre-wrap word-break">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
+                <pre class="bg-gray-100 p-3 sm:p-4 rounded-lg text-xs sm:text-sm overflow-x-auto mb-6 border border-gray-200"><code id="csv-example-code" class="whitespace-pre-wrap word-break">Maria Joaquina de Amaral Pereira;09:00;Divórcio Consensual;111.222.333-44
 João da Silva;09:30;Ação de Alimentos;
 Fulano de Tal;10:00;Curatela;444.555.666-77</code></pre>
                 <ul class="list-disc list-inside mt-4 space-y-2 text-gray-700 text-sm">
@@ -1214,7 +1221,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 
                 <div class="flex gap-2">
                     <button id="btn-share-wa" class="flex-1 bg-green-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-green-600 flex items-center justify-center gap-1 transition shadow-sm">
-                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg> WhatsApp
+                        <svg class="w-4 h-4" fill="currentColor" viewBox="0 0 24 24"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767-.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51a12.8 12.8 0 0 0-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413z"/></svg> WhatsApp
                     </button>
                     <button id="btn-share-sms" class="flex-1 bg-blue-500 text-white py-2 rounded-lg text-xs font-bold hover:bg-blue-600 flex items-center justify-center gap-1 transition shadow-sm">
                         <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M8 10h.01M12 10h.01M16 10h.01M9 16H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-5l-5 5v-5z"/></svg> SMS
