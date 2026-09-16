@@ -645,7 +645,7 @@ class SIGEPApp {
             if (modal) {
                 modal.classList.remove('hidden');
                 if (window.ColetasBuilderService && this.currentPautaData) {
-                    document.getElementById('container-bi-links').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                    document.getElementById('container-bi-links-pauta').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
                     document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
                         window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
                     });
