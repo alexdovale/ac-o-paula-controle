@@ -628,6 +628,34 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
 
+        // ⭐ NOVO: INJETA O AVISO DE TOLERÂNCIA ABAIXO DO TÍTULO DA PAUTA
+        const titleContainer = document.getElementById('pauta-title')?.parentElement;
+        if (titleContainer) {
+            let tolInfo = document.getElementById('tolerancia-info-badge');
+            if (!tolInfo) {
+                tolInfo = document.createElement('div');
+                tolInfo.id = 'tolerancia-info-badge';
+                tolInfo.className = 'mt-2 flex justify-center animate-fade-in';
+                titleContainer.appendChild(tolInfo);
+            }
+            
+            const tolVal = app.currentPautaData?.toleranciaMinutos !== undefined ? app.currentPautaData.toleranciaMinutos : 15;
+            const ordem = app.currentPautaData?.ordemAtendimento || 'flexivel';
+            
+            // Só exibe a etiqueta se a pauta for do tipo Flexível (Encaixe)
+            if (ordem.includes('flexivel') || ordem === 'padrao') {
+                tolInfo.innerHTML = `
+                    <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+                        Tolerância de Atraso: ${tolVal} Minutos
+                    </span>`;
+                tolInfo.style.display = 'flex';
+            } else {
+                tolInfo.style.display = 'none';
+            }
+        }
+        // ⭐ FIM DO NOVO CÓDIGO
+
         if (typeof PainelGeralService !== 'undefined') {
             const painelModal = document.getElementById('painel-geral-externo-modal');
             if (painelModal && !painelModal.classList.contains('hidden')) {
