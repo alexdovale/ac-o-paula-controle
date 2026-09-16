@@ -13,7 +13,8 @@ import { ROUTES } from './router.js';
 const TEMPLATES_KEY = 'sigep_pauta_templates';
 
 const DEFAULTS = {
-    ordemAtendimento: 'flexivel', // <-- AGORA O PADRÃO É O FLEXÍVEL (ENCAIXE)
+    ordemAtendimento: 'flexivel', // <-- O PADRÃO É O FLEXÍVEL (ENCAIXE)
+    toleranciaMinutos: 15,        // <-- TOLERÂNCIA PADRÃO
     useDelegationFlow: false,
     useDistributionFlow: false,
     type: 'agendamento',
@@ -105,7 +106,6 @@ export const PautaConfigService = {
             document.getElementById('create-pauta-modal').classList.add('hidden');
         });
 
-        // CORRIGIDO: validação de unidade ignora modo evento
         document.getElementById('next-to-ordem-btn')?.addEventListener('click', () => {
             const modoEvento = this._app?.currentMode === 'evento';
             const unidade = document.getElementById('create-pauta-unidade-select')?.value;
@@ -155,11 +155,9 @@ export const PautaConfigService = {
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
             if (!app.currentPautaData) return;
             
-            // FIX: Fecha o modal roxo de BI caso ele tenha ficado "preso" na tela
             const biModal = document.getElementById('bi-links-modal');
             if (biModal) biModal.classList.add('hidden');
             
-            // FIX: Recolhe o menu flutuante verde (Ações) para limpar a tela
             const actionsPanel = document.getElementById('actions-panel');
             const actionsArrow = document.getElementById('actions-arrow');
             if (actionsPanel) {
@@ -205,7 +203,6 @@ export const PautaConfigService = {
 
         const roomConfig = document.getElementById('room-config-container');
         if (roomConfig) {
-            // Garante que a caixa de salas volte para o modal de criação se tiver sido movida para a edição antes
             const createModalSpace = createModal.querySelector('.space-y-4') || createModal.querySelector('.p-4');
             if (createModalSpace && !createModalSpace.contains(roomConfig)) {
                 createModalSpace.appendChild(roomConfig);
@@ -220,18 +217,14 @@ export const PautaConfigService = {
             }
         }
 
-        // CORRIGIDO: esconde campo de órgão/integração em modo evento
         const isEvento = app?.currentMode === 'evento';
         const orgaoWrapper = document.getElementById('orgao-integration-wrapper');
         if (orgaoWrapper) orgaoWrapper.classList.toggle('hidden', isEvento);
 
-        // 1. Injetar Unidade (apenas no modo normal)
+        // INJEÇÕES DINÂMICAS DE CAMPOS
         this._injetarSeletorUnidade();
-
-        // 2. Injetar Campo de Data
         this._injetarCampoData();
-
-        // 3. Injetar Seletor de Modo/Tipo
+        this._injetarCampoToleranciaCriacao(); // <-- Campo Dinâmico de Tolerância (Criação)
         this._adicionarSelectorModo();
 
         createModal.classList.remove('hidden');
@@ -255,11 +248,9 @@ export const PautaConfigService = {
         `).join('');
     },
 
-    // CORRIGIDO: modo evento não injeta nem exige unidade
     async _injetarSeletorUnidade() {
         const app = this._app;
 
-        // NOVO: se for modo evento, remove o container de unidade se existir e sai
         const isEvento = app?.currentMode === 'evento';
         if (isEvento) {
             const existing = document.getElementById('pauta-unidade-container');
@@ -319,7 +310,6 @@ export const PautaConfigService = {
         }
     },
 
-    // INJETA O CAMPO DE DATA SE ELE NÃO EXISTIR NO HTML ORIGINAL
     _injetarCampoData() {
         let dateInput = document.getElementById('create-pauta-date-input');
 
@@ -338,9 +328,54 @@ export const PautaConfigService = {
             }
         }
 
-        // Preenche com a data de hoje por padrão
         if (dateInput && !dateInput.value) {
             dateInput.value = new Date().toISOString().split('T')[0];
+        }
+    },
+
+    // INJEÇÃO DA TOLERÂNCIA NA CRIAÇÃO
+    _injetarCampoToleranciaCriacao() {
+        let tolInput = document.getElementById('create-pauta-tolerancia-input');
+
+        if (!tolInput) {
+            const dateContainer = document.getElementById('pauta-data-container');
+            if (dateContainer) {
+                const tolContainer = document.createElement('div');
+                tolContainer.id = 'pauta-tolerancia-container';
+                tolContainer.className = 'mb-4 mt-4';
+                tolContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">⏳ Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
+                    <input type="number" id="create-pauta-tolerancia-input" value="${DEFAULTS.toleranciaMinutos}" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                    <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
+                `;
+                dateContainer.parentNode.insertBefore(tolContainer, dateContainer.nextSibling);
+            }
+        }
+    },
+
+    // INJEÇÃO DA TOLERÂNCIA NA EDIÇÃO
+    _injetarCampoToleranciaEdicao(pautaData) {
+        let tolInput = document.getElementById('edit-pauta-tolerancia-input');
+
+        if (!tolInput) {
+            const dateInput = document.getElementById('edit-pauta-date-input');
+            if (dateInput) {
+                const tolContainer = document.createElement('div');
+                tolContainer.id = 'edit-pauta-tolerancia-container';
+                tolContainer.className = 'mb-4 mt-4';
+                tolContainer.innerHTML = `
+                    <label class="block text-sm font-medium text-gray-700 mb-1">⏳ Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
+                    <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
+                    <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
+                `;
+                // Insere logo após o input de data no modal de edição
+                dateInput.parentNode.parentNode.insertBefore(tolContainer, dateInput.parentNode.nextSibling);
+                tolInput = document.getElementById('edit-pauta-tolerancia-input');
+            }
+        }
+
+        if (tolInput) {
+            tolInput.value = pautaData.toleranciaMinutos !== undefined ? pautaData.toleranciaMinutos : DEFAULTS.toleranciaMinutos;
         }
     },
 
@@ -349,20 +384,18 @@ export const PautaConfigService = {
         let modoContainer = document.getElementById('pauta-modo-container');
 
         if (!modoContainer) {
+            // Tenta inserir após a tolerância, ou data
+            const tolContainer = document.getElementById('pauta-tolerancia-container');
             const dateInput = document.getElementById('create-pauta-date-input');
-            const pai = dateInput?.parentNode || document.getElementById('create-pauta-name-input')?.parentNode;
+            const refElement = tolContainer || (dateInput ? dateInput.parentNode : null);
 
-            if (!pai) return;
+            if (!refElement) return;
 
             modoContainer = document.createElement('div');
             modoContainer.id = 'pauta-modo-container';
             modoContainer.className = 'mb-4 sm:mb-6 mt-4';
 
-            if (dateInput) {
-                dateInput.insertAdjacentElement('afterend', modoContainer);
-            } else {
-                pai.appendChild(modoContainer);
-            }
+            refElement.parentNode.insertBefore(modoContainer, refElement.nextSibling);
         }
 
         if (modoAtual === 'normal') {
@@ -399,7 +432,6 @@ export const PautaConfigService = {
     },
 
     _preencherFormEdicao(pautaData) {
-        // Blinda contra valores nulos, forçando os padrões (DEFAULTS) se estiver vazio
         const tipoAtual = pautaData.type || DEFAULTS.type;
         const ordemAtual = pautaData.ordemAtendimento || DEFAULTS.ordemAtendimento;
         const usaDelegacao = pautaData.useDelegationFlow === true;
@@ -425,12 +457,13 @@ export const PautaConfigService = {
             dateInput.value = pautaData.dataOperacao;
         }
 
-        // ⭐ LÓGICA PARA EXIBIR/ESCONDER E CARREGAR SALAS NA EDIÇÃO
+        // PREENCHE A TOLERÂNCIA NA EDIÇÃO
+        this._injetarCampoToleranciaEdicao(pautaData);
+
         const app = this._app;
         const roomConfig = document.getElementById('room-config-container');
         
         if (roomConfig) {
-            // Move o container para dentro do modal de edição na seção correta
             const typeSelectionAreaEdit = document.querySelector('#edit-pauta-config-modal .space-y-4') || document.querySelector('#edit-pauta-config-modal .p-5');
             if (typeSelectionAreaEdit && !typeSelectionAreaEdit.contains(roomConfig)) {
                 typeSelectionAreaEdit.appendChild(roomConfig);
@@ -445,7 +478,6 @@ export const PautaConfigService = {
             }
         }
 
-        // Escuta mudanças no tipo de pauta na janela de edição para mostrar/esconder na hora
         document.querySelectorAll('input[name="edit-pauta-type"]').forEach(r => {
             r.addEventListener('change', (e) => {
                 if (roomConfig) {
@@ -472,7 +504,10 @@ export const PautaConfigService = {
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value;
 
-        // CORRIGIDO: detecta modo evento
+        // CAPTURA A TOLERÂNCIA DA CRIAÇÃO
+        const tolInputVal = parseInt(document.getElementById('create-pauta-tolerancia-input')?.value);
+        const toleranciaMinutos = isNaN(tolInputVal) ? DEFAULTS.toleranciaMinutos : tolInputVal;
+
         const isEvento = app?.currentMode === 'evento';
 
         const unidadeSelect = document.getElementById('create-pauta-unidade-select');
@@ -485,7 +520,6 @@ export const PautaConfigService = {
                              || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value
                              || 'normal';
 
-        // CORRIGIDO: unidade só obrigatória no modo normal
         if (!isEvento && !unidadeId) {
             showNotification("Por favor, selecione uma Unidade Vinculada.", "error");
             return;
@@ -510,11 +544,7 @@ export const PautaConfigService = {
         try {
             const novaPautaData = {
                 name: pautaName,
-                
-                // 🔒 INJEÇÃO DO MULTI-TENANT (ÓRGÃO DO USUÁRIO)
                 orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
-                
-                // CORRIGIDO: unidade nula em modo evento
                 unidadeId: isEvento ? null : unidadeId,
                 unidadeNome: isEvento ? null : unidadeNome,
                 type: pautaType || DEFAULTS.type,
@@ -525,6 +555,7 @@ export const PautaConfigService = {
                 isClosed: false,
                 createdAt: new Date().toISOString(),
                 dataOperacao: dataOp,
+                toleranciaMinutos: toleranciaMinutos, // <--- SALVA NO BANCO
                 ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
                 useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                 useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
@@ -542,7 +573,7 @@ export const PautaConfigService = {
                 app.currentUserName,
                 pautaRef.id,
                 'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) ${isEvento ? `[EVENTO: ${tipoSelecionado}]` : `em ${unidadeNome}`} para ${dataOp}`
+                `Criou pauta "${pautaName}" (${pautaType}) ${isEvento ? `[EVENTO: ${tipoSelecionado}]` : `em ${unidadeNome}`} para ${dataOp} (Tolerância: ${toleranciaMinutos}m)`
             );
 
             if (orgaoId && !isEvento) {
@@ -580,9 +611,9 @@ export const PautaConfigService = {
         const orgaoInput = document.getElementById('select-orgao-integracao');
         if (orgaoInput) orgaoInput.value = '';
 
-        // Remove containers injetados dinamicamente para evitar duplicação
         document.getElementById('pauta-unidade-container')?.remove();
         document.getElementById('pauta-data-container')?.remove();
+        document.getElementById('pauta-tolerancia-container')?.remove();
         document.getElementById('pauta-modo-container')?.remove();
 
         document.getElementById('delegation-flow-modal').classList.add('hidden');
@@ -601,6 +632,10 @@ export const PautaConfigService = {
         const newDist       = document.getElementById('edit-use-distribution')?.checked || false;
         const newDate       = document.getElementById('edit-pauta-date-input')?.value || '';
 
+        // CAPTURA A TOLERÂNCIA DA EDIÇÃO
+        const tolInputVal   = parseInt(document.getElementById('edit-pauta-tolerancia-input')?.value);
+        const newTol        = isNaN(tolInputVal) ? DEFAULTS.toleranciaMinutos : tolInputVal;
+
         if (!newType || !newOrdem) {
             showNotification("Selecione todas as opções obrigatórias.", "error");
             return;
@@ -612,10 +647,10 @@ export const PautaConfigService = {
                 ordemAtendimento: newOrdem,
                 useDelegationFlow: newDelegation,
                 useDistributionFlow: newDist,
+                toleranciaMinutos: newTol // <--- SALVA A EDIÇÃO NO BANCO
             };
             if (newDate) updates.dataOperacao = newDate;
 
-            // ⭐ SALVA AS SALAS SE O NOVO TIPO FOR MULTISALA
             if (newType === 'multisala') {
                 updates.customRooms = app.customRoomsList || [];
                 updates.rooms = app.customRoomsList || [];
@@ -624,10 +659,10 @@ export const PautaConfigService = {
                 updates.rooms = [];
             }
 
-            // 1. Atualiza as configurações da pauta no banco de dados
+            // 1. Atualiza as configurações da pauta
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), updates);
 
-            // 🚀 INÍCIO DA NOVA LÓGICA: MOVER ASSISTIDOS SE DESATIVAR COLUNAS
+            // 🚀 LÓGICA DO BATCH: MOVER ASSISTIDOS SE DESATIVAR COLUNAS (DELEGAÇÃO OU DISTRIBUIÇÃO)
             const batch = writeBatch(app.db);
             let hasBatchUpdates = false;
 
@@ -638,44 +673,38 @@ export const PautaConfigService = {
                     let needsUpdate = false;
                     const status = assistido.status;
 
-                    // Se DESATIVOU a Distribuição e o assistido estava lá
                     if (!newDist && (status === 'aguardandoDistribuicao' || status === 'aguardandoCorrecao' || status === 'aguardandoNumero')) {
                         needsUpdate = true;
                     }
-                    
-                    // Se DESATIVOU a Delegação (Em Atendimento) e o assistido estava lá
                     if (!newDelegation && status === 'emAtendimento') {
                         needsUpdate = true;
                     }
 
-                    // Se o assistido precisa ser movido
                     if (needsUpdate) {
                         const assistidoRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", assistido.id);
                         batch.update(assistidoRef, {
                             status: 'atendido',
-                            attendedAt: now, // Marca a hora que foi finalizado
+                            attendedAt: now,
                             lastActionTimestamp: now,
                             lastActionBy: app.currentUserName || 'Sistema (Mudança de Config)'
                         });
                         hasBatchUpdates = true;
                         
-                        // Atualiza a memória local para a tela piscar instantaneamente
                         assistido.status = 'atendido';
                         assistido.attendedAt = now;
                     }
                 });
 
-                // Se encontrou alguém para atualizar, dispara o lote (batch) de uma vez só
                 if (hasBatchUpdates) {
                     await batch.commit();
                 }
             }
-            // 🛑 FIM DA NOVA LÓGICA
+            // 🛑 FIM DA LÓGICA DO BATCH
 
-            // 2. Atualiza a memória local da aplicação instantaneamente
+            // 2. Atualiza a memória local
             Object.assign(app.currentPautaData, updates);
 
-            // 3. Força a UI a re-renderizar todas as filas IMEDIATAMENTE com a nova regra de ordem
+            // 3. Força a UI a re-renderizar
             if (typeof app.loadColumnPreferences === 'function') app.loadColumnPreferences();
             
             if (window.UIService && typeof window.UIService.renderAssistedLists === 'function') {
@@ -689,7 +718,7 @@ export const PautaConfigService = {
                 app.currentUserName,
                 app.currentPauta.id,
                 'EDIT_PAUTA_CONFIG',
-                `Editou config: tipo=${newType}, ordem=${newOrdem}, delegação=${newDelegation}, distribuição=${newDist}`
+                `Editou config: tipo=${newType}, ordem=${newOrdem}, delegação=${newDelegation}, dist=${newDist}, tolerância=${newTol}min`
             );
 
             showNotification("Configurações atualizadas com sucesso!", "success");
@@ -716,6 +745,7 @@ export const PautaConfigService = {
             nome: nome.trim(),
             tipo: tipoSelecionado,
             type: document.getElementById('create-pauta-modal')?.dataset.pautaType || DEFAULTS.type,
+            toleranciaMinutos: parseInt(document.getElementById('create-pauta-tolerancia-input')?.value) || DEFAULTS.toleranciaMinutos,
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
             useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
@@ -756,6 +786,9 @@ export const PautaConfigService = {
         const distCheck = document.getElementById('check-use-distribution');
         if (distCheck) distCheck.checked = t.useDistributionFlow;
 
+        const tolInput = document.getElementById('create-pauta-tolerancia-input');
+        if (tolInput) tolInput.value = t.toleranciaMinutos !== undefined ? t.toleranciaMinutos : DEFAULTS.toleranciaMinutos;
+
         showNotification(`Template "${t.nome}" carregado!`, "info");
     },
 
@@ -789,10 +822,7 @@ export const PautaConfigService = {
             try {
                 const novaPauta = {
                     name: item.name,
-                    
-                    // 🔒 INJEÇÃO DO MULTI-TENANT NA CRIAÇÃO EM LOTE
                     orgaoId: app.currentUser?.orgaoId || 'padrao_dprj',
-                    
                     type: item.type || DEFAULTS.type,
                     tipo: item.tipo || DEFAULTS.tipo,
                     owner: user.uid,
@@ -801,6 +831,7 @@ export const PautaConfigService = {
                     isClosed: false,
                     createdAt: new Date().toISOString(),
                     dataOperacao: item.dataOperacao || new Date().toISOString().split('T')[0],
+                    toleranciaMinutos: item.toleranciaMinutos !== undefined ? parseInt(item.toleranciaMinutos) : DEFAULTS.toleranciaMinutos,
                     ordemAtendimento: item.ordemAtendimento || DEFAULTS.ordemAtendimento,
                     useDelegationFlow: item.useDelegationFlow || false,
                     useDistributionFlow: item.useDistributionFlow || false,
@@ -879,7 +910,6 @@ export const PautaConfigService = {
                     );
                     if (estaNessa) resultado.push(pauta);
                 } catch {
-                    // pauta sem subcoleção de colaboradores — ignora
                 }
             }
 
