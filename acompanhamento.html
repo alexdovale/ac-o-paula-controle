@@ -35,7 +35,7 @@
         }
         @keyframes flashBorder {
             0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-            40%       { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.35); }
+            40%        { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.35); }
         }
         @keyframes slideInCard {
             from { opacity: 0; transform: translateX(-12px); }
@@ -322,6 +322,8 @@
                 if (!snap.exists()) return;
                 const data = snap.data();
                 renderUltimoChamado(data.atual, data.historico || []);
+            }, (error) => {
+                console.warn("Acesso ao último chamado negado:", error);
             });
         }
 
@@ -356,6 +358,13 @@
         };
 
         if (pId) {
+            const handleAcessoNegado = (error) => {
+                console.error("Acesso bloqueado pelas regras do Firebase:", error);
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('app-content').classList.add('hidden');
+                document.getElementById('error-screen').classList.remove('hidden');
+            };
+
             onSnapshot(doc(db, "pautas", pId), (snap) => {
                 if (!snap.exists() || !snap.data().isPublic) {
                     document.getElementById('loading').classList.add('hidden');
@@ -369,6 +378,7 @@
 
                 document.getElementById('pauta-title').textContent = data.name;
                 document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-screen').classList.add('hidden');
                 document.getElementById('app-content').classList.remove('hidden');
 
                 const grid = document.getElementById('main-grid');
@@ -378,7 +388,7 @@
                 if (data.useDistributionFlow) { document.getElementById('col-distribuicao').classList.remove('hidden'); cols++; }
                 else { document.getElementById('col-distribuicao').classList.add('hidden'); }
                 grid.className = `grid grid-cols-1 ${cols > 1 ? 'lg:grid-cols-' + cols : ''} gap-4 flex-1 min-h-0`;
-            });
+            }, handleAcessoNegado);
 
             iniciarListenerUltimoChamado(pId);
 
@@ -454,7 +464,7 @@
                         <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
                     </div>`).join('')
                     || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado hoje.</p>';
-            });
+            }, handleAcessoNegado);
 
             onSnapshot(doc(db, "pautas", pId), (snap) => {
                 if (!snap.exists()) return;
@@ -462,7 +472,7 @@
                 window._sigepOrdem = d.ordemAtendimento || 'padrao';
                 window._sigepTipo  = d.type || 'agendamento';
                 window._sigepRooms = d.rooms || d.customRooms || [];
-            });
+            }, handleAcessoNegado);
         }
 
         document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
