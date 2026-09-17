@@ -5,159 +5,226 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Acompanhamento de Fila - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
     <style>
-        body { font-family: 'Inter', sans-serif; background-color: #f1f5f9; }
-        .scrollable-content::-webkit-scrollbar { width: 4px; }
+        :root {
+            --fs-xs:   clamp(9px,  1vw,   12px);
+            --fs-sm:   clamp(11px, 1.2vw, 14px);
+            --fs-md:   clamp(13px, 1.5vw, 16px);
+            --fs-lg:   clamp(16px, 2vw,   22px);
+            --fs-xl:   clamp(20px, 2.8vw, 30px);
+            --fs-2xl:  clamp(28px, 4vw,   52px);
+            --fs-3xl:  clamp(36px, 5.5vw, 68px);
+        }
+
+        * { font-family: 'DM Sans', sans-serif; }
+        code, .mono { font-family: 'DM Mono', monospace; }
+
+        body { background-color: #f8fafc; min-height: 100vh; display: flex; flex-direction: column; margin: 0; color: #0f172a; transition: background-color 0.3s; }
+
+        .scrollable-content::-webkit-scrollbar { width: 6px; }
+        .scrollable-content::-webkit-scrollbar-track { background: transparent; }
         .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
         /* ── MODO ALTO CONTRASTE ── */
         html.alto-contraste {
             filter: invert(1) hue-rotate(180deg) contrast(120%);
             background-color: #111 !important;
         }
-        html.alto-contraste img, 
-        html.alto-contraste video, 
-        html.alto-contraste iframe,
-        html.alto-contraste [vw] {
+        html.alto-contraste img, html.alto-contraste [vw] {
             filter: invert(1) hue-rotate(180deg);
         }
 
-        /* ── Animações do último chamado ── */
-        @keyframes fadeInDown {
-            from { opacity: 0; transform: translateY(-18px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0)   scale(1);    }
+        /* ── ANIMAÇÕES ── */
+        @keyframes ping-slow {
+            0%, 100% { opacity: 1; transform: scale(1); }
+            50% { opacity: 0.5; transform: scale(1.5); }
         }
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
-            to   { opacity: 1; transform: translateY(0); }
+        @keyframes flash-glow {
+            0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            30%  { box-shadow: 0 0 0 15px rgba(245, 158, 11, 0.2); }
+            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
         }
-        @keyframes flashBorder {
-            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-            40%        { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.35); }
-        }
-        @keyframes slideInCard {
-            from { opacity: 0; transform: translateX(-12px); }
+        @keyframes card-in {
+            from { opacity: 0; transform: translateX(-10px); }
             to   { opacity: 1; transform: translateX(0); }
         }
+        @keyframes fade-up {
+            from { opacity: 0; transform: translateY(10px); }
+            to   { opacity: 1; transform: translateY(0); }
+        }
 
-        .animate-fade-in      { animation: fadeIn 0.4s ease-out forwards; }
-        .animate-chamado-in   { animation: fadeInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
-        .animate-flash-border { animation: flashBorder 0.9s ease-out; }
-        .animate-slide-card   { animation: slideInCard 0.35s ease-out forwards; }
+        .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
+        .anim-glow { animation: flash-glow 1.1s ease-out forwards; }
+        .anim-card { animation: card-in 0.3s ease-out forwards; }
+        .anim-fade-up { animation: fade-up 0.4s ease-out forwards; }
+
+        /* ── CARDS ESTILO PAINEL RECEPÇÃO ── */
+        .coluna-unificada { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.02); }
+        .coluna-header { padding: clamp(12px, 1.5vw, 18px) clamp(14px, 2vw, 22px); display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; border-bottom: 1px solid #f1f5f9; }
+        
+        .pessoa-card {
+            background: #ffffff;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px;
+            padding: clamp(10px, 1.5vw, 14px) clamp(12px, 1.5vw, 16px);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            transition: all 0.2s ease;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.03);
+            margin-bottom: 10px;
+        }
+        .pessoa-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.06); transform: translateY(-2px); }
+        
+        .nome-chamado { background: linear-gradient(90deg, #d97706, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
+        
+        /* Cores Específicas das Bordas Esquerda */
+        .border-left-amber  { border-left: 4px solid #f59e0b; }
+        .border-left-indigo { border-left: 4px solid #6366f1; background: #f5f8ff; border-color: #e0e7ff; }
+        .border-left-cyan   { border-left: 4px solid #06b6d4; background: #ecfeff; border-color: #cffafe; }
+        .border-left-red    { border-left: 4px solid #ef4444; background: #fef2f2; border-color: #fee2e2; }
     </style>
 </head>
-<body class="p-2 sm:p-4 md:p-8 min-h-screen flex flex-col">
+<body class="p-2 sm:p-4 md:p-6 lg:p-8">
 
     <!-- LOADING -->
-    <div id="loading" class="fixed inset-0 bg-white flex flex-col items-center justify-center z-50">
-        <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-green-600"></div>
-        <p class="mt-4 text-gray-500 font-bold uppercase text-[10px] tracking-widest">Sincronizando com o SIGEP...</p>
+    <div id="loading" class="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50 gap-4">
+        <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-amber-500 animate-spin"></div>
+        <p class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Conectando ao SIGEP...</p>
     </div>
 
     <!-- ERRO -->
-    <div id="error-screen" class="hidden fixed inset-0 bg-gray-100 flex flex-col items-center justify-center p-4 z-50">
+    <div id="error-screen" class="hidden fixed inset-0 bg-slate-100 flex flex-col items-center justify-center p-4 z-50">
         <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-red-500">
-            <h1 class="text-xl font-black text-gray-800 mb-2">ACESSO RESTRITO</h1>
-            <p class="text-gray-500 text-sm mb-6">Esta pauta está privada ou o link expirou no SIGEP.</p>
-            <button onclick="location.reload()" class="bg-green-600 text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md">Tentar Novamente</button>
+            <div class="text-5xl mb-4">🔒</div>
+            <h1 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-wide">Acesso Restrito</h1>
+            <p class="text-slate-500 text-sm mb-6 font-medium">Esta pauta está configurada como privada ou o link de acesso expirou no sistema SIGEP.</p>
+            <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-900 transition-colors text-white px-8 py-3.5 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md w-full">Tentar Novamente</button>
         </div>
     </div>
 
     <!-- CONTEÚDO PRINCIPAL -->
-    <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col">
+    <div id="app-content" class="hidden w-full max-w-[1400px] mx-auto flex-1 flex flex-col gap-5 h-full">
 
-        <!-- HEADER -->
-        <header class="mb-6 bg-white p-5 rounded-3xl shadow-sm border flex flex-col md:flex-row items-center justify-between gap-4">
-            <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left w-full md:w-auto">
-                <div class="flex items-center gap-3 md:pr-5 md:border-r-2 border-slate-100">
-                    <div class="bg-slate-50 p-2 rounded-xl border shadow-inner shrink-0">
-                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
-                    </div>
-                    <div class="flex flex-col text-left">
-                        <h1 class="text-2xl font-black text-slate-800 tracking-tighter leading-none">SIGEP</h1>
-                        <p class="text-[8px] font-bold text-gray-400 uppercase tracking-widest mt-0.5">Gestão de Pauta</p>
-                    </div>
+        <!-- HEADER MODERNIZADO -->
+        <header class="bg-white border border-slate-200 shadow-sm rounded-3xl px-5 py-4 shrink-0 flex flex-col md:flex-row items-center justify-between gap-4">
+            <div class="flex items-center gap-4 w-full md:w-auto">
+                <div class="bg-slate-50 border border-slate-100 p-2.5 rounded-2xl shrink-0 shadow-inner">
+                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 w-auto object-contain">
                 </div>
-                <div class="mt-1 md:mt-0">
-                    <h2 id="pauta-title" class="text-xl md:text-2xl font-black text-gray-800 uppercase tracking-tighter leading-tight">---</h2>
-                    <div class="flex items-center justify-center md:justify-start gap-2 mt-1.5">
-                        <span class="relative flex h-2 w-2">
-                            <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
-                            <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
-                        </span>
-                        <p class="text-[9px] text-gray-400 font-bold uppercase tracking-widest">Painel Público • Atendimento ao vivo</p>
+                <div class="flex flex-col text-left">
+                    <div class="flex items-center gap-2">
+                        <h1 class="text-slate-900 font-black tracking-tight leading-none" style="font-size:var(--fs-lg)">SIGEP</h1>
+                        <span class="text-slate-300 font-bold" style="font-size:var(--fs-xs)">·</span>
+                        <span class="text-slate-400 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Acompanhamento de Fila</span>
+                    </div>
+                    <h2 id="pauta-title" class="text-amber-600 font-black leading-tight mt-1 tracking-tight truncate max-w-xs sm:max-w-md md:max-w-lg lg:max-w-xl" style="font-size:var(--fs-md)">—</h2>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto justify-between md:justify-end">
+                <div class="hidden sm:flex items-center gap-2 px-3 py-1.5 bg-green-50 border border-green-100 rounded-lg">
+                    <span class="relative flex h-2.5 w-2.5">
+                        <span class="ping-slow absolute h-full w-full rounded-full bg-green-500 opacity-60"></span>
+                        <span class="relative rounded-full bg-green-600 h-2.5 w-2.5"></span>
+                    </span>
+                    <span class="text-green-700 font-black uppercase tracking-widest" style="font-size:var(--fs-xs)">Ao Vivo</span>
+                </div>
+
+                <div class="flex gap-2">
+                    <button id="btn-alto-contraste" class="bg-slate-50 hover:bg-slate-100 text-slate-600 px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm border border-slate-200 transition-all uppercase tracking-wider font-bold" style="font-size:var(--fs-xs)">
+                        <span>🌗</span> <span class="hidden sm:inline">Contraste</span>
+                    </button>
+                    <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-4 py-2 rounded-xl flex items-center gap-2 shadow-sm transition-all uppercase tracking-wider font-bold" style="font-size:var(--fs-xs)">
+                        <span>✅</span> <span class="hidden sm:inline">Concluídos:</span>
+                        <span id="total-atendidos-count" class="bg-white/20 px-2 py-0.5 rounded-md">0</span>
+                    </button>
+                </div>
+            </div>
+        </header>
+
+        <!-- BLOCO DO ÚLTIMO CHAMADO -->
+        <div id="ultimo-chamado-container" class="hidden shrink-0">
+            <div id="uc-card" class="bg-white border border-amber-200 shadow-md rounded-3xl relative overflow-hidden" style="padding:clamp(16px, 2.5vw, 32px) clamp(20px, 3vw, 40px)">
+                <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.08) 0%, transparent 70%)"></div>
+                <div class="relative z-10 flex flex-col sm:flex-row items-center justify-between gap-4">
+                    <div class="text-center sm:text-left">
+                        <p class="text-amber-500 font-black uppercase tracking-[0.3em] mb-2 flex items-center justify-center sm:justify-start gap-2" style="font-size:var(--fs-xs)">
+                            📣 Chamando Agora
+                        </p>
+                        <h2 id="uc-nome" class="nome-chamado font-black uppercase tracking-tight leading-none mb-3" style="font-size:var(--fs-3xl)">—</h2>
+                        <div class="flex flex-wrap gap-2 justify-center sm:justify-start items-center">
+                            <span id="uc-local" class="bg-amber-100 border border-amber-200 text-amber-800 font-black px-4 py-1.5 rounded-xl shadow-sm uppercase tracking-wide" style="font-size:var(--fs-sm)">—</span>
+                            <span id="uc-hora"  class="mono text-slate-400 font-bold bg-slate-50 border border-slate-100 px-3 py-1.5 rounded-xl" style="font-size:var(--fs-xs)">—</span>
+                        </div>
                     </div>
                 </div>
             </div>
             
-            <div class="flex items-center gap-3 w-full md:w-auto">
-                <!-- Botão Alto Contraste -->
-                <button id="btn-alto-contraste" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-4 py-3 rounded-2xl flex flex-col items-center shadow-sm transition-all min-w-[80px] flex-1 md:flex-none uppercase tracking-wider border border-slate-200">
-                    <span class="text-[14px]">🌗</span>
-                    <span class="text-[8px] font-black uppercase mt-1">Contraste</span>
-                </button>
-                <!-- Botão Finalizados -->
-                <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-lg transition-all min-w-[140px] flex-1 md:flex-none uppercase tracking-wider">
-                    <span class="text-[9px] font-black uppercase opacity-70">Finalizados Hoje</span>
-                    <span id="total-atendidos-count" class="text-2xl font-black">0</span>
-                </button>
-            </div>
-        </header>
-
-        <!-- BLOCO DO ÚLTIMO CHAMADO (animado) -->
-        <div id="ultimo-chamado-container" class="hidden mb-6">
-            <div id="uc-card" class="bg-slate-900 rounded-3xl p-6 md:p-8 text-center relative overflow-hidden shadow-xl border border-slate-700">
-                <div class="absolute inset-0 bg-amber-500 opacity-10 rounded-3xl animate-pulse-slow pointer-events-none"></div>
-                <p class="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-[0.3em] mb-4">📣 Chamando agora</p>
-                <h2 id="uc-nome" class="text-4xl sm:text-5xl md:text-6xl font-black text-white uppercase tracking-tight leading-none mb-6 drop-shadow-md transition-all duration-300">—</h2>
-                <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                    <span id="uc-local" class="bg-amber-600 text-white text-sm sm:text-base font-black px-6 py-2 rounded-xl shadow-lg border border-amber-500 uppercase tracking-wider">—</span>
-                    <span id="uc-hora"  class="text-slate-400 text-xs font-bold uppercase tracking-widest mt-2 sm:mt-0">—</span>
-                </div>
-            </div>
             <!-- Recentes -->
-            <div id="uc-recentes" class="mt-3 grid grid-cols-1 sm:grid-cols-3 gap-3 hidden"></div>
+            <div id="uc-recentes" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 hidden"></div>
         </div>
 
         <!-- GRADE DE COLUNAS -->
-        <div id="main-grid" class="grid grid-cols-1 gap-4 flex-1 min-h-0">
+        <div id="main-grid" class="flex-1 min-h-[400px] grid grid-cols-1 gap-5">
 
-            <div id="col-aguardando" class="bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-amber-500 p-4 text-white flex justify-between items-center shadow-md shrink-0">
-                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⏳</span> Fila de Espera</h2>
-                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
+            <!-- Fila de Espera -->
+            <div id="col-aguardando" class="coluna-unificada border-amber-200">
+                <div class="coluna-header bg-amber-50/50">
+                    <div>
+                        <p class="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
+                            ⏳ Fila de Espera
+                        </p>
+                        <p class="text-slate-500 font-bold mt-0.5" style="font-size:var(--fs-xs)">Aguardando atendimento</p>
+                    </div>
+                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-1 rounded-full font-black shadow-sm border border-amber-100" style="font-size:var(--fs-md)">0</span>
                 </div>
-                <div id="list-aguardando" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50 scrollable-content"></div>
+                <div id="list-aguardando" class="flex-1 overflow-y-auto bg-slate-50/50 p-3 sm:p-4 scrollable-content"></div>
             </div>
 
-            <div id="col-atendimento" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-indigo-600 p-4 text-white flex justify-between items-center shadow-md shrink-0">
-                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">🧑‍💻</span> Em Atendimento</h2>
-                    <span id="count-atendimento" class="bg-white text-indigo-700 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
+            <!-- Em Atendimento -->
+            <div id="col-atendimento" class="hidden coluna-unificada border-indigo-200">
+                <div class="coluna-header bg-indigo-50/50">
+                    <div>
+                        <p class="text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
+                            🧑‍💻 Em Atendimento
+                        </p>
+                        <p class="text-slate-500 font-bold mt-0.5" style="font-size:var(--fs-xs)">Sendo atendidos agora</p>
+                    </div>
+                    <span id="count-atendimento" class="bg-white text-indigo-700 px-3 py-1 rounded-full font-black shadow-sm border border-indigo-100" style="font-size:var(--fs-md)">0</span>
                 </div>
-                <div id="list-atendimento" class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
+                <div id="list-atendimento" class="flex-1 overflow-y-auto bg-slate-50/50 p-3 sm:p-4 scrollable-content"></div>
             </div>
 
-            <div id="col-distribuicao" class="hidden bg-white rounded-3xl shadow-md border overflow-hidden flex flex-col h-full min-h-[400px]">
-                <div class="bg-cyan-600 p-4 text-white flex justify-between items-center shadow-md shrink-0">
-                    <h2 class="text-sm font-black uppercase flex items-center gap-2"><span class="text-lg">⚖️</span> Distribuição / Assinatura</h2>
-                    <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-0.5 rounded-full text-xs font-black shadow-sm">0</span>
+            <!-- Distribuição -->
+            <div id="col-distribuicao" class="hidden coluna-unificada border-cyan-200">
+                <div class="coluna-header bg-cyan-50/50">
+                    <div>
+                        <p class="text-cyan-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
+                            ⚖️ Distribuição / Assinatura
+                        </p>
+                        <p class="text-slate-500 font-bold mt-0.5" style="font-size:var(--fs-xs)">Aguardando trâmite final</p>
+                    </div>
+                    <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-1 rounded-full font-black shadow-sm border border-cyan-100" style="font-size:var(--fs-md)">0</span>
                 </div>
-                <div id="list-distribuicao" class="p-3 sm:p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50 scrollable-content"></div>
+                <div id="list-distribuicao" class="flex-1 overflow-y-auto bg-slate-50/50 p-3 sm:p-4 scrollable-content"></div>
             </div>
         </div>
+
+        <footer class="text-center text-slate-400 font-bold uppercase tracking-widest pb-2" style="font-size:var(--fs-xs)">
+            SIGEP · Acompanhamento Público · Atualizado em tempo real
+        </footer>
     </div>
 
     <!-- MODAL ATENDIDOS -->
-    <div id="atendidos-modal" class="hidden fixed inset-0 bg-gray-900/60 backdrop-blur-sm flex items-center justify-center z-[100] p-4" onclick="this.classList.add('hidden')">
-        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl flex flex-col max-h-[80vh] overflow-hidden" onclick="event.stopPropagation()">
-            <div class="p-5 border-b flex justify-between items-center bg-slate-50">
+    <div id="atendidos-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 anim-fade-up" onclick="this.classList.add('hidden')">
+        <div class="bg-white w-full max-w-lg rounded-[24px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border border-slate-200" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
                 <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>✅</span> Concluídos Hoje</h2>
-                <button id="close-atendidos-btn" class="text-gray-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1">&times;</button>
+                <button id="close-atendidos-btn" class="text-slate-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1 bg-white rounded-full shadow-sm w-8 h-8 flex items-center justify-center">&times;</button>
             </div>
-            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-gray-50 scrollable-content"></div>
+            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50/30 scrollable-content"></div>
         </div>
     </div>
 
@@ -188,9 +255,9 @@
 
     <script type="module">
         import { initializeApp }    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, collection, setDoc, serverTimestamp }
+        import { getFirestore, doc, onSnapshot, collection } 
             from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        import { initializeAppCheck, ReCaptchaV3Provider }
+        import { initializeAppCheck, ReCaptchaV3Provider } 
             from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
         const firebaseConfig = {
@@ -215,8 +282,6 @@
         const urlParams = new URLSearchParams(window.location.search);
         const pId = urlParams.get('id');
 
-        // ESTADO GLOBAL
-        let ultimoChamadoAtual = null; 
         let maskNames = false;
 
         function escapeHTML(str) {
@@ -242,7 +307,7 @@
         function tocarSomChamado() {
             try {
                 const ctx = new (window.AudioContext || window.webkitAudioContext)();
-                const tocarNota = (freq, inicio, duracao, ganho = 0.4) => {
+                const tocarNota = (freq, inicio, duracao, ganho = 0.3) => {
                     const osc  = ctx.createOscillator();
                     const gain = ctx.createGain();
                     osc.connect(gain);
@@ -270,11 +335,11 @@
             if (!card || !nomeEl) return;
 
             nomeEl.classList.remove('animate-chamado-in');
-            card.classList.remove('animate-flash-border');
+            card.classList.remove('anim-glow');
             void nomeEl.offsetWidth;
             void card.offsetWidth;
             nomeEl.classList.add('animate-chamado-in');
-            card.classList.add('animate-flash-border');
+            card.classList.add('anim-glow');
         }
 
         function renderUltimoChamado(chamado, historico) {
@@ -304,11 +369,11 @@
             if (anteriores.length > 0) {
                 recentesEl.classList.remove('hidden');
                 recentesEl.innerHTML = anteriores.map((c, i) => `
-                    <div class="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm animate-slide-card"
+                    <div class="bg-white border border-slate-200 rounded-2xl px-5 py-4 text-center shadow-sm anim-card"
                          style="animation-delay: ${i * 0.07}s">
-                        <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">Chamado Anterior</p>
-                        <p class="text-slate-800 font-bold text-sm truncate uppercase">${formatNameMasked(c.nome, maskNames)}</p>
-                        <p class="text-slate-500 text-[10px] mt-0.5 font-semibold">${escapeHTML(c.local || '')} · ${escapeHTML(c.hora || '')}</p>
+                        <p class="text-slate-400 font-bold uppercase tracking-widest mb-1" style="font-size:var(--fs-xs)">Anterior</p>
+                        <p class="text-slate-800 font-black truncate uppercase" style="font-size:var(--fs-md)">${formatNameMasked(c.nome, maskNames)}</p>
+                        <p class="text-slate-500 mt-1 font-semibold mono" style="font-size:var(--fs-xs)">${escapeHTML(c.local || '')} · ${escapeHTML(c.hora || '')}</p>
                     </div>
                 `).join('');
             } else {
@@ -331,28 +396,39 @@
             if (e.detail) renderUltimoChamado(e.detail, []);
         });
 
-        const createCardHTML = (a, i, color, type, data) => {
+        const createCardHTML = (a, idx, colorClass, type, data) => {
             const numAg  = a.numeroAgendamento || a.numAgendamento || '';
             const horaAg = a.scheduledTime || '';
+            const isUrgente = a.priority === 'URGENTE';
 
-            let blocos = '';
-            if (numAg || horaAg) {
-                blocos = `<div class="flex flex-wrap gap-1 mt-1.5">`;
-                if (numAg)  blocos += `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-50 text-blue-600 border border-blue-100">📅 Nº: ${escapeHTML(numAg)}</span>`;
-                if (horaAg) blocos += `<span class="inline-flex items-center gap-0.5 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200">⏰ ${escapeHTML(horaAg)}</span>`;
-                blocos += `</div>`;
+            const baseBorder = isUrgente ? 'border-left-red' : colorClass;
+            const delay = Math.min(idx * 0.03, 0.5);
+
+            let subInfos = '';
+            if (numAg || horaAg || a.documentState === 'saved') {
+                subInfos = `<div class="flex flex-wrap gap-2 mt-2">`;
+                if (numAg)  subInfos += `<span class="inline-flex items-center bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 mono font-bold" style="font-size:var(--fs-xs)">📅 ${escapeHTML(numAg)}</span>`;
+                if (horaAg) subInfos += `<span class="inline-flex items-center bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 mono font-bold" style="font-size:var(--fs-xs)">⏰ ${escapeHTML(horaAg)}</span>`;
+                if (a.documentState === 'saved') subInfos += `<span class="inline-flex items-center bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 font-bold uppercase" style="font-size:var(--fs-xs)">Docs OK</span>`;
+                subInfos += `</div>`;
             }
 
             return `
-                <div class="bg-white p-3.5 rounded-2xl border-l-8 ${a.priority === 'URGENTE' ? 'border-red-500 bg-red-50/50' : color} shadow-sm flex justify-between items-center transition-all mb-2 border border-slate-200/60">
-                    <div class="min-w-0 flex-grow pr-2">
-                        <p class="text-[9px] font-black text-slate-400 uppercase tracking-widest leading-none mb-1">${type === 'wait' ? (i+1)+'º DA FILA' : 'PROCESSO ATIVO'}</p>
-                        <h4 class="font-bold text-slate-800 text-sm uppercase truncate leading-tight">${formatNameMasked(a.name, data.maskNames)}</h4>
-                        ${blocos}
+                <div class="pessoa-card anim-card ${baseBorder}" style="animation-delay: ${delay}s">
+                    <div class="flex-1 min-w-0 pr-3">
+                        <p class="text-slate-400 font-black uppercase tracking-widest mb-1" style="font-size:var(--fs-xs)">
+                            ${type === 'wait' ? (idx + 1) + 'º NA FILA' : 'PROCESSO ATIVO'}
+                        </p>
+                        <h4 class="font-black text-slate-800 uppercase truncate leading-tight" style="font-size:var(--fs-md)">
+                            ${formatNameMasked(a.name, data.maskNames)}
+                        </h4>
+                        ${subInfos}
                     </div>
-                    <div class="flex flex-col items-end shrink-0 gap-1">
-                        <span class="bg-slate-800 text-white text-[8px] font-black px-2 py-1 rounded-md uppercase tracking-wider">${escapeHTML(a.room) || 'GERAL'}</span>
-                        ${a.documentState === 'saved' ? '<span class="text-[8px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-1.5 py-0.5 rounded-md uppercase">Docs OK</span>' : ''}
+                    <div class="flex flex-col items-end shrink-0 gap-1.5">
+                        <span class="bg-slate-800 text-white font-bold px-3 py-1 rounded-lg uppercase tracking-wide border border-slate-700 shadow-sm" style="font-size:var(--fs-xs)">
+                            ${escapeHTML(a.room) || 'GERAL'}
+                        </span>
+                        ${isUrgente ? `<span class="bg-red-100 text-red-800 font-black px-3 py-0.5 rounded-lg uppercase tracking-wide border border-red-200" style="font-size:var(--fs-xs)">Urgente</span>` : ''}
                     </div>
                 </div>`;
         };
@@ -374,7 +450,6 @@
 
                 const data = snap.data();
                 maskNames = data.maskNames || false;
-                window.currentPautaMaskNames = maskNames;
 
                 document.getElementById('pauta-title').textContent = data.name;
                 document.getElementById('loading').classList.add('hidden');
@@ -387,7 +462,11 @@
                 else { document.getElementById('col-atendimento').classList.add('hidden'); }
                 if (data.useDistributionFlow) { document.getElementById('col-distribuicao').classList.remove('hidden'); cols++; }
                 else { document.getElementById('col-distribuicao').classList.add('hidden'); }
-                grid.className = `grid grid-cols-1 ${cols > 1 ? 'lg:grid-cols-' + cols : ''} gap-4 flex-1 min-h-0`;
+                grid.className = `flex-1 min-h-[400px] grid grid-cols-1 ${cols > 1 ? 'lg:grid-cols-' + cols : ''} gap-5`;
+                
+                window._sigepOrdem = data.ordemAtendimento || 'padrao';
+                window._sigepTipo  = data.type || 'agendamento';
+                window._sigepRooms = data.rooms || data.customRooms || [];
             }, handleAcessoNegado);
 
             iniciarListenerUltimoChamado(pId);
@@ -401,7 +480,7 @@
 
                 const items = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                const ag   = items.filter(i => i.status === 'aguardando').sort((a, b) => {
+                const ag  = items.filter(i => i.status === 'aguardando').sort((a, b) => {
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
                     if (ordemAtendimento === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
@@ -418,7 +497,7 @@
 
                 const elAg = document.getElementById('list-aguardando');
                 if (ag.length === 0) {
-                    elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
+                    elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-slate-400 font-black uppercase tracking-widest" style="font-size:var(--fs-xs)">Fila Limpa</p></div>';
                 } else if (tipo === 'multisala') {
                     const rooms = window._sigepRooms || [];
                     let html = '';
@@ -426,52 +505,44 @@
                         const roomItems = ag.filter(a => a.room === room);
                         if (roomItems.length === 0) return;
                         html += `
-                            <div class="mb-4 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                <div class="bg-slate-50 px-4 py-2 border-b border-gray-200 flex justify-between items-center">
-                                    <span class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5">🏢 ${escapeHTML(room)}</span>
-                                    <span class="bg-slate-800 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${roomItems.length}</span>
+                            <div class="mb-4 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                                <div class="bg-slate-50/80 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                                    <span class="font-black text-slate-700 uppercase tracking-widest flex items-center gap-2" style="font-size:var(--fs-sm)">🏢 ${escapeHTML(room)}</span>
+                                    <span class="bg-slate-800 text-white font-bold px-2.5 py-0.5 rounded-full" style="font-size:var(--fs-xs)">${roomItems.length}</span>
                                 </div>
-                                <div class="p-2 bg-slate-50/30">${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-500', 'wait', { maskNames })).join('')}</div>
+                                <div class="p-3">${roomItems.map((a, i) => createCardHTML(a, i, 'border-left-amber', 'wait', { maskNames })).join('')}</div>
                             </div>`;
                     });
                     const noRoom = ag.filter(a => !a.room || !rooms.includes(a.room));
                     if (noRoom.length > 0) {
                         html += `
-                            <div class="mb-4 bg-white rounded-2xl border border-gray-200 overflow-hidden shadow-sm">
-                                <div class="bg-red-50 px-4 py-2 border-b border-red-100 flex justify-between items-center">
-                                    <span class="text-xs font-black text-red-900 uppercase tracking-widest flex items-center gap-1.5">⚠️ Triagem Geral</span>
-                                    <span class="bg-red-600 text-white text-[10px] font-bold px-2 py-0.5 rounded-full">${noRoom.length}</span>
+                            <div class="mb-4 bg-white rounded-2xl border border-red-100 overflow-hidden shadow-sm">
+                                <div class="bg-red-50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
+                                    <span class="font-black text-red-800 uppercase tracking-widest flex items-center gap-2" style="font-size:var(--fs-sm)">⚠️ Triagem Geral</span>
+                                    <span class="bg-red-600 text-white font-bold px-2.5 py-0.5 rounded-full" style="font-size:var(--fs-xs)">${noRoom.length}</span>
                                 </div>
-                                <div class="p-2 bg-slate-50/30">${noRoom.map((a, i) => createCardHTML(a, i, 'border-amber-500', 'wait', { maskNames })).join('')}</div>
+                                <div class="p-3">${noRoom.map((a, i) => createCardHTML(a, i, 'border-left-amber', 'wait', { maskNames })).join('')}</div>
                             </div>`;
                     }
                     elAg.innerHTML = html;
                 } else {
-                    elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-amber-400', 'wait', { maskNames })).join('');
+                    elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-left-amber', 'wait', { maskNames })).join('');
                 }
 
                 document.getElementById('list-atendimento').innerHTML = serv.length
-                    ? serv.map((a, i) => createCardHTML(a, i, 'border-indigo-500', 'pulse', { maskNames })).join('')
-                    : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Ninguém em atendimento</p></div>';
+                    ? serv.map((a, i) => createCardHTML(a, i, 'border-left-indigo', 'pulse', { maskNames })).join('')
+                    : '<div class="text-center py-16"><p class="text-slate-400 font-black uppercase tracking-widest" style="font-size:var(--fs-xs)">Ninguém em atendimento</p></div>';
 
                 document.getElementById('list-distribuicao').innerHTML = dist.length
-                    ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-500', 'normal', { maskNames })).join('')
-                    : '<div class="text-center py-10"><p class="text-gray-300 text-[10px] font-black uppercase tracking-widest">Nenhum processo aguardando</p></div>';
+                    ? dist.map((a, i) => createCardHTML(a, i, 'border-left-cyan', 'normal', { maskNames })).join('')
+                    : '<div class="text-center py-16"><p class="text-slate-400 font-black uppercase tracking-widest" style="font-size:var(--fs-xs)">Nenhum processo aguardando</p></div>';
 
-                document.getElementById('list-atendidos-content').innerHTML = done.map(d => `
-                    <div class="bg-white p-3 rounded-xl border border-gray-100 shadow-sm flex justify-between items-center text-sm mb-2 hover:bg-gray-50 transition-colors">
-                        <span class="font-bold text-gray-700 uppercase text-xs truncate">${formatNameMasked(d.name, maskNames)}</span>
-                        <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
+                document.getElementById('list-atendidos-content').innerHTML = done.map((d, i) => `
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center mb-2 hover:shadow-md transition-shadow anim-card" style="animation-delay:${Math.min(i*0.03, 0.5)}s">
+                        <span class="font-black text-slate-700 uppercase truncate" style="font-size:var(--fs-md)">${formatNameMasked(d.name, maskNames)}</span>
+                        <span class="font-bold text-emerald-700 bg-emerald-50 border border-emerald-200 px-3 py-1 rounded-lg uppercase tracking-widest" style="font-size:var(--fs-xs)">Concluído</span>
                     </div>`).join('')
-                    || '<p class="text-center text-gray-400 py-10 uppercase text-xs font-bold">Nenhum atendimento finalizado hoje.</p>';
-            }, handleAcessoNegado);
-
-            onSnapshot(doc(db, "pautas", pId), (snap) => {
-                if (!snap.exists()) return;
-                const d = snap.data();
-                window._sigepOrdem = d.ordemAtendimento || 'padrao';
-                window._sigepTipo  = d.type || 'agendamento';
-                window._sigepRooms = d.rooms || d.customRooms || [];
+                    || '<p class="text-center text-slate-400 py-16 uppercase font-bold tracking-widest" style="font-size:var(--fs-xs)">Nenhum atendimento finalizado.</p>';
             }, handleAcessoNegado);
         }
 
