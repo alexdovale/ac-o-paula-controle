@@ -52,13 +52,13 @@
         .clean-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-left-width: 5px; /* Borda um pouco mais grossa */
+            border-left-width: 5px;
             box-shadow: 0 2px 4px rgba(0,0,0,0.03);
             transition: all 0.2s ease;
             display: flex;
             align-items: center;
             justify-content: space-between;
-            padding: 14px 16px 14px 22px; /* 22px na esquerda dá o respiro perfeito! */
+            padding: 14px 16px 14px 22px;
             gap: 12px;
         }
         .clean-card:hover {
@@ -69,6 +69,7 @@
         .border-indigo-clean { border-left-color: #6366f1; background-color: #f8faff; }
         .border-cyan-clean   { border-left-color: #06b6d4; background-color: #f4feff; }
         .border-red-clean    { border-left-color: #ef4444; background-color: #fef2f2; }
+        .border-slate-clean  { border-left-color: #94a3b8; background-color: #f8fafc; opacity: 0.85; } /* Estilo para o Pausado */
     </style>
 </head>
 <body class="p-3 sm:p-5 md:p-8 min-h-screen flex flex-col">
@@ -396,10 +397,12 @@
             if (e.detail) renderUltimoChamado(e.detail, []);
         });
 
-        // 🌟 FUNÇÃO DE CRIAÇÃO DO CARD (ESTILO CLEAN + SVGS + ASSUNTO/HORA + ESPAÇAMENTO AJUSTADO) 🌟
+        // 🌟 FUNÇÃO DE CRIAÇÃO DO CARD: INCLUI SINCRONIA MANUAL, PAUSADOS, TRIAGEM E SVGS CLEAN 🌟
         const createCardHTML = (a, idx, colorClass, type, data) => {
             const numAg  = a.numeroAgendamento || a.numAgendamento || '';
             const horaAg = a.scheduledTime || '';
+            const statusTriagem = a.statusTriagem || '';
+            const isPausado = a.status === 'pausado';
             
             // Tratamento da Hora de Chegada
             let horaChegada = '';
@@ -427,11 +430,11 @@
             const isUrgente = prioridade === 'URGENTE';
             const isPrioridade = prioridade === 'PRIORIDADE' || (prioridade && prioridade !== 'NORMAL' && !isUrgente);
 
-            // Cores do Card
-            const baseBorder = isUrgente ? 'border-red-clean' : colorClass;
+            // Se estiver pausado, forçamos a borda cinza (slate) e leve opacidade. Se não, segue normal/urgente.
+            const baseBorder = isPausado ? 'border-slate-clean' : (isUrgente ? 'border-red-clean' : colorClass);
             const delay = Math.min(idx * 0.03, 0.5);
 
-            // Tags Embutidas (Horários e Docs com SVG)
+            // Tags Embutidas (Horários, Docs e Status Triagem com SVG)
             const tags = [];
             if (numAg) tags.push(`
                 <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono font-bold text-[9px]" title="Nº Agendamento">
@@ -448,12 +451,17 @@
                     <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     ${escapeHTML(horaChegada)}
                 </span>`);
+            if (statusTriagem) tags.push(`
+                <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200 font-mono font-bold text-[9px]" title="Status da Triagem">
+                    <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
+                    ${escapeHTML(statusTriagem)}
+                </span>`);
             if (a.documentState === 'saved') tags.push(`
                 <span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[8px]" title="Documentação Pronta">
                     Docs OK
                 </span>`);
 
-            let subInfos = tags.length > 0 ? `<div class="flex flex-wrap gap-1.5 mt-2">${tags.join('')}</div>` : '';
+            let subInfos = tags.length > 0 ? `<div class="flex flex-wrap gap-1.5 mt-2.5">${tags.join('')}</div>` : '';
             
             // Assunto com SVG
             let assuntoHTML = '';
@@ -465,9 +473,24 @@
                 </p>`;
             }
 
-            // Badges Direitos (Com flex box para alinhar certinho)
+            // Posição na fila ou Pausado (Topo esquerdo)
+            let tagTopoEsquerda = type === 'wait' ? (idx + 1) + 'º DA FILA' : 'PROCESSO ATIVO';
+            let htmlTopoEsquerda = `<p class="text-slate-400 font-black uppercase tracking-widest mb-1.5 leading-none text-[10px] flex items-center gap-1.5">`;
+            if (isPausado) {
+                htmlTopoEsquerda += `<svg class="w-3 h-3 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg> PAUSADO`;
+            } else {
+                htmlTopoEsquerda += tagTopoEsquerda;
+            }
+            htmlTopoEsquerda += `</p>`;
+
+            // Badges Direitos (Sala + Prioridades/Pausado)
             let badgesHTML = `<span class="bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg uppercase tracking-widest shadow-sm whitespace-nowrap text-[10px]">${escapeHTML(a.room) || 'GERAL'}</span>`;
-            if (isUrgente) {
+            if (isPausado) {
+                badgesHTML += `<span class="bg-slate-200 text-slate-700 font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border border-slate-300 whitespace-nowrap shadow-sm text-[9px] mt-1.5 flex items-center gap-1">
+                    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
+                    Pausado
+                </span>`;
+            } else if (isUrgente) {
                 badgesHTML += `<span class="bg-red-100 text-red-800 font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border border-red-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5 flex items-center gap-1">
                     <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
                     Urgente
@@ -479,9 +502,7 @@
             return `
                 <div class="clean-card anim-card ${baseBorder} mb-3" style="animation-delay: ${delay}s">
                     <div class="flex-1 min-w-0 pr-4 flex flex-col justify-center">
-                        <p class="text-slate-400 font-black uppercase tracking-widest mb-1 leading-none text-[10px]">
-                            ${type === 'wait' ? (idx + 1) + 'º DA FILA' : 'PROCESSO ATIVO'}
-                        </p>
+                        ${htmlTopoEsquerda}
                         <h4 class="font-black text-slate-800 uppercase truncate leading-tight text-base sm:text-lg">
                             ${formatNameMasked(a.name, data.maskNames)}
                         </h4>
@@ -541,12 +562,21 @@
 
                 const items = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
 
-                const ag  = items.filter(i => i.status === 'aguardando').sort((a, b) => {
+                // 🌟 INCLUI "PAUSADO" NA FILA DE ESPERA 🌟
+                // 🌟 RESPEITA ORDENAÇÃO MANUAL (`manualIndex`) DO SISTEMA 🌟
+                const ag  = items.filter(i => i.status === 'aguardando' || i.status === 'pausado').sort((a, b) => {
                     if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
                     if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                    if (ordemAtendimento === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
+                    
+                    if (ordemAtendimento === 'manual') {
+                        const idxA = a.manualIndex !== undefined ? a.manualIndex : 999999;
+                        const idxB = b.manualIndex !== undefined ? b.manualIndex : 999999;
+                        if (idxA !== idxB) return idxA - idxB;
+                    }
+                    
                     return (a.checkInOrder || 0) - (b.checkInOrder || 0);
                 });
+                
                 const serv = items.filter(i => i.status === 'emAtendimento').sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
                 const dist = items.filter(i => i.status === 'aguardandoDistribuicao' || i.status === 'aguardandoCorrecao');
                 const done = items.filter(i => i.status === 'atendido').sort((a, b) => new Date(b.attendedAt || b.attendedTime) - new Date(a.attendedAt || a.attendedTime));
