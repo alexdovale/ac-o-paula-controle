@@ -1012,9 +1012,9 @@ function renderAprovadosTable(db) {
                 </td>
                 <td class="px-3 py-3">
                     <select id="role-select-${user.id}" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none font-medium cursor-pointer">
-                        <option value="user"        ${user.role === 'user'        ? 'selected' : ''}>Usuário</option>
-                        <option value="apoio"       ${user.role === 'apoio'       ? 'selected' : ''}>Apoio</option>
-                        <option value="admin"       ${user.role === 'admin'       ? 'selected' : ''}>Administrador</option>
+                        <option value="user"         ${user.role === 'user'        ? 'selected' : ''}>Usuário</option>
+                        <option value="apoio"        ${user.role === 'apoio'       ? 'selected' : ''}>Apoio</option>
+                        <option value="admin"        ${user.role === 'admin'       ? 'selected' : ''}>Administrador</option>
                         <option value="superadmin" ${user.role === 'superadmin' ? 'selected' : ''}>Superadmin</option>
                         <option value="superadmin_global" ${user.role === 'superadmin_global' ? 'selected' : ''}>Superadmin Global</option>
                         <option value="suspended"  ${user.role === 'suspended'  ? 'selected' : ''}>Suspenso</option>
@@ -1081,7 +1081,6 @@ export const approveUser = async (db, userId) => {
 
 export const updateUserRole = async (db, userId) => {
     try {
-        // Se a instância do banco não veio válida, busca do globalApp ou de window.app
         const database = db && typeof db === 'object' ? db : (globalApp?.db || window.app?.db);
         
         if (!database) {
@@ -1090,7 +1089,6 @@ export const updateUserRole = async (db, userId) => {
         }
 
         let targetId = userId;
-        // Se o userId veio invertido ou vazio, tenta extrair do evento
         if (!targetId || typeof targetId !== 'string') {
             const btn = window.event?.target;
             targetId = btn?.getAttribute('onclick')?.match(/'([^']+)'/)?.[1] || targetId;
@@ -1643,12 +1641,130 @@ export const abrirGerenciadorTenants = async (db) => {
     });
 };
 
+// ==========================================
+// MONITORAMENTO DE ERROS E OUVIDORIA (FEEDBACKS)
+// ==========================================
+
+export const carregarFeedbacksSistema = async (db) => {
+    const container = document.getElementById('admin-content');
+    if (!container) return;
+
+    // Injeta a aba/seção de Ouvidoria se ela ainda não existir no HTML do Admin
+    let secaoOuvidoria = document.getElementById('secao-ouvidoria-admin');
+    if (!secaoOuvidoria) {
+        const wrapper = document.createElement('div');
+        wrapper.id = 'secao-ouvidoria-admin';
+        wrapper.className = 'mt-10 pt-6 border-t border-slate-200';
+        wrapper.innerHTML = `
+            <div class="flex justify-between items-center mb-4">
+                <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
+                    <span>📢</span> Ouvidoria, Erros e Sugestões do Sistema
+                </h3>
+                <button id="btn-atualizar-feedbacks" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                    Atualizar Lista
+                </button>
+            </div>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-xs text-left">
+                        <thead class="bg-slate-50 text-slate-600 border-b border-slate-200">
+                            <tr>
+                                <th class="p-3">Data / Hora</th>
+                                <th class="p-3">Tipo</th>
+                                <th class="p-3">Origem (Pauta / Tela)</th>
+                                <th class="p-3">Remetente</th>
+                                <th class="p-3">Mensagem / Relatório de Erro</th>
+                                <th class="p-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tabela-feedbacks-body" class="divide-y divide-slate-100">
+                            <tr><td colspan="6" class="text-center py-6 text-slate-400">Carregando mensagens...</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        `;
+        container.appendChild(wrapper);
+
+        document.getElementById('btn-atualizar-feedbacks')?.addEventListener('click', () => carregarFeedbacksSistema(db));
+    }
+
+    const tbody = document.getElementById('tabela-feedbacks-body');
+    if (!tbody) return;
+
+    try {
+        const pautasSnap = await getDocs(collection(db, "pautas"));
+        let todosFeedbacks = [];
+
+        for (const pDoc of pautasSnap.docs) {
+            const fbSnap = await getDocs(collection(db, "pautas", pDoc.id, "feedbacks"));
+            fbSnap.forEach(fb => {
+                todosFeedbacks.push({ id: fb.id, pautaId: pDoc.id, ...fb.data() });
+            });
+        }
+
+        try {
+            const globalSnap = await getDocs(collection(db, "feedbacks_sistema"));
+            globalSnap.forEach(fb => {
+                todosFeedbacks.push({ id: fb.id, ...fb.data() });
+            });
+        } catch(e) {}
+
+        if (todosFeedbacks.length === 0) {
+            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum feedback ou erro reportado até o momento. 🎉</td></tr>';
+            return;
+        }
+
+        todosFeedbacks.sort((a, b) => new Date(b.criadoEm || 0) - new Date(a.criadoEm || 0));
+
+        const tipoCores = {
+            'Elogio': 'bg-emerald-50 text-emerald-700 border-emerald-200',
+            'Sugestão': 'bg-blue-50 text-blue-700 border-blue-200',
+            'Erro': 'bg-red-50 text-red-700 border-red-200',
+            'Reclamação': 'bg-amber-50 text-amber-700 border-amber-200',
+            'Dúvida': 'bg-purple-50 text-purple-700 border-purple-200'
+        };
+
+        tbody.innerHTML = todosFeedbacks.map(fb => {
+            let dataFormatada = '-';
+            try {
+                const d = new Date(fb.criadoEm);
+                if (!isNaN(d.getTime())) dataFormatada = d.toLocaleString('pt-BR');
+            } catch(e) {}
+
+            const corBadge = tipoCores[fb.tipo] || 'bg-slate-100 text-slate-700 border-slate-200';
+
+            return `
+                <tr class="hover:bg-slate-50/80 transition">
+                    <td class="p-3 font-mono text-slate-500 whitespace-nowrap">${escapeHTML(dataFormatada)}</td>
+                    <td class="p-3"><span class="px-2.5 py-0.5 rounded-md font-bold text-[10px] uppercase border ${corBadge}">${escapeHTML(fb.tipo || 'Geral')}</span></td>
+                    <td class="p-3 font-mono text-[10px] text-slate-500 truncate max-w-[120px]">${escapeHTML(fb.pautaOrigem || fb.pautaId || 'Sistema')}</td>
+                    <td class="p-3 font-semibold text-slate-700">${escapeHTML(fb.nome || fb.enviadoPor || 'Anônimo')}</td>
+                    <td class="p-3 text-slate-800 font-medium max-w-xs break-words">${escapeHTML(fb.mensagem || '')}</td>
+                    <td class="p-3 text-center">
+                        <button onclick="window.excluirFeedbackAdmin('${fb.pautaId || 'global'}', '${fb.id}')" class="text-red-400 hover:text-red-600 font-bold p-1 rounded transition" title="Excluir mensagem">
+                            ✕
+                        </button>
+                    </td>
+                </tr>
+            `;
+        }).join('');
+
+    } catch (error) {
+        console.error("Erro ao carregar feedbacks:", error);
+        tbody.innerHTML = '<tr><td colspan="6" class="text-center py-6 text-red-500">Erro ao carregar os dados da ouvidoria.</td></tr>';
+    }
+};
+
 export const setupAdminEvents = (app) => {
     globalApp = app;
 
     setupAdminSearch();
     loadUsersList(app.db);
     populateUserFilter(app.db);
+
+    // 🌟 ADICIONADO PARA CARREGAR OS FEEDBACKS NA TELA DE ADMIN:
+    carregarFeedbacksSistema(app.db);
 
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
         if (window.ImportadorOrgaosService && typeof window.ImportadorOrgaosService.abrirModalMaster === 'function') {
@@ -1783,6 +1899,23 @@ window.exportAuditLogsPDF = () => {
     else console.error("App não inicializado");
 };
 
+// 🌟 INJEÇÃO GLOBAL PARA EXCLUIR FEEDBACK DA OUVIDORIA:
+window.excluirFeedbackAdmin = async (pautaId, feedbackId) => {
+    if (!confirm("Deseja remover este registro do painel?")) return;
+    try {
+        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        if (pautaId === 'global') {
+            await deleteDoc(doc(globalApp.db, "feedbacks_sistema", feedbackId));
+        } else {
+            await deleteDoc(doc(globalApp.db, "pautas", pautaId, "feedbacks", feedbackId));
+        }
+        showNotification("Registro removido.", "success");
+        carregarFeedbacksSistema(globalApp.db);
+    } catch(e) {
+        showNotification("Erro ao excluir.", "error");
+    }
+};
+
 window.setupAdminSearch = () => setupAdminSearch();
 
 export const AdminService = {
@@ -1807,6 +1940,7 @@ export const AdminService = {
     abrirGerenciadorTenants,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
+    carregarFeedbacksSistema, // Exportado para caso precise chamar externamente
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
