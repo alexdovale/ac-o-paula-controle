@@ -606,13 +606,25 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 NOVO: Lógica da Chavinha de Compartilhamento
-        document.getElementById('share-toggle')?.addEventListener('change', (e) => {
+        // 🌟 Lógica da Chavinha de Compartilhamento
+        document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
             const statusText = document.getElementById('share-status-text');
             const linkContainer = document.getElementById('share-link-container');
             const linkInput = document.getElementById('share-link-input');
             const openBtn = document.getElementById('open-external-btn');
+
+            if (this.currentPauta && this.currentPauta.id) {
+                try {
+                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isPublic: isPublic });
+                    if(this.currentPautaData) this.currentPautaData.isPublic = isPublic;
+                } catch (err) {
+                    console.error("Erro ao alterar privacidade:", err);
+                    showNotification("Erro ao publicar a pauta.", "error");
+                    e.target.checked = !isPublic;
+                    return;
+                }
+            }
 
             if (isPublic) {
                 statusText.textContent = 'Público';
@@ -634,7 +646,20 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 NOVO: Copiar link de Compartilhamento
+        // 🌟 Lógica para Ocultar Sobrenomes (LGPD) no Firebase
+        document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
+            const maskNames = e.target.checked;
+            if (this.currentPauta && this.currentPauta.id) {
+                try {
+                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { maskNames: maskNames });
+                    if(this.currentPautaData) this.currentPautaData.maskNames = maskNames;
+                } catch (err) {
+                    console.error("Erro ao alterar modo LGPD:", err);
+                }
+            }
+        });
+
+        // 🌟 Copiar link de Compartilhamento
         document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
             const linkInput = document.getElementById('share-link-input');
             if (linkInput && linkInput.value) {
@@ -686,7 +711,6 @@ class SIGEPApp {
             if (modal) {
                 modal.classList.remove('hidden');
                 if (window.ColetasBuilderService && this.currentPautaData) {
-                    // 🔥 CORREÇÃO: Usando container-bi-links-pauta para não dar "null"
                     document.getElementById('container-bi-links-pauta').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
                     document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
                         window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
@@ -1273,6 +1297,12 @@ class SIGEPApp {
                 if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
+
+                // 🔥 NOVO: Auto-ativar público para pautas novas
+                if (this.currentPautaData.isPublic === undefined) {
+                    this.currentPautaData.isPublic = true;
+                    updateDoc(doc(this.db, "pautas", pautaId), { isPublic: true }).catch(err => console.error(err));
+                }
                 
                 if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
                     this.customRoomsList = this.currentPautaData.customRooms;
