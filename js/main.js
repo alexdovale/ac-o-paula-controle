@@ -1,4 +1,4 @@
-// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS)
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS E ORDENAÇÃO)
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -285,7 +285,7 @@ class SIGEPApp {
         modal.classList.remove('hidden');
 
         const userUnidades = this.currentUser?.unidades || [];
-        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
 
         if (isAdmin) {
             try {
@@ -1101,6 +1101,7 @@ class SIGEPApp {
         document.getElementById(btnId)?.addEventListener('click', callback);
     }
 
+    // 🌟 NOVA FUNÇÃO DE CARREGAMENTO BLINDADA COM ORDENAÇÃO E BUSCA DE TEXTO 🌟
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -1121,25 +1122,17 @@ class SIGEPApp {
     
         try {
             let pautasMap = new Map();
-            const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+            const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
             const modoAtual = this.currentMode;
 
-            // 🛠️ BUSCA SEGURA: Traz todas as pautas do usuário sem restrições de query compostas no Firebase
-            // 🛠️ BUSCA SEGURA E ISOLADA POR ÓRGÃO (MULTI-TENANT)
             let qUser;
-            const orgaoDoUsuario = this.currentUser.orgaoId;
+            const orgaoDoUsuario = this.currentUser.orgaoId || 'padrao_dprj';
 
-            if (isAdmin && this.currentUser.role === 'superadmin_global') {
-                // APENAS você (dono do sistema) vê todas as pautas de todos os clientes
+            if (this.currentUser?.role === 'superadmin_global') {
                 qUser = query(collection(this.db, "pautas"));
             } else if (isAdmin) {
-                // Admin de um órgão vê todas as pautas APENAS do seu órgão
-                qUser = query(
-                    collection(this.db, "pautas"),
-                    where("orgaoId", "==", orgaoDoUsuario)
-                );
+                qUser = query(collection(this.db, "pautas"), where("orgaoId", "==", orgaoDoUsuario));
             } else {
-                // Operador comum vê as pautas onde é dono ou membro, MAS restrito ao seu órgão
                 qUser = query(
                     collection(this.db, "pautas"),
                     where("orgaoId", "==", orgaoDoUsuario),
@@ -1155,14 +1148,11 @@ class SIGEPApp {
             
             let pautas = Array.from(pautasMap.values());
             
-            // 🛠️ DEFINIÇÃO AMPLA DOS TIPOS DE EVENTO (Cobre qualquer variação de cadastro: maiúsculo, minúsculo ou acentuado)
             const tiposEventoValidos = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento', 'mutirao_atendimento'];
 
-            // 🛠️ FILTRAGEM INTELIGENTE NO FRONT-END
             if (modoAtual === 'evento') {
                 pautas = pautas.filter(p => {
                     const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
-                    // Se estiver no modo evento, aceita se contiver qualquer termo de evento ou se o nome da pauta contiver 'mutirão' / 'plantão'
                     return tiposEventoValidos.some(t => tipoPauta.includes(t)) || 
                            String(p.name || '').toLowerCase().includes('mutirão') || 
                            String(p.name || '').toLowerCase().includes('plantão');
@@ -1171,12 +1161,10 @@ class SIGEPApp {
                 pautas = pautas.filter(p => {
                     const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
                     const ehMutiraoNoNome = String(p.name || '').toLowerCase().includes('mutirão') || String(p.name || '').toLowerCase().includes('plantão');
-                    // No modo normal, exibe tudo o que NÃO for explicitamente um evento ou mutirão no nome
                     return !tiposEventoValidos.some(t => tipoPauta.includes(t)) && !ehMutiraoNoNome;
                 });
             }
 
-            // Filtro por unidade ativa, se houver
             if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
                 pautas = pautas.filter(p => p.unidadeNome === this.currentUnidadeExibicao);
             }
@@ -1215,7 +1203,7 @@ class SIGEPApp {
                         
                     case 'unidades':
                         const userUnidades = this.currentUser?.unidades || [];
-                        const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin';
+                        const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
                         if (!isAdminFiltro && userUnidades.length > 0) {
                             const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
                             filteredPautas = filteredPautas.filter(pauta => userUnidadesNomes.includes(pauta.unidadeNome));
@@ -1255,6 +1243,25 @@ class SIGEPApp {
                         return new Date() > dExp || p.isClosed;
                     }); break;
             }
+
+            // 🌟 FILTRO POR NOME (PESQUISA TEXTUAL) 🌟
+            const searchInput = document.getElementById('search-pautas-input');
+            if (searchInput && searchInput.value) {
+                const termo = searchInput.value.toLowerCase().trim();
+                filteredPautas = filteredPautas.filter(p => (p.name || '').toLowerCase().includes(termo));
+            }
+
+            // 🌟 ORDENAÇÃO BLINDADA POR DATA DE CRIAÇÃO (ACEITA TIMESTAMPS E STRINGS) 🌟
+            filteredPautas.sort((a, b) => {
+                const getTempo = (dataStrObj) => {
+                    if (!dataStrObj) return 0;
+                    if (dataStrObj.seconds) return dataStrObj.seconds * 1000; // Firebase Timestamp
+                    const parseado = new Date(dataStrObj).getTime(); // ISO String
+                    return isNaN(parseado) ? 0 : parseado;
+                };
+                // Decrescente: b - a (As pautas mais recentes ficam no topo)
+                return getTempo(b.createdAt) - getTempo(a.createdAt);
+            });
             
             if (filteredPautas.length === 0) {
                 const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
@@ -1294,11 +1301,23 @@ class SIGEPApp {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
+                
+                // 🌟 ATUALIZA OS TEXTOS DE TOLERÂNCIA DINAMICAMENTE (TELA LOGADA) 🌟
+                const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
+                
+                const descPontuais = document.getElementById('desc-pontuais');
+                if (descPontuais) descPontuais.innerHTML = `Agendados que chegam no horário (ou com até <b>${tolerancia} min</b> de tolerância). O desempate é por quem fez o check-in na recepção primeiro.`;
+                
+                const descAtrasados = document.getElementById('desc-atrasados');
+                if (descAtrasados) descAtrasados.innerHTML = `Atrasos superiores a <b>${tolerancia} min</b>. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.`;
+                
+                const descExemplo2 = document.getElementById('desc-exemplo2');
+                if (descExemplo2) descExemplo2.innerHTML = `* Pedro atrasou mais de <b>${tolerancia} min</b>. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).`;
+
                 if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
                 this.currentPautaOwnerId = this.currentPautaData.owner;
                 this.isPautaClosed = this.currentPautaData.isClosed || false;
 
-                // 🔥 NOVO: Auto-ativar público para pautas novas
                 if (this.currentPautaData.isPublic === undefined) {
                     this.currentPautaData.isPublic = true;
                     updateDoc(doc(this.db, "pautas", pautaId), { isPublic: true }).catch(err => console.error(err));
@@ -1586,7 +1605,6 @@ class SIGEPApp {
                 this.currentUser = { ...this.currentUser, ...userData }; 
                 
                 // 🔒 CAPTURA O TENANT (ÓRGÃO) DO USUÁRIO
-                // Se for um usuário antigo sem órgão, cai no 'padrao_dprj' temporariamente
                 this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
                 
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
@@ -1599,7 +1617,7 @@ class SIGEPApp {
 
     applyRoleBasedUI() {
         if (!this.currentUser) return;
-        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin');
+        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
         document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
     }
 
@@ -1705,7 +1723,7 @@ window.exportAuditLogsPDF = exportAuditLogsPDF;
 window.loadDashboardData = loadDashboardData;
 window.populateUserFilter = populateUserFilter;
 window.setupAdminSearch = setupAdminSearch;
-window.abrirGerenciadorUnidades = abrirGerenciarUnidades;
+window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
 window.abrirImportadorUnidades = abrirImportadorUnidades;
 window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
 
@@ -1797,8 +1815,8 @@ document.addEventListener('DOMContentLoaded', function() {
             e.preventDefault();
             content.classList.toggle('hidden');
             toggleBtn.textContent = content.classList.contains('hidden') 
-                ? 'Por que esta ordem é a mais justa? (Clique para expandir)'
-                : 'Por que esta ordem é a mais justa? (Clique para recolher)';
+                ? 'Por que a fila muda sozinha? (Clique para entender a lógica)'
+                : 'Fechar explicação';
         });
     }
 
@@ -1944,22 +1962,6 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 // ============================================================
-// REGISTRO DO SERVICE WORKER (PWA)
-// ============================================================
-if ('serviceWorker' in navigator) {
-    window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./sw.js')
-            .then((reg) => {
-                console.log('[SIGEP PWA] Service Worker registrado com sucesso, escopo:', reg.scope);
-            })
-            .catch((err) => {
-                console.warn('[SIGEP PWA] Falha ao registrar o Service Worker:', err);
-            });
-    });
-}
-
-
-// ============================================================
 // EVENTO blur para CEP
 // ============================================================
 document.addEventListener('blur', async (e) => {
@@ -1983,7 +1985,6 @@ document.addEventListener('blur', async (e) => {
         }
     }
 }, true);
-
 
 // ============================================================
 // FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS (BI)
