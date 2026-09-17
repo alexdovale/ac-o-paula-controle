@@ -401,7 +401,7 @@
         const createCardHTML = (a, idx, colorClass, type, data) => {
             const numAg  = a.numeroAgendamento || a.numAgendamento || '';
             const horaAg = a.scheduledTime || '';
-            const statusTriagem = a.docWorkflowStatus || a.statusTriagem || ''; // Atualizado: Puxa o campo correto do BD
+            const statusTriagem = a.docWorkflowStatus || a.statusTriagem || a.documentStatus || '';
             const isPausado = a.status === 'pausado';
             
             // Tratamento da Hora de Chegada
@@ -430,7 +430,7 @@
             const isUrgente = prioridade === 'URGENTE';
             const isPrioridade = prioridade === 'PRIORIDADE' || prioridade === 'RETORNO_RAPIDO' || (prioridade && prioridade !== 'NORMAL' && !isUrgente);
 
-            // Se estiver pausado, forçamos a borda cinza (slate) e leve opacidade. Se não, segue normal/urgente.
+            // Borda e cores
             const baseBorder = isPausado ? 'border-slate-clean' : (isUrgente ? 'border-red-clean' : colorClass);
             const delay = Math.min(idx * 0.03, 0.5);
 
@@ -451,11 +451,23 @@
                     <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
                     ${escapeHTML(horaChegada)}
                 </span>`);
-            if (statusTriagem && statusTriagem !== 'Pendente') tags.push(`
-                <span class="inline-flex items-center gap-1 bg-purple-50 text-purple-700 px-2 py-0.5 rounded-md border border-purple-200 font-mono font-bold text-[9px]" title="Status da Triagem">
+            
+            // INTELIGÊNCIA DO STATUS DA TRIAGEM COM CORES
+            if (statusTriagem && statusTriagem !== 'Pendente') {
+                let badgeClass = 'bg-slate-50 text-slate-600 border-slate-200';
+                if (statusTriagem === 'Assistido Orientado') badgeClass = 'bg-indigo-50 text-indigo-700 border-indigo-200';
+                else if (statusTriagem === 'Preenchendo Dados') badgeClass = 'bg-amber-50 text-amber-700 border-amber-200';
+                else if (statusTriagem === 'Documentação Recebida' || statusTriagem === 'Falta Digitalizar') badgeClass = 'bg-purple-50 text-purple-700 border-purple-200';
+                else if (statusTriagem === 'Digitalizado') badgeClass = 'bg-cyan-50 text-cyan-700 border-cyan-200';
+                else if (statusTriagem.includes('Verde') || statusTriagem.includes('CNP')) badgeClass = 'bg-emerald-50 text-emerald-700 border-emerald-200';
+
+                tags.push(`
+                <span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md border font-mono font-bold text-[9px] ${badgeClass}" title="Status da Triagem">
                     <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.666 3.888A2.25 2.25 0 0013.5 2.25h-3c-1.03 0-1.9.693-2.166 1.638m7.332 0c.055.194.084.4.084.612v0a.75.75 0 01-.75.75H9a.75.75 0 01-.75-.75v0c0-.212.03-.418.084-.612m7.332 0c.646.049 1.288.11 1.927.184 1.1.128 1.907 1.077 1.907 2.185V19.5a2.25 2.25 0 01-2.25 2.25H6.75A2.25 2.25 0 014.5 19.5V6.257c0-1.108.806-2.057 1.907-2.185a48.208 48.208 0 011.927-.184" /></svg>
                     ${escapeHTML(statusTriagem)}
                 </span>`);
+            }
+
             if (a.documentState === 'saved') tags.push(`
                 <span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[8px]" title="Documentação Pronta">
                     Docs OK
@@ -467,7 +479,7 @@
             let assuntoHTML = '';
             if (assunto) {
                 assuntoHTML = `
-                <p class="text-slate-500 font-semibold truncate mt-1 flex items-center gap-1.5 text-[11px]" title="${escapeHTML(a.subject)}">
+                <p class="text-slate-500 font-semibold truncate mt-1.5 flex items-center gap-1.5 text-[11px]" title="${escapeHTML(a.subject)}">
                     <svg class="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
                     ${escapeHTML(assunto)}
                 </p>`;
@@ -486,7 +498,7 @@
             // Badges Direitos (Sala + Prioridades/Pausado)
             let badgesHTML = `<span class="bg-slate-800 text-white font-bold px-3 py-1.5 rounded-lg uppercase tracking-widest shadow-sm whitespace-nowrap text-[10px]">${escapeHTML(a.room) || 'GERAL'}</span>`;
             if (isPausado) {
-                badgesHTML += `<span class="bg-slate-200 text-slate-700 font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border border-slate-300 whitespace-nowrap shadow-sm text-[9px] mt-1.5 flex items-center gap-1">
+                badgesHTML += `<span class="bg-slate-100 text-slate-600 font-black px-2.5 py-1 rounded-lg uppercase tracking-widest border border-slate-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5 flex items-center gap-1">
                     <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 5.25v13.5m-7.5-13.5v13.5" /></svg>
                     Pausado
                 </span>`;
