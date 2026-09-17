@@ -77,7 +77,9 @@
     <!-- ERRO TELA VERMELHA (TRATAMENTO DE ACESSO NEGADO) -->
     <div id="error-screen" class="hidden fixed inset-0 bg-slate-100 flex flex-col items-center justify-center p-4 z-50">
         <div class="bg-white p-8 rounded-[24px] shadow-xl max-w-md w-full text-center border-t-8 border-red-500">
-            <div class="text-5xl mb-4">🔒</div>
+            <svg class="w-16 h-16 text-red-500 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.5 10.5V6.75a4.5 4.5 0 10-9 0v3.75m-.75 11.25h10.5a2.25 2.25 0 002.25-2.25v-6.75a2.25 2.25 0 00-2.25-2.25H6.75a2.25 2.25 0 00-2.25 2.25v6.75a2.25 2.25 0 002.25 2.25z" />
+            </svg>
             <h1 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-wide">Acesso Restrito</h1>
             <p class="text-slate-500 text-sm mb-6 font-medium">Esta pauta está privada ou o link expirou no SIGEP.</p>
             <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-900 transition-colors text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md w-full">Tentar Novamente</button>
@@ -113,12 +115,17 @@
             
             <div class="flex items-center gap-3 w-full md:w-auto justify-center">
                 <button id="btn-alto-contraste" class="bg-slate-50 hover:bg-slate-100 text-slate-600 px-4 py-3 rounded-2xl flex flex-col items-center shadow-sm transition-all min-w-[80px] flex-1 md:flex-none uppercase tracking-widest border border-slate-200 font-bold">
-                    <span class="text-[14px]">🌗</span>
+                    <svg class="w-5 h-5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v2.25m6.364.386l-1.591 1.591M21 12h-2.25m-.386 6.364l-1.591-1.591M12 18.75V21m-4.773-4.227l-1.591 1.591M5.25 12H3m4.227-4.773L5.636 5.636M15.75 12a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0z" />
+                    </svg>
                     <span class="text-[8px] mt-1">Contraste</span>
                 </button>
                 <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-md transition-all min-w-[140px] flex-1 md:flex-none uppercase tracking-widest border border-slate-700">
-                    <span class="text-[9px] font-bold opacity-70">Finalizados</span>
-                    <span id="total-atendidos-count" class="text-xl font-black mt-0.5">0</span>
+                    <div class="flex items-center gap-1.5 opacity-70 mb-0.5">
+                        <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        <span class="text-[9px] font-bold">Finalizados</span>
+                    </div>
+                    <span id="total-atendidos-count" class="text-xl font-black">0</span>
                 </button>
             </div>
         </header>
@@ -128,11 +135,20 @@
             <div id="uc-card" class="bg-white rounded-[24px] p-6 md:p-8 text-center relative overflow-hidden shadow-md border border-amber-200">
                 <div class="absolute inset-0 bg-amber-50 opacity-50 pointer-events-none"></div>
                 <div class="relative z-10">
-                    <p class="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-[0.3em] mb-3">📣 Chamando agora</p>
+                    <p class="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-[0.3em] mb-3 flex items-center justify-center gap-2">
+                        <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M19.114 5.636a9 9 0 010 12.728M16.463 8.288a5.25 5.25 0 010 7.424M6.75 8.25l4.72-4.72a.75.75 0 011.28.53v15.88a.75.75 0 01-1.28.53l-4.72-4.72H4.51c-.88 0-1.704-.507-1.938-1.354A9.01 9.01 0 012.25 12c0-.83.112-1.633.322-2.396C2.806 8.756 3.63 8.25 4.51 8.25H6.75z" /></svg>
+                        Chamando agora
+                    </p>
                     <h2 id="uc-nome" class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 uppercase tracking-tight leading-none mb-5 drop-shadow-sm transition-all duration-300">—</h2>
                     <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
-                        <span id="uc-local" class="bg-amber-100 text-amber-800 text-sm font-black px-6 py-2 rounded-xl shadow-sm border border-amber-200 uppercase tracking-widest">—</span>
-                        <span id="uc-hora"  class="text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 mt-2 sm:mt-0 font-mono">—</span>
+                        <span id="uc-local" class="bg-amber-100 text-amber-800 text-sm font-black px-6 py-2 rounded-xl shadow-sm border border-amber-200 uppercase tracking-widest flex items-center gap-2">
+                            <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                            <span>—</span>
+                        </span>
+                        <span id="uc-hora"  class="text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 mt-2 sm:mt-0 font-mono flex items-center gap-1.5">
+                            <svg class="w-3.5 h-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                            <span>—</span>
+                        </span>
                     </div>
                 </div>
             </div>
@@ -145,7 +161,10 @@
 
             <div id="col-aguardando" class="bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                 <div class="bg-amber-50/50 p-4 border-b border-amber-100 flex justify-between items-center shrink-0">
-                    <h2 class="text-sm font-black text-amber-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">⏳</span> Fila de Espera</h2>
+                    <h2 class="text-sm font-black text-amber-600 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                        Fila de Espera
+                    </h2>
                     <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-amber-100">0</span>
                 </div>
                 <div id="list-aguardando" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
@@ -153,7 +172,10 @@
 
             <div id="col-atendimento" class="hidden bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                 <div class="bg-indigo-50/50 p-4 border-b border-indigo-100 flex justify-between items-center shrink-0">
-                    <h2 class="text-sm font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">🧑‍💻</span> Em Atendimento</h2>
+                    <h2 class="text-sm font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg>
+                        Em Atendimento
+                    </h2>
                     <span id="count-atendimento" class="bg-white text-indigo-700 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-indigo-100">0</span>
                 </div>
                 <div id="list-atendimento" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
@@ -161,7 +183,10 @@
 
             <div id="col-distribuicao" class="hidden bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
                 <div class="bg-cyan-50/50 p-4 border-b border-cyan-100 flex justify-between items-center shrink-0">
-                    <h2 class="text-sm font-black text-cyan-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">⚖️</span> Distribuição</h2>
+                    <h2 class="text-sm font-black text-cyan-600 uppercase tracking-widest flex items-center gap-2">
+                        <svg class="w-5 h-5 opacity-80" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg>
+                        Distribuição
+                    </h2>
                     <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-cyan-100">0</span>
                 </div>
                 <div id="list-distribuicao" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
@@ -177,7 +202,10 @@
     <div id="atendidos-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in" onclick="this.classList.add('hidden')">
         <div class="bg-white w-full max-w-lg rounded-[24px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border border-slate-200" onclick="event.stopPropagation()">
             <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>✅</span> Concluídos Hoje</h2>
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
+                    <svg class="w-5 h-5 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    Concluídos Hoje
+                </h2>
                 <button id="close-atendidos-btn" class="text-slate-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1 bg-white rounded-full shadow-sm w-8 h-8 flex items-center justify-center pb-2">&times;</button>
             </div>
             <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50/30 scrollable-content"></div>
@@ -308,8 +336,18 @@
 
             container.classList.remove('hidden');
             nomeEl.textContent  = novoNome;
-            localEl.textContent = chamado.local || '—';
-            horaEl.textContent  = chamado.hora  || '';
+            
+            // Renderiza o Local com SVG de Pin
+            const strLocal = chamado.sala ? esc(chamado.sala) : esc(chamado.local || '—');
+            localEl.innerHTML = `
+                <svg class="w-4 h-4 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                <span>${strLocal}</span>
+            `;
+            
+            horaEl.innerHTML = `
+                <svg class="w-3.5 h-3.5 shrink-0 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                <span>${escapeHTML(chamado.hora || '')}</span>
+            `;
 
             if (nomeMudou) {
                 animarUltimoChamado();
@@ -321,11 +359,16 @@
             if (anteriores.length > 0) {
                 recentesEl.classList.remove('hidden');
                 recentesEl.innerHTML = anteriores.map((c, i) => `
-                    <div class="bg-white border border-slate-200 rounded-[16px] px-4 py-3 text-center shadow-sm animate-slide-card"
+                    <div class="bg-white border border-slate-200 rounded-2xl px-4 py-3 text-center shadow-sm animate-slide-card"
                          style="animation-delay: ${i * 0.07}s">
-                        <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">Chamado Anterior</p>
+                        <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1 flex items-center justify-center gap-1.5">
+                            <svg class="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Anterior
+                        </p>
                         <p class="text-slate-700 font-black text-sm truncate uppercase">${formatNameMasked(c.nome, maskNames)}</p>
-                        <p class="text-slate-500 text-[10px] mt-1 font-semibold font-mono">${escapeHTML(c.local || '')} · ${escapeHTML(c.hora || '')}</p>
+                        <p class="text-slate-500 text-[10px] mt-1 font-semibold font-mono flex items-center justify-center gap-1">
+                            <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z" /><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z" /></svg>
+                            ${escapeHTML(c.local || '')}
+                        </p>
                     </div>
                 `).join('');
             } else {
@@ -348,12 +391,12 @@
             if (e.detail) renderUltimoChamado(e.detail, []);
         });
 
-        // 🌟 FUNÇÃO QUE CRIA OS CARDS MODERNOS COM HORÁRIOS, ASSUNTO E PRIORIDADE 🌟
+        // 🌟 FUNÇÃO DE CRIAÇÃO DO CARD (ESTILO CLEAN + SVGS + ASSUNTO/HORA) 🌟
         const createCardHTML = (a, idx, colorClass, type, data) => {
             const numAg  = a.numeroAgendamento || a.numAgendamento || '';
             const horaAg = a.scheduledTime || '';
             
-            // 🕒 Tratamento da Hora de Chegada
+            // Tratamento da Hora de Chegada
             let horaChegada = '';
             if (a.arrivalTime) {
                 try {
@@ -361,47 +404,68 @@
                     if (!isNaN(dataChegada.getTime())) {
                         horaChegada = dataChegada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
                     } else {
-                        horaChegada = a.arrivalTime.substring(0, 5); // Fallback string
+                        horaChegada = a.arrivalTime.substring(0, 5);
                     }
                 } catch(e) {
                     horaChegada = a.arrivalTime;
                 }
             }
 
-            // 📝 Tratamento do Assunto (abrevia se for longo)
+            // Tratamento do Assunto (abrevia se for longo)
             let assunto = a.subject || '';
             if (assunto.includes('>')) {
                 assunto = assunto.split('>').pop().trim();
             }
 
-            // ⚠️ Tratamento de Prioridade
+            // Tratamento de Prioridade
             const prioridade = (a.priority || '').toUpperCase();
             const isUrgente = prioridade === 'URGENTE';
             const isPrioridade = prioridade === 'PRIORIDADE' || (prioridade && prioridade !== 'NORMAL' && !isUrgente);
 
-            // Cores do Card
             const baseBorder = isUrgente ? 'border-red-clean' : colorClass;
             const delay = Math.min(idx * 0.03, 0.5);
 
-            // Tags Embutidas (Horários e Docs)
+            // Tags Embutidas (Horários e Docs com SVG)
             const tags = [];
-            if (numAg)       tags.push(`<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono font-bold text-[9px]" title="Nº Agendamento">📅 ${escapeHTML(numAg)}</span>`);
-            if (horaAg)      tags.push(`<span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-200 font-mono font-bold text-[9px]" title="Agendado para">⏰ ${escapeHTML(horaAg)}</span>`);
-            if (horaChegada) tags.push(`<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200 font-mono font-bold text-[9px]" title="Chegou às">🚶 ${escapeHTML(horaChegada)}</span>`);
-            if (a.documentState === 'saved') tags.push(`<span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[8px]" title="Documentação Pronta">Docs OK</span>`);
+            if (numAg) tags.push(`
+                <span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono font-bold text-[9px]" title="Nº Agendamento">
+                    <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M6.75 3v2.25M17.25 3v2.25M3 18.75V7.5a2.25 2.25 0 012.25-2.25h13.5A2.25 2.25 0 0121 7.5v11.25m-18 0A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75m-18 0v-7.5A2.25 2.25 0 015.25 9h13.5A2.25 2.25 0 0121 11.25v7.5m-9-6h.008v.008H12v-.008z" /></svg>
+                    ${escapeHTML(numAg)}
+                </span>`);
+            if (horaAg) tags.push(`
+                <span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-200 font-mono font-bold text-[9px]" title="Agendado para">
+                    <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    ${escapeHTML(horaAg)}
+                </span>`);
+            if (horaChegada) tags.push(`
+                <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200 font-mono font-bold text-[9px]" title="Chegou às">
+                    <svg class="w-3 h-3 opacity-70" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12.75L11.25 15 15 9.75M21 12a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
+                    ${escapeHTML(horaChegada)}
+                </span>`);
+            if (a.documentState === 'saved') tags.push(`
+                <span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[8px]" title="Documentação Pronta">
+                    Docs OK
+                </span>`);
 
             let subInfos = tags.length > 0 ? `<div class="flex flex-wrap gap-1.5 mt-2">${tags.join('')}</div>` : '';
             
-            // Layout do Assunto
+            // Assunto com SVG
             let assuntoHTML = '';
             if (assunto) {
-                assuntoHTML = `<p class="text-slate-500 font-semibold truncate mt-1 flex items-center gap-1 text-[11px]" title="${escapeHTML(a.subject)}"><span class="opacity-60 text-[10px]">📝</span> ${escapeHTML(assunto)}</p>`;
+                assuntoHTML = `
+                <p class="text-slate-500 font-semibold truncate mt-1 flex items-center gap-1 text-[11px]" title="${escapeHTML(a.subject)}">
+                    <svg class="w-3 h-3 opacity-60" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 00-3.375-3.375h-1.5A1.125 1.125 0 0113.5 7.125v-1.5a3.375 3.375 0 00-3.375-3.375H8.25m0 12.75h7.5m-7.5 3H12M10.5 2.25H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 00-9-9z" /></svg>
+                    ${escapeHTML(assunto)}
+                </p>`;
             }
 
-            // Layout dos Badges Laterais (Sala + Prioridades)
+            // Badges Direitos
             let badgesHTML = `<span class="bg-slate-800 text-white font-bold px-2.5 py-1 rounded-lg uppercase tracking-wide border border-slate-700 shadow-sm whitespace-nowrap text-[9px]">${escapeHTML(a.room) || 'GERAL'}</span>`;
             if (isUrgente) {
-                badgesHTML += `<span class="bg-red-100 text-red-800 font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border border-red-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5">Urgente</span>`;
+                badgesHTML += `<span class="bg-red-100 text-red-800 font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border border-red-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5 flex items-center gap-1">
+                    <svg class="w-2.5 h-2.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                    Urgente
+                </span>`;
             } else if (isPrioridade) {
                 badgesHTML += `<span class="bg-amber-100 text-amber-800 font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border border-amber-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5">Prioridade</span>`;
             }
@@ -425,7 +489,6 @@
         };
 
         if (pId) {
-            // Tratamento contra erro de acesso negado
             const handleAcessoNegado = (error) => {
                 console.error("Acesso bloqueado pelas regras do Firebase:", error);
                 document.getElementById('loading').classList.add('hidden');
@@ -489,7 +552,7 @@
 
                 const elAg = document.getElementById('list-aguardando');
                 if (ag.length === 0) {
-                    elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
+                    elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center gap-2"><svg class="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 6v6h4.5m4.5 0a9 9 0 11-18 0 9 9 0 0118 0z" /></svg> Fila Limpa</p></div>';
                 } else if (tipo === 'multisala') {
                     const rooms = window._sigepRooms || [];
                     let html = '';
@@ -499,7 +562,10 @@
                         html += `
                             <div class="mb-5 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
                                 <div class="bg-slate-50/80 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
-                                    <span class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5 opacity-90">🏢 ${escapeHTML(room)}</span>
+                                    <span class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5 opacity-90">
+                                        <svg class="w-4 h-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M2.25 21h19.5m-18-18v18m10.5-18v18m6-13.5V21M6.75 6.75h.75m-.75 3h.75m-.75 3h.75m3-6h.75m-.75 3h.75m-.75 3h.75M6.75 21v-3.375c0-.621.504-1.125 1.125-1.125h2.25c.621 0 1.125.504 1.125 1.125V21M3 3h12.25" /></svg>
+                                        ${escapeHTML(room)}
+                                    </span>
                                     <span class="bg-slate-800 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">${roomItems.length}</span>
                                 </div>
                                 <div class="p-3 bg-slate-50/30">${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-clean', 'wait', { maskNames })).join('')}</div>
@@ -510,7 +576,10 @@
                         html += `
                             <div class="mb-5 bg-white rounded-2xl border border-red-100 overflow-hidden shadow-sm">
                                 <div class="bg-red-50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
-                                    <span class="text-xs font-black text-red-800 uppercase tracking-widest flex items-center gap-1.5 opacity-90">⚠️ Triagem Geral</span>
+                                    <span class="text-xs font-black text-red-800 uppercase tracking-widest flex items-center gap-1.5 opacity-90">
+                                        <svg class="w-4 h-4 text-red-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+                                        Triagem Geral
+                                    </span>
                                     <span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">${noRoom.length}</span>
                                 </div>
                                 <div class="p-3 bg-slate-50/30">${noRoom.map((a, i) => createCardHTML(a, i, 'border-amber-clean', 'wait', { maskNames })).join('')}</div>
@@ -523,18 +592,24 @@
 
                 document.getElementById('list-atendimento').innerHTML = serv.length
                     ? serv.map((a, i) => createCardHTML(a, i, 'border-indigo-clean', 'pulse', { maskNames })).join('')
-                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Ninguém em atendimento</p></div>';
+                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"><svg class="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15.75 6a3.75 3.75 0 11-7.5 0 3.75 3.75 0 017.5 0zM4.501 20.118a7.5 7.5 0 0114.998 0A17.933 17.933 0 0112 21.75c-2.676 0-5.216-.584-7.499-1.632z" /></svg> Ninguém em atendimento</p></div>';
 
                 document.getElementById('list-distribuicao').innerHTML = dist.length
                     ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-clean', 'normal', { maskNames })).join('')
-                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Nenhum processo aguardando</p></div>';
+                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest flex items-center justify-center gap-2"><svg class="w-5 h-5 opacity-50" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12h3.75M9 15h3.75M9 18h3.75m3 .75H18a2.25 2.25 0 002.25-2.25V6.108c0-1.135-.845-2.098-1.976-2.192a48.424 48.424 0 00-1.123-.08m-5.801 0c-.065.21-.1.433-.1.664 0 .414.336.75.75.75h4.5a.75.75 0 00.75-.75 2.25 2.25 0 00-.1-.664m-5.8 0A2.251 2.251 0 0113.5 2.25H15c1.012 0 1.867.668 2.15 1.586m-5.8 0c-.376.023-.75.05-1.124.08C9.095 4.01 8.25 4.973 8.25 6.108V8.25m0 0H4.875c-.621 0-1.125.504-1.125 1.125v11.25c0 .621.504 1.125 1.125 1.125h9.75c.621 0 1.125-.504 1.125-1.125V9.375c0-.621-.504-1.125-1.125-1.125H8.25z" /></svg> Nenhum processo aguardando</p></div>';
 
                 document.getElementById('list-atendidos-content').innerHTML = done.map((d, i) => `
                     <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center mb-2 hover:shadow-md transition-shadow anim-card" style="animation-delay:${Math.min(i*0.03, 0.5)}s">
-                        <span class="font-bold text-slate-700 uppercase text-xs truncate">${formatNameMasked(d.name, maskNames)}</span>
-                        <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
+                        <span class="font-bold text-slate-700 uppercase text-xs truncate flex items-center gap-2">
+                            <svg class="w-4 h-4 text-slate-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" /></svg>
+                            ${formatNameMasked(d.name, maskNames)}
+                        </span>
+                        <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest flex items-center gap-1">
+                            <svg class="w-3 h-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" /></svg>
+                            Concluído
+                        </span>
                     </div>`).join('')
-                    || '<p class="text-center text-slate-400 py-10 uppercase text-xs font-bold tracking-widest">Nenhum atendimento finalizado hoje.</p>';
+                    || '<p class="text-center text-slate-400 py-10 uppercase text-xs font-bold tracking-widest flex flex-col items-center gap-2"><svg class="w-8 h-8 opacity-30" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M20.25 14.15v4.25c0 1.094-.787 2.036-1.872 2.18-2.087.277-4.216.42-6.378.42s-4.291-.143-6.378-.42c-1.085-.144-1.872-1.086-1.872-2.18v-4.25m16.5 0a2.18 2.18 0 00.75-1.661V8.706c0-1.081-.768-2.015-1.837-2.175a48.114 48.114 0 00-3.413-.387m4.5 8.006c-.194.165-.42.295-.673.38A23.978 23.978 0 0112 15.75c-2.648 0-5.195-.429-7.577-1.22a2.016 2.016 0 01-.673-.38m0 0A2.18 2.18 0 013 12.489V8.706c0-1.081.768-2.015 1.837-2.175a48.111 48.111 0 013.413-.387m7.5 0V5.25A2.25 2.25 0 0013.5 3h-3a2.25 2.25 0 00-2.25 2.25v.894m7.5 0a48.667 48.667 0 00-7.5 0M12 12.75h.008v.008H12v-.008z" /></svg> Nenhum atendimento finalizado hoje.</p>';
             }, handleAcessoNegado);
         }
 
