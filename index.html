@@ -24,6 +24,11 @@
           beforeSend(event, hint) {
             if (event.exception) {
               Sentry.showReportDialog({ eventId: event.event_id });
+              
+              // Clone do erro para o Firebase
+              if (window.salvarErroSentryNoFirebase) {
+                  window.salvarErroSentryNoFirebase(event);
+              }
             }
             return event;
           }
@@ -376,7 +381,7 @@
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <!-- CABEÇALHO COM LOGO E BOTÕES GLOBAIS -->
             <div class="flex flex-col justify-center items-center w-full relative mb-6 sm:mb-8 pt-2">
-                <!-- BOTÃO OUVIDORIA (NOVO) -->
+                <!-- BOTÃO OUVIDORIA -->
                 <button id="open-feedback-global-btn" title="Enviar Sugestão ou Reportar Erro" class="absolute top-0 left-0 bg-white text-blue-600 border border-slate-200 font-bold px-3 py-2 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 shadow-sm text-xs sm:text-sm">
                     <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
                     <span class="hidden sm:inline uppercase tracking-widest text-[10px]">Ouvidoria</span>
@@ -582,7 +587,7 @@
             </div>
         </div>
 
-        <!-- MÓDULO DE COLETAS & BI (TELA CHEIA) -->
+        <!-- MÓDULO DE COLETAS & BI -->
         <div id="coletas-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
             <div class="w-full flex flex-col items-center justify-center py-8 mb-6 border-b border-slate-200 bg-white shadow-sm rounded-2xl relative">
                 <button id="coletas-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
@@ -942,74 +947,94 @@
                 
                 <footer class="mt-8 sm:mt-12 bg-white p-4 sm:p-6 rounded-lg shadow-md mb-8 border border-slate-200">
                     <h3 id="order-explanation-title" class="text-lg sm:text-xl font-semibold text-slate-800 mb-2 text-center">Entenda a Ordem de Atendimento do Sistema</h3>
+                    
+                    <div class="text-center mb-4">
+                        <button id="toggle-logic-btn-padrao" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que a fila muda sozinha? (Clique para entender a lógica)</button>
+                    </div>
+
+                    <!-- CAIXAS COLORIDAS (VISÍVEIS) -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
+                        <div class="bg-red-50 p-3 sm:p-4 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
+                            <p class="font-bold text-red-700 text-[10px] sm:text-xs uppercase tracking-wider">Urgência 🚨</p>
+                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Casos marcados como URGENTE no sistema (Idosos 80+, PCD grave, risco de vida) furam a fila imediatamente.</p>
+                        </div>
+                        <div class="bg-green-50 p-3 sm:p-4 rounded-xl border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
+                            <p class="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider">Pontuais ✅</p>
+                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Agendados que chegam no horário (ou com até 15 min de tolerância). O desempate é por quem fez o check-in na recepção primeiro.</p>
+                        </div>
+                        <div class="bg-blue-50 p-3 sm:p-4 rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
+                            <p class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase tracking-wider">Avulsos 🚶</p>
+                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Não possuem horário marcado. Entram na fila disputando a posição de acordo com o horário exato em que chegaram na Defensoria.</p>
+                        </div>
+                        <div class="bg-orange-50 p-3 sm:p-4 rounded-xl border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
+                            <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados ⚠️</p>
+                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
+                        </div>
+                    </div>
+                    
+                    <!-- EXPLICAÇÃO DETALHADA (OCULTA ATÉ CLICAR NO BOTÃO AZUL) -->
                     <div id="order-explanation-content">
                         <div id="logic-explanation-padrao">
-                            <div class="text-center mb-4">
-                                <button id="toggle-logic-btn-padrao" class="text-blue-600 hover:text-blue-800 text-xs sm:text-sm hover:underline transition-colors duration-300 font-bold">Por que a fila muda sozinha? (Clique para entender a lógica)</button>
-                            </div>
-                            
-                            <div id="logic-explanation-padrao-content" class="hidden mt-4 text-left p-4 sm:p-5 bg-white rounded-xl border border-slate-200 shadow-inner space-y-5">
+                            <div id="logic-explanation-padrao-content" class="hidden mt-6 text-left p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 shadow-inner space-y-5">
                                 <div class="border-l-4 border-blue-500 pl-3 sm:pl-4">
                                     <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro (Dinâmica)</h4>
                                     <p class="text-[10px] sm:text-xs text-slate-600">A pauta do SIGEP é dinâmica e prioriza a <b>Pontualidade</b>. A fila é organizada inicialmente pelo <b>Horário Agendado</b>, mas atrasos e encaixes avulsos reajustam as posições automaticamente com base na <b>hora exata da chegada na recepção</b>.</p>
                                 </div>
                                 
-                                <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-100 pb-2">Exemplos Práticos do Sistema</h4>
+                                <h4 class="font-bold text-slate-700 text-[10px] sm:text-[11px] uppercase mt-4 mb-2 tracking-widest text-center border-b border-slate-200 pb-2">Exemplos Práticos do Sistema</h4>
                                 
                                 <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                    
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-sm">
                                         <h5 class="font-bold text-green-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 1: O Desempate Exato</h5>
                                         <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>1º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
                                             </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>2º Carlos:</b> Agendado 09:00 | Chegou 08:45</span>
                                             </div>
                                             <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Ambos são pontuais. O sistema desempata a favor da Maria porque o check-in dela foi feito primeiro.</p>
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-sm">
                                         <h5 class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 2: O Atrasado vs O Avulso</h5>
                                         <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>1º Ana:</b> Atendimento Avulso | Chegou 09:10</span>
                                             </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>2º Pedro:</b> Agendado 09:00 | Chegou 09:20</span>
                                             </div>
                                             <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-sm">
                                         <h5 class="font-bold text-red-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 3: O Fura-Fila Legal</h5>
                                         <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>1º Sr. José:</b> Urgência / 80+ | Chegou 10:00</span>
                                             </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>2º Maria:</b> Agendada 09:00 | Chegou 08:30</span>
                                             </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades absolutas (Idosos 80+, Risco de Morte) ignoram a regra de horário e vão direto para o topo da fila global.</p>
+                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Prioridades absolutas (Idosos 80+, PCD) ignoram a regra de horário e vão direto para o topo da fila global.</p>
                                         </div>
                                     </div>
 
-                                    <div class="bg-slate-50 p-3 sm:p-4 rounded-lg border border-slate-200">
+                                    <div class="bg-white p-3 sm:p-4 rounded-lg border border-slate-200 shadow-sm">
                                         <h5 class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase mb-2">Cenário 4: Chegar muito cedo</h5>
                                         <div class="space-y-1.5 text-[10px] sm:text-[11px] text-slate-700">
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>1º Lucas:</b> Agendado 09:00 | Chegou 08:50</span>
                                             </div>
-                                            <div class="flex justify-between border-b border-slate-200 pb-1">
+                                            <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>2º Bia:</b> Agendada 10:00 | Chegou 07:30</span>
                                             </div>
                                             <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Bia chegou super cedo, mas a fila respeita a faixa de horário. Ela será a primeira das 10h, mas não passa a pauta das 09h.</p>
                                         </div>
                                     </div>
-
                                 </div>
                             </div>
                         </div>
@@ -1370,6 +1395,36 @@
         });
     </script>
 
+    <!-- MÓDULO SENTRY -> FIREBASE -->
+    <script type="module">
+        import { collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        
+        window.salvarErroSentryNoFirebase = async function(event) {
+            // Verifica se o Firebase já conectou e o banco tá pronto
+            if (!window.app || !window.app.db) return;
+            
+            try {
+                // Pega a mensagem de erro técnica que quebrou o sistema
+                let msgErro = "Erro interno Javascript";
+                if (event.exception && event.exception.values && event.exception.values.length > 0) {
+                    msgErro = event.exception.values[0].type + ": " + event.exception.values[0].value;
+                }
+                
+                // Grava silenciosamente na tabela da Ouvidoria
+                await addDoc(collection(window.app.db, "feedbacks_sistema"), {
+                    tipo: "Erro Automático Sentry",
+                    mensagem: "O sistema detectou uma falha de código automaticamente: " + msgErro,
+                    enviadoPor: window.app.currentUserName || window.app.auth?.currentUser?.email || "Monitor Sentry",
+                    pautaOrigem: window.location.pathname,
+                    criadoEm: new Date().toISOString(),
+                    userAgent: navigator.userAgent
+                });
+            } catch(e) {
+                console.error("Falha ao salvar log do Sentry no painel:", e);
+            }
+        };
+    </script>
+
     <script>
         // Lógica independente e super rápida para salvar o status com 1 clique
         document.getElementById('doc-status-buttons-container')?.addEventListener('click', async (e) => {
@@ -1557,6 +1612,7 @@
             });
         }
     </script>
+    
     <!-- ============================================== -->
     <!-- WIDGETS DE UX: DITADO POR VOZ E AUTO-SAVE      -->
     <!-- ============================================== -->
