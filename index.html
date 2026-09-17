@@ -435,7 +435,17 @@
                 <div id="pending-invitations-list" class="space-y-4"></div>
             </div>
             
-            <div id="filters-container" class="mb-6"></div>
+            <div id="filters-container" class="mb-4"></div>
+            
+            <!-- 🌟 BARRA DE PESQUISA DE PAUTAS 🌟 -->
+            <div class="mb-6 flex justify-end w-full">
+                <div class="relative w-full sm:w-96">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="search" id="search-pautas-input" oninput="window.app && window.app.loadPautasWithFilter()" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm text-sm transition-all">
+                </div>
+            </div>
             
             <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"></div>
             <div class="mt-6 w-full">
@@ -960,7 +970,7 @@
                         </div>
                         <div class="bg-green-50 p-3 sm:p-4 rounded-xl border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
                             <p class="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider">Pontuais ✅</p>
-                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Agendados que chegam no horário (ou com até 15 min de tolerância). O desempate é por quem fez o check-in na recepção primeiro.</p>
+                            <p id="desc-pontuais" class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Agendados que chegam no horário (ou com até 15 min de tolerância). O desempate é por quem fez o check-in na recepção primeiro.</p>
                         </div>
                         <div class="bg-blue-50 p-3 sm:p-4 rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
                             <p class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase tracking-wider">Avulsos 🚶</p>
@@ -968,7 +978,7 @@
                         </div>
                         <div class="bg-orange-50 p-3 sm:p-4 rounded-xl border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
                             <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados ⚠️</p>
-                            <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
+                            <p id="desc-atrasados" class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
                         </div>
                     </div>
                     
@@ -1006,7 +1016,7 @@
                                             <div class="flex justify-between border-b border-slate-100 pb-1">
                                                 <span><b>2º Pedro:</b> Agendado 09:00 | Chegou 09:20</span>
                                             </div>
-                                            <p class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
+                                            <p id="desc-exemplo2" class="text-[8.5px] sm:text-[9.5px] text-slate-500 italic mt-1 leading-tight">* Pedro atrasou mais de 15 min. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).</p>
                                         </div>
                                     </div>
 
