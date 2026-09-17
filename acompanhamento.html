@@ -3,29 +3,15 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Painel da Recepção — SIGEP</title>
+    <title>Acompanhamento de Fila - SIGEP</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700;900&family=DM+Mono:wght@400;500&display=swap" rel="stylesheet">
-    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --fs-xs:   clamp(9px,  1vw,   12px);
-            --fs-sm:   clamp(11px, 1.2vw, 14px);
-            --fs-md:   clamp(13px, 1.5vw, 16px);
-            --fs-lg:   clamp(16px, 2vw,   22px);
-            --fs-xl:   clamp(20px, 2.8vw, 30px);
-            --fs-2xl:  clamp(28px, 4vw,   52px);
-            --fs-3xl:  clamp(36px, 5.5vw, 68px);
-        }
-
-        * { font-family: 'DM Sans', sans-serif; }
-        code, .mono { font-family: 'DM Mono', monospace; }
-
-        body { min-height: 100vh; color: #0f172a; transition: background-color 0.3s; margin: 0; }
-
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: transparent; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; }
+        .scrollable-content::-webkit-scrollbar { width: 6px; }
+        .scrollable-content::-webkit-scrollbar-track { background: transparent; }
+        .scrollable-content::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .animate-pulse-slow { animation: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite; }
 
         /* ── MODO ALTO CONTRASTE ── */
         html.alto-contraste {
@@ -39,388 +25,197 @@
             filter: invert(1) hue-rotate(180deg);
         }
 
-        @keyframes ping-slow {
-            0%, 100% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.4; transform: scale(1.6); }
+        /* ── Animações ── */
+        @keyframes fadeInDown {
+            from { opacity: 0; transform: translateY(-12px) scale(0.98); }
+            to   { opacity: 1; transform: translateY(0)   scale(1);    }
         }
-        .ping-slow { animation: ping-slow 2s ease-in-out infinite; }
-
-        @keyframes chamado-enter {
-            from { opacity: 0; transform: translateY(-16px) scale(0.97); }
-            to   { opacity: 1; transform: translateY(0) scale(1); }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(-10px); }
+            to   { opacity: 1; transform: translateY(0); }
         }
-        @keyframes flash-glow {
-            0%   { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
-            30%  { box-shadow: 0 0 0 18px rgba(245, 158, 11, 0.18); }
-            100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+        @keyframes flashBorder {
+            0%, 100% { box-shadow: 0 0 0 0 rgba(245, 158, 11, 0); }
+            40%      { box-shadow: 0 0 0 12px rgba(245, 158, 11, 0.2); }
         }
-        @keyframes card-in {
-            from { opacity: 0; transform: translateX(-8px); }
+        @keyframes slideInCard {
+            from { opacity: 0; transform: translateX(-10px); }
             to   { opacity: 1; transform: translateX(0); }
         }
-        @keyframes fade-up {
-            from { opacity: 0; transform: translateY(10px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
-        @keyframes group-in {
-            from { opacity: 0; transform: translateY(8px); }
-            to   { opacity: 1; transform: translateY(0); }
-        }
 
-        .anim-chamado  { animation: chamado-enter 0.5s cubic-bezier(0.22,1,0.36,1) forwards; }
-        .anim-glow     { animation: flash-glow 1.1s ease-out forwards; }
-        .anim-card     { animation: card-in 0.3s ease-out forwards; }
-        .anim-fade-up  { animation: fade-up 0.4s ease-out forwards; }
-        .anim-group    { animation: group-in 0.4s ease-out forwards; }
-
-        .pessoa-card {
+        .animate-fade-in      { animation: fadeIn 0.4s ease-out forwards; }
+        .animate-chamado-in   { animation: fadeInDown 0.45s cubic-bezier(0.22, 1, 0.36, 1) forwards; }
+        .animate-flash-border { animation: flashBorder 0.9s ease-out; }
+        .animate-slide-card   { animation: slideInCard 0.35s ease-out forwards; }
+        
+        /* ── Estética Clean para os Cards ── */
+        .clean-card {
             background: #ffffff;
             border: 1px solid #e2e8f0;
-            border-left: 4px solid #f59e0b;
-            border-radius: 10px;
-            padding: clamp(10px, 1.2vw, 14px) clamp(12px, 1.5vw, 16px);
-            display: flex;
-            align-items: center;
-            gap: clamp(8px, 1vw, 12px);
+            border-left-width: 4px;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.02);
             transition: all 0.2s ease;
-            box-shadow: 0 1px 2px rgba(0,0,0,0.04);
         }
-        .pessoa-card:hover { box-shadow: 0 4px 8px rgba(0,0,0,0.08); transform: translateY(-1px); }
-        .pessoa-card.em-atendimento { border-left-color: #4f46e5; background: #f5f8ff; border-color: #e0e7ff; }
-
-        .unidade-group { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 14px; overflow: hidden; box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
-        .unidade-group-header { display: flex; align-items: center; justify-content: space-between; padding: clamp(8px, 1vw, 12px) clamp(12px, 1.5vw, 18px); border-bottom: 1px solid #f1f5f9; }
-        .unidade-group-body { padding: clamp(8px, 1vw, 10px); display: flex; flex-direction: column; gap: 8px; }
-
-        /* Cores das Unidades */
-        .ucor-0 { background: #eff6ff; border-left-color: #3b82f6 !important; } .ucor-0 .u-label { color: #1d4ed8; } .ucor-0 .u-badge { background: #dbeafe; color: #1e40af; border: 1px solid #bfdbfe; }
-        .ucor-1 { background: #fdf4ff; border-left-color: #a855f7 !important; } .ucor-1 .u-label { color: #7e22ce; } .ucor-1 .u-badge { background: #f3e8ff; color: #6b21a8; border: 1px solid #e9d5ff; }
-        .ucor-2 { background: #f0fdf4; border-left-color: #22c55e !important; } .ucor-2 .u-label { color: #15803d; } .ucor-2 .u-badge { background: #dcfce7; color: #166534; border: 1px solid #bbf7d0; }
-        .ucor-3 { background: #fff7ed; border-left-color: #f97316 !important; } .ucor-3 .u-label { color: #c2410c; } .ucor-3 .u-badge { background: #ffedd5; color: #9a3412; border: 1px solid #fed7aa; }
-        .ucor-4 { background: #fef2f2; border-left-color: #ef4444 !important; } .ucor-4 .u-label { color: #b91c1c; } .ucor-4 .u-badge { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
-        .ucor-5 { background: #f0fdfa; border-left-color: #14b8a6 !important; } .ucor-5 .u-label { color: #0f766e; } .ucor-5 .u-badge { background: #ccfbf1; color: #115e59; border: 1px solid #99f6e4; }
-        .ucor-6 { background: #fffbeb; border-left-color: #eab308 !important; } .ucor-6 .u-label { color: #a16207; } .ucor-6 .u-badge { background: #fef9c3; color: #854d0e; border: 1px solid #fef08a; }
-        .ucor-7 { background: #f8f5ff; border-left-color: #8b5cf6 !important; } .ucor-7 .u-label { color: #6d28d9; } .ucor-7 .u-badge { background: #ede9fe; color: #5b21b6; border: 1px solid #ddd6fe; }
-
-        .coluna-unificada { background: #ffffff; border: 1px solid #e2e8f0; border-radius: 20px; overflow: hidden; display: flex; flex-direction: column; box-shadow: 0 4px 6px rgba(0,0,0,0.04); }
-        .coluna-header { padding: clamp(12px, 1.5vw, 18px) clamp(14px, 2vw, 22px); background: #f8fafc; border-bottom: 1px solid #e2e8f0; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-        .nome-chamado { background: linear-gradient(90deg, #d97706, #ea580c); -webkit-background-clip: text; -webkit-text-fill-color: transparent; background-clip: text; }
-        
-        .ordem-num { font-size: var(--fs-md); font-weight: 900; font-family: 'DM Mono', monospace; color: #f59e0b; min-width: clamp(24px, 3vw, 36px); text-align: center; flex-shrink: 0; }
-        .sala-badge { font-size: var(--fs-xs); font-weight: 700; padding: clamp(3px, 0.4vw, 5px) clamp(8px, 1vw, 12px); border-radius: 6px; text-transform: uppercase; letter-spacing: 0.05em; white-space: nowrap; background: #f1f5f9; border: 1px solid #cbd5e1; color: #475569; }
-
-        /* Zoom controls */
-        #zoom-controls { opacity: 0; transition: opacity 0.3s; }
-        #zoom-controls:hover { opacity: 1; }
-
-        .bg-tema-panel { background-color: #22c55e; } 
-        .text-tema-panel { color: #16a34a; } 
-
-        @keyframes piscar-chamado-tv {
-            0%, 100% { background-color: #22c55e; transform: scale(1); }
-            50% { background-color: #15803d; transform: scale(0.98); }
+        .clean-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-2px);
         }
-        .animar-chamado-tv { animation: piscar-chamado-tv 0.6s cubic-bezier(0.22,1,0.36,1) 3; }
-
-        @keyframes fade-in-left {
-            from { opacity: 0; transform: translateX(20px); }
-            to { opacity: 1; transform: translateX(0); }
-        }
-        .item-historico { animation: fade-in-left 0.4s ease-out forwards; }
-
-        .texto-nome-tv { font-size: clamp(2.5rem, 6vw, 6.5rem); line-height: 1.1; word-wrap: break-word; }
-        .texto-local-tv { font-size: clamp(2rem, 5vw, 5.5rem); line-height: 1; }
-
-        /* Botão de ativar som */
-        #btn-ativar-som {
-            position: fixed; top: 50%; left: 50%; transform: translate(-50%, -50%);
-            z-index: 200; background: white; border: 2px solid #e2e8f0; border-radius: 20px;
-            padding: 32px 48px; text-align: center; box-shadow: 0 20px 60px rgba(0,0,0,0.15);
-        }
+        .border-amber-clean  { border-left-color: #f59e0b; }
+        .border-indigo-clean { border-left-color: #6366f1; background-color: #f8faff; }
+        .border-cyan-clean   { border-left-color: #06b6d4; background-color: #f4feff; }
+        .border-red-clean    { border-left-color: #ef4444; background-color: #fef2f2; }
     </style>
 </head>
-<body class="p-0 flex flex-col min-h-screen">
+<body class="p-3 sm:p-5 md:p-8 min-h-screen flex flex-col">
 
-    <!-- Tela de Carregamento -->
+    <!-- LOADING -->
     <div id="loading" class="fixed inset-0 bg-slate-50 flex flex-col items-center justify-center z-50 gap-4">
-        <div class="w-12 h-12 rounded-full border-4 border-slate-200 border-t-amber-500 animate-spin"></div>
-        <p class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Conectando ao SIGEP...</p>
+        <div class="animate-spin rounded-full h-12 w-12 border-4 border-slate-200 border-t-amber-500"></div>
+        <p class="text-slate-500 font-bold uppercase text-[10px] tracking-widest">Sincronizando com o SIGEP...</p>
     </div>
 
-    <!-- ERRO TELA VERMELHA -->
+    <!-- ERRO TELA VERMELHA (TRATAMENTO DE ACESSO NEGADO) -->
     <div id="error-screen" class="hidden fixed inset-0 bg-slate-100 flex flex-col items-center justify-center p-4 z-50">
-        <div class="bg-white p-8 rounded-3xl shadow-2xl max-w-md w-full text-center border-t-8 border-red-500">
+        <div class="bg-white p-8 rounded-[24px] shadow-xl max-w-md w-full text-center border-t-8 border-red-500">
             <div class="text-5xl mb-4">🔒</div>
             <h1 class="text-xl font-black text-slate-800 mb-2 uppercase tracking-wide">Acesso Restrito</h1>
-            <p class="text-slate-500 text-sm mb-6 font-medium">A pauta está configurada como privada ou o link expirou.</p>
-            <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-900 transition-colors text-white px-8 py-3.5 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md w-full">Tentar Novamente</button>
+            <p class="text-slate-500 text-sm mb-6 font-medium">Esta pauta está privada ou o link expirou no SIGEP.</p>
+            <button onclick="location.reload()" class="bg-slate-800 hover:bg-slate-900 transition-colors text-white px-8 py-3 rounded-xl font-bold uppercase text-xs tracking-widest shadow-md w-full">Tentar Novamente</button>
         </div>
     </div>
 
-    <!-- Overlay Ativar Som -->
-    <div id="overlay-som" class="fixed inset-0 z-[150] bg-black/40 backdrop-blur-sm flex items-center justify-center" style="display:none!important">
-        <div id="btn-ativar-som">
-            <div style="font-size:48px;margin-bottom:12px">🔔</div>
-            <h2 style="font-size:var(--fs-lg);font-weight:900;color:#0f172a;margin-bottom:8px">Ativar Som</h2>
-            <p style="font-size:var(--fs-sm);color:#64748b;margin-bottom:24px;max-width:280px">Clique para ativar as notificações sonoras dos chamados.</p>
-            <button onclick="ativarSom()" style="background:#22c55e;color:white;font-weight:800;font-size:var(--fs-md);padding:12px 32px;border:none;border-radius:12px;cursor:pointer;width:100%">
-                ✓ Ativar Notificações
-            </button>
-        </div>
-    </div>
+    <!-- CONTEÚDO PRINCIPAL -->
+    <div id="app-content" class="hidden w-full max-w-7xl mx-auto flex-1 flex flex-col gap-6">
 
-    <!-- Botão de Alternar Layout -->
-    <button onclick="alternarModo()" class="fixed bottom-4 left-4 z-[100] bg-white/80 hover:bg-white border border-slate-200 p-3 rounded-full shadow-lg opacity-30 hover:opacity-100 transition-all text-slate-700" title="Alternar Modo de Ecrã">
-        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-        </svg>
-    </button>
-
-    <div id="modo-fila" class="hidden w-full max-w-screen-2xl mx-auto flex-1 flex-col gap-4 h-full p-2 sm:p-4 md:p-6">
-        <!-- Header -->
-        <header class="flex flex-col sm:flex-row items-center justify-between gap-3 bg-white border border-slate-200 shadow-sm rounded-2xl px-5 py-3 shrink-0">
-            <div class="flex items-center gap-3">
-                <div class="bg-slate-50 border border-slate-200 rounded-xl p-2 shrink-0">
-                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" style="height:clamp(28px,4vw,44px)" class="w-auto object-contain drop-shadow-sm">
-                </div>
-                <div>
-                    <div class="flex items-center gap-2">
-                        <h1 class="text-slate-900 font-black tracking-tight leading-none" style="font-size:var(--fs-lg)">SIGEP</h1>
-                        <span class="text-slate-300 font-bold" style="font-size:var(--fs-xs)">·</span>
-                        <span class="text-slate-500 font-bold uppercase tracking-widest" style="font-size:var(--fs-xs)">Painel de Atendimento</span>
+        <!-- HEADER -->
+        <header class="bg-white p-5 rounded-[24px] shadow-sm border border-slate-200 flex flex-col md:flex-row items-center justify-between gap-5 shrink-0">
+            <div class="flex flex-col md:flex-row items-center gap-4 text-center md:text-left w-full md:w-auto">
+                <div class="flex items-center gap-4 md:pr-6 md:border-r border-slate-100">
+                    <div class="bg-slate-50 p-2.5 rounded-xl border border-slate-100 shadow-inner shrink-0">
+                        <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-9 w-auto object-contain">
                     </div>
-                    <h2 id="recepcao-nome-fila" class="text-amber-600 font-black leading-tight mt-0.5 tracking-tight truncate max-w-[200px] sm:max-w-md" style="font-size:var(--fs-md)">—</h2>
+                    <div class="flex flex-col text-left">
+                        <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">SIGEP</h1>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1">Gestão de Pauta</p>
+                    </div>
+                </div>
+                <div class="mt-2 md:mt-0 flex flex-col items-center md:items-start">
+                    <h2 id="pauta-title" class="text-xl md:text-2xl font-black text-amber-600 uppercase tracking-tight leading-tight">—</h2>
+                    <div class="flex items-center gap-2 mt-1.5 bg-green-50 px-2.5 py-1 rounded-md border border-green-100">
+                        <span class="relative flex h-2 w-2">
+                            <span class="animate-ping absolute h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                            <span class="relative rounded-full h-2 w-2 bg-green-500"></span>
+                        </span>
+                        <p class="text-[9px] text-green-700 font-bold uppercase tracking-widest">Painel Público • Ao vivo</p>
+                    </div>
                 </div>
             </div>
-
-            <div class="flex items-center gap-3 flex-wrap justify-center sm:justify-end">
-                <div class="flex items-center gap-2 px-2">
-                    <span class="relative flex" style="height:10px;width:10px">
-                        <span class="ping-slow absolute h-full w-full rounded-full bg-green-500 opacity-60"></span>
-                        <span class="relative rounded-full bg-green-600" style="height:10px;width:10px"></span>
-                    </span>
-                    <span class="text-green-600 font-black uppercase tracking-widest" style="font-size:var(--fs-xs)">Ao Vivo</span>
-                </div>
-                <div class="h-8 w-px bg-slate-200"></div>
-                <div class="text-center px-2">
-                    <p class="text-amber-500 font-black leading-none" id="g-aguardando" style="font-size:var(--fs-xl)">0</p>
-                    <p class="text-slate-500 font-bold uppercase tracking-widest mt-0.5" style="font-size:var(--fs-xs)">Aguardando</p>
-                </div>
-                <div class="text-center px-2">
-                    <p class="text-indigo-600 font-black leading-none" id="g-atendendo" style="font-size:var(--fs-xl)">0</p>
-                    <p class="text-slate-500 font-bold uppercase tracking-widest mt-0.5" style="font-size:var(--fs-xs)">Atendendo</p>
-                </div>
-                <button onclick="toggleSom()" id="btn-som-header" class="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 border border-slate-200 px-3 py-1.5 rounded-lg transition-all" title="Ativar/desativar som">
-                    <span id="icone-som-header" style="font-size:16px">🔇</span>
-                    <span id="texto-som-header" class="font-bold text-slate-600 uppercase tracking-widest hidden sm:inline-block" style="font-size:var(--fs-xs)">Som</span>
+            
+            <div class="flex items-center gap-3 w-full md:w-auto justify-center">
+                <button id="btn-alto-contraste" class="bg-slate-50 hover:bg-slate-100 text-slate-600 px-4 py-3 rounded-2xl flex flex-col items-center shadow-sm transition-all min-w-[80px] flex-1 md:flex-none uppercase tracking-widest border border-slate-200 font-bold">
+                    <span class="text-[14px]">🌗</span>
+                    <span class="text-[8px] mt-1">Contraste</span>
                 </button>
-                <div id="data-hora-fila" class="mono text-slate-600 font-bold bg-slate-50 border border-slate-200 px-3 py-1.5 rounded-lg ml-1 hidden sm:block" style="font-size:var(--fs-xs)"></div>
+                <button id="open-atendidos-btn" class="bg-slate-800 hover:bg-slate-900 text-white px-6 py-3 rounded-2xl flex flex-col items-center shadow-md transition-all min-w-[140px] flex-1 md:flex-none uppercase tracking-widest border border-slate-700">
+                    <span class="text-[9px] font-bold opacity-70">Finalizados</span>
+                    <span id="total-atendidos-count" class="text-xl font-black mt-0.5">0</span>
+                </button>
             </div>
         </header>
 
-        <!-- Último Chamado (Fila) -->
-        <div id="ultimo-chamado-wrap" class="hidden shrink-0">
-            <div id="ultimo-chamado-card" class="bg-white border border-amber-200 shadow-md rounded-2xl relative overflow-hidden" style="padding:clamp(16px,2.5vw,36px) clamp(20px,3vw,44px)">
-                <div class="absolute inset-0 pointer-events-none" style="background: radial-gradient(ellipse at 50% 0%, rgba(245,158,11,0.05) 0%, transparent 70%)"></div>
-                <div class="flex flex-col md:flex-row items-center gap-5 relative z-10">
-                    <div class="text-center md:text-left flex-1">
-                        <p class="text-amber-600 font-black uppercase flex items-center justify-center md:justify-start gap-2 mb-2" style="font-size:var(--fs-xs);letter-spacing:0.3em">
-                            📣 Chamando Agora
-                        </p>
-                        <h2 id="uc-nome-fila" class="nome-chamado font-black uppercase tracking-tight leading-none mb-3 truncate" style="font-size:var(--fs-3xl)">—</h2>
-                        <div class="flex flex-wrap gap-2 justify-center md:justify-start">
-                            <span id="uc-pauta-fila" class="bg-slate-100 border border-slate-200 text-slate-700 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
-                            <span id="uc-local-fila" class="bg-amber-50 border border-amber-200 text-amber-800 font-bold px-4 py-1.5 rounded-xl" style="font-size:var(--fs-sm)">—</span>
-                            <span id="uc-hora-fila"  class="mono text-slate-500 font-bold self-center" style="font-size:var(--fs-xs)">—</span>
-                        </div>
+        <!-- BLOCO DO ÚLTIMO CHAMADO (animado) -->
+        <div id="ultimo-chamado-container" class="hidden shrink-0">
+            <div id="uc-card" class="bg-white rounded-[24px] p-6 md:p-8 text-center relative overflow-hidden shadow-md border border-amber-200">
+                <div class="absolute inset-0 bg-amber-50 opacity-50 pointer-events-none"></div>
+                <div class="relative z-10">
+                    <p class="text-[10px] sm:text-xs font-black text-amber-500 uppercase tracking-[0.3em] mb-3">📣 Chamando agora</p>
+                    <h2 id="uc-nome" class="text-3xl sm:text-4xl md:text-5xl font-black text-slate-800 uppercase tracking-tight leading-none mb-5 drop-shadow-sm transition-all duration-300">—</h2>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-3">
+                        <span id="uc-local" class="bg-amber-100 text-amber-800 text-sm font-black px-6 py-2 rounded-xl shadow-sm border border-amber-200 uppercase tracking-widest">—</span>
+                        <span id="uc-hora"  class="text-slate-400 text-[10px] font-bold uppercase tracking-widest bg-slate-50 px-3 py-1.5 rounded-lg border border-slate-100 mt-2 sm:mt-0 font-mono">—</span>
                     </div>
                 </div>
             </div>
+            <!-- Recentes -->
+            <div id="uc-recentes" class="mt-4 grid grid-cols-1 sm:grid-cols-3 gap-3 hidden"></div>
         </div>
 
-        <!-- Colunas -->
-        <div class="flex flex-col md:flex-row gap-4 flex-1 min-h-[400px]">
-            
-            <!-- Em Atendimento -->
-            <div class="coluna-unificada w-full md:w-1/3 border-indigo-100">
-                <div class="coluna-header bg-indigo-50/50 border-indigo-100">
-                    <div>
-                        <p class="text-indigo-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
-                            🧑‍💻 Em Atendimento
-                        </p>
-                        <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Sendo atendidos neste momento</p>
-                    </div>
+        <!-- GRADE DE COLUNAS -->
+        <div id="main-grid" class="grid grid-cols-1 gap-5 flex-1 min-h-[400px]">
+
+            <div id="col-aguardando" class="bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                <div class="bg-amber-50/50 p-4 border-b border-amber-100 flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-black text-amber-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">⏳</span> Fila de Espera</h2>
+                    <span id="count-aguardando" class="bg-white text-amber-600 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-amber-100">0</span>
                 </div>
-                <div id="lista-atendimento" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:8px"></div>
+                <div id="list-aguardando" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
             </div>
 
-            <!-- Fila de Espera -->
-            <div class="coluna-unificada w-full md:w-2/3 border-amber-100">
-                <div class="coluna-header bg-amber-50/30 border-amber-100">
-                    <div>
-                        <p class="text-amber-600 font-black uppercase tracking-widest flex items-center gap-1.5" style="font-size:var(--fs-sm)">
-                            ⏳ Fila de Espera
-                        </p>
-                        <p class="text-slate-500 font-bold mt-1" style="font-size:var(--fs-xs)">Agrupado por unidade</p>
-                    </div>
-                    <div id="legenda-unidades" class="flex flex-wrap gap-1.5 justify-end max-w-[50%]"></div>
+            <div id="col-atendimento" class="hidden bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                <div class="bg-indigo-50/50 p-4 border-b border-indigo-100 flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-black text-indigo-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">🧑‍💻</span> Em Atendimento</h2>
+                    <span id="count-atendimento" class="bg-white text-indigo-700 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-indigo-100">0</span>
                 </div>
-                <div id="lista-espera" class="flex-1 overflow-y-auto bg-slate-50 p-3" style="display:flex;flex-direction:column;gap:10px"></div>
+                <div id="list-atendimento" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
+            </div>
+
+            <div id="col-distribuicao" class="hidden bg-white rounded-[24px] shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                <div class="bg-cyan-50/50 p-4 border-b border-cyan-100 flex justify-between items-center shrink-0">
+                    <h2 class="text-sm font-black text-cyan-600 uppercase tracking-widest flex items-center gap-2"><span class="text-lg opacity-80">⚖️</span> Distribuição</h2>
+                    <span id="count-distribuicao" class="bg-white text-cyan-700 px-3 py-1 rounded-full text-xs font-black shadow-sm border border-cyan-100">0</span>
+                </div>
+                <div id="list-distribuicao" class="p-3 sm:p-4 overflow-y-auto flex-1 bg-slate-50/50 scrollable-content"></div>
             </div>
         </div>
         
-        <footer class="text-center text-slate-400 font-bold uppercase tracking-widest pb-2 shrink-0 mt-2" style="font-size:var(--fs-xs)">
-            SIGEP · Painel Público · Dados em tempo real
+        <footer class="text-center text-slate-400 font-bold uppercase tracking-widest text-[10px] pb-4 shrink-0">
+            SIGEP · Acompanhamento de Pauta · Atualizado em tempo real
         </footer>
     </div>
 
-    <!-- Controles de Zoom (Apenas Modo Fila) -->
-    <div id="zoom-controls" class="fixed bottom-4 right-4 flex items-center gap-2 z-[100] bg-white border border-slate-200 p-2 rounded-xl shadow-xl">
-        <button onclick="mudarZoom(-0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">-</button>
-        <span id="zoom-level" class="font-bold text-slate-600 text-center" style="font-size:var(--fs-xs);min-width:3rem">100%</span>
-        <button onclick="mudarZoom(0.1)" class="flex items-center justify-center bg-slate-100 hover:bg-slate-200 rounded-lg font-black text-slate-700 leading-none" style="width:clamp(28px,3vw,36px);height:clamp(28px,3vw,36px);font-size:var(--fs-lg)">+</button>
-    </div>
-
-    <!-- MODO TV -->
-    <div id="modo-tv" class="hidden w-full h-screen sm:p-4 flex items-center justify-center overflow-hidden">
-        <div class="w-full h-full sm:max-h-[90vh] sm:max-w-[160vh] sm:aspect-video bg-white shadow-2xl overflow-hidden rounded-none sm:rounded-2xl flex flex-col sm:flex-row">
-            <!-- Lado Esquerdo -->
-            <div id="painel-destaque-tv" class="w-full sm:w-2/3 bg-tema-panel flex flex-col justify-center items-center text-white p-6 sm:p-12 text-center transition-all duration-300 flex-1">
-                <h1 class="text-3xl sm:text-5xl font-semibold uppercase tracking-widest mb-2 sm:mb-4 opacity-90 leading-tight drop-shadow-md">Chamando</h1>
-                <div id="uc-nome-tv" class="texto-nome-tv font-black mb-6 sm:mb-12 w-full px-4 drop-shadow-lg" style="min-height: 3em; display: flex; align-items: center; justify-content: center;">
-                    AGUARDANDO...
-                </div>
-                <h2 class="text-2xl sm:text-4xl font-semibold uppercase tracking-widest mb-1 sm:mb-3 opacity-90 drop-shadow-md" id="label-local-tv">Dirija-se a</h2>
-                <div id="uc-local-tv" class="texto-local-tv font-black tracking-tighter drop-shadow-lg">—</div>
+    <!-- MODAL ATENDIDOS -->
+    <div id="atendidos-modal" class="hidden fixed inset-0 bg-slate-900/40 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in" onclick="this.classList.add('hidden')">
+        <div class="bg-white w-full max-w-lg rounded-[24px] shadow-2xl flex flex-col max-h-[80vh] overflow-hidden border border-slate-200" onclick="event.stopPropagation()">
+            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
+                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2"><span>✅</span> Concluídos Hoje</h2>
+                <button id="close-atendidos-btn" class="text-slate-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1 bg-white rounded-full shadow-sm w-8 h-8 flex items-center justify-center pb-2">&times;</button>
             </div>
-
-            <!-- Lado Direito -->
-            <div class="w-full sm:w-1/3 flex flex-col bg-white border-t-4 sm:border-t-0 sm:border-l-4 border-gray-100 flex-shrink-0" style="height: 100%;">
-                <div class="p-6 pb-2">
-                    <h3 class="text-xl sm:text-2xl font-black text-tema-panel text-center mb-6 uppercase tracking-widest">Últimos Chamados</h3>
-                    <div class="flex justify-between text-xs sm:text-sm text-slate-400 font-bold mb-2 px-2 uppercase tracking-wider border-b-2 border-slate-100 pb-2">
-                        <span>Nome</span>
-                        <span>Local</span>
-                    </div>
-                </div>
-                <div id="lista-historico-tv" class="flex flex-col flex-grow overflow-hidden px-4 space-y-3 mt-2"></div>
-                <div class="mt-auto h-32 sm:h-48 bg-slate-50 flex flex-col justify-center items-center border-t border-slate-200 p-4">
-                    <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo SIGEP" class="h-10 sm:h-16 object-contain mb-3 grayscale opacity-70">
-                    <div id="data-hora-tv" class="mono text-slate-500 font-bold text-sm sm:text-base uppercase tracking-widest text-center"></div>
-                    <div id="recepcao-nome-tv" class="text-xs text-slate-400 font-bold mt-1 uppercase tracking-wider truncate max-w-full px-4">—</div>
-                </div>
-            </div>
+            <div id="list-atendidos-content" class="p-4 overflow-y-auto flex-1 space-y-2 bg-slate-50/30 scrollable-content"></div>
         </div>
     </div>
 
+    <!-- WIDGET DE ACESSIBILIDADE: VLIBRAS -->
+    <div vw class="enabled">
+        <div vw-access-button class="active"></div>
+        <div vw-plugin-wrapper>
+            <div class="vw-plugin-top-wrapper"></div>
+        </div>
+    </div>
+    <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
+    <script>
+        new window.VLibras.Widget('https://vlibras.gov.br/app');
+        
+        // Controle de Alto Contraste
+        const btnContraste = document.getElementById('btn-alto-contraste');
+        const htmlElement = document.documentElement;
+        if (localStorage.getItem('sigep_alto_contraste') === 'true') {
+            htmlElement.classList.add('alto-contraste');
+        }
+        if (btnContraste) {
+            btnContraste.addEventListener('click', () => {
+                htmlElement.classList.toggle('alto-contraste');
+                localStorage.setItem('sigep_alto_contraste', htmlElement.classList.contains('alto-contraste'));
+            });
+        }
+    </script>
+
     <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeApp }    from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getFirestore, doc, onSnapshot, collection } 
+            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { initializeAppCheck, ReCaptchaV3Provider } 
+            from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app-check.js";
 
-        // ─────────────────────────────────────────────
-        //  GESTÃO DE SOM E ZOOM
-        // ─────────────────────────────────────────────
-        let audioCtx = null;
-        let somAtivo = false;
-
-        function garantirAudioCtx() {
-            if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            if (audioCtx.state === 'suspended') audioCtx.resume();
-            return audioCtx;
-        }
-
-        window.ativarSom = function() {
-            try {
-                garantirAudioCtx();
-                somAtivo = true;
-                atualizarIndicadorSom();
-                tocarSom();
-                const overlay = document.getElementById('overlay-som');
-                if (overlay) overlay.style.display = 'none';
-            } catch(e) { console.warn('Som não ativado', e); }
-        };
-
-        window.toggleSom = function() {
-            somAtivo = !somAtivo;
-            if (somAtivo) garantirAudioCtx();
-            atualizarIndicadorSom();
-        };
-
-        function atualizarIndicadorSom() {
-            const iconeHeader = document.getElementById('icone-som-header');
-            const btnHeader   = document.getElementById('btn-som-header');
-            if (somAtivo) {
-                if (iconeHeader) iconeHeader.textContent = '🔔';
-                if (btnHeader) { btnHeader.style.background = '#dcfce7'; btnHeader.style.borderColor = '#86efac'; }
-            } else {
-                if (iconeHeader) iconeHeader.textContent = '🔇';
-                if (btnHeader) { btnHeader.style.background = ''; btnHeader.style.borderColor = ''; }
-            }
-        }
-
-        function onPrimeiraInteracao() {
-            if (!somAtivo) { try { garantirAudioCtx(); somAtivo = true; atualizarIndicadorSom(); } catch(e) {} }
-        }
-        document.addEventListener('click',   onPrimeiraInteracao, { once: true });
-        document.addEventListener('keydown', onPrimeiraInteracao, { once: true });
-        document.addEventListener('touchstart', onPrimeiraInteracao, { once: true });
-
-        function tocarSom() {
-            if (!somAtivo) return;
-            try {
-                const ctx = garantirAudioCtx();
-                const notas = [[659, 0, 0.4], [523, 0.4, 0.6]];
-                notas.forEach(([freq, inicio, duracao]) => {
-                    const osc  = ctx.createOscillator();
-                    const gain = ctx.createGain();
-                    osc.connect(gain); gain.connect(ctx.destination);
-                    osc.type = 'sine';
-                    osc.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
-                    gain.gain.setValueAtTime(0.5, ctx.currentTime + inicio);
-                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracao);
-                    osc.start(ctx.currentTime + inicio);
-                    osc.stop(ctx.currentTime + inicio + duracao);
-                });
-            } catch(e) {}
-        }
-
-        window.alternarModo = function() {
-            const url = new URL(window.location);
-            if (url.searchParams.get('modo') === 'tv') url.searchParams.delete('modo');
-            else url.searchParams.set('modo', 'tv');
-            window.history.pushState({}, '', url);
-            aplicarModoAtual();
-        };
-
-        function aplicarModoAtual() {
-            const isTV = new URLSearchParams(window.location.search).get('modo') === 'tv';
-            if (isTV) {
-                document.getElementById('modo-fila').classList.add('hidden');
-                document.getElementById('modo-fila').classList.remove('flex');
-                document.getElementById('zoom-controls').classList.add('hidden');
-                document.getElementById('modo-tv').classList.remove('hidden');
-                document.body.style.background = '#1e293b';
-                document.body.style.zoom = 1;
-            } else {
-                document.getElementById('modo-tv').classList.add('hidden');
-                document.getElementById('modo-fila').classList.remove('hidden');
-                document.getElementById('modo-fila').classList.add('flex');
-                document.getElementById('zoom-controls').classList.remove('hidden');
-                document.body.style.background = '#f8fafc';
-                document.body.style.zoom = window.zoomAtual;
-            }
-        }
-
-        window.zoomAtual = 1;
-        window.mudarZoom = function(delta) {
-            window.zoomAtual = Math.max(0.4, Math.min(2.5, window.zoomAtual + delta));
-            document.body.style.zoom = window.zoomAtual;
-            document.getElementById('zoom-level').textContent = Math.round(window.zoomAtual * 100) + '%';
-        };
-
-        // ─────────────────────────────────────────────
-        //  FIREBASE E DADOS
-        // ─────────────────────────────────────────────
         const firebaseConfig = {
             apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
             authDomain: "pauta-ce162.firebaseapp.com",
@@ -429,284 +224,322 @@
             messagingSenderId: "87113750208",
             appId: "1:87113750208:web:4abba0024f4d4af699bf25"
         };
+
         const firebaseApp = initializeApp(firebaseConfig);
         const db = getFirestore(firebaseApp);
 
-        // O Painel unificado pode receber '?pautas=id1,id2' ou só '?id=pautaId'
-        const params = new URLSearchParams(window.location.search);
-        let pautasParam = params.get('pautas');
-        if (!pautasParam && params.get('id')) pautasParam = params.get('id'); // Aceita os dois links
-        let recepcaoNome = params.get('nome') || 'Atendimento Geral';
+        try {
+            initializeAppCheck(firebaseApp, {
+                provider: new ReCaptchaV3Provider('6LeWfTgsAAAAAHy1y3TFZ1EH-L3btwHsult6Rgy4'),
+                isTokenAutoRefreshEnabled: true
+            });
+        } catch(e) {}
 
-        const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
+        const urlParams = new URLSearchParams(window.location.search);
+        const pId = urlParams.get('id');
 
-        const corPorUnidade = {};
-        let proximaCor = 0;
-        function getCorUnidade(key) {
-            if (corPorUnidade[key] === undefined) { corPorUnidade[key] = proximaCor % 8; proximaCor++; }
-            return corPorUnidade[key];
-        }
+        let maskNames = false;
 
-        function esc(str) {
+        function escapeHTML(str) {
             if (!str) return '';
-            return String(str).replace(/[&<>'"]/g, t => ({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[t]||t));
+            return str.replace(/[&<>'"]/g, tag => ({ '&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;' }[tag] || tag));
         }
-        
+
         function formatNameMasked(name, mask) {
             if (!name) return '—';
-            if (!mask) return esc(name);
+            if (!mask) return escapeHTML(name);
             const connectors = ['de','da','do','dos','das'];
-            return esc(name.trim().split(/\s+/).map((p, i) => i===0 || connectors.includes(p.toLowerCase()) ? p : p.charAt(0).toUpperCase()+'.').join(' '));
+            return escapeHTML(
+                name.trim().split(/\s+/).map((part, i) => {
+                    if (i === 0) return part;
+                    if (connectors.includes(part.toLowerCase())) return part;
+                    return part.charAt(0).toUpperCase() + '.';
+                }).join(' ')
+            );
         }
 
-        function tickRelogio() {
-            const d = new Date();
-            const fila = d.toLocaleString('pt-BR', { weekday:'short', day:'2-digit', month:'2-digit', hour:'2-digit', minute:'2-digit' }).replace(',', ' ·');
-            const tv = d.toLocaleString('pt-BR', { hour:'2-digit', minute:'2-digit', second:'2-digit' });
-            if (document.getElementById('data-hora-fila')) document.getElementById('data-hora-fila').textContent = fila;
-            if (document.getElementById('data-hora-tv')) document.getElementById('data-hora-tv').textContent = tv;
-        }
-        setInterval(tickRelogio, 1000); tickRelogio();
+        function tocarSomChamado() {
+            try {
+                const ctx = new (window.AudioContext || window.webkitAudioContext)();
+                const tocarNota = (freq, inicio, duracao, ganho = 0.3) => {
+                    const osc  = ctx.createOscillator();
+                    const gain = ctx.createGain();
+                    osc.connect(gain);
+                    gain.connect(ctx.destination);
+                    osc.type = 'sine';
+                    osc.frequency.setValueAtTime(freq, ctx.currentTime + inicio);
+                    gain.gain.setValueAtTime(ganho, ctx.currentTime + inicio);
+                    gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + inicio + duracao);
+                    osc.start(ctx.currentTime + inicio);
+                    osc.stop(ctx.currentTime + inicio + duracao);
+                };
 
-        // ─────────────────────────────────────────────
-        //  RENDERIZAÇÃO DOS CARDS MODERNOS
-        // ─────────────────────────────────────────────
-        function renderUltimoChamadoFila(chamado) {
-            if (!chamado) return;
-            document.getElementById('ultimo-chamado-wrap').classList.remove('hidden');
-            const nomeEl = document.getElementById('uc-nome-fila');
-            const card   = document.getElementById('ultimo-chamado-card');
-            
-            nomeEl.textContent = esc(chamado.nome).toUpperCase();
-            document.getElementById('uc-pauta-fila').textContent = esc(chamado.pautaNome || chamado.local || '—');
-            document.getElementById('uc-local-fila').textContent = chamado.sala ? '🏠 ' + esc(chamado.sala) : '📋 ' + esc(chamado.local || '—');
-            document.getElementById('uc-hora-fila').textContent  = chamado.hora || new Date().toLocaleTimeString('pt-BR', {hour:'2-digit', minute:'2-digit'});
-            
-            nomeEl.classList.remove('anim-chamado'); card.classList.remove('anim-glow');
+                tocarNota(523, 0,    0.22); // C5
+                tocarNota(659, 0.22, 0.22); // E5
+                tocarNota(784, 0.44, 0.35); // G5
+                setTimeout(() => ctx.close(), 1200);
+            } catch(e) {}
+        }
+
+        function animarUltimoChamado() {
+            const card   = document.getElementById('uc-card');
+            const nomeEl = document.getElementById('uc-nome');
+            if (!card || !nomeEl) return;
+
+            nomeEl.classList.remove('animate-chamado-in');
+            card.classList.remove('animate-flash-border');
+            void nomeEl.offsetWidth;
             void card.offsetWidth;
-            nomeEl.classList.add('anim-chamado'); card.classList.add('anim-glow');
+            nomeEl.classList.add('animate-chamado-in');
+            card.classList.add('animate-flash-border');
         }
 
-        function renderPainelUnificado() {
-            let todosEmAtendimento = [];
-            let totalAguardando = 0;
-            const grupos = {};
-
-            for (const pautaId in estado.assistidos) {
-                const pauta = estado.pautas[pautaId];
-                const lista = estado.assistidos[pautaId] || [];
-                const nomePauta = pauta?.name || 'Geral';
-                const salaPauta = pauta?.sala || '';
-                const maskNames = pauta?.maskNames || false;
-                let aguardandoLocal = [];
-
-                lista.forEach(a => {
-                    const p = { ...a, nomePauta, salaPauta, pautaId, maskNames };
-                    if (a.status === 'aguardando') aguardandoLocal.push(p);
-                    else if (a.status === 'emAtendimento') todosEmAtendimento.push(p);
-                });
-
-                if (aguardandoLocal.length > 0) {
-                    aguardandoLocal.sort((a, b) => {
-                        if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
-                        if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
-                        return (a.checkInOrder || 0) - (b.checkInOrder || 0);
-                    });
-                    aguardandoLocal.forEach((p, idx) => p.ordemLocal = idx + 1);
-                    grupos[pautaId] = { nomePauta, salaPauta, pessoas: aguardandoLocal, maskNames };
-                    totalAguardando += aguardandoLocal.length;
-                }
-            }
-
-            document.getElementById('g-aguardando').textContent = totalAguardando;
-            document.getElementById('g-atendendo').textContent  = todosEmAtendimento.length;
-            document.getElementById('count-aguardando').textContent = totalAguardando;
-            document.getElementById('count-atendimento').textContent = todosEmAtendimento.length;
-
-            todosEmAtendimento.sort((a, b) => new Date(b.inAttendanceTime||0) - new Date(a.inAttendanceTime||0));
-
-            // Função construtora do Card Clean
-            const renderCardClean = (a, corStr, isFila = true) => {
-                const numAg  = a.numeroAgendamento || a.numAgendamento || '';
-                const horaAg = a.scheduledTime || '';
-                
-                let horaChegada = '';
-                if (a.arrivalTime) {
-                    try {
-                        const dc = new Date(a.arrivalTime);
-                        horaChegada = !isNaN(dc.getTime()) ? dc.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : a.arrivalTime.substring(0,5);
-                    } catch(e) { horaChegada = a.arrivalTime; }
-                }
-
-                let assunto = a.subject || '';
-                if (assunto.includes('>')) assunto = assunto.split('>').pop().trim();
-
-                const prio = (a.priority || '').toUpperCase();
-                const isUrgente = prio === 'URGENTE';
-                const isPrio = prio === 'PRIORIDADE' || (prio && prio !== 'NORMAL' && !isUrgente);
-
-                const tags = [];
-                if (numAg) tags.push(`<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded border border-slate-200 mono font-bold" style="font-size:var(--fs-xs)">📅 ${esc(numAg)}</span>`);
-                if (horaAg) tags.push(`<span class="inline-flex items-center gap-1 bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-200 mono font-bold" style="font-size:var(--fs-xs)">⏰ ${esc(horaAg)}</span>`);
-                if (horaChegada) tags.push(`<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded border border-emerald-200 mono font-bold" style="font-size:var(--fs-xs)">🚶 ${esc(horaChegada)}</span>`);
-                if (a.documentState === 'saved') tags.push(`<span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded font-bold uppercase" style="font-size:var(--fs-xs)">Docs OK</span>`);
-                
-                let assuntoHTML = assunto ? `<p class="text-slate-500 font-bold truncate mt-1 flex items-center gap-1.5" style="font-size:var(--fs-xs)" title="${esc(a.subject)}"><span style="opacity:0.6">📝</span> ${esc(assunto)}</p>` : '';
-
-                let badges = `<span class="sala-badge">${esc(a.room || a.salaPauta) || 'GERAL'}</span>`;
-                if (isUrgente) badges += `<span class="bg-red-100 text-red-800 font-black px-2.5 py-1 rounded-lg uppercase border border-red-200" style="font-size:var(--fs-xs)">Urgente</span>`;
-                else if (isPrio) badges += `<span class="bg-amber-100 text-amber-800 font-black px-2.5 py-1 rounded-lg uppercase border border-amber-200" style="font-size:var(--fs-xs)">Prioridade</span>`;
-
-                return `
-                <div class="pessoa-card anim-card ${corStr}" style="margin:0; ${isUrgente ? 'border-left-color:#ef4444!important;background:#fef2f2' : ''}">
-                    ${isFila ? `<span class="ordem-num">${a.ordemLocal}º</span>` : ''}
-                    <div style="min-width:0;flex:1">
-                        <p style="font-size:var(--fs-md);font-weight:900;color:#1e293b;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;text-transform:uppercase">${formatNameMasked(a.name, a.maskNames)}</p>
-                        ${assuntoHTML}
-                        ${tags.length ? `<div class="flex flex-wrap gap-1.5 mt-2">${tags.join('')}</div>` : ''}
-                    </div>
-                    <div class="flex flex-col items-end gap-1.5 shrink-0">${badges}</div>
-                </div>`;
-            };
-
-            // RENDER ATENDIMENTO
-            const listaAtEl = document.getElementById('lista-atendimento');
-            if (todosEmAtendimento.length === 0) {
-                listaAtEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:#94a3b8"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Ninguém em atendimento</p></div>`;
-            } else {
-                listaAtEl.innerHTML = todosEmAtendimento.map(a => renderCardClean(a, `ucor-${getCorUnidade(a.pautaId)}`, false)).join('');
-            }
-
-            // RENDER FILA
-            const listaEsEl = document.getElementById('lista-espera');
-            if (totalAguardando === 0) {
-                listaEsEl.innerHTML = `<div style="display:flex;align-items:center;justify-content:center;flex:1;color:#94a3b8"><p style="font-size:var(--fs-xs);font-weight:700;text-transform:uppercase">Fila vazia</p></div>`;
-                document.getElementById('legenda-unidades').innerHTML = '';
-                return;
-            }
-
-            const ordemGrupos = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
-            document.getElementById('legenda-unidades').innerHTML = ordemGrupos.map(key => {
-                const cor = getCorUnidade(key); const g = grupos[key];
-                return `<span class="u-badge ucor-${cor}" style="font-size:var(--fs-xs);font-weight:800;padding:3px 10px;border-radius:8px;white-space:nowrap">${esc(g.nomePauta)} <strong>${g.pessoas.length}</strong></span>`;
-            }).join('');
-
-            listaEsEl.innerHTML = ordemGrupos.map((key, gi) => {
-                const g = grupos[key]; const cor = getCorUnidade(key);
-                const pessoasHTML = g.pessoas.map(a => renderCardClean(a, `ucor-${cor}`, true)).join('');
-                return `
-                <div class="unidade-group anim-group ucor-${cor}" style="animation-delay:${gi*0.08}s;border-left:4px solid currentColor">
-                    <div class="unidade-group-header ucor-${cor}">
-                        <div style="display:flex;align-items:center;gap:10px;min-width:0;flex:1">
-                            <span style="font-size:var(--fs-md)">🏢</span>
-                            <div style="min-width:0">
-                                <p class="u-label" style="font-size:var(--fs-sm);font-weight:900;text-transform:uppercase;letter-spacing:0.06em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">${esc(g.nomePauta)}</p>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="unidade-group-body">${pessoasHTML}</div>
-                </div>`;
-            }).join('');
-        }
-
-        function renderHistoricoTV() {
-            const listaEl = document.getElementById('lista-historico-tv');
-            if (estado.historico.length === 0) {
-                listaEl.innerHTML = `<div class="flex-1 flex items-center justify-center text-slate-300 font-bold uppercase text-xs">Nenhum histórico recente</div>`;
-                return;
-            }
-            listaEl.innerHTML = estado.historico.slice(0, 5).map(h => `
-                <div class="item-historico flex justify-between items-center bg-slate-50 rounded-xl p-4 border border-slate-100 shadow-sm">
-                    <span class="text-xl font-bold text-slate-700 truncate pr-2 w-2/3 uppercase">${esc(h.nome)}</span>
-                    <span class="text-lg font-black text-tema-panel whitespace-nowrap text-right">${esc(h.sala || h.local || '—')}</span>
-                </div>
-            `).join('');
-        }
-
-        function renderUltimoChamadoTV(chamado) {
+        function renderUltimoChamado(chamado, historico) {
             if (!chamado) return;
-            const nomeEl = document.getElementById('uc-nome-tv');
-            const painel = document.getElementById('painel-destaque-tv');
-            nomeEl.textContent = esc(chamado.nome).toUpperCase();
-            document.getElementById('uc-local-tv').textContent = chamado.sala ? esc(chamado.sala) : esc(chamado.local || '—');
-            document.getElementById('label-local-tv').textContent = chamado.sala ? 'Sala' : 'Local';
 
-            painel.classList.remove('animar-chamado-tv'); void painel.offsetWidth; painel.classList.add('animar-chamado-tv');
+            const container = document.getElementById('ultimo-chamado-container');
+            const nomeEl    = document.getElementById('uc-nome');
+            const localEl   = document.getElementById('uc-local');
+            const horaEl    = document.getElementById('uc-hora');
+            const recentesEl = document.getElementById('uc-recentes');
+
+            const novoNome = formatNameMasked(chamado.nome, maskNames);
+            const nomeMudou = nomeEl.textContent !== novoNome && novoNome !== '—';
+
+            container.classList.remove('hidden');
+            nomeEl.textContent  = novoNome;
+            localEl.textContent = chamado.local || '—';
+            horaEl.textContent  = chamado.hora  || '';
+
+            if (nomeMudou) {
+                animarUltimoChamado();
+                tocarSomChamado();
+            }
+
+            const anteriores = (historico || []).slice(1, 4);
+
+            if (anteriores.length > 0) {
+                recentesEl.classList.remove('hidden');
+                recentesEl.innerHTML = anteriores.map((c, i) => `
+                    <div class="bg-white border border-slate-200 rounded-[16px] px-4 py-3 text-center shadow-sm animate-slide-card"
+                         style="animation-delay: ${i * 0.07}s">
+                        <p class="text-slate-400 text-[9px] font-black uppercase tracking-widest mb-1">Chamado Anterior</p>
+                        <p class="text-slate-700 font-black text-sm truncate uppercase">${formatNameMasked(c.nome, maskNames)}</p>
+                        <p class="text-slate-500 text-[10px] mt-1 font-semibold font-mono">${escapeHTML(c.local || '')} · ${escapeHTML(c.hora || '')}</p>
+                    </div>
+                `).join('');
+            } else {
+                recentesEl.classList.add('hidden');
+            }
         }
 
-        // ─────────────────────────────────────────────
-        //  INIT FIREBASE & TRATAMENTO DE ERRO
-        // ─────────────────────────────────────────────
-        async function init() {
-            aplicarModoAtual();
+        function iniciarListenerUltimoChamado(pautaId) {
+            const chamadoRef = doc(db, "pautas", pautaId, "painel", "ultimoChamado");
+            onSnapshot(chamadoRef, (snap) => {
+                if (!snap.exists()) return;
+                const data = snap.data();
+                renderUltimoChamado(data.atual, data.historico || []);
+            }, (error) => {
+                console.warn("Acesso ao último chamado negado:", error);
+            });
+        }
+
+        window.addEventListener('sigep:chamado', (e) => {
+            if (e.detail) renderUltimoChamado(e.detail, []);
+        });
+
+        // 🌟 FUNÇÃO QUE CRIA OS CARDS MODERNOS COM HORÁRIOS, ASSUNTO E PRIORIDADE 🌟
+        const createCardHTML = (a, idx, colorClass, type, data) => {
+            const numAg  = a.numeroAgendamento || a.numAgendamento || '';
+            const horaAg = a.scheduledTime || '';
             
-            // TRATAMENTO DE ACESSO NEGADO (TELA VERMELHA)
+            // 🕒 Tratamento da Hora de Chegada
+            let horaChegada = '';
+            if (a.arrivalTime) {
+                try {
+                    const dataChegada = new Date(a.arrivalTime);
+                    if (!isNaN(dataChegada.getTime())) {
+                        horaChegada = dataChegada.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                    } else {
+                        horaChegada = a.arrivalTime.substring(0, 5); // Fallback string
+                    }
+                } catch(e) {
+                    horaChegada = a.arrivalTime;
+                }
+            }
+
+            // 📝 Tratamento do Assunto (abrevia se for longo)
+            let assunto = a.subject || '';
+            if (assunto.includes('>')) {
+                assunto = assunto.split('>').pop().trim();
+            }
+
+            // ⚠️ Tratamento de Prioridade
+            const prioridade = (a.priority || '').toUpperCase();
+            const isUrgente = prioridade === 'URGENTE';
+            const isPrioridade = prioridade === 'PRIORIDADE' || (prioridade && prioridade !== 'NORMAL' && !isUrgente);
+
+            // Cores do Card
+            const baseBorder = isUrgente ? 'border-red-clean' : colorClass;
+            const delay = Math.min(idx * 0.03, 0.5);
+
+            // Tags Embutidas (Horários e Docs)
+            const tags = [];
+            if (numAg)       tags.push(`<span class="inline-flex items-center gap-1 bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md border border-slate-200 font-mono font-bold text-[9px]" title="Nº Agendamento">📅 ${escapeHTML(numAg)}</span>`);
+            if (horaAg)      tags.push(`<span class="inline-flex items-center gap-1 bg-blue-50 text-blue-600 px-2 py-0.5 rounded-md border border-blue-200 font-mono font-bold text-[9px]" title="Agendado para">⏰ ${escapeHTML(horaAg)}</span>`);
+            if (horaChegada) tags.push(`<span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 px-2 py-0.5 rounded-md border border-emerald-200 font-mono font-bold text-[9px]" title="Chegou às">🚶 ${escapeHTML(horaChegada)}</span>`);
+            if (a.documentState === 'saved') tags.push(`<span class="inline-flex items-center bg-slate-800 text-white px-2 py-0.5 rounded-md font-bold uppercase tracking-widest text-[8px]" title="Documentação Pronta">Docs OK</span>`);
+
+            let subInfos = tags.length > 0 ? `<div class="flex flex-wrap gap-1.5 mt-2">${tags.join('')}</div>` : '';
+            
+            // Layout do Assunto
+            let assuntoHTML = '';
+            if (assunto) {
+                assuntoHTML = `<p class="text-slate-500 font-semibold truncate mt-1 flex items-center gap-1 text-[11px]" title="${escapeHTML(a.subject)}"><span class="opacity-60 text-[10px]">📝</span> ${escapeHTML(assunto)}</p>`;
+            }
+
+            // Layout dos Badges Laterais (Sala + Prioridades)
+            let badgesHTML = `<span class="bg-slate-800 text-white font-bold px-2.5 py-1 rounded-lg uppercase tracking-wide border border-slate-700 shadow-sm whitespace-nowrap text-[9px]">${escapeHTML(a.room) || 'GERAL'}</span>`;
+            if (isUrgente) {
+                badgesHTML += `<span class="bg-red-100 text-red-800 font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border border-red-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5">Urgente</span>`;
+            } else if (isPrioridade) {
+                badgesHTML += `<span class="bg-amber-100 text-amber-800 font-black px-2.5 py-0.5 rounded-lg uppercase tracking-widest border border-amber-200 whitespace-nowrap shadow-sm text-[9px] mt-1.5">Prioridade</span>`;
+            }
+
+            return `
+                <div class="clean-card anim-card ${baseBorder} mb-3" style="animation-delay: ${delay}s">
+                    <div class="flex-1 min-w-0 pr-3 flex flex-col justify-center">
+                        <p class="text-slate-400 font-black uppercase tracking-widest mb-1.5 leading-none text-[9px]">
+                            ${type === 'wait' ? (idx + 1) + 'º DA FILA' : 'PROCESSO ATIVO'}
+                        </p>
+                        <h4 class="font-black text-slate-800 uppercase truncate leading-tight text-sm">
+                            ${formatNameMasked(a.name, data.maskNames)}
+                        </h4>
+                        ${assuntoHTML}
+                        ${subInfos}
+                    </div>
+                    <div class="flex flex-col items-end shrink-0 justify-center">
+                        ${badgesHTML}
+                    </div>
+                </div>`;
+        };
+
+        if (pId) {
+            // Tratamento contra erro de acesso negado
             const handleAcessoNegado = (error) => {
-                console.error("Firebase Error:", error);
+                console.error("Acesso bloqueado pelas regras do Firebase:", error);
                 document.getElementById('loading').classList.add('hidden');
                 document.getElementById('app-content').classList.add('hidden');
-                document.getElementById('modo-fila').classList.add('hidden');
-                document.getElementById('modo-tv').classList.add('hidden');
                 document.getElementById('error-screen').classList.remove('hidden');
             };
 
-            if (!pautasParam) {
-                document.getElementById('loading').innerHTML = `<div class="p-8 text-center"><span class="text-4xl">⚠️</span><h2 class="font-bold text-slate-800 mt-4">Link inválido</h2></div>`;
-                return;
-            }
-
-            const pautaIds = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
-            document.getElementById('recepcao-nome-fila').textContent = decodeURIComponent(recepcaoNome);
-            document.getElementById('recepcao-nome-tv').textContent   = decodeURIComponent(recepcaoNome);
-
-            pautaIds.forEach(pautaId => {
-                onSnapshot(doc(db, "pautas", pautaId), (snap) => {
-                    if (!snap.exists() || !snap.data().isPublic) {
-                        handleAcessoNegado("Pauta Privada ou Inexistente");
-                        return;
-                    }
+            onSnapshot(doc(db, "pautas", pId), (snap) => {
+                if (!snap.exists() || !snap.data().isPublic) {
                     document.getElementById('loading').classList.add('hidden');
-                    document.getElementById('error-screen').classList.add('hidden');
-                    
-                    if (new URLSearchParams(window.location.search).get('modo') !== 'tv') {
-                        document.getElementById('app-content').classList.remove('hidden');
-                    }
-                    
-                    const d = snap.data();
-                    estado.pautas[pautaId] = { id: pautaId, ...d };
-                    if (d.name && pautaIds.length === 1) document.getElementById('pauta-title').textContent = esc(d.name);
-                    renderPainelUnificado();
-                }, handleAcessoNegado);
+                    document.getElementById('error-screen').classList.remove('hidden');
+                    return;
+                }
 
-                onSnapshot(collection(db, "pautas", pautaId, "attendances"), (snap) => {
-                    estado.assistidos[pautaId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-                    renderPainelUnificado();
-                }, handleAcessoNegado);
+                const data = snap.data();
+                maskNames = data.maskNames || false;
 
-                onSnapshot(doc(db, "pautas", pautaId, "painel", "ultimoChamado"), (snap) => {
-                    if (!snap.exists()) return;
-                    const data = snap.data();
-                    if (!data.atual) return;
-                    
-                    const tsAtual = data.atual.timestamp || 0;
-                    const tsUlt   = estado.ultimoChamado?.timestamp || 0;
-                    
-                    if (tsAtual > tsUlt) {
-                        const nv = { ...data.atual, pautaNome: estado.pautas[pautaId]?.name || '', sala: estado.pautas[pautaId]?.sala || data.atual.sala || '' };
-                        if (estado.ultimoChamado) {
-                            estado.historico.unshift(estado.ultimoChamado);
-                            if (estado.historico.length > 5) estado.historico.pop();
-                            renderHistoricoTV();
-                        }
-                        estado.ultimoChamado = nv;
-                        renderUltimoChamadoFila(nv);
-                        renderUltimoChamadoTV(nv);
-                        tocarSom();
+                document.getElementById('pauta-title').textContent = data.name;
+                document.getElementById('loading').classList.add('hidden');
+                document.getElementById('error-screen').classList.add('hidden');
+                document.getElementById('app-content').classList.remove('hidden');
+
+                const grid = document.getElementById('main-grid');
+                let cols = 1;
+                if (data.useDelegationFlow) { document.getElementById('col-atendimento').classList.remove('hidden'); cols++; }
+                else { document.getElementById('col-atendimento').classList.add('hidden'); }
+                if (data.useDistributionFlow) { document.getElementById('col-distribuicao').classList.remove('hidden'); cols++; }
+                else { document.getElementById('col-distribuicao').classList.add('hidden'); }
+                grid.className = `grid grid-cols-1 ${cols > 1 ? 'lg:grid-cols-' + cols : ''} gap-5 flex-1 min-h-[400px]`;
+                
+                window._sigepOrdem = data.ordemAtendimento || 'padrao';
+                window._sigepTipo  = data.type || 'agendamento';
+                window._sigepRooms = data.rooms || data.customRooms || [];
+            }, handleAcessoNegado);
+
+            iniciarListenerUltimoChamado(pId);
+
+            onSnapshot(collection(db, "pautas", pId, "attendances"), (attSnap) => {
+                const pautaSnap = document.getElementById('pauta-title').textContent !== '---';
+                if (!pautaSnap) return; 
+
+                const ordemAtendimento = window._sigepOrdem || 'padrao';
+                const tipo = window._sigepTipo || 'agendamento';
+
+                const items = attSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                const ag  = items.filter(i => i.status === 'aguardando').sort((a, b) => {
+                    if (a.priority === 'URGENTE' && b.priority !== 'URGENTE') return -1;
+                    if (b.priority === 'URGENTE' && a.priority !== 'URGENTE') return 1;
+                    if (ordemAtendimento === 'manual') return (a.manualIndex || 0) - (b.manualIndex || 0);
+                    return (a.checkInOrder || 0) - (b.checkInOrder || 0);
+                });
+                const serv = items.filter(i => i.status === 'emAtendimento').sort((a, b) => new Date(b.inAttendanceTime) - new Date(a.inAttendanceTime));
+                const dist = items.filter(i => i.status === 'aguardandoDistribuicao' || i.status === 'aguardandoCorrecao');
+                const done = items.filter(i => i.status === 'atendido').sort((a, b) => new Date(b.attendedAt || b.attendedTime) - new Date(a.attendedAt || a.attendedTime));
+
+                document.getElementById('count-aguardando').textContent  = ag.length;
+                document.getElementById('count-atendimento').textContent = serv.length;
+                document.getElementById('count-distribuicao').textContent = dist.length;
+                document.getElementById('total-atendidos-count').textContent = done.length;
+
+                const elAg = document.getElementById('list-aguardando');
+                if (ag.length === 0) {
+                    elAg.innerHTML = '<div class="flex items-center justify-center py-20"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Fila Limpa</p></div>';
+                } else if (tipo === 'multisala') {
+                    const rooms = window._sigepRooms || [];
+                    let html = '';
+                    rooms.forEach(room => {
+                        const roomItems = ag.filter(a => a.room === room);
+                        if (roomItems.length === 0) return;
+                        html += `
+                            <div class="mb-5 bg-white rounded-2xl border border-slate-200 overflow-hidden shadow-sm">
+                                <div class="bg-slate-50/80 px-4 py-3 border-b border-slate-200 flex justify-between items-center">
+                                    <span class="text-xs font-black text-slate-700 uppercase tracking-widest flex items-center gap-1.5 opacity-90">🏢 ${escapeHTML(room)}</span>
+                                    <span class="bg-slate-800 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">${roomItems.length}</span>
+                                </div>
+                                <div class="p-3 bg-slate-50/30">${roomItems.map((a, i) => createCardHTML(a, i, 'border-amber-clean', 'wait', { maskNames })).join('')}</div>
+                            </div>`;
+                    });
+                    const noRoom = ag.filter(a => !a.room || !rooms.includes(a.room));
+                    if (noRoom.length > 0) {
+                        html += `
+                            <div class="mb-5 bg-white rounded-2xl border border-red-100 overflow-hidden shadow-sm">
+                                <div class="bg-red-50 px-4 py-3 border-b border-red-100 flex justify-between items-center">
+                                    <span class="text-xs font-black text-red-800 uppercase tracking-widest flex items-center gap-1.5 opacity-90">⚠️ Triagem Geral</span>
+                                    <span class="bg-red-600 text-white text-[10px] font-bold px-2.5 py-0.5 rounded-full">${noRoom.length}</span>
+                                </div>
+                                <div class="p-3 bg-slate-50/30">${noRoom.map((a, i) => createCardHTML(a, i, 'border-amber-clean', 'wait', { maskNames })).join('')}</div>
+                            </div>`;
                     }
-                }, handleAcessoNegado);
-            });
+                    elAg.innerHTML = html;
+                } else {
+                    elAg.innerHTML = ag.map((a, i) => createCardHTML(a, i, 'border-amber-clean', 'wait', { maskNames })).join('');
+                }
+
+                document.getElementById('list-atendimento').innerHTML = serv.length
+                    ? serv.map((a, i) => createCardHTML(a, i, 'border-indigo-clean', 'pulse', { maskNames })).join('')
+                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Ninguém em atendimento</p></div>';
+
+                document.getElementById('list-distribuicao').innerHTML = dist.length
+                    ? dist.map((a, i) => createCardHTML(a, i, 'border-cyan-clean', 'normal', { maskNames })).join('')
+                    : '<div class="text-center py-12"><p class="text-slate-400 text-[10px] font-black uppercase tracking-widest">Nenhum processo aguardando</p></div>';
+
+                document.getElementById('list-atendidos-content').innerHTML = done.map((d, i) => `
+                    <div class="bg-white p-4 rounded-xl border border-slate-100 shadow-sm flex justify-between items-center mb-2 hover:shadow-md transition-shadow anim-card" style="animation-delay:${Math.min(i*0.03, 0.5)}s">
+                        <span class="font-bold text-slate-700 uppercase text-xs truncate">${formatNameMasked(d.name, maskNames)}</span>
+                        <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 border border-emerald-200 px-2.5 py-1 rounded-md uppercase tracking-widest">Concluído</span>
+                    </div>`).join('')
+                    || '<p class="text-center text-slate-400 py-10 uppercase text-xs font-bold tracking-widest">Nenhum atendimento finalizado hoje.</p>';
+            }, handleAcessoNegado);
         }
-        init();
+
+        document.getElementById('open-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.remove('hidden');
+        document.getElementById('close-atendidos-btn').onclick = () => document.getElementById('atendidos-modal').classList.add('hidden');
     </script>
 </body>
 </html>
