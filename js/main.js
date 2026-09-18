@@ -2,8 +2,8 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// 🔥 OTIMIZAÇÃO: A importação do 'or' foi adicionada aqui para permitir as consultas compostas
-import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+// 🔥 OTIMIZAÇÃO: A importação do 'or' e 'and' foi adicionada aqui para permitir as consultas compostas
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
@@ -1135,10 +1135,12 @@ class SIGEPApp {
             } else {
                 qUser = query(
                     collection(this.db, "pautas"),
-                    where("orgaoId", "==", orgaoDoUsuario),
-                    or(
-                        where("owner", "==", user.uid),
-                        where("members", "array-contains", user.uid)
+                    and(
+                        where("orgaoId", "==", orgaoDoUsuario),
+                        or(
+                            where("owner", "==", user.uid),
+                            where("members", "array-contains", user.uid)
+                        )
                     )
                 );
             }
