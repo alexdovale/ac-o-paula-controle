@@ -951,6 +951,30 @@ class SIGEPApp {
             
             document.getElementById('attendant-modal')?.classList.add('hidden');
         });
+
+        // 🌟 NOVA LÓGICA: SALVAR ALTERAÇÃO DE ATENDENTE (DOS ATENDIDOS) 🌟
+        document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
+            const nomeFinal = document.getElementById('edit-attendant-select')?.value || null;
+            if (!nomeFinal) {
+                showNotification("Selecione um novo atendente.", "warning");
+                return;
+            }
+
+            let attendantData = nomeFinal;
+            const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+            if (selectedCollab) {
+                attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+            }
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { 
+                attendant: attendantData, 
+                attendedBy: nomeFinal,
+                assignedCollaborator: { id: selectedCollab ? selectedCollab.id : 'manual', name: nomeFinal }
+            }, this.currentUserName);
+            
+            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+            showNotification("Atendente atualizado com sucesso!", "success");
+        });
         
         document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
             const isAcaoRapida = ['reagendar', 'agendar', 'consulta', 'outros'].includes(window.assistedTipoAcao);
