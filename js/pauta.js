@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO REFATORADA (COM ACTION MAP E CHECKLIST DINÂMICO)
+// js/pauta.js - VERSÃO REFATORADA (COM ACTION MAP E LISTA DE COLAB CORRIGIDA)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -442,12 +442,15 @@ export const PautaService = {
             }
 
             let eAtrasado = false;
+            const tolerancia = app.currentPautaData?.toleranciaAtraso || app.currentPautaData?.tolerancia || 15;
+
             if (assisted.type === 'agendamento' && assisted.scheduledTime && assisted.arrivalTime) {
                 const [h, m] = assisted.scheduledTime.split(':').map(Number);
                 const schedDate = new Date();
                 schedDate.setHours(h, m, 0, 0);
                 const arrDate = new Date(assisted.arrivalTime);
-                eAtrasado = arrDate > new Date(schedDate.getTime() + 15 * 60000); 
+                
+                eAtrasado = arrDate > new Date(schedDate.getTime() + tolerancia * 60000); 
             }
 
             try {
@@ -550,8 +553,9 @@ export const PautaService = {
         }
 
         const statsDaPauta = app.currentPautaData?.stats || { pontuais: 0, atrasados: 0 };
+        const tolerancia = app.currentPautaData?.toleranciaAtraso || app.currentPautaData?.tolerancia || 15;
         
-        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento, statsDaPauta);
+        const orderedList = this.sortAguardando(aguardandoList, app.currentPautaData.ordemAtendimento, statsDaPauta, tolerancia);
         const nextAssisted = orderedList[0];
 
         if (!nextAssisted) {
@@ -871,11 +875,11 @@ export const PautaService = {
     // ============================================================
     // LÓGICA DE ORDENAÇÃO DA FILA DE AGUARDANDO
     // ============================================================
-    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }) {
+    sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }, toleranciaMinutos = 15) {
         if (!list || !list.length) return [];
 
         const agora = Date.now();
-        const TOLERANCIA_MINUTOS = 15;
+        const TOLERANCIA_MINUTOS = parseInt(toleranciaMinutos) || 15;
         const TEMPO_ESPERA_ALERTA_MS = 45 * 60 * 1000; 
 
         const getTempoChegada = (item) => {
@@ -926,16 +930,13 @@ export const PautaService = {
             return item.scheduledTime;
         };
 
-        // Identifica os alertas para exibição na UI antes de ordenar
         list.forEach(item => {
             item._alertaAtraso = isAtrasado(item);
             item._alertaEspera = isEsperandoMuito(item);
         });
 
-        // Retorna a lista manualmente ordenada (Drag and Drop)
         if (orderType === 'manual') return [...list].sort((a, b) => (a.manualIndex || 0) - (b.manualIndex || 0));
 
-        // Retorna a lista ordenada por quem chegou primeiro (Ordem de Chegada)
         if (orderType === 'chegada') {
             return [...list].sort((a, b) => {
                 const wA = getPriorityWeight(a.priority);
@@ -945,17 +946,11 @@ export const PautaService = {
             });
         }
 
-        // ==========================================
-        // ORDENAÇÃO FLEXÍVEL / PADRÃO / COM ALERTAS
-        // (Garante que os pontuais não percam a vez para os atrasados)
-        // ==========================================
         return [...list].sort((a, b) => {
-            // 1. Prioridades Absolutas (Urgência e Retorno sempre no topo)
             const wA = getPriorityWeight(a.priority);
             const wB = getPriorityWeight(b.priority);
             if (wA !== wB) return wB - wA; 
 
-            // Se for do tipo proporcional, alterna entre pontuais e atrasados (ex: a cada 3 pontuais atende 1 atrasado)
             if (orderType === 'proporcional') {
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
@@ -979,16 +974,12 @@ export const PautaService = {
             }
 
             if (orderType === 'flexivel_alerta' || orderType === 'flexivel' || orderType === 'padrao') {
-                
-                // 2. Proteção aos Pontuais (Pontual sempre ganha do Atrasado/Encaixe)
                 const atrasadoA = isAtrasado(a);
                 const atrasadoB = isAtrasado(b);
 
-                if (!atrasadoA && atrasadoB) return -1; // A é pontual, B é atrasado -> A sobe
-                if (atrasadoA && !atrasadoB) return 1;  // A é atrasado, B é pontual -> B sobe
+                if (!atrasadoA && atrasadoB) return -1; 
+                if (atrasadoA && !atrasadoB) return 1;  
 
-                // 3. Se ambos têm a mesma condição (ambos pontuais ou ambos atrasados), 
-                // ordena pelo horário que seria o correto de atendimento.
                 const horaA = getHoraParaOrdenacao(a);
                 const horaB = getHoraParaOrdenacao(b);
                 
@@ -1228,9 +1219,12 @@ export const PautaService = {
                     searchInput.value = '';
                     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                
+                // Usando UIService diretamente importado do escopo
+                if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
                     UIService.preencherListaColaboradoresModal(app);
                 }
+                
                 const firstInput = modal.querySelector('input, button, [tabindex="0"]');
                 if (firstInput) firstInput.focus();
             }, 150);
@@ -1353,7 +1347,7 @@ export const PautaService = {
         
         const razaoSalva = motivo.trim() === "" ? "Aguardando Retorno" : motivo.trim();
         this.updateStatus(app.db, app.currentPauta.id, id, {
-            status: 'aguardando', priority: 'RETORNO_RAPIDO', priorityReason: razaoSalva,
+            status: 'pausado', priority: 'RETORNO_RAPIDO', priorityReason: razaoSalva,
             assignedCollaborator: null, delegatedBy: null, delegatedAt: null,
             inAttendanceTime: null, distributionStatus: null
         }, app.currentUserName);
@@ -1364,7 +1358,7 @@ export const PautaService = {
     actionTogglePriority(app, id, assisted) {
         if (assisted && (assisted.priority === 'URGENTE' || assisted.priority === 'RETORNO_RAPIDO')) {
             if (confirm("Remover a marcação especial desta pessoa?")) {
-                this.updateStatus(app.db, app.currentPauta.id, id, { priority: null, priorityReason: null }, app.currentUserName);
+                this.updateStatus(app.db, app.currentPauta.id, id, { priority: null, priorityReason: null, status: 'aguardando' }, app.currentUserName);
             }
         } else {
             window.assistedIdToHandle = id;
@@ -1398,9 +1392,12 @@ export const PautaService = {
                     searchInput.value = '';
                     searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                 }
-                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
+                
+                // Usando UIService diretamente importado do escopo
+                if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
                     UIService.preencherListaColaboradoresModal(app);
                 }
+                
                 if (searchInput) searchInput.focus();
             }, 150);
         }
@@ -1436,11 +1433,12 @@ export const PautaService = {
                         searchInput.value = '';
                         searchInput.dispatchEvent(new Event('input', { bubbles: true }));
                     }
-                    if (typeof window.UIService !== 'undefined' && typeof window.UIService.preencherListaColaboradoresModal === 'function') {
-                        window.UIService.preencherListaColaboradoresModal(app);
-                    } else if (typeof app.UIService !== 'undefined' && typeof app.UIService.preencherListaColaboradoresModal === 'function') {
-                        app.UIService.preencherListaColaboradoresModal(app);
+                    
+                    // 🐛 AQUI: Chama a função UIService diretamente em vez de tentar buscar no window
+                    if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
+                        UIService.preencherListaColaboradoresModal(app);
                     }
+                    
                     if (searchInput) searchInput.focus();
                 }, 150);
             }
