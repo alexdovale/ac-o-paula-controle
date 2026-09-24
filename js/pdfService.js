@@ -1,4 +1,4 @@
-// js/pdfService.js - VERSÃO OTIMIZADA (UX, PERFORMANCE E TEXT WRAPPING)
+// js/pdfService.js - VERSÃO OTIMIZADA (UX, PERFORMANCE, TEXT WRAPPING E ORDEM ALFABÉTICA NA ATA)
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
@@ -173,15 +173,14 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     
     let currentY = 62 + (splitIntro.length * 4.5);
 
-    const sortedColaboradores = [...colaboradores].sort((a, b) => {
-        const eqA = a.equipe || '';
-        const eqB = b.equipe || '';
-        if (eqA !== eqB) return eqA.localeCompare(eqB);
-        return (a.nome || '').localeCompare(b.nome || '');
-    });
+    // 🌟 ORDENAÇÃO EXATAMENTE ALFABÉTICA (IGNORANDO EQUIPE NA ATA)
+    const defensores = colaboradores
+        .filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'))
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-    const defensores = sortedColaboradores.filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'));
-    const servidores = sortedColaboradores.filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'));
+    const servidores = colaboradores
+        .filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'))
+        .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
     const larguraNome = 65;
     const larguraIdentificador = 30;
