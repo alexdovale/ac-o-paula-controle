@@ -3,49 +3,64 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGEP - Pauta Rápida & Gestão de Documentos</title>
+    <title>SIGEP • Pauta Rápida & Gestão de Documentos</title>
+    <!-- Favicon Oficial -->
+    <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .transition-all-custom { transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); }
+    </style>
 </head>
-<body class="bg-slate-100 font-sans antialiased text-slate-800">
+<body class="bg-slate-50 font-sans antialiased text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <div class="max-w-4xl mx-auto p-4 sm:p-6">
-        <!-- Cabeçalho com Logo -->
-        <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-slate-200">
-            <div class="flex items-center gap-3.5 w-full sm:w-auto">
-                <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
-                     alt="Logo SIGEP" class="h-12 w-12 object-contain rounded-xl bg-slate-50 p-1 border border-slate-100 shadow-sm shrink-0">
+    <div class="max-w-4xl mx-auto p-4 sm:p-6 w-full flex-1">
+        <!-- Cabeçalho Profissional -->
+        <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-slate-200/80">
+            <div class="flex items-center gap-4 w-full sm:w-auto">
+                <div class="bg-slate-50 p-2 rounded-xl border border-slate-100 shadow-inner shrink-0">
+                    <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" 
+                         alt="Logo SIGEP" class="h-10 w-10 object-contain">
+                </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                        SIGEP • Pauta Rápida & Gestão de Documentos
+                        SIGEP • Pauta Rápida
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-400 font-medium mt-0.5">Verificando conexão...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Sincronizando com o sistema...</p>
                 </div>
             </div>
-            <div id="status-pauta-badge" class="bg-violet-50 text-violet-700 text-xs font-bold px-3.5 py-2 rounded-xl border border-violet-100 shadow-sm shrink-0">
-                Aguardando ID...
+            <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
+                <span class="h-2 w-2 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span id="nome-pauta-texto">Carregando pauta...</span>
             </div>
         </header>
 
-        <!-- Barra de Busca -->
-        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
-            <div class="relative w-full sm:w-96">
-                <span class="absolute inset-y-0 left-0 flex items-center pl-3 text-slate-400 text-xs">🔍</span>
-                <input type="text" id="filtro-assistido" placeholder="Pesquisar assistido com chegada marcada..." 
-                    class="w-full pl-9 pr-3 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:outline-none focus:border-violet-500 transition">
+        <!-- Barra de Busca Avançada -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200/80 mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+            <div class="relative w-full sm:w-[420px]">
+                <span class="absolute inset-y-0 left-0 flex items-center pl-3.5 text-slate-400 text-sm">🔍</span>
+                <input type="search" id="filtro-assistido" placeholder="Pesquisar por nome do assistido..." 
+                    class="w-full pl-10 pr-4 py-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 focus:bg-white focus:outline-none focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 transition-all-custom font-medium">
             </div>
-            <div class="text-xs text-slate-500 font-bold bg-slate-50 px-3 py-2 rounded-xl border border-slate-100 w-full sm:w-auto text-center" id="contador-status">
-                Total: 0 assistidos presentes
+            <div class="text-xs text-slate-600 font-bold bg-slate-100/70 px-4 py-2.5 rounded-xl border border-slate-200/60 w-full sm:w-auto text-center" id="contador-status">
+                0 presentes na fila
             </div>
         </div>
 
         <!-- Lista de Assistidos -->
-        <div id="lista-assistidos-rapida" class="space-y-3">
-            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">
-                Carregando dados da pauta...
+        <div id="lista-assistidos-rapida" class="space-y-3.5">
+            <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">
+                Carregando registros da pauta...
             </div>
         </div>
     </div>
+
+    <!-- Rodapé Profissional -->
+    <footer class="w-full py-6 bg-white border-t border-slate-200 mt-8 text-center text-slate-400 text-[11px] font-bold uppercase tracking-widest">
+        SIGEP • Sistema Integrado de Gestão de Pautas e Documentos
+    </footer>
 
     <!-- Script Principal -->
     <script type="module">
@@ -73,7 +88,7 @@
                         <div class="bg-white p-8 rounded-2xl shadow-xl border border-red-100 text-center max-w-md w-full">
                             <span class="text-4xl mb-3 block">⚠️</span>
                             <h2 class="font-black text-slate-800 text-base mb-1">Pauta não informada</h2>
-                            <p class="text-xs text-slate-500">Parâmetro <b>pautaId</b> ausente na URL.</p>
+                            <p class="text-xs text-slate-500">Parâmetro <b>pautaId</b> ausente na URL de acesso.</p>
                         </div>
                     </div>`;
             } else {
@@ -91,16 +106,16 @@
             console.error("Erro crítico:", erroInit);
             document.getElementById('lista-assistidos-rapida').innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
-                    Erro ao inicializar o Firebase. Verifique o arquivo config.js.
+                    Erro ao inicializar serviços do Firebase. Verifique o arquivo config.js.
                 </div>`;
         }
 
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
             if (usuarioLogado) {
-                descEl.innerHTML = "Modo Operador: Envio e edições liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
+                descEl.innerHTML = "Modo Operador: Uploads e edições liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
-                descEl.innerHTML = "Modo Consulta Externa: Visualização de documentos <span class='text-blue-600 font-bold'>● Leitura</span>";
+                descEl.innerHTML = "Modo Consulta Externa: Visualização de arquivos <span class='text-blue-600 font-bold'>● Leitura</span>";
             }
         }
 
@@ -108,9 +123,9 @@
             onSnapshot(doc(database, "pautas", idDaPauta), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    document.getElementById('status-pauta-badge').textContent = "Pauta: " + (data.name || 'Ativa');
+                    document.getElementById('nome-pauta-texto').textContent = data.name || 'Pauta Ativa';
                 } else {
-                    document.getElementById('status-pauta-badge').textContent = "Pauta não encontrada";
+                    document.getElementById('nome-pauta-texto').textContent = "Pauta não encontrada";
                 }
             });
 
@@ -127,10 +142,6 @@
                 renderizarLista(presentes);
             }, (err) => {
                 console.error("Erro ao carregar assistidos:", err);
-                document.getElementById('lista-assistidos-rapida').innerHTML = `
-                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
-                        Erro ao carregar a lista de presentes. Verifique as permissões.
-                    </div>`;
             });
         }
 
@@ -139,17 +150,17 @@
             const termoFiltro = document.getElementById('filtro-assistido').value.toLowerCase().trim();
 
             const filtrados = assistidos.filter(a => (a.name || '').toLowerCase().includes(termoFiltro));
-            document.getElementById('contador-status').textContent = "Total: " + filtrados.length + " assistidos presentes";
+            document.getElementById('contador-status').textContent = filtrados.length + " assistidos presentes";
 
             if (filtrados.length === 0) {
-                container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs">Nenhum assistido com chegada marcada encontrado nesta pauta.</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs font-medium">Nenhum assistido com chegada marcada encontrado.</div>`;
                 return;
             }
 
             let htmlFinal = "";
             for (let i = 0; i < filtrados.length; i++) {
                 const a = filtrados[i];
-                const btnVerdeClass = a.noVerde ? 'bg-emerald-600 text-white shadow-emerald-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
+                const btnVerdeClass = a.noVerde ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
                 const disabledAttr = !usuarioLogado ? 'disabled opacity-75 cursor-not-allowed' : '';
                 const onclickVerde = usuarioLogado ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})"` : '';
                 
@@ -162,31 +173,42 @@
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
                 const telSeguro = a.telefone || '';
 
+                // Histórico de interações registradas
+                let historicoHTML = '';
+                if (a.historicoAcoes && a.historicoAcoes.length > 0) {
+                    historicoHTML = `<div class="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap text-[10px] text-slate-500">
+                        <span class="font-bold text-slate-600">Histórico de Atividades:</span>`;
+                    a.historicoAcoes.forEach(h => {
+                        historicoHTML += `<span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200 font-medium">${h}</span>`;
+                    });
+                    historicoHTML += `</div>`;
+                }
+
                 htmlFinal += `
-                    <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3 transition-all hover:shadow-md">
+                    <div class="bg-white p-4.5 sm:p-5 rounded-2xl shadow-sm border border-slate-200/80 flex flex-col gap-3 transition-all-custom hover:shadow-md hover:border-slate-300">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                             <div>
                                 <div class="flex items-center gap-2 flex-wrap">
                                     <h3 class="font-black text-slate-900 text-sm sm:text-base">${nomeSeguro}</h3>
-                                    <span class="bg-violet-100 text-violet-800 text-[10px] font-bold px-2 py-0.5 rounded-lg">Agendamento: #${numAgendamento}</span>
-                                    <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-lg">⏰ ${horarioAgendado}</span>
-                                    <span class="bg-cyan-100 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-lg">📑 Triagem: ${triagemStatus}</span>
+                                    <span class="bg-violet-50 text-violet-700 border border-violet-200/60 text-[10px] font-black px-2.5 py-0.5 rounded-lg">Agendamento: #${numAgendamento}</span>
+                                    <span class="bg-slate-100 text-slate-700 border border-slate-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg">⏰ ${horarioAgendado}</span>
+                                    <span class="bg-cyan-50 text-cyan-800 border border-cyan-200/60 text-[10px] font-bold px-2.5 py-0.5 rounded-lg">📑 Triagem: ${triagemStatus}</span>
                                 </div>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Status: <span class="font-bold text-slate-700 uppercase">${statusSeguro}</span></p>
+                                <p class="text-[11px] text-slate-400 font-medium mt-1">Status na Fila: <span class="font-bold text-slate-700 uppercase">${statusSeguro}</span></p>
                             </div>
-                            <button ${onclickVerde} ${disabledAttr} class="px-3.5 py-2 rounded-xl font-black text-xs transition-all shadow-sm shrink-0 ${btnVerdeClass}">
-                                ${a.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
+                            <button ${onclickVerde} ${disabledAttr} class="px-4 py-2 rounded-xl font-black text-xs transition-all-custom shadow-sm shrink-0 ${btnVerdeClass}">
+                                ${a.noVerde ? '✅ No Verde / CNP' : '⏳ Pendente no Verde'}
                             </button>
                         </div>`;
 
                 if (usuarioLogado) {
                     htmlFinal += `
-                        <div class="flex flex-col sm:flex-row gap-2 items-center bg-violet-50/50 p-3 rounded-xl border border-violet-100">
+                        <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
                             <div class="flex-1 w-full">
-                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Selecionar PDF (Adobe Scan):</label>
+                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Selecionar PDF (Adobe Scan / Arquivo):</label>
                                 <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-700 cursor-pointer">
                             </div>
-                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end shadow-sm">
+                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 self-end shadow-sm">
                                 🚀 Enviar para Nuvem
                             </button>
                         </div>`;
@@ -194,42 +216,43 @@
 
                 htmlFinal += `
                         <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
-                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Link interno/externo do PDF..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition w-full" ${!usuarioLogado ? 'readonly' : ''}>`;
+                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Link interno ou externo do documento..." 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" ${!usuarioLogado ? 'readonly' : ''}>`;
 
                 if (usuarioLogado) {
                     htmlFinal += `
-                            <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
+                            <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
                                 Salvar Link
                             </button>`;
                 }
 
                 if (linkSeguro) {
                     htmlFinal += `
-                            <a href="${linkSeguro}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Abrir PDF">
-                                👁️ Abrir PDF
+                            <a href="${linkSeguro}" target="_blank" onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir PDF">
+                                👁️ Abrir
                             </a>
-                            <button onclick="enviarWhatsAppServidores('${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Avisar equipe no grupo">
-                                💬 WhatsApp Servidores
+                            <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Avisar equipe no grupo">
+                                💬 WhatsApp
                             </button>`;
                 }
 
                 htmlFinal += `
                         </div>
                         <div class="flex gap-2 items-center">
-                            <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações (ex: Falta comprovante...)" 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition" ${!usuarioLogado ? 'readonly' : ''}>`;
+                            <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações rápidas (ex: Falta certidão...)" 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" ${!usuarioLogado ? 'readonly' : ''}>`;
 
                 if (usuarioLogado) {
                     htmlFinal += `
-                            <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
+                            <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
                                 Atualizar Obs
                             </button>`;
                 }
 
                 htmlFinal += `
                         </div>
+                        ${historicoHTML}
                     </div>`;
             }
 
@@ -240,7 +263,22 @@
             if (window._assistidosCache) renderizarLista(window._assistidosCache);
         });
 
-        // 🌟 UPLOAD COM ATUALIZAÇÃO AUTOMÁTICA PARA "Digitalizado" 🌟
+        // 🌟 FUNÇÃO PARA REGISTRAR O HISTÓRICO DE CLIQUES E AÇÕES 🌟
+        window.registrarAcaoHistorico = async function(idPauta, idAssistido, acaoDesc) {
+            try {
+                const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+                const registro = `${acaoDesc} às ${horaFormatada}`;
+                const assistidoRef = doc(db, "pautas", idPauta, "attendances", idAssistido);
+                
+                const { arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                await updateDoc(assistidoRef, {
+                    historicoAcoes: arrayUnion(registro)
+                });
+            } catch (e) {
+                console.error("Erro ao registrar histórico:", e);
+            }
+        };
+
         window.fazerUploadPdf = async function(idPauta, idAssistido) {
             if (!usuarioLogado) return alert("Acesso restrito.");
             const fileInput = document.getElementById(`file-${idAssistido}`);
@@ -265,8 +303,9 @@
                     lastActionTimestamp: new Date().toISOString()
                 });
 
+                await registrarAcaoHistorico(idPauta, idAssistido, "Upload de PDF realizado");
                 document.getElementById(`link-${idAssistido}`).value = downloadUrl;
-                alert("PDF enviado e status de triagem atualizado para 'Digitalizado'! 🚀");
+                alert("PDF enviado e status atualizado para 'Digitalizado'! 🚀");
                 fileInput.value = ''; 
             } catch (error) {
                 console.error("Erro no upload:", error);
@@ -274,7 +313,6 @@
             }
         };
 
-        // 🌟 SALVAR LINK MANUAL COM ATUALIZAÇÃO AUTOMÁTICA PARA "Digitalizado" 🌟
         window.salvarLinkExterno = async function(idPauta, idAssistido) {
             if (!usuarioLogado) return alert("Acesso restrito.");
             const val = document.getElementById(`link-${idAssistido}`).value.trim();
@@ -282,7 +320,8 @@
                 pdfLink: val,
                 docWorkflowStatus: "Digitalizado"
             });
-            alert("Link do PDF salvo e status atualizado para 'Digitalizado'! 💾");
+            await registrarAcaoHistorico(idPauta, idAssistido, "Link do documento salvo");
+            alert("Link salvo com sucesso! 💾");
         }
 
         window.salvarObsExterno = async function(idPauta, idAssistido) {
@@ -292,7 +331,6 @@
             alert("Observações atualizadas! 📝");
         }
 
-        // 🌟 TOGGLE NO VERDE COM ATUALIZAÇÃO AUTOMÁTICA PARA "Inserido no Verde/CNP" 🌟
         window.toggleNoVerdeExterno = async function(idPauta, idAssistido, atual) {
             if (!usuarioLogado) return alert("Acesso restrito.");
             const novoEstado = !atual;
@@ -300,9 +338,12 @@
                 noVerde: novoEstado,
                 docWorkflowStatus: novoEstado ? "Inserido no Verde/CNP" : "Digitalizado"
             });
+            await registrarAcaoHistorico(idPauta, idAssistido, novoEstado ? "Marcado como No Verde" : "Removido do Verde");
         }
 
-        window.enviarWhatsAppServidores = function(nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
+        window.enviarWhatsAppServidores = async function(idPauta, idAssistido, nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
+            await registrarAcaoHistorico(idPauta, idAssistido, "Aviso enviado via WhatsApp");
+
             const textoMensagem = 
                 `*ATUALIZACAO DE DOCUMENTACAO - SIGEP*\n\n` +
                 `Assistido(a): ${nomeAssistido}\n` +
