@@ -66,7 +66,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
 
@@ -123,7 +123,7 @@
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
             if (!modoLeituraExterna) {
-                descEl.innerHTML = "Modo Operador: Uploads, links e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
+                descEl.innerHTML = "Modo Operador: Uploads, múltiplos links e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
                 descEl.innerHTML = "Modo Equipe (Leitura): Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
             }
@@ -180,13 +180,13 @@
                 const triagemStatus = escapeHTML(a.docWorkflowStatus || 'Pendente');
                 const numAgendamento = escapeHTML(a.numeroAgendamento || a.numAgendamento || a.protocolo || a.codigo || 'N/A');
                 const horarioAgendado = escapeHTML(a.scheduledTime || a.horario || a.time || a.hora || '--:--');
-                const linkSeguro = a.pdfLink || '';
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
 
-                // 🌟 Lógica inteligente: Se for do Storage do Firebase = Baixar/Abrir. Se for link externo = Apenas Abrir Link
-                const isFirebaseStorage = linkSeguro.includes('firebasestorage.googleapis.com');
-                const attrDownload = isFirebaseStorage ? 'download' : '';
-                const textoBotaoLink = isFirebaseStorage ? '👁️ Abrir / Baixar' : '🌐 Abrir Link';
+                // Lida com múltiplos links (suporta o formato antigo pdfLink e a nova lista documentosLista)
+                let listaDocs = a.documentosLista || [];
+                if (listaDocs.length === 0 && a.pdfLink) {
+                    listaDocs = [{ descricao: 'Documento Principal', url: a.pdfLink }];
+                }
 
                 let historicoHTML = '';
                 if (a.historicoAcoes && a.historicoAcoes.length > 0) {
@@ -219,45 +219,69 @@
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
                             <div class="flex-1 w-full">
-                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Selecionar PDF (Adobe Scan / Arquivo):</label>
+                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Fazer Upload de PDF (Adobe Scan / Arquivo):</label>
                                 <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-700 cursor-pointer">
                             </div>
                             <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-black px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 self-end shadow-sm">
                                 🚀 Enviar para Nuvem
                             </button>
+                        </div>
+
+                        <!-- Adicionar Novo Link Manual com Descrição -->
+                        <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-2 items-center">
+                            <input type="text" id="desc-novo-${a.id}" placeholder="Descrição (Ex: RG, CPF, Certidão...)" class="w-full sm:w-1/3 p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
+                            <input type="text" id="link-novo-${a.id}" placeholder="Cole o URL do documento aqui..." class="flex-1 w-full p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
+                            <button onclick="adicionarLinkManual('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-lg text-xs transition shrink-0">
+                                ➕ Adicionar Link
+                            </button>
+                        </div>`;
+                }
+
+                // Renderiza a listagem de todos os documentos cadastrados para este assistido
+                htmlFinal += `<div class="space-y-2 mt-2">`;
+                if (listaDocs.length === 0) {
+                    htmlFinal += `<p class="text-xs text-slate-400 italic">Nenhum documento anexado ainda.</p>`;
+                } else {
+                    listaDocs.forEach((docItem, index) => {
+                        const isFirebaseStorage = docItem.url.includes('firebasestorage.googleapis.com');
+                        const attrDownload = isFirebaseStorage ? 'download' : '';
+                        const textoBotaoLink = isFirebaseStorage ? '👁️ Abrir / Baixar' : '🌐 Abrir Link';
+
+                        htmlFinal += `
+                            <div class="flex flex-col sm:flex-row gap-2 items-center bg-slate-100/70 p-2.5 rounded-xl border border-slate-200">
+                                <span class="text-xs font-bold text-slate-700 w-full sm:w-1/3 truncate" title="${escapeHTML(docItem.descricao)}">📄 ${escapeHTML(docItem.descricao)}</span>
+                                <input type="text" value="${escapeHTML(docItem.url)}" class="flex-1 w-full p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none text-slate-600" readonly>
+                                <div class="flex gap-1.5 w-full sm:w-auto justify-end">
+                                    <a href="${docItem.url}" target="_blank" ${attrDownload} onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Consultou documento: ${escapeHTML(docItem.descricao)}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg text-xs transition flex items-center justify-center gap-1 shrink-0">
+                                        ${textoBotaoLink}
+                                    </a>`;
+                        
+                        if (!modoLeituraExterna) {
+                            htmlFinal += `
+                                    <button onclick="removerDocumento('${pautaId}', '${a.id}', '${docItem.url}')" class="bg-red-500 hover:bg-red-600 text-white font-bold px-2.5 py-2 rounded-lg text-xs transition" title="Excluir link">
+                                        🗑️
+                                    </button>`;
+                        }
+
+                        htmlFinal += `</div></div>`;
+                    });
+                }
+                htmlFinal += `</div>`;
+
+                // Botão de WhatsApp global para avisar a equipe quando houver documentos
+                if (!modoLeituraExterna && listaDocs.length > 0) {
+                    const primeiroLink = listaDocs[0].url;
+                    htmlFinal += `
+                        <div class="flex justify-end mt-1">
+                            <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${primeiroLink}')" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2 rounded-xl text-xs transition flex items-center gap-1.5 shadow-sm">
+                                💬 Avisar Equipe via WhatsApp (${listaDocs.length} docs)
+                            </button>
                         </div>`;
                 }
 
                 htmlFinal += `
-                        <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
-                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Cole o link do documento aqui..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" ${modoLeituraExterna ? 'readonly' : ''}>`;
-
-                if (!modoLeituraExterna) {
-                    htmlFinal += `
-                            <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
-                                Salvar Link
-                            </button>`;
-                }
-
-                if (linkSeguro) {
-                    htmlFinal += `
-                            <a href="${linkSeguro}" target="_blank" ${attrDownload} onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Consultou o Documento')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Acessar Documento">
-                                ${textoBotaoLink}
-                            </a>`;
-                }
-
-                if (!modoLeituraExterna && linkSeguro) {
-                    htmlFinal += `
-                            <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Avisar equipe no grupo">
-                                💬 WhatsApp
-                            </button>`;
-                }
-
-                htmlFinal += `
-                        </div>
-                        <div class="flex gap-2 items-center">
+                        <div class="flex gap-2 items-center mt-2">
                             <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações rápidas..." 
                                 class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" ${modoLeituraExterna ? 'readonly' : ''}>`;
 
@@ -305,24 +329,28 @@
             }
 
             const arquivo = fileInput.files[0];
+            const nomeOriginal = arquivo.name.replace(/\.[^/.]+$/, "");
             const caminhoStorage = `pautas/${idPauta}/assistidos/${idAssistido}/documento_${Date.now()}.pdf`;
             const storageRef = ref(storage, caminhoStorage);
 
-            alert("Enviando PDF para a pasta do assistido na nuvem... Aguarde.");
+            alert("Enviando PDF para a nuvem... Aguarde.");
 
             try {
                 const snapshot = await uploadBytes(storageRef, arquivo);
                 const downloadUrl = await getDownloadURL(snapshot.ref);
 
-                await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), {
-                    pdfLink: downloadUrl,
+                const novoDoc = { descricao: nomeOriginal || 'Documento Digitalizado', url: downloadUrl };
+
+                const assistidoRef = doc(db, "pautas", idPauta, "attendances", idAssistido);
+                await updateDoc(assistidoRef, {
+                    documentosLista: arrayUnion(novoDoc),
+                    pdfLink: downloadUrl, // retrocompatibilidade
                     docWorkflowStatus: "Digitalizado",
                     lastActionTimestamp: new Date().toISOString()
                 });
 
-                await registrarAcaoHistorico(idPauta, idAssistido, "Upload de PDF realizado");
-                document.getElementById(`link-${idAssistido}`).value = downloadUrl;
-                alert("PDF enviado e status atualizado para 'Digitalizado'! 🚀");
+                await registrarAcaoHistorico(idPauta, idAssistido, `Upload do documento: ${novoDoc.descricao}`);
+                alert("PDF enviado com sucesso! 🚀");
                 fileInput.value = ''; 
             } catch (error) {
                 console.error("Erro no upload:", error);
@@ -330,16 +358,62 @@
             }
         };
 
-        window.salvarLinkExterno = async function(idPauta, idAssistido) {
+        window.adicionarLinkManual = async function(idPauta, idAssistido) {
             if (modoLeituraExterna) return alert("Acesso restrito.");
-            const val = document.getElementById(`link-${idAssistido}`).value.trim();
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
-                pdfLink: val,
-                docWorkflowStatus: "Digitalizado"
-            });
-            await registrarAcaoHistorico(idPauta, idAssistido, "Link do documento salvo");
-            alert("Link salvo com sucesso! 💾");
-        }
+            const descInput = document.getElementById(`desc-novo-${idAssistido}`);
+            const linkInput = document.getElementById(`link-novo-${idAssistido}`);
+            
+            const descricao = descInput.value.trim() || 'Documento Externo';
+            const url = linkInput.value.trim();
+
+            if (!url) {
+                alert("Insira o link/URL do documento!");
+                return;
+            }
+
+            const novoDoc = { descricao, url };
+            const assistidoRef = doc(db, "pautas", idPauta, "attendances", idAssistido);
+
+            try {
+                await updateDoc(assistidoRef, {
+                    documentosLista: arrayUnion(novoDoc),
+                    docWorkflowStatus: "Digitalizado"
+                });
+
+                await registrarAcaoHistorico(idPauta, idAssistido, `Adicionou link: ${descricao}`);
+                descInput.value = '';
+                linkInput.value = '';
+                alert("Link adicionado com sucesso! 💾");
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao salvar o link.");
+            }
+        };
+
+        window.removerDocumento = async function(idPauta, idAssistido, urlParaRemover) {
+            if (modoLeituraExterna) return alert("Acesso restrito.");
+            if (!confirm("Deseja realmente remover este documento da lista?")) return;
+
+            try {
+                // Como o arrayUnion/arrayRemove exige o objeto exato, precisamos buscar o assistido atual
+                const assistido = window._assistidosCache?.find(a => a.id === idAssistido);
+                if (!assistido || !assistido.documentosLista) return;
+
+                const docEncontrado = assistido.documentosLista.find(d => d.url === urlParaRemover);
+                if (!docEncontrado) return;
+
+                const assistidoRef = doc(db, "pautas", idPauta, "attendances", idAssistido);
+                await updateDoc(assistidoRef, {
+                    documentosLista: arrayRemove(docEncontrado)
+                });
+
+                await registrarAcaoHistorico(idPauta, idAssistido, `Removeu documento: ${docEncontrado.descricao}`);
+                alert("Documento removido.");
+            } catch (err) {
+                console.error(err);
+                alert("Erro ao remover o documento.");
+            }
+        };
 
         window.salvarObsExterno = async function(idPauta, idAssistido) {
             if (modoLeituraExterna) return alert("Acesso restrito.");
@@ -368,7 +442,7 @@
                 `Agendamento: #${numAgendamento}\n` +
                 `Horario: ${horarioAgendado}\n\n` +
                 `Documentacao digitalizada e enviada para a nuvem com sucesso!\n` +
-                `Link do PDF: ${pdfLink}\n\n` +
+                `Link: ${pdfLink}\n\n` +
                 `_Mensagem gerada automaticamente pelo sistema SIGEP._`;
 
             const urlWa = `https://wa.me/?text=${encodeURIComponent(textoMensagem)}`;
