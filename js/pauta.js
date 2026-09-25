@@ -1710,5 +1710,13 @@ window.confirmarAcessoPdf = async function(assistedId, pdfLink, nomeColaborador)
     }
 };
 
+// 5. Alternar o Modo de Rastreio de PDF (Liga/Desliga)
+window.toggleModoRastreioPdf = function() {
+    const atual = localStorage.getItem('sigep_modo_rastreio_pdf') === 'true';
+    const novo = !atual;
+    localStorage.setItem('sigep_modo_rastreio_pdf', novo);
+    showNotification(`Modo Rastreio de PDF: ${novo ? 'ATIVADO 🟢' : 'DESATIVADO ⚪'}`, 'info');
+};
+
 
 export default PautaService;
