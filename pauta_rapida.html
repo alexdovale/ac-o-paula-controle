@@ -84,7 +84,6 @@
             pautaId = urlParams.get('pautaId');
             const modoUrl = urlParams.get('modo');
 
-            // Se a URL tiver explicitamente o modo leitura, restringe
             if (modoUrl === 'leitura') {
                 modoLeituraExterna = true;
             }
@@ -101,7 +100,6 @@
             } else {
                 onAuthStateChanged(auth, (user) => {
                     usuarioOperadorLogado = !!user;
-                    // Se estiver abrindo direto pelo sistema logado, garante que é operador (a não ser que tenha o &modo=leitura)
                     if (user && modoUrl !== 'leitura') {
                         modoLeituraExterna = false;
                     }
@@ -185,6 +183,11 @@
                 const linkSeguro = a.pdfLink || '';
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
 
+                // Identifica se o link salvo é um arquivo do Storage do Firebase (para decidir se baixa ou apenas abre)
+                const isFirebaseStorage = linkSeguro.includes('firebasestorage.googleapis.com');
+                const attrDownload = isFirebaseStorage ? 'download' : '';
+                const textoBotaoLink = isFirebaseStorage ? '👁️ Abrir / Baixar' : '🌐 Abrir Link';
+
                 let historicoHTML = '';
                 if (a.historicoAcoes && a.historicoAcoes.length > 0) {
                     historicoHTML = `<div class="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap text-[10px] text-slate-500">
@@ -212,7 +215,6 @@
                             </button>
                         </div>`;
 
-                // 🌟 Bloco de Upload do Operador 🌟
                 if (!modoLeituraExterna) {
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
@@ -231,7 +233,6 @@
                             <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Cole o link do documento aqui..." 
                                 class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" ${modoLeituraExterna ? 'readonly' : ''}>`;
 
-                // 🌟 Botão Salvar Link Manual (Aparece para o Operador) 🌟
                 if (!modoLeituraExterna) {
                     htmlFinal += `
                             <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
@@ -241,12 +242,11 @@
 
                 if (linkSeguro) {
                     htmlFinal += `
-                            <a href="${linkSeguro}" target="_blank" download onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou/Baixou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir ou Baixar PDF">
-                                👁️ Abrir / Baixar
+                            <a href="${linkSeguro}" target="_blank" ${attrDownload} onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Consultou o Documento')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Acessar Documento">
+                                ${textoBotaoLink}
                             </a>`;
                 }
 
-                // 🌟 Botão do WhatsApp (Aparece para o Operador sempre que houver link) 🌟
                 if (!modoLeituraExterna && linkSeguro) {
                     htmlFinal += `
                             <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
