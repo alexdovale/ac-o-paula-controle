@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGEP - Gestão Rápida de Documentos (Adobe Scan)</title>
+    <title>SIGEP - Gestão Rápida de Documentos (Adobe Scan & Storage)</title>
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
@@ -14,9 +14,9 @@
         <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-slate-200">
             <div>
                 <h1 class="text-xl font-black text-slate-900 flex items-center gap-2">
-                    <span>📄</span> Pauta Rápida - Adobe Scan & Docs
+                    <span>📄</span> Pauta Rápida - Adobe Scan & Storage
                 </h1>
-                <p class="text-xs text-slate-500 mt-1">Gerencie links, observações e status "No Verde" em tempo real</p>
+                <p class="text-xs text-slate-500 mt-1">Envie PDFs direto para a nuvem, gerencie observações e status "No Verde"</p>
             </div>
             <div id="status-pauta-badge" class="bg-violet-100 text-violet-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-violet-200">
                 Conectando à pauta...
@@ -40,14 +40,16 @@
         </div>
     </div>
 
-    <!-- Script de Conexão Firebase e Lógica -->
+    <!-- Script de Conexão Firebase (Firestore + Storage) e Lógica -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getFirestore, collection, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const storage = getStorage(app);
 
         // Captura o pautaId da URL (ex: pauta_rapida.html?pautaId=XYZ)
         const urlParams = new URLSearchParams(window.location.search);
@@ -76,8 +78,8 @@
             });
 
             // Escuta a coleção de assistidos em tempo real
-            const ref = collection(db, "pautas", pautaId, "attendances");
-            onSnapshot(ref, (snapshot) => {
+            const refCol = collection(db, "pautas", pautaId, "attendances");
+            onSnapshot(refCol, (snapshot) => {
                 const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
                 // Ordenação alfabética por nome
@@ -114,11 +116,22 @@
                         </button>
                     </div>
 
+                    <!-- Seção de Upload Direto para o Firebase Storage (Adobe Scan) -->
+                    <div class="flex flex-col sm:flex-row gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                        <div class="flex-1 w-full">
+                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Selecionar PDF (Adobe Scan):</label>
+                            <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer">
+                        </div>
+                        <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end">
+                            🚀 Enviar para Nuvem
+                        </button>
+                    </div>
+
                     <!-- Input de Link do PDF -->
                     <div class="flex gap-2 items-center">
-                        <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Cole o link do PDF (Adobe Scan)..." 
+                        <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF na nuvem..." 
                             class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none transition">
-                        <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0">
+                        <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition shrink-0">
                             Salvar Link
                         </button>
                         ${a.pdfLink ? `
@@ -144,6 +157,41 @@
         document.getElementById('filtro-assistido').addEventListener('input', () => {
             if (window._assistidosCache) renderizarLista(window._assistidosCache);
         });
+
+        // 🚀 Função de Upload do PDF para o Firebase Storage
+        window.fazerUploadPdf = async function(pautaId, assistidoId) {
+            const fileInput = document.getElementById(`file-${assistidoId}`);
+            if (!fileInput || !fileInput.files[0]) {
+                alert("Selecione um arquivo PDF primeiro!");
+                return;
+            }
+
+            const arquivo = fileInput.files[0];
+            const caminhoStorage = `pautas/${pautaId}/${assistidoId}_${Date.now()}.pdf`;
+            const storageRef = ref(storage, caminhoStorage);
+
+            alert("Enviando PDF para a nuvem... Aguarde um instante.");
+
+            try {
+                // Envia o arquivo para o Storage
+                const snapshot = await uploadBytes(storageRef, arquivo);
+                // Recupera a URL pública de download
+                const downloadUrl = await getDownloadURL(snapshot.ref);
+
+                // Salva a URL no Firestore automaticamente
+                await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
+                    pdfLink: downloadUrl,
+                    lastActionTimestamp: new Date().toISOString()
+                });
+
+                document.getElementById(`link-${assistidoId}`).value = downloadUrl;
+                alert("PDF enviado e vinculado com sucesso! 🚀");
+                fileInput.value = ''; 
+            } catch (error) {
+                console.error("Erro no upload:", error);
+                alert("Erro ao enviar o arquivo para o Firebase Storage.");
+            }
+        };
 
         // Funções globais de salvamento na página externa
         window.salvarLinkExterno = async function(pautaId, assistidoId) {
