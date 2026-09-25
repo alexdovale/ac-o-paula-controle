@@ -3,101 +3,126 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGEP - Gestão Rápida de Documentos da Pauta</title>
-    <!-- Tailwind CSS -->
+    <title>SIGEP - Gestão Rápida de Documentos (Adobe Scan)</title>
+    <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body class="bg-slate-100 font-sans antialiased text-slate-800">
 
     <div class="max-w-4xl mx-auto p-4 sm:p-6">
         <!-- Cabeçalho -->
-        <header class="bg-white shadow rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+        <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 border border-slate-200">
             <div>
                 <h1 class="text-xl font-black text-slate-900 flex items-center gap-2">
                     <span>📄</span> Pauta Rápida - Adobe Scan & Docs
                 </h1>
                 <p class="text-xs text-slate-500 mt-1">Gerencie links, observações e status "No Verde" em tempo real</p>
             </div>
-            <div id="pauta-nome-badge" class="bg-violet-100 text-violet-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-violet-200">
-                Carregando pauta...
+            <div id="status-pauta-badge" class="bg-violet-100 text-violet-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-violet-200">
+                Conectando à pauta...
             </div>
         </header>
 
-        <!-- Barra de Ações / Filtros -->
-        <div class="bg-white p-4 rounded-2xl shadow mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
+        <!-- Barra de Busca -->
+        <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-6 flex flex-col sm:flex-row justify-between items-center gap-3">
             <input type="text" id="filtro-assistido" placeholder="Pesquisar assistido na pauta..." 
-                class="w-full sm:w-72 p-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-violet-500">
-            <div class="text-xs text-slate-500 font-medium" id="contador-status">
+                class="w-full sm:w-80 p-2.5 border border-slate-200 rounded-xl text-xs focus:outline-none focus:border-violet-500">
+            <div class="text-xs text-slate-500 font-semibold" id="contador-status">
                 Total: 0 assistidos
             </div>
         </div>
 
-        <!-- Lista de Assistidos (Injetada via JS) -->
+        <!-- Lista de Assistidos (Injetada via JavaScript) -->
         <div id="lista-assistidos-rapida" class="space-y-3">
-            <div class="text-center py-12 text-slate-400 font-medium">Carregando dados do Firebase...</div>
+            <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium">
+                Carregando dados do Firebase...
+            </div>
         </div>
     </div>
 
-    <!-- Firebase SDKs e Lógica -->
+    <!-- Script de Conexão Firebase e Lógica -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
 
-        // Pega o pautaId da URL (ex: pauta_rapida.html?pautaId=XYZ)
+        // Captura o pautaId da URL (ex: pauta_rapida.html?pautaId=XYZ)
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
 
         if (!pautaId) {
-            document.body.innerHTML = `<div class="p-8 text-center text-red-600 font-bold">Erro: ID da pauta não informado na URL. (Use ?pautaId=SEU_ID)</div>`;
+            document.body.innerHTML = `
+                <div class="min-h-screen flex items-center justify-center p-4">
+                    <div class="bg-white p-6 rounded-2xl shadow-md border border-red-200 text-center max-w-md w-full">
+                        <span class="text-3xl mb-2 block">⚠️</span>
+                        <h2 class="font-bold text-slate-800 text-base mb-1">Pauta não informada</h2>
+                        <p class="text-xs text-slate-500">Para acessar esta tela, abra com o parâmetro correto na URL (Ex: <code class="bg-slate-100 p-1 rounded text-violet-600">?pautaId=SEU_ID</code>).</p>
+                    </div>
+                </div>`;
         } else {
-            carregarDadosPauta(db, pautaId);
+            escutarPauta(db, pautaId);
         }
 
-        function carregarDadosPauta(db, pautaId) {
-            // Escuta os assistidos em tempo real
+        function escutarPauta(db, pautaId) {
+            // Busca nome da pauta para o badge
+            onSnapshot(doc(db, "pautas", pautaId), (docSnap) => {
+                if (docSnap.exists()) {
+                    const data = docSnap.data();
+                    document.getElementById('status-pauta-badge').textContent = `Pauta: ${data.name || 'Ativa'}`;
+                }
+            });
+
+            // Escuta a coleção de assistidos em tempo real
             const ref = collection(db, "pautas", pautaId, "attendances");
             onSnapshot(ref, (snapshot) => {
-                const assistidos = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-                renderizarLista(db, pautaId, assistidos);
+                const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+                
+                // Ordenação alfabética por nome
+                assistidos.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
+                
+                window._assistidosCache = assistidos;
+                renderizarLista(assistidos);
             });
         }
 
-        function renderizarLista(db, pautaId, assistidos) {
+        function renderizarLista(assistidos) {
             const container = document.getElementById('lista-assistidos-rapida');
-            document.getElementById('contador-status').textContent = `Total: ${assistidos.length} assistidos`;
+            const termoFiltro = document.getElementById('filtro-assistido').value.toLowerCase().trim();
 
-            if (assistidos.length === 0) {
-                container.innerHTML = `<div class="bg-white p-6 rounded-xl text-center text-slate-400">Nenhum assistido encontrado nesta pauta.</div>`;
+            const filtrados = assistidos.filter(a => (a.name || '').toLowerCase().includes(termoFiltro));
+            document.getElementById('contador-status').textContent = `Total: ${filtrados.length} de ${assistidos.length} assistidos`;
+
+            if (filtrados.length === 0) {
+                container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs">Nenhum assistido encontrado.</div>`;
                 return;
             }
 
-            container.innerHTML = assistidos.map(a => `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3">
-                    <div class="flex justify-between items-start">
+            container.innerHTML = filtrados.map(a => `
+                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3 transition-all hover:shadow-md">
+                    <div class="flex justify-between items-start gap-2">
                         <div>
                             <h3 class="font-black text-slate-800 text-sm">${escapeHTML(a.name || 'Sem Nome')}</h3>
-                            <p class="text-[11px] text-slate-500">Status Fila: <span class="font-bold text-slate-700 uppercase">${a.status || 'pauta'}</span></p>
+                            <p class="text-[11px] text-slate-400">Status: <span class="font-bold text-slate-600 uppercase">${a.status || 'pauta'}</span></p>
                         </div>
                         <!-- Botão No Verde -->
                         <button onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})" 
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm ${a.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm shrink-0 ${a.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
                             ${a.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
                         </button>
                     </div>
 
                     <!-- Input de Link do PDF -->
                     <div class="flex gap-2 items-center">
-                        <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Cole o link do PDF escaneado..." 
-                            class="flex-1 p-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none">
-                        <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3 py-2 rounded-xl text-xs transition">
+                        <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Cole o link do PDF (Adobe Scan)..." 
+                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none transition">
+                        <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0">
                             Salvar Link
                         </button>
                         ${a.pdfLink ? `
-                            <a href="${a.pdfLink}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-xl text-xs transition flex items-center gap-1">
+                            <a href="${a.pdfLink}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1 shrink-0" title="Abrir PDF">
                                 👁️ Abrir
                             </a>
                         ` : ''}
@@ -105,9 +130,9 @@
 
                     <!-- Input de Observações -->
                     <div class="flex gap-2 items-center">
-                        <input type="text" id="obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Observações (ex: Falta comprovante...)" 
-                            class="flex-1 p-2 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none">
-                        <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-xl text-xs transition">
+                        <input type="text" id="obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Observações (ex: Falta comprovante de residência...)" 
+                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none transition">
+                        <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0">
                             Atualizar Obs
                         </button>
                     </div>
@@ -115,17 +140,22 @@
             `).join('');
         }
 
-        // Funções globais de ação na página externa
+        // Evento de filtro em tempo real
+        document.getElementById('filtro-assistido').addEventListener('input', () => {
+            if (window._assistidosCache) renderizarLista(window._assistidosCache);
+        });
+
+        // Funções globais de salvamento na página externa
         window.salvarLinkExterno = async function(pautaId, assistidoId) {
             const val = document.getElementById(`link-${assistidoId}`).value.trim();
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { pdfLink: val });
-            alert("Link do PDF salvo com sucesso!");
+            alert("Link do PDF salvo com sucesso! 💾");
         }
 
         window.salvarObsExterno = async function(pautaId, assistidoId) {
             const val = document.getElementById(`obs-${assistidoId}`).value.trim();
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { pdfObservacoes: val });
-            alert("Observações atualizadas!");
+            alert("Observações atualizadas! 📝");
         }
 
         window.toggleNoVerdeExterno = async function(pautaId, assistidoId, atual) {
@@ -133,9 +163,7 @@
         }
 
         function escapeHTML(str) {
-            return str.replace(/[&<>'"]/g, 
-                tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag)
-            );
+            return str.replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
         }
     </script>
 </body>
