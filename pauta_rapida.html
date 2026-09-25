@@ -16,10 +16,10 @@
                 <h1 class="text-xl font-black text-slate-900 flex items-center gap-2">
                     <span>📄</span> Pauta Rápida - Adobe Scan & Storage
                 </h1>
-                <p id="modo-painel-desc" class="text-xs text-slate-500 mt-1">Carregando permissões do painel...</p>
+                <p id="modo-painel-desc" class="text-xs text-slate-500 mt-1">Carregando painel...</p>
             </div>
             <div id="status-pauta-badge" class="bg-violet-100 text-violet-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-violet-200">
-                Conectando à pauta...
+                Conectando...
             </div>
         </header>
 
@@ -32,7 +32,7 @@
             </div>
         </div>
 
-        <!-- Lista de Assistidos (Injetada via JavaScript) -->
+        <!-- Lista de Assistidos -->
         <div id="lista-assistidos-rapida" class="space-y-3">
             <div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium">
                 Carregando dados do Firebase...
@@ -40,7 +40,7 @@
         </div>
     </div>
 
-    <!-- Script de Conexão Firebase (Firestore + Storage) e Lógica -->
+    <!-- Script de Conexão Firebase -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -53,7 +53,6 @@
         const auth = getAuth(app);
         const storage = getStorage(app);
 
-        // Captura o pautaId da URL
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
 
@@ -65,20 +64,31 @@
                     <div class="bg-white p-6 rounded-2xl shadow-md border border-red-200 text-center max-w-md w-full">
                         <span class="text-3xl mb-2 block">⚠️</span>
                         <h2 class="font-bold text-slate-800 text-base mb-1">Pauta não informada</h2>
-                        <p class="text-xs text-slate-500">Para acessar esta tela, abra com o parâmetro correto na URL (Ex: <code class="bg-slate-100 p-1 rounded text-violet-600">?pautaId=SEU_ID</code>).</p>
+                        <p class="text-xs text-slate-500">Para acessar esta tela, utilize o link gerado pelo sistema.</p>
                     </div>
                 </div>`;
         } else {
+            // Monitora o login de forma opcional (sem travar a tela se não estiver logado)
             onAuthStateChanged(auth, (user) => {
                 usuarioLogado = !!user;
-                const descEl = document.getElementById('modo-painel-desc');
-                if (usuarioLogado) {
-                    descEl.textContent = "Modo Operador: Envio de arquivos e edições liberados ⚙️";
-                } else {
-                    descEl.textContent = "Modo Consulta Externa: Visualização de documentos em tempo real 👁️";
-                }
-                escutarPauta(db, pautaId);
+                atualizarInterfaceModo();
+            }, (error) => {
+                console.warn("Aviso de auth:", error);
+                usuarioLogado = false;
+                atualizarInterfaceModo();
             });
+
+            // Carrega os dados da pauta imediatamente
+            escutarPauta(db, pautaId);
+        }
+
+        function atualizarInterfaceModo() {
+            const descEl = document.getElementById('modo-painel-desc');
+            if (usuarioLogado) {
+                descEl.textContent = "Modo Operador: Envio de arquivos e edições liberados ⚙️";
+            } else {
+                descEl.textContent = "Modo Consulta Externa: Visualização de documentos em tempo real 👁️";
+            }
         }
 
         function escutarPauta(db, pautaId) {
@@ -86,7 +96,12 @@
                 if (docSnap.exists()) {
                     const data = docSnap.data();
                     document.getElementById('status-pauta-badge').textContent = `Pauta: ${data.name || 'Ativa'}`;
+                } else {
+                    document.getElementById('status-pauta-badge').textContent = `Pauta não encontrada`;
                 }
+            }, (err) => {
+                console.error("Erro ao ler pauta:", err);
+                document.getElementById('status-pauta-badge').textContent = `Erro de conexão`;
             });
 
             const refCol = collection(db, "pautas", pautaId, "attendances");
@@ -95,6 +110,12 @@
                 assistidos.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 window._assistidosCache = assistidos;
                 renderizarLista(assistidos);
+            }, (err) => {
+                console.error("Erro ao ler assistidos:", err);
+                document.getElementById('lista-assistidos-rapida').innerHTML = `
+                    <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-500 text-xs font-bold">
+                        Erro ao carregar os dados da pauta. Verifique se o ID está correto.
+                    </div>`;
             });
         }
 
@@ -106,7 +127,7 @@
             document.getElementById('contador-status').textContent = `Total: ${filtrados.length} de ${assistidos.length} assistidos`;
 
             if (filtrados.length === 0) {
-                container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs">Nenhum assistido encontrado.</div>`;
+                container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs">Nenhum assistido encontrado nesta pauta.</div>`;
                 return;
             }
 
