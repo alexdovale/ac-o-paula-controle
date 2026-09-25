@@ -183,7 +183,7 @@
                 const linkSeguro = a.pdfLink || '';
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
 
-                // Identifica se o link salvo é um arquivo do Storage do Firebase (para decidir se baixa ou apenas abre)
+                // 🌟 Lógica inteligente: Se for do Storage do Firebase = Baixar/Abrir. Se for link externo = Apenas Abrir Link
                 const isFirebaseStorage = linkSeguro.includes('firebasestorage.googleapis.com');
                 const attrDownload = isFirebaseStorage ? 'download' : '';
                 const textoBotaoLink = isFirebaseStorage ? '👁️ Abrir / Baixar' : '🌐 Abrir Link';
