@@ -84,6 +84,7 @@
             pautaId = urlParams.get('pautaId');
             const modoUrl = urlParams.get('modo');
 
+            // Se a URL tiver explicitamente o modo leitura, restringe
             if (modoUrl === 'leitura') {
                 modoLeituraExterna = true;
             }
@@ -100,11 +101,14 @@
             } else {
                 onAuthStateChanged(auth, (user) => {
                     usuarioOperadorLogado = !!user;
-                    if (!user) modoLeituraExterna = true;
+                    // Se estiver abrindo direto pelo sistema logado, garante que é operador (a não ser que tenha o &modo=leitura)
+                    if (user && modoUrl !== 'leitura') {
+                        modoLeituraExterna = false;
+                    }
                     atualizarInterfaceModo();
                 }, () => {
                     usuarioOperadorLogado = false;
-                    modoLeituraExterna = true;
+                    if (modoUrl === 'leitura') modoLeituraExterna = true;
                     atualizarInterfaceModo();
                 });
 
@@ -120,11 +124,12 @@
 
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
-            if (!modoLeituraExterna && usuarioOperadorLogado) {
-                descEl.innerHTML = "Modo Operador: Uploads e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
+            if (!modoLeituraExterna) {
+                descEl.innerHTML = "Modo Operador: Uploads, links e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
                 descEl.innerHTML = "Modo Equipe (Leitura): Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
             }
+            if (window._assistidosCache) renderizarLista(window._assistidosCache);
         }
 
         function iniciarEscutaFirebase(database, idDaPauta) {
@@ -207,7 +212,7 @@
                             </button>
                         </div>`;
 
-                // Bloco de Upload restrito ao operador
+                // 🌟 Bloco de Upload do Operador 🌟
                 if (!modoLeituraExterna) {
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
@@ -223,10 +228,11 @@
 
                 htmlFinal += `
                         <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
-                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Link interno ou externo do documento..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" readonly>`;
+                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Cole o link do documento aqui..." 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" ${modoLeituraExterna ? 'readonly' : ''}>`;
 
-                if (!modoLeituraExterna && linkSeguro) {
+                // 🌟 Botão Salvar Link Manual (Aparece para o Operador) 🌟
+                if (!modoLeituraExterna) {
                     htmlFinal += `
                             <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
                                 Salvar Link
@@ -238,22 +244,22 @@
                             <a href="${linkSeguro}" target="_blank" download onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou/Baixou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir ou Baixar PDF">
                                 👁️ Abrir / Baixar
                             </a>`;
+                }
 
-                    // 🌟 BOTÃO DO WHATSAPP VISÍVEL APENAS PARA O OPERADOR 🌟
-                    if (!modoLeituraExterna) {
-                        htmlFinal += `
+                // 🌟 Botão do WhatsApp (Aparece para o Operador sempre que houver link) 🌟
+                if (!modoLeituraExterna && linkSeguro) {
+                    htmlFinal += `
                             <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Avisar equipe no grupo">
                                 💬 WhatsApp
                             </button>`;
-                    }
                 }
 
                 htmlFinal += `
                         </div>
                         <div class="flex gap-2 items-center">
                             <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações rápidas..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" readonly>`;
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" ${modoLeituraExterna ? 'readonly' : ''}>`;
 
                 if (!modoLeituraExterna) {
                     htmlFinal += `
