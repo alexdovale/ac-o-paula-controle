@@ -118,9 +118,9 @@
             onSnapshot(refCol, (snapshot) => {
                 const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // 🌟 FILTRO RIGOROSO: Exibe apenas os que possuem chegada marcada (chegada: true, status 'presente', 'atendido', etc.)
+                // 🌟 FILTRO ATUALIZADO: Identifica chegada marcada pelo status da fila (aguardando/pausado) ou chegada registrada
                 const presentes = assistidos.filter(a => {
-                    return a.chegada === true || a.status === 'presente' || a.status === 'atendido' || a.presente === true || a.noVerde === true;
+                    return a.status === 'aguardando' || a.status === 'pausado' || a.arrivalTime || a.chegada === true || a.status === 'presente' || a.status === 'atendido';
                 });
 
                 presentes.sort((a, b) => (a.name || '').localeCompare(b.name || ''));
@@ -155,9 +155,9 @@
                 const onclickVerde = usuarioLogado ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})"` : '';
                 
                 const nomeSeguro = escapeHTML(a.name || 'Sem Nome');
-                const statusSeguro = escapeHTML(a.status || 'presente');
-                const numAgendamento = escapeHTML(a.numeroAgendamento || a.protocolo || a.codigo || 'N/A');
-                const horarioAgendado = escapeHTML(a.horario || a.time || a.hora || '--:--');
+                const statusSeguro = escapeHTML(a.status || 'aguardando');
+                const numAgendamento = escapeHTML(a.numeroAgendamento || a.numAgendamento || a.protocolo || a.codigo || 'N/A');
+                const horarioAgendado = escapeHTML(a.scheduledTime || a.horario || a.time || a.hora || '--:--');
                 const linkSeguro = a.pdfLink || '';
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
                 const telSeguro = a.telefone || '';
@@ -208,9 +208,9 @@
                             <a href="${linkSeguro}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Abrir PDF">
                                 👁️ Abrir PDF
                             </a>
-                            <button onclick="enviarWhatsAppAssistido('${nomeSeguro}', '${telSeguro}', '${linkSeguro}')" 
-                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Enviar link via WhatsApp">
-                                💬 WhatsApp
+                            <button onclick="enviarWhatsAppServidores('${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Avisar equipe no grupo">
+                                💬 WhatsApp Servidores
                             </button>`;
                 }
 
@@ -271,17 +271,17 @@
             }
         };
 
-        window.enviarWhatsAppAssistido = function(nomeAssistido, telefoneAssistido, pdfLink) {
-            const telLimpo = telefoneAssistido ? telefoneAssistido.replace(/\D/g, '') : '';
-            const primeiroNome = nomeAssistido ? nomeAssistido.split(' ')[0] : 'Assistido(a)';
-            const mensagem = encodeURIComponent(
-                `Olá, ${primeiroNome}! Segue o link com a digitalização da sua documentação realizada em nossa pauta:\n\n📄 ${pdfLink}\n\nGuarde este link para consultas.`
-            );
+        window.enviarWhatsAppServidores = function(nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
+            const textoMensagem = 
+                `📌 *ATUALIZAÇÃO DE DOCUMENTAÇÃO - SIGEP*\n\n` +
+                `👤 *Assistido(a):* ${nomeAssistido}\n` +
+                `📋 *Agendamento:* #${numAgendamento}\n` +
+                `⏰ *Horário:* ${horarioAgendado}\n\n` +
+                `📄 *Documentação digitalizada e enviada para a nuvem com sucesso!*\n` +
+                `🔗 *Link do PDF:* ${pdfLink}\n\n` +
+                `_Mensagem gerada automaticamente pelo sistema SIGEP._`;
 
-            const urlWa = telLimpo.length >= 10 
-                ? `https://wa.me/55${telLimpo}?text=${mensagem}` 
-                : `https://wa.me/?text=${mensagem}`;
-
+            const urlWa = `https://wa.me/?text=${encodeURIComponent(textoMensagem)}`;
             window.open(urlWa, '_blank');
         };
 
