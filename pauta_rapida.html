@@ -118,7 +118,6 @@
             onSnapshot(refCol, (snapshot) => {
                 const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // Filtro alinhado com a chegada marcada (aguardando, pausado ou chegada registrada)
                 const presentes = assistidos.filter(a => {
                     return a.status === 'aguardando' || a.status === 'pausado' || a.arrivalTime || a.chegada === true || a.status === 'presente' || a.status === 'atendido';
                 });
@@ -156,6 +155,7 @@
                 
                 const nomeSeguro = escapeHTML(a.name || 'Sem Nome');
                 const statusSeguro = escapeHTML(a.status || 'aguardando');
+                const triagemStatus = escapeHTML(a.docWorkflowStatus || 'Pendente');
                 const numAgendamento = escapeHTML(a.numeroAgendamento || a.numAgendamento || a.protocolo || a.codigo || 'N/A');
                 const horarioAgendado = escapeHTML(a.scheduledTime || a.horario || a.time || a.hora || '--:--');
                 const linkSeguro = a.pdfLink || '';
@@ -170,6 +170,7 @@
                                     <h3 class="font-black text-slate-900 text-sm sm:text-base">${nomeSeguro}</h3>
                                     <span class="bg-violet-100 text-violet-800 text-[10px] font-bold px-2 py-0.5 rounded-lg">Agendamento: #${numAgendamento}</span>
                                     <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-0.5 rounded-lg">⏰ ${horarioAgendado}</span>
+                                    <span class="bg-cyan-100 text-cyan-800 text-[10px] font-bold px-2 py-0.5 rounded-lg">📑 Triagem: ${triagemStatus}</span>
                                 </div>
                                 <p class="text-[11px] text-slate-400 mt-0.5">Status: <span class="font-bold text-slate-700 uppercase">${statusSeguro}</span></p>
                             </div>
@@ -239,12 +240,9 @@
             if (window._assistidosCache) renderizarLista(window._assistidosCache);
         });
 
+        // 🌟 UPLOAD COM ATUALIZAÇÃO AUTOMÁTICA DO STATUS PARA "Digitalizado" 🌟
         window.fazerUploadPdf = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) {
-                alert("Acesso restrito: Você precisa estar logado como operador.");
-                return;
-            }
-
+            if (!usuarioLogado) return alert("Acesso restrito.");
             const fileInput = document.getElementById(`file-${idAssistido}`);
             if (!fileInput || !fileInput.files[0]) {
                 alert("Selecione um arquivo PDF primeiro!");
@@ -255,7 +253,7 @@
             const caminhoStorage = `pautas/${idPauta}/assistidos/${idAssistido}/documento_${Date.now()}.pdf`;
             const storageRef = ref(storage, caminhoStorage);
 
-            alert("Iniciando envio para a nuvem... Aguarde um instante.");
+            alert("Enviando PDF para a pasta do assistido na nuvem... Aguarde.");
 
             try {
                 const snapshot = await uploadBytes(storageRef, arquivo);
@@ -263,17 +261,46 @@
 
                 await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), {
                     pdfLink: downloadUrl,
+                    docWorkflowStatus: "Digitalizado",
                     lastActionTimestamp: new Date().toISOString()
                 });
 
                 document.getElementById(`link-${idAssistido}`).value = downloadUrl;
-                alert("PDF enviado e vinculado com sucesso! 🚀");
+                alert("PDF enviado e status atualizado para 'Digitalizado' com sucesso! 🚀");
                 fileInput.value = ''; 
             } catch (error) {
-                console.error("ERRO DETALHADO NO UPLOAD DO STORAGE:", error);
-                alert("Erro ao enviar: " + (error.code || error.message || "Erro desconhecido"));
+                console.error("Erro no upload:", error);
+                alert("Erro ao enviar o arquivo para o Firebase Storage.");
             }
         };
+
+        // 🌟 SALVAR LINK MANUAL COM ATUALIZAÇÃO AUTOMÁTICA DO STATUS PARA "Digitalizado" 🌟
+        window.salvarLinkExterno = async function(idPauta, idAssistido) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
+            const val = document.getElementById(`link-${idAssistido}`).value.trim();
+            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
+                pdfLink: val,
+                docWorkflowStatus: "Digitalizado"
+            });
+            alert("Link do PDF salvo e status atualizado para 'Digitalizado'! 💾");
+        }
+
+        window.salvarObsExterno = async function(idPauta, idAssistido) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
+            const val = document.getElementById(`obs-${idAssistido}`).value.trim();
+            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { pdfObservacoes: val });
+            alert("Observações atualizadas! 📝");
+        }
+
+        // 🌟 TOGGLE NO VERDE COM ATUALIZAÇÃO AUTOMÁTICA DO STATUS PARA "Inserido no Verde" 🌟
+        window.toggleNoVerdeExterno = async function(idPauta, idAssistido, atual) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
+            const novoEstado = !atual;
+            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
+                noVerde: novoEstado,
+                docWorkflowStatus: novoEstado ? "Inserido no Verde" : "Digitalizado"
+            });
+        }
 
         window.enviarWhatsAppServidores = function(nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
             const textoMensagem = 
@@ -288,25 +315,6 @@
             const urlWa = `https://wa.me/?text=${encodeURIComponent(textoMensagem)}`;
             window.open(urlWa, '_blank');
         };
-
-        window.salvarLinkExterno = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
-            const val = document.getElementById(`link-${idAssistido}`).value.trim();
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { pdfLink: val });
-            alert("Link do PDF salvo com sucesso! 💾");
-        }
-
-        window.salvarObsExterno = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
-            const val = document.getElementById(`obs-${idAssistido}`).value.trim();
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { pdfObservacoes: val });
-            alert("Observações atualizadas! 📝");
-        }
-
-        window.toggleNoVerdeExterno = async function(idPauta, idAssistido, atual) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { noVerde: !atual });
-        }
 
         function escapeHTML(str) {
             return String(str || '').replace(/[&<>'"]/g, tag => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'}[tag] || tag));
