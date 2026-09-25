@@ -16,7 +16,7 @@
                 <h1 class="text-xl font-black text-slate-900 flex items-center gap-2">
                     <span>📄</span> Pauta Rápida - Adobe Scan & Storage
                 </h1>
-                <p class="text-xs text-slate-500 mt-1">Envie PDFs direto para a nuvem, gerencie observações e status "No Verde"</p>
+                <p id="modo-painel-desc" class="text-xs text-slate-500 mt-1">Carregando permissões do painel...</p>
             </div>
             <div id="status-pauta-badge" class="bg-violet-100 text-violet-800 text-xs font-bold px-3 py-1.5 rounded-xl border border-violet-200">
                 Conectando à pauta...
@@ -43,17 +43,21 @@
     <!-- Script de Conexão Firebase (Firestore + Storage) e Lógica -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
 
         const app = initializeApp(firebaseConfig);
         const db = getFirestore(app);
+        const auth = getAuth(app);
         const storage = getStorage(app);
 
         // Captura o pautaId da URL (ex: pauta_rapida.html?pautaId=XYZ)
         const urlParams = new URLSearchParams(window.location.search);
         const pautaId = urlParams.get('pautaId');
+
+        let usuarioLogado = false;
 
         if (!pautaId) {
             document.body.innerHTML = `
@@ -65,7 +69,17 @@
                     </div>
                 </div>`;
         } else {
-            escutarPauta(db, pautaId);
+            // Verifica o estado de autenticação para definir se é Operador (com edição) ou Visualizador Externo (somente leitura)
+            onAuthStateChanged(auth, (user) => {
+                usuarioLogado = !!user;
+                const descEl = document.getElementById('modo-painel-desc');
+                if (usuarioLogado) {
+                    descEl.textContent = "Modo Operador: Envio de arquivos e edições liberados ⚙️";
+                } else {
+                    descEl.textContent = "Modo Consulta Externa: Visualização de documentos em tempo real 👁️";
+                }
+                escutarPauta(db, pautaId);
+            });
         }
 
         function escutarPauta(db, pautaId) {
@@ -109,45 +123,58 @@
                             <h3 class="font-black text-slate-800 text-sm">${escapeHTML(a.name || 'Sem Nome')}</h3>
                             <p class="text-[11px] text-slate-400">Status: <span class="font-bold text-slate-600 uppercase">${a.status || 'pauta'}</span></p>
                         </div>
-                        <!-- Botão No Verde -->
-                        <button onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})" 
-                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm shrink-0 ${a.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'}">
+                        <!-- Botão No Verde (Bloqueado para externos) -->
+                        <button ${usuarioLogado ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}',${a.noVerde || false})"` : 'disabled'} 
+                            class="px-3 py-1.5 rounded-xl font-bold text-xs transition-all shadow-sm shrink-0 ${a.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-100 text-slate-700 hover:bg-slate-200'} ${!usuarioLogado ? 'opacity-75 cursor-not-allowed' : ''}">
                             ${a.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
                         </button>
                     </div>
 
-                    <!-- Seção de Upload Direto para o Firebase Storage (Adobe Scan) -->
-                    <div class="flex flex-col sm:flex-row gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
-                        <div class="flex-1 w-full">
-                            <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Selecionar PDF (Adobe Scan):</label>
-                            <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer">
+                    <!-- Seção de Upload Direto (Apenas visível/funcional para operadores logados) -->
+                    ${usuarioLogado ? `
+                        <div class="flex flex-col sm:flex-row gap-2 items-center bg-slate-50 p-3 rounded-xl border border-slate-200">
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-black uppercase text-slate-500 mb-1">Selecionar PDF (Adobe Scan):</label>
+                                <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-500 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-50 file:text-violet-700 hover:file:bg-violet-100 cursor-pointer">
+                            </div>
+                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end">
+                                🚀 Enviar para Nuvem
+                            </button>
                         </div>
-                        <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end">
-                            🚀 Enviar para Nuvem
-                        </button>
-                    </div>
+                    ` : ''}
 
                     <!-- Input de Link do PDF -->
                     <div class="flex gap-2 items-center">
                         <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF na nuvem..." 
-                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none transition">
-                        <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition shrink-0">
-                            Salvar Link
-                        </button>
+                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition" ${!usuarioLogado ? 'readonly' : ''}>
+                        
+                        ${usuarioLogado ? `
+                            <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition shrink-0">
+                                Salvar Link
+                            </button>
+                        ` : ''}
+
                         ${a.pdfLink ? `
-                            <a href="${a.pdfLink}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1 shrink-0" title="Abrir PDF">
-                                👁️ Abrir
+                            <a href="${a.pdfLink}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1 shrink-0 shadow-sm" title="Abrir PDF">
+                                👁️ Abrir PDF
                             </a>
+                            <button onclick="enviarWhatsAppAssistido('${escapeHTML(a.name)}', '${a.telefone \vert{}\vert{} ''}', '${a.pdfLink}')" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2.5 rounded-xl text-xs transition flex items-center gap-1 shrink-0 shadow-sm" title="Enviar link via WhatsApp">
+                                💬 WhatsApp
+                            </button>
                         ` : ''}
                     </div>
 
                     <!-- Input de Observações -->
                     <div class="flex gap-2 items-center">
-                        <input type="text" id="obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Observações (ex: Falta comprovante de residência...)" 
-                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:border-violet-500 outline-none transition">
-                        <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0">
-                            Atualizar Obs
-                        </button>
+                        <input type="text" id="obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Observações (ex: Falta comprovante...)" 
+                            class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition" ${!usuarioLogado ? 'readonly' : ''}>
+                        
+                        ${usuarioLogado ? `
+                            <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0">
+                                Atualizar Obs
+                            </button>
+                        ` : ''}
                     </div>
                 </div>
             `).join('');
@@ -160,6 +187,11 @@
 
         // 🚀 Função de Upload do PDF para o Firebase Storage
         window.fazerUploadPdf = async function(pautaId, assistidoId) {
+            if (!usuarioLogado) {
+                alert("Acesso restrito: Apenas operadores autenticados podem enviar arquivos.");
+                return;
+            }
+
             const fileInput = document.getElementById(`file-${assistidoId}`);
             if (!fileInput || !fileInput.files[0]) {
                 alert("Selecione um arquivo PDF primeiro!");
@@ -173,12 +205,9 @@
             alert("Enviando PDF para a nuvem... Aguarde um instante.");
 
             try {
-                // Envia o arquivo para o Storage
                 const snapshot = await uploadBytes(storageRef, arquivo);
-                // Recupera a URL pública de download
                 const downloadUrl = await getDownloadURL(snapshot.ref);
 
-                // Salva a URL no Firestore automaticamente
                 await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), {
                     pdfLink: downloadUrl,
                     lastActionTimestamp: new Date().toISOString()
@@ -193,20 +222,38 @@
             }
         };
 
-        // Funções globais de salvamento na página externa
+        // Função de Disparo via WhatsApp
+        window.enviarWhatsAppAssistido = function(nomeAssistido, telefoneAssistido, pdfLink) {
+            const telLimpo = telefoneAssistido ? telefoneAssistido.replace(/\D/g, '') : '';
+            const primeiroNome = nomeAssistido ? nomeAssistido.split(' ')[0] : 'Assistido(a)';
+            const mensagem = encodeURIComponent(
+                `Olá, ${primeiroNome}! Segue o link com a digitalização da sua documentação realizada em nossa pauta:\n\n📄 ${pdfLink}\n\nGuarde este link para consultas.`
+            );
+
+            const urlWa = telLimpo.length >= 10 
+                ? `https://wa.me/55${telLimpo}?text=${mensagem}` 
+                : `https://wa.me/?text=${mensagem}`;
+
+            window.open(urlWa, '_blank');
+        };
+
+        // Funções globais de salvamento (Apenas Operador)
         window.salvarLinkExterno = async function(pautaId, assistidoId) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
             const val = document.getElementById(`link-${assistidoId}`).value.trim();
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { pdfLink: val });
             alert("Link do PDF salvo com sucesso! 💾");
         }
 
         window.salvarObsExterno = async function(pautaId, assistidoId) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
             const val = document.getElementById(`obs-${assistidoId}`).value.trim();
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { pdfObservacoes: val });
             alert("Observações atualizadas! 📝");
         }
 
         window.toggleNoVerdeExterno = async function(pautaId, assistidoId, atual) {
+            if (!usuarioLogado) return alert("Acesso restrito.");
             await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { noVerde: !atual });
         }
 
