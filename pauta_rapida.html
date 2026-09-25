@@ -77,23 +77,21 @@
                         </div>
                     </div>`;
             } else {
-                // Monitoramento de autenticação flexível
                 onAuthStateChanged(auth, (user) => {
                     usuarioLogado = !!user;
                     atualizarInterfaceModo();
-                }, (err) => {
+                }, () => {
                     usuarioLogado = false;
                     atualizarInterfaceModo();
                 });
 
-                // Executa a escuta da pauta imediatamente
                 iniciarEscutaFirebase(db, pautaId);
             }
         } catch (erroInit) {
             console.error("Erro crítico na inicialização:", erroInit);
             document.getElementById('lista-assistidos-rapida').innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
-                    Erro ao conectar com o Firebase. Verifique o arquivo config.js. Detalhes: ${erroInit.message}
+                    Erro ao conectar com o Firebase. Verifique o arquivo config.js.
                 </div>`;
         }
 
@@ -107,20 +105,17 @@
         }
 
         function iniciarEscutaFirebase(database, idDaPauta) {
-            // Escuta metadados da pauta
             onSnapshot(doc(database, "pautas", idDaPauta), (docSnap) => {
                 if (docSnap.exists()) {
                     const data = docSnap.data();
-                    document.getElementById('status-pauta-badge').textContent = `Pauta: ${data.name || 'Ativa'}`;
+                    document.getElementById('status-pauta-badge').textContent = "Pauta: " + (data.name || 'Ativa');
                 } else {
-                    document.getElementById('status-pauta-badge').textContent = `Pauta não encontrada no Banco`;
+                    document.getElementById('status-pauta-badge').textContent = "Pauta não encontrada";
                 }
             }, (err) => {
                 console.error("Erro pauta:", err);
-                document.getElementById('status-pauta-badge').textContent = `Erro de permissão/leitura`;
             });
 
-            // Escuta a subcoleção de attendances
             const refCol = collection(database, "pautas", idDaPauta, "attendances");
             onSnapshot(refCol, (snapshot) => {
                 const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
@@ -131,7 +126,7 @@
                 console.error("Erro attendances:", err);
                 document.getElementById('lista-assistidos-rapida').innerHTML = `
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
-                        Erro ao carregar assistidos. Verifique se as regras do Firestore permitem leitura pública. (Erro: ${err.message})
+                        Erro ao carregar assistidos. Verifique as regras do Firestore.
                     </div>`;
             });
         }
@@ -141,76 +136,92 @@
             const termoFiltro = document.getElementById('filtro-assistido').value.toLowerCase().trim();
 
             const filtrados = assistidos.filter(a => (a.name || '').toLowerCase().includes(termoFiltro));
-            document.getElementById('contador-status').textContent = `Total: ${filtrados.length} de ${assistidos.length} assistidos`;
+            document.getElementById('contador-status').textContent = "Total: " + filtrados.length + " de " + assistidos.length + " assistidos";
 
             if (filtrados.length === 0) {
                 container.innerHTML = `<div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs">Nenhum assistido cadastrado nesta pauta.</div>`;
                 return;
             }
 
-            container.innerHTML = filtrados.map(a => {
+            let htmlFinal = "";
+            for (let i = 0; i < filtrados.length; i++) {
+                const a = filtrados[i];
                 const btnVerdeClass = a.noVerde ? 'bg-emerald-600 text-white shadow-emerald-100' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
                 const disabledAttr = !usuarioLogado ? 'disabled opacity-75 cursor-not-allowed' : '';
                 const onclickVerde = usuarioLogado ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})"` : '';
+                const nomeSeguro = escapeHTML(a.name || 'Sem Nome');
+                const statusSeguro = escapeHTML(a.status || 'pauta');
+                const linkSeguro = a.pdfLink || '';
+                const obsSegura = escapeHTML(a.pdfObservacoes || '');
+                const telSeguro = a.telefone || '';
 
-                return `
+                htmlFinal += `
                     <div class="bg-white p-4 sm:p-5 rounded-2xl shadow-sm border border-slate-200 flex flex-col gap-3 transition-all hover:shadow-md">
                         <div class="flex justify-between items-start gap-3">
                             <div>
-                                <h3 class="font-black text-slate-900 text-sm sm:text-base">${escapeHTML(a.name || 'Sem Nome')}</h3>
-                                <p class="text-[11px] text-slate-400 mt-0.5">Status atual: <span class="font-bold text-slate-700 uppercase">${a.status || 'pauta'}</span></p>
+                                <h3 class="font-black text-slate-900 text-sm sm:text-base">${nomeSeguro}</h3>
+                                <p class="text-[11px] text-slate-400 mt-0.5">Status atual: <span class="font-bold text-slate-700 uppercase">${statusSeguro}</span></p>
                             </div>
                             <button ${onclickVerde} ${disabledAttr} class="px-3.5 py-2 rounded-xl font-black text-xs transition-all shadow-sm shrink-0 ${btnVerdeClass}">
                                 ${a.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
                             </button>
-                        </div>
+                        </div>`;
 
-                        ${usuarioLogado ? `
-                            <div class="flex flex-col sm:flex-row gap-2 items-center bg-violet-50/50 p-3 rounded-xl border border-violet-100">
-                                <div class="flex-1 w-full">
-                                    <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Selecionar PDF (Adobe Scan):</label>
-                                    <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-700 cursor-pointer">
-                                </div>
-                                <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end shadow-sm">
-                                    🚀 Enviar para Nuvem
-                                </button>
+                if (usuarioLogado) {
+                    htmlFinal += `
+                        <div class="flex flex-col sm:flex-row gap-2 items-center bg-violet-50/50 p-3 rounded-xl border border-violet-100">
+                            <div class="flex-1 w-full">
+                                <label class="block text-[10px] font-black uppercase text-violet-700 mb-1">Selecionar PDF (Adobe Scan):</label>
+                                <input type="file" id="file-${a.id}" accept="application/pdf" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-violet-600 file:text-white hover:file:bg-violet-700 cursor-pointer">
                             </div>
-                        ` : ''}
+                            <button onclick="fazerUploadPdf('${pautaId}', '${a.id}')" class="w-full sm:w-auto bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 self-end shadow-sm">
+                                🚀 Enviar para Nuvem
+                            </button>
+                        </div>`;
+                }
 
+                htmlFinal += `
                         <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
-                            <input type="text" id="link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF na nuvem..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition w-full" ${!usuarioLogado ? 'readonly' : ''}>
-                            
-                            ${usuarioLogado ? `
-                                <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
-                                    Salvar Link
-                                </button>
-                            ` : ''}
+                            <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Link do PDF na nuvem..." 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition w-full" ${!usuarioLogado ? 'readonly' : ''}>`;
 
-                            ${a.pdfLink ? `
-                                <a href="${a.pdfLink}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Abrir PDF">
-                                    👁️ Abrir PDF
-                                </a>
-                                <button onclick="enviarWhatsAppAssistido('${escapeHTML(a.name)}', '${a.telefone \vert{}\vert{} ''}', '${a.pdfLink}')" 
-                                    class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Enviar link via WhatsApp">
-                                    💬 WhatsApp
-                                </button>
-                            ` : ''}
+                if (usuarioLogado) {
+                    htmlFinal += `
+                            <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
+                                Salvar Link
+                            </button>`;
+                }
+
+                if (linkSeguro) {
+                    htmlFinal += `
+                            <a href="${linkSeguro}" target="_blank" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Abrir PDF">
+                                👁️ Abrir PDF
+                            </a>
+                            <button onclick="enviarWhatsAppAssistido('${nomeSeguro}', '${telSeguro}', '${linkSeguro}')" 
+                                class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs transition flex items-center justify-center gap-1 shrink-0 shadow-sm" title="Enviar link via WhatsApp">
+                                💬 WhatsApp
+                            </button>`;
+                }
+
+                htmlFinal += `
                         </div>
-
                         <div class="flex gap-2 items-center">
-                            <input type="text" id="obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Observações (ex: Falta comprovante...)" 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition" ${!usuarioLogado ? 'readonly' : ''}>
-                            
-                            ${usuarioLogado ? `
-                                <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
-                                    Atualizar Obs
-                                </button>
-                            ` : ''}
+                            <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações (ex: Falta comprovante...)" 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none transition" ${!usuarioLogado ? 'readonly' : ''}>`;
+
+                if (usuarioLogado) {
+                    htmlFinal += `
+                            <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition shrink-0 shadow-sm">
+                                Atualizar Obs
+                            </button>`;
+                }
+
+                htmlFinal += `
                         </div>
-                    </div>
-                `;
-            }).join('');
+                    </div>`;
+            }
+
+            container.innerHTML = htmlFinal;
         }
 
         document.getElementById('filtro-assistido').addEventListener('input', () => {
