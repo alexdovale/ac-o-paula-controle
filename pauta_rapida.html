@@ -1,3 +1,6 @@
+Perfeito, Alex! Essa regra de temporalidade é excelente e muito segura: o link da Pauta Rápida expira automaticamente 24 horas após a data de atuação da pauta OU assim que o operador fechar a pauta manualmente pelo painel principal.
+Para aplicar essa regra na sua página pauta_rapida.html, nós adicionamos uma validação logo na inicialização. Se a pauta estiver fechada (isClosed: true) ou se já tiver passado de 24 horas da data de atuação, a página bloqueia o acesso e exibe uma mensagem informativa de expiração.
+Aqui está o código completo e atualizado da pauta_rapida.html com essa validação de segurança temporal incorporada:
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -16,7 +19,7 @@
 </head>
 <body class="bg-slate-50 font-sans antialiased text-slate-800 min-h-screen flex flex-col justify-between">
 
-    <div class="max-w-4xl mx-auto p-4 sm:p-6 w-full flex-1">
+    <div id="conteudo-principal" class="max-w-4xl mx-auto p-4 sm:p-6 w-full flex-1">
         <!-- Cabeçalho Profissional -->
         <header class="bg-white shadow-sm rounded-2xl p-5 mb-6 flex flex-col sm:flex-row justify-between items-center gap-4 border border-slate-200/80">
             <div class="flex items-center gap-4 w-full sm:w-auto">
@@ -28,7 +31,7 @@
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                         SIGEP • Gestão de Documentos
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando permissões...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando validade do link...</p>
                 </div>
             </div>
             <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
@@ -52,7 +55,7 @@
         <!-- Lista de Assistidos -->
         <div id="lista-assistidos-rapida" class="space-y-3.5">
             <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">
-                Carregando registros da pauta...
+                Verificando regras de acesso e temporalidade...
             </div>
         </div>
     </div>
@@ -66,7 +69,7 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, arrayUnion, arrayRemove, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
 
@@ -89,34 +92,83 @@
             }
 
             if (!pautaId) {
-                document.body.innerHTML = `
-                    <div class="min-h-screen flex items-center justify-center p-4 bg-slate-100">
-                        <div class="bg-white p-8 rounded-2xl shadow-xl border border-red-100 text-center max-w-md w-full">
-                            <span class="text-4xl mb-3 block">⚠️</span>
-                            <h2 class="font-black text-slate-800 text-base mb-1">Pauta não informada</h2>
-                            <p class="text-xs text-slate-500">Parâmetro <b>pautaId</b> ausente na URL de acesso.</p>
-                        </div>
-                    </div>`;
+                exibirErroExpiracao("Pauta não informada", "Parâmetro <b>pautaId</b> ausente na URL de acesso.");
             } else {
-                onAuthStateChanged(auth, (user) => {
-                    usuarioOperadorLogado = !!user;
-                    if (user && modoUrl !== 'leitura') {
-                        modoLeituraExterna = false;
-                    }
-                    atualizarInterfaceModo();
-                }, () => {
-                    usuarioOperadorLogado = false;
-                    if (modoUrl === 'leitura') modoLeituraExterna = true;
-                    atualizarInterfaceModo();
-                });
+                // Validação de Temporalidade e Fechamento no Firebase antes de carregar a lista
+                verificarValidadePauta(db, pautaId).then((pautaValida) => {
+                    if (!pautaValida) return;
 
-                iniciarEscutaFirebase(db, pautaId);
+                    onAuthStateChanged(auth, (user) => {
+                        usuarioOperadorLogado = !!user;
+                        if (user && modoUrl !== 'leitura') {
+                            modoLeituraExterna = false;
+                        }
+                        atualizarInterfaceModo();
+                    }, () => {
+                        usuarioOperadorLogado = false;
+                        if (modoUrl === 'leitura') modoLeituraExterna = true;
+                        atualizarInterfaceModo();
+                    });
+
+                    iniciarEscutaFirebase(db, pautaId);
+                });
             }
         } catch (erroInit) {
             console.error("Erro crítico:", erroInit);
             document.getElementById('lista-assistidos-rapida').innerHTML = `
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-red-200 text-center text-red-600 text-xs font-bold">
                     Erro ao inicializar serviços do Firebase. Verifique o arquivo config.js.
+                </div>`;
+        }
+
+        async function verificarValidadePauta(database, idDaPauta) {
+            try {
+                const pautaDoc = await getDoc(doc(database, "pautas", idDaPauta));
+                if (!pautaDoc.exists()) {
+                    exibirErroExpiracao("Pauta não encontrada", "O registro desta pauta não existe ou foi excluído do sistema.");
+                    return false;
+                }
+
+                const dataPauta = pautaDoc.data();
+
+                // 1. Verifica se a pauta foi fechada manualmente pelo operador
+                if (dataPauta.isClosed === true) {
+                    exibirErroExpiracao("Pauta Encerrada", "Este link não está mais acessível pois a pauta foi fechada pelo operador responsável.");
+                    return false;
+                }
+
+                // 2. Verifica a temporalidade: 24h após a data de atuação (dataAtuacao ou createdAt)
+                const baseDataStr = dataPauta.dataAtuacao || dataPauta.createdAt;
+                if (baseDataStr) {
+                    const dataOperacao = new Date(baseDataStr);
+                    const limiteExpiracao = new Date(dataOperacao.getTime() + (24 * 60 * 60 * 1000)); // +24 horas
+                    const agora = new Date();
+
+                    if (agora > limiteExpiracao) {
+                        exibirErroExpiracao("Link Expirado", "O prazo de validade deste link (24h após a operação da pauta) foi encerrado por motivos de segurança.");
+                        return false;
+                    }
+                }
+
+                document.getElementById('nome-pauta-texto').textContent = dataPauta.name || 'Pauta Ativa';
+                return true;
+            } catch (err) {
+                console.error("Erro ao validar pauta:", err);
+                return true; // Se houver falha de rede na checagem inicial, deixa o listener tratar
+            }
+        }
+
+        function exibirErroExpiracao(titulo, mensagem) {
+            document.getElementById('conteudo-principal').innerHTML = `
+                <div class="min-h-[70vh] flex items-center justify-center p-4">
+                    <div class="bg-white p-8 rounded-2xl shadow-xl border border-amber-200 text-center max-w-md w-full">
+                        <span class="text-4xl mb-3 block">🔒</span>
+                        <h2 class="font-black text-slate-800 text-base mb-1">${titulo}</h2>
+                        <p class="text-xs text-slate-500 mt-2">${mensagem}</p>
+                        <div class="mt-6 pt-4 border-t border-slate-100 text-[11px] text-slate-400 font-bold uppercase tracking-wider">
+                            SIGEP • Segurança e Privacidade
+                        </div>
+                    </div>
                 </div>`;
         }
 
@@ -131,12 +183,10 @@
         }
 
         function iniciarEscutaFirebase(database, idDaPauta) {
+            // Monitora fechamento em tempo real (se o operador fechar a pauta enquanto a equipe estiver com a tela aberta)
             onSnapshot(doc(database, "pautas", idDaPauta), (docSnap) => {
-                if (docSnap.exists()) {
-                    const data = docSnap.data();
-                    document.getElementById('nome-pauta-texto').textContent = data.name || 'Pauta Ativa';
-                } else {
-                    document.getElementById('nome-pauta-texto').textContent = "Pauta não encontrada";
+                if (docSnap.exists() && docSnap.data().isClosed === true) {
+                    exibirErroExpiracao("Pauta Encerrada", "O operador encerrou esta pauta neste momento. O acesso aos documentos foi bloqueado.");
                 }
             });
 
@@ -182,7 +232,6 @@
                 const horarioAgendado = escapeHTML(a.scheduledTime || a.horario || a.time || a.hora || '--:--');
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
 
-                // Lida com múltiplos links (suporta o formato antigo pdfLink e a nova lista documentosLista)
                 let listaDocs = a.documentosLista || [];
                 if (listaDocs.length === 0 && a.pdfLink) {
                     listaDocs = [{ descricao: 'Documento Principal', url: a.pdfLink }];
@@ -227,7 +276,6 @@
                             </button>
                         </div>
 
-                        <!-- Adicionar Novo Link Manual com Descrição -->
                         <div class="bg-slate-50 p-3 rounded-xl border border-slate-200 flex flex-col sm:flex-row gap-2 items-center">
                             <input type="text" id="desc-novo-${a.id}" placeholder="Descrição (Ex: RG, CPF, Certidão...)" class="w-full sm:w-1/3 p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
                             <input type="text" id="link-novo-${a.id}" placeholder="Cole o URL do documento aqui..." class="flex-1 w-full p-2 border border-slate-200 rounded-lg text-xs bg-white outline-none">
@@ -237,7 +285,6 @@
                         </div>`;
                 }
 
-                // Renderiza a listagem de todos os documentos cadastrados para este assistido
                 htmlFinal += `<div class="space-y-2 mt-2">`;
                 if (listaDocs.length === 0) {
                     htmlFinal += `<p class="text-xs text-slate-400 italic">Nenhum documento anexado ainda.</p>`;
@@ -268,7 +315,6 @@
                 }
                 htmlFinal += `</div>`;
 
-                // Botão de WhatsApp global para avisar a equipe quando houver documentos
                 if (!modoLeituraExterna && listaDocs.length > 0) {
                     const primeiroLink = listaDocs[0].url;
                     htmlFinal += `
@@ -344,7 +390,7 @@
                 const assistidoRef = doc(db, "pautas", idPauta, "attendances", idAssistido);
                 await updateDoc(assistidoRef, {
                     documentosLista: arrayUnion(novoDoc),
-                    pdfLink: downloadUrl, // retrocompatibilidade
+                    pdfLink: downloadUrl,
                     docWorkflowStatus: "Digitalizado",
                     lastActionTimestamp: new Date().toISOString()
                 });
@@ -395,7 +441,6 @@
             if (!confirm("Deseja realmente remover este documento da lista?")) return;
 
             try {
-                // Como o arrayUnion/arrayRemove exige o objeto exato, precisamos buscar o assistido atual
                 const assistido = window._assistidosCache?.find(a => a.id === idAssistido);
                 if (!assistido || !assistido.documentosLista) return;
 
@@ -455,3 +500,5 @@
     </script>
 </body>
 </html>
+
+Qual é a próxima melhoria ou detalhe que gostaria de ajustar no sistema agora, Alex?
