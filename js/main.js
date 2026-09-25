@@ -2,7 +2,6 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-// 🔥 OTIMIZAÇÃO: A importação do 'or' e 'and' foi adicionada aqui para permitir as consultas compostas
 import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
@@ -66,7 +65,6 @@ class SIGEPApp {
         this.unsubscribeFromCollaborators = null;
         this.currentPautaFilter = 'all';
         
-        // CARREGA O MODO SALVO DO LOCALSTORAGE (persistência após refresh)
         this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
         this.currentUnidadeExibicao = localStorage.getItem('sigep_unidade_ativa') || 'todas';
         
@@ -79,7 +77,6 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
     
-            // ── Inicializa o router antes de qualquer verificação de URL ──
             this.router = new SIGEPRouter(this, {
                 UIService,
                 DashboardService,
@@ -93,7 +90,7 @@ class SIGEPApp {
             await this.setupOfflinePersistence();
             
             this.setupEventListeners();
-            this.setupAuthListener();       // dispara resolveInitialRoute() internamente
+            this.setupAuthListener();       
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -112,9 +109,6 @@ class SIGEPApp {
         }
     }
 
-    // ============================================================
-    // MÉTODOS DE COMPATIBILIDADE LEGADA E RENDERIZAÇÃO
-    // ============================================================
     showPautaSelectionScreen() {
         document.getElementById('app-container')?.classList.add('hidden');
         document.getElementById('dashboard-container')?.classList.add('hidden');
@@ -163,7 +157,6 @@ class SIGEPApp {
         this.listarColetas();
     }
 
-    // 🔥 ADMIN RENDERIZADO DIRETAMENTE (SEM FETCH, EVITA ERROS DE CORS LOCAL)
     async renderAdminContent() {
         const container = document.getElementById('admin-content');
         if (!container) return;
@@ -604,51 +597,87 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 AGROUPAMENTO DOS BOTÕES DE PAUTA RÁPIDA E LINK EXTERNO COM DESIGN PROFISSIONAL 🌟
+        // 🌟 INJEÇÃO DO BOTÃO "GESTÃO DE DOCUMENTOS" ENTRE "COLABORADORES" E "ANOTAÇÕES" 🌟
         const actionsMenu = document.querySelector('#actions-panel .py-2') || document.getElementById('actions-panel');
-        if (actionsMenu && !document.getElementById('grupo-pauta-rapida')) {
-            const grupoContainer = document.createElement('div');
-            grupoContainer.id = 'grupo-pauta-rapida';
-            grupoContainer.className = 'my-2 mx-3 p-2 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1 shadow-sm';
-            
-            grupoContainer.innerHTML = `
-                <p class="text-[9px] font-black uppercase text-slate-400 tracking-wider px-2 mb-1">Gestão de Documentos</p>
-                <button id="btn-abrir-pauta-rapida" class="w-full text-left px-3 py-2 hover:bg-white rounded-lg flex items-center gap-2.5 text-xs font-bold text-slate-700 transition shadow-sm">
-                    <span class="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-xs shrink-0">📄</span> 
-                    <span>Abrir Pauta Rápida (Adobe Scan)</span>
-                </button>
-                <button id="btn-copiar-link-externo" class="w-full text-left px-3 py-2 hover:bg-white rounded-lg flex items-center gap-2.5 text-xs font-bold text-violet-700 transition shadow-sm">
-                    <span class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shrink-0">🔗</span> 
-                    <span>Copiar Link Externo (Equipe / PDFs)</span>
-                </button>
+        if (actionsMenu && !document.getElementById('btn-gestao-docs-menu')) {
+            const btnGestaoDocs = document.createElement('button');
+            btnGestaoDocs.id = 'btn-gestao-docs-menu';
+            btnGestaoDocs.className = 'w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors';
+            btnGestaoDocs.innerHTML = `
+                <span class="w-7 h-7 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-sm shadow-sm shrink-0">📑</span>
+                Gestão de Documentos
             `;
+            
+            // Cria o Modal de Escolha (Pop-up) para a Gestão de Documentos
+            if (!document.getElementById('modal-escolha-gestao-docs')) {
+                const modalEscolha = document.createElement('div');
+                modalEscolha.id = 'modal-escolha-gestao-docs';
+                modalEscolha.className = 'hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4';
+                modalEscolha.innerHTML = `
+                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 flex flex-col gap-4 border border-slate-200">
+                        <div class="flex justify-between items-center border-b pb-3">
+                            <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">📑 Gestão de Documentos</h3>
+                            <button onclick="document.getElementById('modal-escolha-gestao-docs').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-2xl font-bold">&times;</button>
+                        </div>
+                        <p class="text-xs text-slate-500 font-medium">Selecione a ação desejada para esta pauta:</p>
+                        <div class="space-y-2.5">
+                            <button id="popup-btn-pauta-rapida" class="w-full text-left p-3.5 bg-slate-50 hover:bg-violet-50 hover:border-violet-300 border border-slate-200 rounded-xl transition flex items-center gap-3 group">
+                                <span class="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-base font-bold shrink-0">📄</span>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 group-hover:text-violet-700">Abrir Pauta Rápida (Adobe Scan)</p>
+                                    <p class="text-[10px] text-slate-400">Envio de PDFs e gestão de presença</p>
+                                </div>
+                            </button>
+                            <button id="popup-btn-link-externo" class="w-full text-left p-3.5 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl transition flex items-center gap-3 group">
+                                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base font-bold shrink-0">🔗</span>
+                                <div>
+                                    <p class="text-xs font-black text-slate-800 group-hover:text-emerald-700">Copiar Link Externo (Equipe / Leitura)</p>
+                                    <p class="text-[10px] text-slate-400">Apenas visualização e download de arquivos</p>
+                                </div>
+                            </button>
+                        </div>
+                    </div>
+                `;
+                document.body.appendChild(modalEscolha);
 
-            actionsMenu.appendChild(grupoContainer);
+                // Eventos do Pop-up
+                document.getElementById('popup-btn-pauta-rapida').onclick = () => {
+                    document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
+                    if (!window.app.currentPauta || !window.app.currentPauta.id) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
+                        return;
+                    }
+                    window.open(`pauta_rapida.html?pautaId=${window.app.currentPauta.id}`, '_blank');
+                };
 
-            // Ações de Clique
-            document.getElementById('btn-abrir-pauta-rapida').onclick = () => {
-                if (!this.currentPauta || !this.currentPauta.id) {
-                    showNotification("Nenhuma pauta selecionada!", "error");
-                    return;
-                }
-                const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-                window.open(url, '_blank');
+                document.getElementById('popup-btn-link-externo').onclick = () => {
+                    document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
+                    if (!window.app.currentPauta || !window.app.currentPauta.id) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
+                        return;
+                    }
+                    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${window.app.currentPauta.id}`;
+                    
+                    navigator.clipboard.writeText(urlExterna).then(() => {
+                        showNotification("Link externo (somente leitura) copiado! 📋", "success");
+                    }).catch(() => {
+                        showNotification("Erro ao copiar o link.", "error");
+                    });
+                };
+            }
+
+            btnGestaoDocs.onclick = () => {
+                document.getElementById('modal-escolha-gestao-docs').classList.remove('hidden');
             };
 
-            document.getElementById('btn-copiar-link-externo').onclick = () => {
-                if (!this.currentPauta || !this.currentPauta.id) {
-                    showNotification("Nenhuma pauta selecionada!", "error");
-                    return;
-                }
-                const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-                const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-                
-                navigator.clipboard.writeText(urlExterna).then(() => {
-                    showNotification("Link externo para equipe copiado! 📋", "success");
-                }).catch(() => {
-                    showNotification("Erro ao copiar o link.", "error");
-                });
-            };
+            // Insere o botão exatamente entre o botão "Colaboradores" e "Anotações"
+            const btnColaboradores = document.getElementById('manage-collaborators-btn');
+            if (btnColaboradores && btnColaboradores.nextSibling) {
+                actionsMenu.insertBefore(btnGestaoDocs, btnColaboradores.nextSibling);
+            } else {
+                actionsMenu.appendChild(btnGestaoDocs);
+            }
         }
 
         // 🌟 Lógica da Chavinha de Compartilhamento
@@ -997,7 +1026,6 @@ class SIGEPApp {
             document.getElementById('attendant-modal')?.classList.add('hidden');
         });
 
-        // 🌟 NOVA LÓGICA: SALVAR ALTERAÇÃO DE ATENDENTE (DOS ATENDIDOS) 🌟
         document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
             const nomeFinal = document.getElementById('edit-attendant-select')?.value || null;
             if (!nomeFinal) {
@@ -1170,7 +1198,6 @@ class SIGEPApp {
         document.getElementById(btnId)?.addEventListener('click', callback);
     }
 
-    // 🌟 NOVA FUNÇÃO DE CARREGAMENTO BLINDADA COM ORDENAÇÃO E BUSCA DE TEXTO 🌟
     async loadPautasWithFilter(filterOptions = null) {
         const user = this.auth.currentUser;
         if (!user) return;
@@ -1315,22 +1342,19 @@ class SIGEPApp {
                     }); break;
             }
 
-            // 🌟 FILTRO POR NOME (PESQUISA TEXTUAL) 🌟
             const searchInput = document.getElementById('search-pautas-input');
             if (searchInput && searchInput.value) {
                 const termo = searchInput.value.toLowerCase().trim();
                 filteredPautas = filteredPautas.filter(p => (p.name || '').toLowerCase().includes(termo));
             }
 
-            // 🌟 ORDENAÇÃO BLINDADA POR DATA DE CRIAÇÃO (ACEITA TIMESTAMPS E STRINGS) 🌟
             filteredPautas.sort((a, b) => {
                 const getTempo = (dataStrObj) => {
                     if (!dataStrObj) return 0;
-                    if (dataStrObj.seconds) return dataStrObj.seconds * 1000; // Firebase Timestamp
-                    const parseado = new Date(dataStrObj).getTime(); // ISO String
+                    if (dataStrObj.seconds) return dataStrObj.seconds * 1000;
+                    const parseado = new Date(dataStrObj).getTime();
                     return isNaN(parseado) ? 0 : parseado;
                 };
-                // Decrescente: b - a (As pautas mais recentes ficam no topo)
                 return getTempo(b.createdAt) - getTempo(a.createdAt);
             });
             
@@ -1373,7 +1397,6 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
                 
-                // 🌟 ATUALIZA OS TEXTOS DE TOLERÂNCIA DINAMICAMENTE (TELA LOGADA) 🌟
                 const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
                 
                 const descPontuais = document.getElementById('desc-pontuais');
@@ -1675,7 +1698,6 @@ class SIGEPApp {
                 const userData = docSnap.data();
                 this.currentUser = { ...this.currentUser, ...userData }; 
                 
-                // 🔒 CAPTURA O TENANT (ÓRGÃO) DO USUÁRIO
                 this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
                 
                 this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
