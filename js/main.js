@@ -163,7 +163,6 @@ class SIGEPApp {
         this.listarColetas();
     }
 
-    // 🔥 ADMIN RENDERIZADO VIA HTML EXTERNO (DESACOPLADO DO MAIN)
     // 🔥 ADMIN RENDERIZADO DIRETAMENTE (SEM FETCH, EVITA ERROS DE CORS LOCAL)
     async renderAdminContent() {
         const container = document.getElementById('admin-content');
@@ -252,7 +251,6 @@ class SIGEPApp {
             </div>
         `;
         
-        // Entrega o controle de eventos para o AdminService
         if (AdminService?.setupAdminEvents) {
             AdminService.setupAdminEvents(this);
         }
@@ -510,7 +508,7 @@ class SIGEPApp {
 
     setupNavigationEvents() {
         document.getElementById('view-dashboard-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.DASHBOARD, {}, false));
-        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));       
+        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));        
         document.getElementById('btn-recepcao-central')?.addEventListener('click', () => this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false));
         
         document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.MEU_PERFIL, {}, false));
@@ -606,48 +604,51 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 Injeção automática dos botões de Pauta Rápida e Link Externo no painel de ações
-        const actionsMenu = document.querySelector('#actions-panel .space-y-1, #actions-panel') || document.getElementById('actions-panel');
-        if (actionsMenu) {
-            // 1. Botão de Abrir Pauta Rápida (Operador)
-            if (!document.getElementById('btn-abrir-pauta-rapida')) {
-                const btnRapido = document.createElement('button');
-                btnRapido.id = 'btn-abrir-pauta-rapida';
-                btnRapido.className = 'w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold text-slate-700 transition border-t border-slate-100';
-                btnRapido.innerHTML = '<span>📄</span> Abrir Pauta Rápida (Adobe Scan)';
-                btnRapido.onclick = () => {
-                    if (!this.currentPauta || !this.currentPauta.id) {
-                        showNotification("Nenhuma pauta selecionada!", "error");
-                        return;
-                    }
-                    const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-                    window.open(url, '_blank');
-                };
-                actionsMenu.appendChild(btnRapido);
-            }
+        // 🌟 AGROUPAMENTO DOS BOTÕES DE PAUTA RÁPIDA E LINK EXTERNO COM DESIGN PROFISSIONAL 🌟
+        const actionsMenu = document.querySelector('#actions-panel .py-2') || document.getElementById('actions-panel');
+        if (actionsMenu && !document.getElementById('grupo-pauta-rapida')) {
+            const grupoContainer = document.createElement('div');
+            grupoContainer.id = 'grupo-pauta-rapida';
+            grupoContainer.className = 'my-2 mx-3 p-2 bg-slate-50 border border-slate-200/80 rounded-xl space-y-1 shadow-sm';
+            
+            grupoContainer.innerHTML = `
+                <p class="text-[9px] font-black uppercase text-slate-400 tracking-wider px-2 mb-1">Gestão de Documentos</p>
+                <button id="btn-abrir-pauta-rapida" class="w-full text-left px-3 py-2 hover:bg-white rounded-lg flex items-center gap-2.5 text-xs font-bold text-slate-700 transition shadow-sm">
+                    <span class="w-6 h-6 rounded-md bg-violet-100 text-violet-700 flex items-center justify-center text-xs shrink-0">📄</span> 
+                    <span>Abrir Pauta Rápida (Adobe Scan)</span>
+                </button>
+                <button id="btn-copiar-link-externo" class="w-full text-left px-3 py-2 hover:bg-white rounded-lg flex items-center gap-2.5 text-xs font-bold text-violet-700 transition shadow-sm">
+                    <span class="w-6 h-6 rounded-md bg-emerald-100 text-emerald-700 flex items-center justify-center text-xs shrink-0">🔗</span> 
+                    <span>Copiar Link Externo (Equipe / PDFs)</span>
+                </button>
+            `;
 
-            // 2. Botão de Copiar Link Externo para os Colaboradores (Somente Leitura)
-            if (!document.getElementById('btn-copiar-link-externo')) {
-                const btnCopiarLink = document.createElement('button');
-                btnCopiarLink.id = 'btn-copiar-link-externo';
-                btnCopiarLink.className = 'w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold text-violet-700 transition';
-                btnCopiarLink.innerHTML = '<span>🔗</span> Copiar Link Externo (Equipe / PDFs)';
-                btnCopiarLink.onclick = () => {
-                    if (!this.currentPauta || !this.currentPauta.id) {
-                        showNotification("Nenhuma pauta selecionada!", "error");
-                        return;
-                    }
-                    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-                    
-                    navigator.clipboard.writeText(urlExterna).then(() => {
-                        showNotification("Link externo para equipe copiado! 📋", "success");
-                    }).catch(() => {
-                        showNotification("Erro ao copiar o link.", "error");
-                    });
-                };
-                actionsMenu.appendChild(btnCopiarLink);
-            }
+            actionsMenu.appendChild(grupoContainer);
+
+            // Ações de Clique
+            document.getElementById('btn-abrir-pauta-rapida').onclick = () => {
+                if (!this.currentPauta || !this.currentPauta.id) {
+                    showNotification("Nenhuma pauta selecionada!", "error");
+                    return;
+                }
+                const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
+                window.open(url, '_blank');
+            };
+
+            document.getElementById('btn-copiar-link-externo').onclick = () => {
+                if (!this.currentPauta || !this.currentPauta.id) {
+                    showNotification("Nenhuma pauta selecionada!", "error");
+                    return;
+                }
+                const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+                const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${this.currentPauta.id}`;
+                
+                navigator.clipboard.writeText(urlExterna).then(() => {
+                    showNotification("Link externo para equipe copiado! 📋", "success");
+                }).catch(() => {
+                    showNotification("Erro ao copiar o link.", "error");
+                });
+            };
         }
 
         // 🌟 Lógica da Chavinha de Compartilhamento
