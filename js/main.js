@@ -608,7 +608,6 @@ class SIGEPApp {
                 Gestão de Documentos
             `;
             
-            // Cria o Modal de Escolha (Pop-up) para a Gestão de Documentos
             if (!document.getElementById('modal-escolha-gestao-docs')) {
                 const modalEscolha = document.createElement('div');
                 modalEscolha.id = 'modal-escolha-gestao-docs';
@@ -640,7 +639,6 @@ class SIGEPApp {
                 `;
                 document.body.appendChild(modalEscolha);
 
-                // Eventos do Pop-up
                 document.getElementById('popup-btn-pauta-rapida').onclick = () => {
                     document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
                     if (!window.app.currentPauta || !window.app.currentPauta.id) {
@@ -650,6 +648,7 @@ class SIGEPApp {
                     window.open(`pauta_rapida.html?pautaId=${window.app.currentPauta.id}`, '_blank');
                 };
 
+                // 🌟 GERAÇÃO CORRETA DO LINK COM O PARÂMETRO &modo=leitura 🌟
                 document.getElementById('popup-btn-link-externo').onclick = () => {
                     document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
                     if (!window.app.currentPauta || !window.app.currentPauta.id) {
@@ -657,10 +656,10 @@ class SIGEPApp {
                         return;
                     }
                     const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${window.app.currentPauta.id}`;
+                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${window.app.currentPauta.id}&modo=leitura`;
                     
                     navigator.clipboard.writeText(urlExterna).then(() => {
-                        showNotification("Link externo (somente leitura) copiado! 📋", "success");
+                        showNotification("Link externo para equipe (somente leitura) copiado! 📋", "success");
                     }).catch(() => {
                         showNotification("Erro ao copiar o link.", "error");
                     });
@@ -671,7 +670,6 @@ class SIGEPApp {
                 document.getElementById('modal-escolha-gestao-docs').classList.remove('hidden');
             };
 
-            // Insere o botão exatamente entre o botão "Colaboradores" e "Anotações"
             const btnColaboradores = document.getElementById('manage-collaborators-btn');
             if (btnColaboradores && btnColaboradores.nextSibling) {
                 actionsMenu.insertBefore(btnGestaoDocs, btnColaboradores.nextSibling);
