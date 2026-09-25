@@ -581,16 +581,6 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 Atalho para abrir a Pauta Rápida (Adobe Scan & Documentos)
-        document.getElementById('btn-abrir-pauta-rapida')?.addEventListener('click', () => {
-            if (!this.currentPauta || !this.currentPauta.id) {
-                showNotification("Nenhuma pauta selecionada!", "error");
-                return;
-            }
-            const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-            window.open(url, '_blank');
-        });
-
         document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
@@ -616,22 +606,48 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 Injeção automática do botão de Pauta Rápida no painel de ações caso não exista no HTML estático
+        // 🌟 Injeção automática dos botões de Pauta Rápida e Link Externo no painel de ações
         const actionsMenu = document.querySelector('#actions-panel .space-y-1, #actions-panel') || document.getElementById('actions-panel');
-        if (actionsMenu && !document.getElementById('btn-abrir-pauta-rapida')) {
-            const btnRapido = document.createElement('button');
-            btnRapido.id = 'btn-abrir-pauta-rapida';
-            btnRapido.className = 'w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold text-slate-700 transition border-t border-slate-100';
-            btnRapido.innerHTML = '<span>📄</span> Abrir Pauta Rápida (Adobe Scan)';
-            btnRapido.onclick = () => {
-                if (!this.currentPauta || !this.currentPauta.id) {
-                    showNotification("Nenhuma pauta selecionada!", "error");
-                    return;
-                }
-                const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
-                window.open(url, '_blank');
-            };
-            actionsMenu.appendChild(btnRapido);
+        if (actionsMenu) {
+            // 1. Botão de Abrir Pauta Rápida (Operador)
+            if (!document.getElementById('btn-abrir-pauta-rapida')) {
+                const btnRapido = document.createElement('button');
+                btnRapido.id = 'btn-abrir-pauta-rapida';
+                btnRapido.className = 'w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold text-slate-700 transition border-t border-slate-100';
+                btnRapido.innerHTML = '<span>📄</span> Abrir Pauta Rápida (Adobe Scan)';
+                btnRapido.onclick = () => {
+                    if (!this.currentPauta || !this.currentPauta.id) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
+                        return;
+                    }
+                    const url = `pauta_rapida.html?pautaId=${this.currentPauta.id}`;
+                    window.open(url, '_blank');
+                };
+                actionsMenu.appendChild(btnRapido);
+            }
+
+            // 2. Botão de Copiar Link Externo para os Colaboradores (Somente Leitura)
+            if (!document.getElementById('btn-copiar-link-externo')) {
+                const btnCopiarLink = document.createElement('button');
+                btnCopiarLink.id = 'btn-copiar-link-externo';
+                btnCopiarLink.className = 'w-full text-left px-4 py-2.5 hover:bg-slate-50 flex items-center gap-2 text-xs font-bold text-violet-700 transition';
+                btnCopiarLink.innerHTML = '<span>🔗</span> Copiar Link Externo (Equipe / PDFs)';
+                btnCopiarLink.onclick = () => {
+                    if (!this.currentPauta || !this.currentPauta.id) {
+                        showNotification("Nenhuma pauta selecionada!", "error");
+                        return;
+                    }
+                    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${this.currentPauta.id}`;
+                    
+                    navigator.clipboard.writeText(urlExterna).then(() => {
+                        showNotification("Link externo para equipe copiado! 📋", "success");
+                    }).catch(() => {
+                        showNotification("Erro ao copiar o link.", "error");
+                    });
+                };
+                actionsMenu.appendChild(btnCopiarLink);
+            }
         }
 
         // 🌟 Lógica da Chavinha de Compartilhamento
