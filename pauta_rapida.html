@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGEP • Gestão de Documentos (Equipe / Leitura)</title>
+    <title>SIGEP • Gestão de Documentos</title>
     <!-- Favicon Oficial -->
     <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
     <!-- Tailwind CSS CDN -->
@@ -28,7 +28,7 @@
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                         SIGEP • Gestão de Documentos
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando permissões de acesso...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando permissões...</p>
                 </div>
             </div>
             <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
@@ -84,7 +84,6 @@
             pautaId = urlParams.get('pautaId');
             const modoUrl = urlParams.get('modo');
 
-            // Se o link vier explicitamente como leitura ou sem autenticação de operador
             if (modoUrl === 'leitura') {
                 modoLeituraExterna = true;
             }
@@ -101,7 +100,6 @@
             } else {
                 onAuthStateChanged(auth, (user) => {
                     usuarioOperadorLogado = !!user;
-                    // Se não estiver logado no sistema principal, força o modo de leitura externa/equipe
                     if (!user) modoLeituraExterna = true;
                     atualizarInterfaceModo();
                 }, () => {
@@ -123,9 +121,9 @@
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
             if (!modoLeituraExterna && usuarioOperadorLogado) {
-                descEl.innerHTML = "Modo Operador: Uploads e edições liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
+                descEl.innerHTML = "Modo Operador: Uploads e ferramentas liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
-                descEl.innerHTML = "Modo Equipe / Leitura: Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
+                descEl.innerHTML = "Modo Equipe (Leitura): Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
             }
         }
 
@@ -209,7 +207,7 @@
                             </button>
                         </div>`;
 
-                // Bloco de Upload restrito apenas para o Operador logado
+                // 🌟 SÓ APARECE PARA O OPERADOR: Bloco de Upload de PDF
                 if (!modoLeituraExterna) {
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
@@ -235,6 +233,7 @@
                             </button>`;
                 }
 
+                // 🌟 DISPONÍVEL PARA AMBOS (EQUIPE E OPERADOR): Botão de ABRIR / BAIXAR e WHATSAPP SÓ PRO OPERADOR
                 if (linkSeguro) {
                     htmlFinal += `
                             <a href="${linkSeguro}" target="_blank" download onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou/Baixou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir ou Baixar PDF">
@@ -292,7 +291,7 @@
         };
 
         window.fazerUploadPdf = async function(idPauta, idAssistido) {
-            if (modoLeituraExterna) return alert("Acesso restrito: Modo de leitura para equipe.");
+            if (modoLeituraExterna) return alert("Acesso restrito.");
             const fileInput = document.getElementById(`file-${idAssistido}`);
             if (!fileInput || !fileInput.files[0]) {
                 alert("Selecione um arquivo PDF primeiro!");
@@ -326,7 +325,7 @@
         };
 
         window.toggleNoVerdeExterno = async function(idPauta, idAssistido, atual) {
-            if (modoLeituraExterna) return alert("Acesso restrito: Modo de leitura para equipe.");
+            if (modoLeituraExterna) return alert("Acesso restrito.");
             const novoEstado = !atual;
             await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
                 noVerde: novoEstado,
@@ -336,6 +335,7 @@
         }
 
         window.enviarWhatsAppServidores = async function(idPauta, idAssistido, nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
+            if (modoLeituraExterna) return;
             await registrarAcaoHistorico(idPauta, idAssistido, "Aviso enviado via WhatsApp");
 
             const textoMensagem = 
