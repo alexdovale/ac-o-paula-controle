@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SIGEP • Pauta Rápida & Gestão de Documentos</title>
+    <title>SIGEP • Gestão de Documentos (Equipe / Leitura)</title>
     <!-- Favicon Oficial -->
     <link rel="icon" type="image/png" href="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6">
     <!-- Tailwind CSS CDN -->
@@ -26,9 +26,9 @@
                 </div>
                 <div>
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
-                        SIGEP • Pauta Rápida
+                        SIGEP • Gestão de Documentos
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Sincronizando com o sistema...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando permissões de acesso...</p>
                 </div>
             </div>
             <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
@@ -66,12 +66,13 @@
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, onAuthStateChanged } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, collection, doc, onSnapshot, updateDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getFirestore, collection, doc, onSnapshot, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
         import { firebaseConfig } from './js/config.js';
 
         let db, auth, storage, pautaId;
-        let usuarioLogado = false;
+        let modoLeituraExterna = false;
+        let usuarioOperadorLogado = false;
 
         try {
             const app = initializeApp(firebaseConfig);
@@ -81,6 +82,12 @@
 
             const urlParams = new URLSearchParams(window.location.search);
             pautaId = urlParams.get('pautaId');
+            const modoUrl = urlParams.get('modo');
+
+            // Se o link vier explicitamente como leitura ou sem autenticação de operador
+            if (modoUrl === 'leitura') {
+                modoLeituraExterna = true;
+            }
 
             if (!pautaId) {
                 document.body.innerHTML = `
@@ -93,10 +100,13 @@
                     </div>`;
             } else {
                 onAuthStateChanged(auth, (user) => {
-                    usuarioLogado = !!user;
+                    usuarioOperadorLogado = !!user;
+                    // Se não estiver logado no sistema principal, força o modo de leitura externa/equipe
+                    if (!user) modoLeituraExterna = true;
                     atualizarInterfaceModo();
                 }, () => {
-                    usuarioLogado = false;
+                    usuarioOperadorLogado = false;
+                    modoLeituraExterna = true;
                     atualizarInterfaceModo();
                 });
 
@@ -112,10 +122,10 @@
 
         function atualizarInterfaceModo() {
             const descEl = document.getElementById('modo-painel-desc');
-            if (usuarioLogado) {
+            if (!modoLeituraExterna && usuarioOperadorLogado) {
                 descEl.innerHTML = "Modo Operador: Uploads e edições liberados <span class='text-emerald-600 font-bold'>● Ativo</span>";
             } else {
-                descEl.innerHTML = "Modo Consulta Externa: Visualização de arquivos <span class='text-blue-600 font-bold'>● Leitura</span>";
+                descEl.innerHTML = "Modo Equipe / Leitura: Apenas visualização e download de arquivos <span class='text-violet-600 font-bold'>● Restrito</span>";
             }
         }
 
@@ -153,7 +163,7 @@
             document.getElementById('contador-status').textContent = filtrados.length + " assistidos presentes";
 
             if (filtrados.length === 0) {
-                container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 text-xs font-medium">Nenhum assistido com chegada marcada encontrado.</div>`;
+                container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">Nenhum assistido com chegada marcada encontrado.</div>`;
                 return;
             }
 
@@ -161,8 +171,8 @@
             for (let i = 0; i < filtrados.length; i++) {
                 const a = filtrados[i];
                 const btnVerdeClass = a.noVerde ? 'bg-emerald-600 text-white shadow-emerald-200' : 'bg-slate-100 text-slate-700 hover:bg-slate-200';
-                const disabledAttr = !usuarioLogado ? 'disabled opacity-75 cursor-not-allowed' : '';
-                const onclickVerde = usuarioLogado ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})"` : '';
+                const disabledAttr = modoLeituraExterna ? 'disabled opacity-75 cursor-not-allowed' : '';
+                const onclickVerde = !modoLeituraExterna ? `onclick="toggleNoVerdeExterno('${pautaId}', '${a.id}', ${a.noVerde || false})"` : '';
                 
                 const nomeSeguro = escapeHTML(a.name || 'Sem Nome');
                 const statusSeguro = escapeHTML(a.status || 'aguardando');
@@ -171,9 +181,7 @@
                 const horarioAgendado = escapeHTML(a.scheduledTime || a.horario || a.time || a.hora || '--:--');
                 const linkSeguro = a.pdfLink || '';
                 const obsSegura = escapeHTML(a.pdfObservacoes || '');
-                const telSeguro = a.telefone || '';
 
-                // Histórico de interações registradas
                 let historicoHTML = '';
                 if (a.historicoAcoes && a.historicoAcoes.length > 0) {
                     historicoHTML = `<div class="mt-2 pt-2 border-t border-slate-100 flex items-center gap-2 flex-wrap text-[10px] text-slate-500">
@@ -201,7 +209,8 @@
                             </button>
                         </div>`;
 
-                if (usuarioLogado) {
+                // Bloco de Upload restrito apenas para o Operador logado
+                if (!modoLeituraExterna) {
                     htmlFinal += `
                         <div class="flex flex-col sm:flex-row gap-2.5 items-center bg-violet-50/40 p-3 rounded-xl border border-violet-100/80">
                             <div class="flex-1 w-full">
@@ -217,9 +226,9 @@
                 htmlFinal += `
                         <div class="flex flex-wrap sm:flex-nowrap gap-2 items-center">
                             <input type="text" id="link-${a.id}" value="${linkSeguro}" placeholder="Link interno ou externo do documento..." 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" ${!usuarioLogado ? 'readonly' : ''}>`;
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400 w-full" readonly>`;
 
-                if (usuarioLogado) {
+                if (!modoLeituraExterna && linkSeguro) {
                     htmlFinal += `
                             <button onclick="salvarLinkExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
                                 Salvar Link
@@ -228,22 +237,26 @@
 
                 if (linkSeguro) {
                     htmlFinal += `
-                            <a href="${linkSeguro}" target="_blank" onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir PDF">
-                                👁️ Abrir
-                            </a>
+                            <a href="${linkSeguro}" target="_blank" download onclick="registrarAcaoHistorico('${pautaId}', '${a.id}', 'Visualizou/Baixou o PDF')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Abrir ou Baixar PDF">
+                                👁️ Abrir / Baixar
+                            </a>`;
+
+                    if (!modoLeituraExterna) {
+                        htmlFinal += `
                             <button onclick="enviarWhatsAppServidores('${pautaId}', '${a.id}', '${nomeSeguro}', '${numAgendamento}', '${horarioAgendado}', '${linkSeguro}')" 
                                 class="bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom flex items-center justify-center gap-1.5 shrink-0 shadow-sm" title="Avisar equipe no grupo">
                                 💬 WhatsApp
                             </button>`;
+                    }
                 }
 
                 htmlFinal += `
                         </div>
                         <div class="flex gap-2 items-center">
-                            <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações rápidas (ex: Falta certidão...)" 
-                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" ${!usuarioLogado ? 'readonly' : ''}>`;
+                            <input type="text" id="obs-${a.id}" value="${obsSegura}" placeholder="Observações rápidas..." 
+                                class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50/50 outline-none transition-all-custom focus:bg-white focus:border-slate-400" readonly>`;
 
-                if (usuarioLogado) {
+                if (!modoLeituraExterna) {
                     htmlFinal += `
                             <button onclick="salvarObsExterno('${pautaId}', '${a.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs transition-all-custom shrink-0 shadow-sm">
                                 Atualizar Obs
@@ -263,7 +276,6 @@
             if (window._assistidosCache) renderizarLista(window._assistidosCache);
         });
 
-        // 🌟 FUNÇÃO PARA REGISTRAR O HISTÓRICO DE CLIQUES E AÇÕES 🌟
         window.registrarAcaoHistorico = async function(idPauta, idAssistido, acaoDesc) {
             try {
                 const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
@@ -280,7 +292,7 @@
         };
 
         window.fazerUploadPdf = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
+            if (modoLeituraExterna) return alert("Acesso restrito: Modo de leitura para equipe.");
             const fileInput = document.getElementById(`file-${idAssistido}`);
             if (!fileInput || !fileInput.files[0]) {
                 alert("Selecione um arquivo PDF primeiro!");
@@ -313,26 +325,8 @@
             }
         };
 
-        window.salvarLinkExterno = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
-            const val = document.getElementById(`link-${idAssistido}`).value.trim();
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
-                pdfLink: val,
-                docWorkflowStatus: "Digitalizado"
-            });
-            await registrarAcaoHistorico(idPauta, idAssistido, "Link do documento salvo");
-            alert("Link salvo com sucesso! 💾");
-        }
-
-        window.salvarObsExterno = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
-            const val = document.getElementById(`obs-${idAssistido}`).value.trim();
-            await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { pdfObservacoes: val });
-            alert("Observações atualizadas! 📝");
-        }
-
         window.toggleNoVerdeExterno = async function(idPauta, idAssistido, atual) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
+            if (modoLeituraExterna) return alert("Acesso restrito: Modo de leitura para equipe.");
             const novoEstado = !atual;
             await updateDoc(doc(db, "pautas", idPauta, "attendances", idAssistido), { 
                 noVerde: novoEstado,
