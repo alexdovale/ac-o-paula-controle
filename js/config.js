@@ -4,7 +4,7 @@ export const firebaseConfig = {
     apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
     authDomain: "pauta-ce162.firebaseapp.com",
     projectId: "pauta-ce162",
-    storageBucket: "pauta-ce162.appspot.com",
+    storageBucket: "pauta-ce162.firebasestorage.app",
     messagingSenderId: "87113750208",
     appId: "1:87113750208:web:4abba0024f4d4af699bf25"
 };
