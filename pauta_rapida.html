@@ -240,7 +240,11 @@
         });
 
         window.fazerUploadPdf = async function(idPauta, idAssistido) {
-            if (!usuarioLogado) return alert("Acesso restrito.");
+            if (!usuarioLogado) {
+                alert("Acesso restrito: Você precisa estar logado como operador.");
+                return;
+            }
+
             const fileInput = document.getElementById(`file-${idAssistido}`);
             if (!fileInput || !fileInput.files[0]) {
                 alert("Selecione um arquivo PDF primeiro!");
@@ -251,7 +255,7 @@
             const caminhoStorage = `pautas/${idPauta}/assistidos/${idAssistido}/documento_${Date.now()}.pdf`;
             const storageRef = ref(storage, caminhoStorage);
 
-            alert("Enviando PDF para a pasta do assistido na nuvem... Aguarde.");
+            alert("Iniciando envio para a nuvem... Aguarde um instante.");
 
             try {
                 const snapshot = await uploadBytes(storageRef, arquivo);
@@ -266,8 +270,8 @@
                 alert("PDF enviado e vinculado com sucesso! 🚀");
                 fileInput.value = ''; 
             } catch (error) {
-                console.error("Erro no upload:", error);
-                alert("Erro ao enviar o arquivo para o Firebase Storage.");
+                console.error("ERRO DETALHADO NO UPLOAD DO STORAGE:", error);
+                alert("Erro ao enviar: " + (error.code || error.message || "Erro desconhecido"));
             }
         };
 
