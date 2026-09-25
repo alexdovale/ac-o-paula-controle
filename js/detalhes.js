@@ -180,7 +180,7 @@ export const documentsData = {
 /* ========================================================
    3. ESTADO GLOBAL
    ======================================================== */
-let currentAssistedId = null;      
+let currentAssistedId = null;     
 let currentPautaId = null;         
 let db = null;                     
 let allAssisted = [];              
@@ -1376,30 +1376,30 @@ async function handlePdf() {
 
 function addReuToPdfData(documentosTextos, reu) {
     documentosTextos.push({ id: 'reu-titulo', text: '👤 DADOS DA QUALIFICAÇÃO DO RÉU:' });
-    if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `   • Nome: ${reu.nome}` });
-    if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `   • CPF: ${reu.cpf}` });
-    if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `   • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
+    if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `    • Nome: ${reu.nome}` });
+    if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `    • CPF: ${reu.cpf}` });
+    if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `    • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
     
     let ocupacao = reu.ocupacao;
     if (reu.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-ocupacao', text: `   • Ocupação do Réu: ${ocupacao || 'Não informado'}` });
+    documentosTextos.push({ id: 'reu-ocupacao', text: `    • Ocupação do Réu: ${ocupacao || 'Não informado'}` });
     
     let profissao = reu.profissao;
     if (reu.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
     if (profissao && profissao !== '' && !reu.profissaoNaoSei) {
-        documentosTextos.push({ id: 'reu-prof', text: `   • Profissão do Réu: ${profissao}` });
+        documentosTextos.push({ id: 'reu-prof', text: `    • Profissão do Réu: ${profissao}` });
     }
     
     let estadoCivil = reu.estadoCivil;
     if (reu.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-civil', text: `   • Estado Civil do Réu: ${estadoCivil || 'Não informado'}` });
+    documentosTextos.push({ id: 'reu-civil', text: `    • Estado Civil do Réu: ${estadoCivil || 'Não informado'}` });
     
     let ganhos = reu.ganhos;
     if (reu.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `   • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
+    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `    • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
     
     if (reu.fonteRenda) {
-        documentosTextos.push({ id: 'reu-fonte', text: `   • Fonte de Renda do Réu: ${reu.fonteRenda}` });
+        documentosTextos.push({ id: 'reu-fonte', text: `    • Fonte de Renda do Réu: ${reu.fonteRenda}` });
     }
 }
 
@@ -1413,7 +1413,7 @@ function addExpensesToPdfData(documentosTextos, gastos) {
     };
 
     documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS (COM RATEIO):' });
-    documentosTextos.push({ id: 'gastos-moradores', text: `   • Quantidade de pessoas na residência: ${qtdMoradores}` });
+    documentosTextos.push({ id: 'gastos-moradores', text: `    • Quantidade de pessoas na residência: ${qtdMoradores}` });
 
     let totalFamiliaCota = 0;
     EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
@@ -1421,7 +1421,7 @@ function addExpensesToPdfData(documentosTextos, gastos) {
         if (val > 0) {
             const cota = val / qtdMoradores;
             totalFamiliaCota += cota;
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: Total ${gastos[cat.id]} / Cota (1/${qtdMoradores}): ${formatCurrency(cota)}` });
+            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `    • ${cat.label}: Total ${gastos[cat.id]} / Cota (1/${qtdMoradores}): ${formatCurrency(cota)}` });
         }
     });
 
@@ -1430,11 +1430,11 @@ function addExpensesToPdfData(documentosTextos, gastos) {
         const val = limpaMoeda(gastos[cat.id]);
         if (val > 0) {
             totalCrianca += val;
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `   • ${cat.label}: ${gastos[cat.id]} (Integral)` });
+            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `    • ${cat.label}: ${gastos[cat.id]} (Integral)` });
         }
     });
 
-    documentosTextos.push({ id: 'gastos-total', text: `   • NECESSIDADE MENSAL APURADA: ${formatCurrency(totalFamiliaCota + totalCrianca)}` });
+    documentosTextos.push({ id: 'gastos-total', text: `    • NECESSIDADE MENSAL APURADA: ${formatCurrency(totalFamiliaCota + totalCrianca)}` });
 }
 
 function collectCheckedDocuments() {
@@ -1734,7 +1734,71 @@ export async function openDetailsModal(config) {
     if (!assisted) return;
     
     if (getEl('assisted-details-name')) getEl('assisted-details-name').textContent = assisted.name;
-    
+
+    // 📁 ADOBE SCAN: Injeção do bloco de Gestão de Documentos na Modal de Detalhes
+    let docManagementContainer = getEl('adobe-scan-management-container');
+    if (!docManagementContainer) {
+        docManagementContainer = document.createElement('div');
+        docManagementContainer.id = 'adobe-scan-management-container';
+        const nameHeader = getEl('assisted-details-name');
+        if (nameHeader && nameHeader.parentElement) {
+            nameHeader.parentElement.appendChild(docManagementContainer);
+        }
+    }
+
+    docManagementContainer.innerHTML = `
+        <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs">
+            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                <span class="font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
+                    <span>📁</span> Gestão de Documento (Adobe Scan)
+                </span>
+                <button onclick="toggleNoVerde('${assisted.id}', ${assisted.noVerde || false})" 
+                    class="px-3 py-1.5 rounded-xl font-bold transition-all shadow-sm ${assisted.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                    ${assisted.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
+                </button>
+            </div>
+
+            <!-- Link do PDF -->
+            <div class="flex flex-col gap-1">
+                <label class="font-bold text-slate-600">Link do PDF:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="pdf-link-${assisted.id}" value="${assisted.pdfLink || ''}" placeholder="Cole o link do PDF..." 
+                        class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:border-violet-500">
+                    <button onclick="salvarLinkPdf('${assisted.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3.5 py-2.5 rounded-xl transition">
+                        Salvar
+                    </button>
+                    ${assisted.pdfLink ? `
+                        <button onclick="abrirPdfComRastreio(window.app, '${assisted.id}', '${assisted.pdfLink}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl transition" title="Abrir PDF com Rastreio">
+                            👁️ Ver
+                        </button>
+                    ` : ''}
+                </div>
+            </div>
+
+            <!-- Observações (O que falta digitalizar) -->
+            <div class="flex flex-col gap-1">
+                <label class="font-bold text-slate-600">Observações / Pendências:</label>
+                <div class="flex gap-2">
+                    <input type="text" id="pdf-obs-${assisted.id}" value="${escapeHTML(assisted.pdfObservacoes || '')}" placeholder="Ex: Falta comprovante de residência..." 
+                        class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:border-violet-500">
+                    <button onclick="salvarObsPdf('${assisted.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl transition">
+                        Atualizar Obs
+                    </button>
+                </div>
+            </div>
+
+            <!-- Histórico de Visualizações -->
+            <div class="pt-1 text-[11px] text-slate-500 flex justify-between items-center border-t border-slate-200">
+                <span>👁️ Acessos: <strong>${assisted.pdfHistoricoVisualizacao ? assisted.pdfHistoricoVisualizacao.length : 0}</strong></span>
+                ${assisted.pdfHistoricoVisualizacao?.length > 0 ? `
+                    <span class="text-violet-700 font-medium truncate max-w-[200px]" title="Último por: ${escapeHTML(assisted.pdfHistoricoVisualizacao[assisted.pdfHistoricoVisualizacao.length - 1].colaborador)}">
+                        Último: ${escapeHTML(assisted.pdfHistoricoVisualizacao[assisted.pdfHistoricoVisualizacao.length - 1].colaborador)}
+                    </span>
+                ` : '<span class="text-slate-400 italic">Nunca aberto</span>'}
+            </div>
+        </div>
+    `;
+
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
 
