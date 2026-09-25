@@ -118,7 +118,7 @@
             onSnapshot(refCol, (snapshot) => {
                 const assistidos = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
                 
-                // 🌟 FILTRO ATUALIZADO: Identifica chegada marcada pelo status da fila (aguardando/pausado) ou chegada registrada
+                // Filtro alinhado com a chegada marcada (aguardando, pausado ou chegada registrada)
                 const presentes = assistidos.filter(a => {
                     return a.status === 'aguardando' || a.status === 'pausado' || a.arrivalTime || a.chegada === true || a.status === 'presente' || a.status === 'atendido';
                 });
@@ -273,12 +273,12 @@
 
         window.enviarWhatsAppServidores = function(nomeAssistido, numAgendamento, horarioAgendado, pdfLink) {
             const textoMensagem = 
-                `📌 *ATUALIZAÇÃO DE DOCUMENTAÇÃO - SIGEP*\n\n` +
-                `👤 *Assistido(a):* ${nomeAssistido}\n` +
-                `📋 *Agendamento:* #${numAgendamento}\n` +
-                `⏰ *Horário:* ${horarioAgendado}\n\n` +
-                `📄 *Documentação digitalizada e enviada para a nuvem com sucesso!*\n` +
-                `🔗 *Link do PDF:* ${pdfLink}\n\n` +
+                `*ATUALIZACAO DE DOCUMENTACAO - SIGEP*\n\n` +
+                `Assistido(a): ${nomeAssistido}\n` +
+                `Agendamento: #${numAgendamento}\n` +
+                `Horario: ${horarioAgendado}\n\n` +
+                `Documentacao digitalizada e enviada para a nuvem com sucesso!\n` +
+                `Link do PDF: ${pdfLink}\n\n` +
                 `_Mensagem gerada automaticamente pelo sistema SIGEP._`;
 
             const urlWa = `https://wa.me/?text=${encodeURIComponent(textoMensagem)}`;
