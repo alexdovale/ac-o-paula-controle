@@ -28,7 +28,7 @@
                     <h1 class="text-base sm:text-lg font-black text-slate-900 tracking-tight">
                         SIGEP • Gestão de Documentos
                     </h1>
-                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando validade do link...</p>
+                    <p id="modo-painel-desc" class="text-xs text-slate-500 font-medium mt-0.5">Verificando status da pauta...</p>
                 </div>
             </div>
             <div id="status-pauta-badge" class="bg-emerald-50 text-emerald-700 text-xs font-bold px-4 py-2 rounded-xl border border-emerald-200/60 shadow-sm shrink-0 flex items-center gap-2">
@@ -52,7 +52,7 @@
         <!-- Lista de Assistidos -->
         <div id="lista-assistidos-rapida" class="space-y-3.5">
             <div class="bg-white p-10 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-xs">
-                Verificando regras de acesso e temporalidade...
+                Carregando registros da pauta...
             </div>
         </div>
     </div>
@@ -91,7 +91,7 @@
             if (!pautaId) {
                 exibirErroExpiracao("Pauta não informada", "Parâmetro <b>pautaId</b> ausente na URL de acesso.");
             } else {
-                // Validação de Temporalidade e Fechamento no Firebase antes de carregar a lista
+                // Validação de Fechamento manual no Firebase antes de carregar a lista
                 verificarValidadePauta(db, pautaId).then((pautaValida) => {
                     if (!pautaValida) return;
 
@@ -128,30 +128,17 @@
 
                 const dataPauta = pautaDoc.data();
 
-                // 1. Verifica se a pauta foi fechada manualmente pelo operador
+                // Verifica se a pauta foi fechada manualmente pelo operador
                 if (dataPauta.isClosed === true) {
                     exibirErroExpiracao("Pauta Encerrada", "Este link não está mais acessível pois a pauta foi fechada pelo operador responsável.");
                     return false;
-                }
-
-                // 2. Verifica a temporalidade: 24h após a data de atuação (dataAtuacao ou createdAt)
-                const baseDataStr = dataPauta.dataAtuacao || dataPauta.createdAt;
-                if (baseDataStr) {
-                    const dataOperacao = new Date(baseDataStr);
-                    const limiteExpiracao = new Date(dataOperacao.getTime() + (24 * 60 * 60 * 1000)); // +24 horas
-                    const agora = new Date();
-
-                    if (agora > limiteExpiracao) {
-                        exibirErroExpiracao("Link Expirado", "O prazo de validade deste link (24h após a operação da pauta) foi encerrado por motivos de segurança.");
-                        return false;
-                    }
                 }
 
                 document.getElementById('nome-pauta-texto').textContent = dataPauta.name || 'Pauta Ativa';
                 return true;
             } catch (err) {
                 console.error("Erro ao validar pauta:", err);
-                return true; // Se houver falha de rede na checagem inicial, deixa o listener tratar
+                return true; 
             }
         }
 
@@ -180,7 +167,7 @@
         }
 
         function iniciarEscutaFirebase(database, idDaPauta) {
-            // Monitora fechamento em tempo real (se o operador fechar a pauta enquanto a equipe estiver com a tela aberta)
+            // Monitora fechamento em tempo real
             onSnapshot(doc(database, "pautas", idDaPauta), (docSnap) => {
                 if (docSnap.exists() && docSnap.data().isClosed === true) {
                     exibirErroExpiracao("Pauta Encerrada", "O operador encerrou esta pauta neste momento. O acesso aos documentos foi bloqueado.");
