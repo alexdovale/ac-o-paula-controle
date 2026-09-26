@@ -536,6 +536,12 @@ class SIGEPApp {
             const actionsToggle = document.getElementById('actions-toggle');
             
             const actionsPanel = document.getElementById('actions-panel');
+            
+            // 🌟 Correção: Se o clique foi DENTRO do painel de ações, não faz nada (mantém aberto)
+            if (actionsPanel && actionsPanel.contains(e.target)) {
+                return;
+            }
+
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !actionsToggle?.contains(e.target)) {
                 actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
                 document.getElementById('actions-arrow')?.classList.remove('rotate-180');
