@@ -14,62 +14,48 @@ import { PDFService } from './pdfService.js';
 
 /* ========================================================
    CÉREBRO DE DETECÇÃO DE ASSUNTO (INTELIGÊNCIA AUTOMÁTICA)
-   Lê o texto livre do agendamento e deduz a ação correta
    ======================================================== */
 function descobrirAssuntoInteligente(assuntoTexto) {
     if (!assuntoTexto) return null;
     
-    // Normaliza: tira acentos e joga para minúsculo
     const txt = assuntoTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
-    // PENSÃO / ALIMENTOS
     if (txt.includes('alimento') || txt.includes('pensao') || txt.includes('oferta') || txt.includes('exoneracao') || txt.includes('revisao')) {
         if (txt.includes('gravidic') || txt.includes('gestante')) return 'alimentos_gravidicos';
         if (txt.includes('avo') || txt.includes('avoeng')) return 'alimentos_avoengos';
         return 'alimentos_fixacao_majoracao_oferta';
     }
     
-    // DIVÓRCIO E SEPARAÇÃO
     if (txt.includes('divorcio') || txt.includes('separacao')) {
         if (txt.includes('consensual') || txt.includes('amigavel') || txt.includes('acordo')) return 'divorcio_consensual';
         return 'divorcio_litigioso';
     }
     
-    // UNIÃO ESTÁVEL
     if (txt.includes('uniao estavel') || txt.includes('companheir')) return 'uniao_estavel';
     
-    // GUARDA E VISITAS
     if (txt.includes('guarda')) return 'guarda';
     if (txt.includes('visita') || txt.includes('convivencia')) return 'regulamentacao_convivencia';
     
-    // INVESTIGAÇÃO DE PATERNIDADE (DNA)
     if (txt.includes('paternidade') || txt.includes('maternidade') || txt.includes('dna') || txt.includes('reconhecimento')) {
         return 'investigacao_paternidade';
     }
 
-    // SAÚDE / OBRIGAÇÃO DE FAZER
     if (txt.includes('obrigacao de fazer') || txt.includes('medicamento') || txt.includes('saude') || txt.includes('cirurgia') || txt.includes('internacao')) {
         return 'obrigacao_fazer';
     }
 
-    // INDENIZAÇÃO / DANOS
     if (txt.includes('indenizacao') || txt.includes('dano') || txt.includes('moral') || txt.includes('material')) {
         return 'indenizacao_danos';
     }
 
-    // CURATELA / INTERDIÇÃO (TMO)
     if (txt.includes('curatela') || txt.includes('interdicao') || txt.includes('tmo') || txt.includes('curador')) return 'curatela';
     
-    // REGISTRO CIVIL
     if (txt.includes('retificacao') || txt.includes('registro civil') || txt.includes('nome') || txt.includes('certidao')) return 'retificacao_registro_civil';
     
-    // ALVARÁ
     if (txt.includes('alvara') || txt.includes('residuos') || txt.includes('levantamento')) return 'alvara_valores';
     
-    // VAGA EM CRECHE/ESCOLA
     if (txt.includes('vaga') && (txt.includes('escola') || txt.includes('creche') || txt.includes('matricula'))) return 'vaga_escola_creche';
 
-    // Se não identificar nada, retorna null para você escolher na lista manualmente
     return null;
 }
 
@@ -411,7 +397,6 @@ function renderChecklist(actionKey) {
     getEl('checklist-search-container')?.classList.remove('hidden');
     containerEl.innerHTML = ''; 
 
-    // Botão Gerador de Texto (Apenas para Defensorias de Família)
     const ASSUNTOS_PENSAO = [
         'alimentos_fixacao_majoracao_oferta',
         'alimentos_gravidicos',
@@ -442,7 +427,6 @@ function renderChecklist(actionKey) {
         containerEl.appendChild(calcContainer);
     }
 
-    // Seção de Dados Socioeconômicos do Assistido
     const socioSection = document.createElement('div');
     socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
     socioSection.innerHTML = `
@@ -1067,7 +1051,6 @@ function renderExpenseTable() {
                 </div>
             </div>
 
-            <!-- ⭐ BOTÃO DE GERAR APENAS A PLANILHA EM PDF NA MESA -->
             <div class="mt-4 flex gap-2">
                 <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
                     <span>📄</span> Baixar Apenas Planilha (PDF)
@@ -1327,7 +1310,6 @@ function fillExpenseData(d) {
 /* ========================================================
    8. FUNÇÕES DE AÇÃO DE PDF E SALVAMENTO
    ======================================================== */
-
 async function handlePdf() {
     if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
         console.error("PDFService não disponível:", PDFService);
@@ -1455,11 +1437,6 @@ async function handleSave(closeModal = true) {
     ensureAssistedId();
     
     if (!currentAssistedId || !currentPautaId || !db) {
-        console.error("❌ Erro ao salvar - IDs ausentes:", { 
-            currentAssistedId, 
-            currentPautaId, 
-            db: !!db 
-        });
         showNotification("Erro: assistido não identificado. Feche e reabra o modal.", "error");
         return;
     }
@@ -1519,14 +1496,13 @@ async function handleReset() {
         demandasAdicionaisLocais = [];
         window._lastOpenedAssistedId = null;
         currentChecklistAction = null;
-        handleBack(); // Retorna para a tela de botões permitindo "Mudar Assunto"
+        handleBack(); 
         showNotification("Triagem limpa.", "info");
     } catch (e) {
         showNotification("Erro ao limpar", "error");
     }
 }
 
-// ⭐ BOTÃO DE VOLTAR (Para caso a IA erre ou você queira Mudar o Assunto)
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
     getEl('document-checklist-view-header-actions')?.classList.add('hidden'); 
@@ -1549,7 +1525,6 @@ function closeAssistedDetailsModal() {
    11. GERADOR DE TEXTO PARA PETIÇÃO (COM RATEIO)
    ======================================================== */
 window.gerarTextoDespesas = () => {
-    // Agora o sistema lê os valores DIRETAMENTE do que está digitado na tela!
     const g = getExpenseDataFromForm();
     const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O requerente';
     const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
@@ -1663,7 +1638,6 @@ export function setupDetailsModal(config) {
     db = config.db;
     getEl('close-assisted-details-modal-btn').onclick = closeAssistedDetailsModal;
     
-    // Conecta o botão "Voltar" (Trocar Assunto) à função handleBack
     getEl('back-to-action-selection-btn').onclick = handleBack;
     
     getEl('save-checklist-btn').onclick = () => handleSave(true);
@@ -1703,7 +1677,6 @@ export async function openDetailsModal(config) {
         if (docSnap.exists()) {
             const data = docSnap.data();
             
-            // ⭐ MAGIA DA INTELIGÊNCIA: Analisa o texto do Assunto e joga direto pro lugar certo
             const textoAssunto = data.subject || data.materia || data.assunto || '';
             if (!data.documentChecklist?.action && textoAssunto) {
                 const assuntoDetectado = descobrirAssuntoInteligente(textoAssunto);
@@ -1733,14 +1706,27 @@ export async function openDetailsModal(config) {
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) return;
     
-    if (getEl('assisted-details-name')) getEl('assisted-details-name').textContent = assisted.name;
+    // ⭐ RESTAURAÇÃO DO TOPO ORIGINAL DO MODAL DE DETALHES
+    const nameHeader = getEl('assisted-details-name');
+    if (nameHeader) {
+        nameHeader.textContent = assisted.name || 'Sem Nome';
+    }
+
+    // Preenche informações adicionais do topo se os elementos existirem na estrutura HTML original
+    const cpfEl = getEl('assisted-details-cpf');
+    if (cpfEl) cpfEl.textContent = assisted.cpf ? `CPF: ${assisted.cpf}` : '';
+
+    const agendamentoEl = getEl('assisted-details-agendamento');
+    if (agendamentoEl) {
+        const numAg = assisted.numeroAgendamento || assisted.numAgendamento || assisted.protocolo || 'N/A';
+        agendamentoEl.textContent = `Agendamento: #${numAgendamento}`;
+    }
 
     // 📁 ADOBE SCAN: Injeção do bloco de Gestão de Documentos na Modal de Detalhes
     let docManagementContainer = getEl('adobe-scan-management-container');
     if (!docManagementContainer) {
         docManagementContainer = document.createElement('div');
         docManagementContainer.id = 'adobe-scan-management-container';
-        const nameHeader = getEl('assisted-details-name');
         if (nameHeader && nameHeader.parentElement) {
             nameHeader.parentElement.appendChild(docManagementContainer);
         }
@@ -1804,14 +1790,11 @@ export async function openDetailsModal(config) {
 
     window._lastOpenedAssistedId = currentAssistedId;
     
-    // Aqui ele verifica se a IA já definiu o assunto (ou se você já tinha escolhido antes). 
-    // Se sim, pula direto pra tela de preenchimento (checklist). 
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
         renderChecklist(assisted.documentChecklist.action);
     } else {
-        // Se a IA não reconheceu as palavras, mostra a lista para você clicar.
         checklistView?.classList.add('hidden');
         selectionArea?.classList.remove('hidden');
         renderSubjectSelection(selectionArea);
