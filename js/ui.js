@@ -1,4 +1,4 @@
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT)
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT E LAYOUT BLINDADO)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -696,7 +696,8 @@ export const UIService = {
 
         const searchTerms = this.getSearchTerms();
 
-        let rawAguardando = allAssisted.filter(a => a.status === 'aguardando');
+        // 🌟 INCLUI OS PAUSADOS NA COLUNA DE AGUARDANDO
+        let rawAguardando = allAssisted.filter(a => a.status === 'aguardando' || a.status === 'pausado');
         let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
         let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
         let rawFaltosos = allAssisted.filter(a => a.status === 'faltoso');
@@ -865,7 +866,7 @@ export const UIService = {
 
     _getActionButtonsHtml(item) {
         return `
-            <div class="absolute top-2 right-2 flex items-center z-10 gap-1">
+            <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
                 <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
                     class="text-indigo-600 hover:text-indigo-800 p-2 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Scanner)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -899,7 +900,7 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Consulta
                         </button>
                         <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
@@ -1036,8 +1037,8 @@ export const UIService = {
 
             ${this._getActionButtonsHtml(item)}
 
-            <div class="pt-2 text-center">
-                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(nomeSeguro)}</p>
+            <div class="pt-8 text-center">
+                <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                 <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 
                 <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
@@ -1403,10 +1404,9 @@ export const UIService = {
                     </svg>
                 </button>` : ''}
                 
-                <div class="text-center pt-2">
+                <div class="text-center pt-8">
                     ${priorityTagHtml}
-
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-6">${escapeHTML(nomeSeguro)}</p>
+                    <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
 
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
                     
@@ -1428,9 +1428,8 @@ export const UIService = {
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
             `;
-
+            
             this._setupRoomSelectListener(card, item);
-
             return card;
         } catch (error) {
             console.error("Erro ao criar card de aguardando:", error, item);
@@ -1570,6 +1569,7 @@ export const UIService = {
             }
 
             const numeroOrdem = item.absoluteOrder || (index + 1);
+            const nomeSeguro = item.name || 'Nome não informado';
 
             card.innerHTML = `
                 <div class="absolute -left-2 -top-2 w-8 h-8 bg-blue-600 text-white rounded-full flex items-center justify-center font-bold text-sm shadow-lg border-2 border-white z-20">
@@ -1585,13 +1585,13 @@ export const UIService = {
                     </svg>
                 </button>` : ''}
 
-                <div class="text-center pt-2">
+                <div class="text-center pt-8">
                     ${priorityTagHtml}
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2 mt-4">${escapeHTML(item.name || '')}</p>
+                    <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
                     
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
                         ${roomDropdownHtml}
@@ -1689,6 +1689,7 @@ export const UIService = {
             ` : '';
             
             const roomDropdownHtml = this._getRoomDropdownHtml(item, currentPautaData, canEditPriority);
+            const nomeSeguro = item.name || 'Nome não informado';
 
             card.innerHTML = `
                 <div class="absolute top-2 left-2 z-10">
@@ -1701,8 +1702,8 @@ export const UIService = {
 
                 ${this._getActionButtonsHtml(item)}
 
-                <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2 mt-4">${escapeHTML(item.name || '')}</p>
+                <div class="text-center pt-8">
+                    <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
                     ${item.tipoAcaoRapida ? (() => {
@@ -1819,8 +1820,8 @@ export const UIService = {
                     </button>
                 </div>
 
-                <div class="text-center pt-2">
-                    <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-8 mb-2">${escapeHTML(item.name || '')}</p>
+                <div class="text-center pt-8">
+                    <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
                     <span class="text-[9px] font-black text-red-700 bg-red-100 px-2 py-1 rounded-md border border-red-200 inline-block uppercase tracking-wider shadow-sm mb-1">🚫 Faltoso</span>
                     
                     <p class="text-xs text-slate-700 mt-2 mb-2">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
@@ -2024,8 +2025,8 @@ export const UIService = {
                     ${badgeStatus}
                     ${deleteBtnHtml}
 
-                    <div class="text-center pt-2">
-                        <p class="font-bold text-lg text-slate-800 leading-tight uppercase px-4 mb-2 mt-4">${escapeHTML(item.name || '')}</p>
+                    <div class="text-center pt-8">
+                        <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
 
                         <div class="text-xs text-slate-600 space-y-1 mb-2">
                             <p>Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
@@ -2415,12 +2416,14 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const btnGroup = document.createElement('div');
                 btnGroup.className = 'flex items-center gap-1 ml-auto pl-2 flex-shrink-0';
                 btnGroup.innerHTML = `
+                    <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
                     <button class="btn-maximize bg-slate-200 hover:bg-slate-300 text-slate-700 p-1.5 rounded-md transition-colors shadow-sm" title="Maximizar na Tela Atual">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>
                     </button>
                     <button class="btn-popout bg-blue-100 hover:bg-blue-200 text-blue-700 p-1.5 rounded-md transition-colors shadow-sm" title="Desencaixar (Arraste para Monitor 2)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.5 13A1.5 1.5 0 0 0 3 14.5h8a1.5 1.5 0 0 0 1.5-1.5V9a.5.5 0 0 0-1 0v4a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 0 0-1H3A1.5 1.5 0 0 0 1.5 5v8zm7-11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V2.5H9a.5.5 0 0 1-.5-.5z"/><path fill-rule="evenodd" d="M14.354 1.646a.5.5 0 0 1 0 .708l-8 8a.5.5 0 0 1-.708-.708l8-8a.5.5 0 0 1 .708 0z"/></svg>
                     </button>
+                    </div>
                 `;
 
                 headerFlex.appendChild(btnGroup);
