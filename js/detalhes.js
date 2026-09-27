@@ -1706,23 +1706,21 @@ export async function openDetailsModal(config) {
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) return;
     
-    // ⭐ RESTAURAÇÃO DO TOPO ORIGINAL DO MODAL DE DETALHES
     const nameHeader = getEl('assisted-details-name');
     if (nameHeader) {
         nameHeader.textContent = assisted.name || 'Sem Nome';
     }
 
-    // Preenche informações adicionais do topo se os elementos existirem na estrutura HTML original
     const cpfEl = getEl('assisted-details-cpf');
     if (cpfEl) cpfEl.textContent = assisted.cpf ? `CPF: ${assisted.cpf}` : '';
 
     const agendamentoEl = getEl('assisted-details-agendamento');
     if (agendamentoEl) {
         const numAg = assisted.numeroAgendamento || assisted.numAgendamento || assisted.protocolo || 'N/A';
-        agendamentoEl.textContent = `Agendamento: #${numAgendamento}`;
+        agendamentoEl.textContent = `Agendamento: #${numAg}`;
     }
 
-    // 📁 ADOBE SCAN: Injeção do bloco de Gestão de Documentos na Modal de Detalhes
+    // ⭐ PAINEL RETRÁTIL DE GESTÃO DE DOCUMENTOS (OCULTO POR PADRÃO, ACIONADO POR BOTÃO)
     let docManagementContainer = getEl('adobe-scan-management-container');
     if (!docManagementContainer) {
         docManagementContainer = document.createElement('div');
@@ -1733,54 +1731,54 @@ export async function openDetailsModal(config) {
     }
 
     docManagementContainer.innerHTML = `
-        <div class="mt-4 p-4 bg-slate-50 border border-slate-200 rounded-2xl space-y-3 text-xs">
-            <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                <span class="font-black text-slate-700 uppercase tracking-wider flex items-center gap-1.5">
-                    <span>📁</span> Gestão de Documento (Adobe Scan)
+        <div class="mt-3">
+            <!-- Botão Discreto para Abrir/Ocultar -->
+            <button onclick="document.getElementById('painel-documentos-oculto').classList.toggle('hidden')" 
+                class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center justify-between transition border border-slate-200">
+                <span class="flex items-center gap-1.5">
+                    <span>📁</span> Gestão de Documentos / Adobe Scan ${assisted.documentosLista?.length ? `(${assisted.documentosLista.length})` : ''}
                 </span>
-                <button onclick="toggleNoVerde('${assisted.id}', ${assisted.noVerde || false})" 
-                    class="px-3 py-1.5 rounded-xl font-bold transition-all shadow-sm ${assisted.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
-                    ${assisted.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
-                </button>
-            </div>
+                <span>▼</span>
+            </button>
 
-            <!-- Link do PDF -->
-            <div class="flex flex-col gap-1">
-                <label class="font-bold text-slate-600">Link do PDF:</label>
-                <div class="flex gap-2">
-                    <input type="text" id="pdf-link-${assisted.id}" value="${assisted.pdfLink || ''}" placeholder="Cole o link do PDF..." 
-                        class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:border-violet-500">
-                    <button onclick="salvarLinkPdf('${assisted.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3.5 py-2.5 rounded-xl transition">
-                        Salvar
+            <!-- Conteúdo Oculto por Padrão -->
+            <div id="painel-documentos-oculto" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
+                <div class="flex items-center justify-between border-b border-slate-200 pb-2">
+                    <span class="font-bold text-slate-600 uppercase">Status no Verde:</span>
+                    <button onclick="toggleNoVerde('${assisted.id}', ${assisted.noVerde || false})" 
+                        class="px-3 py-1 rounded-lg font-bold transition-all shadow-sm ${assisted.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                        ${assisted.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
                     </button>
-                    ${assisted.pdfLink ? `
-                        <button onclick="abrirPdfComRastreio(window.app, '${assisted.id}', '${assisted.pdfLink}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3.5 py-2.5 rounded-xl transition" title="Abrir PDF com Rastreio">
-                            👁️ Ver
+                </div>
+
+                <!-- Link do PDF -->
+                <div class="flex flex-col gap-1">
+                    <label class="font-bold text-slate-600">Link do PDF:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="pdf-link-${assisted.id}" value="${assisted.pdfLink || ''}" placeholder="Cole o link do PDF..." 
+                            class="flex-1 p-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-violet-500">
+                        <button onclick="salvarLinkPdf('${assisted.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3 py-2 rounded-lg transition">
+                            Salvar
                         </button>
-                    ` : ''}
+                        ${assisted.pdfLink ? `
+                            <button onclick="abrirPdfComRastreio(window.app, '${assisted.id}', '${assisted.pdfLink}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg transition" title="Ver PDF">
+                                👁️
+                            </button>
+                        ` : ''}
+                    </div>
                 </div>
-            </div>
 
-            <!-- Observações (O que falta digitalizar) -->
-            <div class="flex flex-col gap-1">
-                <label class="font-bold text-slate-600">Observações / Pendências:</label>
-                <div class="flex gap-2">
-                    <input type="text" id="pdf-obs-${assisted.id}" value="${escapeHTML(assisted.pdfObservacoes || '')}" placeholder="Ex: Falta comprovante de residência..." 
-                        class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-white focus:outline-none focus:border-violet-500">
-                    <button onclick="salvarObsPdf('${assisted.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl transition">
-                        Atualizar Obs
-                    </button>
+                <!-- Observações -->
+                <div class="flex flex-col gap-1">
+                    <label class="font-bold text-slate-600">Observações / Pendências:</label>
+                    <div class="flex gap-2">
+                        <input type="text" id="pdf-obs-${assisted.id}" value="${escapeHTML(assisted.pdfObservacoes || '')}" placeholder="Ex: Falta comprovante..." 
+                            class="flex-1 p-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-violet-500">
+                        <button onclick="salvarObsPdf('${assisted.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-lg transition">
+                            Atualizar
+                        </button>
+                    </div>
                 </div>
-            </div>
-
-            <!-- Histórico de Visualizações -->
-            <div class="pt-1 text-[11px] text-slate-500 flex justify-between items-center border-t border-slate-200">
-                <span>👁️ Acessos: <strong>${assisted.pdfHistoricoVisualizacao ? assisted.pdfHistoricoVisualizacao.length : 0}</strong></span>
-                ${assisted.pdfHistoricoVisualizacao?.length > 0 ? `
-                    <span class="text-violet-700 font-medium truncate max-w-[200px]" title="Último por: ${escapeHTML(assisted.pdfHistoricoVisualizacao[assisted.pdfHistoricoVisualizacao.length - 1].colaborador)}">
-                        Último: ${escapeHTML(assisted.pdfHistoricoVisualizacao[assisted.pdfHistoricoVisualizacao.length - 1].colaborador)}
-                    </span>
-                ` : '<span class="text-slate-400 italic">Nunca aberto</span>'}
             </div>
         </div>
     `;
