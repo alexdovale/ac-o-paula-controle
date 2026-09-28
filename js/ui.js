@@ -60,6 +60,10 @@ export const UIService = {
         document.getElementById('dashboard-container')?.classList.toggle('hidden', screenName !== 'dashboard');
         document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
         document.getElementById('admin-container')?.classList.toggle('hidden', screenName !== 'admin');
+        
+        // 👇 ESTAS DUAS LINHAS FALTAVAM PARA ESCONDER OS PAINÉIS NOVOS 👇
+        document.getElementById('coletas-container')?.classList.toggle('hidden', screenName !== 'coletas');
+        document.getElementById('meu-perfil-container')?.classList.toggle('hidden', screenName !== 'perfil');
 
         if (screenName !== 'loading' && screenName !== 'login') {
             localStorage.setItem('lastScreen', screenName);
