@@ -291,6 +291,9 @@ export const RecepcaoCentralService = {
                 <!-- Header Superior Minimalista -->
                 <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
                     <div class="flex items-center gap-4">
+                        <button id="rc-btn-voltar-home" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors shadow-sm shrink-0" title="Voltar ao início">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
+                        </button>
                         <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-[#0d1117] border border-slate-700 shadow-md shrink-0 overflow-hidden">
                             <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-8 w-auto object-contain">
                         </div>
@@ -364,6 +367,11 @@ export const RecepcaoCentralService = {
             this._cancelarListeners();
             await this._carregarRecepcoesDoUsuario();
             await this._mostrarSelectorRecepcoes();
+        });
+
+        // Evento do botão Voltar
+        document.getElementById('rc-btn-voltar-home')?.addEventListener('click', () => {
+            this.fechar();
         });
     },
 
@@ -1730,7 +1738,7 @@ export const RecepcaoCentralService = {
         this._cancelarListeners();
         const app = this._app;
         if (app && app.router) {
-            app.router.navigate('pauta-selection');
+            app.router.navigate('pautas'); // Usa o nome da rota registrado
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
