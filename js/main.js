@@ -575,6 +575,17 @@ class SIGEPApp {
             }
         });
 
+        // 🌟 BOTÃO MONITOR DA PAUTA GLOBAL (INJETADO COM LISTENER) 🌟
+        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                if (typeof window.abrirMonitoramentoGlobal === 'function') {
+                    window.abrirMonitoramentoGlobal();
+                }
+            }
+        });
+
         document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
@@ -1995,7 +2006,7 @@ document.addEventListener('blur', async (e) => {
 }, true);
 
 // ============================================================
-// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS (BI)
+// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS E MONITORAMENTO
 // ============================================================
 
 window.abrirConstrutor = async (coletaId) => {
@@ -2024,10 +2035,21 @@ window.abrirConstrutor = async (coletaId) => {
     }
 };
 
-// ========================================================
-// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO INDIVIDUAL
-// ========================================================
+window.verResultados = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    ColetasBiService.abrirResultados(window.app.db, coletaId);
+};
 
+window.ApiIntegration = {
+    simularSincronizacaoVerde: function(pautaId) {
+        console.log("Simulando sincronização verde para a pauta:", pautaId);
+        showNotification("Sincronização simulada com sucesso!", "success");
+    }
+};
+
+// ========================================================
+// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO (INDIVIDUAL)
+// ========================================================
 window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) {
     const modal = document.getElementById('monitoramento-modal');
     if (!modal) return;
@@ -2035,11 +2057,10 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
     document.getElementById('monitor-nome-assistido').textContent = assistidoNome;
     document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">Carregando histórico...</p>';
     
-    // Reseta inputs de upload
     const tituloInp = document.getElementById('monitor-upload-titulo');
     const fileInp = document.getElementById('monitor-file-input');
-    if(tituloInp) tituloInp.value = '';
-    if(fileInp) fileInp.value = '';
+    if (tituloInp) tituloInp.value = '';
+    if (fileInp) fileInp.value = '';
 
     modal.classList.remove('hidden');
 
@@ -2055,7 +2076,6 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 
         const data = snap.data();
 
-        // 1. CARREGA GESTÃO DE DOCUMENTOS BÁSICA
         const linkInp = document.getElementById('monitor-pdf-link');
         const obsInp = document.getElementById('monitor-pdf-obs');
         const btnVerde = document.getElementById('monitor-btn-verde');
@@ -2085,6 +2105,7 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 
         const btnSalvarLink = document.getElementById('monitor-btn-salvar-link');
         if(btnSalvarLink) btnSalvarLink.onclick = async () => {
+            if(!linkInp) return;
             await updateDoc(assistidoRef, { pdfLink: linkInp.value.trim() });
             await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
             showNotification("Link salvo com sucesso!", "success");
@@ -2093,15 +2114,13 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 
         const btnSalvarObs = document.getElementById('monitor-btn-salvar-obs');
         if(btnSalvarObs) btnSalvarObs.onclick = async () => {
+            if(!obsInp) return;
             await updateDoc(assistidoRef, { pdfObservacoes: obsInp.value.trim() });
             await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
             showNotification("Observação salva!", "success");
             window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
         };
 
-        // ==========================================
-        // LÓGICA DE UPLOAD DE ARQUIVO PELA EQUIPE
-        // ==========================================
         const btnTabUpload = document.getElementById('monitor-btn-tab-upload');
         const btnTabLink = document.getElementById('monitor-btn-tab-link');
         const boxUpload = document.getElementById('monitor-box-upload');
@@ -2123,7 +2142,6 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
             };
         }
 
-        // Renderiza lista de arquivos já anexados
         const listaArquivosContainer = document.getElementById('monitor-lista-arquivos-anexados');
         const docsDigitalizados = data.documentosDigitalizados || [];
         
@@ -2143,7 +2161,6 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
             }
         }
 
-        // Evento de Upload para a Nuvem
         const btnEnviarUpload = document.getElementById('monitor-btn-enviar-upload');
         if (btnEnviarUpload) {
             btnEnviarUpload.onclick = async () => {
@@ -2181,7 +2198,7 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 
                     await window.registrarAcaoHistorico(pautaId, assistidoId, `Upload concluído: ${titulo}`);
                     showNotification("Documento enviado com sucesso!", "success");
-                    window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); // Recarrega a tela
+                    window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
                 } catch (err) {
                     console.error(err);
                     showNotification("Erro ao enviar o documento para a nuvem.", "error");
@@ -2191,9 +2208,6 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
             };
         }
 
-        // ==========================================
-        // 2. RENDERIZA A LINHA DO TEMPO (HISTÓRICO)
-        // ==========================================
         const timelineContainer = document.getElementById('monitor-timeline-container');
         if (timelineContainer) {
             let historicoHTML = '';
@@ -2226,7 +2240,7 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
                         <div class="relative pl-6 mt-6">
                             <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></span>
                             <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
-                            <p class="text-[11px] text-slate-700 font-medium">${window.escapeHTML ? window.escapeHTML(texto) : texto}</p>
+                            <p class="text-[11px] text-slate-700 font-medium">${escapeHTML(texto)}</p>
                         </div>
                     `;
                 });
@@ -2241,13 +2255,18 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 };
 
 // ========================================================
-// MONITORAMENTO GLOBAL DA PAUTA
+// SISTEMA DE MONITORAMENTO GLOBAL DA PAUTA
 // ========================================================
+
 window.abrirMonitoramentoGlobal = function() {
     let modal = document.getElementById('monitoramento-global-modal');
-    if (!modal) return;
+    if (!modal) {
+        console.error("Modal global não encontrado no HTML!");
+        return;
+    }
     modal.classList.remove('hidden');
-    document.getElementById('monitor-global-search').value = '';
+    const searchInput = document.getElementById('monitor-global-search');
+    if (searchInput) searchInput.value = '';
     window.renderizarListaMonitorGlobal();
 };
 
@@ -2320,13 +2339,13 @@ window.renderizarListaMonitorGlobal = function(filtro = '') {
                 <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col gap-2">
                     <label class="text-[9px] font-black text-slate-400 uppercase">Link Principal</label>
                     <div class="flex gap-1.5">
-                        <input type="text" id="m-link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
-                        <button onclick="window.salvarMonitorLink('${window.app.currentPauta.id}', '${a.id}')" class="bg-blue-600 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-blue-700 transition">Salvar</button>
+                        <input type="text" id="mg-link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
+                        <button onclick="window.salvarMonitorLink('${window.app.currentPauta.id}', '${a.id}', 'mg-link-${a.id}')" class="bg-blue-600 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-blue-700 transition">Salvar</button>
                     </div>
                     <label class="text-[9px] font-black text-slate-400 uppercase mt-1">Observações de Doc</label>
                     <div class="flex gap-1.5">
-                        <input type="text" id="m-obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Falta documento..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
-                        <button onclick="window.salvarMonitorObs('${window.app.currentPauta.id}', '${a.id}')" class="bg-slate-700 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-slate-800 transition">Salvar</button>
+                        <input type="text" id="mg-obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Falta documento..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
+                        <button onclick="window.salvarMonitorObs('${window.app.currentPauta.id}', '${a.id}', 'mg-obs-${a.id}')" class="bg-slate-700 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-slate-800 transition">Atualizar</button>
                     </div>
                 </div>
                 <div class="w-full md:w-1/3 pl-2">
@@ -2342,7 +2361,6 @@ window.renderizarListaMonitorGlobal = function(filtro = '') {
     container.innerHTML = html;
 };
 
-// Ações disparadas pelos botões do Monitor Global
 window.toggleMonitorVerde = async function(pautaId, assistidoId, isVerde) {
     if (!window.app || !window.app.db) return;
     const novoVerde = !isVerde;
@@ -2350,31 +2368,44 @@ window.toggleMonitorVerde = async function(pautaId, assistidoId, isVerde) {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { noVerde: novoVerde });
         await window.registrarAcaoHistorico(pautaId, assistidoId, novoVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
-        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        
+        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
+            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        }
     } catch (e) { showNotification("Erro ao atualizar o Verde", "error"); }
 };
 
-window.salvarMonitorLink = async function(pautaId, assistidoId) {
+window.salvarMonitorLink = async function(pautaId, assistidoId, inputId) {
     if (!window.app || !window.app.db) return;
-    const val = document.getElementById(`m-link-${assistidoId}`).value.trim();
+    const input = document.getElementById(inputId || `m-link-${assistidoId}`);
+    if(!input) return;
+    const val = input.value.trim();
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfLink: val });
         await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
         showNotification("Link salvo com sucesso!", "success");
-        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        
+        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
+            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        }
     } catch (e) { showNotification("Erro ao salvar Link", "error"); }
 };
 
-window.salvarMonitorObs = async function(pautaId, assistidoId) {
+window.salvarMonitorObs = async function(pautaId, assistidoId, inputId) {
     if (!window.app || !window.app.db) return;
-    const val = document.getElementById(`m-obs-${assistidoId}`).value.trim();
+    const input = document.getElementById(inputId || `m-obs-${assistidoId}`);
+    if(!input) return;
+    const val = input.value.trim();
     try {
         const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfObservacoes: val });
         await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
         showNotification("Observação atualizada!", "success");
-        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        
+        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
+            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+        }
     } catch (e) { showNotification("Erro ao salvar Obs", "error"); }
 };
 
@@ -2392,17 +2423,5 @@ window.registrarAcaoHistorico = async function(pautaId, assistidoId, descricaoAc
         await updateDoc(assistidoRef, { historicoAcoes: arrayUnion(registro) });
     } catch (err) {
         console.warn("Falha ao salvar auditoria:", err);
-    }
-};
-
-window.verResultados = async (coletaId) => {
-    if (!window.app || !window.app.db) return;
-    ColetasBiService.abrirResultados(window.app.db, coletaId);
-};
-
-window.ApiIntegration = {
-    simularSincronizacaoVerde: function(pautaId) {
-        console.log("Simulando sincronização verde para a pauta:", pautaId);
-        showNotification("Sincronização simulada com sucesso!", "success");
     }
 };
