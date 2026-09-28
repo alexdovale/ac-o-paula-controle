@@ -31,7 +31,7 @@ export const MonitoramentoService = {
         if (!modal) return;
 
         document.getElementById('monitor-nome-assistido').textContent = assistidoNome;
-        document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">Carregando histórico...</p>';
+        document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">A carregar histórico...</p>';
         
         const tituloInp = document.getElementById('monitor-upload-titulo');
         const fileInp = document.getElementById('monitor-file-input');
@@ -45,7 +45,7 @@ export const MonitoramentoService = {
             const snap = await getDoc(assistidoRef);
 
             if (!snap.exists()) {
-                showNotification("Registro não encontrado", "error");
+                showNotification("Registo não encontrado", "error");
                 return;
             }
 
@@ -55,6 +55,20 @@ export const MonitoramentoService = {
             const obsInp = document.getElementById('monitor-pdf-obs');
             const btnVerde = document.getElementById('monitor-btn-verde');
             const btnVerPdf = document.getElementById('monitor-btn-ver-pdf');
+            
+            // Inserir Botão de Dossiê PDF
+            let btnImprimir = document.getElementById('monitor-btn-imprimir');
+            if (!btnImprimir && btnVerde) {
+                btnImprimir = document.createElement('button');
+                btnImprimir.id = 'monitor-btn-imprimir';
+                btnImprimir.className = 'px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider bg-slate-700 text-white hover:bg-slate-800 ml-2 flex items-center gap-1';
+                btnImprimir.innerHTML = '🖨️ Dossiê';
+                btnVerde.parentNode.appendChild(btnImprimir);
+            }
+
+            if (btnImprimir) {
+                btnImprimir.onclick = () => this._gerarDossierPDF(data, assistidoNome);
+            }
 
             if(linkInp) linkInp.value = data.pdfLink || '';
             if(obsInp) obsInp.value = data.pdfObservacoes || '';
@@ -83,7 +97,7 @@ export const MonitoramentoService = {
                 if(!linkInp) return;
                 await updateDoc(assistidoRef, { pdfLink: linkInp.value.trim() });
                 await this.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`, app);
-                showNotification("Link salvo com sucesso!", "success");
+                showNotification("Link guardado com sucesso!", "success");
                 this.abrirMonitoramento(pautaId, assistidoId, assistidoNome, app);
             };
 
@@ -92,7 +106,7 @@ export const MonitoramentoService = {
                 if(!obsInp) return;
                 await updateDoc(assistidoRef, { pdfObservacoes: obsInp.value.trim() });
                 await this.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`, app);
-                showNotification("Observação salva!", "success");
+                showNotification("Observação guardada!", "success");
                 this.abrirMonitoramento(pautaId, assistidoId, assistidoNome, app);
             };
 
@@ -122,7 +136,7 @@ export const MonitoramentoService = {
             
             if (listaArquivosContainer) {
                 if (docsDigitalizados.length === 0) {
-                    listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum arquivo enviado diretamente pelo sistema.</p>';
+                    listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum ficheiro enviado diretamente pelo sistema.</p>';
                 } else {
                     listaArquivosContainer.innerHTML = '';
                     docsDigitalizados.forEach(docItem => {
@@ -144,12 +158,12 @@ export const MonitoramentoService = {
                     const file = fileInput.files[0];
 
                     if (!titulo || !file) {
-                        showNotification("Preencha o título e selecione um arquivo.", "error");
+                        showNotification("Preencha o título e selecione um ficheiro.", "error");
                         return;
                     }
 
                     btnEnviarUpload.disabled = true;
-                    btnEnviarUpload.innerHTML = "⌛ ENVIANDO...";
+                    btnEnviarUpload.innerHTML = "⌛ A ENVIAR...";
 
                     try {
                         const storage = getStorage(app.db.app);
@@ -191,7 +205,72 @@ export const MonitoramentoService = {
     },
 
     // ========================================================
-    // MONITORAMENTO GLOBAL (APENAS LEITURA DE DOCUMENTOS)
+    // GERAÇÃO DE DOSSIÊ PDF (NOVA FUNCIONALIDADE)
+    // ========================================================
+    _gerarDossierPDF(data, assistidoNome) {
+        if (!window.jspdf) {
+            showNotification("Motor de PDF não carregado. Recarregue a página.", "error");
+            return;
+        }
+        showNotification("A gerar Dossiê em PDF...", "info");
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.text("Dossiê de Acompanhamento - SIGEP", 14, 20);
+        
+        doc.setFontSize(10);
+        doc.setFont("helvetica", "normal");
+        doc.setTextColor(100);
+        doc.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 14, 26);
+        
+        doc.setTextColor(0);
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("1. Dados do Assistido", 14, 35);
+        
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(10);
+        
+        // Tratar múltiplos assuntos ou números
+        const assuntosStr = Array.isArray(data.subject) ? data.subject.join(' | ') : (data.subject || 'Não informado');
+        const agendamentosStr = Array.isArray(data.numAgendamento) ? data.numAgendamento.join(', ') : (data.numeroAgendamento || data.numAgendamento || 'Avulso');
+
+        doc.text(`Nome: ${assistidoNome}`, 14, 42);
+        doc.text(`Identificação / Agendamento: ${agendamentosStr}`, 14, 48);
+        doc.text(`Assunto(s): ${assuntosStr}`, 14, 54);
+        doc.text(`Estado Atual: ${String(data.status || 'Desconhecido').toUpperCase()}`, 14, 60);
+
+        let yPos = 70;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(12);
+        doc.text("2. Cronologia de Eventos (Linha do Tempo)", 14, yPos);
+        yPos += 7;
+
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(9);
+        const acoes = data.historicoAcoes || [];
+        if (acoes.length === 0) {
+            doc.text("Nenhum evento registado na auditoria.", 14, yPos);
+        } else {
+            acoes.forEach((acao) => {
+                const linhasTexto = doc.splitTextToSize(`• ${acao}`, 180);
+                doc.text(linhasTexto, 14, yPos);
+                yPos += (linhasTexto.length * 5);
+                if (yPos > 280) {
+                    doc.addPage();
+                    yPos = 20;
+                }
+            });
+        }
+
+        doc.save(`Dossie_${assistidoNome.replace(/\s+/g, '_')}.pdf`);
+        showNotification("Dossiê gerado com sucesso!", "success");
+    },
+
+    // ========================================================
+    // MONITORAMENTO GLOBAL (APENAS LEITURA DE DOCUMENTOS E SLA)
     // ========================================================
     abrirMonitoramentoGlobal(app) {
         let modal = document.getElementById('monitoramento-global-modal');
@@ -206,17 +285,48 @@ export const MonitoramentoService = {
         const container = document.getElementById('monitor-global-list');
         if (!container || !app || !app.allAssisted) return;
 
-        const assistidos = app.allAssisted.filter(a => (a.name || '').toLowerCase().includes(filtro));
+        let assistidos = app.allAssisted.filter(a => (a.name || '').toLowerCase().includes(filtro));
         
         if (assistidos.length === 0) {
             container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-sm">Nenhum assistido encontrado.</div>`;
             return;
         }
 
+        // 🌟 ORDENAÇÃO INTELIGENTE (SLA): Quem espera há mais tempo aparece primeiro
+        assistidos.sort((a, b) => {
+            if (a.status === 'aguardando' && b.status !== 'aguardando') return -1;
+            if (a.status !== 'aguardando' && b.status === 'aguardando') return 1;
+            if (a.status === 'aguardando' && b.status === 'aguardando') {
+                const timeA = a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0;
+                const timeB = b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0;
+                return timeA - timeB; 
+            }
+            return 0;
+        });
+
+        const agora = Date.now();
         let html = '';
+
         assistidos.forEach(a => {
             const isVerde = a.noVerde || false;
             
+            // Tratamento SLA Visual
+            let borderSlaClass = "border-slate-200";
+            let badgeSlaHtml = "";
+            let animPulse = "";
+
+            if (a.status === 'aguardando' && a.arrivalTime) {
+                const timeDiff = Math.floor((agora - new Date(a.arrivalTime).getTime()) / 60000);
+                if (timeDiff >= 60) {
+                    borderSlaClass = "border-red-400 shadow-red-100 ring-1 ring-red-400";
+                    animPulse = "animate-pulse";
+                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">⚠️ ESPERA: ${timeDiff} MIN</span>`;
+                } else if (timeDiff >= 30) {
+                    borderSlaClass = "border-amber-400 shadow-amber-100 ring-1 ring-amber-400";
+                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">⏳ ESPERA: ${timeDiff} MIN</span>`;
+                }
+            }
+
             // Tratamento APENAS LEITURA dos documentos
             let docsUploadHTML = '';
             const docsDigitalizados = a.documentosDigitalizados || [];
@@ -229,23 +339,32 @@ export const MonitoramentoService = {
                         </div>`;
                 });
             } else {
-                docsUploadHTML = '<p class="text-[9px] text-slate-400 italic">Nenhum upload registrado.</p>';
+                docsUploadHTML = '<p class="text-[9px] text-slate-400 italic">Nenhum upload registado.</p>';
             }
 
             const linkPrincipalHtml = a.pdfLink 
-                ? `<a href="${a.pdfLink}" target="_blank" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 hover:bg-blue-200 w-full justify-center">🔗 Abrir Link Principal</a>` 
+                ? `<a href="${a.pdfLink}" target="_blank" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 hover:bg-blue-200 w-full justify-center shadow-sm">🔗 Abrir Link Principal</a>` 
                 : `<span class="text-[10px] text-slate-400 italic block text-center p-1 border border-dashed rounded">Nenhum link externo</span>`;
 
+            // Tratamento Múltiplos Assuntos/Agendamentos
+            const assuntosRenderizados = Array.isArray(a.subject) ? a.subject.join(' | ') : escapeHTML(a.subject || 'Sem Nome');
+            const agendamentoRenderizado = Array.isArray(a.numAgendamento) ? a.numAgendamento.join(', ') : escapeHTML(a.numeroAgendamento || a.numAgendamento || 'N/A');
+
             html += `
-                <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-3 flex flex-col md:flex-row gap-4">
+                <div class="bg-white p-4 rounded-2xl shadow-sm border ${borderSlaClass} mb-3 flex flex-col md:flex-row gap-4 transition-all">
                     
                     <!-- DADOS DO ASSISTIDO -->
                     <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
                         <div>
-                            <h4 class="font-black text-slate-800 text-sm truncate" title="${escapeHTML(a.name)}">${escapeHTML(a.name || 'Sem Nome')}</h4>
-                            <div class="mt-2 space-y-1.5">
-                                <span class="block bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
-                                <span class="block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded">Agendamento: #${escapeHTML(a.numeroAgendamento || a.numAgendamento || 'N/A')}</span>
+                            <div class="flex items-center justify-between gap-2 mb-1">
+                                <h4 class="font-black text-slate-800 text-sm truncate" title="${escapeHTML(a.name)}">${escapeHTML(a.name || 'Sem Nome')}</h4>
+                                ${badgeSlaHtml}
+                            </div>
+                            <p class="text-[10px] text-slate-500 font-bold mb-2 uppercase line-clamp-2">${assuntosRenderizados}</p>
+                            
+                            <div class="mt-2 space-y-1.5 flex flex-wrap gap-2">
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded shadow-sm">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
+                                <span class="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded shadow-sm">Agendamento: #${agendamentoRenderizado}</span>
                             </div>
                         </div>
                         <div class="mt-4 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
@@ -259,7 +378,7 @@ export const MonitoramentoService = {
                     <!-- GESTÃO DE DOCUMENTOS (SOMENTE CONSULTA) -->
                     <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col gap-2">
                         <label class="text-[9px] font-black text-slate-400 uppercase">Documentos Enviados</label>
-                        <div class="max-h-20 overflow-y-auto mb-2 pr-1">
+                        <div class="max-h-20 overflow-y-auto mb-2 pr-1 custom-scrollbar">
                             ${docsUploadHTML}
                         </div>
                         
@@ -273,8 +392,8 @@ export const MonitoramentoService = {
                     </div>
 
                     <!-- TIMELINE -->
-                    <div class="w-full md:w-1/3 pl-2">
-                        <h5 class="text-[9px] font-black text-slate-400 uppercase mb-3">Últimos Eventos</h5>
+                    <div class="w-full md:w-1/3 pl-2 max-h-[160px] overflow-y-auto custom-scrollbar">
+                        <h5 class="text-[9px] font-black text-slate-400 uppercase mb-3 sticky top-0 bg-white z-10 pb-1">Últimos Eventos</h5>
                         <div class="relative border-l-2 border-slate-200 ml-2">
                             ${this._gerarHtmlTimeline(a)}
                         </div>
@@ -293,6 +412,8 @@ export const MonitoramentoService = {
         const timelineContainer = document.getElementById(containerId);
         if(!timelineContainer) return;
         timelineContainer.innerHTML = this._gerarHtmlTimeline(data, false);
+        // O scroll desce automaticamente se os eventos ultrapassarem o tamanho da div
+        timelineContainer.scrollTop = timelineContainer.scrollHeight;
     },
 
     _gerarHtmlTimeline(data, resumida = true) {
@@ -300,16 +421,41 @@ export const MonitoramentoService = {
         const acoes = data.historicoAcoes || [];
         const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
         
+        // 1. Mostrar o status de Agendamento ou Avulso
+        const agendamentoRenderizado = Array.isArray(data.scheduledTime) ? data.scheduledTime.join(', ') : escapeHTML(data.scheduledTime);
+        const assuntoRenderizado = Array.isArray(data.subject) ? data.subject.join(' | ') : escapeHTML(data.subject || 'Não informado');
+
+        if (agendamentoRenderizado && agendamentoRenderizado !== '--:--') {
+            historicoHTML += `
+                <div class="relative pl-6">
+                    <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-slate-300 ring-4 ring-slate-50"></span>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-0.5">AGENDAMENTO • ${agendamentoRenderizado}</p>
+                    ${!resumida ? `<p class="text-xs text-slate-700 font-medium">Marcado para assunto: ${assuntoRenderizado}.</p>` : ''}
+                </div>
+                <div class="h-4 border-l-2 border-slate-200 absolute left-[3px]"></div>
+            `;
+        } else {
+             historicoHTML += `
+                <div class="relative pl-6">
+                    <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-slate-300 ring-4 ring-slate-50"></span>
+                    <p class="text-[10px] font-bold text-slate-500 uppercase mb-0.5">ATENDIMENTO AVULSO</p>
+                    ${!resumida ? `<p class="text-xs text-slate-700 font-medium">Utente não agendado, inserido com assunto: ${assuntoRenderizado}.</p>` : ''}
+                </div>
+                 <div class="h-4 border-l-2 border-slate-200 absolute left-[3px]"></div>
+            `;
+        }
+
+        // 2. Mostrar a hora exata da Chegada
         historicoHTML += `
-            <div class="relative pl-6">
+            <div class="relative pl-6 ${data.scheduledTime || data.type === 'avulso' ? 'mt-4' : ''}">
                 <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-slate-50"></span>
                 <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
-                ${!resumida ? '<p class="text-xs text-slate-700 font-medium">Assistido registrado na recepção.</p>' : ''}
+                ${!resumida ? '<p class="text-xs text-slate-700 font-medium">Assistido registado na recepção.</p>' : ''}
             </div>
         `;
 
         if (acoes.length === 0) {
-            historicoHTML += `<div class="relative pl-6 mt-4"><p class="text-[10px] text-slate-400 italic">Sem movimentações.</p></div>`;
+            historicoHTML += `<div class="relative pl-6 mt-4"><p class="text-[10px] text-slate-400 italic">Sem movimentações adicionais.</p></div>`;
         } else {
             let acoesList = acoes.slice().reverse();
             if (resumida) acoesList = acoesList.slice(0, 5);
