@@ -1334,6 +1334,33 @@ class SIGEPApp {
                 if (typeof PautaService.populateRoomSelects === 'function') {
                     PautaService.populateRoomSelects(this);
                 }
+
+                // 🌟 CONTROLE INTELIGENTE DE ABAS (AGENDAMENTO VS AVULSO) 🌟
+                const tipoConfig = String(this.currentPautaData.type || this.currentPautaData.tipo || 'hibrido').toLowerCase();
+                const tabAgendamento = document.getElementById('tab-agendamento');
+                const tabAvulso = document.getElementById('tab-avulso');
+                const navTabs = document.getElementById('nav-tabs-atendimento');
+
+                if (tabAgendamento && tabAvulso) {
+                    // Reseta as abas mostrando as duas inicialmente
+                    tabAgendamento.classList.remove('hidden');
+                    tabAvulso.classList.remove('hidden');
+                    if (navTabs) navTabs.classList.remove('hidden');
+
+                    if (tipoConfig === 'agendamento' && this.currentPautaData.permiteAvulso !== true) {
+                        tabAvulso.classList.add('hidden');
+                        UIService.switchTab('agendamento', this);
+                    } 
+                    else if (tipoConfig === 'avulso' && this.currentPautaData.permiteAgendamento !== true) {
+                        tabAgendamento.classList.add('hidden');
+                        UIService.switchTab('avulso', this);
+                    } 
+                    else {
+                        // Se for híbrido ou tiver permissões mescladas, mostra as duas e foca no agendamento
+                        UIService.switchTab('agendamento', this);
+                    }
+                }
+                // 🌟 FIM DO CONTROLE DE ABAS 🌟
             }
 
             this.setupRealtimeListener(pautaId);
