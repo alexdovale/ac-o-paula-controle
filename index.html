@@ -698,6 +698,15 @@
                                         <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
                                         Colaboradores
                                     </button>
+                                    
+                                    <!-- INJEÇÃO DO MONITOR GLOBAL -->
+                                    <button id="btn-monitor-pauta-global" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-indigo-700 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">
+                                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
+                                        </span>
+                                        Monitor da Pauta
+                                    </button>
+                                    
                                     <button id="notes-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📋</span>
                                         Anotações
@@ -800,7 +809,7 @@
                         <input type="file" id="file-upload" class="hidden" accept=".csv">
 
                         <a href="#" id="format-help-link" class="w-full sm:w-auto text-sm text-green-600 hover:text-green-800 hover:underline transition-colors duration-300 flex items-center justify-center sm:justify-start gap-1">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 0 8 0a8 8 0 0 0 0 16zm.95-11.05a.9.9 0 0 1 .023 1.272l-.2.204a.9.9 0 0 1-1.273-.226L6.451 4.95a.9.9 0 0 1 1.273-.023l.204.2zM8 8.5a1 1 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-info-circle-fill" viewBox="0 0 16 16"><path d="M8 16A8 8 0 1 1 0 2 1 1 0 0 1 0-2z"/></svg>
                             <span>Como formatar pauta?</span>
                         </a>
                     </div>
@@ -1271,14 +1280,14 @@
         </div>
     </div>
 
-    <!-- MODAL DE MONITORAMENTO E LINHA DO TEMPO -->
+    <!-- MODAL DE MONITORAMENTO E LINHA DO TEMPO INDIVIDUAL -->
     <div id="monitoramento-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
-            <!-- Cabeçalho Escuro -->
             <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
                 <div>
                     <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
-                        <span>⏱️</span> Monitoramento e Auditoria do Caso
+                        <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Monitoramento e Auditoria do Caso
                     </h3>
                     <p id="monitor-nome-assistido" class="text-xs text-slate-300 mt-1 font-medium tracking-wide"></p>
                 </div>
@@ -1286,107 +1295,110 @@
             </div>
             
             <div class="flex flex-col md:flex-row flex-1 overflow-hidden bg-slate-50">
-                <!-- COLUNA ESQUERDA: Gestão de Documentos -->
+                <!-- Gestão de Documentos Avançada -->
                 <div class="w-full md:w-1/2 p-5 overflow-y-auto border-r border-slate-200 bg-white">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-100 pb-2 flex items-center gap-2">
-                        <span>📁</span> Gestão de Documentos
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>
+                        Documentação do Assistido
                     </h4>
                     
                     <div class="flex items-center justify-between bg-slate-50 p-3 rounded-xl border border-slate-200 mb-5">
                         <span class="font-bold text-xs text-slate-600 uppercase">Status no Verde:</span>
-                        <button id="monitor-btn-verde" class="px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider">
-                            Carregando...
-                        </button>
+                        <button id="monitor-btn-verde" class="px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider">Carregando...</button>
                     </div>
-    
+
                     <div class="space-y-5">
-                        <div>
-                            <label class="text-[10px] font-black text-slate-400 uppercase">Link do PDF (Adobe Scan / Nuvem)</label>
-                            <div class="flex gap-2 mt-1">
-                                <input type="text" id="monitor-pdf-link" placeholder="Cole a URL do documento..." class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 focus:bg-white font-medium transition-all">
-                                <button id="monitor-btn-salvar-link" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-all shrink-0">Salvar</button>
-                                <button id="monitor-btn-ver-pdf" class="hidden bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs shadow-sm transition-all shrink-0" title="Ver PDF">👁️ Abrir</button>
+                        <!-- SELETOR: UPLOAD OU LINK -->
+                        <div class="flex gap-2 p-1 bg-slate-100 rounded-lg">
+                            <button type="button" id="monitor-btn-tab-upload" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all">Upload (Arquivo/Foto)</button>
+                            <button type="button" id="monitor-btn-tab-link" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">Link Principal</button>
+                        </div>
+
+                        <!-- CAIXA DE UPLOAD DIRETO -->
+                        <div id="monitor-box-upload" class="block space-y-3">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase">Título / Descrição do Documento</label>
+                                <input type="text" id="monitor-upload-titulo" placeholder="Ex: RG, CNH, Comprovante..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium mt-1">
+                            </div>
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase">Selecionar Arquivo PDF ou Imagem</label>
+                                <div class="flex gap-2 mt-1">
+                                    <input type="file" id="monitor-file-input" accept=".pdf,image/*" class="w-full text-xs text-slate-600 file:mr-3 file:py-2 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-bold file:bg-blue-100 file:text-blue-700 hover:file:bg-blue-200 cursor-pointer">
+                                </div>
+                            </div>
+                            <button id="monitor-btn-enviar-upload" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 rounded-xl text-xs shadow-md transition-all active:scale-95 flex items-center justify-center gap-2">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"></path></svg>
+                                ENVIAR PARA A NUVEM
+                            </button>
+                            
+                            <!-- Lista de Arquivos já anexados -->
+                            <div class="mt-4 border-t border-slate-100 pt-3">
+                                <h5 class="text-[10px] font-black text-slate-400 uppercase mb-2">Arquivos Anexados</h5>
+                                <div id="monitor-lista-arquivos-anexados" class="space-y-2"></div>
                             </div>
                         </div>
-    
-                        <div>
+
+                        <!-- CAIXA DE LINK PRINCIPAL -->
+                        <div id="monitor-box-link" class="hidden space-y-3">
+                            <div>
+                                <label class="text-[10px] font-black text-slate-400 uppercase">Link Principal (Ex: Google Drive)</label>
+                                <div class="flex gap-2 mt-1">
+                                    <input type="text" id="monitor-pdf-link" placeholder="Cole a URL do documento..." class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium">
+                                    <button id="monitor-btn-salvar-link" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm shrink-0">Salvar</button>
+                                    <button id="monitor-btn-ver-pdf" class="hidden bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs shadow-sm shrink-0" title="Ver PDF">👁️ Abrir</button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Observações de Pendências (Fixo) -->
+                        <div class="pt-2 border-t border-slate-100">
                             <label class="text-[10px] font-black text-slate-400 uppercase">Observações / Pendências de Docs</label>
                             <div class="flex gap-2 mt-1">
-                                <input type="text" id="monitor-pdf-obs" placeholder="Ex: Falta comprovante de residência..." class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 focus:bg-white font-medium transition-all">
-                                <button id="monitor-btn-salvar-obs" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-all shrink-0">Atualizar</button>
+                                <input type="text" id="monitor-pdf-obs" placeholder="Ex: Falta comprovante..." class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium">
+                                <button id="monitor-btn-salvar-obs" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm shrink-0">Atualizar</button>
                             </div>
                         </div>
                     </div>
                 </div>
-    
-                <!-- COLUNA DIREITA: Linha do Tempo -->
+
+                <!-- Linha do Tempo -->
                 <div class="w-full md:w-1/2 p-5 overflow-y-auto">
                     <h4 class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-4 border-b border-slate-200 pb-2 flex items-center gap-2">
-                        <span>⏳</span> Linha do Tempo
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                        Linha do Tempo
                     </h4>
-                    
                     <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm min-h-[300px]">
-                        <div id="monitor-timeline-container" class="relative border-l-2 border-slate-200 ml-3 space-y-6">
-                            <!-- O Javascript vai injetar o histórico aqui -->
-                        </div>
+                        <div id="monitor-timeline-container" class="relative border-l-2 border-slate-200 ml-3 space-y-6"></div>
                     </div>
                 </div>
             </div>
         </div>
     </div>
-        
-    <!-- MODAL OUVIDORIA / FEEDBACK GLOBAL -->
-    <div id="feedback-global-modal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[100] p-4 animate-fade-in" onclick="this.classList.add('hidden')">
-        <div class="bg-white w-full max-w-md rounded-[24px] shadow-2xl flex flex-col overflow-hidden border border-slate-200" onclick="event.stopPropagation()">
-            <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50/80">
-                <h2 class="text-sm font-black text-slate-800 uppercase tracking-widest flex items-center gap-2">
-                    <svg class="w-5 h-5 text-blue-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
-                    Ouvidoria & Suporte
-                </h2>
-                <button id="close-feedback-global-btn" class="text-slate-400 hover:text-red-500 text-3xl font-bold transition-colors leading-none p-1 bg-white rounded-full shadow-sm w-8 h-8 flex items-center justify-center pb-2">&times;</button>
+    
+    <!-- MODAL DE MONITORAMENTO GLOBAL -->
+    <div id="monitoramento-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white w-full max-w-5xl rounded-3xl shadow-2xl overflow-hidden flex flex-col h-[85vh]">
+            <!-- Cabeçalho -->
+            <div class="bg-indigo-700 p-5 text-white flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
+                        <svg class="w-5 h-5 text-indigo-300" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Monitor da Pauta / Auditoria
+                    </h3>
+                    <p class="text-xs text-indigo-200 mt-1 font-medium tracking-wide">Acompanhe a linha do tempo e documentos de todos os assistidos.</p>
+                </div>
+                <button onclick="document.getElementById('monitoramento-global-modal').classList.add('hidden')" class="text-indigo-300 hover:text-white text-3xl font-bold leading-none">&times;</button>
             </div>
-            <form id="feedback-global-form" class="p-5 space-y-5">
-                <p class="text-xs text-slate-500 font-medium">Envie sua sugestão, reporte um erro ou faça um elogio diretamente para a administração do sistema.</p>
-                
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Tipo de Mensagem</label>
-                    <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-                        <label class="cursor-pointer">
-                            <input type="radio" name="fbg_tipo" value="Dúvida" class="peer sr-only" checked>
-                            <div class="text-center px-1 py-2 bg-slate-50 border border-slate-200 rounded-xl peer-checked:bg-indigo-50 peer-checked:border-indigo-500 peer-checked:text-indigo-700 transition-all hover:bg-slate-100">
-                                <span class="block text-[10px] sm:text-xs font-bold uppercase tracking-wide">Dúvida</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="fbg_tipo" value="Sugestão" class="peer sr-only">
-                            <div class="text-center px-1 py-2 bg-slate-50 border border-slate-200 rounded-xl peer-checked:bg-blue-50 peer-checked:border-blue-500 peer-checked:text-blue-700 transition-all hover:bg-slate-100">
-                                <span class="block text-[10px] sm:text-xs font-bold uppercase tracking-wide">Sugestão</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="fbg_tipo" value="Erro" class="peer sr-only">
-                            <div class="text-center px-1 py-2 bg-slate-50 border border-slate-200 rounded-xl peer-checked:bg-red-50 peer-checked:border-red-500 peer-checked:text-red-700 transition-all hover:bg-slate-100">
-                                <span class="block text-[10px] sm:text-xs font-bold uppercase tracking-wide">Erro/Bug</span>
-                            </div>
-                        </label>
-                        <label class="cursor-pointer">
-                            <input type="radio" name="fbg_tipo" value="Elogio" class="peer sr-only">
-                            <div class="text-center px-1 py-2 bg-slate-50 border border-slate-200 rounded-xl peer-checked:bg-emerald-50 peer-checked:border-emerald-500 peer-checked:text-emerald-700 transition-all hover:bg-slate-100">
-                                <span class="block text-[10px] sm:text-xs font-bold uppercase tracking-wide">Elogio</span>
-                            </div>
-                        </label>
-                    </div>
-                </div>
-                
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Sua Mensagem <span class="text-red-500">*</span></label>
-                    <textarea id="fbg_mensagem" required rows="4" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-sm focus:outline-none focus:border-blue-500 focus:ring-1 focus:ring-blue-500 transition-all resize-none placeholder-slate-400" placeholder="Descreva aqui sua mensagem detalhadamente..."></textarea>
-                </div>
-                
-                <button type="submit" id="btn-submit-global-feedback" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest text-xs py-3.5 rounded-xl shadow-md transition-all">
-                    Enviar para Administração
-                </button>
-            </form>
+            
+            <!-- Barra de Busca -->
+            <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
+                <input type="text" id="monitor-global-search" placeholder="🔍 Buscar assistido no monitor..." class="w-full p-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm transition-all">
+            </div>
+
+            <!-- Lista de Assistidos e Timeline (Corpo) -->
+            <div class="flex-1 overflow-y-auto p-2 bg-slate-100" id="monitor-global-list">
+                <p class="text-center text-slate-400 py-10 font-bold animate-pulse">Carregando dados da pauta...</p>
+            </div>
         </div>
     </div>
 
@@ -1685,265 +1697,6 @@
                 }
             });
         }
-    </script>
-    
-    <!-- ============================================== -->
-    <!-- WIDGETS DE UX: DITADO POR VOZ E AUTO-SAVE      -->
-    <!-- ============================================== -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            // Verifica suporte a voz no navegador
-            const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-            
-            // Função para aplicar os poderes a qualquer caixa de texto (textarea)
-            function aplicarSuperPoderesAosTextos() {
-                const textareas = document.querySelectorAll('textarea');
-                
-                textareas.forEach(ta => {
-                    if (!ta.id || ta.hasAttribute('data-ux-aplicado')) return;
-                    ta.setAttribute('data-ux-aplicado', 'true'); // Evita duplicar
-
-                    // --- 1. SALVA-VIDAS AUTOMÁTICO ---
-                    const storageKey = `autosave_sigep_${ta.id}`;
-                    const savedText = localStorage.getItem(storageKey);
-                    if (savedText) ta.value = savedText; // Restaura se a página fechou do nada
-
-                    ta.addEventListener('input', () => {
-                        localStorage.setItem(storageKey, ta.value); // Salva a cada letra digitada
-                    });
-
-                    // --- 2. DITADO POR VOZ ---
-                    if (SpeechRecognition) {
-                        const micBtn = document.createElement('button');
-                        micBtn.type = 'button';
-                        micBtn.innerHTML = '🎙️ Ditar Resumo';
-                        micBtn.className = 'text-[11px] bg-slate-100 hover:bg-slate-200 text-slate-600 font-bold py-1.5 px-3 rounded-lg border border-slate-300 ml-auto shadow-sm transition-all flex items-center gap-1 mt-1 mb-3';
-                        
-                        ta.parentNode.insertBefore(micBtn, ta.nextSibling);
-
-                        const recognition = new SpeechRecognition();
-                        recognition.lang = 'pt-BR';
-                        recognition.continuous = false;
-
-                        micBtn.addEventListener('click', (e) => {
-                            e.preventDefault();
-                            if (micBtn.classList.contains('bg-red-100')) {
-                                recognition.stop();
-                                return;
-                            }
-                            recognition.start();
-                            micBtn.innerHTML = '🔴 Ouvindo... (Fale agora)';
-                            micBtn.classList.replace('bg-slate-100', 'bg-red-100');
-                            micBtn.classList.replace('text-slate-600', 'text-red-600');
-                        });
-
-                        recognition.onresult = (event) => {
-                            const transcript = event.results[0][0].transcript;
-                            ta.value += (ta.value ? ' ' : '') + transcript;
-                            ta.dispatchEvent(new Event('input')); // Salva o que a voz digitou
-                        };
-
-                        recognition.onend = () => {
-                            micBtn.innerHTML = '🎙️ Ditar Resumo';
-                            micBtn.classList.replace('bg-red-100', 'bg-slate-100');
-                            micBtn.classList.replace('text-red-600', 'text-slate-600');
-                        };
-                    }
-                });
-            }
-
-            // Aplica agora e fica vigiando caso novos modais sejam abertos
-            aplicarSuperPoderesAosTextos();
-            const observer = new MutationObserver(aplicarSuperPoderesAosTextos);
-            observer.observe(document.body, { childList: true, subtree: true });
-        });
-    </script>
-
-    <!-- Modal de Digitalização Livre (Com Upload e Link) -->
-    <div id="modal-digitalizar-assistido" class="hidden fixed inset-0 bg-slate-900/80 z-[90] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-            <div class="bg-emerald-600 p-5 text-white flex justify-between items-center">
-                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2"><span>📑</span> Adicionar Documento</h3>
-                <button onclick="document.getElementById('modal-digitalizar-assistido').classList.add('hidden')" class="text-emerald-200 hover:text-white text-2xl font-bold">&times;</button>
-            </div>
-            
-            <div class="p-6 space-y-4">
-                <div class="bg-emerald-50 border border-emerald-200 p-3 rounded-xl text-xs text-emerald-800 font-bold text-center">
-                    Assistido: <span id="nome-assistido-digitalizacao" class="uppercase"></span>
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Título do Documento</label>
-                    <input type="text" id="input-titulo-doc" placeholder="Ex: RG, Petição Inicial..." class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1 font-bold text-slate-700">
-                </div>
-
-                <!-- SELETOR: UPLOAD OU LINK -->
-                <div class="flex gap-2 p-1 bg-slate-100 rounded-lg">
-                    <button type="button" id="btn-tab-upload" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all">Upload de Arquivo</button>
-                    <button type="button" id="btn-tab-link" class="flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all">Colar Link Externo</button>
-                </div>
-
-                <div id="box-upload" class="block">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Arquivo PDF/Foto</label>
-                    <input type="file" id="input-pdf-recepcao" accept=".pdf,image/*" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1">
-                </div>
-
-                <div id="box-link" class="hidden">
-                    <label class="text-[10px] font-black text-slate-400 uppercase">URL / Link do Documento</label>
-                    <input type="url" id="input-link-externo" placeholder="https://..." class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 mt-1 font-mono text-blue-600">
-                </div>
-
-                <div>
-                    <label class="text-[10px] font-black text-slate-400 uppercase">Senha de Proteção (PIN)</label>
-                    <input type="password" id="input-senha-recepcao" placeholder="Ex: 1234" maxlength="6" class="w-full text-center text-lg font-bold p-3 border border-slate-200 rounded-xl bg-slate-50 mt-1 tracking-widest">
-                </div>
-
-                <button id="btn-enviar-documento-pauta" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-4 rounded-2xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95">
-                    Adicionar à Ficha
-                </button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPT DO MODAL DE DIGITALIZAÇÃO -->
-    <script type="module">
-        import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
-        import { doc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-        
-        window.assistidoAlvoId = null;
-        let tipoEnvioAtual = 'upload'; // Pode ser 'upload' ou 'link'
-
-        // Lógica para alternar entre as abinhas de Upload e Link
-        const btnTabUpload = document.getElementById('btn-tab-upload');
-        const btnTabLink = document.getElementById('btn-tab-link');
-        const boxUpload = document.getElementById('box-upload');
-        const boxLink = document.getElementById('box-link');
-
-        btnTabUpload?.addEventListener('click', () => {
-            tipoEnvioAtual = 'upload';
-            btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all";
-            btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
-            boxUpload.classList.remove('hidden');
-            boxLink.classList.add('hidden');
-        });
-
-        btnTabLink?.addEventListener('click', () => {
-            tipoEnvioAtual = 'link';
-            btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-emerald-600 border border-slate-200 transition-all";
-            btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
-            boxLink.classList.remove('hidden');
-            boxUpload.classList.add('hidden');
-        });
-
-        // Abre o modal quando clica na câmera no card
-        window.abrirModalDigitalizacao = (id, nome) => {
-            const modal = document.getElementById('modal-digitalizar-assistido');
-            if (modal) {
-                window.assistidoAlvoId = id;
-                document.getElementById('nome-assistido-digitalizacao').textContent = nome;
-                document.getElementById('input-titulo-doc').value = '';
-                document.getElementById('input-pdf-recepcao').value = '';
-                document.getElementById('input-link-externo').value = '';
-                document.getElementById('input-senha-recepcao').value = '';
-                
-                // Reseta para a aba de upload por padrão
-                btnTabUpload?.click();
-                
-                modal.classList.remove('hidden');
-            } else {
-                console.error("Modal não encontrado no HTML!");
-            }
-        };
-
-        // Salva o documento no Firebase
-        document.addEventListener('DOMContentLoaded', () => {
-            const btnEnviar = document.getElementById('btn-enviar-documento-pauta');
-            
-            if(btnEnviar) {
-                btnEnviar.addEventListener('click', async () => {
-                    const titulo = document.getElementById('input-titulo-doc').value.trim() || "Documento Digitalizado";
-                    const senha = document.getElementById('input-senha-recepcao').value.trim();
-                    const pautaId = window.app?.currentPauta?.id;
-
-                    if (!senha || !pautaId || !window.assistidoAlvoId) {
-                        alert("Por favor, preencha a senha de proteção e certifique-se de que a pauta está ativa.");
-                        return;
-                    }
-
-                    let urlFinal = "";
-                    let nomeArquivoFinal = "";
-
-                    // Lógica para UPLOAD DE ARQUIVO
-                    if (tipoEnvioAtual === 'upload') {
-                        const fileInput = document.getElementById('input-pdf-recepcao');
-                        const file = fileInput.files[0];
-                        
-                        if (!file) {
-                            alert("Por favor, selecione um arquivo para upload.");
-                            return;
-                        }
-
-                        btnEnviar.textContent = "ENVIANDO PARA A NUVEM...";
-                        btnEnviar.disabled = true;
-
-                        try {
-                            const storage = getStorage(window.app.db.app);
-                            const timestamp = Date.now();
-                            const path = `documentos_pautas/${pautaId}/${window.assistidoAlvoId}/${timestamp}_${file.name}`;
-                            const storageRef = ref(storage, path);
-                            
-                            await uploadBytes(storageRef, file);
-                            urlFinal = await getDownloadURL(storageRef);
-                            nomeArquivoFinal = file.name;
-                        } catch (e) {
-                            console.error("Erro ao fazer upload:", e);
-                            alert("Erro ao enviar documento para a nuvem.");
-                            btnEnviar.textContent = "Adicionar à Ficha";
-                            btnEnviar.disabled = false;
-                            return;
-                        }
-                    } 
-                    // Lógica para COLAR LINK
-                    else {
-                        const linkExterno = document.getElementById('input-link-externo').value.trim();
-                        if (!linkExterno) {
-                            alert("Por favor, cole a URL do documento.");
-                            return;
-                        }
-                        urlFinal = linkExterno;
-                        nomeArquivoFinal = "Link Externo";
-                        
-                        btnEnviar.textContent = "SALVANDO LINK...";
-                        btnEnviar.disabled = true;
-                    }
-
-                    // Adiciona na ficha do assistido no Firestore (Ocorre para ambos os fluxos)
-                    try {
-                        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", window.assistidoAlvoId);
-                        await updateDoc(assistidoRef, {
-                            documentosDigitalizados: arrayUnion({
-                                url: urlFinal,
-                                titulo: titulo,
-                                nomeArquivo: nomeArquivoFinal,
-                                senhaPin: senha,
-                                enviadoPor: window.app.currentUserName || "Recepção",
-                                dataEnvio: new Date().toISOString()
-                            })
-                        });
-
-                        alert("✅ Documento adicionado com sucesso!");
-                        document.getElementById('modal-digitalizar-assistido').classList.add('hidden');
-                        
-                    } catch (e) {
-                        console.error("Erro ao atualizar banco de dados:", e);
-                        alert("Erro ao salvar o documento na ficha do assistido.");
-                    } finally {
-                        btnEnviar.textContent = "Adicionar à Ficha";
-                        btnEnviar.disabled = false;
-                    }
-                });
-            }
-        });
     </script>
 </body>
 </html>
