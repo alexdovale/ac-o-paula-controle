@@ -35,6 +35,7 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
                 if (e.target.value === 'yes') {
                     wrapper.classList.remove('hidden');
                     const timeInput = document.getElementById('arrival-time');
+                    // Preenche automaticamente a hora atual se estiver vazio
                     if (timeInput && !timeInput.value) {
                         timeInput.value = new Date().toTimeString().slice(0, 5);
                     }
@@ -61,7 +62,7 @@ export const UIService = {
         document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
         document.getElementById('admin-container')?.classList.toggle('hidden', screenName !== 'admin');
         
-        // 👇 ESTAS DUAS LINHAS FALTAVAM PARA ESCONDER OS PAINÉIS NOVOS 👇
+        // 👇 ESTAS DUAS LINHAS CORRIGEM O SEU PROBLEMA 👇
         document.getElementById('coletas-container')?.classList.toggle('hidden', screenName !== 'coletas');
         document.getElementById('meu-perfil-container')?.classList.toggle('hidden', screenName !== 'perfil');
 
@@ -551,7 +552,7 @@ export const UIService = {
         const emAtendimentoColumn = document.getElementById('em-atendimento-column');
         const formContainer = document.getElementById('form-agendamento');
 
-        formContainer.classList.remove('hidden');
+        if (formContainer) formContainer.classList.remove('hidden');
 
         if (app.currentPautaData?.useDelegationFlow) {
             emAtendimentoColumn?.classList.remove('hidden');
@@ -560,16 +561,18 @@ export const UIService = {
         }
 
         if (tabName === 'agendamento') {
-            tabAgendamento.classList.add('tab-active');
-            tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.remove('hidden');
+            if (tabAgendamento) tabAgendamento.classList.add('tab-active');
+            if (tabAvulso) tabAvulso.classList.remove('tab-active', 'text-gray-500', 'hover:text-gray-700');
+            if (isScheduledContainer) isScheduledContainer.classList.remove('hidden');
             if (formTitle) formTitle.textContent = "Adicionar Novo Agendamento";
             this.showAgendamentoForm();
         } else {
-            tabAvulso.classList.add('tab-active');
-            tabAgendamento.classList.remove('tab-active');
-            tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
-            isScheduledContainer.classList.add('hidden');
+            if (tabAvulso) tabAvulso.classList.add('tab-active');
+            if (tabAgendamento) {
+                tabAgendamento.classList.remove('tab-active');
+                tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700');
+            }
+            if (isScheduledContainer) isScheduledContainer.classList.add('hidden');
             if (formTitle) formTitle.textContent = "Adicionar Atendimento Avulso";
             this.showAvulsoForm(app);
         }
@@ -578,32 +581,39 @@ export const UIService = {
     },
 
     showAgendamentoForm() {
-        document.querySelector('input[name="is-scheduled"][value="no"]').checked = true;
-        document.querySelector('input[name="has-arrived"][value="no"]').checked = true;
-        document.getElementById('scheduled-time-wrapper').classList.add('hidden');
-        document.getElementById('arrival-time-wrapper').classList.add('hidden');
-        document.getElementById('manual-room-wrapper').classList.add('hidden');
+        const radioNo = document.querySelector('input[name="is-scheduled"][value="no"]');
+        const radioArrivedNo = document.querySelector('input[name="has-arrived"][value="no"]');
+        if (radioNo) radioNo.checked = true;
+        if (radioArrivedNo) radioArrivedNo.checked = true;
+        document.getElementById('scheduled-time-wrapper')?.classList.add('hidden');
+        document.getElementById('arrival-time-wrapper')?.classList.add('hidden');
+        document.getElementById('manual-room-wrapper')?.classList.add('hidden');
     },
 
     showAvulsoForm(app) {
-        document.querySelector('input[name="has-arrived"][value="yes"]').checked = true;
-        document.getElementById('arrival-time-wrapper').classList.remove('hidden');
-        document.getElementById('arrival-time').value = new Date().toTimeString().slice(0, 5);
+        const radioArrivedYes = document.querySelector('input[name="has-arrived"][value="yes"]');
+        if (radioArrivedYes) radioArrivedYes.checked = true;
+        document.getElementById('arrival-time-wrapper')?.classList.remove('hidden');
+        
+        const arrTime = document.getElementById('arrival-time');
+        if (arrTime) arrTime.value = new Date().toTimeString().slice(0, 5);
 
         const manualRoomWrapper = document.getElementById('manual-room-wrapper');
         const manualRoomSelect = document.getElementById('manual-room-select');
 
         if (app.currentPautaData?.type === 'multisala' && app.currentPautaData.rooms) {
-            manualRoomWrapper.classList.remove('hidden');
-            manualRoomSelect.innerHTML = '';
-            app.currentPautaData.rooms.forEach(room => {
-                const opt = document.createElement('option');
-                opt.value = room;
-                opt.textContent = room;
-                manualRoomSelect.appendChild(opt);
-            });
+            if (manualRoomWrapper) manualRoomWrapper.classList.remove('hidden');
+            if (manualRoomSelect) {
+                manualRoomSelect.innerHTML = '';
+                app.currentPautaData.rooms.forEach(room => {
+                    const opt = document.createElement('option');
+                    opt.value = room;
+                    opt.textContent = room;
+                    manualRoomSelect.appendChild(opt);
+                });
+            }
         } else {
-            manualRoomWrapper.classList.add('hidden');
+            if (manualRoomWrapper) manualRoomWrapper.classList.add('hidden');
         }
     },
 
@@ -878,7 +888,7 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Consulta
                         </button>
                         <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0l2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
