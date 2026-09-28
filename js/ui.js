@@ -17,27 +17,6 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         /* Corrige o vazamento do modal de confirmar chegada no celular */
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
-
-        /* ESTILOS PARA O BOTÃO MAXIMIZAR (Janela Flutuante e Arrastável) */
-        .column-maximized {
-            position: fixed !important;
-            z-index: 99999 !important;
-            background-color: #f8fafc !important; /* Tailwind slate-50 */
-            padding: 1.5rem !important;
-            overflow-y: auto !important;
-            margin: 0 !important;
-            border-radius: 0.75rem !important;
-            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4) !important;
-            border: 2px solid #cbd5e1 !important;
-            resize: both !important; /* Permite redimensionar a janela puxando a quina inferior */
-        }
-        /* Garante que o conteúdo expanda e aproveite a largura inteira do monitor */
-        .column-maximized > * {
-            max-width: 100% !important;
-            width: 100% !important;
-            margin-left: 0 !important;
-            margin-right: 0 !important;
-        }
     `;
     document.head.appendChild(style);
 
@@ -56,7 +35,6 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
                 if (e.target.value === 'yes') {
                     wrapper.classList.remove('hidden');
                     const timeInput = document.getElementById('arrival-time');
-                    // Preenche automaticamente a hora atual se estiver vazio
                     if (timeInput && !timeInput.value) {
                         timeInput.value = new Date().toTimeString().slice(0, 5);
                     }
@@ -628,7 +606,6 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
 
-        // ⭐ NOVO: INJETA O AVISO DE TOLERÂNCIA ABAIXO DO TÍTULO DA PAUTA
         const titleContainer = document.getElementById('pauta-title')?.parentElement;
         if (titleContainer) {
             let tolInfo = document.getElementById('tolerancia-info-badge');
@@ -642,7 +619,6 @@ export const UIService = {
             const tolVal = app.currentPautaData?.toleranciaMinutos !== undefined ? app.currentPautaData.toleranciaMinutos : 15;
             const ordem = app.currentPautaData?.ordemAtendimento || 'flexivel';
             
-            // Só exibe a etiqueta se a pauta for do tipo Flexível (Encaixe)
             if (ordem.includes('flexivel') || ordem === 'padrao') {
                 tolInfo.innerHTML = `
                     <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
@@ -654,7 +630,6 @@ export const UIService = {
                 tolInfo.style.display = 'none';
             }
         }
-        // ⭐ FIM DO NOVO CÓDIGO
 
         if (typeof PainelGeralService !== 'undefined') {
             const painelModal = document.getElementById('painel-geral-externo-modal');
@@ -696,7 +671,6 @@ export const UIService = {
 
         const searchTerms = this.getSearchTerms();
 
-        // 🌟 INCLUI OS PAUSADOS NA COLUNA DE AGUARDANDO
         let rawAguardando = allAssisted.filter(a => a.status === 'aguardando' || a.status === 'pausado');
         let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
         let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
@@ -900,7 +874,7 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg> Consulta
                         </button>
                         <button data-id="${item.id}" data-tipo="outros" class="quick-action-item w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0l2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> Outros
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
@@ -910,7 +884,7 @@ export const UIService = {
                         </button>
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
-                        <button data-action="monitoramento" data-id="${item.id}" data-name="${escapeHTML(item.name)}" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                        <button onclick="window.abrirMonitoramento('${window.app.currentPauta.id}', '${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Monitoramento
                         </button>
                         
@@ -2418,90 +2392,16 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const headerFlex = countBadge.parentElement; 
                 headerFlex.classList.add('relative');
                 
-                // Agrupa o título e a bolinha do contador lado a lado
-                const titleWrapper = document.createElement('div');
-                titleWrapper.className = 'flex items-center gap-2';
-                
-                const h3 = headerFlex.querySelector('h3');
-                if (h3) {
-                    headerFlex.insertBefore(titleWrapper, h3);
-                    titleWrapper.appendChild(h3);
-                    titleWrapper.appendChild(countBadge);
-                }
-                
+                // Mantém apenas o botão de desencaixar (popout) perfeitamente alinhado no canto direito
                 const btnGroup = document.createElement('div');
-                btnGroup.className = 'flex items-center gap-1.5 ml-auto flex-shrink-0';
+                btnGroup.className = 'flex items-center gap-1 ml-auto flex-shrink-0';
                 btnGroup.innerHTML = `
-                    <button class="btn-maximize bg-slate-200 hover:bg-slate-300 text-slate-600 p-1.5 rounded-lg transition-colors shadow-sm flex items-center justify-center" title="Maximizar na Tela Atual">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
-                    </button>
                     <button class="btn-popout bg-blue-100 hover:bg-blue-200 text-blue-700 p-1.5 rounded-lg transition-colors shadow-sm flex items-center justify-center" title="Desencaixar (Arraste para Monitor 2)">
                         <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </button>
                 `;
 
                 headerFlex.appendChild(btnGroup);
-
-                // LÓGICA DE MAXIMIZAR ARRASTÁVEL
-                btnGroup.querySelector('.btn-maximize').onclick = (e) => {
-                    e.stopPropagation();
-                    const isMax = container.classList.contains('column-maximized');
-                    
-                    // Reseta tudo e fecha outras janelas ativas
-                    document.querySelectorAll('.column-maximized').forEach(el => {
-                        el.classList.remove('column-maximized');
-                        el.style.top = ''; el.style.left = ''; el.style.width = ''; el.style.height = '';
-                    });
-                    
-                    if (!isMax) {
-                        container.classList.add('column-maximized');
-                        document.body.style.overflow = 'hidden'; 
-                        
-                        // Configura o tamanho grande inicial (80% da tela)
-                        container.style.width = '80vw';
-                        container.style.height = '85vh';
-                        container.style.top = '7.5vh';
-                        container.style.left = '10vw';
-
-                        // Atribui o arrasto ao header da coluna
-                        headerFlex.style.cursor = 'move';
-                        let pos1 = 0, pos2 = 0, pos3 = 0, pos4 = 0;
-                        
-                        headerFlex.onmousedown = (e) => {
-                            // Previne que o arrasto ative se clicar nos próprios botões
-                            if (e.target.closest('button')) return;
-                            e.preventDefault();
-                            pos3 = e.clientX;
-                            pos4 = e.clientY;
-                            
-                            document.onmouseup = () => {
-                                document.onmouseup = null;
-                                document.onmousemove = null;
-                            };
-                            
-                            document.onmousemove = (e) => {
-                                e.preventDefault();
-                                pos1 = pos3 - e.clientX;
-                                pos2 = pos4 - e.clientY;
-                                pos3 = e.clientX;
-                                pos4 = e.clientY;
-                                container.style.top = (container.offsetTop - pos2) + "px";
-                                container.style.left = (container.offsetLeft - pos1) + "px";
-                            };
-                        };
-                        
-                    } else {
-                        container.classList.remove('column-maximized');
-                        container.style.width = '';
-                        container.style.height = '';
-                        container.style.top = '';
-                        container.style.left = '';
-                        document.body.style.overflow = '';
-                        
-                        headerFlex.style.cursor = '';
-                        headerFlex.onmousedown = null;
-                    }
-                };
 
                 btnGroup.querySelector('.btn-popout').onclick = (e) => {
                     e.stopPropagation();
