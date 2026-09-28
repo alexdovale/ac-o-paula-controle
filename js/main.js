@@ -6,7 +6,7 @@ import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
-import { UIService } from './ui.js?v=2';
+import { UIService } from './ui.js?v=4';
 import CollaboratorService from './colaboradores.js'; 
 window.CollaboratorService = CollaboratorService;  
 import { ModalService } from './modal.js?v=20260707';
@@ -1548,6 +1548,8 @@ class SIGEPApp {
 
         document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
             document.getElementById('container-construtor-coleta')?.classList.add('hidden');
+            document.getElementById('coletas-container')?.classList.add('hidden'); // FORÇA A OCULTAÇÃO AQUI
+            this.showPautaSelectionScreen(); // LIMPA TODO O ECRÃ
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
