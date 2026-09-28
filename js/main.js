@@ -27,7 +27,8 @@ import {
 } from './admin.js';
 import { parsePautaCSV } from './csvHandler.js';
 import { getChecklistHTML } from './checklist.js';
-import { PainelGeralService } from './painelGeralService.js'; 
+import { PainelGeralService } from './painelGeralService.js';
+import { MonitoramentoService } from './monitoramento.js';
 
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepçãoCentralService } from './recepcaoCentral.js';
@@ -575,17 +576,6 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 BOTÃO MONITOR DA PAUTA GLOBAL (INJETADO COM LISTENER) 🌟
-        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                if (typeof window.abrirMonitoramentoGlobal === 'function') {
-                    window.abrirMonitoramentoGlobal();
-                }
-            }
-        });
-
         document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
@@ -877,24 +867,6 @@ class SIGEPApp {
                     });
                 }
             }
-        });
-
-        this._bindModalConfirmation('confirm-edit-assisted-btn', async () => {
-            const name = document.getElementById('edit-assisted-name')?.value.trim();
-            if (!name) return showNotification("O nome não pode ficar em branco.", "error");
-            
-            const updatedData = {
-                name: name,
-                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
-                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
-                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
-                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
-            };
-            const roomSelect = document.getElementById('edit-room-select');
-            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) updatedData.room = roomSelect.value || null;
-            
-            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
-            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
         });
 
         this._bindModalConfirmation('confirm-priority-reason-btn', async () => {
