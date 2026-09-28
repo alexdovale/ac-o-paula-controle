@@ -1191,6 +1191,46 @@
     <!-- RECIPIENTE DE MODAIS -->
     <div id="modals-container"></div>
 
+    <!-- MODAL DE OUVIDORIA / FEEDBACK -->
+    <div id="feedback-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
+        <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
+            <div class="bg-blue-600 px-6 py-5 flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="text-white font-black text-xl flex items-center gap-2">📢 Ouvidoria / Suporte</h3>
+                    <p class="text-blue-100 text-xs mt-0.5 opacity-90">Envie sugestões ou reporte erros do sistema</p>
+                </div>
+                <button id="close-feedback-global-btn" type="button" class="text-blue-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
+            </div>
+            
+            <form id="feedback-global-form" class="p-6 bg-slate-50 space-y-5">
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-3">Qual o tipo da mensagem?</label>
+                    <div class="grid grid-cols-2 gap-3">
+                        <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:border-blue-400 transition">
+                            <input type="radio" name="fbg_tipo" value="Sugestão / Melhoria" required class="w-4 h-4 text-blue-600 focus:ring-blue-500">
+                            <span class="text-sm font-bold text-slate-700">💡 Sugestão</span>
+                        </label>
+                        <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:border-red-400 transition">
+                            <input type="radio" name="fbg_tipo" value="Reportar Erro / Bug" required class="w-4 h-4 text-red-600 focus:ring-red-500">
+                            <span class="text-sm font-bold text-slate-700">🐞 Erro / Bug</span>
+                        </label>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Sua Mensagem</label>
+                    <textarea id="fbg_mensagem" required rows="4" placeholder="Descreva sua sugestão ou detalhe o erro que encontrou..." class="w-full p-4 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none shadow-sm resize-none"></textarea>
+                </div>
+
+                <div class="pt-2">
+                    <button type="submit" id="btn-submit-global-feedback" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3.5 rounded-xl transition shadow-sm text-sm">
+                        Enviar para Administração
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- MODAL DE SELEÇÃO DE UNIDADE -->
     <div id="select-unidade-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" onclick="event.stopPropagation()">
