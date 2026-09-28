@@ -628,7 +628,6 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
 
-        // ⭐ NOVO: INJETA O AVISO DE TOLERÂNCIA ABAIXO DO TÍTULO DA PAUTA
         const titleContainer = document.getElementById('pauta-title')?.parentElement;
         if (titleContainer) {
             let tolInfo = document.getElementById('tolerancia-info-badge');
@@ -642,7 +641,6 @@ export const UIService = {
             const tolVal = app.currentPautaData?.toleranciaMinutos !== undefined ? app.currentPautaData.toleranciaMinutos : 15;
             const ordem = app.currentPautaData?.ordemAtendimento || 'flexivel';
             
-            // Só exibe a etiqueta se a pauta for do tipo Flexível (Encaixe)
             if (ordem.includes('flexivel') || ordem === 'padrao') {
                 tolInfo.innerHTML = `
                     <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
@@ -654,7 +652,6 @@ export const UIService = {
                 tolInfo.style.display = 'none';
             }
         }
-        // ⭐ FIM DO NOVO CÓDIGO
 
         if (typeof PainelGeralService !== 'undefined') {
             const painelModal = document.getElementById('painel-geral-externo-modal');
@@ -696,7 +693,6 @@ export const UIService = {
 
         const searchTerms = this.getSearchTerms();
 
-        // 🌟 INCLUI OS PAUSADOS NA COLUNA DE AGUARDANDO
         let rawAguardando = allAssisted.filter(a => a.status === 'aguardando' || a.status === 'pausado');
         let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
         let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
@@ -865,16 +861,9 @@ export const UIService = {
     },
 
     _getActionButtonsHtml(item) {
+        // ⭐ INJEÇÃO DO BOTÃO "MONITORAMENTO" NOS TRÊS PONTINHOS DO CARD ⭐
         return `
             <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
-                <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
-                    class="text-indigo-600 hover:text-indigo-800 p-2 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Scanner)">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
-                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
-                        <circle cx="12" cy="13" r="4"></circle>
-                    </svg>
-                </button>
-
                 <div class="relative">
                     <button data-id="${item.id}" id="quick-toggle-${item.id}" class="quick-action-toggle text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200" title="Opções">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -908,8 +897,14 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
                             Status da Triagem
                         </button>
-                        <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
+                        <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                        
+                        <button data-action="monitoramento" data-id="${item.id}" data-name="${escapeHTML(item.name)}" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-xs font-bold text-indigo-700 flex items-center gap-2 transition">
+                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                            Monitoramento
+                        </button>
+                        
                         <button data-id="${item.id}" class="edit-assisted-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Dados
                         </button>
@@ -1720,7 +1715,7 @@ export const UIService = {
                         </div>`;
                     })() : ''}
 
-                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0">
+                    <div class="flex flex-col items-center justify-center w-full mb-3 gap-0 mt-3">
                         ${timeInfoHtml}
                         ${badgeAgendamentoHtml}
                         ${roomDropdownHtml}
