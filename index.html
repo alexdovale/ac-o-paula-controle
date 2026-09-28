@@ -1765,44 +1765,7 @@
         }
     </script>
     
-    <!-- CONTROLE INTELIGENTE DAS ABAS DE AGENDAMENTO VS AVULSO -->
-    <script>
-        setInterval(() => {
-            const container = document.getElementById('app-container');
-            if (container && !container.classList.contains('hidden') && window.app && window.app.currentPautaData) {
-                const config = window.app.currentPautaData;
-                const tipo = String(config.type || config.tipo || 'hibrido').toLowerCase();
-                
-                let showAgendamento = true;
-                let showAvulso = true;
-
-                // Se a pauta é puramente de agendamento e não há uma permissão extra para avulso
-                if (tipo === 'agendamento' && config.permiteAvulso !== true) {
-                    showAvulso = false;
-                } 
-                // Se a pauta é puramente avulsa e não há permissão extra para agendamento
-                else if (tipo === 'avulso' && config.permiteAgendamento !== true) {
-                    showAgendamento = false;
-                }
-
-                const tabAgendamento = document.getElementById('tab-agendamento');
-                const tabAvulso = document.getElementById('tab-avulso');
-
-                if (tabAgendamento) {
-                    tabAgendamento.style.display = showAgendamento ? 'block' : 'none';
-                    if (!showAgendamento && tabAgendamento.classList.contains('tab-active') && showAvulso) {
-                        tabAvulso.click(); // Força a visualização correta
-                    }
-                }
-
-                if (tabAvulso) {
-                    tabAvulso.style.display = showAvulso ? 'block' : 'none';
-                    if (!showAvulso && tabAvulso.classList.contains('tab-active') && showAgendamento) {
-                        tabAgendamento.click(); // Força a visualização correta
-                    }
-                }
-            }
-        }, 800);
+   
     </script>
 </body>
 </html>
