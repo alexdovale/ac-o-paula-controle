@@ -1,9 +1,8 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VERSÃO COMPLETA E INTELIGENTE)
+ * DETALHES.JS - SIGEP (VERSÃO LIMPA E JURÍDICA)
  * Módulo de Detalhes do Assistido, Checklist de Documentos,
- * Acúmulo de Demandas, Captação Direta, Gerador de Texto,
- * Planilha de Gastos com Rateio e IA de Assunto Automático
+ * Captação Direta, Gerador de Texto e Planilha de Gastos
  * ========================================================
  */
 
@@ -1719,69 +1718,6 @@ export async function openDetailsModal(config) {
         const numAg = assisted.numeroAgendamento || assisted.numAgendamento || assisted.protocolo || 'N/A';
         agendamentoEl.textContent = `Agendamento: #${numAg}`;
     }
-
-    // ⭐ PAINEL RETRÁTIL DE GESTÃO DE DOCUMENTOS (OCULTO POR PADRÃO, ACIONADO POR BOTÃO)
-    let docManagementContainer = getEl('adobe-scan-management-container');
-    if (!docManagementContainer) {
-        docManagementContainer = document.createElement('div');
-        docManagementContainer.id = 'adobe-scan-management-container';
-        if (nameHeader && nameHeader.parentElement) {
-            nameHeader.parentElement.appendChild(docManagementContainer);
-        }
-    }
-
-    docManagementContainer.innerHTML = `
-        <div class="mt-3">
-            <!-- Botão Discreto para Abrir/Ocultar -->
-            <button onclick="document.getElementById('painel-documentos-oculto').classList.toggle('hidden')" 
-                class="w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs flex items-center justify-between transition border border-slate-200">
-                <span class="flex items-center gap-1.5">
-                    <span>📁</span> Gestão de Documentos / Adobe Scan ${assisted.documentosLista?.length ? `(${assisted.documentosLista.length})` : ''}
-                </span>
-                <span>▼</span>
-            </button>
-
-            <!-- Conteúdo Oculto por Padrão -->
-            <div id="painel-documentos-oculto" class="hidden mt-2 p-3 bg-slate-50 border border-slate-200 rounded-xl space-y-3 text-xs">
-                <div class="flex items-center justify-between border-b border-slate-200 pb-2">
-                    <span class="font-bold text-slate-600 uppercase">Status no Verde:</span>
-                    <button onclick="toggleNoVerde('${assisted.id}', ${assisted.noVerde || false})" 
-                        class="px-3 py-1 rounded-lg font-bold transition-all shadow-sm ${assisted.noVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
-                        ${assisted.noVerde ? '✅ No Verde' : '⏳ Pendente no Verde'}
-                    </button>
-                </div>
-
-                <!-- Link do PDF -->
-                <div class="flex flex-col gap-1">
-                    <label class="font-bold text-slate-600">Link do PDF:</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="pdf-link-${assisted.id}" value="${assisted.pdfLink || ''}" placeholder="Cole o link do PDF..." 
-                            class="flex-1 p-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-violet-500">
-                        <button onclick="salvarLinkPdf('${assisted.id}')" class="bg-violet-600 hover:bg-violet-700 text-white font-bold px-3 py-2 rounded-lg transition">
-                            Salvar
-                        </button>
-                        ${assisted.pdfLink ? `
-                            <button onclick="abrirPdfComRastreio(window.app, '${assisted.id}', '${assisted.pdfLink}')" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-2 rounded-lg transition" title="Ver PDF">
-                                👁️
-                            </button>
-                        ` : ''}
-                    </div>
-                </div>
-
-                <!-- Observações -->
-                <div class="flex flex-col gap-1">
-                    <label class="font-bold text-slate-600">Observações / Pendências:</label>
-                    <div class="flex gap-2">
-                        <input type="text" id="pdf-obs-${assisted.id}" value="${escapeHTML(assisted.pdfObservacoes || '')}" placeholder="Ex: Falta comprovante..." 
-                            class="flex-1 p-2 border border-slate-200 rounded-lg text-xs bg-white focus:outline-none focus:border-violet-500">
-                        <button onclick="salvarObsPdf('${assisted.id}')" class="bg-slate-700 hover:bg-slate-800 text-white font-bold px-3 py-2 rounded-lg transition">
-                            Atualizar
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
 
     const selectionArea = getEl('document-action-selection');
     const checklistView = getEl('document-checklist-view');
