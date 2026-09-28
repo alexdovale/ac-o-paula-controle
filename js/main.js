@@ -2113,6 +2113,157 @@ window.abrirConstrutor = async (coletaId) => {
     }
 };
 
+// ========================================================
+// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO (AUDITORIA)
+// ========================================================
+
+window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) {
+    const modal = document.getElementById('monitoramento-modal');
+    if (!modal) return;
+
+    // Configura o cabeçalho
+    document.getElementById('monitor-nome-assistido').textContent = assistidoNome;
+    
+    // Mostra estado de carregamento
+    document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">Carregando histórico...</p>';
+    modal.classList.remove('hidden');
+
+    try {
+        const { doc, getDoc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        const snap = await getDoc(assistidoRef);
+
+        if (!snap.exists()) {
+            showNotification("Registro não encontrado", "error");
+            return;
+        }
+
+        const data = snap.data();
+
+        // 1. CARREGA GESTÃO DE DOCUMENTOS
+        const linkInp = document.getElementById('monitor-pdf-link');
+        const obsInp = document.getElementById('monitor-pdf-obs');
+        const btnVerde = document.getElementById('monitor-btn-verde');
+        const btnVerPdf = document.getElementById('monitor-btn-ver-pdf');
+
+        linkInp.value = data.pdfLink || '';
+        obsInp.value = data.pdfObservacoes || '';
+
+        // Botão Ver PDF
+        if (data.pdfLink) {
+            btnVerPdf.classList.remove('hidden');
+            btnVerPdf.onclick = () => window.open(data.pdfLink, '_blank');
+        } else {
+            btnVerPdf.classList.add('hidden');
+        }
+
+        // Status no Verde
+        const isVerde = data.noVerde || false;
+        btnVerde.textContent = isVerde ? '✅ NO VERDE' : '⏳ PENDENTE';
+        btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
+        
+        btnVerde.onclick = async () => {
+            const novoVerde = !isVerde;
+            await updateDoc(assistidoRef, { noVerde: novoVerde });
+            await window.registrarAcaoHistorico(pautaId, assistidoId, novoVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
+            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); // Recarrega
+        };
+
+        // Salvar Link e Obs
+        document.getElementById('monitor-btn-salvar-link').onclick = async () => {
+            const val = linkInp.value.trim();
+            await updateDoc(assistidoRef, { pdfLink: val });
+            await window.registrarAcaoHistorico(pautaId, assistidoId, `Documento/Link anexado ao processo`);
+            showNotification("Link salvo com sucesso!", "success");
+            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
+        };
+
+        document.getElementById('monitor-btn-salvar-obs').onclick = async () => {
+            const val = obsInp.value.trim();
+            await updateDoc(assistidoRef, { pdfObservacoes: val });
+            await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
+            showNotification("Observação salva!", "success");
+            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
+        };
+
+        // 2. RENDERIZA A LINHA DO TEMPO (HISTÓRICO)
+        const timelineContainer = document.getElementById('monitor-timeline-container');
+        let historicoHTML = '';
+        const acoes = data.historicoAcoes || [];
+
+        // Adiciona a Chegada como o primeiro evento fixo
+        const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+        historicoHTML += `
+            <div class="relative pl-6">
+                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-white"></span>
+                <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
+                <p class="text-xs text-slate-700 font-medium">Assistido registrado na recepção/triagem.</p>
+            </div>
+        `;
+
+        if (acoes.length === 0) {
+            historicoHTML += `
+                <div class="relative pl-6 mt-6">
+                    <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full bg-slate-300 ring-4 ring-white"></span>
+                    <p class="text-[11px] text-slate-400 italic mt-1">Nenhuma movimentação ou edição registrada até o momento.</p>
+                </div>
+            `;
+        } else {
+            // Renderiza os eventos do histórico salvos no Firebase
+            acoes.reverse().forEach(acao => {
+                // Tenta extrair a hora se ela existir no formato "... às HH:MM"
+                let texto = acao;
+                let hora = "Log";
+                const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
+                if (match) {
+                    texto = match[1];
+                    hora = match[2];
+                }
+
+                // Define cor da bolinha baseada na ação
+                let colorClass = "bg-slate-400";
+                if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
+                if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
+                if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
+                if (texto.toLowerCase().includes('triagem')) colorClass = "bg-indigo-500";
+
+                historicoHTML += `
+                    <div class="relative pl-6 mt-6">
+                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></span>
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
+                        <p class="text-[11px] text-slate-700 font-medium">${escapeHTML(texto)}</p>
+                    </div>
+                `;
+            });
+        }
+
+        timelineContainer.innerHTML = historicoHTML;
+
+    } catch (e) {
+        console.error(e);
+        showNotification("Erro ao carregar monitoramento.", "error");
+    }
+};
+
+// FUNÇÃO GLOBAL PARA REGISTRAR AUDITORIA NA FICHA DO ASSISTIDO
+window.registrarAcaoHistorico = async function(pautaId, assistidoId, descricaoAcao) {
+    if (!window.app || !window.app.db) return;
+    try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        
+        const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const autor = window.app.currentUserName || "Operador";
+        const registro = `${descricaoAcao} (por ${autor}) às ${horaFormatada}`;
+        
+        await updateDoc(assistidoRef, {
+            historicoAcoes: arrayUnion(registro)
+        });
+    } catch (err) {
+        console.warn("Falha ao salvar auditoria na timeline:", err);
+    }
+};
+
 window.verResultados = async (coletaId) => {
     if (!window.app || !window.app.db) return;
     ColetasBiService.abrirResultados(window.app.db, coletaId);
