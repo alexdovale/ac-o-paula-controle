@@ -1499,7 +1499,7 @@ class SIGEPApp {
 
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAINEL_PUBLICO, {}, false); 
+            // Removida a rota incorreta (ROUTES.PAINEL_PUBLICO) que abria a tela de som
             this.showColetasScreen();
         });
 
@@ -1518,7 +1518,9 @@ class SIGEPApp {
                     criadoEm: new Date().toISOString()
                 };
                 
+                const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
+                
                 showNotification("Nova coleta criada com sucesso!", "success");
                 this.listarColetas();
             } catch (error) {
