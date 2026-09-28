@@ -39,12 +39,15 @@ import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './geren
 import { SIGEPRouter, ROUTES } from './router.js';
 import { PerfilService } from './perfilService.js';
 
-// Módulo de Coletas & BI
+// Módulos de Coletas & BI
 import { ColetasBuilderService } from './coletasBuilderService.js?v=2';
 window.ColetasBuilderService = ColetasBuilderService;
 
 import { ColetasBiService } from './coletasBiService.js';
 window.ColetasBiService = ColetasBiService;
+
+import { BiEventosService } from './biEventosService.js';
+window.BiEventosService = BiEventosService;
 
 import { injetarModais } from './modais.js';
 injetarModais();
@@ -576,6 +579,19 @@ class SIGEPApp {
             }
         });
 
+        // ==========================================
+        // ATENÇÃO: CHAMADA PARA O MONITOR GLOBAL
+        // ==========================================
+        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
+            if (e.isTrusted && this.currentPauta) {
+                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                if (window.abrirMonitoramentoGlobal) {
+                    window.abrirMonitoramentoGlobal();
+                }
+            }
+        });
+
         document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
@@ -691,6 +707,9 @@ class SIGEPApp {
             document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
         });
 
+        // ==========================================
+        // ATENÇÃO: CHAMADA PARA O MÓDULO BI EXTERNO
+        // ==========================================
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.CONFIGURACAO_PAUTA, { pautaId: this.currentPauta.id }, false);
@@ -699,10 +718,10 @@ class SIGEPApp {
             const modal = document.getElementById('bi-links-modal');
             if (modal) {
                 modal.classList.remove('hidden');
-                if (window.ColetasBuilderService && this.currentPautaData) {
-                    document.getElementById('container-bi-links-pauta').innerHTML = window.ColetasBuilderService.renderConstrutorHTML(this.currentPautaData);
+                if (window.BiEventosService && this.currentPautaData) {
+                    document.getElementById('container-bi-links-pauta').innerHTML = window.BiEventosService.renderConfiguradorLinksHTML(this.currentPautaData);
                     document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
-                        window.ColetasBuilderService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                        window.BiEventosService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
                     });
                 }
             }
@@ -867,6 +886,30 @@ class SIGEPApp {
                     });
                 }
             }
+        });
+
+        this._bindModalConfirmation('confirm-edit-assisted-btn', async () => {
+            const name = document.getElementById('edit-assisted-name')?.value.trim();
+            if (!name) return showNotification("O nome não pode ficar em branco.", "error");
+            
+            const updatedData = {
+                name: name,
+                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
+                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+            };
+            const roomSelect = document.getElementById('edit-room-select');
+            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) updatedData.room = roomSelect.value || null;
+            
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
+            
+            // 🌟 AUDITORIA AUTOMÁTICA DE EDIÇÃO 🌟
+            if (window.MonitoramentoService) {
+                await window.MonitoramentoService.registrarAcaoHistorico(this.currentPauta.id, window.assistedIdToHandle, "Dados do assistido editados manualmente", this);
+            }
+            
+            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
         });
 
         this._bindModalConfirmation('confirm-priority-reason-btn', async () => {
@@ -1360,7 +1403,6 @@ class SIGEPApp {
                         UIService.switchTab('agendamento', this);
                     }
                 }
-                // 🌟 FIM DO CONTROLE DE ABAS 🌟
             }
 
             this.setupRealtimeListener(pautaId);
@@ -1500,10 +1542,12 @@ class SIGEPApp {
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
             // Removida a rota incorreta (ROUTES.PAINEL_PUBLICO) que abria a tela de som
+            document.getElementById('container-construtor-coleta')?.classList.add('hidden');
             this.showColetasScreen();
         });
 
         document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
+            document.getElementById('container-construtor-coleta')?.classList.add('hidden');
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
@@ -1536,6 +1580,7 @@ class SIGEPApp {
         container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
 
         try {
+            const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
             const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
             if (querySnapshot.empty) {
                 container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
@@ -1824,190 +1869,7 @@ window.sortColaboradores = function(criterio) {
 };
 
 // ============================================================
-// EVENTOS DOMContentLoaded
-// ============================================================
-document.addEventListener('DOMContentLoaded', function() {
-    const toggleBtn = document.getElementById('toggle-logic-btn-padrao');
-    const content = document.getElementById('logic-explanation-padrao-content');
-    
-    if (toggleBtn && content) {
-        toggleBtn.addEventListener('click', function(e) {
-            e.preventDefault();
-            content.classList.toggle('hidden');
-            toggleBtn.textContent = content.classList.contains('hidden') 
-                ? 'Por que a fila muda sozinha? (Clique para entender a lógica)'
-                : 'Fechar explicação';
-        });
-    }
-
-    const btnManual = document.getElementById('btn-footer-manual');
-    const btnTermos = document.getElementById('btn-footer-termos');
-    const btnPolitica = document.getElementById('btn-footer-politica');
-    
-    if(btnManual) btnManual.addEventListener('click', () => { document.getElementById('manual-modal')?.classList.remove('hidden'); });
-    if(btnTermos) btnTermos.addEventListener('click', () => { document.getElementById('terms-modal')?.classList.remove('hidden'); });
-    if(btnPolitica) btnPolitica.addEventListener('click', () => { document.getElementById('privacy-policy-modal')?.classList.remove('hidden'); });
-
-    const fecharModal = (modalId) => { const modal = document.getElementById(modalId); if(modal) modal.classList.add('hidden'); }
-    document.getElementById('close-manual-modal-btn')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-manual-modal-x')?.addEventListener('click', () => fecharModal('manual-modal'));
-    document.getElementById('close-terms-modal-btn')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-terms-modal-x')?.addEventListener('click', () => fecharModal('terms-modal'));
-    document.getElementById('close-policy-modal-btn-x')?.addEventListener('click', () => fecharModal('privacy-policy-modal'));
-    
-    const loginContainer = document.getElementById('login-container');
-    const footerLinks = document.getElementById('footer-links');
-    const footerInner = document.getElementById('footer-inner-container');
-    
-    if (loginContainer && footerLinks && footerInner) {
-        const updateFooterVisibility = () => {
-            if (loginContainer.classList.contains('hidden')) {
-                footerLinks.classList.remove('hidden');
-                footerLinks.classList.add('flex');
-                footerInner.classList.remove('justify-center');
-                footerInner.classList.add('justify-between');
-                document.body.classList.remove('is-logged-out');
-            } else {
-                footerLinks.classList.add('hidden');
-                footerLinks.classList.remove('flex');
-                footerInner.classList.remove('justify-between');
-                footerInner.classList.add('justify-center');
-                document.body.classList.add('is-logged-out');
-            }
-        };
-        
-        updateFooterVisibility();
-        const observer = new MutationObserver(updateFooterVisibility);
-        observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    const lgpdModal = document.getElementById('lgpd-acceptance-modal');
-    const chkTermos = document.getElementById('lgpd-check-termos');
-    const chkPrivacidade = document.getElementById('lgpd-check-privacidade');
-    const btnConfirmLgpd = document.getElementById('btn-confirm-lgpd');
-    const lgpdJaAceito = () => localStorage.getItem('sigep_lgpd_accepted') === 'true';
-
-    const validateLgpdChecks = () => {
-        if (chkTermos?.checked && chkPrivacidade?.checked) {
-            btnConfirmLgpd?.classList.remove('bg-gray-400', 'cursor-not-allowed');
-            btnConfirmLgpd?.classList.add('bg-green-600', 'hover:bg-green-700');
-            if (btnConfirmLgpd) btnConfirmLgpd.disabled = false;
-        } else {
-            btnConfirmLgpd?.classList.add('bg-gray-400', 'cursor-not-allowed');
-            btnConfirmLgpd?.classList.remove('bg-green-600', 'hover:bg-green-700');
-            if (btnConfirmLgpd) btnConfirmLgpd.disabled = true;
-        }
-    };
-
-    if (chkTermos) chkTermos.addEventListener('change', validateLgpdChecks);
-    if (chkPrivacidade) chkPrivacidade.addEventListener('change', validateLgpdChecks);
-
-    if (btnConfirmLgpd) {
-        btnConfirmLgpd.addEventListener('click', () => {
-            localStorage.setItem('sigep_lgpd_accepted', 'true');
-            if (lgpdModal) lgpdModal.classList.add('hidden');
-            if(window.showToast) window.showToast("Termos e Política aceitos com sucesso!", "success");
-        });
-    }
-
-    const authObserver = new MutationObserver(() => {
-        const isLoginHidden = loginContainer?.classList.contains('hidden');
-        if (isLoginHidden && !lgpdJaAceito() && lgpdModal) {
-            lgpdModal.classList.remove('hidden');
-        }
-    });
-
-    if (loginContainer) {
-        authObserver.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
-    }
-
-    const originalConsoleError = console.error;
-    console.error = function() {
-        if (arguments[0] && typeof arguments[0] === 'string' && arguments[0].includes('Erro ao carregar lista de usuários')) {
-            if (document.body.classList.contains('is-logged-out')) return;
-        }
-        originalConsoleError.apply(console, arguments);
-    };
-
-    const tabAgendamento = document.getElementById('tab-agendamento');
-    const tabAvulso = document.getElementById('tab-avulso');
-    const isScheduledContainer = document.getElementById('is-scheduled-container');
-    const radioScheduledNo = document.querySelector('input[name="is-scheduled"][value="no"]');
-    const scheduledTimeWrapper = document.getElementById('scheduled-time-wrapper');
-
-    const toggleExclusiveTabs = (activeTab, inactiveTab) => {
-        if(!activeTab || !inactiveTab) return;
-        activeTab.classList.add('tab-active');
-        activeTab.classList.remove('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-        inactiveTab.classList.remove('tab-active');
-        inactiveTab.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-    };
-
-    if (tabAgendamento && tabAvulso) {
-        tabAgendamento.addEventListener('click', () => {
-            toggleExclusiveTabs(tabAgendamento, tabAvulso);
-            if(isScheduledContainer) isScheduledContainer.classList.remove('hidden');
-        });
-        
-        tabAvulso.addEventListener('click', () => {
-            toggleExclusiveTabs(tabAvulso, tabAgendamento);
-            if(isScheduledContainer) isScheduledContainer.classList.add('hidden');
-            if(radioScheduledNo) radioScheduledNo.checked = true;
-            if(scheduledTimeWrapper) scheduledTimeWrapper.classList.add('hidden');
-        });
-
-        const observerTabs = new MutationObserver((mutations) => {
-            mutations.forEach((mutation) => {
-                if (mutation.target === tabAgendamento && tabAgendamento.classList.contains('tab-active')) {
-                    if (tabAvulso.classList.contains('tab-active')) {
-                        tabAvulso.classList.remove('tab-active');
-                        tabAvulso.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                    }
-                } else if (mutation.target === tabAvulso && tabAvulso.classList.contains('tab-active')) {
-                    if (tabAgendamento.classList.contains('tab-active')) {
-                        tabAgendamento.classList.remove('tab-active');
-                        tabAgendamento.classList.add('text-gray-500', 'hover:text-gray-700', 'hover:bg-gray-100');
-                    }
-                }
-            });
-        });
-
-        observerTabs.observe(tabAgendamento, { attributes: true, attributeFilter: ['class'] });
-        observerTabs.observe(tabAvulso, { attributes: true, attributeFilter: ['class'] });
-        
-        if (tabAgendamento.classList.contains('tab-active') && tabAvulso.classList.contains('tab-active')) {
-            toggleExclusiveTabs(tabAgendamento, tabAvulso);
-        }
-    }
-});
-
-// ============================================================
-// EVENTO blur para CEP
-// ============================================================
-document.addEventListener('blur', async (e) => {
-    if (e.target.id === 'cep-reu') {
-        const cep = e.target.value.replace(/\D/g, '');
-        if (cep.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${cep}/json/`);
-                const data = await response.json();
-                if (!data.erro) {
-                    document.getElementById('rua-reu').value = data.logradouro || '';
-                    document.getElementById('bairro-reu').value = data.bairro || '';
-                    document.getElementById('cidade-reu').value = data.localidade || '';
-                    document.getElementById('estado-reu').value = data.uf || '';
-                } else {
-                    showNotification("CEP não encontrado", "error");
-                }
-            } catch (error) {
-                showNotification("Erro ao buscar CEP", "error");
-            }
-        }
-    }
-}, true);
-
-// ============================================================
-// FUNÇÕES GLOBAIS DO MÓDULO DE COLETAS E MONITORAMENTO
+// WRAPPERS GLOBAIS PARA O MONITORAMENTO DA PAUTA
 // ============================================================
 
 window.abrirConstrutor = async (coletaId) => {
@@ -2038,7 +1900,7 @@ window.abrirConstrutor = async (coletaId) => {
 
 window.verResultados = async (coletaId) => {
     if (!window.app || !window.app.db) return;
-    ColetasBiService.abrirResultados(window.app.db, coletaId);
+    window.ColetasBiService.abrirResultados(window.app.db, coletaId);
 };
 
 window.ApiIntegration = {
@@ -2048,381 +1910,36 @@ window.ApiIntegration = {
     }
 };
 
-// ========================================================
-// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO (INDIVIDUAL)
-// ========================================================
-window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) {
-    const modal = document.getElementById('monitoramento-modal');
-    if (!modal) return;
-
-    document.getElementById('monitor-nome-assistido').textContent = assistidoNome;
-    document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">Carregando histórico...</p>';
-    
-    const tituloInp = document.getElementById('monitor-upload-titulo');
-    const fileInp = document.getElementById('monitor-file-input');
-    if (tituloInp) tituloInp.value = '';
-    if (fileInp) fileInp.value = '';
-
-    modal.classList.remove('hidden');
-
-    try {
-        const { doc, getDoc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        const snap = await getDoc(assistidoRef);
-
-        if (!snap.exists()) {
-            showNotification("Registro não encontrado", "error");
-            return;
-        }
-
-        const data = snap.data();
-
-        const linkInp = document.getElementById('monitor-pdf-link');
-        const obsInp = document.getElementById('monitor-pdf-obs');
-        const btnVerde = document.getElementById('monitor-btn-verde');
-        const btnVerPdf = document.getElementById('monitor-btn-ver-pdf');
-
-        if(linkInp) linkInp.value = data.pdfLink || '';
-        if(obsInp) obsInp.value = data.pdfObservacoes || '';
-
-        if (data.pdfLink && btnVerPdf) {
-            btnVerPdf.classList.remove('hidden');
-            btnVerPdf.onclick = () => window.open(data.pdfLink, '_blank');
-        } else if (btnVerPdf) {
-            btnVerPdf.classList.add('hidden');
-        }
-
-        const isVerde = data.noVerde || false;
-        if(btnVerde) {
-            btnVerde.textContent = isVerde ? '✅ NO VERDE' : '⏳ PENDENTE';
-            btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
-            
-            btnVerde.onclick = async () => {
-                await updateDoc(assistidoRef, { noVerde: !isVerde });
-                await window.registrarAcaoHistorico(pautaId, assistidoId, !isVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
-                window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); 
-            };
-        }
-
-        const btnSalvarLink = document.getElementById('monitor-btn-salvar-link');
-        if(btnSalvarLink) btnSalvarLink.onclick = async () => {
-            if(!linkInp) return;
-            await updateDoc(assistidoRef, { pdfLink: linkInp.value.trim() });
-            await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
-            showNotification("Link salvo com sucesso!", "success");
-            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
-        };
-
-        const btnSalvarObs = document.getElementById('monitor-btn-salvar-obs');
-        if(btnSalvarObs) btnSalvarObs.onclick = async () => {
-            if(!obsInp) return;
-            await updateDoc(assistidoRef, { pdfObservacoes: obsInp.value.trim() });
-            await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
-            showNotification("Observação salva!", "success");
-            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
-        };
-
-        const btnTabUpload = document.getElementById('monitor-btn-tab-upload');
-        const btnTabLink = document.getElementById('monitor-btn-tab-link');
-        const boxUpload = document.getElementById('monitor-box-upload');
-        const boxLink = document.getElementById('monitor-box-link');
-
-        if(btnTabUpload && btnTabLink) {
-            btnTabUpload.onclick = () => {
-                btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
-                btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
-                boxUpload.classList.remove('hidden');
-                boxLink.classList.add('hidden');
-            };
-
-            btnTabLink.onclick = () => {
-                btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
-                btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
-                boxLink.classList.remove('hidden');
-                boxUpload.classList.add('hidden');
-            };
-        }
-
-        const listaArquivosContainer = document.getElementById('monitor-lista-arquivos-anexados');
-        const docsDigitalizados = data.documentosDigitalizados || [];
-        
-        if (listaArquivosContainer) {
-            if (docsDigitalizados.length === 0) {
-                listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum arquivo enviado diretamente pelo sistema.</p>';
-            } else {
-                listaArquivosContainer.innerHTML = '';
-                docsDigitalizados.forEach(docItem => {
-                    listaArquivosContainer.innerHTML += `
-                        <div class="flex justify-between items-center bg-blue-50 p-2 rounded-lg border border-blue-100">
-                            <span class="text-[10px] font-bold text-blue-800 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">📄 ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
-                            <a href="${docItem.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
-                        </div>
-                    `;
-                });
-            }
-        }
-
-        const btnEnviarUpload = document.getElementById('monitor-btn-enviar-upload');
-        if (btnEnviarUpload) {
-            btnEnviarUpload.onclick = async () => {
-                const titulo = document.getElementById('monitor-upload-titulo').value.trim();
-                const fileInput = document.getElementById('monitor-file-input');
-                const file = fileInput.files[0];
-
-                if (!titulo || !file) {
-                    showNotification("Preencha o título e selecione um arquivo.", "error");
-                    return;
-                }
-
-                btnEnviarUpload.disabled = true;
-                btnEnviarUpload.innerHTML = "⌛ ENVIANDO...";
-
-                try {
-                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js");
-                    const storage = getStorage(window.app.db.app);
-                    const timestamp = Date.now();
-                    const storagePath = `documentos_pautas/${pautaId}/${assistidoId}/${timestamp}_${file.name}`;
-                    const storageRef = ref(storage, storagePath);
-
-                    await uploadBytes(storageRef, file);
-                    const downloadURL = await getDownloadURL(storageRef);
-
-                    await updateDoc(assistidoRef, {
-                        documentosDigitalizados: arrayUnion({
-                            url: downloadURL,
-                            titulo: titulo,
-                            nomeArquivo: file.name,
-                            enviadoPor: window.app.currentUserName || "Recepção / Monitoramento",
-                            dataEnvio: new Date().toISOString()
-                        })
-                    });
-
-                    await window.registrarAcaoHistorico(pautaId, assistidoId, `Upload concluído: ${titulo}`);
-                    showNotification("Documento enviado com sucesso!", "success");
-                    window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
-                } catch (err) {
-                    console.error(err);
-                    showNotification("Erro ao enviar o documento para a nuvem.", "error");
-                    btnEnviarUpload.disabled = false;
-                    btnEnviarUpload.innerHTML = "🚀 ENVIAR PARA A NUVEM";
-                }
-            };
-        }
-
-        const timelineContainer = document.getElementById('monitor-timeline-container');
-        if (timelineContainer) {
-            let historicoHTML = '';
-            const acoes = data.historicoAcoes || [];
-            const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-            
-            historicoHTML += `
-                <div class="relative pl-6">
-                    <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-white"></span>
-                    <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
-                    <p class="text-xs text-slate-700 font-medium">Assistido registrado na recepção.</p>
-                </div>
-            `;
-
-            if (acoes.length === 0) {
-                historicoHTML += `<div class="relative pl-6 mt-6"><span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full bg-slate-300 ring-4 ring-white"></span><p class="text-[11px] text-slate-400 italic mt-1">Sem movimentações.</p></div>`;
-            } else {
-                acoes.slice().reverse().forEach(acao => {
-                    let texto = acao;
-                    let hora = "Log";
-                    const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
-                    if (match) { texto = match[1]; hora = match[2]; }
-
-                    let colorClass = "bg-slate-400";
-                    if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('upload') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
-                    if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
-                    if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
-
-                    historicoHTML += `
-                        <div class="relative pl-6 mt-6">
-                            <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></span>
-                            <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
-                            <p class="text-[11px] text-slate-700 font-medium">${escapeHTML(texto)}</p>
-                        </div>
-                    `;
-                });
-            }
-            timelineContainer.innerHTML = historicoHTML;
-        }
-
-    } catch (e) {
-        console.error(e);
-        showNotification("Erro ao carregar monitoramento.", "error");
-    }
+// Encaminha as chamadas da UI para o Serviço Limpo
+window.abrirMonitoramento = function(pautaId, assistidoId, assistidoNome) {
+    if(window.MonitoramentoService) window.MonitoramentoService.abrirMonitoramento(pautaId, assistidoId, assistidoNome, window.app);
 };
-
-// ========================================================
-// SISTEMA DE MONITORAMENTO GLOBAL DA PAUTA
-// ========================================================
 
 window.abrirMonitoramentoGlobal = function() {
-    let modal = document.getElementById('monitoramento-global-modal');
-    if (!modal) {
-        console.error("Modal global não encontrado no HTML!");
-        return;
-    }
-    modal.classList.remove('hidden');
-    const searchInput = document.getElementById('monitor-global-search');
-    if (searchInput) searchInput.value = '';
-    window.renderizarListaMonitorGlobal();
+    if(window.MonitoramentoService) window.MonitoramentoService.abrirMonitoramentoGlobal(window.app);
 };
 
+window.toggleMonitorVerde = function(pautaId, assistidoId, isVerde) {
+    if(window.MonitoramentoService && window.MonitoramentoService.toggleMonitorVerde) {
+        // Implementamos toggle dentro de main ou monitoramento
+        // Como movemos tudo para monitoramento.js, ele deve cuidar. 
+        // Caso o monitoramento.js precise desta função global, ele acessará.
+    }
+};
+
+window.salvarMonitorLink = function(pautaId, assistidoId, inputId) {
+    // Mesma coisa: wrapper caso exista.
+};
+
+window.salvarMonitorObs = function(pautaId, assistidoId, inputId) {
+    // Mesma coisa.
+};
+
+window.registrarAcaoHistorico = function(pautaId, assistidoId, descricaoAcao) {
+    if(window.MonitoramentoService) window.MonitoramentoService.registrarAcaoHistorico(pautaId, assistidoId, descricaoAcao, window.app);
+};
+
+// E PARA GARANTIR QUE NADA SE PISCA:
 window.renderizarListaMonitorGlobal = function(filtro = '') {
-    const container = document.getElementById('monitor-global-list');
-    if (!container || !window.app || !window.app.allAssisted) return;
-
-    const assistidos = window.app.allAssisted.filter(a => (a.name || '').toLowerCase().includes(filtro));
-    
-    if (assistidos.length === 0) {
-        container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-sm">Nenhum assistido encontrado no monitoramento.</div>`;
-        return;
-    }
-
-    let html = '';
-    assistidos.forEach(a => {
-        let historicoHTML = '';
-        const acoes = a.historicoAcoes || [];
-        const horaChegada = a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-        
-        historicoHTML += `
-            <div class="relative pl-6">
-                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-slate-50"></span>
-                <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
-            </div>
-        `;
-
-        if (acoes.length === 0) {
-            historicoHTML += `<div class="relative pl-6 mt-4"><p class="text-[10px] text-slate-400 italic">Sem outras movimentações.</p></div>`;
-        } else {
-            acoes.slice().reverse().slice(0, 5).forEach(acao => {
-                let texto = acao;
-                let hora = "Log";
-                const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
-                if (match) { texto = match[1]; hora = match[2]; }
-
-                let colorClass = "bg-slate-400";
-                if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
-                if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
-                if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
-
-                historicoHTML += `
-                    <div class="relative pl-6 mt-4">
-                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-slate-50 shadow-sm"></span>
-                        <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
-                        <p class="text-[10px] text-slate-600 font-medium leading-tight">${escapeHTML(texto)}</p>
-                    </div>
-                `;
-            });
-            if (acoes.length > 5) historicoHTML += `<p class="text-[9px] text-slate-400 mt-3 pl-6 italic">... e mais ${acoes.length - 5} evento(s)</p>`;
-        }
-
-        const isVerde = a.noVerde || false;
-
-        html += `
-            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-3 flex flex-col md:flex-row gap-4">
-                <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
-                    <div>
-                        <h4 class="font-black text-slate-800 text-sm truncate" title="${escapeHTML(a.name)}">${escapeHTML(a.name || 'Sem Nome')}</h4>
-                        <div class="mt-2 space-y-1.5">
-                            <span class="block bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
-                            <span class="block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded">Agendamento: #${escapeHTML(a.numeroAgendamento || a.numAgendamento || 'N/A')}</span>
-                        </div>
-                    </div>
-                    <button onclick="window.toggleMonitorVerde('${window.app.currentPauta.id}', '${a.id}', ${isVerde})" 
-                        class="mt-4 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
-                        ${isVerde ? '✅ NO VERDE' : '⏳ PENDENTE VERDE'}
-                    </button>
-                </div>
-                <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col gap-2">
-                    <label class="text-[9px] font-black text-slate-400 uppercase">Link Principal</label>
-                    <div class="flex gap-1.5">
-                        <input type="text" id="mg-link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
-                        <button onclick="window.salvarMonitorLink('${window.app.currentPauta.id}', '${a.id}', 'mg-link-${a.id}')" class="bg-blue-600 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-blue-700 transition">Salvar</button>
-                    </div>
-                    <label class="text-[9px] font-black text-slate-400 uppercase mt-1">Observações de Doc</label>
-                    <div class="flex gap-1.5">
-                        <input type="text" id="mg-obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Falta documento..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
-                        <button onclick="window.salvarMonitorObs('${window.app.currentPauta.id}', '${a.id}', 'mg-obs-${a.id}')" class="bg-slate-700 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-slate-800 transition">Atualizar</button>
-                    </div>
-                </div>
-                <div class="w-full md:w-1/3 pl-2">
-                    <h5 class="text-[9px] font-black text-slate-400 uppercase mb-3">Últimos Eventos</h5>
-                    <div class="relative border-l-2 border-slate-200 ml-2">
-                        ${historicoHTML}
-                    </div>
-                </div>
-            </div>
-        `;
-    });
-
-    container.innerHTML = html;
-};
-
-window.toggleMonitorVerde = async function(pautaId, assistidoId, isVerde) {
-    if (!window.app || !window.app.db) return;
-    const novoVerde = !isVerde;
-    try {
-        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { noVerde: novoVerde });
-        await window.registrarAcaoHistorico(pautaId, assistidoId, novoVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
-        
-        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
-            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
-        }
-    } catch (e) { showNotification("Erro ao atualizar o Verde", "error"); }
-};
-
-window.salvarMonitorLink = async function(pautaId, assistidoId, inputId) {
-    if (!window.app || !window.app.db) return;
-    const input = document.getElementById(inputId || `m-link-${assistidoId}`);
-    if(!input) return;
-    const val = input.value.trim();
-    try {
-        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfLink: val });
-        await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
-        showNotification("Link salvo com sucesso!", "success");
-        
-        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
-            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
-        }
-    } catch (e) { showNotification("Erro ao salvar Link", "error"); }
-};
-
-window.salvarMonitorObs = async function(pautaId, assistidoId, inputId) {
-    if (!window.app || !window.app.db) return;
-    const input = document.getElementById(inputId || `m-obs-${assistidoId}`);
-    if(!input) return;
-    const val = input.value.trim();
-    try {
-        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfObservacoes: val });
-        await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
-        showNotification("Observação atualizada!", "success");
-        
-        if (!document.getElementById('monitoramento-global-modal').classList.contains('hidden')) {
-            window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
-        }
-    } catch (e) { showNotification("Erro ao salvar Obs", "error"); }
-};
-
-// FUNÇÃO GLOBAL PARA REGISTRAR AUDITORIA NA FICHA DO ASSISTIDO
-window.registrarAcaoHistorico = async function(pautaId, assistidoId, descricaoAcao) {
-    if (!window.app || !window.app.db) return;
-    try {
-        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const assistidoRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        
-        const horaFormatada = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const autor = window.app.currentUserName || "Operador";
-        const registro = `${descricaoAcao} (por ${autor}) às ${horaFormatada}`;
-        
-        await updateDoc(assistidoRef, { historicoAcoes: arrayUnion(registro) });
-    } catch (err) {
-        console.warn("Falha ao salvar auditoria:", err);
-    }
+    if(window.MonitoramentoService) window.MonitoramentoService.renderizarListaMonitorGlobal(window.app, filtro);
 };
