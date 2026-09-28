@@ -90,7 +90,7 @@ class SIGEPApp {
             await this.setupOfflinePersistence();
             
             this.setupEventListeners();
-            this.setupAuthListener();       
+            this.setupAuthListener();        
     
             setupDetailsModal({ db: this.db });
             this.loadExternalModalsContent();
@@ -531,13 +531,9 @@ class SIGEPApp {
         });
 
         document.addEventListener('click', (e) => {
-            const adminModal = document.getElementById('admin-modal');
-            const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
             const actionsToggle = document.getElementById('actions-toggle');
-            
             const actionsPanel = document.getElementById('actions-panel');
             
-            // 🌟 Correção: Se o clique foi DENTRO do painel de ações, não faz nada (mantém aberto)
             if (actionsPanel && actionsPanel.contains(e.target)) {
                 return;
             }
@@ -547,6 +543,7 @@ class SIGEPApp {
                 document.getElementById('actions-arrow')?.classList.remove('rotate-180');
             }
             
+            const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
             const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
             if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
                  pautaSettingsPanel.classList.add('hidden');
@@ -603,88 +600,6 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 INJEÇÃO DO BOTÃO "GESTÃO DE DOCUMENTOS" ENTRE "COLABORADORES" E "ANOTAÇÕES" 🌟
-        const actionsMenu = document.querySelector('#actions-panel .py-2') || document.getElementById('actions-panel');
-        if (actionsMenu && !document.getElementById('btn-gestao-docs-menu')) {
-            const btnGestaoDocs = document.createElement('button');
-            btnGestaoDocs.id = 'btn-gestao-docs-menu';
-            btnGestaoDocs.className = 'w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors';
-            btnGestaoDocs.innerHTML = `
-                <span class="w-7 h-7 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-sm shadow-sm shrink-0">📑</span>
-                Gestão de Documentos
-            `;
-            
-            if (!document.getElementById('modal-escolha-gestao-docs')) {
-                const modalEscolha = document.createElement('div');
-                modalEscolha.id = 'modal-escolha-gestao-docs';
-                modalEscolha.className = 'hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm flex items-center justify-center z-[110] p-4';
-                modalEscolha.innerHTML = `
-                    <div class="bg-white w-full max-w-sm rounded-2xl shadow-2xl p-6 flex flex-col gap-4 border border-slate-200">
-                        <div class="flex justify-between items-center border-b pb-3">
-                            <h3 class="font-black text-slate-800 text-sm uppercase tracking-wider flex items-center gap-2">📑 Gestão de Documentos</h3>
-                            <button onclick="document.getElementById('modal-escolha-gestao-docs').classList.add('hidden')" class="text-slate-400 hover:text-red-500 text-2xl font-bold">&times;</button>
-                        </div>
-                        <p class="text-xs text-slate-500 font-medium">Selecione a ação desejada para esta pauta:</p>
-                        <div class="space-y-2.5">
-                            <button id="popup-btn-pauta-rapida" class="w-full text-left p-3.5 bg-slate-50 hover:bg-violet-50 hover:border-violet-300 border border-slate-200 rounded-xl transition flex items-center gap-3 group">
-                                <span class="w-8 h-8 rounded-lg bg-violet-100 text-violet-700 flex items-center justify-center text-base font-bold shrink-0">📄</span>
-                                <div>
-                                    <p class="text-xs font-black text-slate-800 group-hover:text-violet-700">Abrir Pauta Rápida (Adobe Scan)</p>
-                                    <p class="text-[10px] text-slate-400">Envio de PDFs e gestão de presença</p>
-                                </div>
-                            </button>
-                            <button id="popup-btn-link-externo" class="w-full text-left p-3.5 bg-slate-50 hover:bg-emerald-50 hover:border-emerald-300 border border-slate-200 rounded-xl transition flex items-center gap-3 group">
-                                <span class="w-8 h-8 rounded-lg bg-emerald-100 text-emerald-700 flex items-center justify-center text-base font-bold shrink-0">🔗</span>
-                                <div>
-                                    <p class="text-xs font-black text-slate-800 group-hover:text-emerald-700">Copiar Link Externo (Equipe / Leitura)</p>
-                                    <p class="text-[10px] text-slate-400">Apenas visualização e download de arquivos</p>
-                                </div>
-                            </button>
-                        </div>
-                    </div>
-                `;
-                document.body.appendChild(modalEscolha);
-
-                document.getElementById('popup-btn-pauta-rapida').onclick = () => {
-                    document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
-                    if (!window.app.currentPauta || !window.app.currentPauta.id) {
-                        showNotification("Nenhuma pauta selecionada!", "error");
-                        return;
-                    }
-                    window.open(`pauta_rapida.html?pautaId=${window.app.currentPauta.id}`, '_blank');
-                };
-
-                // 🌟 GERAÇÃO CORRETA DO LINK COM O PARÂMETRO &modo=leitura 🌟
-                document.getElementById('popup-btn-link-externo').onclick = () => {
-                    document.getElementById('modal-escolha-gestao-docs').classList.add('hidden');
-                    if (!window.app.currentPauta || !window.app.currentPauta.id) {
-                        showNotification("Nenhuma pauta selecionada!", "error");
-                        return;
-                    }
-                    const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-                    const urlExterna = `${baseUrl}pauta_rapida.html?pautaId=${window.app.currentPauta.id}&modo=leitura`;
-                    
-                    navigator.clipboard.writeText(urlExterna).then(() => {
-                        showNotification("Link externo para equipe (somente leitura) copiado! 📋", "success");
-                    }).catch(() => {
-                        showNotification("Erro ao copiar o link.", "error");
-                    });
-                };
-            }
-
-            btnGestaoDocs.onclick = () => {
-                document.getElementById('modal-escolha-gestao-docs').classList.remove('hidden');
-            };
-
-            const btnColaboradores = document.getElementById('manage-collaborators-btn');
-            if (btnColaboradores && btnColaboradores.nextSibling) {
-                actionsMenu.insertBefore(btnGestaoDocs, btnColaboradores.nextSibling);
-            } else {
-                actionsMenu.appendChild(btnGestaoDocs);
-            }
-        }
-
-        // 🌟 Lógica da Chavinha de Compartilhamento
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
             const statusText = document.getElementById('share-status-text');
@@ -697,7 +612,6 @@ class SIGEPApp {
                     await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isPublic: isPublic });
                     if(this.currentPautaData) this.currentPautaData.isPublic = isPublic;
                 } catch (err) {
-                    console.error("Erro ao alterar privacidade:", err);
                     showNotification("Erro ao publicar a pauta.", "error");
                     e.target.checked = !isPublic;
                     return;
@@ -724,20 +638,16 @@ class SIGEPApp {
             }
         });
 
-        // 🌟 Lógica para Ocultar Sobrenomes (LGPD) no Firebase
         document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
             const maskNames = e.target.checked;
             if (this.currentPauta && this.currentPauta.id) {
                 try {
                     await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { maskNames: maskNames });
                     if(this.currentPautaData) this.currentPautaData.maskNames = maskNames;
-                } catch (err) {
-                    console.error("Erro ao alterar modo LGPD:", err);
-                }
+                } catch (err) {}
             }
         });
 
-        // 🌟 Copiar link de Compartilhamento
         document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
             const linkInput = document.getElementById('share-link-input');
             if (linkInput && linkInput.value) {
@@ -1855,6 +1765,7 @@ window.getReuDataFromForm = function() {
         empresa: document.getElementById('empresa-reu')?.value || '',
         rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
         numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+        complemento_comercial: document.getElementById('complemento-comercial-reu')?.value || '',
         bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
         cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
         uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
@@ -2114,18 +2025,22 @@ window.abrirConstrutor = async (coletaId) => {
 };
 
 // ========================================================
-// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO (AUDITORIA)
+// SISTEMA DE MONITORAMENTO E LINHA DO TEMPO INDIVIDUAL
 // ========================================================
 
 window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) {
     const modal = document.getElementById('monitoramento-modal');
     if (!modal) return;
 
-    // Configura o cabeçalho
     document.getElementById('monitor-nome-assistido').textContent = assistidoNome;
-    
-    // Mostra estado de carregamento
     document.getElementById('monitor-timeline-container').innerHTML = '<p class="text-xs text-slate-400 ml-4 animate-pulse">Carregando histórico...</p>';
+    
+    // Reseta inputs de upload
+    const tituloInp = document.getElementById('monitor-upload-titulo');
+    const fileInp = document.getElementById('monitor-file-input');
+    if(tituloInp) tituloInp.value = '';
+    if(fileInp) fileInp.value = '';
+
     modal.classList.remove('hidden');
 
     try {
@@ -2140,109 +2055,327 @@ window.abrirMonitoramento = async function(pautaId, assistidoId, assistidoNome) 
 
         const data = snap.data();
 
-        // 1. CARREGA GESTÃO DE DOCUMENTOS
+        // 1. CARREGA GESTÃO DE DOCUMENTOS BÁSICA
         const linkInp = document.getElementById('monitor-pdf-link');
         const obsInp = document.getElementById('monitor-pdf-obs');
         const btnVerde = document.getElementById('monitor-btn-verde');
         const btnVerPdf = document.getElementById('monitor-btn-ver-pdf');
 
-        linkInp.value = data.pdfLink || '';
-        obsInp.value = data.pdfObservacoes || '';
+        if(linkInp) linkInp.value = data.pdfLink || '';
+        if(obsInp) obsInp.value = data.pdfObservacoes || '';
 
-        // Botão Ver PDF
-        if (data.pdfLink) {
+        if (data.pdfLink && btnVerPdf) {
             btnVerPdf.classList.remove('hidden');
             btnVerPdf.onclick = () => window.open(data.pdfLink, '_blank');
-        } else {
+        } else if (btnVerPdf) {
             btnVerPdf.classList.add('hidden');
         }
 
-        // Status no Verde
         const isVerde = data.noVerde || false;
-        btnVerde.textContent = isVerde ? '✅ NO VERDE' : '⏳ PENDENTE';
-        btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
-        
-        btnVerde.onclick = async () => {
-            const novoVerde = !isVerde;
-            await updateDoc(assistidoRef, { noVerde: novoVerde });
-            await window.registrarAcaoHistorico(pautaId, assistidoId, novoVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
-            window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); // Recarrega
-        };
+        if(btnVerde) {
+            btnVerde.textContent = isVerde ? '✅ NO VERDE' : '⏳ PENDENTE';
+            btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
+            
+            btnVerde.onclick = async () => {
+                await updateDoc(assistidoRef, { noVerde: !isVerde });
+                await window.registrarAcaoHistorico(pautaId, assistidoId, !isVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
+                window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); 
+            };
+        }
 
-        // Salvar Link e Obs
-        document.getElementById('monitor-btn-salvar-link').onclick = async () => {
-            const val = linkInp.value.trim();
-            await updateDoc(assistidoRef, { pdfLink: val });
-            await window.registrarAcaoHistorico(pautaId, assistidoId, `Documento/Link anexado ao processo`);
+        const btnSalvarLink = document.getElementById('monitor-btn-salvar-link');
+        if(btnSalvarLink) btnSalvarLink.onclick = async () => {
+            await updateDoc(assistidoRef, { pdfLink: linkInp.value.trim() });
+            await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
             showNotification("Link salvo com sucesso!", "success");
             window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
         };
 
-        document.getElementById('monitor-btn-salvar-obs').onclick = async () => {
-            const val = obsInp.value.trim();
-            await updateDoc(assistidoRef, { pdfObservacoes: val });
+        const btnSalvarObs = document.getElementById('monitor-btn-salvar-obs');
+        if(btnSalvarObs) btnSalvarObs.onclick = async () => {
+            await updateDoc(assistidoRef, { pdfObservacoes: obsInp.value.trim() });
             await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
             showNotification("Observação salva!", "success");
             window.abrirMonitoramento(pautaId, assistidoId, assistidoNome);
         };
 
-        // 2. RENDERIZA A LINHA DO TEMPO (HISTÓRICO)
-        const timelineContainer = document.getElementById('monitor-timeline-container');
-        let historicoHTML = '';
-        const acoes = data.historicoAcoes || [];
+        // ==========================================
+        // LÓGICA DE UPLOAD DE ARQUIVO PELA EQUIPE
+        // ==========================================
+        const btnTabUpload = document.getElementById('monitor-btn-tab-upload');
+        const btnTabLink = document.getElementById('monitor-btn-tab-link');
+        const boxUpload = document.getElementById('monitor-box-upload');
+        const boxLink = document.getElementById('monitor-box-link');
 
-        // Adiciona a Chegada como o primeiro evento fixo
-        const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
-        historicoHTML += `
-            <div class="relative pl-6">
-                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-white"></span>
-                <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
-                <p class="text-xs text-slate-700 font-medium">Assistido registrado na recepção/triagem.</p>
-            </div>
-        `;
+        if(btnTabUpload && btnTabLink) {
+            btnTabUpload.onclick = () => {
+                btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
+                btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
+                boxUpload.classList.remove('hidden');
+                boxLink.classList.add('hidden');
+            };
 
-        if (acoes.length === 0) {
-            historicoHTML += `
-                <div class="relative pl-6 mt-6">
-                    <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full bg-slate-300 ring-4 ring-white"></span>
-                    <p class="text-[11px] text-slate-400 italic mt-1">Nenhuma movimentação ou edição registrada até o momento.</p>
-                </div>
-            `;
-        } else {
-            // Renderiza os eventos do histórico salvos no Firebase
-            acoes.reverse().forEach(acao => {
-                // Tenta extrair a hora se ela existir no formato "... às HH:MM"
-                let texto = acao;
-                let hora = "Log";
-                const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
-                if (match) {
-                    texto = match[1];
-                    hora = match[2];
-                }
-
-                // Define cor da bolinha baseada na ação
-                let colorClass = "bg-slate-400";
-                if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
-                if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
-                if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
-                if (texto.toLowerCase().includes('triagem')) colorClass = "bg-indigo-500";
-
-                historicoHTML += `
-                    <div class="relative pl-6 mt-6">
-                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></span>
-                        <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
-                        <p class="text-[11px] text-slate-700 font-medium">${escapeHTML(texto)}</p>
-                    </div>
-                `;
-            });
+            btnTabLink.onclick = () => {
+                btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
+                btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
+                boxLink.classList.remove('hidden');
+                boxUpload.classList.add('hidden');
+            };
         }
 
-        timelineContainer.innerHTML = historicoHTML;
+        // Renderiza lista de arquivos já anexados
+        const listaArquivosContainer = document.getElementById('monitor-lista-arquivos-anexados');
+        const docsDigitalizados = data.documentosDigitalizados || [];
+        
+        if (listaArquivosContainer) {
+            if (docsDigitalizados.length === 0) {
+                listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum arquivo enviado diretamente pelo sistema.</p>';
+            } else {
+                listaArquivosContainer.innerHTML = '';
+                docsDigitalizados.forEach(docItem => {
+                    listaArquivosContainer.innerHTML += `
+                        <div class="flex justify-between items-center bg-blue-50 p-2 rounded-lg border border-blue-100">
+                            <span class="text-[10px] font-bold text-blue-800 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">📄 ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
+                            <a href="${docItem.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        // Evento de Upload para a Nuvem
+        const btnEnviarUpload = document.getElementById('monitor-btn-enviar-upload');
+        if (btnEnviarUpload) {
+            btnEnviarUpload.onclick = async () => {
+                const titulo = document.getElementById('monitor-upload-titulo').value.trim();
+                const fileInput = document.getElementById('monitor-file-input');
+                const file = fileInput.files[0];
+
+                if (!titulo || !file) {
+                    showNotification("Preencha o título e selecione um arquivo.", "error");
+                    return;
+                }
+
+                btnEnviarUpload.disabled = true;
+                btnEnviarUpload.innerHTML = "⌛ ENVIANDO...";
+
+                try {
+                    const { getStorage, ref, uploadBytes, getDownloadURL } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js");
+                    const storage = getStorage(window.app.db.app);
+                    const timestamp = Date.now();
+                    const storagePath = `documentos_pautas/${pautaId}/${assistidoId}/${timestamp}_${file.name}`;
+                    const storageRef = ref(storage, storagePath);
+
+                    await uploadBytes(storageRef, file);
+                    const downloadURL = await getDownloadURL(storageRef);
+
+                    await updateDoc(assistidoRef, {
+                        documentosDigitalizados: arrayUnion({
+                            url: downloadURL,
+                            titulo: titulo,
+                            nomeArquivo: file.name,
+                            enviadoPor: window.app.currentUserName || "Recepção / Monitoramento",
+                            dataEnvio: new Date().toISOString()
+                        })
+                    });
+
+                    await window.registrarAcaoHistorico(pautaId, assistidoId, `Upload concluído: ${titulo}`);
+                    showNotification("Documento enviado com sucesso!", "success");
+                    window.abrirMonitoramento(pautaId, assistidoId, assistidoNome); // Recarrega a tela
+                } catch (err) {
+                    console.error(err);
+                    showNotification("Erro ao enviar o documento para a nuvem.", "error");
+                    btnEnviarUpload.disabled = false;
+                    btnEnviarUpload.innerHTML = "🚀 ENVIAR PARA A NUVEM";
+                }
+            };
+        }
+
+        // ==========================================
+        // 2. RENDERIZA A LINHA DO TEMPO (HISTÓRICO)
+        // ==========================================
+        const timelineContainer = document.getElementById('monitor-timeline-container');
+        if (timelineContainer) {
+            let historicoHTML = '';
+            const acoes = data.historicoAcoes || [];
+            const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+            
+            historicoHTML += `
+                <div class="relative pl-6">
+                    <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-white"></span>
+                    <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
+                    <p class="text-xs text-slate-700 font-medium">Assistido registrado na recepção.</p>
+                </div>
+            `;
+
+            if (acoes.length === 0) {
+                historicoHTML += `<div class="relative pl-6 mt-6"><span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full bg-slate-300 ring-4 ring-white"></span><p class="text-[11px] text-slate-400 italic mt-1">Sem movimentações.</p></div>`;
+            } else {
+                acoes.slice().reverse().forEach(acao => {
+                    let texto = acao;
+                    let hora = "Log";
+                    const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
+                    if (match) { texto = match[1]; hora = match[2]; }
+
+                    let colorClass = "bg-slate-400";
+                    if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('upload') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
+                    if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
+                    if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
+
+                    historicoHTML += `
+                        <div class="relative pl-6 mt-6">
+                            <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-white shadow-sm"></span>
+                            <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
+                            <p class="text-[11px] text-slate-700 font-medium">${window.escapeHTML ? window.escapeHTML(texto) : texto}</p>
+                        </div>
+                    `;
+                });
+            }
+            timelineContainer.innerHTML = historicoHTML;
+        }
 
     } catch (e) {
         console.error(e);
         showNotification("Erro ao carregar monitoramento.", "error");
     }
+};
+
+// ========================================================
+// MONITORAMENTO GLOBAL DA PAUTA
+// ========================================================
+window.abrirMonitoramentoGlobal = function() {
+    let modal = document.getElementById('monitoramento-global-modal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    document.getElementById('monitor-global-search').value = '';
+    window.renderizarListaMonitorGlobal();
+};
+
+window.renderizarListaMonitorGlobal = function(filtro = '') {
+    const container = document.getElementById('monitor-global-list');
+    if (!container || !window.app || !window.app.allAssisted) return;
+
+    const assistidos = window.app.allAssisted.filter(a => (a.name || '').toLowerCase().includes(filtro));
+    
+    if (assistidos.length === 0) {
+        container.innerHTML = `<div class="bg-white p-8 rounded-2xl shadow-sm border border-slate-200 text-center text-slate-400 font-medium text-sm">Nenhum assistido encontrado no monitoramento.</div>`;
+        return;
+    }
+
+    let html = '';
+    assistidos.forEach(a => {
+        let historicoHTML = '';
+        const acoes = a.historicoAcoes || [];
+        const horaChegada = a.arrivalTime ? new Date(a.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
+        
+        historicoHTML += `
+            <div class="relative pl-6">
+                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-slate-50"></span>
+                <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
+            </div>
+        `;
+
+        if (acoes.length === 0) {
+            historicoHTML += `<div class="relative pl-6 mt-4"><p class="text-[10px] text-slate-400 italic">Sem outras movimentações.</p></div>`;
+        } else {
+            acoes.slice().reverse().slice(0, 5).forEach(acao => {
+                let texto = acao;
+                let hora = "Log";
+                const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
+                if (match) { texto = match[1]; hora = match[2]; }
+
+                let colorClass = "bg-slate-400";
+                if (texto.toLowerCase().includes('documento') || texto.toLowerCase().includes('link')) colorClass = "bg-violet-500";
+                if (texto.toLowerCase().includes('edit') || texto.toLowerCase().includes('alterad')) colorClass = "bg-amber-500";
+                if (texto.toLowerCase().includes('verde')) colorClass = "bg-emerald-500";
+
+                historicoHTML += `
+                    <div class="relative pl-6 mt-4">
+                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-slate-50 shadow-sm"></span>
+                        <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
+                        <p class="text-[10px] text-slate-600 font-medium leading-tight">${escapeHTML(texto)}</p>
+                    </div>
+                `;
+            });
+            if (acoes.length > 5) historicoHTML += `<p class="text-[9px] text-slate-400 mt-3 pl-6 italic">... e mais ${acoes.length - 5} evento(s)</p>`;
+        }
+
+        const isVerde = a.noVerde || false;
+
+        html += `
+            <div class="bg-white p-4 rounded-2xl shadow-sm border border-slate-200 mb-3 flex flex-col md:flex-row gap-4">
+                <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
+                    <div>
+                        <h4 class="font-black text-slate-800 text-sm truncate" title="${escapeHTML(a.name)}">${escapeHTML(a.name || 'Sem Nome')}</h4>
+                        <div class="mt-2 space-y-1.5">
+                            <span class="block bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
+                            <span class="block bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded">Agendamento: #${escapeHTML(a.numeroAgendamento || a.numAgendamento || 'N/A')}</span>
+                        </div>
+                    </div>
+                    <button onclick="window.toggleMonitorVerde('${window.app.currentPauta.id}', '${a.id}', ${isVerde})" 
+                        class="mt-4 px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}">
+                        ${isVerde ? '✅ NO VERDE' : '⏳ PENDENTE VERDE'}
+                    </button>
+                </div>
+                <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col gap-2">
+                    <label class="text-[9px] font-black text-slate-400 uppercase">Link Principal</label>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="m-link-${a.id}" value="${a.pdfLink || ''}" placeholder="Link do PDF..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
+                        <button onclick="window.salvarMonitorLink('${window.app.currentPauta.id}', '${a.id}')" class="bg-blue-600 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-blue-700 transition">Salvar</button>
+                    </div>
+                    <label class="text-[9px] font-black text-slate-400 uppercase mt-1">Observações de Doc</label>
+                    <div class="flex gap-1.5">
+                        <input type="text" id="m-obs-${a.id}" value="${escapeHTML(a.pdfObservacoes || '')}" placeholder="Falta documento..." class="flex-1 p-2 border border-slate-200 rounded-lg text-[10px] bg-slate-50 outline-none">
+                        <button onclick="window.salvarMonitorObs('${window.app.currentPauta.id}', '${a.id}')" class="bg-slate-700 text-white font-bold px-2.5 rounded-lg text-[10px] hover:bg-slate-800 transition">Salvar</button>
+                    </div>
+                </div>
+                <div class="w-full md:w-1/3 pl-2">
+                    <h5 class="text-[9px] font-black text-slate-400 uppercase mb-3">Últimos Eventos</h5>
+                    <div class="relative border-l-2 border-slate-200 ml-2">
+                        ${historicoHTML}
+                    </div>
+                </div>
+            </div>
+        `;
+    });
+
+    container.innerHTML = html;
+};
+
+// Ações disparadas pelos botões do Monitor Global
+window.toggleMonitorVerde = async function(pautaId, assistidoId, isVerde) {
+    if (!window.app || !window.app.db) return;
+    const novoVerde = !isVerde;
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { noVerde: novoVerde });
+        await window.registrarAcaoHistorico(pautaId, assistidoId, novoVerde ? "Marcado como INSERIDO NO VERDE" : "Removido do Verde");
+        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+    } catch (e) { showNotification("Erro ao atualizar o Verde", "error"); }
+};
+
+window.salvarMonitorLink = async function(pautaId, assistidoId) {
+    if (!window.app || !window.app.db) return;
+    const val = document.getElementById(`m-link-${assistidoId}`).value.trim();
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfLink: val });
+        await window.registrarAcaoHistorico(pautaId, assistidoId, `Link principal do processo atualizado`);
+        showNotification("Link salvo com sucesso!", "success");
+        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+    } catch (e) { showNotification("Erro ao salvar Link", "error"); }
+};
+
+window.salvarMonitorObs = async function(pautaId, assistidoId) {
+    if (!window.app || !window.app.db) return;
+    const val = document.getElementById(`m-obs-${assistidoId}`).value.trim();
+    try {
+        const { doc, updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        await updateDoc(doc(window.app.db, "pautas", pautaId, "attendances", assistidoId), { pdfObservacoes: val });
+        await window.registrarAcaoHistorico(pautaId, assistidoId, `Observação de documento atualizada`);
+        showNotification("Observação atualizada!", "success");
+        window.renderizarListaMonitorGlobal(document.getElementById('monitor-global-search').value.toLowerCase().trim());
+    } catch (e) { showNotification("Erro ao salvar Obs", "error"); }
 };
 
 // FUNÇÃO GLOBAL PARA REGISTRAR AUDITORIA NA FICHA DO ASSISTIDO
@@ -2256,11 +2389,9 @@ window.registrarAcaoHistorico = async function(pautaId, assistidoId, descricaoAc
         const autor = window.app.currentUserName || "Operador";
         const registro = `${descricaoAcao} (por ${autor}) às ${horaFormatada}`;
         
-        await updateDoc(assistidoRef, {
-            historicoAcoes: arrayUnion(registro)
-        });
+        await updateDoc(assistidoRef, { historicoAcoes: arrayUnion(registro) });
     } catch (err) {
-        console.warn("Falha ao salvar auditoria na timeline:", err);
+        console.warn("Falha ao salvar auditoria:", err);
     }
 };
 
