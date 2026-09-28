@@ -660,94 +660,152 @@
                         </div>
 
                         <div class="relative flex items-center w-full sm:w-auto justify-end">
-                            <div id="actions-panel" class="absolute top-full right-0 mt-2 w-64 bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-50 origin-top-right overflow-hidden">
+                            <div id="actions-panel" class="absolute top-full right-0 mt-2 w-72 max-h-[75vh] overflow-y-auto bg-white rounded-2xl shadow-xl border border-slate-100 opacity-0 scale-95 pointer-events-none transition-all duration-200 z-50 origin-top-right">
                                 <div class="py-2">
-                                    <button id="btn-painel-geral-externo" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <!-- ACOMPANHAR -->
+                                    <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Acompanhar</p>
+
+                                    <button id="btn-painel-geral-externo" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">📊</span>
-                                        Monitor da Equipe
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Monitor da Equipe</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Veja o que cada pessoa está fazendo</span>
+                                        </span>
                                     </button>
-                                    
-                                    <!-- MOVIDO PARA CÁ -->
-                                    <button id="btn-monitor-pauta-global" onclick="document.getElementById('actions-panel').classList.add('opacity-0', 'scale-95', 'pointer-events-none'); window.abrirMonitoramentoGlobal();" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <button id="btn-monitor-pauta-global" onclick="document.getElementById('actions-panel').classList.add('opacity-0', 'scale-95', 'pointer-events-none'); window.abrirMonitoramentoGlobal();" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">
                                             <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z"></path></svg>
                                         </span>
-                                        Monitor da Pauta
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Monitor da Pauta</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Auditoria e Documentos globais</span>
+                                        </span>
                                     </button>
 
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    <button id="share-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔗</span>
-                                        Compartilhamento Externo
-                                    </button>
-
-                                    <button id="open-totem-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-teal-100 text-teal-600 flex items-center justify-center text-sm shadow-sm shrink-0">📱</span>
-                                        Totem de Autoatendimento
-                                    </button>
-                                    
-                                    <button id="view-stats-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+                                    <button id="view-stats-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm shrink-0">📈</span>
-                                        Ver Estatísticas
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Ver Estatísticas</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Números e desempenho</span>
+                                        </span>
                                     </button>
-                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    <button id="edit-pauta-name-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">✏️</span>
-                                        Editar Nome
-                                    </button>
-                                    <button id="edit-pauta-config-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
-                                        Editar Configurações
-                                    </button>
-                                    <button id="manage-members-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🤝</span>
-                                        Compartilhar Pauta
-                                    </button>
-                                    <button id="manage-collaborators-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
-                                        Colaboradores
-                                    </button>
-                                    
-                                    <button id="notes-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <button id="notes-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📋</span>
-                                        Anotações
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Anotações</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Notas internas da pauta</span>
+                                        </span>
                                     </button>
+
                                     <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    
-                                    <div class="px-4 py-2 bg-slate-50 flex items-center justify-between hover:bg-slate-100 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
+
+                                    <!-- COMPARTILHAR E DAR ACESSO -->
+                                    <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Compartilhar e dar acesso</p>
+
+                                    <button id="manage-members-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🤝</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Convidar pessoas</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Dê acesso a esta pauta</span>
+                                        </span>
+                                    </button>
+
+                                    <button id="manage-collaborators-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Colaboradores</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Cadastro da equipe e e-mails</span>
+                                        </span>
+                                    </button>
+
+                                    <button id="share-pauta-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔗</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Link público</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Compartilhe fora da equipe</span>
+                                        </span>
+                                    </button>
+
+                                    <button id="open-totem-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📱</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Totem</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Autoatendimento para assistidos</span>
+                                        </span>
+                                    </button>
+
+                                    <div class="h-px bg-slate-100 my-1 mx-3"></div>
+
+                                    <!-- CONFIGURAR -->
+                                    <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Configurar</p>
+
+                                    <button id="edit-pauta-name-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">✏️</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Renomear</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Mudar o nome da pauta</span>
+                                        </span>
+                                    </button>
+
+                                    <button id="edit-pauta-config-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
+                                        <span>
+                                            <span class="text-sm font-semibold text-slate-700 block leading-tight">Configurações</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Preferências da pauta</span>
+                                        </span>
+                                    </button>
+
+                                    <div class="px-4 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
                                         <div class="flex items-center gap-3 pointer-events-none">
-                                            <div class="w-7 h-7 rounded-lg bg-rose-100 flex items-center justify-center text-rose-600 shadow-sm shrink-0">
-                                                🔕
-                                            </div>
+                                            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shadow-sm shrink-0">🔕</div>
                                             <div>
-                                                <span class="text-sm font-bold text-slate-700 block">Modo Silencioso</span>
-                                                <span class="text-[9px] text-slate-500 block leading-tight mt-0.5">Bloquear e-mails</span>
+                                                <span class="text-sm font-semibold text-slate-700 block leading-tight">Pausar e-mails</span>
+                                                <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Sem aviso ao delegar</span>
                                             </div>
                                         </div>
-                                        <label class="relative inline-flex items-center cursor-pointer pointer-events-none">
+                                        <label class="relative inline-flex items-center cursor-pointer pointer-events-none shrink-0 ml-2">
                                             <input type="checkbox" id="toggle-silent-mode" class="sr-only peer">
                                             <div class="w-9 h-5 bg-slate-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-rose-500 shadow-inner"></div>
                                         </label>
                                     </div>
+
                                     <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                                    
-                                    <button id="close-pauta-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <!-- ZONA DE RISCO -->
+                                    <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Zona de risco</p>
+
+                                    <button id="close-pauta-btn" class="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔒</span>
-                                        Fechar Pauta
+                                        <span>
+                                            <span class="text-sm font-semibold text-amber-700 block leading-tight">Fechar Pauta</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Bloqueia novas edições</span>
+                                        </span>
                                     </button>
-                                    <button id="reopen-pauta-btn" class="hidden w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <button id="reopen-pauta-btn" class="hidden w-full text-left px-4 py-2 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔓</span>
-                                        Reabrir Pauta
+                                        <span>
+                                            <span class="text-sm font-semibold text-emerald-700 block leading-tight">Reabrir Pauta</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Libera as edições de novo</span>
+                                        </span>
                                     </button>
-                                    <button id="reset-all-btn" class="w-full text-left px-4 py-2.5 text-sm font-semibold text-slate-700 hover:bg-slate-50 hover:text-slate-900 flex items-center gap-3 transition-colors">
+
+                                    <button id="reset-all-btn" class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-3 transition-colors">
                                         <span class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm shrink-0">🗑️</span>
-                                        Zerar Pauta
+                                        <span>
+                                            <span class="text-sm font-semibold text-red-700 block leading-tight">Zerar Pauta</span>
+                                            <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Não dá para desfazer</span>
+                                        </span>
                                     </button>
+
                                 </div>
                             </div>
 
                             <button id="actions-toggle" class="z-10 w-full sm:w-auto flex items-center justify-center gap-2 px-5 py-2.5 text-white bg-green-600 hover:bg-green-700 font-semibold rounded-lg transition-colors duration-200">
-                                <span>Ações</span>
+                                <span>Menu</span>
                                 <svg id="actions-arrow" xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="w-5 h-5 transition-transform duration-200"><path d="m6 9 6 6 6-6"/></svg>
                             </button>
                             
