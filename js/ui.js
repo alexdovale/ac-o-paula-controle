@@ -628,6 +628,7 @@ export const UIService = {
     renderAssistedLists(app) {
         if (!app) return;
 
+        // ⭐ NOVO: INJETA O AVISO DE TOLERÂNCIA ABAIXO DO TÍTULO DA PAUTA
         const titleContainer = document.getElementById('pauta-title')?.parentElement;
         if (titleContainer) {
             let tolInfo = document.getElementById('tolerancia-info-badge');
@@ -641,6 +642,7 @@ export const UIService = {
             const tolVal = app.currentPautaData?.toleranciaMinutos !== undefined ? app.currentPautaData.toleranciaMinutos : 15;
             const ordem = app.currentPautaData?.ordemAtendimento || 'flexivel';
             
+            // Só exibe a etiqueta se a pauta for do tipo Flexível (Encaixe)
             if (ordem.includes('flexivel') || ordem === 'padrao') {
                 tolInfo.innerHTML = `
                     <span class="bg-amber-50 text-amber-800 border border-amber-200 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm flex items-center gap-1.5 uppercase tracking-wider">
@@ -652,6 +654,7 @@ export const UIService = {
                 tolInfo.style.display = 'none';
             }
         }
+        // ⭐ FIM DO NOVO CÓDIGO
 
         if (typeof PainelGeralService !== 'undefined') {
             const painelModal = document.getElementById('painel-geral-externo-modal');
@@ -693,6 +696,7 @@ export const UIService = {
 
         const searchTerms = this.getSearchTerms();
 
+        // 🌟 INCLUI OS PAUSADOS NA COLUNA DE AGUARDANDO
         let rawAguardando = allAssisted.filter(a => a.status === 'aguardando' || a.status === 'pausado');
         let rawEmAtendimento = allAssisted.filter(a => a.status === 'emAtendimento');
         let rawAtendidos = allAssisted.filter(a => a.status === 'atendido');
@@ -861,9 +865,16 @@ export const UIService = {
     },
 
     _getActionButtonsHtml(item) {
-        // ⭐ INJEÇÃO DO BOTÃO "MONITORAMENTO" NOS TRÊS PONTINHOS DO CARD ⭐
         return `
             <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
+                <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
+                    class="text-indigo-600 hover:text-indigo-800 p-2 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Scanner)">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path>
+                        <circle cx="12" cy="13" r="4"></circle>
+                    </svg>
+                </button>
+
                 <div class="relative">
                     <button data-id="${item.id}" id="quick-toggle-${item.id}" class="quick-action-toggle text-slate-400 hover:text-slate-700 p-1.5 rounded-md hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200" title="Opções">
                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" viewBox="0 0 16 16">
@@ -897,12 +908,10 @@ export const UIService = {
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
                             Status da Triagem
                         </button>
-
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
-                        
-                        <button data-action="monitoramento" data-id="${item.id}" data-name="${escapeHTML(item.name)}" class="w-full text-left px-4 py-2 hover:bg-indigo-50 text-xs font-bold text-indigo-700 flex items-center gap-2 transition">
-                            <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
-                            Monitoramento
+
+                        <button data-action="monitoramento" data-id="${item.id}" data-name="${escapeHTML(item.name)}" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Monitoramento
                         </button>
                         
                         <button data-id="${item.id}" class="edit-assisted-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
@@ -2407,18 +2416,28 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 container.classList.add('column-wrapper-base');
                 
                 const headerFlex = countBadge.parentElement; 
+                headerFlex.classList.add('relative');
+                
+                // Agrupa o título e a bolinha do contador lado a lado
+                const titleWrapper = document.createElement('div');
+                titleWrapper.className = 'flex items-center gap-2';
+                
+                const h3 = headerFlex.querySelector('h3');
+                if (h3) {
+                    headerFlex.insertBefore(titleWrapper, h3);
+                    titleWrapper.appendChild(h3);
+                    titleWrapper.appendChild(countBadge);
+                }
                 
                 const btnGroup = document.createElement('div');
-                btnGroup.className = 'flex items-center gap-1 ml-auto pl-2 flex-shrink-0';
+                btnGroup.className = 'flex items-center gap-1.5 ml-auto flex-shrink-0';
                 btnGroup.innerHTML = `
-                    <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
-                    <button class="btn-maximize bg-slate-200 hover:bg-slate-300 text-slate-700 p-1.5 rounded-md transition-colors shadow-sm" title="Maximizar na Tela Atual">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M5.828 10.172a.5.5 0 0 0-.707 0l-4.096 4.096V11.5a.5.5 0 0 0-1 0v3.975a.5.5 0 0 0 .5.5H4.5a.5.5 0 0 0 0-1H1.732l4.096-4.096a.5.5 0 0 0 0-.707zm4.344-4.344a.5.5 0 0 0 .707 0l4.096-4.096V4.5a.5.5 0 1 0 1 0V.525a.5.5 0 0 0-.5-.5H11.5a.5.5 0 0 0 0 1h2.768l-4.096 4.096a.5.5 0 0 0 0 .707z"/></svg>
+                    <button class="btn-maximize bg-slate-200 hover:bg-slate-300 text-slate-600 p-1.5 rounded-lg transition-colors shadow-sm flex items-center justify-center" title="Maximizar na Tela Atual">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h6v6"/><path d="M9 21H3v-6"/><path d="M21 3l-7 7"/><path d="M3 21l7-7"/></svg>
                     </button>
-                    <button class="btn-popout bg-blue-100 hover:bg-blue-200 text-blue-700 p-1.5 rounded-md transition-colors shadow-sm" title="Desencaixar (Arraste para Monitor 2)">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="13" height="13" fill="currentColor" viewBox="0 0 16 16"><path fill-rule="evenodd" d="M1.5 13A1.5 1.5 0 0 0 3 14.5h8a1.5 1.5 0 0 0 1.5-1.5V9a.5.5 0 0 0-1 0v4a.5.5 0 0 1-.5.5H3a.5.5 0 0 1-.5-.5V5a.5.5 0 0 1 .5-.5h4a.5.5 0 0 0 0-1H3A1.5 1.5 0 0 0 1.5 5v8zm7-11a.5.5 0 0 1 .5-.5h5a.5.5 0 0 1 .5.5v5a.5.5 0 0 1-1 0V2.5H9a.5.5 0 0 1-.5-.5z"/><path fill-rule="evenodd" d="M14.354 1.646a.5.5 0 0 1 0 .708l-8 8a.5.5 0 0 1-.708-.708l8-8a.5.5 0 0 1 .708 0z"/></svg>
+                    <button class="btn-popout bg-blue-100 hover:bg-blue-200 text-blue-700 p-1.5 rounded-lg transition-colors shadow-sm flex items-center justify-center" title="Desencaixar (Arraste para Monitor 2)">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     </button>
-                    </div>
                 `;
 
                 headerFlex.appendChild(btnGroup);
