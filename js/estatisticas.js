@@ -1,16 +1,42 @@
 /**
- * estatisticas.js - Versão Completa e Corrigida
- * Funcionalidades:
- * - PDF por Equipe (MOSTRA TODOS + QUEBRA DE PÁGINA AUTOMÁTICA)
- * - Logo SIGEP no cabeçalho + Função Anti-CORS
- * - Tabelas inteligentes para não sobrepor textos
- * - Ordenação Hierárquica: Defensores primeiro, Servidores depois.
- * - Disponibilidade total dos colaboradores (mesmo após 7 dias)
+ * estatisticas.js - SIGEP
+ * - Interface redesenhada (indicadores, barras, cartões por equipe)
+ * - Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras, "Não definida" por último
+ * - IDs estáveis (sem Math.random) e nomes protegidos contra HTML
+ * - PDFs: Resumo Geral, Por Equipe, Só Grupos, Detalhado (com logo SIGEP e quebra de página)
  */
 
 const LOGO_SIGEP_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
 
-// ⭐ FUNÇÃO BLINDADA: Carrega imagem driblando o bloqueio de CORS do Firebase
+// ---------- utilitários ----------
+const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+const slug = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+const pct = (parte, total) => total > 0 ? Math.round((parte / total) * 100) : 0;
+// Porcentagem com 1 casa decimal (ex.: 33,3 -> 33.3)
+const pctF = (parte, total) => total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
+
+// Ordem das equipes: números (1,2,3..), CRC, Coordenadores, outras A-Z, "Não definida" por último
+const compararGrupos = (a, b) => {
+    const limpa = s => String(s ?? '').replace(/^Equipe\s+/i, '').trim();
+    const ga = limpa(a), gb = limpa(b);
+    const naoDef = s => /^N[ãa]o Definida$/i.test(s) || s === '';
+    if (naoDef(ga) !== naoDef(gb)) return naoDef(ga) ? 1 : -1;
+    const na = /^\d+$/.test(ga), nb = /^\d+$/.test(gb);
+    if (na && nb) return Number(ga) - Number(gb);
+    if (na) return -1;
+    if (nb) return 1;
+    const fixa = ['crc', 'coordenadores'];
+    const ia = fixa.indexOf(ga.toLowerCase()), ib = fixa.indexOf(gb.toLowerCase());
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return ga.localeCompare(gb, 'pt-BR');
+};
+
+// Carrega imagem em base64 driblando CORS do Firebase
 const loadImageBase64 = async (url) => {
     const fetchImage = (src) => new Promise((resolve, reject) => {
         const img = new Image();
@@ -25,14 +51,11 @@ const loadImageBase64 = async (url) => {
         img.onerror = reject;
         img.src = src;
     });
-
     try {
-        return await fetchImage(url); // Tenta direto
+        return await fetchImage(url);
     } catch (e) {
         try {
-            // Se o Firebase bloquear, usa o proxy
-            const proxyUrl = 'https://corsproxy.io/?' + encodeURIComponent(url);
-            return await fetchImage(proxyUrl);
+            return await fetchImage('https://corsproxy.io/?' + encodeURIComponent(url));
         } catch (e2) {
             console.warn("Erro ao carregar logo", e2);
             return null;
@@ -49,1118 +72,798 @@ export const StatisticsService = {
         return Math.round((end - start) / 60000);
     },
 
-    // Ordenação Inteligente: Primeiro Defensor, depois Servidor, depois Alfabético
     sortCollaboratorsByRole(colaboradores) {
+        const peso = (cargo) => {
+            const c = (cargo || '').toLowerCase();
+            if (c.includes('defensor')) return 1;
+            if (c.includes('servidor')) return 2;
+            return 3;
+        };
         return [...colaboradores].sort((a, b) => {
-            const getCargoWeight = (cargo) => {
-                const c = (cargo || '').toLowerCase();
-                if (c.includes('defensor')) return 1;
-                if (c.includes('servidor')) return 2;
-                return 3;
-            };
-            const weightA = getCargoWeight(a.cargo);
-            const weightB = getCargoWeight(b.cargo);
-            
-            if (weightA !== weightB) return weightA - weightB;
-            return (a.nome || '').localeCompare(b.nome || '');
+            const d = peso(a.cargo) - peso(b.cargo);
+            return d !== 0 ? d : (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
         });
     },
 
-    // Função auxiliar para desenhar o Cabeçalho SIGEP com Logo
+    // =====================================================================
+    // PDF - helpers compartilhados
+    // =====================================================================
     async drawSigepHeader(doc, margin, startY) {
         const logoBase64 = await loadImageBase64(LOGO_SIGEP_URL);
         if (logoBase64) {
-            try {
-                doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - margin - 35, startY - 15, 35, 35);
-            } catch(e) {}
+            try { doc.addImage(logoBase64, 'PNG', doc.internal.pageSize.getWidth() - margin - 35, startY - 15, 35, 35); } catch (e) { }
         }
-
         doc.setFontSize(24);
-        doc.setTextColor(22, 163, 74); // Verde SIGEP
+        doc.setTextColor(22, 163, 74);
         doc.setFont("helvetica", "bold");
         doc.text("SIGEP", margin, startY);
-        
+
         doc.setFontSize(10);
         doc.setTextColor(120, 120, 120);
         doc.setFont("helvetica", "normal");
         doc.text("Sistema de Gerenciamento de Pauta", margin, startY + 12);
-        
         return startY + 35;
+    },
+
+    async novoPDF(titulo, pautaName, totalGeral) {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+        const pageWidth = doc.internal.pageSize.getWidth();
+        const pageHeight = doc.internal.pageSize.getHeight();
+        const margin = 40;
+
+        let yPos = await this.drawSigepHeader(doc, margin, margin);
+
+        doc.setFontSize(16);
+        doc.setTextColor(22, 163, 74);
+        doc.setFont("helvetica", "bold");
+        doc.text(titulo, margin, yPos);
+        yPos += 18;
+
+        doc.setFontSize(12);
+        doc.setTextColor(100);
+        doc.setFont("helvetica", "normal");
+        const linhas = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - margin * 2);
+        doc.text(linhas, margin, yPos);
+        yPos += linhas.length * 15;
+
+        if (totalGeral !== undefined) {
+            doc.setFontSize(10);
+            doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
+            yPos += 14;
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total de Atendimentos: ${totalGeral}`, margin, yPos);
+            yPos += 20;
+        } else {
+            yPos += 5;
+        }
+        return { doc, yPos, margin, pageWidth, pageHeight };
+    },
+
+    rodapePDF(doc, margin, pageHeight) {
+        const total = doc.internal.getNumberOfPages();
+        for (let i = 1; i <= total; i++) {
+            doc.setPage(i);
+            doc.setFontSize(8);
+            doc.setTextColor(150);
+            doc.setFont("helvetica", "normal");
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${total}`, margin, pageHeight - 20);
+        }
+    },
+
+    // =====================================================================
+    // INTERFACE
+    // =====================================================================
+    coletarColaboradores(atendidos) {
+        let lista = [];
+        if (window.app?.currentPautaData?.colaboradores?.length) lista = [...window.app.currentPautaData.colaboradores];
+        if (lista.length === 0 && window.app?.colaboradores?.length) lista = [...window.app.colaboradores];
+        if (lista.length === 0) {
+            try { lista = JSON.parse(localStorage.getItem('sigap_colaboradores') || '[]'); } catch (e) { lista = []; }
+        }
+
+        // Fallback: atendentes que aparecem nos atendimentos
+        atendidos.forEach(a => {
+            const raw = a.attendedBy || a.attendant;
+            if (!raw) return;
+            const nome = String(typeof raw === 'object' ? (raw.nome || raw.name || '') : raw).trim();
+            if (!nome) return;
+            if (!lista.some(c => (c.nome || '').trim().toLowerCase() === nome.toLowerCase())) {
+                lista.push({
+                    id: 'extraido-' + slug(nome),
+                    nome,
+                    cargo: 'Atendente',
+                    equipe: (typeof raw === 'object' && raw.equipe) ? raw.equipe : ''
+                });
+            }
+        });
+        return lista;
+    },
+
+    barras(itens, cor) {
+        const max = Math.max(...itens.map(i => i.count), 1);
+        return itens.map(i => `
+            <div class="flex items-center gap-3 text-xs">
+                <span class="w-14 shrink-0 font-semibold text-slate-600 tabular-nums">${esc(i.label)}</span>
+                <div class="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                    <div class="h-full rounded-full ${cor}" style="width:${pct(i.count, max)}%"></div>
+                </div>
+                <span class="w-8 text-right font-bold text-slate-700 tabular-nums">${i.count}</span>
+            </div>`).join('');
+    },
+
+    cartao(titulo, icone, corpo, extra = '') {
+        return `
+            <section class="bg-white rounded-2xl border border-slate-200 shadow-sm ${extra}">
+                <header class="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
+                    <span class="text-base">${icone}</span>
+                    <h3 class="text-sm font-bold text-slate-800">${titulo}</h3>
+                </header>
+                <div class="p-5">${corpo}</div>
+            </section>`;
     },
 
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
         if (!modal) return;
-        
         modal.classList.remove('hidden');
-        
+
         const closeBtn = document.getElementById('close-statistics-modal-btn');
         if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
 
         const titleEl = modal.querySelector('h2');
-        if (titleEl) {
-            titleEl.innerHTML = `<span class="text-blue-600 mr-2">📊</span> Estatísticas - <span class="text-gray-700">${pautaName}</span>`;
-        }
+        if (titleEl) titleEl.innerHTML = `<span class="text-blue-600 mr-2">📊</span> Estatísticas - <span class="text-gray-700">${esc(pautaName)}</span>`;
 
         const content = document.getElementById('statistics-content');
         if (!content) return;
-
         content.innerHTML = `<div class="flex items-center justify-center h-64"><p class="text-gray-500 font-medium animate-pulse">Calculando estatísticas...</p></div>`;
 
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // BUSCAR DADOS DOS COLABORADORES DE FORMA TOTALMENTE ABRANGENTE
-        let todosColaboradores = [];
-        
-        // 1. Tenta pegar da pauta atual se estiver armazenada no app
-        if (window.app && window.app.currentPautaData && window.app.currentPautaData.colaboradores) {
-            todosColaboradores = window.app.currentPautaData.colaboradores;
-        } 
-        
-        // 2. Se não achar na pauta, pega do escopo global do app
-        if (todosColaboradores.length === 0 && window.app && window.app.colaboradores) {
-            todosColaboradores = window.app.colaboradores;
-        } 
-        
-        // 3. Se ainda estiver vazio, busca no localStorage de segurança
-        if (todosColaboradores.length === 0) {
-            const stored = localStorage.getItem('sigap_colaboradores');
-            if (stored) {
-                try { todosColaboradores = JSON.parse(stored); } catch (e) {}
-            }
-        }
-
-        // 4. Fallback final: Extrai dinamicamente todos os atendentes únicos que já apareceram nos atendimentos da pauta
-        atendidos.forEach(a => {
-            const rawAtt = a.attendedBy || a.attendant;
-            if (rawAtt) {
-                const nomeExtraido = typeof rawAtt === 'object' ? (rawAtt.nome || rawAtt.name) : String(rawAtt);
-                if (nomeExtraido && !todosColaboradores.some(c => c.nome.toLowerCase() === nomeExtraido.toLowerCase())) {
-                    todosColaboradores.push({
-                        id: 'extracted_' + Math.random(),
-                        nome: nomeExtraido.trim(),
-                        cargo: 'Atendente',
-                        equipe: rawAtt.equipe || '1'
-                    });
-                }
-            }
-        });
-        
-        const colaboradoresPorEquipe = {};
-        const mapaNomeParaEquipe = {};
-        
-        todosColaboradores.forEach(col => {
-            const equipe = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
-            const nomeNormalizado = (col.nome || '').trim();
-            if (!nomeNormalizado) return;
-            
-            mapaNomeParaEquipe[nomeNormalizado] = equipe;
-            
-            if (!colaboradoresPorEquipe[equipe]) {
-                colaboradoresPorEquipe[equipe] = [];
-            }
-            
-            // Evita duplicatas na mesma equipe
-            if (!colaboradoresPorEquipe[equipe].some(c => c.nome.toLowerCase() === nomeNormalizado.toLowerCase())) {
-                colaboradoresPorEquipe[equipe].push({
-                    nome: nomeNormalizado,
-                    cargo: col.cargo || 'Sem cargo',
-                    id: col.id || Math.random()
-                });
-            }
-        });
-
+        // ---------- equipes ----------
+        const todosColaboradores = this.coletarColaboradores(atendidos);
+        const nomeParaEquipe = {};
         const statsByGroup = {};
-        
-        Object.keys(colaboradoresPorEquipe).forEach(equipe => {
-            statsByGroup[equipe] = { 
-                collaborators: {}, 
-                total: 0,
-                atendimentos: [],
-                todosColaboradores: colaboradoresPorEquipe[equipe]
-            };
+        const garantirGrupo = (g) => {
+            if (!statsByGroup[g]) statsByGroup[g] = { collaborators: {}, total: 0, atendimentos: [], todosColaboradores: [] };
+            return statsByGroup[g];
+        };
+
+        todosColaboradores.forEach(col => {
+            const nome = (col.nome || '').trim();
+            if (!nome) return;
+            const grupo = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
+            nomeParaEquipe[nome.toLowerCase()] = grupo;
+            const g = garantirGrupo(grupo);
+            if (!g.todosColaboradores.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
+                g.todosColaboradores.push({ nome, cargo: col.cargo || 'Sem cargo', id: col.id || ('col-' + slug(nome)) });
+            }
         });
-        
-        if (!statsByGroup['Equipe Não Definida']) {
-            statsByGroup['Equipe Não Definida'] = { 
-                collaborators: {}, total: 0, atendimentos: [], todosColaboradores: []
-            };
-        }
-        
+
         atendidos.forEach(a => {
-            const rawAttendant = a.attendedBy || a.attendant;
-            if (!rawAttendant) return;
-
-            let attendantName = '';
-            let groupName = '';
-
-            if (typeof rawAttendant === 'object') {
-                attendantName = (rawAttendant.nome || rawAttendant.name || '').trim();
-                groupName = rawAttendant.equipe ? `Equipe ${rawAttendant.equipe}` : '';
+            const raw = a.attendedBy || a.attendant;
+            if (!raw) return;
+            let nome = '', grupo = '';
+            if (typeof raw === 'object') {
+                nome = (raw.nome || raw.name || '').trim();
+                grupo = raw.equipe ? `Equipe ${raw.equipe}` : '';
             } else {
-                attendantName = String(rawAttendant).trim();
+                nome = String(raw).trim();
             }
-            
-            if (!groupName || groupName === 'Equipe undefined') {
-                groupName = mapaNomeParaEquipe[attendantName] || 'Equipe Não Definida';
-            }
+            if (!grupo || grupo === 'Equipe undefined') grupo = nomeParaEquipe[nome.toLowerCase()] || 'Equipe Não Definida';
 
-            if (!statsByGroup[groupName]) {
-                statsByGroup[groupName] = { collaborators: {}, total: 0, atendimentos: [], todosColaboradores: [] };
-            }
-
-            const safeAttendantName = attendantName || 'Não informado';
-            statsByGroup[groupName].collaborators[safeAttendantName] = (statsByGroup[groupName].collaborators[safeAttendantName] || 0) + 1;
-            statsByGroup[groupName].total++;
-            
-            statsByGroup[groupName].atendimentos.push({
+            const g = garantirGrupo(grupo);
+            const seguro = nome || 'Não informado';
+            g.collaborators[seguro] = (g.collaborators[seguro] || 0) + 1;
+            g.total++;
+            g.atendimentos.push({
                 nome: a.name || 'Não informado',
                 assunto: a.subject || 'Sem assunto',
-                atendente: safeAttendantName,
+                atendente: seguro,
                 horario: a.attendedTime ? new Date(a.attendedTime.seconds ? a.attendedTime.seconds * 1000 : a.attendedTime).toLocaleString('pt-BR') : 'Não finalizado'
             });
         });
-        
+
         const sortedGroups = Object.keys(statsByGroup)
-            .sort()
-            .map(groupName => ({
-                groupName,
-                total: statsByGroup[groupName]?.total || 0,
-                collaborators: statsByGroup[groupName]?.collaborators ? 
-                    Object.entries(statsByGroup[groupName].collaborators)
-                        .sort(([, a], [, b]) => b - a)
-                        .map(([name, count]) => ({ name, count })) : [],
-                todosColaboradores: statsByGroup[groupName]?.todosColaboradores || [],
-                atendimentos: statsByGroup[groupName]?.atendimentos || []
-            }));
-        
+            .sort(compararGrupos)
+            .map(groupName => {
+                const g = statsByGroup[groupName];
+                return {
+                    groupName,
+                    total: g.total,
+                    collaborators: Object.entries(g.collaborators).sort(([, a], [, b]) => b - a).map(([name, count]) => ({ name, count })),
+                    todosColaboradores: g.todosColaboradores,
+                    atendimentos: g.atendimentos
+                };
+            })
+            // equipe vazia e sem membros não aparece (exceto se tiver atendimento)
+            .filter(g => g.todosColaboradores.length > 0 || g.total > 0);
+
         const totalGeral = atendidos.length;
-        
+
+        // ---------- assuntos ----------
         const statsBySubject = allAssisted.reduce((acc, a) => {
-            const demandasDoAssistido = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
-            demandasDoAssistido.forEach(demanda => {
-                if (!acc[demanda]) acc[demanda] = { total: 0, atendidos: 0, faltosos: 0 };
-                acc[demanda].total++;
-                if (a.status === 'atendido') acc[demanda].atendidos++;
-                else if (a.status === 'faltoso') acc[demanda].faltosos++;
+            const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
+            demandas.forEach(d => {
+                if (!acc[d]) acc[d] = { total: 0, atendidos: 0, faltosos: 0 };
+                acc[d].total++;
+                if (a.status === 'atendido') acc[d].atendidos++;
+                else if (a.status === 'faltoso') acc[d].faltosos++;
             });
             return acc;
         }, {});
+        const somaSubj = (k) => Object.values(statsBySubject).reduce((s, d) => s + d[k], 0);
+        const totalDemandasGeral = somaSubj('total');
+        const totalDemandasAtendidos = somaSubj('atendidos');
+        const totalDemandasFaltosos = somaSubj('faltosos');
 
-        const totalDemandasGeral = Object.values(statsBySubject).reduce((sum, data) => sum + data.total, 0);
-
+        // ---------- ações rápidas ----------
         const statsByAcaoRapida = {};
-        atendidos.forEach(a => {
-            if (a.tipoAcaoRapida) {
-                statsByAcaoRapida[a.tipoAcaoRapida] = (statsByAcaoRapida[a.tipoAcaoRapida] || 0) + 1;
-            }
-        });
+        atendidos.forEach(a => { if (a.tipoAcaoRapida) statsByAcaoRapida[a.tipoAcaoRapida] = (statsByAcaoRapida[a.tipoAcaoRapida] || 0) + 1; });
         const totalAcoesRapidas = Object.values(statsByAcaoRapida).reduce((s, v) => s + v, 0);
-        const totalDemandasAtendidos = Object.values(statsBySubject).reduce((sum, data) => sum + data.atendidos, 0);
-        const totalDemandasFaltosos = Object.values(statsBySubject).reduce((sum, data) => sum + data.faltosos, 0);
 
-        const statsByTime = atendidos.filter(a => a.scheduledTime).reduce((acc, a) => {
+        // ---------- horários ----------
+        const contarPorHorario = (lista) => lista.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
         }, {});
+        const statsByTime = contarPorHorario(atendidos);
+        const statsByTimeFaltosos = contarPorHorario(faltosos);
+        const statsByScheduledTime = contarPorHorario(allAssisted);
         const sortedTimes = Object.keys(statsByTime).sort();
-
-        const statsByTimeFaltosos = faltosos.filter(a => a.scheduledTime).reduce((acc, a) => {
-            acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
-            return acc;
-        }, {});
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
-
-        const statsByScheduledTime = allAssisted.filter(a => a.scheduledTime).reduce((acc, a) => {
-            acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
-            return acc;
-        }, {});
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        let totalDelegatedMinutes = 0, delegatedCount = 0;
-        let totalDirectMinutes = 0, directCount = 0;
-
+        // ---------- tempos médios ----------
+        let totDeleg = 0, nDeleg = 0, totDir = 0, nDir = 0;
         atendidos.forEach(a => {
-            const minutes = this.getTimeDifferenceInMinutes(a.arrivalTime, a.attendedTime);
-            if (minutes !== null) {
-                if (useDelegationFlow && a.inAttendanceTime) {
-                    totalDelegatedMinutes += minutes;
-                    delegatedCount++;
-                } else {
-                    totalDirectMinutes += minutes;
-                    directCount++;
-                }
-            }
+            const m = this.getTimeDifferenceInMinutes(a.arrivalTime, a.attendedTime);
+            if (m === null) return;
+            if (useDelegationFlow && a.inAttendanceTime) { totDeleg += m; nDeleg++; } else { totDir += m; nDir++; }
+        });
+        const avgTimeDelegated = nDeleg > 0 ? Math.round(totDeleg / nDeleg) : 0;
+        const avgTimeDirect = nDir > 0 ? Math.round(totDir / nDir) : 0;
+
+        const comparecimento = pct(atendidos.length, atendidos.length + faltosos.length);
+
+        // =================== HTML ===================
+        const kpi = (icone, valor, rotulo, cor) => `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
+                <div class="w-11 h-11 rounded-xl ${cor} flex items-center justify-center text-lg shrink-0">${icone}</div>
+                <div class="min-w-0">
+                    <p class="text-2xl font-black text-slate-800 leading-none tabular-nums">${valor}</p>
+                    <p class="text-[11px] text-slate-500 font-semibold mt-1 truncate">${rotulo}</p>
+                </div>
+            </div>`;
+
+        const kpisHTML = `
+            <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+                ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
+                ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
+                ${kpi('📈', comparecimento + '%', 'Comparecimento', 'bg-indigo-50')}
+                ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo médio', 'bg-blue-50')}
+                ${useDelegationFlow ? kpi('🤝', avgTimeDelegated + ' min', 'Média na delegação', 'bg-amber-50') : ''}
+            </div>`;
+
+        const exportHTML = `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
+                <div class="flex flex-wrap items-center gap-2">
+                    <span class="text-sm font-bold text-slate-800 mr-auto">🖨️ Exportar relatórios</span>
+                    <button id="export-stats-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors">📊 Resumo geral</button>
+                    <button id="export-equipes-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 transition-colors">👥 Por equipe</button>
+                    <button id="export-grupo-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">📋 Só grupos</button>
+                    <button id="export-stats-detalhado-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-orange-500 text-white hover:bg-orange-600 transition-colors">📖 Detalhado</button>
+                </div>
+                <details class="mt-3">
+                    <summary class="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Escolher o que entra no Resumo geral</summary>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-3 text-[11px] font-medium text-slate-600">
+                        ${[['export-general', 'Geral'], ['export-collaborators', 'Equipes'], ['export-subjects', 'Assuntos'], ['export-scheduled-time', 'Agenda'], ['export-times', 'Chegada'], ['export-absentees-time', 'Faltosos']]
+                .map(([id, l]) => `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="${id}" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600" checked> ${l}</label>`).join('')}
+                    </div>
+                </details>
+            </div>`;
+
+        // Ações rápidas
+        const acoesCores = {
+            'Reagendamento': { icon: '🔄', bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
+            'Agendamento': { icon: '📅', bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
+            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
+            'Outros Assuntos': { icon: '⚙️', bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
+        };
+        const acoesHTML = totalAcoesRapidas > 0 ? this.cartao('Ações rápidas utilizadas', '⚡', `
+            <div class="grid grid-cols-2 gap-3">
+                ${Object.entries(statsByAcaoRapida).sort(([, a], [, b]) => b - a).map(([tipo, qtd]) => {
+            const c = acoesCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
+            return `<div style="background:${c.bg};border:1px solid ${c.border};color:${c.text}" class="rounded-xl px-3 py-2.5">
+                        <div class="text-[11px] font-bold opacity-80">${c.icon} ${esc(tipo)}</div>
+                        <div class="text-xl font-black tabular-nums">${qtd}</div></div>`;
+        }).join('')}
+            </div>
+            <p class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between"><span>Total de ações ágeis</span><strong class="text-slate-700">${totalAcoesRapidas}</strong></p>`) : '';
+
+        // Horários (barras)
+        const horariosHTML = [
+            sortedScheduledTimes.length ? this.cartao('Agendados por horário', '📅', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedScheduledTimes.map(t => ({ label: t, count: statsByScheduledTime[t] })), 'bg-slate-500')}</div>`) : '',
+            sortedTimes.length ? this.cartao('Atendidos por horário', '📍', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimes.map(t => ({ label: t, count: statsByTime[t] })), 'bg-green-500')}</div>`) : '',
+            sortedTimesFaltosos.length ? this.cartao('Faltosos por horário', '🚫', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimesFaltosos.map(t => ({ label: t, count: statsByTimeFaltosos[t] })), 'bg-red-500')}</div>`) : ''
+        ].join('');
+
+        // Assuntos
+        const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
+        const assuntosHTML = this.cartao('Demandas por assunto', '🏷️', assuntosOrdenados.length === 0
+            ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
+            : `<div class="max-h-[360px] overflow-y-auto rounded-lg border border-slate-100">
+                <table class="w-full text-xs md:text-sm text-left">
+                    <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10">
+                        <tr>
+                            <th class="px-4 py-2.5 font-bold">Assunto</th>
+                            <th class="px-3 py-2.5 font-bold text-center">Total</th>
+                            <th class="px-3 py-2.5 font-bold text-center text-green-600">Atend.</th>
+                            <th class="px-3 py-2.5 font-bold text-center text-red-600">Falt.</th>
+                            <th class="px-4 py-2.5 font-bold w-32">Participação</th>
+                        </tr>
+                    </thead>
+                    <tbody class="divide-y divide-slate-100">
+                        ${assuntosOrdenados.map(([subject, d]) => `
+                            <tr class="hover:bg-slate-50/60">
+                                <td class="px-4 py-2.5 font-medium text-slate-700">${esc(subject)}</td>
+                                <td class="px-3 py-2.5 text-center font-bold text-slate-800">${d.total}</td>
+                                <td class="px-3 py-2.5 text-center font-semibold text-green-600">${d.atendidos}</td>
+                                <td class="px-3 py-2.5 text-center font-semibold text-red-500">${d.faltosos}</td>
+                                <td class="px-4 py-2.5">
+                                    <div class="flex items-center gap-2">
+                                        <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full bg-orange-400 rounded-full" style="width:${pct(d.total, totalDemandasGeral)}%"></div></div>
+                                        <span class="text-[11px] text-slate-500 w-9 text-right tabular-nums">${pct(d.total, totalDemandasGeral)}%</span>
+                                    </div>
+                                </td>
+                            </tr>`).join('')}
+                    </tbody>
+                    <tfoot class="bg-slate-100 font-bold sticky bottom-0">
+                        <tr>
+                            <td class="px-4 py-2.5 text-slate-800">Total geral</td>
+                            <td class="px-3 py-2.5 text-center">${totalDemandasGeral}</td>
+                            <td class="px-3 py-2.5 text-center text-green-700">${totalDemandasAtendidos}</td>
+                            <td class="px-3 py-2.5 text-center text-red-700">${totalDemandasFaltosos}</td>
+                            <td></td>
+                        </tr>
+                    </tfoot>
+                </table>
+            </div>`);
+
+        // Equipes
+        const CORES_EQUIPE = ['bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-400', 'bg-teal-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500', 'bg-cyan-500', 'bg-rose-500'];
+        const corEquipe = (nome) => CORES_EQUIPE[Math.max(0, sortedGroups.findIndex(g => g.groupName === nome)) % CORES_EQUIPE.length];
+        const iniciaisDe = (nome) => (String(nome).split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join('') || '?').toUpperCase();
+
+        // Lista individual de todas as equipes (inclui atendentes que não estão na lista de membros)
+        const individuais = [];
+        sortedGroups.forEach(({ groupName, total, collaborators, todosColaboradores }) => {
+            const conhecidos = new Set();
+            todosColaboradores.forEach(col => {
+                conhecidos.add(col.nome);
+                individuais.push({ nome: col.nome, cargo: col.cargo, equipe: groupName, equipeTotal: total, atendimentos: collaborators.find(c => c.name === col.nome)?.count || 0 });
+            });
+            collaborators.forEach(c => {
+                if (!conhecidos.has(c.name)) individuais.push({ nome: c.name, cargo: '-', equipe: groupName, equipeTotal: total, atendimentos: c.count });
+            });
         });
 
-        const avgTimeDelegated = delegatedCount > 0 ? Math.round(totalDelegatedMinutes / delegatedCount) : 0;
-        const avgTimeDirect = directCount > 0 ? Math.round(totalDirectMinutes / directCount) : 0;
-
-        const delegationHTML = useDelegationFlow ? `
-            <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                <span class="w-8 h-8 rounded-full bg-indigo-50 text-indigo-600 flex items-center justify-center mb-2 text-sm">⏱️</span>
-                <p class="text-2xl font-black text-slate-800">${avgTimeDelegated} min</p>
-                <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center leading-tight">Média Delegação</p>
+        // --- Visão GERAL: distribuição + cartões por equipe ---
+        const gruposComAtend = sortedGroups.filter(g => g.total > 0);
+        const distribuicaoHTML = totalGeral > 0 ? `
+            <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-baseline justify-between mb-2">
+                    <p class="text-xs font-bold text-slate-700">Como os ${totalGeral} atendimentos se dividem entre as equipes</p>
+                    <p class="text-[11px] text-slate-400">100% = todos os atendidos</p>
+                </div>
+                <div class="flex h-4 rounded-full overflow-hidden bg-slate-200">
+                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}: ${pctF(g.total, totalGeral)}%"></div>`).join('')}
+                </div>
+                <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+                    ${gruposComAtend.map(g => `
+                        <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                            <span class="w-2.5 h-2.5 rounded-full ${corEquipe(g.groupName)}"></span>
+                            <strong>${esc(g.groupName)}</strong> ${g.total} (${pctF(g.total, totalGeral)}%)
+                        </span>`).join('')}
+                </div>
             </div>` : '';
 
-        const acoesRapidasCores = {
-            'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
-            'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
-            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
-            'Outros Assuntos':     { icon: '⚙️', bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
-        };
-        
-        const acoesRapidasHTML = totalAcoesRapidas > 0 ? `
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                <h3 class="text-base font-bold text-slate-800 mb-3 flex items-center gap-2">
-                    <span class="text-blue-500">⚡</span> Ações Rápidas Utilizadas
-                </h3>
-                <div class="grid grid-cols-2 gap-3">
-                    ${Object.entries(statsByAcaoRapida).sort(([,a],[,b]) => b-a).map(([tipo, qtd]) => {
-                        const cfg = acoesRapidasCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
-                        return `<div style="background:${cfg.bg}; border:1px solid ${cfg.border}; color:${cfg.text}" class="flex flex-col rounded-xl px-3 py-2.5">
-                            <span class="text-[10px] font-bold uppercase tracking-wider opacity-80 mb-1">${cfg.icon} ${tipo}</span>
-                            <span class="text-xl font-black">${qtd}</span>
-                        </div>`;
-                    }).join('')}
-                </div>
-                <div class="mt-3 pt-3 border-t border-slate-100 flex justify-between items-center text-xs text-slate-500">
-                    <span class="font-medium">Total de ações ágeis</span>
-                    <span class="font-bold text-slate-700 bg-slate-100 px-2 py-0.5 rounded-md">${totalAcoesRapidas}</span>
-                </div>
-            </div>
-        ` : '';
+        const groupsHTML = sortedGroups.map(({ groupName, total, todosColaboradores }) => {
+            const gid = 'g-' + slug(groupName);
+            const membros = this.sortCollaboratorsByRole(individuais.filter(i => i.equipe === groupName));
+            const parteDoTotal = pctF(total, totalGeral);
+            const mediaMembro = todosColaboradores.length > 0 ? (total / todosColaboradores.length).toFixed(1).replace('.', ',') : '-';
 
-        const groupsHTML = sortedGroups.map(({groupName, total, collaborators, todosColaboradores}, index) => {
-            const colaboradoresCompletos = [];
-            todosColaboradores.forEach(col => {
-                const atendimentos = collaborators.find(c => c.name === col.nome)?.count || 0;
-                colaboradoresCompletos.push({ nome: col.nome, atendimentos: atendimentos, cargo: col.cargo });
-            });
-            
-            const sortedColaboradoresUI = this.sortCollaboratorsByRole(colaboradoresCompletos);
-            
-            const collaboratorsRows = sortedColaboradoresUI.map(({nome, atendimentos, cargo}) => `
-                <tr class="border-b border-slate-50 collaborator-row group-${index} hover:bg-slate-50/50 transition-colors">
-                    <td class="px-3 md:px-4 py-2.5 font-medium text-xs md:text-sm text-slate-700 pl-4 md:pl-6">${nome}</td>
-                    <td class="px-3 md:px-4 py-2.5 text-[11px] md:text-xs text-slate-500">${cargo || '-'}</td>
-                    <td class="px-3 md:px-4 py-2.5 text-right text-xs md:text-sm font-bold atendimento-valor-${index} ${atendimentos > 0 ? 'text-green-600' : 'text-slate-400'}">${atendimentos > 0 ? atendimentos : '-'}</td>
-                </tr>
-            `).join('');
-
-            const hasCollaborators = sortedColaboradoresUI.length > 0;
+            const linhas = membros.map(({ nome, cargo, atendimentos }) => `
+                <div class="flex items-center gap-3 px-4 py-2 border-t border-slate-50 hover:bg-slate-50/60">
+                    <div class="w-8 h-8 rounded-full ${atendimentos > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(nome))}</div>
+                    <div class="min-w-0 flex-1">
+                        <p class="text-sm font-semibold text-slate-700 truncate">${esc(nome)}</p>
+                        <p class="text-[11px] text-slate-400">${esc(cargo || '-')}</p>
+                    </div>
+                    <div class="w-24 hidden sm:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)} rounded-full" style="width:${pctF(atendimentos, total)}%"></div></div>
+                    <div class="text-right leading-tight w-20 shrink-0">
+                        <p class="text-[11px] font-bold ${atendimentos > 0 ? 'text-slate-700' : 'text-slate-300'}">${pctF(atendimentos, total)}% da equipe</p>
+                        <p class="text-[10px] text-slate-400">${pctF(atendimentos, totalGeral)}% do total</p>
+                    </div>
+                    <span class="w-8 text-right text-sm font-black tabular-nums ${atendimentos > 0 ? 'text-green-600' : 'text-slate-300'}">${atendimentos || '-'}</span>
+                </div>`).join('');
 
             return `
-                <div class="mb-4 border border-slate-200 rounded-xl overflow-hidden shadow-sm bg-white group-container" data-group-index="${index}">
-                    <div class="bg-slate-50/80 px-4 py-3 flex flex-col md:flex-row md:items-center justify-between gap-3 border-b border-slate-200">
+                <div class="border border-slate-200 rounded-xl overflow-hidden bg-white" data-group="${gid}">
+                    <button type="button" class="group-toggle w-full text-left px-4 pt-3 pb-2.5 bg-slate-50 hover:bg-slate-100 transition-colors" data-target="${gid}" aria-expanded="true">
                         <div class="flex items-center gap-3">
-                            <span class="font-bold text-slate-800 text-sm flex items-center gap-2">
-                                <span class="text-blue-500">👥</span> ${groupName}
+                            <span class="chev text-slate-400 transition-transform">▾</span>
+                            <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
+                            <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
+                            <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
+                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
+                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
+                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${todosColaboradores.length} membro${todosColaboradores.length === 1 ? '' : 's'}</span>
+                                <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">média ${mediaMembro}/membro</span>
                             </span>
-                            <div class="flex gap-2">
-                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-blue-200" title="Total de Atendimentos">Atend.: ${total}</span>
-                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-md text-[10px] font-bold border border-purple-200" title="Membros Cadastrados">Membros: ${todosColaboradores.length}</span>
-                            </div>
                         </div>
-                        <div class="flex gap-2">
-                            <button class="hide-individual-btn text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm" data-group-index="${index}">
-                                Ocultar Atendimentos
-                            </button>
-                            ${hasCollaborators ? `
-                                <button class="toggle-details-btn text-[11px] font-medium text-slate-600 bg-white px-2.5 py-1.5 rounded-md border border-slate-200 hover:bg-slate-100 transition-colors shadow-sm" data-group-index="${index}">
-                                    Ocultar Lista
-                                </button>
-                            ` : ''}
-                        </div>
+                        <div class="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)}" style="width:${parteDoTotal}%"></div></div>
+                    </button>
+                    <div id="${gid}" class="group-body">
+                        ${membros.length ? linhas : '<p class="p-4 text-xs text-slate-400 italic text-center">Nenhum colaborador cadastrado nesta equipe.</p>'}
                     </div>
-                    ${hasCollaborators ? `
-                        <table class="w-full text-left collaborators-table" data-group-index="${index}">
-                            <thead class="text-[10px] text-slate-500 uppercase tracking-wider bg-white border-b border-slate-100">
-                                <tr>
-                                    <th class="px-3 md:px-4 py-2 font-semibold pl-4 md:pl-6">Colaborador</th>
-                                    <th class="px-3 md:px-4 py-2 font-semibold">Cargo</th>
-                                    <th class="px-3 md:px-4 py-2 font-semibold text-right atendimento-header-${index}">Total</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                ${collaboratorsRows}
-                            </tbody>
-                        </table>
-                    ` : `
-                        <div class="p-4 text-xs text-slate-500 italic text-center bg-white">Nenhum colaborador cadastrado nesta equipe.</div>
-                    `}
-                </div>
-            `;
+                </div>`;
         }).join('');
 
-        const botoesExportacaoHTML = `
-            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm mt-4">
-                <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2">
-                    <span class="text-indigo-500">🖨️</span> Exportar Relatórios
-                </h3>
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3">
-                    <button id="export-stats-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-blue-50 text-slate-700 hover:text-blue-700 border border-slate-200 hover:border-blue-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
-                        <span class="text-blue-500 text-lg">📊</span> Resumo Geral
-                    </button>
-                    <button id="export-equipes-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-purple-50 text-slate-700 hover:text-purple-700 border border-slate-200 hover:border-purple-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
-                        <span class="text-purple-500 text-lg">👥</span> Por Equipe
-                    </button>
-                    <button id="export-grupo-pdf-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-green-50 text-slate-700 hover:text-green-700 border border-slate-200 hover:border-green-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
-                        <span class="text-green-500 text-lg">📋</span> Só Grupos
-                    </button>
-                    <button id="export-stats-detalhado-btn" class="flex flex-col items-center justify-center gap-1.5 w-full bg-slate-50 hover:bg-orange-50 text-slate-700 hover:text-orange-700 border border-slate-200 hover:border-orange-200 font-bold py-3 px-2 rounded-xl text-xs transition-all shadow-sm">
-                        <span class="text-orange-500 text-lg">📖</span> Detalhado
-                    </button>
-                </div>
-                
-                <div class="mt-5 pt-4 border-t border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-2">Configurar Relatório Resumo Geral:</p>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 text-[11px] font-medium text-slate-600">
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-general" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Geral</label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-collaborators" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Equipes</label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-subjects" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Assuntos</label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-scheduled-time" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Agenda</label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-times" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Chegada</label>
-                        <label class="flex items-center gap-2 cursor-pointer hover:text-slate-900"><input type="checkbox" id="export-absentees-time" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> Faltosos</label>
-                    </div>
-                </div>
+        // --- Visão INDIVIDUAL: ranking de todos os colaboradores ---
+        const ranking = [...individuais].sort((a, b) => b.atendimentos - a.atendimentos || a.nome.localeCompare(b.nome, 'pt-BR'));
+        const maxIndividual = Math.max(...ranking.map(r => r.atendimentos), 1);
+        const atuaram = ranking.filter(r => r.atendimentos > 0).length;
+        const individualHTML = ranking.length === 0
+            ? '<p class="text-sm text-slate-400 text-center py-6">Nenhum colaborador encontrado.</p>'
+            : `
+            <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-wrap gap-x-8 gap-y-2 text-xs text-slate-600">
+                <span><strong class="text-slate-800 text-base">${atuaram}</strong> de ${ranking.length} membros atenderam <strong>(${pctF(atuaram, ranking.length)}%)</strong></span>
+                <span>Total atendido: <strong class="text-slate-800">${totalGeral}</strong></span>
             </div>
-        `;
+            <div class="rounded-xl border border-slate-200 overflow-hidden">
+                ${ranking.map((r, i) => `
+                    <div class="flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-slate-100' : ''} hover:bg-slate-50/60">
+                        <span class="w-6 text-center text-[11px] font-black ${r.atendimentos > 0 ? 'text-slate-500' : 'text-slate-300'}">${i + 1}º</span>
+                        <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
+                        <div class="min-w-0 flex-1">
+                            <p class="text-sm font-semibold text-slate-700 truncate">${esc(r.nome)}</p>
+                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} · ${esc(r.cargo || '-')}</p>
+                        </div>
+                        <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(r.equipe)} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
+                        <div class="text-right leading-tight w-24 shrink-0 hidden sm:block">
+                            <p class="text-[11px] font-bold ${r.atendimentos > 0 ? 'text-slate-700' : 'text-slate-300'}">${pctF(r.atendimentos, r.equipeTotal)}% da equipe</p>
+                            <p class="text-[10px] text-slate-400">${pctF(r.atendimentos, totalGeral)}% do total</p>
+                        </div>
+                        <span class="w-8 text-right text-sm font-black tabular-nums ${r.atendimentos > 0 ? 'text-green-600' : 'text-slate-300'}">${r.atendimentos || '-'}</span>
+                    </div>`).join('')}
+            </div>`;
 
-        const html = `
-        <div id="statistics-content-wrapper" class="grid grid-cols-1 xl:grid-cols-5 gap-5 h-full p-2 md:p-5 overflow-hidden bg-slate-50/30">
-            <!-- Coluna Esquerda -->
-            <div class="xl:col-span-2 flex flex-col gap-4 overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
-                <div class="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                        <span class="w-8 h-8 rounded-full bg-green-50 text-green-600 flex items-center justify-center mb-2 text-sm">✅</span>
-                        <p class="text-2xl font-black text-slate-800">${atendidos.length}</p>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">Atendidos</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                        <span class="w-8 h-8 rounded-full bg-red-50 text-red-600 flex items-center justify-center mb-2 text-sm">🚫</span>
-                        <p class="text-2xl font-black text-slate-800">${faltosos.length}</p>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">Faltosos</p>
-                    </div>
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center">
-                        <span class="w-8 h-8 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center mb-2 text-sm">⏱️</span>
-                        <p class="text-2xl font-black text-slate-800">${avgTimeDirect} min</p>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center">T. Médio</p>
-                    </div>
-                    ${totalAcoesRapidas > 0 ? `
-                    <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex flex-col items-center col-span-2 sm:col-span-1 sm:hidden">
-                        <span class="w-8 h-8 rounded-full bg-amber-50 text-amber-600 flex items-center justify-center mb-2 text-sm">⚡</span>
-                        <p class="text-2xl font-black text-slate-800">${totalAcoesRapidas}</p>
-                        <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1 text-center leading-tight">Opções</p>
-                    </div>` : ''}
-                    ${delegationHTML}
+        const equipesHTML = this.cartao('Atendimentos por equipe', '🏢', `
+            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
+                <div class="inline-flex rounded-lg bg-slate-100 p-1" role="tablist">
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold bg-white shadow text-slate-800" data-view="geral" role="tab">🏢 Geral</button>
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="individual" role="tab">🧑 Individual</button>
                 </div>
-                
-                ${acoesRapidasHTML}
-                ${botoesExportacaoHTML}
-
-                ${sortedScheduledTimes.length > 0 ? `
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">📅 Agendados por Horário</h3>
-                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
-                        <table class="w-full text-xs text-left">
-                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0">
-                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${sortedScheduledTimes.map(time => `
-                                    <tr class="hover:bg-slate-50/50">
-                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
-                                        <td class="px-4 py-2 text-right font-bold text-slate-600">${statsByScheduledTime[time]}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>` : ''}
-
-                ${sortedTimes.length > 0 ? `
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">📍 Atendimentos (Chegada)</h3>
-                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
-                        <table class="w-full text-xs text-left">
-                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0">
-                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${sortedTimes.map(time => `
-                                    <tr class="hover:bg-slate-50/50">
-                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
-                                        <td class="px-4 py-2 text-right font-bold text-green-600">${statsByTime[time]}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>` : ''}
-
-                ${sortedTimesFaltosos.length > 0 ? `
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
-                    <h3 class="text-sm font-bold text-slate-800 mb-3 border-b border-slate-100 pb-2">🚫 Faltosos por Horário</h3>
-                    <div class="max-h-40 overflow-y-auto custom-scrollbar">
-                        <table class="w-full text-xs text-left">
-                            <thead class="text-[10px] text-slate-500 uppercase bg-red-50 sticky top-0">
-                                <tr><th class="px-4 py-2 font-semibold">Horário</th><th class="px-4 py-2 font-semibold text-right">Qtd</th></tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${sortedTimesFaltosos.map(time => `
-                                    <tr class="hover:bg-red-50/30">
-                                        <td class="px-4 py-2 font-medium text-slate-700">${time}</td>
-                                        <td class="px-4 py-2 text-right font-bold text-red-600">${statsByTimeFaltosos[time]}</td>
-                                    </tr>
-                                `).join('')}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>` : ''}
+                <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">Recolher todas</button>
             </div>
-
-            <!-- Coluna Direita -->
-            <div class="xl:col-span-3 flex flex-col gap-4 overflow-y-auto pr-1 md:pr-2 custom-scrollbar">
-                
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex flex-col h-[40vh] md:h-auto min-h-[300px]">
-                    <h3 class="text-base font-bold text-slate-800 mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">
-                        <span class="text-orange-500">🏷️</span> Demandas por Assunto
-                    </h3>
-                    <div class="flex-1 overflow-y-auto custom-scrollbar rounded-lg border border-slate-100">
-                        <table class="w-full text-xs md:text-sm text-left">
-                            <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10 shadow-sm">
-                                <tr>
-                                    <th class="px-4 py-3 font-bold">Assunto</th>
-                                    <th class="px-3 py-3 font-bold text-center">Total</th>
-                                    <th class="px-3 py-3 font-bold text-center text-green-600">Atend.</th>
-                                    <th class="px-3 py-3 font-bold text-center text-red-600">Falt.</th>
-                                    <th class="px-4 py-3 font-bold text-right">%</th>
-                                </tr>
-                            </thead>
-                            <tbody class="divide-y divide-slate-100">
-                                ${Object.entries(statsBySubject).sort(([,a],[,b]) => b.total - a.total).map(([subject, data]) => `
-                                    <tr class="hover:bg-slate-50/50 transition-colors">
-                                        <td class="px-4 py-2.5 font-medium text-slate-700">${subject}</td>
-                                        <td class="px-3 py-2.5 text-center font-bold text-slate-800 bg-slate-50/50">${data.total}</td>
-                                        <td class="px-3 py-2.5 text-center font-semibold text-green-600">${data.atendidos}</td>
-                                        <td class="px-3 py-2.5 text-center font-semibold text-red-500">${data.faltosos}</td>
-                                        <td class="px-4 py-2.5 text-right font-medium text-slate-500">${totalDemandasGeral > 0 ? ((data.total / totalDemandasGeral) * 100).toFixed(1) : 0}%</td>
-                                    </tr>`).join('')}
-                            </tbody>
-                            <tfoot class="bg-slate-100 font-bold sticky bottom-0 z-10 shadow-[0_-2px_4px_rgba(0,0,0,0.02)]">
-                                <tr>
-                                    <td class="px-4 py-3 text-slate-800">TOTAL GERAL</td>
-                                    <td class="px-3 py-3 text-center text-slate-800">${totalDemandasGeral}</td>
-                                    <td class="px-3 py-3 text-center text-green-700">${totalDemandasAtendidos}</td>
-                                    <td class="px-3 py-3 text-center text-red-700">${totalDemandasFaltosos}</td>
-                                    <td class="px-4 py-3 text-right text-slate-800">100%</td>
-                                </tr>
-                            </tfoot>
-                        </table>
-                    </div>
-                </div>
-                
-                <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex-1 flex flex-col min-h-[400px]">
-                    <div class="flex flex-wrap justify-between items-center mb-4 gap-3 border-b border-slate-100 pb-3">
-                        <h3 class="text-base font-bold text-slate-800 flex items-center gap-2">
-                            <span class="text-teal-500">🏢</span> Atendimentos por Equipe
-                        </h3>
-                        <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">
-                            Ocultar todas as listas
-                        </button>
-                    </div>
-                    <div class="flex-1 overflow-y-auto pr-2 custom-scrollbar" id="groups-container">
-                        ${groupsHTML}
-                    </div>
-                </div>
+            <div id="view-geral">
+                ${distribuicaoHTML}
+                <div class="space-y-3" id="groups-container">${groupsHTML || '<p class="text-sm text-slate-400 text-center py-6">Nenhuma equipe encontrada.</p>'}</div>
             </div>
-        </div>
-        `;
-        
-        content.innerHTML = html;
+            <div id="view-individual" style="display:none">${individualHTML}</div>`);
 
-        document.querySelectorAll('.hide-individual-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const groupIndex = btn.dataset.groupIndex;
-                const individuais = document.querySelectorAll(`.atendimento-valor-${groupIndex}`);
-                const header = document.querySelector(`.atendimento-header-${groupIndex}`);
-                
-                const isHidden = btn.textContent.includes('Mostrar');
-                
-                individuais.forEach(el => {
-                    if (isHidden) el.style.display = 'table-cell';
-                    else el.style.display = 'none';
-                });
-                
-                if (header) {
-                    if (isHidden) header.style.display = 'table-cell';
-                    else header.style.display = 'none';
-                }
-                
-                btn.textContent = isHidden ? 'Ocultar Atendimentos' : 'Mostrar Atendimentos';
-                btn.classList.toggle('bg-blue-50', !isHidden);
-                btn.classList.toggle('text-blue-600', !isHidden);
-            });
+        content.innerHTML = `
+            <div id="statistics-content-wrapper" class="h-full overflow-y-auto p-3 md:p-5 bg-slate-50/40">
+                <div class="space-y-4 max-w-[1400px] mx-auto">
+                    ${kpisHTML}
+                    ${exportHTML}
+                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">
+                        <div class="xl:col-span-2 space-y-4">
+                            ${acoesHTML}
+                            ${horariosHTML}
+                        </div>
+                        <div class="xl:col-span-3 space-y-4">
+                            ${assuntosHTML}
+                            ${equipesHTML}
+                        </div>
+                    </div>
+                </div>
+            </div>`;
+
+        // ---------- eventos ----------
+        content.querySelectorAll('.group-toggle').forEach(btn => {
+            btn.onclick = () => {
+                const body = document.getElementById(btn.dataset.target);
+                const abrir = body.style.display === 'none';
+                body.style.display = abrir ? '' : 'none';
+                btn.setAttribute('aria-expanded', String(abrir));
+                btn.querySelector('.chev').style.transform = abrir ? '' : 'rotate(-90deg)';
+            };
         });
 
-        const toggleAllBtn = document.getElementById('toggle-all-groups-btn');
-        if (toggleAllBtn) {
-            toggleAllBtn.addEventListener('click', () => {
-                const isShowing = toggleAllBtn.textContent.includes('Ocultar');
-                document.querySelectorAll('.collaborators-table').forEach(table => {
-                    if (table) table.style.display = isShowing ? 'none' : 'table';
+        const toggleAll = document.getElementById('toggle-all-groups-btn');
+        if (toggleAll) {
+            toggleAll.onclick = () => {
+                const recolher = toggleAll.textContent.includes('Recolher');
+                content.querySelectorAll('.group-body').forEach(b => { b.style.display = recolher ? 'none' : ''; });
+                content.querySelectorAll('.group-toggle').forEach(b => {
+                    b.setAttribute('aria-expanded', String(!recolher));
+                    b.querySelector('.chev').style.transform = recolher ? 'rotate(-90deg)' : '';
                 });
-                document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-                    if (btn) btn.textContent = isShowing ? 'Mostrar Lista' : 'Ocultar Lista';
-                });
-                toggleAllBtn.textContent = isShowing ? 'Mostrar todas as listas' : 'Ocultar todas as listas';
-            });
+                toggleAll.textContent = recolher ? 'Expandir todas' : 'Recolher todas';
+            };
         }
-        
-        document.querySelectorAll('.toggle-details-btn').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const groupIndex = btn.dataset.groupIndex;
-                const table = document.querySelector(`.collaborators-table[data-group-index="${groupIndex}"]`);
-                if (table) {
-                    if (table.style.display === 'none') {
-                        table.style.display = 'table';
-                        btn.textContent = 'Ocultar Lista';
-                    } else {
-                        table.style.display = 'none';
-                        btn.textContent = 'Mostrar Lista';
-                    }
-                }
-            });
+
+        content.querySelectorAll('.view-tab').forEach(tab => {
+            tab.onclick = () => {
+                const v = tab.dataset.view;
+                content.querySelectorAll('.view-tab').forEach(t => {
+                    const ativo = t === tab;
+                    t.classList.toggle('bg-white', ativo);
+                    t.classList.toggle('shadow', ativo);
+                    t.classList.toggle('text-slate-800', ativo);
+                    t.classList.toggle('text-slate-500', !ativo);
+                });
+                document.getElementById('view-geral').style.display = v === 'geral' ? '' : 'none';
+                document.getElementById('view-individual').style.display = v === 'individual' ? '' : 'none';
+                const t = document.getElementById('toggle-all-groups-btn');
+                if (t) t.style.display = v === 'geral' ? '' : 'none';
+            };
         });
 
-        const exportBtn = document.getElementById('export-stats-pdf-btn');
-        if (exportBtn) {
-            exportBtn.addEventListener('click', () => {
-                const originalHtml = exportBtn.innerHTML;
-                exportBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
-                exportBtn.disabled = true;
-
-                this.exportStatisticsToPDF(pautaName, {
-                    agendadosCount: allAssisted.length,
-                    atendidosCount: atendidos.length,
-                    faltososCount: faltosos.length,
-                    avgTimeDirect,
-                    avgTimeDelegated,
-                    useDelegationFlow,
-                    statsByGroup,
-                    statsBySubject,
-                    statsByAcaoRapida,
-                    totalAcoesRapidas,
-                    statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
-                    statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
-                    statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
-                }).finally(() => {
-                    exportBtn.innerHTML = originalHtml;
-                    exportBtn.disabled = false;
+        const comLoading = (id, acao) => {
+            const btn = document.getElementById(id);
+            if (!btn) return;
+            btn.onclick = () => {
+                const original = btn.innerHTML;
+                btn.innerHTML = '⏳ Aguarde...';
+                btn.disabled = true;
+                Promise.resolve(acao()).catch(e => { console.error(e); }).finally(() => {
+                    btn.innerHTML = original;
+                    btn.disabled = false;
                 });
-            });
-        }
+            };
+        };
 
-        const exportEquipesBtn = document.getElementById('export-equipes-pdf-btn');
-        if (exportEquipesBtn) {
-            exportEquipesBtn.addEventListener('click', () => {
-                const originalHtml = exportEquipesBtn.innerHTML;
-                exportEquipesBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
-                exportEquipesBtn.disabled = true;
+        comLoading('export-stats-pdf-btn', () => this.exportStatisticsToPDF(pautaName, {
+            agendadosCount: allAssisted.length,
+            atendidosCount: atendidos.length,
+            faltososCount: faltosos.length,
+            avgTimeDirect, avgTimeDelegated, useDelegationFlow,
+            statsByGroup: Object.fromEntries(sortedGroups.map(g => [g.groupName, statsByGroup[g.groupName]])), statsBySubject, statsByAcaoRapida, totalAcoesRapidas,
+            statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
+            statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
+            statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
+        }));
+        comLoading('export-equipes-pdf-btn', () => this.exportEquipesPDF(pautaName, { sortedGroups, totalGeral }));
+        comLoading('export-grupo-pdf-btn', () => this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }));
+        comLoading('export-stats-detalhado-btn', () => this.exportDetailedStatisticsPDF(pautaName, { sortedGroups, totalGeral }));
+    },
 
-                this.exportEquipesPDF(pautaName, { statsByGroup, sortedGroups, totalGeral }).finally(() => {
-                    exportEquipesBtn.innerHTML = originalHtml;
-                    exportEquipesBtn.disabled = false;
-                });
-            });
-        }
+    // =====================================================================
+    // PDFs
+    // =====================================================================
+    tabelaGrupo(doc, yPos, margin, config) {
+        doc.autoTable({
+            startY: yPos,
+            theme: 'grid',
+            headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold' },
+            margin: { left: margin, right: margin, bottom: 40 },
+            ...config
+        });
+        return doc.lastAutoTable.finalY + 15;
+    },
 
-        const exportGrupoBtn = document.getElementById('export-grupo-pdf-btn');
-        if (exportGrupoBtn) {
-            exportGrupoBtn.addEventListener('click', () => {
-                const originalHtml = exportGrupoBtn.innerHTML;
-                exportGrupoBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
-                exportGrupoBtn.disabled = true;
-
-                this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }).finally(() => {
-                    exportGrupoBtn.innerHTML = originalHtml;
-                    exportGrupoBtn.disabled = false;
-                });
-            });
-        }
-
-        const exportDetalhadoBtn = document.getElementById('export-stats-detalhado-btn');
-        if (exportDetalhadoBtn) {
-            exportDetalhadoBtn.addEventListener('click', () => {
-                const originalHtml = exportDetalhadoBtn.innerHTML;
-                exportDetalhadoBtn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Aguarde...';
-                exportDetalhadoBtn.disabled = true;
-
-                this.exportDetailedStatisticsPDF(pautaName, { totalGeral, sortedGroups }).finally(() => {
-                    exportDetalhadoBtn.innerHTML = originalHtml;
-                    exportDetalhadoBtn.disabled = false;
-                });
-            });
-        }
+    tituloGrupo(texto, colSpan) {
+        return [{ content: texto, colSpan, styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center', fontSize: 10 } }];
     },
 
     async exportEquipesPDF(pautaName, dados) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
+        const { doc, yPos: y0, margin, pageHeight } = await this.novoPDF("RELATÓRIO COMPLETO POR EQUIPE", pautaName, dados.totalGeral);
+        let yPos = y0;
 
-        let yPos = margin;
-        yPos = await this.drawSigepHeader(doc, margin, yPos);
+        dados.sortedGroups.forEach(({ groupName, total, todosColaboradores, collaborators }) => {
+            const body = todosColaboradores.length
+                ? this.sortCollaboratorsByRole(todosColaboradores).map(col => {
+                    const n = collaborators.find(c => c.name === col.nome)?.count || 0;
+                    return [col.nome, col.cargo || '-', n, pctF(n, total) + '%', pctF(n, dados.totalGeral) + '%'];
+                })
+                : [['Nenhum colaborador nesta equipe', '-', '-', '-', '-']];
 
-        doc.setFontSize(16);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("RELATÓRIO COMPLETO POR EQUIPE", margin, yPos);
-        yPos += 18;
-        
-        doc.setFontSize(12);
-        doc.setTextColor(100);
-        doc.setFont("helvetica", "normal");
-        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
-        doc.text(splitTitle, margin, yPos);
-        yPos += (splitTitle.length * 15);
-        
-        doc.setFontSize(10);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 14;
-        doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
-        yPos += 20;
-
-        dados.sortedGroups.forEach(({groupName, total, todosColaboradores, collaborators}) => {
-            let body = [];
-            if (todosColaboradores && todosColaboradores.length > 0) {
-                const cols = this.sortCollaboratorsByRole(todosColaboradores);
-                body = cols.map(col => {
-                    const count = collaborators.find(c => c.name === col.nome)?.count || 0;
-                    return [col.nome, col.cargo || '-', count];
-                });
-            } else {
-                body = [['Nenhum colaborador nesta equipe', '-', '-']];
-            }
-
-            doc.autoTable({
-                startY: yPos,
+            yPos = this.tabelaGrupo(doc, yPos, margin, {
                 head: [
-                    [{ content: `${groupName.toUpperCase()} - TOTAL: ${total} atendimentos | Membros: ${todosColaboradores.length}`, colSpan: 3, styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center', fontSize: 10 } }],
-                    ['Colaborador', 'Cargo', 'Atendimentos']
+                    this.tituloGrupo(`${groupName.toUpperCase()} - ${total} atendimentos (${pctF(total, dados.totalGeral)}% do total) | Membros: ${todosColaboradores.length}`, 5),
+                    ['Colaborador', 'Cargo', 'Atend.', '% equipe', '% total']
                 ],
-                body: body,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold' },
+                body,
                 styles: { fontSize: 9, cellPadding: 5, valign: 'middle' },
                 columnStyles: {
-                    0: { halign: 'left', cellWidth: 260, fontStyle: 'bold', textColor: [60, 60, 60] },
-                    1: { halign: 'left', cellWidth: 140 },
-                    2: { halign: 'center', cellWidth: 80, fontStyle: 'bold' }
+                    0: { halign: 'left', cellWidth: 190, fontStyle: 'bold', textColor: [60, 60, 60] },
+                    1: { halign: 'left', cellWidth: 115 },
+                    2: { halign: 'center', cellWidth: 60, fontStyle: 'bold' },
+                    3: { halign: 'center', cellWidth: 75 },
+                    4: { halign: 'center', cellWidth: 75 }
                 },
-                margin: { left: margin, right: margin, bottom: 40 },
-                didParseCell: function(data) {
-                    if (data.section === 'body' && data.column.index === 2) {
-                        if (data.cell.raw === 0 || data.cell.raw === '-') {
-                            data.cell.styles.textColor = [150, 150, 150];
-                        } else {
-                            data.cell.styles.textColor = [22, 163, 74];
-                        }
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index >= 2) {
+                        const zero = data.row.raw[2] === 0 || data.row.raw[2] === '-';
+                        data.cell.styles.textColor = zero ? [150, 150, 150] : [22, 163, 74];
                     }
                 }
             });
-            yPos = doc.lastAutoTable.finalY + 15;
         });
 
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
-        }
-
+        this.rodapePDF(doc, margin, pageHeight);
         doc.save(`equipe_completa_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     async exportGrupoPDF(pautaName, dados) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
+        const { doc, yPos: y0, margin, pageHeight } = await this.novoPDF("RELATÓRIO DE GRUPOS", pautaName, dados.totalGeral);
+        let yPos = y0;
 
-        let yPos = margin;
-        yPos = await this.drawSigepHeader(doc, margin, yPos);
+        dados.sortedGroups.forEach(({ groupName, total, todosColaboradores }) => {
+            const body = todosColaboradores.length
+                ? this.sortCollaboratorsByRole(todosColaboradores).map(c => [c.nome, c.cargo || '-'])
+                : [['Nenhum colaborador cadastrado nesta equipe', '-']];
 
-        doc.setFontSize(16);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("RELATÓRIO DE GRUPOS", margin, yPos);
-        yPos += 18;
-        
-        doc.setFontSize(12);
-        doc.setTextColor(100);
-        doc.setFont("helvetica", "normal");
-        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
-        doc.text(splitTitle, margin, yPos);
-        yPos += (splitTitle.length * 15);
-        
-        doc.setFontSize(10);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 14;
-        doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${dados.totalGeral}`, margin, yPos);
-        yPos += 20;
-
-        dados.sortedGroups.forEach(({groupName, total, todosColaboradores}) => {
-            let body = [];
-            if (todosColaboradores && todosColaboradores.length > 0) {
-                const cols = this.sortCollaboratorsByRole(todosColaboradores);
-                body = cols.map(c => [c.nome, c.cargo || '-']);
-            } else {
-                body = [['Nenhum colaborador cadastrado nesta equipe', '-']];
-            }
-
-            doc.autoTable({
-                startY: yPos,
+            yPos = this.tabelaGrupo(doc, yPos, margin, {
                 head: [
-                    [{ content: `${groupName.toUpperCase()} - TOTAL: ${total} atendimentos | Membros: ${todosColaboradores.length}`, colSpan: 2, styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center', fontSize: 10 } }],
+                    this.tituloGrupo(`${groupName.toUpperCase()} - ${total} atendimentos (${pctF(total, dados.totalGeral)}% do total) | Membros: ${todosColaboradores.length}`, 2),
                     ['Membro da Equipe', 'Cargo']
                 ],
-                body: body,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold' },
+                body,
                 styles: { fontSize: 9, cellPadding: 5, valign: 'middle' },
-                columnStyles: {
-                    0: { halign: 'left', fontStyle: 'bold', textColor: [60, 60, 60] },
-                    1: { halign: 'left' }
-                },
-                margin: { left: margin, right: margin, bottom: 40 }
+                columnStyles: { 0: { halign: 'left', fontStyle: 'bold', textColor: [60, 60, 60] }, 1: { halign: 'left' } }
             });
-            yPos = doc.lastAutoTable.finalY + 15;
         });
 
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
-        }
-
+        this.rodapePDF(doc, margin, pageHeight);
         doc.save(`grupo_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
-    async exportDetailedStatisticsPDF(pautaName, detalhesData) {
-        const { jsPDF } = window.jspdf;
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
+    async exportDetailedStatisticsPDF(pautaName, dados) {
+        const { doc, yPos: y0, margin, pageHeight } = await this.novoPDF("LISTA DE ASSISTIDOS POR EQUIPE", pautaName, dados.totalGeral);
+        let yPos = y0;
 
-        let yPos = margin;
-        yPos = await this.drawSigepHeader(doc, margin, yPos);
+        dados.sortedGroups.forEach(({ groupName, total, atendimentos }) => {
+            const body = atendimentos.length
+                ? atendimentos.map((att, i) => [i + 1, att.nome, att.assunto, att.atendente, att.horario !== 'Não finalizado' ? att.horario : '---'])
+                : [['-', 'Nenhum atendimento registrado', '-', '-', '-']];
 
-        doc.setFontSize(16);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("LISTA DE ASSISTIDOS POR EQUIPE", margin, yPos);
-        yPos += 18;
-        
-        doc.setFontSize(12);
-        doc.setTextColor(100);
-        doc.setFont("helvetica", "normal");
-        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
-        doc.text(splitTitle, margin, yPos);
-        yPos += (splitTitle.length * 15);
-        
-        doc.setFontSize(10);
-        doc.text(`Gerado em: ${new Date().toLocaleString('pt-BR')}`, margin, yPos);
-        yPos += 14;
-        doc.setFont("helvetica", "bold");
-        doc.text(`Total de Atendimentos: ${detalhesData.totalGeral}`, margin, yPos);
-        yPos += 20;
-
-        detalhesData.sortedGroups.forEach(({groupName, total, atendimentos}) => {
-            let body = [];
-            if (atendimentos && atendimentos.length > 0) {
-                body = atendimentos.map((att, idx) => [
-                    idx + 1,
-                    att.nome,
-                    att.assunto,
-                    att.atendente,
-                    att.horario !== 'Não finalizado' ? att.horario : '---'
-                ]);
-            } else {
-                body = [['-', 'Nenhum atendimento registrado', '-', '-', '-']];
-            }
-
-            doc.autoTable({
-                startY: yPos,
+            yPos = this.tabelaGrupo(doc, yPos, margin, {
                 head: [
-                    [{ content: `${groupName.toUpperCase()} (${total} ATENDIMENTOS)`, colSpan: 5, styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center', fontSize: 10 } }],
+                    this.tituloGrupo(`${groupName.toUpperCase()} (${total} ATENDIMENTOS)`, 5),
                     ['#', 'Assistido', 'Assunto', 'Atendente', 'Horário']
                 ],
-                body: body,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: [255, 255, 255], fontStyle: 'bold' },
+                body,
                 styles: { fontSize: 8, cellPadding: 4, valign: 'middle' },
-                columnStyles: { 
+                columnStyles: {
                     0: { cellWidth: 25, halign: 'center' },
                     1: { cellWidth: 130, fontStyle: 'bold' },
                     2: { cellWidth: 'auto' },
                     3: { cellWidth: 100 },
                     4: { cellWidth: 60, halign: 'center' }
-                },
-                margin: { left: margin, right: margin, bottom: 40 }
+                }
             });
-            yPos = doc.lastAutoTable.finalY + 15;
         });
 
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
-        }
-
+        this.rodapePDF(doc, margin, pageHeight);
         doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
-    async exportStatisticsToPDF(pautaName, statsData) {
-        const { jsPDF } = window.jspdf;
-        
-        const exportGeneral = document.getElementById('export-general')?.checked ?? true;
-        const exportCollaborators = document.getElementById('export-collaborators')?.checked ?? true;
-        const exportSubjects = document.getElementById('export-subjects')?.checked ?? true;
-        const exportScheduledTime = document.getElementById('export-scheduled-time')?.checked ?? true;
-        const exportTimes = document.getElementById('export-times')?.checked ?? true;
-        const exportAbsenteesTime = document.getElementById('export-absentees-time')?.checked ?? true;
-        
-        const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-        const pageWidth = doc.internal.pageSize.getWidth();
-        const pageHeight = doc.internal.pageSize.getHeight();
-        const margin = 40;
-        
-        let yPos = margin;
-        yPos = await this.drawSigepHeader(doc, margin, yPos);
+    async exportStatisticsToPDF(pautaName, s) {
+        const marcado = (id) => document.getElementById(id)?.checked ?? true;
+        const exportGeneral = marcado('export-general');
+        const exportCollaborators = marcado('export-collaborators');
+        const exportSubjects = marcado('export-subjects');
+        const exportScheduledTime = marcado('export-scheduled-time');
+        const exportTimes = marcado('export-times');
+        const exportAbsenteesTime = marcado('export-absentees-time');
 
-        doc.setFontSize(16);
-        doc.setTextColor(22, 163, 74);
-        doc.setFont("helvetica", "bold");
-        doc.text("RESUMO GERAL ESTATÍSTICO", margin, yPos);
-        yPos += 18;
-        
-        doc.setFontSize(12);
-        doc.setTextColor(100);
-        doc.setFont("helvetica", "normal");
-        const splitTitle = doc.splitTextToSize(`Pauta: ${pautaName}`, pageWidth - (margin * 2));
-        doc.text(splitTitle, margin, yPos);
-        yPos += (splitTitle.length * 15) + 5;
+        const { doc, yPos: y0, margin, pageWidth, pageHeight } = await this.novoPDF("RESUMO GERAL ESTATÍSTICO", pautaName);
+        let yPos = y0;
 
+        const novaPaginaSe = (limite) => { if (yPos > pageHeight - limite) { doc.addPage(); yPos = margin + 30; } };
         const addSectionTitle = (title) => {
-            if (yPos > pageHeight - 100) { 
-                doc.addPage();
-                yPos = margin + 30;
-            }
+            novaPaginaSe(100);
             doc.setFont("helvetica", "bold");
             doc.setFontSize(14);
             doc.setTextColor(43, 58, 85);
             doc.text(title, margin, yPos);
             yPos += 20;
         };
+        const tabela = (config) => {
+            doc.autoTable({ startY: yPos, theme: 'grid', styles: { fontSize: 9 }, margin: { left: margin, right: margin }, ...config });
+            yPos = doc.lastAutoTable.finalY + 20;
+        };
+        const verde = { fillColor: [22, 163, 74], textColor: '#FFFFFF' };
+        const rodapeCinza = { fillColor: [240, 240, 240], fontStyle: 'bold' };
 
         if (exportGeneral) {
             addSectionTitle("Resumo Geral");
-            
             const colWidth = (pageWidth - margin * 2) / 3;
-            let startX = margin;
-            
-            doc.setFillColor(240, 253, 244);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(22, 163, 74);
-            doc.text(String(statsData.atendidosCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Atendidos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
-            
-            startX += colWidth;
-            doc.setFillColor(254, 242, 242);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(220, 38, 38);
-            doc.text(String(statsData.faltososCount || 0), startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Faltosos", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
-            
-            startX += colWidth;
-            doc.setFillColor(239, 246, 255);
-            doc.roundedRect(startX, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(24);
-            doc.setTextColor(37, 99, 235);
-            const tempoMedio = statsData.avgTimeDirect || 0;
-            doc.text(tempoMedio + ' min', startX + (colWidth - 10)/2, yPos + 15, { align: 'center' });
-            doc.setFontSize(10);
-            doc.setTextColor(0);
-            doc.text("Tempo Médio", startX + (colWidth - 10)/2, yPos + 35, { align: 'center' });
-            
+            const cards = [
+                { v: String(s.atendidosCount || 0), l: "Atendidos", bg: [240, 253, 244], fg: [22, 163, 74] },
+                { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] },
+                { v: (s.avgTimeDirect || 0) + ' min', l: "Tempo Médio", bg: [239, 246, 255], fg: [37, 99, 235] }
+            ];
+            cards.forEach((c, i) => {
+                const x = margin + colWidth * i;
+                doc.setFillColor(...c.bg);
+                doc.roundedRect(x, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(24);
+                doc.setTextColor(...c.fg);
+                doc.text(c.v, x + (colWidth - 10) / 2, yPos + 15, { align: 'center' });
+                doc.setFontSize(10);
+                doc.setTextColor(0);
+                doc.text(c.l, x + (colWidth - 10) / 2, yPos + 35, { align: 'center' });
+            });
             yPos += 70;
         }
 
-        if (statsData.statsByAcaoRapida && statsData.totalAcoesRapidas > 0) {
-            if (yPos > pageHeight - 80) { doc.addPage(); yPos = margin + 30; }
+        if (s.statsByAcaoRapida && s.totalAcoesRapidas > 0) {
             addSectionTitle("Ações Rápidas");
-            
-            const acoesRows = Object.entries(statsData.statsByAcaoRapida)
-                .sort(([,a],[,b]) => b - a)
-                .map(([tipo, qtd]) => [tipo, qtd]);
-            
-            doc.autoTable({
-                startY: yPos,
+            tabela({
                 head: [['Tipo de Ação', 'Total']],
-                body: acoesRows,
-                foot: [['TOTAL', statsData.totalAcoesRapidas]],
-                theme: 'grid',
+                body: Object.entries(s.statsByAcaoRapida).sort(([, a], [, b]) => b - a),
+                foot: [['TOTAL', s.totalAcoesRapidas]],
                 headStyles: { fillColor: [99, 102, 241], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
+                footStyles: rodapeCinza
             });
-            yPos = doc.lastAutoTable.finalY + 20;
         }
 
-        if (exportCollaborators && statsData.statsByGroup) {
+        if (exportCollaborators && s.statsByGroup) {
             addSectionTitle("Atendimentos por Equipe");
-            const equipes = Object.entries(statsData.statsByGroup).map(([nome, data]) => [nome, data.total]);
-            equipes.sort((a, b) => b[1] - a[1]);
-            
-            doc.autoTable({
-                startY: yPos,
-                head: [['Equipe', 'Total']],
-                body: equipes,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            yPos = doc.lastAutoTable.finalY + 20;
+            const equipes = Object.entries(s.statsByGroup)
+                .sort((a, b) => compararGrupos(a[0], b[0]))
+                .map(([nome, d]) => [nome, d.todosColaboradores.length, d.total, pctF(d.total, s.atendidosCount) + '%']);
+            tabela({ head: [['Equipe', 'Membros', 'Atendimentos', '% do total']], body: equipes, headStyles: verde });
         }
 
-        if (exportScheduledTime && statsData.statsByScheduledTime && statsData.statsByScheduledTime.length > 0) {
-            addSectionTitle("Agendados por Horário");
-            doc.autoTable({
-                startY: yPos,
+        const tabelaHorario = (titulo, itens, total, headFill, footFill) => {
+            addSectionTitle(titulo);
+            tabela({
                 head: [['Horário', 'Quantidade']],
-                body: statsData.statsByScheduledTime.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.agendadosCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
+                body: itens.map(i => [i.time, i.count]),
+                foot: [['Total', total]],
+                headStyles: { fillColor: headFill, textColor: '#FFFFFF' },
+                footStyles: footFill ? { fillColor: footFill, fontStyle: 'bold' } : rodapeCinza
             });
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
+        };
+        if (exportScheduledTime && s.statsByScheduledTime?.length) tabelaHorario("Agendados por Horário", s.statsByScheduledTime, s.agendadosCount || 0, [22, 163, 74]);
+        if (exportTimes && s.statsByTime?.length) tabelaHorario("Atendimentos por Horário (Chegada)", s.statsByTime, s.atendidosCount || 0, [22, 163, 74]);
+        if (exportAbsenteesTime && s.statsByTimeFaltosos?.length) tabelaHorario("Faltosos por Horário", s.statsByTimeFaltosos, s.faltososCount || 0, [220, 38, 38], [255, 240, 240]);
 
-        if (exportTimes && statsData.statsByTime && statsData.statsByTime.length > 0) {
-            addSectionTitle("Atendimentos por Horário (Chegada)");
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: statsData.statsByTime.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.atendidosCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        if (exportAbsenteesTime && statsData.statsByTimeFaltosos && statsData.statsByTimeFaltosos.length > 0) {
-            addSectionTitle("Faltosos por Horário");
-            doc.autoTable({
-                startY: yPos,
-                head: [['Horário', 'Quantidade']],
-                body: statsData.statsByTimeFaltosos.map(item => [item.time, item.count]),
-                foot: [['Total', statsData.faltososCount || 0]],
-                theme: 'grid',
-                headStyles: { fillColor: [220, 38, 38], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [255, 240, 240], fontStyle: 'bold' },
-                styles: { fontSize: 9 },
-                margin: { left: margin, right: margin }
-            });
-            yPos = doc.lastAutoTable.finalY + 20;
-        }
-
-        if (exportSubjects && statsData.statsBySubject && Object.keys(statsData.statsBySubject).length > 0) {
+        if (exportSubjects && s.statsBySubject && Object.keys(s.statsBySubject).length > 0) {
             addSectionTitle("Demandas por Assunto");
-            const subjects = Object.entries(statsData.statsBySubject)
-                .sort(([,a], [,b]) => b.total - a.total)
-                .map(([name, data]) => [
-                    name.length > 30 ? name.substring(0, 27) + '...' : name,
-                    data.total || 0,
-                    data.atendidos || 0,
-                    data.faltosos || 0
-                ]);
-            
-            const totalGeral = subjects.reduce((acc, row) => acc + row[1], 0);
-            const totalAtendidos = subjects.reduce((acc, row) => acc + row[2], 0);
-            const totalFaltosos = subjects.reduce((acc, row) => acc + row[3], 0);
-            
-            doc.autoTable({
-                startY: yPos,
+            const subjects = Object.entries(s.statsBySubject)
+                .sort(([, a], [, b]) => b.total - a.total)
+                .map(([name, d]) => [name.length > 30 ? name.substring(0, 27) + '...' : name, d.total || 0, d.atendidos || 0, d.faltosos || 0]);
+            const soma = (i) => subjects.reduce((acc, r) => acc + r[i], 0);
+            tabela({
                 head: [['Assunto', 'Total', 'Atendidos', 'Faltosos']],
                 body: subjects,
-                foot: [['TOTAL GERAL', totalGeral, totalAtendidos, totalFaltosos]],
-                theme: 'grid',
+                foot: [['TOTAL GERAL', soma(1), soma(2), soma(3)]],
                 headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
-                footStyles: { fillColor: [240, 240, 240], fontStyle: 'bold' },
+                footStyles: rodapeCinza,
                 styles: { fontSize: 8 },
-                columnStyles: { 0: { cellWidth: 180 } },
-                margin: { left: margin, right: margin }
+                columnStyles: { 0: { cellWidth: 180 } }
             });
         }
 
-        const pageCount = doc.internal.getNumberOfPages();
-        for (let i = 1; i <= pageCount; i++) {
-            doc.setPage(i);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
-            doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${pageCount}`, margin, pageHeight - 20);
-        }
-
+        this.rodapePDF(doc, margin, pageHeight);
         doc.save(`resumo_${pautaName.replace(/\s+/g, '_')}.pdf`);
     }
 };
 
-export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) => {
-    return StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
-};
+export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) =>
+    StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
 
-export const exportStatisticsToPDF = (pautaName, statsData) => {
-    return StatisticsService.exportStatisticsToPDF(pautaName, statsData);
-};
+export const exportStatisticsToPDF = (pautaName, statsData) =>
+    StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
-
-console.log("✅ estatisticas.js carregado com sucesso (Colaboradores garantidos mesmo após 7 dias)!");
