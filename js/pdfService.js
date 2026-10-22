@@ -1,66 +1,59 @@
-// js/pdfService.js - VERSÃO OTIMIZADA (UX, PERFORMANCE, TEXT WRAPPING E ORDEM ALFABÉTICA NA ATA)
+// js/pdfService.js - SIGEP
+// Visual unificado: cabeçalho com logo, resumo (KPIs), tabelas padronizadas e rodapé "Página X de Y" em todas as páginas.
+// A ATA e o DEMONSTRATIVO DE DESPESAS (documentos oficiais) mantêm o layout original.
+
+// ========================================================
+// UTILITÁRIOS
+// ========================================================
+const loadScript = (src) => new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = src;
+    s.onload = resolve;
+    s.onerror = () => reject(new Error('Falha ao carregar ' + src));
+    document.head.appendChild(s);
+});
 
 const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
-        console.log("Baixando biblioteca PDF...");
-        await new Promise((resolve) => {
-            const script = document.createElement('script');
-            script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
-            script.onload = resolve;
-            document.head.appendChild(script);
-        });
-        await new Promise((resolve) => {
-            const script2 = document.createElement('script');
-            script2.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js";
-            script2.onload = resolve;
-            document.head.appendChild(script2);
-        });
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
+    }
+    // Confere o plugin de tabelas separadamente (antes só o jsPDF era checado)
+    const probe = new window.jspdf.jsPDF();
+    if (typeof probe.autoTable !== 'function') {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js");
     }
 };
 
-// Pausa assíncrona para liberar o navegador e renderizar a UI (Evita o congelamento da aba)
+// Pausa assíncrona para liberar o navegador e renderizar a UI
 const yieldThread = () => new Promise(resolve => setTimeout(resolve, 50));
 
 const cleanString = (str) => String(str || '').replace(/"/g, '');
 
 const getSafeDate = (timeValue) => {
     if (!timeValue) return null;
-    if (typeof timeValue === 'object' && timeValue.seconds) {
-        return new Date(timeValue.seconds * 1000);
-    }
+    if (typeof timeValue === 'object' && timeValue.seconds) return new Date(timeValue.seconds * 1000);
     const date = new Date(timeValue);
     return isNaN(date.getTime()) ? null : date;
 };
 
 const calculateDuration = (totalMinutes) => {
     if (totalMinutes === null || totalMinutes < 0) return 'N/A';
-    return totalMinutes >= 60 
-        ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min` 
-        : `${totalMinutes} min`;
+    return totalMinutes >= 60 ? `${Math.floor(totalMinutes / 60)}h ${totalMinutes % 60}min` : `${totalMinutes} min`;
 };
 
 const formatCurrency = (value) => {
     if (!value) return 'R$ 0,00';
     if (typeof value === 'string' && value.includes('R$')) return value;
-    
     let num = 0;
     if (typeof value === 'string') {
-        const cleanValue = value.replace(/[R$\s]/g, '').replace(',', '.');
-        num = parseFloat(cleanValue) || 0;
+        num = parseFloat(value.replace(/[R$\s]/g, '').replace(',', '.')) || 0;
     } else {
         num = value || 0;
     }
-    
     return num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
 };
 
-const getIdentificador = (colaborador) => {
-    if (colaborador.identificador) return colaborador.identificador;
-    if (colaborador.id) return colaborador.id;
-    if (colaborador.matricula) return colaborador.matricula;
-    if (colaborador.codigo) return colaborador.codigo;
-    return '';
-};
+const getIdentificador = (c) => c.identificador || c.id || c.matricula || c.codigo || '';
 
 const getAttendantNameForPDF = (item) => {
     if (!item) return 'N/A';
@@ -68,9 +61,7 @@ const getAttendantNameForPDF = (item) => {
         const name = typeof item.attendedBy === 'object' ? (item.attendedBy.nome || item.attendedBy.name) : item.attendedBy;
         if (name) return String(name).trim();
     }
-    if (item.assignedCollaborator && item.assignedCollaborator.name) {
-        return String(item.assignedCollaborator.name).trim();
-    }
+    if (item.assignedCollaborator && item.assignedCollaborator.name) return String(item.assignedCollaborator.name).trim();
     if (item.attendant) {
         const name = typeof item.attendant === 'object' ? (item.attendant.nome || item.attendant.name) : item.attendant;
         if (name) return String(name).trim();
@@ -81,82 +72,216 @@ const getAttendantNameForPDF = (item) => {
 const sortByScheduledTime = (a, b) => {
     const timeA = a.scheduledTime || '';
     const timeB = b.scheduledTime || '';
-    
     if (timeA === '---' || timeA.toLowerCase() === 'avulso' || !timeA) return 1;
     if (timeB === '---' || timeB.toLowerCase() === 'avulso' || !timeB) return -1;
-    
     return timeA.localeCompare(timeB);
 };
 
+// Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras A-Z, sem equipe por último
+const compararGrupos = (a, b) => {
+    a = String(a ?? '').trim();
+    b = String(b ?? '').trim();
+    if (!a && !b) return 0;
+    if (!a) return 1;
+    if (!b) return -1;
+    const na = /^\d+$/.test(a), nb = /^\d+$/.test(b);
+    if (na && nb) return Number(a) - Number(b);
+    if (na) return -1;
+    if (nb) return 1;
+    const fixa = ['crc', 'coordenadores'];
+    const ia = fixa.indexOf(a.toLowerCase()), ib = fixa.indexOf(b.toLowerCase());
+    if (ia !== -1 && ib !== -1) return ia - ib;
+    if (ia !== -1) return -1;
+    if (ib !== -1) return 1;
+    return a.localeCompare(b, 'pt-BR');
+};
+
+const pesoCargo = (cargo) => {
+    const c = (cargo || '').toLowerCase();
+    if (c.includes('defensor')) return 1;
+    if (c.includes('servidor')) return 2;
+    return 3;
+};
+
+// ========================================================
+// IDENTIDADE VISUAL
+// ========================================================
 const LOGO_ATA_RAW = "https://raw.githubusercontent.com/alexdovale/Calculadora-de-Acervo-Documental/main/logo%20(2).png";
 const LOGO_DEMAIS_PDF_RAW = "https://raw.githubusercontent.com/alexdovale/ponto.codoc/main/imagem.png";
 const LOGO_DEFENSORIA_RATIO = 535 / 120;
 
-const loadImage = (url) => {
-    return new Promise((resolve, reject) => {
-        const img = new Image();
-        img.crossOrigin = "Anonymous";
-        img.onload = () => resolve(img);
-        img.onerror = (e) => reject(e);
-        img.src = url;
-    });
+const C = {
+    verde: [22, 163, 74],
+    verdeEscuro: [21, 128, 61],
+    verdeClaro: [240, 253, 244],
+    verdeBorda: [187, 247, 208],
+    vermelho: [185, 28, 28],
+    vermelhoClaro: [254, 242, 242],
+    texto: [30, 41, 59],
+    cinza: [100, 116, 139],
+    cinzaClaro: [241, 245, 249],
+    linha: [226, 232, 240],
+    zebra: [248, 250, 252]
 };
 
-const addLogoHeader = async (doc, startY = 15) => {
-    const larguraDesejada = 45;
-    const alturaMaxima = 35; 
+const loadImage = (url) => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "Anonymous";
+    img.onload = () => resolve(img);
+    img.onerror = (e) => reject(e);
+    img.src = url;
+});
 
-    try {
-        const img = await loadImage(LOGO_DEMAIS_PDF_RAW);
-        const proporcaoReal = img.width / img.height;
-        let alturaProporcional = larguraDesejada / proporcaoReal;
+const imgCache = {};
+const loadImageSafe = async (url) => {
+    if (imgCache[url] === undefined) {
+        try { imgCache[url] = await loadImage(url); }
+        catch (e) { console.error("❌ Erro ao carregar logo:", e); imgCache[url] = null; }
+    }
+    return imgCache[url];
+};
 
-        if (alturaProporcional > alturaMaxima) {
-            alturaProporcional = alturaMaxima;
-        }
+const logoSize = (img) => {
+    if (!img) return { w: 0, h: 0 };
+    const ratio = img.width / img.height;
+    let w = 52, h = w / ratio;
+    if (h > 36) { h = 36; w = h * ratio; }
+    return { w, h };
+};
 
-        doc.addImage(img, 'PNG', 40, startY, larguraDesejada, alturaProporcional);
+// Cabeçalho: logo + título + linhas de contexto + data de emissão + filete verde
+const drawHeader = (doc, logo, { title, lines = [], margin = 40 }) => {
+    const W = doc.internal.pageSize.getWidth();
+    const top = 28;
+    const { w, h } = logoSize(logo);
+    if (logo) { try { doc.addImage(logo, 'PNG', margin, top, w, h); } catch (e) { } }
 
-        return { success: true, height: alturaProporcional, bottomY: startY + alturaProporcional };
-    } catch (e) {
-        console.error("❌ Erro ao renderizar a logo do SIGEP:", e);
-        return { success: false, height: 0, bottomY: startY };
+    const textX = margin + (logo ? w + 14 : 0);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(17);
+    doc.setTextColor(...C.verdeEscuro);
+    doc.text(title, textX, top + 14);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9.5);
+    doc.setTextColor(...C.cinza);
+    let ly = top + 28;
+    lines.forEach(l => {
+        const wrapped = doc.splitTextToSize(String(l), W - textX - margin - 110);
+        doc.text(wrapped, textX, ly);
+        ly += wrapped.length * 12;
+    });
+
+    doc.setFontSize(8);
+    doc.text(`Emitido em ${new Date().toLocaleString('pt-BR')}`, W - margin, top + 8, { align: 'right' });
+
+    const lineY = Math.max(top + h, ly) + 6;
+    doc.setDrawColor(...C.verde);
+    doc.setLineWidth(1.5);
+    doc.line(margin, lineY, W - margin, lineY);
+    doc.setLineWidth(0.2);
+    return lineY + 14;
+};
+
+// Faixa de indicadores (cartões com barra de destaque)
+const drawKpis = (doc, y, items, margin = 40) => {
+    const W = doc.internal.pageSize.getWidth();
+    const gap = 8, h = 44;
+    const w = (W - margin * 2 - gap * (items.length - 1)) / items.length;
+    items.forEach((it, i) => {
+        const x = margin + i * (w + gap);
+        const cor = it.cor || C.verde;
+        doc.setFillColor(...C.cinzaClaro);
+        doc.roundedRect(x, y, w, h, 4, 4, 'F');
+        doc.setFillColor(...cor);
+        doc.roundedRect(x, y + 6, 3, h - 12, 1.5, 1.5, 'F');
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(16);
+        doc.setTextColor(...C.texto);
+        doc.text(String(it.valor), x + 14, y + 21);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(...C.cinza);
+        doc.text(String(it.label), x + 14, y + 34);
+    });
+    return y + h + 16;
+};
+
+// Rodapé em TODAS as páginas, com "Página X de Y"
+const applyFooters = (doc) => {
+    const total = doc.internal.getNumberOfPages();
+    const W = doc.internal.pageSize.getWidth();
+    const H = doc.internal.pageSize.getHeight();
+    for (let i = 1; i <= total; i++) {
+        doc.setPage(i);
+        doc.setDrawColor(...C.linha);
+        doc.setLineWidth(0.5);
+        doc.line(40, H - 28, W - 40, H - 28);
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(150, 150, 150);
+        doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
+        doc.text(`Página ${i} de ${total}`, W - 40, H - 16, { align: 'right' });
     }
 };
 
-const addFooter = (doc, pageNumber, totalPages) => {
-    const pageHeight = doc.internal.pageSize.getHeight();
-    doc.setFontSize(8);
-    doc.setTextColor(150, 150, 150);
-    doc.text(`Sistema de Gerenciamento de Pauta | Impresso em ${new Date().toLocaleString('pt-BR')} | Página ${pageNumber}`, 
-             doc.internal.pageSize.getWidth() / 2, pageHeight - 10, { align: 'center' });
+// Configuração padrão das tabelas
+const tableBase = (extra = {}) => ({
+    theme: 'grid',
+    headStyles: { fillColor: C.verde, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.verde },
+    alternateRowStyles: { fillColor: C.zebra },
+    styles: { fontSize: 8.5, cellPadding: { top: 5, bottom: 5, left: 6, right: 6 }, lineColor: C.linha, lineWidth: 0.4, valign: 'middle', overflow: 'linebreak', textColor: C.texto },
+    margin: { top: 45, left: 40, right: 40, bottom: 42 },
+    ...extra
+});
+
+// ========================================================
+// ATA AÇÃO SOCIAL (documento oficial - layout original)
+// ========================================================
+const ataTabelaPessoas = (doc, startY, titulo, labelId, lista, larguras) => {
+    doc.autoTable({
+        startY,
+        head: [[{ content: titulo, colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
+        body: [
+            [
+                { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                { content: labelId, styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
+                { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
+            ],
+            ...lista.map(c => [
+                { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2, overflow: 'linebreak' } },
+                { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
+                { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
+            ])
+        ],
+        theme: 'grid',
+        headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
+        styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
+        columnStyles: { 0: { cellWidth: larguras.nome }, 1: { cellWidth: larguras.id }, 2: { cellWidth: larguras.assinatura } },
+        margin: { left: 20, right: 20 }
+    });
+    return doc.lastAutoTable.finalY + 2;
 };
 
 const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, dadosExtras = {}) => {
-    console.log("📄 Iniciando geração da Ata Social...");
-    
     const dataInput = dadosExtras.data ? new Date(dadosExtras.data + 'T12:00:00') : new Date();
     const dia = dataInput.getDate();
     const mesExtenso = dataInput.toLocaleString('pt-BR', { month: 'long' });
     const ano = dataInput.getFullYear();
-    
+
     const endereco = dadosExtras.endereco || "Não informado";
     const nomeDaAcao = dadosExtras.acao || pautaName;
     const orgaoAtendimentoConteudo = dadosExtras.orgao || "NÃO INFORMADO";
-    const totalAtendidos = dadosExtras.totalAtendimentos !== undefined 
-        ? dadosExtras.totalAtendimentos 
-        : atendidos.length;
+    const totalAtendidos = dadosExtras.totalAtendimentos !== undefined ? dadosExtras.totalAtendimentos : atendidos.length;
 
     try {
         const img = await loadImage(LOGO_ATA_RAW);
         const pageWidth = doc.internal.pageSize.getWidth();
-        const logoWidth = 90; 
-        const logoHeight = logoWidth / LOGO_DEFENSORIA_RATIO; 
-        const xPos = (pageWidth - logoWidth) / 2;
-        
-        doc.addImage(img, 'PNG', xPos, 8, logoWidth, logoHeight);
-    } catch(e) { 
-        console.error("❌ Erro ao inserir logo RAW no PDF da Ata:", e); 
+        const logoWidth = 90;
+        const logoHeight = logoWidth / LOGO_DEFENSORIA_RATIO;
+        doc.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, 8, logoWidth, logoHeight);
+    } catch (e) {
+        console.error("❌ Erro ao inserir logo RAW no PDF da Ata:", e);
     }
 
     doc.setFont("helvetica", "bold");
@@ -165,79 +290,26 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
-    
     const introText = `Aos ${dia} dias do mês de ${mesExtenso} do ano de ${ano}, a partir das 9h, em ${endereco}, trabalharam na ${nomeDaAcao}, os(as) Defensores(as) Públicos(as) abaixo listados(as), bem como os(as) servidores(as), conforme listagem a seguir:`;
-    
     const splitIntro = doc.splitTextToSize(introText, 170);
     doc.text(splitIntro, 20, 62);
-    
     let currentY = 62 + (splitIntro.length * 4.5);
 
-    // 🌟 ORDENAÇÃO EXATAMENTE ALFABÉTICA (IGNORANDO EQUIPE NA ATA)
+    // Ordem estritamente alfabética (ignora equipe na ata)
     const defensores = colaboradores
         .filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-
     const servidores = colaboradores
         .filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
-    const larguraNome = 65;
-    const larguraIdentificador = 30;
-    const larguraAssinatura = 170 - larguraNome - larguraIdentificador;
+    const larguraNome = 65, larguraId = 30;
+    const larguras = { nome: larguraNome, id: larguraId, assinatura: 170 - larguraNome - larguraId };
 
-    // Respiro na thread para não congelar UI
     await yieldThread();
 
-    if (defensores.length > 0) {
-        doc.autoTable({
-            startY: currentY + 1,
-            head: [[{ content: 'DEFENSOR(A) PÚBLICO(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
-            body: [
-                [
-                    { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
-                    { content: 'MATRÍCULA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
-                    { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
-                ],
-                ...defensores.map(c => [
-                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2, overflow: 'linebreak' } },
-                    { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
-                    { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
-                ])
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
-            columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
-            margin: { left: 20, right: 20 }
-        });
-        currentY = doc.lastAutoTable.finalY + 2;
-    }
-
-    if (servidores.length > 0) {
-        doc.autoTable({
-            startY: currentY,
-            head: [[{ content: 'SERVIDOR(A)', colSpan: 3, styles: { halign: 'center', fontStyle: 'bold', fontSize: 9, fillColor: [146, 208, 80] } }]],
-            body: [
-                [
-                    { content: 'NOME', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
-                    { content: 'ID FUNCIONAL', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } },
-                    { content: 'ASSINATURA', styles: { fillColor: [226, 239, 218], fontStyle: 'bold', halign: 'center', fontSize: 8 } }
-                ],
-                ...servidores.map(c => [
-                    { content: c.nome || '', styles: { halign: 'center', fontSize: 8, cellPadding: 2, overflow: 'linebreak' } },
-                    { content: getIdentificador(c), styles: { halign: 'center', fontSize: 8, cellPadding: 2 } },
-                    { content: '', styles: { halign: 'center', fontSize: 8, cellPadding: 2 } }
-                ])
-            ],
-            theme: 'grid',
-            headStyles: { fillColor: [146, 208, 80], textColor: [0, 0, 0], halign: 'center', fontStyle: 'bold', fontSize: 9 },
-            styles: { fontSize: 8, cellPadding: 2.5, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
-            columnStyles: { 0: { cellWidth: larguraNome }, 1: { cellWidth: larguraIdentificador }, 2: { cellWidth: larguraAssinatura } },
-            margin: { left: 20, right: 20 }
-        });
-        currentY = doc.lastAutoTable.finalY + 2;
-    }
+    if (defensores.length > 0) currentY = ataTabelaPessoas(doc, currentY + 1, 'DEFENSOR(A) PÚBLICO(A)', 'MATRÍCULA', defensores, larguras);
+    if (servidores.length > 0) currentY = ataTabelaPessoas(doc, currentY, 'SERVIDOR(A)', 'ID FUNCIONAL', servidores, larguras);
 
     doc.autoTable({
         startY: currentY,
@@ -256,15 +328,14 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
         margin: { left: 20, right: 20 }
     });
-    
-    currentY = doc.lastAutoTable.finalY + 6;
 
+    currentY = doc.lastAutoTable.finalY + 6;
     doc.setFont("helvetica", "bold");
     doc.setFontSize(8);
     doc.text("OBSERVAÇÕES:", 20, currentY);
     doc.setDrawColor(0, 0, 0);
     doc.line(20, currentY + 3, 190, currentY + 3);
-    
+
     for (let i = 1; i <= 3; i++) {
         const lineY = currentY + 6 + (i * 4.5);
         if (lineY < doc.internal.pageSize.getHeight() - 15) {
@@ -272,25 +343,23 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
             doc.line(20, lineY, 190, lineY);
         }
     }
-    
-    // Sem chamada do addFooter aqui, respeitando a Ata oficial
+    // Sem rodapé: respeita a Ata oficial
 };
 
 // ========================================================
-// PDF SERVICE - EXPORT
+// PDF SERVICE
 // ========================================================
-
 export const PDFService = {
-    
+
+    // Documento formal: layout original preservado
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         if (window.showNotification) window.showNotification("Gerando demonstrativo, aguarde...", "info");
         try {
-            await ensureJsPDF(); 
+            await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
 
             let y = 60;
-
             doc.setFont("helvetica", "bold");
             doc.setFontSize(12);
             doc.text("DEMONSTRATIVO DE DESPESAS MENSAIS", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
@@ -326,17 +395,12 @@ export const PDFService = {
             ];
 
             bodyRows.push([{ content: '1. Despesas Residenciais Comuns (Rateadas)', colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0, 0, 0] } }]);
-            
             comuns.forEach(c => {
                 const valTotal = limpaMoeda(expenseData?.[c.id]);
                 const cotaParte = valTotal / parseInt(moradores || 1);
                 if (valTotal > 0) {
                     totalFamilia += cotaParte;
-                    bodyRows.push([
-                        c.label, 
-                        formatCurrency(valTotal), 
-                        formatCurrency(cotaParte) + ` (Cota 1/${moradores})`
-                    ]);
+                    bodyRows.push([c.label, formatCurrency(valTotal), formatCurrency(cotaParte) + ` (Cota 1/${moradores})`]);
                 }
             });
 
@@ -349,21 +413,15 @@ export const PDFService = {
             ];
 
             bodyRows.push([{ content: '2. Despesas Exclusivas (Integrais)', colSpan: 3, styles: { fillColor: [240, 240, 240], fontStyle: 'bold', textColor: [0, 0, 0] } }]);
-
             exclusivas.forEach(c => {
                 const valIntegral = limpaMoeda(expenseData?.[c.id]);
                 if (valIntegral > 0) {
                     totalCrianca += valIntegral;
-                    bodyRows.push([
-                        c.label, 
-                        formatCurrency(valIntegral), 
-                        formatCurrency(valIntegral) + ' (Integral)'
-                    ]);
+                    bodyRows.push([c.label, formatCurrency(valIntegral), formatCurrency(valIntegral) + ' (Integral)']);
                 }
             });
 
             const totalGeral = totalFamilia + totalCrianca;
-
             await yieldThread();
 
             doc.autoTable({
@@ -372,16 +430,12 @@ export const PDFService = {
                 body: bodyRows,
                 margin: { left: 40, right: 40 },
                 theme: 'grid',
-                headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: 'center', fontSize: 10, lineColor: [0,0,0], lineWidth: 0.5 },
-                styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0], overflow: 'linebreak' },
-                columnStyles: { 
-                    1: { halign: 'center', cellWidth: 110 }, 
-                    2: { halign: 'center', cellWidth: 130 } 
-                }
+                headStyles: { fillColor: [230, 230, 230], textColor: [0, 0, 0], halign: 'center', fontSize: 10, lineColor: [0, 0, 0], lineWidth: 0.5 },
+                styles: { fontSize: 9, cellPadding: 5, valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0], overflow: 'linebreak' },
+                columnStyles: { 1: { halign: 'center', cellWidth: 110 }, 2: { halign: 'center', cellWidth: 130 } }
             });
 
-            let finalY = doc.lastAutoTable.finalY + 15;
-
+            const finalY = doc.lastAutoTable.finalY + 15;
             doc.autoTable({
                 startY: finalY,
                 body: [
@@ -391,14 +445,11 @@ export const PDFService = {
                 ],
                 margin: { left: 40, right: 40 },
                 theme: 'grid',
-                styles: { fontSize: 9, cellPadding: 6, valign: 'middle', lineColor: [0,0,0], lineWidth: 0.5, textColor: [0,0,0] },
-                columnStyles: { 
-                    0: { cellWidth: 350 }, 
-                    1: { halign: 'center' } 
-                }
+                styles: { fontSize: 9, cellPadding: 6, valign: 'middle', lineColor: [0, 0, 0], lineWidth: 0.5, textColor: [0, 0, 0] },
+                columnStyles: { 0: { cellWidth: 350 }, 1: { halign: 'center' } }
             });
 
-            doc.save(`Demonstrativo_Despesas_${(assistedName||'Requerente').replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Demonstrativo_Despesas_${(assistedName || 'Requerente').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("PDF Padrão gerado com sucesso!", "success");
             return true;
         } catch (error) {
@@ -414,13 +465,10 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
-            
             doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Ata gerada com sucesso!", "success");
             return true;
-            
         } catch (error) {
             console.error("Erro ao gerar Ata Social:", error);
             if (window.showNotification) window.showNotification("Falha ao gerar Ata Social.", "error");
@@ -434,14 +482,9 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
             await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
-            
-            const pdfBlob = doc.output('blob');
-            const pdfUrl = URL.createObjectURL(pdfBlob);
-            window.open(pdfUrl, '_blank');
+            window.open(URL.createObjectURL(doc.output('blob')), '_blank');
             return true;
-            
         } catch (error) {
             console.error("Erro ao gerar Preview da Ata Social:", error);
             if (window.showNotification) window.showNotification("Falha na pré-visualização.", "error");
@@ -449,85 +492,56 @@ export const PDFService = {
         }
     },
 
+    // ----------------------------------------------------
+    // ATENDIDOS
+    // ----------------------------------------------------
     async generateAtendidosPDF(arg1, arg2) {
         return new Promise((resolve) => {
             const modalId = 'pdf-column-selector-modal';
-            let modal = document.getElementById(modalId);
-            if (modal) modal.remove();
+            document.getElementById(modalId)?.remove();
 
-            modal = document.createElement('div');
+            const opcoes = [
+                { v: 'numAgendamento', l: 'Nº do Agendamento / Senha', on: false },
+                { v: 'numeroProcesso', l: 'Número do Processo', on: false },
+                { v: 'scheduledTime', l: 'Horário Agendado', on: true },
+                { v: 'arrivalTime', l: 'Horário de Chegada', on: true },
+                { v: 'attendedTime', l: 'Horário de Finalização', on: true },
+                { v: 'duration', l: 'Duração do Atendimento', on: true },
+                { v: 'subject', l: 'Assunto Principal', on: true },
+                { v: 'demandas', l: 'Demandas Adicionais', on: false },
+                { v: 'attendant', l: 'Responsável pelo Atendimento', on: true }
+            ];
+
+            const modal = document.createElement('div');
             modal.id = modalId;
             modal.className = 'fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
-            
             modal.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
-                    <div class="p-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                        <h3 class="text-lg font-black text-slate-800 uppercase tracking-tight flex items-center gap-2">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="text-emerald-600"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/></svg> 
-                            Configurar Relatório
-                        </h3>
+                    <div class="p-5 border-b border-slate-100 bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">📄 Configurar relatório</h3>
                     </div>
                     <div class="p-5 overflow-y-auto">
                         <p class="text-xs text-slate-500 mb-4 font-medium">Selecione quais informações devem constar no PDF final:</p>
-                        
                         <div class="space-y-2 mb-2" id="pdf-columns-checkboxes">
                             <label class="flex items-center gap-3 p-3 border rounded-xl bg-slate-50 opacity-70 cursor-not-allowed border-slate-200">
-                                <input type="checkbox" checked disabled class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Nome do Assistido (Obrigatório)</span>
+                                <input type="checkbox" checked disabled class="w-5 h-5 text-emerald-600 rounded">
+                                <span class="font-bold text-slate-700 text-sm">Nome do Assistido (obrigatório)</span>
                             </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="numAgendamento" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Nº do Agendamento / Senha</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="numeroProcesso" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Número do Processo</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="scheduledTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Horário Agendado</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="arrivalTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Horário de Chegada</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="attendedTime" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Horário de Finalização</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="duration" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Duração do Atendimento</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="subject" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Assunto Principal</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="demandas" class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Demandas Adicionais</span>
-                            </label>
-                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-slate-50 transition border-slate-200">
-                                <input type="checkbox" value="attendant" checked class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
-                                <span class="font-bold text-slate-700 text-sm">Responsável pelo Atendimento</span>
-                            </label>
+                            ${opcoes.map(o => `
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition border-slate-200">
+                                <input type="checkbox" value="${o.v}" ${o.on ? 'checked' : ''} class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">${o.l}</span>
+                            </label>`).join('')}
                         </div>
                     </div>
                     <div class="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
                         <button id="cancel-pdf-btn" class="flex-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition-colors text-xs uppercase shadow-sm">Cancelar</button>
-                        <button id="confirm-pdf-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md text-xs uppercase flex items-center justify-center gap-2">
-                            <span>Gerar PDF</span>
-                        </button>
+                        <button id="confirm-pdf-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md text-xs uppercase flex items-center justify-center gap-2"><span>Gerar PDF</span></button>
                     </div>
-                </div>
-            `;
-            
+                </div>`;
             document.body.appendChild(modal);
 
-            document.getElementById('cancel-pdf-btn').onclick = () => {
-                modal.remove();
-                resolve(false);
-            };
+            document.getElementById('cancel-pdf-btn').onclick = () => { modal.remove(); resolve(false); };
 
             document.getElementById('confirm-pdf-btn').onclick = async () => {
                 const btn = document.getElementById('confirm-pdf-btn');
@@ -535,12 +549,10 @@ export const PDFService = {
                 btn.disabled = true;
 
                 const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
-                
-                let atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
+                const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
                 const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
 
                 const success = await PDFService._buildAtendidosPDF(atendidosList, pautaNome, selectedColumns);
-                
                 modal.remove();
                 resolve(success);
             };
@@ -551,25 +563,17 @@ export const PDFService = {
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
-
-            const logoInfo = await addLogoHeader(docPDF, 20);
-            const tituloY = Math.max(55, logoInfo.bottomY + 20);
+            const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
+            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
-            docPDF.setFontSize(18);
-            docPDF.setTextColor(22, 163, 74); 
-            docPDF.text(`Relatório de Atendidos - ${pautaNome}`, 40, tituloY);
-
-            docPDF.setFontSize(10);
-            docPDF.setTextColor(100);
-            const totalAssuntos = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
-            docPDF.text(`Data da Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
-            docPDF.text(`Total: ${atendidosList.length} assistidos | Volume de Demandas (Múltiplas): ${totalAssuntos}`, 40, tituloY + 28);
+            // Dados por linha + métricas do resumo
+            let somaMin = 0, nMin = 0;
+            const totalDemandas = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
 
             const colDef = [
-                { key: 'name', label: 'Nome Completo' },
+                { key: 'name', label: 'Nome completo' },
                 { key: 'numAgendamento', label: 'Nº Agend.' },
                 { key: 'numeroProcesso', label: 'Nº Processo' },
                 { key: 'scheduledTime', label: 'Agendado' },
@@ -577,35 +581,27 @@ export const PDFService = {
                 { key: 'attendedTime', label: 'Chamado/Fim' },
                 { key: 'duration', label: 'Duração' },
                 { key: 'subject', label: 'Assunto' },
-                { key: 'demandas', label: 'Demandas Adicionais' },
+                { key: 'demandas', label: 'Demandas adicionais' },
                 { key: 'attendant', label: 'Atendente' }
             ];
-
             const activeCols = colDef.filter(c => c.key === 'name' || selectedColumns.includes(c.key));
             const head = [["#", ...activeCols.map(c => c.label)]];
 
-            // Respiro na thread antes de varrer centenas de dados
             await yieldThread();
 
             const body = atendidosList.map((item, index) => {
                 const arrivalDate = getSafeDate(item.arrivalTime);
-                const attendedDate = getSafeDate(item.attendedTime || item.attendedAt); 
+                const attendedDate = getSafeDate(item.attendedTime || item.attendedAt);
 
                 let duration = 'N/A';
                 if (arrivalDate && attendedDate) {
-                    const diffMs = attendedDate.getTime() - arrivalDate.getTime();
-                    duration = calculateDuration(Math.round(diffMs / 60000));
+                    const min = Math.round((attendedDate.getTime() - arrivalDate.getTime()) / 60000);
+                    duration = calculateDuration(min);
+                    if (min >= 0) { somaMin += min; nMin++; }
                 }
 
-                const arrStr = arrivalDate ? arrivalDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
-                const attStr = attendedDate ? attendedDate.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
-                const atendente = getAttendantNameForPDF(item);
-                
-                let demandasStr = '---';
-                if (item.demandas && item.demandas.descricoes && item.demandas.descricoes.length > 0) {
-                    demandasStr = item.demandas.descricoes.join(', ');
-                }
-
+                const hora = (d) => d ? d.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
+                const demandasStr = item.demandas?.descricoes?.length ? item.demandas.descricoes.join(', ') : '---';
                 const processoStr = item.numeroProcesso || item.processo || '---';
 
                 const rowData = {
@@ -613,45 +609,43 @@ export const PDFService = {
                     numAgendamento: item.numAgendamento || item.numeroAgendamento || '---',
                     numeroProcesso: cleanString(processoStr).toUpperCase(),
                     scheduledTime: item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
-                    arrivalTime: arrStr,
-                    attendedTime: attStr,
-                    duration: duration,
+                    arrivalTime: hora(arrivalDate),
+                    attendedTime: hora(attendedDate),
+                    duration,
                     subject: cleanString(item.subject).toUpperCase(),
                     demandas: cleanString(demandasStr).toUpperCase(),
-                    attendant: cleanString(atendente).toUpperCase()
+                    attendant: cleanString(getAttendantNameForPDF(item)).toUpperCase()
                 };
-
                 return [index + 1, ...activeCols.map(c => rowData[c.key])];
             });
 
             if (body.length === 0) {
-                body.push([{ 
-                    content: "Nenhum atendimento finalizado nesta pauta até o momento.", 
-                    colSpan: activeCols.length + 1, 
-                    styles: { halign: 'center', fontStyle: 'italic' } 
-                }]);
+                body.push([{ content: "Nenhum atendimento finalizado nesta pauta até o momento.", colSpan: activeCols.length + 1, styles: { halign: 'center', fontStyle: 'italic', textColor: C.cinza } }]);
             }
 
-            // Garante que o navegador atualize a UI antes do AutoTable (que é pesado)
+            let y = drawHeader(doc, logo, { title: 'Relatório de Atendidos', lines: [`Pauta: ${pautaNome}`] });
+            y = drawKpis(doc, y, [
+                { label: 'Assistidos atendidos', valor: atendidosList.length },
+                { label: 'Volume de demandas', valor: totalDemandas, cor: [59, 130, 246] },
+                { label: 'Duração média', valor: nMin ? calculateDuration(Math.round(somaMin / nMin)) : '—', cor: [245, 158, 11] }
+            ]);
+
             await yieldThread();
 
-            docPDF.autoTable({
-                head: head,
-                body: body,
-                startY: tituloY + 45,
-                theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74], halign: 'center' },
-                // overflow: 'linebreak' força textos grandes a não cortarem
-                styles: { fontSize: 8, cellPadding: 4, halign: 'center', valign: 'middle', overflow: 'linebreak' },
-                columnStyles: { 
-                    0: { cellWidth: 25 }, 
-                    1: { halign: 'left' } 
-                }
+            // Colunas curtas com largura fixa; nome/assunto/atendente se ajustam ao espaço
+            const fixas = { numAgendamento: 55, scheduledTime: 55, arrivalTime: 50, attendedTime: 60, duration: 55, numeroProcesso: 110 };
+            const columnStyles = { 0: { cellWidth: 24, halign: 'center', textColor: C.cinza } };
+            activeCols.forEach((c, i) => {
+                const idx = i + 1;
+                if (c.key === 'name') columnStyles[idx] = { halign: 'left', fontStyle: 'bold' };
+                else if (['subject', 'demandas', 'attendant'].includes(c.key)) columnStyles[idx] = { halign: 'left' };
+                else columnStyles[idx] = { halign: 'center', cellWidth: fixas[c.key] || 'auto' };
             });
 
-            addFooter(docPDF, 1, 1);
+            doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
+            applyFooters(doc);
 
-            docPDF.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
         } catch (error) {
@@ -660,68 +654,58 @@ export const PDFService = {
             return false;
         }
     },
-    
+
+    // ----------------------------------------------------
+    // FALTOSOS
+    // ----------------------------------------------------
     async generateFaltososPDF(arg1, arg2) {
         if (window.showNotification) window.showNotification("Gerando lista de faltosos, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
-
-            const logoInfo = await addLogoHeader(docPDF, 20);
-            const tituloY = Math.max(55, logoInfo.bottomY + 20);
+            const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
-
             faltososList = [...faltososList].sort(sortByScheduledTime);
 
-            docPDF.setFontSize(18);
-            docPDF.setTextColor(22, 163, 74);
-            docPDF.text(`Relatório de Faltosos - ${pautaNome}`, 40, tituloY);
-
-            docPDF.setFontSize(10);
-            docPDF.setTextColor(100);
-            docPDF.text(`Data de Emissão: ${new Date().toLocaleString('pt-BR')}`, 40, tituloY + 15);
-            docPDF.text(`Total de Ausências: ${faltososList.length}`, 40, tituloY + 28);
-
-            const head = [["#", "Nome do Assistido", "Agendado", "Assunto", "Falta às"]];
+            let y = drawHeader(doc, logo, { title: 'Relatório de Faltosos', lines: [`Pauta: ${pautaNome}`] });
+            y = drawKpis(doc, y, [{ label: 'Total de ausências', valor: faltososList.length, cor: C.vermelho }]);
 
             await yieldThread();
 
             const body = faltososList.map((item, index) => {
                 const logTime = getSafeDate(item.lastActionTimestamp);
-                const faltaStr = logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---';
-
                 return [
                     index + 1,
                     cleanString(item.name).toUpperCase(),
                     item.scheduledTime || (item.type === 'avulso' ? 'Avulso' : '---'),
-                    cleanString(item.subject).toUpperCase(), 
-                    faltaStr
+                    cleanString(item.subject).toUpperCase(),
+                    logTime ? logTime.toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : '---'
                 ];
             });
+            if (body.length === 0) {
+                body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic', textColor: C.cinza } }]);
+            }
 
-            if (body.length === 0) body.push([{ content: "Nenhum assistido marcado como faltoso.", colSpan: 5, styles: { halign: 'center', fontStyle: 'italic' } }]);
-
-            await yieldThread();
-
-            docPDF.autoTable({
-                head: head,
-                body: body,
-                startY: tituloY + 45,
-                theme: 'grid',
-                headStyles: { fillColor: [22, 163, 74] },
-                styles: { fontSize: 8, cellPadding: 5, halign: 'center', valign: 'middle', overflow: 'linebreak' },
-                columnStyles: { 
-                    1: { halign: 'left', cellWidth: 160 }, 
-                    3: { halign: 'left', cellWidth: 180 }
+            doc.autoTable(tableBase({
+                head: [["#", "Nome do assistido", "Agendado", "Assunto", "Falta às"]],
+                body,
+                startY: y,
+                headStyles: { fillColor: C.vermelho, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.vermelho },
+                alternateRowStyles: { fillColor: [254, 250, 250] },
+                columnStyles: {
+                    0: { cellWidth: 26, halign: 'center', textColor: C.cinza },
+                    1: { halign: 'left', fontStyle: 'bold' },
+                    2: { cellWidth: 60, halign: 'center' },
+                    3: { halign: 'left' },
+                    4: { cellWidth: 55, halign: 'center' }
                 }
-            });
+            }));
 
-            addFooter(docPDF, 1, 1);
-
-            docPDF.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            applyFooters(doc);
+            doc.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
             console.error("Erro PDF Faltosos:", error);
@@ -730,15 +714,14 @@ export const PDFService = {
         }
     },
 
+    // ----------------------------------------------------
+    // EQUIPE
+    // ----------------------------------------------------
     async generateCollaboratorsPDF(arg1, arg2, arg3) {
         if (window.showNotification) window.showNotification("Gerando lista de equipe, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
-            const docPDF = new jsPDF();
-
-            const logoInfo = await addLogoHeader(docPDF, 15);
-            const tituloY = Math.max(40, logoInfo.bottomY + 20);
 
             let colaboradores = [];
             let pautaNome = 'Geral';
@@ -747,7 +730,7 @@ export const PDFService = {
             if (arg1 && !Array.isArray(arg1) && arg1.colaboradores) {
                 colaboradores = arg1.colaboradores || [];
                 pautaNome = arg1.pautaNome || 'Geral';
-                colunas = arg1.colunas || ['nome', 'cargo', 'equipe', 'transporte'];
+                colunas = arg1.colunas || colunas;
             } else if (Array.isArray(arg1)) {
                 colaboradores = arg1;
                 if (typeof arg2 === 'string') pautaNome = arg2;
@@ -755,90 +738,95 @@ export const PDFService = {
             }
 
             if (!colaboradores || colaboradores.length === 0) {
-                console.warn("Nenhum colaborador na lista para gerar PDF.");
                 if (window.showNotification) window.showNotification("Nenhum colaborador encontrado.", "warning");
                 return false;
             }
 
+            // Muitas colunas pedem folha deitada
+            const doc = new jsPDF({ orientation: colunas.length > 5 ? 'l' : 'p', unit: 'pt', format: 'a4' });
+            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
+
             const colMap = {
-                'nome': { label: 'Membro da Equipe', getData: (c) => c.nome },
-                'cargo': { label: 'Cargo', getData: (c) => c.cargo || 'N/A' },
-                'equipe': { label: 'Equipe', getData: (c) => c.equipe ? `EQP ${c.equipe}` : 'N/A' },
-                'presenca': { label: 'Status / Horário', getData: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
-                'identificador': { label: 'Matrícula/ID', getData: (c) => c.identificador || 'N/A' },
-                'telefone': { label: 'Telefone', getData: (c) => c.telefone || 'N/A' },
-                'email': { label: 'E-mail', getData: (c) => c.email || 'N/A' },
-                'horario': { label: 'Chegada', getData: (c) => c.horario || '--:--' },
-                'transporte': { label: 'Deslocamento', getData: (c) => {
-                    let desc = c.transporte || 'Não Informado';
-                    if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
-                    return desc;
-                }}
+                nome: { label: 'Membro da equipe', get: (c) => c.nome || '' },
+                cargo: { label: 'Cargo', get: (c) => c.cargo || 'N/A' },
+                equipe: { label: 'Equipe', get: (c) => c.equipe ? (/^\d+$/.test(c.equipe) ? `Equipe ${c.equipe}` : c.equipe) : 'N/A' },
+                presenca: { label: 'Status / horário', get: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
+                identificador: { label: 'Matrícula/ID', get: (c) => c.identificador || 'N/A' },
+                telefone: { label: 'Telefone', get: (c) => c.telefone || 'N/A' },
+                email: { label: 'E-mail', get: (c) => c.email || 'N/A' },
+                horario: { label: 'Chegada', get: (c) => c.horario || '--:--' },
+                transporte: {
+                    label: 'Deslocamento', get: (c) => {
+                        let desc = c.transporte || 'Não informado';
+                        if (c.transporte === 'Com a Empresa' && c.localEncontro) desc += ` (${c.localEncontro})`;
+                        return desc;
+                    }
+                }
             };
 
-            const sortedColaboradores = [...colaboradores].sort((a, b) => {
-                const equipeA = a.equipe || 'Sem Equipe';
-                const equipeB = b.equipe || 'Sem Equipe';
-                if (equipeA !== equipeB) return equipeA.localeCompare(equipeB);
-
-                const getCargoWeight = (cargo) => {
-                    const c = (cargo || '').toLowerCase();
-                    if (c.includes('defensor')) return 1;
-                    if (c.includes('servidor')) return 2;
-                    return 3;
-                };
-
-                const weightA = getCargoWeight(a.cargo);
-                const weightB = getCargoWeight(b.cargo);
-                
-                if (weightA !== weightB) return weightA - weightB;
-                return (a.nome || '').localeCompare(b.nome || '');
+            const ordenados = [...colaboradores].sort((a, b) => {
+                const g = compararGrupos(a.equipe, b.equipe);
+                if (g !== 0) return g;
+                const w = pesoCargo(a.cargo) - pesoCargo(b.cargo);
+                return w !== 0 ? w : (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
             });
 
-            const header = [colunas.map(key => colMap[key] ? colMap[key].label : key)];
+            // Contagem por equipe para o título de cada bloco
+            const porEquipe = {};
+            ordenados.forEach(c => { const k = c.equipe || ''; porEquipe[k] = (porEquipe[k] || 0) + 1; });
+
+            await yieldThread();
+
             const tableData = [];
-            let currentEquipe = null;
-
-            await yieldThread();
-
-            sortedColaboradores.forEach(c => {
-                const equipeAtual = c.equipe ? `Equipe ${c.equipe}` : 'Sem Equipe';
-                
-                if (equipeAtual !== currentEquipe) {
-                    currentEquipe = equipeAtual;
-                    tableData.push([
-                        {
-                            content: equipeAtual.toUpperCase(),
-                            colSpan: colunas.length, 
-                            styles: { fillColor: [240, 253, 244], textColor: [21, 128, 61], fontStyle: 'bold', halign: 'center' }
-                        }
-                    ]);
+            let atual = null;
+            ordenados.forEach(c => {
+                const k = c.equipe || '';
+                if (k !== atual) {
+                    atual = k;
+                    const nome = k ? (/^\d+$/.test(k) ? `Equipe ${k}` : k) : 'Sem equipe';
+                    tableData.push([{
+                        content: `${nome.toUpperCase()}  ·  ${porEquipe[k]} membro${porEquipe[k] === 1 ? '' : 's'}`,
+                        colSpan: colunas.length,
+                        styles: { fillColor: [220, 252, 231], textColor: C.verdeEscuro, fontStyle: 'bold', halign: 'left', fontSize: 9 }
+                    }]);
                 }
-                
-                tableData.push(colunas.map(key => colMap[key] ? colMap[key].getData(c) : 'N/A'));
+                tableData.push(colunas.map(key => colMap[key] ? colMap[key].get(c) : 'N/A'));
             });
 
-            docPDF.setFontSize(16);
-            docPDF.setTextColor(22, 163, 74); 
-            docPDF.text("LISTA DAS EQUIPES", 14, tituloY);
-            
-            docPDF.setFontSize(10);
-            docPDF.text(`PAUTA: ${pautaNome.toUpperCase()}`, 14, tituloY + 15);
+            const presentes = colaboradores.filter(c => c.presente).length;
+            const defensores = colaboradores.filter(c => pesoCargo(c.cargo) === 1).length;
+            const servidores = colaboradores.filter(c => pesoCargo(c.cargo) === 2).length;
 
-            await yieldThread();
+            let y = drawHeader(doc, logo, { title: 'Lista das Equipes', lines: [`Pauta: ${pautaNome}`] });
+            y = drawKpis(doc, y, [
+                { label: 'Total de membros', valor: colaboradores.length },
+                { label: 'Presentes', valor: presentes, cor: [59, 130, 246] },
+                { label: 'Defensores(as)', valor: defensores, cor: [139, 92, 246] },
+                { label: 'Servidores(as)', valor: servidores, cor: [245, 158, 11] }
+            ]);
 
-            docPDF.autoTable({
-                head: header,
+            const idxPresenca = colunas.indexOf('presenca');
+            const idxNome = colunas.indexOf('nome');
+            const columnStyles = {};
+            if (idxNome >= 0) columnStyles[idxNome] = { halign: 'left', fontStyle: 'bold' };
+
+            doc.autoTable(tableBase({
+                head: [colunas.map(key => colMap[key] ? colMap[key].label : key)],
                 body: tableData,
-                startY: tituloY + 30,
-                theme: 'striped',
-                headStyles: { fillColor: [22, 163, 74] },
-                styles: { fontSize: 9, halign: 'center', valign: 'middle', overflow: 'linebreak' }
-            });
+                startY: y,
+                columnStyles,
+                styles: { ...tableBase().styles, halign: 'center' },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && idxPresenca >= 0 && data.column.index === idxPresenca && data.cell.colSpan === 1) {
+                        const t = String(data.cell.raw);
+                        data.cell.styles.fontStyle = 'bold';
+                        data.cell.styles.textColor = t.startsWith('Presente') ? C.verdeEscuro : [148, 163, 184];
+                    }
+                }
+            }));
 
-            addFooter(docPDF, 1, 1);
-
-            docPDF.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            applyFooters(doc);
+            doc.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
@@ -846,225 +834,222 @@ export const PDFService = {
             return false;
         }
     },
-    
+
+    // ----------------------------------------------------
+    // CHECKLIST
+    // ----------------------------------------------------
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
         if (window.showNotification) window.showNotification("Gerando checklist, aguarde...", "info");
         try {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
+            const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
-            const marginX = 50; 
-            const maxWidth = doc.internal.pageSize.getWidth() - (marginX * 2);
-            const pageHeight = doc.internal.pageSize.getHeight();
+            const W = doc.internal.pageSize.getWidth();
+            const H = doc.internal.pageSize.getHeight();
+            const m = 40;
+            const contentW = W - m * 2;
 
-            const logoInfo = await addLogoHeader(doc, 15);
-            let y = Math.max(60, logoInfo.bottomY + 20);
+            let y = drawHeader(doc, logo, {
+                title: 'Checklist de Atendimento',
+                lines: [`Assistido: ${String(assistedName).toUpperCase()}`, `Ação: ${actionTitle}`]
+            });
 
-            const checkPage = (heightToAdd = 20) => {
-                if (y + heightToAdd >= pageHeight - 50) {
-                    const pageNumber = doc.internal.getNumberOfPages() + 1;
-                    addFooter(doc, pageNumber, 1);
+            // Nova página mantendo a logo (usa imagem já carregada, sem await)
+            const ensure = (h) => {
+                if (y + h > H - 48) {
                     doc.addPage();
+                    const { w, h: lh } = logoSize(logo);
+                    if (logo) { try { doc.addImage(logo, 'PNG', m, 20, w * 0.7, lh * 0.7); } catch (e) { } }
                     y = 60;
-                    addLogoHeader(doc, 15);
                 }
             };
 
-            const addText = (text, isBold = false, size = 10, indent = 0) => {
-                doc.setFont("helvetica", isBold ? "bold" : "normal");
-                doc.setFontSize(size);
-                const textLines = doc.splitTextToSize(text, maxWidth - indent);
-                checkPage(textLines.length * (size * 1.2));
-                doc.text(textLines, marginX + indent, y);
-                y += (textLines.length * (size * 1.2)) + 5;
+            const section = (titulo) => {
+                ensure(40);
+                doc.setFillColor(...C.verdeClaro);
+                doc.rect(m, y, contentW, 20, 'F');
+                doc.setFillColor(...C.verde);
+                doc.rect(m, y, 3, 20, 'F');
+                doc.setFont("helvetica", "bold");
+                doc.setFontSize(10);
+                doc.setTextColor(...C.verdeEscuro);
+                doc.text(titulo, m + 12, y + 13.5);
+                y += 30;
             };
 
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.text("Checklist de Atendimento - SIGEP", doc.internal.pageSize.getWidth() / 2, y, { align: "center" });
-            y += 40;
+            // Item com caixa marcada e etiqueta opcional à direita
+            const checkItem = (texto, tag) => {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9.5);
+                doc.setTextColor(...C.texto);
+                doc.setFont("helvetica", "bold"); doc.setFontSize(7.5);
+                const tagW = tag ? doc.getTextWidth(tag) + 12 : 0;
+                doc.setFont("helvetica", "normal"); doc.setFontSize(9.5);
+                const linhas = doc.splitTextToSize(texto, contentW - 28 - (tagW ? tagW + 10 : 0));
+                const altura = Math.max(linhas.length * 12.5, 14);
+                ensure(altura + 6);
 
-            addText(`Assistido: ${assistedName.toUpperCase()}`, false, 11);
-            addText(`Ação: ${actionTitle}`, false, 11);
-            y += 30;
+                // caixa
+                doc.setDrawColor(...C.verde);
+                doc.setLineWidth(0.9);
+                doc.rect(m + 8, y - 8, 10, 10);
+                doc.setLineWidth(1.4);
+                doc.line(m + 10, y - 3, m + 12.5, y - 0.5);
+                doc.line(m + 12.5, y - 0.5, m + 17, y - 7);
+                doc.setLineWidth(0.2);
 
-            addText("DOCUMENTAÇÃO ENTREGUE:", true, 11);
-            y += 10;
-            
-            documentosTextos.forEach((item) => {
-                if (item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')) return;
-                const tipoEntrega = checklistData.docTypes && checklistData.docTypes[item.id] ? checklistData.docTypes[item.id] : 'Físico';
-                addText(`[X] ${item.text} - [${tipoEntrega.toUpperCase()}]`, false, 10, 20); 
-            });
-            y += 20;
+                doc.text(linhas, m + 26, y);
 
-            if (checklistData.demandasAdicionais && checklistData.demandasAdicionais.length > 0) {
-                addText("DEMANDAS ADICIONAIS:", true, 11);
-                y += 10;
-                checklistData.demandasAdicionais.forEach((demanda) => {
-                    addText(`• ${demanda}`, false, 10, 20);
-                });
+                if (tag) {
+                    const bx = W - m - tagW;
+                    doc.setFillColor(...C.cinzaClaro);
+                    doc.roundedRect(bx, y - 10, tagW, 14, 3, 3, 'F');
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(7.5);
+                    doc.setTextColor(...C.cinza);
+                    doc.text(tag, bx + tagW / 2, y - 0.5, { align: 'center' });
+                }
+                y += altura + 6;
+            };
+
+            const bullet = (texto) => {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(9.5);
+                doc.setTextColor(...C.texto);
+                const linhas = doc.splitTextToSize(texto, contentW - 30);
+                ensure(linhas.length * 12.5 + 4);
+                doc.setFillColor(...C.verde);
+                doc.circle(m + 13, y - 3, 1.8, 'F');
+                doc.text(linhas, m + 24, y);
+                y += linhas.length * 12.5 + 4;
+            };
+
+            // Tabela chave/valor padronizada (gastos e réu)
+            const tabelaKV = (rows, opts = {}) => {
+                doc.autoTable(tableBase({
+                    startY: y,
+                    body: rows,
+                    theme: 'plain',
+                    margin: { top: 60, left: m, right: m, bottom: 42 },
+                    styles: { fontSize: 9, cellPadding: { top: 4, bottom: 4, left: 8, right: 8 }, textColor: C.texto, lineColor: C.linha, lineWidth: 0, overflow: 'linebreak' },
+                    alternateRowStyles: { fillColor: C.zebra },
+                    columnStyles: { 0: { cellWidth: opts.w0 || 150, fontStyle: 'bold', textColor: C.cinza }, 1: { halign: opts.align1 || 'left' } },
+                    ...(opts.extra || {})
+                }));
+                y = doc.lastAutoTable.finalY + 18;
+            };
+
+            // ---- Documentação entregue ----
+            section('DOCUMENTAÇÃO ENTREGUE');
+            const docsVisiveis = (documentosTextos || []).filter(item =>
+                !(item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')));
+            if (docsVisiveis.length === 0) {
+                doc.setFont("helvetica", "italic"); doc.setFontSize(9.5); doc.setTextColor(...C.cinza);
+                doc.text('Nenhum documento registrado.', m + 8, y);
                 y += 20;
+            }
+            docsVisiveis.forEach(item => {
+                const tipo = checklistData.docTypes?.[item.id] || 'Físico';
+                checkItem(item.text, tipo.toUpperCase());
+            });
+            y += 12;
+
+            // ---- Demandas adicionais ----
+            if (checklistData.demandasAdicionais?.length > 0) {
+                section('DEMANDAS ADICIONAIS');
+                checklistData.demandasAdicionais.forEach(d => bullet(d));
+                y += 12;
             }
 
             await yieldThread();
 
-            if (checklistData.expenseData && checklistData.expenseData.checkExibirGastos) {
+            // ---- Planilha de gastos ----
+            if (checklistData.expenseData?.checkExibirGastos) {
                 const g = checklistData.expenseData;
-                addText("PLANILHA DE GASTOS:", true, 11);
-                y += 10;
-                
-                const categoriasNome = [
-                    { id: 'moradia', label: '1. MORADIA (Habitação)' },
-                    { id: 'alimentacao', label: '2. ALIMENTAÇÃO' },
-                    { id: 'educacao', label: '3. EDUCAÇÃO' },
-                    { id: 'saude', label: '4. SAÚDE' },
-                    { id: 'vestuario', label: '5. VESTUÁRIO E HIGIENE' },
-                    { id: 'lazer', label: '6. LAZER E TRANSPORTE' },
-                    { id: 'outras', label: '7. OUTRAS DESPESAS' }
+                section('PLANILHA DE GASTOS');
+                const categorias = [
+                    { id: 'moradia', label: '1. Moradia (habitação)' },
+                    { id: 'alimentacao', label: '2. Alimentação' },
+                    { id: 'educacao', label: '3. Educação' },
+                    { id: 'saude', label: '4. Saúde' },
+                    { id: 'vestuario', label: '5. Vestuário e higiene' },
+                    { id: 'lazer', label: '6. Lazer e transporte' },
+                    { id: 'outras', label: '7. Outras despesas' }
                 ];
-
                 let totalGastos = 0;
-                categoriasNome.forEach(c => {
+                const rows = [];
+                categorias.forEach(c => {
                     const valorStr = g[c.id] || 'R$ 0,00';
                     if (valorStr !== 'R$ 0,00') {
-                        addText(`${c.label}: ${valorStr}`, false, 10, 20); 
-                        const num = parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                        totalGastos += num;
+                        rows.push([c.label, valorStr]);
+                        totalGastos += parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
                     }
                 });
-
+                if (rows.length === 0) rows.push(['Nenhum gasto informado', '—']);
                 if (totalGastos > 0) {
-                    y += 5; 
-                    const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    addText(`TOTAL: ${totalFormatado}`, true, 10, 20); 
+                    rows.push([
+                        { content: 'TOTAL', styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } },
+                        { content: totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } }
+                    ]);
                 }
-                y += 20;
+                tabelaKV(rows, { w0: 260, align1: 'right' });
             }
 
-            if (checklistData.reuData && checklistData.reuData.checkReuUnico) {
+            // ---- Parte contrária (réu) ----
+            if (checklistData.reuData?.checkReuUnico) {
                 const r = checklistData.reuData;
-                addText("DADOS DA PARTE CONTRÁRIA (RÉU):", true, 11);
-                y += 10;
-                
-                if (r.nome) addText(`Nome: ${r.nome.toUpperCase()}`, false, 10, 20);
-                
-                let contatoStr = '';
-                if (r.cpf) contatoStr += `CPF: ${r.cpf}`;
-                if (r.telefone) {
-                    if (contatoStr) contatoStr += ` | `;
-                    contatoStr += `WhatsApp: ${r.telefone}`;
-                }
-                if (contatoStr) addText(contatoStr, false, 10, 20);
-                
+                const ligar = (...partes) => partes.filter(Boolean).join(' | ');
+                const campo = (valor, naoSei) => {
+                    if (naoSei) return 'Não informado (não soube informar)';
+                    return valor && String(valor).trim() !== '' ? valor : '';
+                };
+
+                const dados = [];
+                const add = (rotulo, valor) => { if (valor) dados.push([rotulo, valor]); };
+
+                add('Nome', r.nome ? r.nome.toUpperCase() : '');
+                add('Contato', ligar(r.cpf && `CPF: ${r.cpf}`, r.telefone && `WhatsApp: ${r.telefone}`));
                 if (r.rua) {
-                    let endStr = `Endereço: ${r.rua}`;
-                    if(r.numero) endStr += `, ${r.numero}`;
-                    if(r.complemento) endStr += ` - ${r.complemento}`;
-                    if(r.bairro) endStr += ` - ${r.bairro}`;
-                    addText(endStr, false, 10, 20);
-                    
-                    let cidStr = '';
-                    if(r.cidade) cidStr += `Cidade: ${r.cidade}`;
-                    if(r.uf) cidStr += `/${r.uf}`;
-                    if(r.cep) {
-                        if (cidStr) cidStr += ` | `;
-                        cidStr += `CEP: ${r.cep}`;
-                    }
-                    if (cidStr) addText(cidStr, false, 10, 20);
+                    add('Endereço', [r.rua, r.numero, r.complemento, r.bairro].filter(Boolean).join(', '));
+                    add('Cidade / CEP', ligar((r.cidade || r.uf) && `${r.cidade || ''}${r.uf ? '/' + r.uf : ''}`, r.cep && `CEP: ${r.cep}`));
                 }
-
                 if (r.empresa) {
-                    y += 5;
-                    addText(`Empresa (Trabalho): ${r.empresa.toUpperCase()}`, false, 10, 20);
-                    
-                    let endComStr = `End. Comercial: ${r.rua_comercial}`;
-                    if(r.numero_comercial) endComStr += `, ${r.numero_comercial}`;
-                    if(r.complemento_comercial) endComStr += ` - ${r.complemento_comercial}`;
-                    if(r.bairro_comercial) endComStr += ` - ${r.bairro_comercial}`;
-                    addText(endComStr, false, 10, 20);
-
-                    let cidComStr = '';
-                    if(r.cidade_comercial) cidComStr += `Cidade: ${r.cidade_comercial}`;
-                    if(r.uf_comercial) cidComStr += `/${r.uf_comercial}`;
-                    if(r.cep_comercial) {
-                        if (cidComStr) cidComStr += ` | `;
-                        cidComStr += `CEP: ${r.cep_comercial}`;
-                    }
-                    if (cidComStr) addText(cidComStr, false, 10, 20);
+                    add('Empresa (trabalho)', r.empresa.toUpperCase());
+                    add('End. comercial', [r.rua_comercial, r.numero_comercial, r.complemento_comercial, r.bairro_comercial].filter(Boolean).join(', '));
+                    add('Cidade / CEP', ligar((r.cidade_comercial || r.uf_comercial) && `${r.cidade_comercial || ''}${r.uf_comercial ? '/' + r.uf_comercial : ''}`, r.cep_comercial && `CEP: ${r.cep_comercial}`));
                 }
 
-                let temDadosReuSocio = false;
-                const dadosReuSocio = [];
-                
-                let ocupacao = r.ocupacao;
-                if (r.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
-                if (ocupacao && ocupacao.trim() !== '' && !r.ocupacaoNaoSei) {
-                    dadosReuSocio.push(`Ocupação: ${ocupacao}`);
-                    temDadosReuSocio = true;
-                } else if (r.ocupacaoNaoSei) {
-                    dadosReuSocio.push(`Ocupação: Não informado (Não soube informar)`);
-                    temDadosReuSocio = true;
+                if (dados.length > 0) {
+                    section('DADOS DA PARTE CONTRÁRIA (RÉU)');
+                    tabelaKV(dados);
                 }
-                
-                let profession = r.profissao;
-                if (r.profissaoNaoSei) profession = 'Não informado (Não soube informar)';
-                if (profession && profession.trim() !== '' && !r.profissaoNaoSei) {
-                    dadosReuSocio.push(`Profissão: ${profession}`);
-                    temDadosReuSocio = true;
-                } else if (r.profissaoNaoSei) {
-                    dadosReuSocio.push(`Profissão: Não informado (Não soube informar)`);
-                    temDadosReuSocio = true;
-                }
-                
-                let estadoCivil = r.estadoCivil;
-                if (r.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
-                if (estadoCivil && estadoCivil.trim() !== '' && !r.estadoCivilNaoSei) {
-                    dadosReuSocio.push(`Estado Civil: ${estadoCivil}`);
-                    temDadosReuSocio = true;
-                } else if (r.estadoCivilNaoSei) {
-                    dadosReuSocio.push(`Estado Civil: Não informado (Não soube informar)`);
-                    temDadosReuSocio = true;
-                }
-                
-                let ganhos = r.ganhos;
-                if (r.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
-                if (ganhos && ganhos.trim() !== '' && ganhos !== 'R$ 0,00' && !r.ganhosNaoSei) {
-                    dadosReuSocio.push(`Ganhos Líquidos: ${ganhos}`);
-                    temDadosReuSocio = true;
-                } else if (r.ganhosNaoSei) {
-                    dadosReuSocio.push(`Ganhos Líquidos: Não informado (Não soube informar)`);
-                    temDadosReuSocio = true;
-                }
-                
-                if (r.fonteRenda && r.fonteRenda.trim() !== '') {
-                    dadosReuSocio.push(`Fonte de Renda: ${r.fonteRenda}`);
-                    temDadosReuSocio = true;
-                }
-                
-                if (temDadosReuSocio) {
-                    y += 10;
-                    addText("PERFIL SOCIOECONÔMICO DO RÉU:", true, 11);
-                    y += 10;
-                    dadosReuSocio.forEach(dado => {
-                        addText(`• ${dado}`, false, 10, 20);
-                    });
-                    y += 20;
+
+                const ganhos = r.ganhosNaoSei ? '' : (r.ganhos && r.ganhos !== 'R$ 0,00' ? r.ganhos : '');
+                const socio = [];
+                const addSocio = (rotulo, valor, naoSei) => {
+                    const v = campo(valor, naoSei);
+                    if (v) socio.push([rotulo, v]);
+                };
+                addSocio('Ocupação', r.ocupacao, r.ocupacaoNaoSei);
+                addSocio('Profissão', r.profissao, r.profissaoNaoSei);
+                addSocio('Estado civil', r.estadoCivil, r.estadoCivilNaoSei);
+                addSocio('Ganhos líquidos', ganhos, r.ganhosNaoSei);
+                if (r.fonteRenda && r.fonteRenda.trim() !== '') socio.push(['Fonte de renda', r.fonteRenda]);
+
+                if (socio.length > 0) {
+                    section('PERFIL SOCIOECONÔMICO DO RÉU');
+                    tabelaKV(socio);
                 }
             }
 
-            const totalPages = doc.internal.getNumberOfPages();
-            for (let i = 1; i <= totalPages; i++) {
-                doc.setPage(i);
-                addFooter(doc, i, totalPages);
-            }
-
-            doc.save(`Checklist_SIGEP_${assistedName.replace(/\s+/g, '_')}.pdf`);
+            applyFooters(doc);
+            doc.save(`Checklist_SIGEP_${String(assistedName).replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Checklist exportado!", "success");
             return true;
         } catch (err) {
-            console.error("Erro crítico na montagem do PDF textual:", err);
+            console.error("Erro crítico na montagem do PDF do checklist:", err);
             if (window.showNotification) window.showNotification("Falha ao exportar checklist.", "error");
             return false;
         }
