@@ -565,7 +565,7 @@ export const PainelPublicoService = {
                                 ? salaOuLocal 
                                 : `a recepção ${salaOuLocal}`;
                         
-                        const mensagem = new SpeechSynthesisUtterance(`${nomePessoa}. Por favor, dirija-se à ${localFormatado}.`);
+                        const mensagem = new SpeechSynthesisUtterance(`Atenção, assistido ${nomePessoa}. Por favor, dirija-se à ${localFormatado}.`);
                         mensagem.lang = 'pt-BR';
                         mensagem.rate = 0.85; 
                         mensagem.pitch = 1.0;
