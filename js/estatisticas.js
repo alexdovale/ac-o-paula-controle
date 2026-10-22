@@ -320,10 +320,12 @@ export const StatisticsService = {
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // ---------- equipes ----------
+        // ---------- equipes e classificação operacional ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
         const nomeParaEquipe = {};
+        const cargoPorNome = {};
         const statsByGroup = {};
+
         const garantirGrupo = (g) => {
             if (!statsByGroup[g]) statsByGroup[g] = { collaborators: {}, total: 0, atendimentos: [], todosColaboradores: [] };
             return statsByGroup[g];
@@ -334,11 +336,17 @@ export const StatisticsService = {
             if (!nome) return;
             const grupo = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
             nomeParaEquipe[nome.toLowerCase()] = grupo;
+            cargoPorNome[nome.toLowerCase()] = col.cargo || 'Sem cargo';
+            
             const g = garantirGrupo(grupo);
             if (!g.todosColaboradores.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
                 g.todosColaboradores.push({ nome, cargo: col.cargo || 'Sem cargo', id: col.id || ('col-' + slug(nome)) });
             }
         });
+
+        let totalOperacional = 0;
+        let totalDefensores = 0;
+        let totalServidores = 0;
 
         atendidos.forEach(a => {
             const raw = a.attendedBy || a.attendant;
@@ -356,6 +364,21 @@ export const StatisticsService = {
             const seguro = nome || 'Não informado';
             g.collaborators[seguro] = (g.collaborators[seguro] || 0) + 1;
             g.total++;
+            
+            // Separação operacional (Defensores vs Servidores) sem CRC e Coordenadores
+            const grupoLower = grupo.toLowerCase();
+            const isApoio = grupoLower.includes('crc') || grupoLower.includes('coordenadores');
+            
+            if (!isApoio && grupo.trim() !== '') {
+                totalOperacional++;
+                const cargoAtendente = cargoPorNome[nome.toLowerCase()] || '';
+                if (cargoAtendente.toLowerCase().includes('defensor')) {
+                    totalDefensores++;
+                } else {
+                    totalServidores++;
+                }
+            }
+
             g.atendimentos.push({
                 nome: a.name || 'Não informado',
                 assunto: a.subject || 'Sem assunto',
@@ -476,7 +499,7 @@ export const StatisticsService = {
                 ${Object.entries(statsByAcaoRapida).sort(([, a], [, b]) => b - a).map(([tipo, qtd]) => {
             const c = acoesCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
             return `<div style="background:${c.bg};border:1px solid ${c.border};color:${c.text}" class="rounded-xl px-3 py-2.5">
-                        <div class="text-[11px] font-bold opacity-80">${c.icon} ${esc(tipo)}</div>
+                        <div class="text-[11px] font-bold opacity-80">${c.icon}${esc(tipo)}</div>
                         <div class="text-xl font-black tabular-nums">${qtd}</div></div>`;
         }).join('')}
             </div>
@@ -551,14 +574,34 @@ export const StatisticsService = {
 
         // --- Visão GERAL: distribuição + cartões por equipe ---
         const gruposComAtend = sortedGroups.filter(g => g.total > 0);
+        
         const distribuicaoHTML = totalGeral > 0 ? `
             <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-baseline justify-between mb-3">
+                    <p class="text-xs font-bold text-slate-700">Produtividade Operacional (Sem CRC/Coordenadores)</p>
+                </div>
+                
+                <div class="flex flex-wrap gap-3 mb-5">
+                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Operacional</p>
+                        <p class="text-xl font-black text-slate-700">${totalOperacional}</p>
+                    </div>
+                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Defensores</p>
+                        <p class="text-xl font-black text-purple-700">${totalDefensores}</p>
+                    </div>
+                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
+                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Servidores</p>
+                        <p class="text-xl font-black text-orange-700">${totalServidores}</p>
+                    </div>
+                </div>
+
                 <div class="flex items-baseline justify-between mb-2">
                     <p class="text-xs font-bold text-slate-700">Como os ${totalGeral} atendimentos se dividem entre as equipes</p>
                     <p class="text-[11px] text-slate-400">100% = todos os atendidos</p>
                 </div>
                 <div class="flex h-4 rounded-full overflow-hidden bg-slate-200">
-                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}: ${pctF(g.total, totalGeral)}%"></div>`).join('')}
+                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}:${pctF(g.total, totalGeral)}%"></div>`).join('')}
                 </div>
                 <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
                     ${gruposComAtend.map(g => `
@@ -569,11 +612,19 @@ export const StatisticsService = {
                 </div>
             </div>` : '';
 
-        const groupsHTML = sortedGroups.map(({ groupName, total, todosColaboradores }) => {
+        const groupsHTML = sortedGroups.map(({ groupName, total, todosColaboradores, collaborators }) => {
             const gid = 'g-' + slug(groupName);
             const membros = this.sortCollaboratorsByRole(individuais.filter(i => i.equipe === groupName));
             const parteDoTotal = pctF(total, totalGeral);
             const mediaMembro = todosColaboradores.length > 0 ? (total / todosColaboradores.length).toFixed(1).replace('.', ',') : '-';
+
+            let defensoresGrupo = 0;
+            let servidoresGrupo = 0;
+            collaborators.forEach(c => {
+                const cargo = cargoPorNome[c.name.toLowerCase()] || '';
+                if (cargo.toLowerCase().includes('defensor')) defensoresGrupo += c.count;
+                else servidoresGrupo += c.count;
+            });
 
             const linhas = membros.map(({ nome, cargo, atendimentos }) => `
                 <div class="flex items-center gap-3 px-4 py-2 border-t border-slate-50 hover:bg-slate-50/60">
@@ -593,16 +644,19 @@ export const StatisticsService = {
             return `
                 <div class="border border-slate-200 rounded-xl overflow-hidden bg-white" data-group="${gid}">
                     <button type="button" class="group-toggle w-full text-left px-4 pt-3 pb-2.5 bg-slate-50 hover:bg-slate-100 transition-colors" data-target="${gid}" aria-expanded="true">
-                        <div class="flex items-center gap-3">
-                            <span class="chev text-slate-400 transition-transform">▾</span>
-                            <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
-                            <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
-                            <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
-                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
-                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
-                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${todosColaboradores.length} membro${todosColaboradores.length === 1 ? '' : 's'}</span>
-                                <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">média ${mediaMembro}/membro</span>
-                            </span>
+                        <div class="flex flex-col gap-2">
+                            <div class="flex items-center gap-3">
+                                <span class="chev text-slate-400 transition-transform">▾</span>
+                                <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
+                                <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
+                                
+                                <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
+                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
+                                    <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${defensoresGrupo} Def.</span>
+                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${servidoresGrupo} Serv.</span>
+                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
+                                </span>
+                            </div>
                         </div>
                         <div class="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)}" style="width:${parteDoTotal}%"></div></div>
                     </button>
@@ -630,7 +684,7 @@ export const StatisticsService = {
                         <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-slate-700 truncate">${esc(r.nome)}</p>
-                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} · ${esc(r.cargo || '-')}</p>
+                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} ·${esc(r.cargo || '-')}</p>
                         </div>
                         <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(r.equipe)} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
                         <div class="text-right leading-tight w-24 shrink-0 hidden sm:block">
