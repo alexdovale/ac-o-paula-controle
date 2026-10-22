@@ -883,7 +883,7 @@ export const PDFService = {
     // ----------------------------------------------------
     // CHECKLIST
     // ----------------------------------------------------
-    async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos) {
+    async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) {
         if (window.showNotification) window.showNotification("Gerando checklist, aguarde...", "info");
         try {
             await ensureJsPDF();
@@ -1014,31 +1014,75 @@ export const PDFService = {
             if (checklistData.expenseData?.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 section('PLANILHA DE GASTOS');
-                const categorias = [
-                    { id: 'moradia', label: '1. Moradia (habitação)' },
-                    { id: 'alimentacao', label: '2. Alimentação' },
-                    { id: 'educacao', label: '3. Educação' },
-                    { id: 'saude', label: '4. Saúde' },
-                    { id: 'vestuario', label: '5. Vestuário e higiene' },
-                    { id: 'lazer', label: '6. Lazer e transporte' },
-                    { id: 'outras', label: '7. Outras despesas' }
+
+                const limpaMoeda = (valStr) => {
+                    if (!valStr || valStr === 'R$ 0,00') return 0;
+                    return parseFloat(String(valStr).replace(/[^\d,]/g, '').replace(',', '.')) || 0;
+                };
+
+                const formatMoeda = (num) => num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+
+                const moradores = Math.max(1, parseInt(g.quantidadeMoradores || 1));
+                
+                const comuns = [
+                    { id: 'aluguel', label: 'Aluguel Residencial' },
+                    { id: 'condominio', label: 'Condomínio' },
+                    { id: 'iptu', label: 'IPTU' },
+                    { id: 'luz', label: 'Energia Elétrica' },
+                    { id: 'agua', label: 'Água/Saneamento' },
+                    { id: 'gas', label: 'Gás de Cozinha' },
+                    { id: 'internet', label: 'Internet' },
+                    { id: 'supermercado', label: 'Supermercado' }
                 ];
-                let totalGastos = 0;
+
+                const exclusivas = [
+                    { id: 'escola', label: 'Mensalidade Escolar' },
+                    { id: 'material_escolar', label: 'Material Escolar/Livros' },
+                    { id: 'merenda', label: 'Merenda/Lanches' },
+                    { id: 'plano_saude', label: 'Plano de Saúde' },
+                    { id: 'lazer_crianca', label: 'Lazer/Atividades' }
+                ];
+
+                let totalRateado = 0;
+                let totalIntegral = 0;
                 const rows = [];
-                categorias.forEach(c => {
-                    const valorStr = g[c.id] || 'R$ 0,00';
-                    if (valorStr !== 'R$ 0,00') {
-                        rows.push([c.label, valorStr]);
-                        totalGastos += parseFloat(String(valorStr).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+
+                rows.push([{ content: `DESPESAS COMUNS (Rateio 1/${moradores})`, colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]);
+                let achouComum = false;
+                comuns.forEach(c => {
+                    const val = limpaMoeda(g[c.id]);
+                    if (val > 0) {
+                        const cota = val / moradores;
+                        totalRateado += cota;
+                        rows.push([`${c.label} (Total: ${formatMoeda(val)})`, formatMoeda(cota)]);
+                        achouComum = true;
                     }
                 });
-                if (rows.length === 0) rows.push(['Nenhum gasto informado', '—']);
-                if (totalGastos > 0) {
+                if (!achouComum) rows.push([{ content: 'Nenhuma informada', colSpan: 2, styles: { fontStyle: 'italic', textColor: C.cinza } }]);
+
+                rows.push([{ content: 'DESPESAS EXCLUSIVAS (Integrais)', colSpan: 2, styles: { fontStyle: 'bold', fillColor: [240, 240, 240] } }]);
+                let achouExclusiva = false;
+                exclusivas.forEach(c => {
+                    const val = limpaMoeda(g[c.id]);
+                    if (val > 0) {
+                        totalIntegral += val;
+                        rows.push([c.label, formatMoeda(val)]);
+                        achouExclusiva = true;
+                    }
+                });
+                if (!achouExclusiva) rows.push([{ content: 'Nenhuma informada', colSpan: 2, styles: { fontStyle: 'italic', textColor: C.cinza } }]);
+
+                const totalGeral = totalRateado + totalIntegral;
+
+                if (totalGeral === 0) {
+                    rows.push([{ content: 'NENHUM GASTO TOTAL INFORMADO', colSpan: 2, styles: { halign: 'center', fontStyle: 'bold', textColor: C.vermelho } }]);
+                } else {
                     rows.push([
-                        { content: 'TOTAL', styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } },
-                        { content: totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }), styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } }
+                        { content: 'NECESSIDADE MENSAL APURADA', styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } },
+                        { content: formatMoeda(totalGeral), styles: { fontStyle: 'bold', textColor: C.verdeEscuro, fillColor: C.verdeClaro } }
                     ]);
                 }
+
                 tabelaKV(rows, { w0: 260, align1: 'right' });
             }
 
@@ -1130,7 +1174,7 @@ export const PDFService = {
 
 // EXPORTS AVULSOS
 export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
-export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
 export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
 
