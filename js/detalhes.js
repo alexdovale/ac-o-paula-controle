@@ -1,8 +1,14 @@
 /**
  * ========================================================
- * DETALHES.JS - SIGEP (VERSÃO LIMPA E JURÍDICA)
- * Módulo de Detalhes do Assistido, Checklist de Documentos,
- * Captação Direta, Gerador de Texto e Planilha de Gastos
+ * DETALHES.JS - SIGEP (VISUAL REORGANIZADO)
+ * Detalhes do Assistido, Checklist de Documentos, Captação Direta,
+ * Gerador de Texto e Planilha de Gastos.
+ *
+ * Mudanças: barra de progresso, seções em cartões com contador,
+ * Físico/Digital em controle segmentado, formulários em grade,
+ * máscaras (CPF, telefone, CEP, moeda), seleção de assunto com ícones
+ * e correções (texto da petição, PDF aguardado, perfil socioeconômico no PDF).
+ * Todos os IDs usados por outras partes do sistema foram mantidos.
  * ========================================================
  */
 
@@ -12,11 +18,10 @@ import { flatSubjects } from './assuntos.js';
 import { PDFService } from './pdfService.js';
 
 /* ========================================================
-   CÉREBRO DE DETECÇÃO DE ASSUNTO (INTELIGÊNCIA AUTOMÁTICA)
+   CÉREBRO DE DETECÇÃO DE ASSUNTO
    ======================================================== */
 function descobrirAssuntoInteligente(assuntoTexto) {
     if (!assuntoTexto) return null;
-    
     const txt = assuntoTexto.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "");
 
     if (txt.includes('alimento') || txt.includes('pensao') || txt.includes('oferta') || txt.includes('exoneracao') || txt.includes('revisao')) {
@@ -24,37 +29,20 @@ function descobrirAssuntoInteligente(assuntoTexto) {
         if (txt.includes('avo') || txt.includes('avoeng')) return 'alimentos_avoengos';
         return 'alimentos_fixacao_majoracao_oferta';
     }
-    
     if (txt.includes('divorcio') || txt.includes('separacao')) {
         if (txt.includes('consensual') || txt.includes('amigavel') || txt.includes('acordo')) return 'divorcio_consensual';
         return 'divorcio_litigioso';
     }
-    
     if (txt.includes('uniao estavel') || txt.includes('companheir')) return 'uniao_estavel';
-    
     if (txt.includes('guarda')) return 'guarda';
     if (txt.includes('visita') || txt.includes('convivencia')) return 'regulamentacao_convivencia';
-    
-    if (txt.includes('paternidade') || txt.includes('maternidade') || txt.includes('dna') || txt.includes('reconhecimento')) {
-        return 'investigacao_paternidade';
-    }
-
-    if (txt.includes('obrigacao de fazer') || txt.includes('medicamento') || txt.includes('saude') || txt.includes('cirurgia') || txt.includes('internacao')) {
-        return 'obrigacao_fazer';
-    }
-
-    if (txt.includes('indenizacao') || txt.includes('dano') || txt.includes('moral') || txt.includes('material')) {
-        return 'indenizacao_danos';
-    }
-
+    if (txt.includes('paternidade') || txt.includes('maternidade') || txt.includes('dna') || txt.includes('reconhecimento')) return 'investigacao_paternidade';
+    if (txt.includes('obrigacao de fazer') || txt.includes('medicamento') || txt.includes('saude') || txt.includes('cirurgia') || txt.includes('internacao')) return 'obrigacao_fazer';
+    if (txt.includes('indenizacao') || txt.includes('dano') || txt.includes('moral') || txt.includes('material')) return 'indenizacao_danos';
     if (txt.includes('curatela') || txt.includes('interdicao') || txt.includes('tmo') || txt.includes('curador')) return 'curatela';
-    
     if (txt.includes('retificacao') || txt.includes('registro civil') || txt.includes('nome') || txt.includes('certidao')) return 'retificacao_registro_civil';
-    
     if (txt.includes('alvara') || txt.includes('residuos') || txt.includes('levantamento')) return 'alvara_valores';
-    
     if (txt.includes('vaga') && (txt.includes('escola') || txt.includes('creche') || txt.includes('matricula'))) return 'vaga_escola_creche';
-
     return null;
 }
 
@@ -72,23 +60,23 @@ const INCOME_DOCS_STRUCTURED = [
     'Contracheque (3 últimos meses)',
     'Carteira de Trabalho (Física ou Digital - Print das telas)',
     'Extrato Analítico do FGTS',
-    
+
     { type: 'title', text: '2. APOSENTADO / PENSIONISTA / BPC-LOAS' },
     'Extrato de Pagamento de Benefício (Portal Meu INSS)',
     'Histórico de Crédito - HISCRE (Portal Meu INSS)',
     'Extrato bancário da conta onde recebe o benefício',
-    
+
     { type: 'title', text: '3. AUTÔNOMO / TRABALHADOR INFORMAL' },
     'Declaração de Hipossuficiência (Próprio Punho - informando média mensal)',
     'Extratos Bancários (3 últimos meses)',
     'Comprovante de Inscrição no CadÚnico',
-    
+
     { type: 'title', text: '4. DESEMPREGADO' },
     'Carteira de Trabalho (Página da baixa do último emprego)',
     'Comprovante de Seguro-Desemprego (se estiver recebendo)',
     'Declaração de Hipossuficiência (Informando ausência de renda)',
     'Extrato do CNIS (Meu INSS - prova ausência de vínculo ativo)',
-    
+
     { type: 'title', text: '5. PROVAS GERAIS E IMPOSTO DE RENDA' },
     'Extrato do Bolsa Família',
     'Folha Resumo do CadÚnico',
@@ -118,11 +106,8 @@ export const EXPENSE_CATEGORIES_EXCLUSIVAS = [
 ];
 
 const ACTIONS_ALWAYS_EXPENSES = [
-    'alimentos_fixacao_majoracao_oferta',
-    'alimentos_gravidicos',
-    'alimentos_avoengos',
-    'investigacao_paternidade',
-    'guarda'
+    'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos',
+    'investigacao_paternidade', 'guarda'
 ];
 
 const ACTIONS_WITH_WORK_INFO = [
@@ -138,8 +123,20 @@ const OCUPACOES = [
     'Desempregado', 'Estudante'
 ];
 
+const OCUPACOES_COM_PROFISSAO = ['Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo'];
+const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a)'];
+const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
+
+const ICONES_ACAO = {
+    obrigacao_fazer: '🏥', declaratoria_nulidade: '📜', indenizacao_danos: '💥', revisional_debito: '🏦',
+    exigir_contas: '🧾', alimentos_fixacao_majoracao_oferta: '👶', alimentos_gravidicos: '🤰',
+    alimentos_avoengos: '👵', divorcio_consensual: '🤝', divorcio_litigioso: '⚖️', uniao_estavel: '💍',
+    guarda: '🧒', regulamentacao_convivencia: '🕒', investigacao_paternidade: '🧬', curatela: '🛡️',
+    retificacao_registro_civil: '✏️', alvara_valores: '💰', vaga_escola_creche: '🏫'
+};
+
 /* ========================================================
-   2. BASE DE DADOS DE AÇÕES COMPLETA
+   2. BASE DE DADOS DE AÇÕES
    ======================================================== */
 export const documentsData = {
     obrigacao_fazer: { title: 'Obrigação de Fazer', sections: [{ title: 'Base e Renda', docs: COMMON_DOCS_FULL }, { title: 'Específicos', docs: ['Contrato/Acordo', 'Provas do descumprimento'] }] },
@@ -163,14 +160,14 @@ export const documentsData = {
 };
 
 /* ========================================================
-   3. ESTADO GLOBAL
+   3. ESTADO GLOBAL E UTILITÁRIOS
    ======================================================== */
-let currentAssistedId = null;     
-let currentPautaId = null;         
-let db = null;                     
-let allAssisted = [];              
-let currentChecklistAction = null; 
-let demandasAdicionaisLocais = []; 
+let currentAssistedId = null;
+let currentPautaId = null;
+let db = null;
+let allAssisted = [];
+let currentChecklistAction = null;
+let demandasAdicionaisLocais = [];
 
 let _backupAssistedId = null;
 let _backupPautaId = null;
@@ -189,8 +186,8 @@ const ensureAssistedId = () => {
 
 const getEl = (id) => document.getElementById(id);
 
-const normalizeLocal = (str) => str 
-    ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase() 
+const normalizeLocal = (str) => str
+    ? str.toString().normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
     : '';
 
 function formatCurrency(v) {
@@ -202,8 +199,76 @@ function parseCurrency(s) {
     return parseFloat(s.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
 }
 
+// Máscaras de digitação
+const mascaraMoeda = (e) => {
+    const v = e.target.value.replace(/\D/g, '');
+    e.target.value = v ? (Number(v) / 100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
+};
+const mascaraCPF = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 11);
+    e.target.value = v.replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d)/, '$1.$2').replace(/(\d{3})(\d{1,2})$/, '$1-$2');
+};
+const mascaraTelefone = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 11);
+    e.target.value = v.length > 10 ? v.replace(/(\d{2})(\d{5})(\d{4})/, '($1) $2-$3')
+        : v.replace(/(\d{2})(\d{4})(\d{0,4})/, '($1) $2-$3').replace(/-$/, '');
+};
+const mascaraCEP = (e) => {
+    const v = e.target.value.replace(/\D/g, '').slice(0, 8);
+    e.target.value = v.length > 5 ? v.replace(/(\d{5})(\d{1,3})/, '$1-$2') : v;
+};
+
+/* ---------- Blocos visuais reutilizáveis ---------- */
+const INPUT_CLS = 'w-full px-3 py-2.5 border border-slate-300 rounded-lg text-sm bg-white focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 transition';
+const LABEL_CLS = 'block text-[11px] font-bold text-slate-500 mb-1';
+
+const campo = (id, label, { placeholder = '', maxlength = '', inputmode = '', span = '' } = {}) => `
+    <div class="${span}">
+        <label for="${id}" class="${LABEL_CLS}">${label}</label>
+        <input type="text" id="${id}" ${placeholder ? `placeholder="${placeholder}"` : ''} ${maxlength ? `maxlength="${maxlength}"` : ''} ${inputmode ? `inputmode="${inputmode}"` : ''} class="${INPUT_CLS}">
+    </div>`;
+
+const seletor = (id, label, opcoes, { span = '', primeira = 'Selecione' } = {}) => `
+    <div class="${span}">
+        <label for="${id}" class="${LABEL_CLS}">${label}</label>
+        <select id="${id}" class="${INPUT_CLS}">
+            <option value="">${primeira}</option>
+            ${opcoes.map(o => `<option value="${o}">${o}</option>`).join('')}
+        </select>
+    </div>`;
+
+// Opções em "pílulas" (substitui os rádios minúsculos)
+const pilulas = (name, valores) => `
+    <div class="flex flex-wrap gap-2">
+        ${valores.map(v => `
+            <label class="cursor-pointer">
+                <input type="radio" name="${name}" value="${v}" class="peer sr-only">
+                <span class="inline-block px-3 py-1.5 rounded-full border border-slate-300 bg-white text-[11px] font-bold text-slate-500 hover:bg-slate-50 peer-checked:bg-emerald-600 peer-checked:border-emerald-600 peer-checked:text-white peer-focus-visible:ring-2 peer-focus-visible:ring-emerald-400 transition">${v}</span>
+            </label>`).join('')}
+    </div>`;
+
+const naoSeiCheck = (id) => `
+    <label class="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 cursor-pointer whitespace-nowrap select-none">
+        <input type="checkbox" id="${id}" class="h-3.5 w-3.5 rounded border-slate-300 text-emerald-600"> Não sei informar
+    </label>`;
+
+const cartaoSecao = (titulo, icone, corpo, tom = 'slate') => {
+    const tons = {
+        slate: 'border-slate-200 bg-white', red: 'border-red-200 bg-red-50/40',
+        blue: 'border-sky-200 bg-sky-50/40', green: 'border-emerald-200 bg-emerald-50/40'
+    };
+    return `
+        <section class="mb-5 rounded-2xl border ${tons[tom]} shadow-sm overflow-hidden">
+            <header class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
+                <span class="text-base">${icone}</span>
+                <h4 class="text-xs font-black text-slate-700 uppercase tracking-wide">${titulo}</h4>
+            </header>
+            <div class="p-4">${corpo}</div>
+        </section>`;
+};
+
 /* ========================================================
-   3.1 FUNÇÃO DE GERAÇÃO DE LINK DE CAPTAÇÃO
+   3.1 LINK DE CAPTAÇÃO
    ======================================================== */
 export async function gerarLinkCaptacao() {
     const pautaId = currentPautaId;
@@ -217,13 +282,12 @@ export async function gerarLinkCaptacao() {
     const tokenSeguranca = crypto.randomUUID();
 
     try {
-        const assistidoRef = doc(db, "pautas", pautaId, "attendances", assistidoId);
-        await updateDoc(assistidoRef, { delegationToken: tokenSeguranca });
+        await updateDoc(doc(db, "pautas", pautaId, "attendances", assistidoId), { delegationToken: tokenSeguranca });
 
-        let path = window.location.pathname; 
+        let path = window.location.pathname;
         path = path.replace('index.html', '');
         if (!path.endsWith('/')) path += '/';
-        
+
         const link = `${window.location.origin}${path}captacao.html?pid=${pautaId}&aid=${assistidoId}&token=${tokenSeguranca}`;
 
         const assisted = allAssisted.find(a => a.id === assistidoId);
@@ -235,11 +299,11 @@ export async function gerarLinkCaptacao() {
 
         const modalQr = document.getElementById('modal-captacao-qr');
         const qrContainer = document.getElementById('qrcode-display');
-        
+
         if (modalQr && qrContainer) {
             modalQr.classList.remove('hidden');
-            qrContainer.innerHTML = ""; 
-            new QRCode(qrContainer, { text: link, width: 220, height: 220, correctLevel : QRCode.CorrectLevel.H });
+            qrContainer.innerHTML = "";
+            new QRCode(qrContainer, { text: link, width: 220, height: 220, correctLevel: QRCode.CorrectLevel.H });
 
             document.getElementById('btn-share-wa').onclick = () => {
                 const tel = assisted?.telefone?.replace(/\D/g, '') || '';
@@ -253,7 +317,7 @@ export async function gerarLinkCaptacao() {
 }
 
 /* ========================================================
-   4. FUNÇÕES DO CHECKLIST E DEMANDAS ADICIONAIS
+   4. CHECKLIST, PROGRESSO E DEMANDAS ADICIONAIS
    ======================================================== */
 function getDocTypesFromForm() {
     const docTypes = {};
@@ -267,15 +331,39 @@ function getDocTypesFromForm() {
 function updateSelectedCounter() {
     const container = getEl('checklist-container');
     if (!container) return;
-    
-    const checkedDocs = container.querySelectorAll('.doc-checkbox:checked').length;
+
+    const todos = container.querySelectorAll('.doc-checkbox').length;
+    const marcados = container.querySelectorAll('.doc-checkbox:checked').length;
     const reuCheck = document.getElementById('check-reu-unico')?.checked ? 1 : 0;
-    const gasesCheck = document.getElementById('check-exibir-gastos')?.checked ? 1 : 0;
-    const totalChecked = checkedDocs + reuCheck + gasesCheck + demandasAdicionaisLocais.length;
-    
+    const gastosCheck = document.getElementById('check-exibir-gastos')?.checked ? 1 : 0;
+    const totalChecked = marcados + reuCheck + gastosCheck + demandasAdicionaisLocais.length;
+
     const counterEl = getEl('checklist-counter');
     if (counterEl) counterEl.textContent = `${totalChecked} itens selecionados no SIGEP`;
-    
+
+    // Barra de progresso
+    const pct = todos > 0 ? Math.round((marcados / todos) * 100) : 0;
+    const label = getEl('progress-label');
+    const pctEl = getEl('progress-pct');
+    const bar = getEl('progress-bar');
+    if (label) label.textContent = `${marcados} de ${todos} documentos recebidos`;
+    if (pctEl) pctEl.textContent = `${pct}%`;
+    if (bar) bar.style.width = `${pct}%`;
+
+    // Contador por seção
+    container.querySelectorAll('[data-section-block]').forEach(sec => {
+        const t = sec.querySelectorAll('.doc-checkbox').length;
+        const c = sec.querySelectorAll('.doc-checkbox:checked').length;
+        const el = sec.querySelector('.section-count');
+        if (el) {
+            el.textContent = `${c}/${t}`;
+            el.classList.toggle('text-emerald-600', t > 0 && c === t);
+            el.classList.toggle('bg-emerald-100', t > 0 && c === t);
+            el.classList.toggle('text-slate-500', !(t > 0 && c === t));
+            el.classList.toggle('bg-slate-100', !(t > 0 && c === t));
+        }
+    });
+
     if (totalChecked > 0) updateDocumentState('filling');
 }
 
@@ -284,8 +372,7 @@ async function updateDocumentState(state) {
     try {
         const docRef = doc(db, "pautas", currentPautaId, "attendances", currentAssistedId);
         const actionTitle = currentChecklistAction ? documentsData[currentChecklistAction]?.title : null;
-        
-        await updateDoc(docRef, { 
+        await updateDoc(docRef, {
             documentState: state,
             selectedAction: actionTitle,
             lastActionBy: window.app?.currentUserName || 'Sistema',
@@ -299,8 +386,7 @@ async function updateDocumentState(state) {
 function checkReuVisibility() {
     const reuArea = getEl('address-editor-container');
     if (!reuArea) return;
-    const actionRequiresReu = ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction);
-    if (actionRequiresReu) {
+    if (ACTIONS_WITH_WORK_INFO.includes(currentChecklistAction)) {
         reuArea.classList.remove('hidden');
         if (reuArea.children.length === 0 || reuArea.innerHTML.trim() === '') renderReuForm('address-editor-container');
     } else {
@@ -313,18 +399,19 @@ function injectDemandasAdicionaisInterface(containerEl) {
     if (!divDemanda) {
         divDemanda = document.createElement('div');
         divDemanda.id = 'secao-demandas-adicionais-triagem';
-        divDemanda.className = 'mt-6 p-4 bg-violet-50 border-2 border-violet-100 rounded-xl shadow-sm';
+        divDemanda.className = 'mt-5 p-4 bg-violet-50 border border-violet-200 rounded-2xl shadow-sm';
         containerEl.appendChild(divDemanda);
     }
 
     divDemanda.innerHTML = `
-        <h4 class="text-sm font-bold text-violet-700 mb-2 flex items-center gap-1"><span>⚖️</span> Casos Acumulados no Atendimento</h4>
+        <h4 class="text-xs font-black text-violet-700 uppercase tracking-wide mb-1 flex items-center gap-2"><span>⚖️</span> Casos acumulados no atendimento</h4>
+        <p class="text-[11px] text-violet-500 mb-3">Some outras demandas do mesmo assistido para que entrem nas estatísticas.</p>
         <div class="flex gap-2 mb-3">
-            <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow p-2.5 border rounded-lg text-xs bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda...">
+            <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow px-3 py-2.5 border border-violet-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda...">
             <datalist id="subjects-list-triagem-dinamico"></datalist>
             <button type="button" id="btn-add-demanda-triagem" class="bg-violet-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-violet-700 uppercase transition shadow-sm">Somar</button>
         </div>
-        <div id="lista-demandas-triagem-container" class="space-y-1.5 max-h-40 overflow-y-auto"></div>
+        <div id="lista-demandas-triagem-container" class="flex flex-wrap gap-2"></div>
     `;
 
     const datalist = divDemanda.querySelector('#subjects-list-triagem-dinamico');
@@ -336,16 +423,19 @@ function injectDemandasAdicionaisInterface(containerEl) {
         });
     }
 
-    document.getElementById('btn-add-demanda-triagem').onclick = () => {
+    const adicionar = () => {
         const input = document.getElementById('input-nova-demanda-triagem');
         let text = input ? input.value.trim() : '';
-        if (text) {
-            if (text.includes(' > ')) text = text.split(' > ').pop();
-            demandasAdicionaisLocais.push(text);
-            input.value = '';
-            renderListaDemandasTriagem();
-            updateSelectedCounter();
-        }
+        if (!text) return;
+        if (text.includes(' > ')) text = text.split(' > ').pop();
+        demandasAdicionaisLocais.push(text);
+        input.value = '';
+        renderListaDemandasTriagem();
+        updateSelectedCounter();
+    };
+    document.getElementById('btn-add-demanda-triagem').onclick = adicionar;
+    document.getElementById('input-nova-demanda-triagem').onkeydown = (e) => {
+        if (e.key === 'Enter') { e.preventDefault(); adicionar(); }
     };
 
     renderListaDemandasTriagem();
@@ -357,29 +447,26 @@ function renderListaDemandasTriagem() {
     container.innerHTML = '';
 
     if (demandasAdicionaisLocais.length === 0) {
-        container.innerHTML = '<p class="text-[11px] text-gray-400 italic text-center py-2 bg-white rounded border border-dashed">Nenhuma demanda extra cadastrada.</p>';
+        container.innerHTML = '<p class="w-full text-[11px] text-slate-400 italic text-center py-2 bg-white rounded-lg border border-dashed border-violet-200">Nenhuma demanda extra cadastrada.</p>';
         return;
     }
 
     demandasAdicionaisLocais.forEach((dem, idx) => {
-        const item = document.createElement('div');
-        item.className = "flex justify-between items-center bg-white border p-2 rounded-lg text-xs shadow-sm shadow-slate-100";
-        item.innerHTML = `
-            <span class="font-bold text-slate-700">• ${escapeHTML(dem)}</span>
-            <button type="button" class="text-[10px] text-red-500 hover:text-red-700 bg-red-50 px-2 py-0.5 rounded" data-idx="${idx}">Remover</button>
-        `;
-        item.querySelector('button').onclick = () => {
+        const chip = document.createElement('span');
+        chip.className = 'inline-flex items-center gap-1.5 bg-white border border-violet-200 text-violet-800 text-xs font-bold pl-3 pr-1.5 py-1 rounded-full shadow-sm';
+        chip.innerHTML = `${escapeHTML(dem)} <button type="button" class="w-5 h-5 rounded-full text-red-500 hover:bg-red-100 leading-none" title="Remover" aria-label="Remover demanda">×</button>`;
+        chip.querySelector('button').onclick = () => {
             demandasAdicionaisLocais.splice(idx, 1);
             renderListaDemandasTriagem();
             updateSelectedCounter();
         };
-        container.appendChild(item);
+        container.appendChild(chip);
     });
 }
 
 function renderChecklist(actionKey) {
     currentChecklistAction = actionKey;
-    window.currentChecklistAction = actionKey; 
+    window.currentChecklistAction = actionKey;
     const data = documentsData[actionKey];
     if (!data) return;
 
@@ -391,166 +478,139 @@ function renderChecklist(actionKey) {
 
     const titleEl = getEl('checklist-title');
     if (titleEl) titleEl.textContent = data.title;
-    
+
     getEl('document-checklist-view-header-actions')?.classList.remove('hidden');
     getEl('checklist-search-container')?.classList.remove('hidden');
-    containerEl.innerHTML = ''; 
+    containerEl.innerHTML = '';
 
+    // --- Barra de progresso (fica visível ao rolar) ---
+    const progress = document.createElement('div');
+    progress.id = 'checklist-progress-card';
+    progress.className = 'sticky top-0 z-10 mb-4 p-3 bg-white/95 backdrop-blur border border-slate-200 rounded-xl shadow-sm';
+    progress.innerHTML = `
+        <div class="flex items-center justify-between text-xs font-bold text-slate-600 mb-1.5">
+            <span id="progress-label">0 documentos recebidos</span>
+            <span id="progress-pct" class="text-emerald-600">0%</span>
+        </div>
+        <div class="h-2 bg-slate-100 rounded-full overflow-hidden"><div id="progress-bar" class="h-full bg-emerald-500 rounded-full transition-all duration-300" style="width:0%"></div></div>`;
+    containerEl.appendChild(progress);
+
+    // --- Gerador de texto (somente fluxos de pensão) ---
     const ASSUNTOS_PENSAO = [
-        'alimentos_fixacao_majoracao_oferta',
-        'alimentos_gravidicos',
-        'alimentos_avoengos',
-        'divorcio_consensual',
-        'divorcio_litigioso',
-        'investigacao_paternidade',
-        'guarda'
+        'alimentos_fixacao_majoracao_oferta', 'alimentos_gravidicos', 'alimentos_avoengos',
+        'divorcio_consensual', 'divorcio_litigioso', 'investigacao_paternidade', 'guarda'
     ];
-
     const isLinkDoCidadao = window.location.pathname.includes('captacao');
 
     if (ASSUNTOS_PENSAO.includes(actionKey) && !isLinkDoCidadao) {
-        const calcContainer = document.createElement('div');
-        calcContainer.className = "mb-6 p-4 bg-indigo-50 border-2 border-indigo-200 rounded-xl flex items-center justify-between shadow-sm cursor-pointer hover:bg-indigo-100 transition-colors group";
-        calcContainer.onclick = () => window.gerarTextoDespesas(currentAssistedId); 
-        calcContainer.innerHTML = `
-            <div>
-                <h4 class="font-black text-indigo-800 text-[11px] sm:text-sm uppercase flex items-center gap-2">
-                    <span>🧮</span> Gerador de Texto para Petição (Gastos)
-                </h4>
-                <p class="text-[10px] sm:text-xs text-indigo-600 mt-1 font-medium">Extrai os gastos apurados e cria um texto pronto para o Word/SEI.</p>
-            </div>
-            <div class="bg-indigo-600 text-white p-2 rounded-lg shadow-sm group-hover:scale-105 transition-transform shrink-0 ml-3">
-                <span>📑</span>
-            </div>
-        `;
-        containerEl.appendChild(calcContainer);
+        const calc = document.createElement('button');
+        calc.type = 'button';
+        calc.className = 'w-full mb-5 p-4 bg-gradient-to-r from-indigo-50 to-white border border-indigo-200 rounded-2xl flex items-center justify-between text-left shadow-sm hover:shadow-md hover:border-indigo-300 transition group';
+        calc.onclick = () => window.gerarTextoDespesas(currentAssistedId);
+        calc.innerHTML = `
+            <span>
+                <span class="block font-black text-indigo-800 text-xs sm:text-sm uppercase">🧮 Gerador de texto para petição</span>
+                <span class="block text-[11px] sm:text-xs text-indigo-600 mt-1 font-medium">Usa os gastos apurados e cria um texto pronto para o Word/SEI.</span>
+            </span>
+            <span class="bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-3 group-hover:scale-105 transition">📑</span>`;
+        containerEl.appendChild(calc);
     }
 
+    // --- Dados socioeconômicos do assistido ---
     const socioSection = document.createElement('div');
-    socioSection.className = "mb-6 p-4 bg-gray-50 border border-gray-200 rounded-xl";
-    socioSection.innerHTML = `
-        <h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">DADOS SOCIOECONÔMICOS DO ASSISTIDO</h4>
-        <div class="mb-4">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">OCUPAÇÃO</label>
-            <select id="socio-ocupacao" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="">Selecione a ocupação</option>
-                ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-            </select>
-        </div>
-        <div id="socio-profissao-container" class="mb-4 hidden">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">PROFISSÃO / CARGO</label>
-            <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-        </div>
-        <div class="mb-4">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">ESTADO CIVIL</label>
-            <select id="socio-estado-civil" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                <option value="">Selecione</option>
-                <option value="Solteiro(a)">Solteiro(a)</option>
-                <option value="Casado(a)">Casado(a)</option>
-                <option value="União Estável">União Estável</option>
-                <option value="Divorciado(a)">Divorciado(a)</option>
-                <option value="Viúvo(a)">Viúvo(a)</option>
-                <option value="Separado(a)">Separado(a)</option>
-            </select>
-        </div>
-        <div class="mb-2">
-            <label class="block text-[9px] font-black text-gray-500 uppercase mb-1">RENDA FAMILIAR (R$)</label>
-            <input type="text" id="socio-ganhos" placeholder="R$ 0,00" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
-            <div class="flex flex-wrap gap-3 mt-2">
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="CLT"> CLT</label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
-                <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="socio-fonte-renda" value="Outros"> OUTROS</label>
+    socioSection.innerHTML = cartaoSecao('Dados socioeconômicos do assistido', '👤', `
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            ${seletor('socio-ocupacao', 'Ocupação', OCUPACOES, { primeira: 'Selecione a ocupação' })}
+            <div id="socio-profissao-container" class="hidden">
+                <label for="socio-profissao" class="${LABEL_CLS}">Profissão / cargo</label>
+                <input type="text" id="socio-profissao" placeholder="Digite a profissão ou cargo" class="${INPUT_CLS}">
+            </div>
+            ${seletor('socio-estado-civil', 'Estado civil', ESTADOS_CIVIS)}
+            <div>
+                <label for="socio-ganhos" class="${LABEL_CLS}">Renda familiar (R$)</label>
+                <input type="text" id="socio-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS}">
             </div>
         </div>
-    `;
-    containerEl.appendChild(socioSection);
-    
-    const ocupacaoSelect = socioSection.querySelector('#socio-ocupacao');
-    const profissaoContainer = socioSection.querySelector('#socio-profissao-container');
-    const profissaoInput = socioSection.querySelector('#socio-profissao');
-    
-    if (ocupacaoSelect && profissaoContainer) {
-        const checkProfissaoVisibility = () => {
-            const valor = ocupacaoSelect.value;
-            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
-                                     valor === 'Empregado sem vínculo (Informal)' || 
-                                     valor === 'Autônomo';
-            
-            if (mostrarProfissao) {
-                profissaoContainer.classList.remove('hidden');
-            } else {
-                profissaoContainer.classList.add('hidden');
-                if (profissaoInput) profissaoInput.value = '';
-            }
-        };
-        ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
-        checkProfissaoVisibility();
-    }
-    
-    const ganhosInput = socioSection.querySelector('#socio-ganhos');
-    if (ganhosInput) {
-        ganhosInput.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-        });
-    }
+        <p class="${LABEL_CLS} mt-4">Fonte de renda</p>
+        ${pilulas('socio-fonte-renda', FONTES_RENDA)}
+    `);
+    containerEl.appendChild(socioSection.firstElementChild);
+
+    const ocupacaoSelect = containerEl.querySelector('#socio-ocupacao');
+    const profissaoContainer = containerEl.querySelector('#socio-profissao-container');
+    const profissaoInput = containerEl.querySelector('#socio-profissao');
+
+    const checkProfissaoVisibility = () => {
+        if (OCUPACOES_COM_PROFISSAO.includes(ocupacaoSelect.value)) {
+            profissaoContainer.classList.remove('hidden');
+        } else {
+            profissaoContainer.classList.add('hidden');
+            profissaoInput.value = '';
+        }
+    };
+    ocupacaoSelect.addEventListener('change', checkProfissaoVisibility);
+    containerEl.querySelector('#socio-ganhos').addEventListener('input', mascaraMoeda);
 
     if (saved?.socioData) {
-        const socioSaved = saved.socioData;
-        if (socioSaved.ocupacao) ocupacaoSelect.value = socioSaved.ocupacao;
-        if (socioSaved.profissao && profissaoInput) profissaoInput.value = socioSaved.profissao;
-        if (socioSaved.estadoCivil) document.getElementById('socio-estado-civil').value = socioSaved.estadoCivil;
-        if (socioSaved.ganhos) document.getElementById('socio-ganhos').value = socioSaved.ganhos;
-        if (socioSaved.fonteRenda) {
-            const radio = socioSection.querySelector(`input[name="socio-fonte-renda"][value="${socioSaved.fonteRenda}"]`);
+        const s = saved.socioData;
+        if (s.ocupacao) ocupacaoSelect.value = s.ocupacao;
+        if (s.profissao) profissaoInput.value = s.profissao;
+        if (s.estadoCivil) getEl('socio-estado-civil').value = s.estadoCivil;
+        if (s.ganhos) getEl('socio-ganhos').value = s.ganhos;
+        if (s.fonteRenda) {
+            const radio = containerEl.querySelector(`input[name="socio-fonte-renda"][value="${s.fonteRenda}"]`);
             if (radio) radio.checked = true;
         }
-        if (ocupacaoSelect) {
-            const event = new Event('change');
-            ocupacaoSelect.dispatchEvent(event);
-        }
     }
+    // Mantém o campo de profissão coerente com a ocupação salva (sem apagar o valor carregado)
+    if (OCUPACOES_COM_PROFISSAO.includes(ocupacaoSelect.value)) profissaoContainer.classList.remove('hidden');
 
+    // --- Seções de documentos (cartões) ---
     data.sections.forEach((section, sIdx) => {
-        const sectionDiv = document.createElement('div');
-        sectionDiv.className = "mb-6";
-        sectionDiv.innerHTML = `<h4 class="font-bold text-gray-700 mb-3 border-b pb-1 uppercase text-[10px] tracking-widest">${section.title}</h4>`;
-        const ul = document.createElement('ul');
-        ul.className = 'space-y-1';
+        const sec = document.createElement('section');
+        sec.setAttribute('data-section-block', '');
+        sec.className = 'mb-5 bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden';
+        sec.innerHTML = `
+            <header class="px-4 py-3 bg-slate-50 border-b border-slate-200 flex items-center justify-between gap-2">
+                <h4 class="text-xs font-black text-slate-700 uppercase tracking-wide">${section.title}</h4>
+                <span class="section-count text-[11px] font-black px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">0/0</span>
+            </header>
+            <ul class="p-2 space-y-0.5"></ul>`;
+        const ul = sec.querySelector('ul');
 
         section.docs.forEach((docItem, dIdx) => {
             const li = document.createElement('li');
             if (typeof docItem === 'object' && docItem.type === 'title') {
-                li.innerHTML = `<div class="font-bold text-blue-700 text-[10px] mt-4 mb-2 bg-blue-50 p-2 rounded border-l-4 border-blue-400 uppercase tracking-tighter">${docItem.text}</div>`;
+                li.innerHTML = `<div class="mt-3 mb-1 mx-1 px-3 py-1.5 text-[10px] font-black uppercase tracking-tight text-sky-700 bg-sky-50 rounded-md border border-sky-100">${docItem.text}</div>`;
             } else {
                 const docText = typeof docItem === 'string' ? docItem : docItem.text;
                 const id = `doc-${actionKey}-${sIdx}-${dIdx}`;
-                const isChecked = saved?.checkedIds?.includes(id) ? 'checked' : '';
+                const isChecked = saved?.checkedIds?.includes(id);
                 const savedType = saved?.docTypes ? saved.docTypes[id] : 'Físico';
 
                 li.innerHTML = `
-                    <div class="flex flex-col border-b border-gray-50 pb-1">
-                        <label class="checklist-row flex items-center gap-3 w-full cursor-pointer p-2 rounded-lg transition-all hover:bg-gray-50">
-                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 text-green-600 rounded border-gray-300 shadow-sm" ${isChecked}>
-                            <span class="text-sm text-gray-700 font-medium">${docText}</span>
+                    <div class="flex flex-col border-b border-slate-50">
+                        <label class="checklist-row flex items-center gap-3 w-full cursor-pointer px-3 py-2.5 rounded-lg transition-colors hover:bg-slate-50 ${isChecked ? 'bg-emerald-50' : ''}">
+                            <input type="checkbox" id="${id}" class="doc-checkbox h-5 w-5 shrink-0 rounded border-slate-300 text-emerald-600 focus:ring-emerald-500" ${isChecked ? 'checked' : ''}>
+                            <span class="text-sm text-slate-700 font-medium">${docText}</span>
                         </label>
-                        <div id="type-${id}" class="ml-10 mt-1 flex gap-4 ${isChecked ? '' : 'hidden'}">
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Físico" ${savedType === 'Físico' ? 'checked' : ''}> FÍSICO
-                            </label>
-                            <label class="flex items-center text-[9px] font-black text-gray-400 cursor-pointer">
-                                <input type="radio" name="type-${id}" value="Digital" ${savedType === 'Digital' ? 'checked' : ''}> DIGITAL
-                            </label>
+                        <div id="type-${id}" class="ml-11 mb-2 ${isChecked ? '' : 'hidden'}">
+                            <div class="inline-flex rounded-lg bg-slate-100 p-0.5">
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="type-${id}" value="Físico" class="peer sr-only" ${savedType !== 'Digital' ? 'checked' : ''}>
+                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow transition">📄 FÍSICO</span>
+                                </label>
+                                <label class="cursor-pointer">
+                                    <input type="radio" name="type-${id}" value="Digital" class="peer sr-only" ${savedType === 'Digital' ? 'checked' : ''}>
+                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-sky-700 peer-checked:shadow transition">📱 DIGITAL</span>
+                                </label>
+                            </div>
                         </div>
                     </div>`;
             }
             ul.appendChild(li);
         });
-        sectionDiv.appendChild(ul);
-        containerEl.appendChild(sectionDiv);
+        containerEl.appendChild(sec);
     });
 
     if (ACTIONS_ALWAYS_EXPENSES.includes(actionKey)) {
@@ -581,9 +641,9 @@ function addExpenseTable(containerEl, saved) {
 
 function addExpenseButton(containerEl, saved) {
     const expenseButton = document.createElement('div');
-    expenseButton.className = 'mt-4 p-3 bg-gray-50 border border-gray-200 rounded-lg text-center';
+    expenseButton.className = 'mt-4 p-4 bg-white border border-dashed border-emerald-300 rounded-2xl text-center';
     expenseButton.id = 'expense-button-container';
-    expenseButton.innerHTML = `<button id="btn-abrir-gastos" class="bg-green-600 text-white px-4 py-2 rounded-lg text-sm font-bold hover:bg-green-700">+ Adicionar Planilha de Gastos</button>`;
+    expenseButton.innerHTML = `<button id="btn-abrir-gastos" type="button" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 shadow-sm transition">💰 Adicionar planilha de gastos</button>`;
     containerEl.appendChild(expenseButton);
 
     const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
@@ -614,6 +674,7 @@ function setupCheckboxEvents(containerEl) {
                     t.querySelector('input[value="Físico"]').checked = true;
                 }
             }
+            e.target.closest('label')?.classList.toggle('bg-emerald-50', e.target.checked);
             updateSelectedCounter();
             checkReuVisibility();
         });
@@ -639,33 +700,119 @@ function setupCheckboxEvents(containerEl) {
 /* ========================================================
    5. FORMULÁRIO DO RÉU
    ======================================================== */
+function renderUfOptions() {
+    const ufs = ['RJ', 'SP', 'MG', 'ES', 'PR', 'SC', 'RS', 'BA', 'CE', 'PE', 'DF', 'GO', 'MT', 'MS', 'AM', 'PA', 'AC', 'AL', 'AP', 'MA', 'PB', 'PI', 'RN', 'RO', 'RR', 'SE', 'TO'];
+    return '<option value="">UF</option>' + ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
+}
+
+const ufSelect = (id) => `
+    <div>
+        <label for="${id}" class="${LABEL_CLS}">Estado</label>
+        <select id="${id}" class="${INPUT_CLS}">${renderUfOptions()}</select>
+    </div>`;
+
 function renderReuForm(containerId) {
     const container = getEl(containerId);
     if (!container) return;
 
     container.innerHTML = `
-        <div class="p-4 sm:p-6 bg-red-50 border-2 border-red-200 rounded-2xl shadow-sm mt-6">
-            <div class="flex items-center gap-2 mb-4">
-                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-red-600" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" /></svg>
-                <h3 class="text-sm font-black text-red-600 uppercase">DADOS DA PARTE CONTRÁRIA (RÉU)</h3>
-            </div>
-            
-            <div class="bg-white p-4 rounded-lg border border-gray-200 mb-4" style="border: 2px solid #f97316;">
-                <div class="flex items-center gap-3">
-                    <input type="checkbox" id="check-reu-unico" class="h-5 w-5 text-red-600 rounded border-gray-300 focus:ring-red-500" checked>
-                    <label for="check-reu-unico" class="text-sm font-bold text-gray-700 cursor-pointer">
-                        📋 DADOS DO RÉU (Endereço completo e Dados de trabalho)
-                    </label>
-                </div>
+        <div class="mt-6 rounded-2xl border-2 border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
+            <div class="px-4 py-3 bg-red-600 text-white flex flex-wrap items-center justify-between gap-2">
+                <h3 class="text-sm font-black uppercase tracking-wide flex items-center gap-2">🏠 Dados da parte contrária (réu)</h3>
+                <label for="check-reu-unico" class="flex items-center gap-2 text-xs font-bold cursor-pointer bg-white/15 px-3 py-1.5 rounded-lg hover:bg-white/25 transition">
+                    <input type="checkbox" id="check-reu-unico" class="h-4 w-4 rounded border-white text-red-600 focus:ring-white" checked>
+                    Incluir no checklist
+                </label>
             </div>
 
-            <div id="content-reu-completo">
-                ${renderReuIdentificacao()}
-                ${renderReuResidencial()}
-                ${renderReuComercial()}
-                ${renderReuSocioeconomico()}
+            <div id="content-reu-completo" class="p-4 space-y-4">
+                ${cartaoSecao('1. Identificação', '🪪', `
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        ${campo('nome-reu', 'Nome completo', { placeholder: 'Nome completo do réu', span: 'md:col-span-2' })}
+                        ${campo('cpf-reu', 'CPF', { placeholder: '000.000.000-00', maxlength: 14, inputmode: 'numeric' })}
+                        ${campo('telefone-reu', 'Telefone', { placeholder: '(21) 99999-9999', maxlength: 15, inputmode: 'tel' })}
+                    </div>`)}
+
+                ${cartaoSecao('2. Endereço residencial', '📍', `
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                        <div class="md:col-span-2">
+                            <label for="cep-reu" class="${LABEL_CLS}">CEP</label>
+                            <div class="flex">
+                                <input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" inputmode="numeric" class="${INPUT_CLS} rounded-r-none">
+                                <button type="button" id="buscar-cep-reu-btn" class="bg-red-600 hover:bg-red-700 text-white px-3 rounded-r-lg text-xs font-bold transition">Buscar</button>
+                            </div>
+                        </div>
+                        ${campo('rua-reu', 'Logradouro', { span: 'md:col-span-4' })}
+                        ${campo('numero-reu', 'Número', { span: 'md:col-span-2' })}
+                        ${campo('complemento-reu', 'Complemento', { span: 'md:col-span-4' })}
+                        ${campo('bairro-reu', 'Bairro', { span: 'md:col-span-3' })}
+                        ${campo('cidade-reu', 'Cidade', { span: 'md:col-span-2' })}
+                        <div class="md:col-span-1">${ufSelect('estado-reu')}</div>
+                        ${campo('referencia-reu', 'Ponto de referência', { span: 'md:col-span-6' })}
+                    </div>`, 'red')}
+
+                ${cartaoSecao('3. Dados de trabalho', '🏢', `
+                    <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
+                        ${campo('empresa-reu', 'Empresa', { span: 'md:col-span-6' })}
+                        ${campo('rua-comercial-reu', 'Logradouro comercial', { span: 'md:col-span-6' })}
+                        ${campo('numero-comercial-reu', 'Número', { span: 'md:col-span-2' })}
+                        ${campo('complemento-comercial-reu', 'Complemento', { span: 'md:col-span-4' })}
+                        ${campo('bairro-comercial-reu', 'Bairro', { span: 'md:col-span-3' })}
+                        ${campo('cidade-comercial-reu', 'Cidade', { span: 'md:col-span-2' })}
+                        <div class="md:col-span-1">${ufSelect('estado-comercial-reu')}</div>
+                        <div class="md:col-span-6">
+                            <label for="cep-comercial-reu" class="${LABEL_CLS}">CEP comercial</label>
+                            <div class="flex md:max-w-xs">
+                                <input type="text" id="cep-comercial-reu" placeholder="00000-000" maxlength="9" inputmode="numeric" class="${INPUT_CLS} rounded-r-none">
+                                <button type="button" id="buscar-cep-comercial-reu-btn" class="bg-slate-600 hover:bg-slate-700 text-white px-3 rounded-r-lg text-xs font-bold transition whitespace-nowrap">Buscar</button>
+                            </div>
+                        </div>
+                    </div>`)}
+
+                ${cartaoSecao('4. Perfil socioeconômico', '📊', `
+                    <div class="space-y-4">
+                        <div>
+                            <label for="reu-ocupacao" class="${LABEL_CLS}">Ocupação</label>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <select id="reu-ocupacao" class="${INPUT_CLS} flex-1 min-w-[180px]">
+                                    <option value="">Selecione</option>
+                                    ${OCUPACOES.map(o => `<option value="${o}">${o}</option>`).join('')}
+                                </select>
+                                ${naoSeiCheck('reu-ocupacao-nao-sei')}
+                            </div>
+                        </div>
+                        <div id="reu-profissao-container" class="hidden">
+                            <label for="reu-profissao" class="${LABEL_CLS}">Profissão</label>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="${INPUT_CLS} flex-1 min-w-[180px]">
+                                ${naoSeiCheck('reu-profissao-nao-sei')}
+                            </div>
+                        </div>
+                        <div>
+                            <label for="reu-estado-civil" class="${LABEL_CLS}">Estado civil</label>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <select id="reu-estado-civil" class="${INPUT_CLS} flex-1 min-w-[180px]">
+                                    <option value="">Selecione</option>
+                                    ${ESTADOS_CIVIS.map(o => `<option value="${o}">${o}</option>`).join('')}
+                                </select>
+                                ${naoSeiCheck('reu-estado-civil-nao-sei')}
+                            </div>
+                        </div>
+                        <div>
+                            <label for="reu-ganhos" class="${LABEL_CLS}">Ganhos líquidos mensais (R$)</label>
+                            <div class="flex flex-wrap gap-2 items-center">
+                                <input type="text" id="reu-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS} flex-1 min-w-[180px]">
+                                ${naoSeiCheck('reu-ganhos-nao-sei')}
+                            </div>
+                            <p class="${LABEL_CLS} mt-3">Fonte de renda</p>
+                            ${pilulas('reu-fonte-renda', FONTES_RENDA)}
+                        </div>
+                    </div>`, 'blue')}
+
+                <div class="text-right">
+                    <button type="button" id="salvar-reu-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase shadow-sm transition">💾 Salvar dados do réu</button>
+                </div>
             </div>
-            ${renderReuSaveButton()}
         </div>
     `;
 
@@ -673,172 +820,18 @@ function renderReuForm(containerId) {
     initCepSearch();
     initReuSaveButton();
     initReuSocioeconomicoEvents();
-}
 
-function renderReuIdentificacao() {
-    return `
-        <div class="bg-white p-3 rounded-lg border border-gray-200 mb-4">
-            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-red-600 rounded"></span>1. IDENTIFICAÇÃO DO RÉU</h4>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <div class="md:col-span-2">
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Nome Completo</label>
-                    <input type="text" id="nome-reu" placeholder="Nome completo do réu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                </div>
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase">CPF</label>
-                    <input type="text" id="cpf-reu" placeholder="000.000.000-00" maxlength="14" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                </div>
-                <div>
-                    <label class="text-[9px] font-black text-gray-400 uppercase">Telefone</label>
-                    <input type="text" id="telefone-reu" placeholder="(21) 99999-9999" maxlength="15" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderReuResidencial() {
-    return `
-        <div class="bg-red-50 p-3 rounded-lg border border-red-200 mb-4">
-            <h4 class="text-sm font-bold text-red-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-red-600 rounded"></span>2. ENDEREÇO RESIDENCIAL</h4>
-            <div class="space-y-3">
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div>
-                        <label class="text-[9px] font-black text-gray-400 uppercase">CEP</label>
-                        <div class="flex">
-                            <input type="text" id="cep-reu" maxlength="9" placeholder="00000-000" class="w-full p-2 border-2 border-red-200 rounded-l-lg text-sm bg-white">
-                            <button type="button" id="buscar-cep-reu-btn" class="bg-red-600 text-white px-3 rounded-r-lg text-xs font-bold">Buscar</button>
-                        </div>
-                    </div>
-                    <div class="md:col-span-2">
-                        <label class="text-[9px] font-black text-gray-400 uppercase">Logradouro</label>
-                        <input type="text" id="rua-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                    </div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Número</label><input type="text" id="numero-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                    <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label><input type="text" id="complemento-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label><input type="text" id="bairro-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label><input type="text" id="cidade-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Estado</label><select id="estado-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">${renderUfOptions()}</select></div>
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Ponto de Referência</label><input type="text" id="referencia-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderReuComercial() {
-    return `
-        <div class="bg-gray-50 p-3 rounded-lg border border-gray-200 mb-4">
-            <h4 class="text-sm font-bold text-gray-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-gray-600 rounded"></span>3. DADOS DE TRABALHO</h4>
-            <div class="space-y-3">
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">Empresa</label><input type="text" id="empresa-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                <div><label class="text-[9px] font-black text-gray-400 uppercase">Logradouro Comercial</label><input type="text" id="rua-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Número</label><input type="text" id="numero-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                    <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Complemento</label><input type="text" id="complemento-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-2">
-                    <div class="md:col-span-2"><label class="text-[9px] font-black text-gray-400 uppercase">Bairro</label><input type="text" id="bairro-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Cidade</label><input type="text" id="cidade-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-2">
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">Estado</label><select id="estado-comercial-reu" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white">${renderUfOptions()}</select></div>
-                    <div><label class="text-[9px] font-black text-gray-400 uppercase">CEP Comercial</label><input type="text" id="cep-comercial-reu" placeholder="00000-000" maxlength="9" class="w-full p-2 border border-gray-300 rounded-lg text-sm bg-white"></div>
-                </div>
-                <div class="flex justify-end"><button type="button" id="buscar-cep-comercial-reu-btn" class="bg-gray-600 text-white px-3 py-1.5 rounded-lg text-xs font-bold">Buscar CEP Comercial</button></div>
-            </div>
-        </div>
-    `;
-}
-
-function renderReuSocioeconomico() {
-    return `
-        <div class="bg-blue-50 p-3 rounded-lg border border-blue-200">
-            <h4 class="text-sm font-bold text-blue-700 mb-3 flex items-center gap-2"><span class="w-1 h-4 bg-blue-600 rounded"></span>4. PERFIL SOCIOECONÔMICO DO RÉU</h4>
-            <div class="space-y-3">
-                <div>
-                    <label class="text-[9px] font-black text-gray-600 uppercase">OCUPAÇÃO DO RÉU</label>
-                    <div class="flex flex-wrap gap-2 items-center mt-1">
-                        <select id="reu-ocupacao" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                            <option value="">Selecione</option>
-                            ${OCUPACOES.map(opt => `<option value="${opt}">${opt}</option>`).join('')}
-                        </select>
-                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                            <input type="checkbox" id="reu-ocupacao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                        </label>
-                    </div>
-                </div>
-
-                <div id="reu-profissao-container" class="hidden">
-                    <label class="text-[9px] font-black text-gray-600 uppercase">PROFISSÃO DO RÉU</label>
-                    <div class="flex flex-wrap gap-2 items-center mt-1">
-                        <input type="text" id="reu-profissao" placeholder="Digite a profissão" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                            <input type="checkbox" id="reu-profissao-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[9px] font-black text-gray-600 uppercase">ESTADO CIVIL</label>
-                    <div class="flex flex-wrap gap-2 items-center mt-1">
-                        <select id="reu-estado-civil" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white">
-                            <option value="">Selecione</option>
-                            <option value="Solteiro(a)">Solteiro(a)</option>
-                            <option value="Casado(a)">Casado(a)</option>
-                            <option value="União Estável">União Estável</option>
-                            <option value="Divorciado(a)">Divorciado(a)</option>
-                            <option value="Viúvo(a)">Viúvo(a)</option>
-                            <option value="Separado(a)">Separado(a)</option>
-                        </select>
-                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                            <input type="checkbox" id="reu-estado-civil-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                        </label>
-                    </div>
-                </div>
-
-                <div>
-                    <label class="text-[9px] font-black text-gray-600 uppercase">GANHOS LÍQUIDOS MENSAIS (R$)</label>
-                    <div class="flex flex-wrap gap-2 items-center mt-1">
-                        <input type="text" id="reu-ganhos" placeholder="R$ 0,00" class="flex-1 p-2 border border-gray-300 rounded-lg text-sm bg-white" inputmode="numeric">
-                        <label class="flex items-center gap-1 text-[9px] font-bold text-gray-400 cursor-pointer whitespace-nowrap">
-                            <input type="checkbox" id="reu-ganhos-nao-sei" class="h-3 w-3"> NÃO SEI INFORMAR
-                        </label>
-                    </div>
-                    <div class="flex flex-wrap gap-3 mt-2">
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="CLT"> CLT</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Autônomo"> AUTÔNOMO</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Aposentadoria"> APOSENTADORIA</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Bolsa Família"> BOLSA FAMÍLIA</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Desempregado"> DESEMPREGADO</label>
-                        <label class="flex items-center gap-1 text-[8px] font-bold text-gray-400 cursor-pointer"><input type="radio" name="reu-fonte-renda" value="Outros"> OUTROS</label>
-                    </div>
-                </div>
-            </div>
-        </div>
-    `;
-}
-
-function renderUfOptions() {
-    const ufs = ['RJ','SP','MG','ES','PR','SC','RS','BA','CE','PE','DF','GO','MT','MS','AM','PA','AC','AL','AP','MA','PB','PI','RN','RO','RR','SE','TO'];
-    return '<option value="">UF</option>' + ufs.map(uf => `<option value="${uf}">${uf}</option>`).join('');
-}
-
-function renderReuSaveButton() {
-    return `<div class="mt-4 text-right"><button type="button" id="salvar-reu-btn" class="bg-red-600 text-white font-bold py-2 px-4 rounded-lg text-xs uppercase shadow-sm">Salvar Dados do Réu</button></div>`;
+    getEl('cpf-reu')?.addEventListener('input', mascaraCPF);
+    getEl('telefone-reu')?.addEventListener('input', mascaraTelefone);
+    getEl('cep-reu')?.addEventListener('input', mascaraCEP);
+    getEl('cep-comercial-reu')?.addEventListener('input', mascaraCEP);
 }
 
 function initReuUnicoCheckbox() {
     const checkUnico = getEl('check-reu-unico');
-    const contentCompleto = getEl('content-reu-completo'); 
+    const contentCompleto = getEl('content-reu-completo');
     if (checkUnico && contentCompleto) {
-        checkUnico.addEventListener('change', function() {
+        checkUnico.addEventListener('change', function () {
             contentCompleto.style.display = this.checked ? 'block' : 'none';
             updateSelectedCounter();
         });
@@ -846,41 +839,37 @@ function initReuUnicoCheckbox() {
 }
 
 function initCepSearch() {
-    const cepInp = getEl('cep-reu');
-    const buscarBtn = getEl('buscar-cep-reu-btn'); 
-    
     async function buscarCEP(cep, tipo = 'residencial') {
         const val = cep.replace(/\D/g, '');
-        if (val.length === 8) {
-            try {
-                const response = await fetch(`https://viacep.com.br/ws/${val}/json/`);
-                const r = await response.json();
-                if (!r.erro) {
-                    if (tipo === 'residencial') {
-                        getEl('rua-reu').value = r.logradouro || '';
-                        getEl('bairro-reu').value = r.bairro || '';
-                        getEl('cidade-reu').value = r.localidade || '';
-                        getEl('estado-reu').value = r.uf || '';
-                    } else {
-                        getEl('rua-comercial-reu').value = r.logradouro || '';
-                        getEl('bairro-comercial-reu').value = r.bairro || '';
-                        getEl('cidade-comercial-reu').value = r.localidade || '';
-                        getEl('estado-comercial-reu').value = r.uf || '';
-                    }
-                    showNotification("Endereço sincronizado no SIGEP!", "success");
-                }
-            } catch (error) {
-                showNotification("Erro na busca do CEP", "error");
+        if (val.length !== 8) return;
+        try {
+            const response = await fetch(`https://viacep.com.br/ws/${val}/json/`);
+            const r = await response.json();
+            if (r.erro) {
+                showNotification("CEP não encontrado.", "warning");
+                return;
             }
+            const sufixo = tipo === 'residencial' ? '' : 'comercial-';
+            const set = (id, v) => { const el = getEl(id); if (el) el.value = v || ''; };
+            if (tipo === 'residencial') {
+                set('rua-reu', r.logradouro); set('bairro-reu', r.bairro); set('cidade-reu', r.localidade); set('estado-reu', r.uf);
+            } else {
+                set(`rua-${sufixo}reu`, r.logradouro); set(`bairro-${sufixo}reu`, r.bairro); set(`cidade-${sufixo}reu`, r.localidade); set(`estado-${sufixo}reu`, r.uf);
+            }
+            showNotification("Endereço sincronizado no SIGEP!", "success");
+        } catch (error) {
+            showNotification("Erro na busca do CEP", "error");
         }
     }
 
+    const cepInp = getEl('cep-reu');
+    const buscarBtn = getEl('buscar-cep-reu-btn');
     if (buscarBtn && cepInp) {
         buscarBtn.addEventListener('click', () => buscarCEP(cepInp.value, 'residencial'));
         cepInp.addEventListener('blur', () => buscarCEP(cepInp.value, 'residencial'));
     }
 
-    const buscarComercialBtn = getEl('buscar-cep-comercial-reu-btn'); 
+    const buscarComercialBtn = getEl('buscar-cep-comercial-reu-btn');
     const cepComercial = getEl('cep-comercial-reu');
     if (buscarComercialBtn && cepComercial) {
         buscarComercialBtn.addEventListener('click', () => buscarCEP(cepComercial.value, 'comercial'));
@@ -890,91 +879,43 @@ function initCepSearch() {
 
 function initReuSocioeconomicoEvents() {
     const ganhosInput = document.getElementById('reu-ganhos');
-    if (ganhosInput) {
-        ganhosInput.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-        });
-    }
+    if (ganhosInput) ganhosInput.addEventListener('input', mascaraMoeda);
 
     const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
     const reuProfissaoContainer = document.getElementById('reu-profissao-container');
     const reuProfissaoInput = document.getElementById('reu-profissao');
-    
+
     if (reuOcupacaoSelect && reuProfissaoContainer) {
-        const checkReuProfissaoVisibility = () => {
-            const valor = reuOcupacaoSelect.value;
-            const mostrarProfissao = valor === 'Empregado com vínculo (CLT)' || 
-                                     valor === 'Empregado sem vínculo (Informal)' || 
-                                     valor === 'Autônomo';
-            if (mostrarProfissao) {
+        const check = () => {
+            if (OCUPACOES_COM_PROFISSAO.includes(reuOcupacaoSelect.value)) {
                 reuProfissaoContainer.classList.remove('hidden');
             } else {
                 reuProfissaoContainer.classList.add('hidden');
                 if (reuProfissaoInput) reuProfissaoInput.value = '';
             }
         };
-        reuOcupacaoSelect.addEventListener('change', checkReuProfissaoVisibility);
-        checkReuProfissaoVisibility();
+        reuOcupacaoSelect.addEventListener('change', check);
+        check();
     }
 
-    const reuOcupacaoNaoSei = document.getElementById('reu-ocupacao-nao-sei');
-    if (reuOcupacaoNaoSei && reuOcupacaoSelect) {
-        reuOcupacaoNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                reuOcupacaoSelect.disabled = true;
-                reuOcupacaoSelect.value = 'Não informado';
-                reuProfissaoContainer.classList.add('hidden');
-            } else {
-                reuOcupacaoSelect.disabled = false;
-                reuOcupacaoSelect.value = '';
-            }
+    // "Não sei informar": trava o campo e preenche o valor padrão
+    const ligarNaoSei = (checkId, campoEl, { esconde } = {}) => {
+        const chk = document.getElementById(checkId);
+        if (!chk || !campoEl) return;
+        chk.addEventListener('change', (e) => {
+            campoEl.disabled = e.target.checked;
+            campoEl.value = e.target.checked ? 'Não informado' : '';
+            if (esconde && e.target.checked) esconde.classList.add('hidden');
         });
-    }
-
-    const reuProfissaoNaoSei = document.getElementById('reu-profissao-nao-sei');
-    if (reuProfissaoNaoSei && reuProfissaoInput) {
-        reuProfissaoNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                reuProfissaoInput.disabled = true;
-                reuProfissaoInput.value = 'Não informado';
-            } else {
-                reuProfissaoInput.disabled = false;
-                reuProfissaoInput.value = '';
-            }
-        });
-    }
-
-    const reuCivilNaoSei = document.getElementById('reu-estado-civil-nao-sei');
-    const reuCivilSelect = document.getElementById('reu-estado-civil');
-    if (reuCivilNaoSei && reuCivilSelect) {
-        reuCivilNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                reuCivilSelect.disabled = true;
-                reuCivilSelect.value = 'Não informado';
-            } else {
-                reuCivilSelect.disabled = false;
-                reuCivilSelect.value = '';
-            }
-        });
-    }
-
-    const reuGanhosNaoSei = document.getElementById('reu-ganhos-nao-sei');
-    if (reuGanhosNaoSei && ganhosInput) {
-        reuGanhosNaoSei.addEventListener('change', (e) => {
-            if (e.target.checked) {
-                ganhosInput.disabled = true;
-                ganhosInput.value = 'Não informado';
-            } else {
-                ganhosInput.disabled = false;
-                ganhosInput.value = '';
-            }
-        });
-    }
+    };
+    ligarNaoSei('reu-ocupacao-nao-sei', reuOcupacaoSelect, { esconde: reuProfissaoContainer });
+    ligarNaoSei('reu-profissao-nao-sei', reuProfissaoInput);
+    ligarNaoSei('reu-estado-civil-nao-sei', document.getElementById('reu-estado-civil'));
+    ligarNaoSei('reu-ganhos-nao-sei', ganhosInput);
 }
 
 function initReuSaveButton() {
-    const salvarBtn = getEl('salvar-reu-btn'); 
+    const salvarBtn = getEl('salvar-reu-btn');
     if (salvarBtn) {
         salvarBtn.addEventListener('click', () => {
             handleSave(false);
@@ -988,75 +929,58 @@ function initReuSaveButton() {
    ======================================================== */
 function renderExpenseTable() {
     const div = document.createElement('div');
-    div.className = 'mt-6 p-4 bg-green-50 border-2 border-green-100 rounded-xl shadow-sm';
+    div.className = 'mt-5 rounded-2xl border border-emerald-200 bg-emerald-50/40 shadow-sm overflow-hidden';
     div.id = 'expense-table';
-    
+
+    const linha = (c, tom) => {
+        const t = tom === 'verde'
+            ? 'border-emerald-100 focus:ring-emerald-500 focus:border-emerald-500'
+            : 'border-sky-100 focus:ring-sky-500 focus:border-sky-500';
+        return `
+            <div class="flex items-center justify-between gap-3 bg-white p-2.5 rounded-xl border ${tom === 'verde' ? 'border-emerald-100' : 'border-sky-100'}">
+                <label for="expense-${c.id}" class="flex-1 min-w-0">
+                    <span class="block text-[12px] font-bold text-slate-700 truncate">${c.label}</span>
+                    <span class="block text-[10px] text-slate-400">${c.desc}</span>
+                </label>
+                <input type="text" id="expense-${c.id}" class="expense-input w-32 shrink-0 px-2.5 py-2 bg-slate-50 border ${t} rounded-lg text-right text-xs font-bold outline-none focus:ring-2" placeholder="R$ 0,00" inputmode="numeric">
+            </div>`;
+    };
+
     div.innerHTML = `
-        <div class="flex items-center gap-3 mb-4 border-b pb-2">
-            <input type="checkbox" id="check-exibir-gastos" class="h-5 w-5 text-green-600 rounded border-gray-300 focus:ring-green-500" checked>
-            <label for="check-exibir-gastos" class="text-sm font-black text-green-800 uppercase">💰 PLANILHA DE GASTOS COM RATEIO AUTOMÁTICO</label>
+        <div class="px-4 py-3 bg-emerald-600 text-white flex items-center justify-between gap-2">
+            <label for="check-exibir-gastos" class="flex items-center gap-2 text-sm font-black uppercase cursor-pointer">
+                <input type="checkbox" id="check-exibir-gastos" class="h-4 w-4 rounded border-white text-emerald-700 focus:ring-white" checked>
+                💰 Planilha de gastos com rateio
+            </label>
+            <button id="fechar-gastos" type="button" class="text-[11px] font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-lg transition">Fechar</button>
         </div>
-        <div id="content-planilha-gastos">
-            <div class="mb-4 bg-white p-3 rounded-lg border border-green-200 flex items-center justify-between">
+        <div id="content-planilha-gastos" class="p-4">
+            <div class="mb-4 bg-white p-3 rounded-xl border border-emerald-200 flex items-center justify-between gap-3">
                 <div>
-                    <p class="text-xs font-bold text-slate-700 uppercase">Quantidade de Pessoas na Residência</p>
-                    <p class="text-[10px] text-slate-400">Usado para calcular a cota proporcional das contas da casa.</p>
+                    <p class="text-xs font-black text-slate-700 uppercase">Pessoas na residência</p>
+                    <p class="text-[10px] text-slate-400">Define a cota de cada conta da casa.</p>
                 </div>
-                <input type="number" id="expense-moradores" min="1" value="1" class="w-16 p-2 border border-green-300 rounded-lg text-center font-black text-sm bg-slate-50">
+                <input type="number" id="expense-moradores" min="1" value="1" class="w-16 p-2 border border-emerald-300 rounded-lg text-center font-black text-sm bg-slate-50 focus:outline-none focus:ring-2 focus:ring-emerald-500">
             </div>
 
-            <h5 class="text-[10px] font-black uppercase text-green-700 mb-2">Gastos Comuns / Família (Serão Rateados)</h5>
-            <div class="space-y-2 mb-4">
-                ${EXPENSE_CATEGORIES_COMUNS.map(c => `
-                    <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-green-100 gap-2">
-                        <div class="flex-1">
-                            <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
-                            <p class="text-[9px] text-slate-400">${c.desc}</p>
-                        </div>
-                        <div class="w-32">
-                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-green-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
+            <h5 class="text-[11px] font-black uppercase text-emerald-700 mb-2">Gastos comuns da família <span class="font-medium normal-case text-slate-400">(serão rateados)</span></h5>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-5">${EXPENSE_CATEGORIES_COMUNS.map(c => linha(c, 'verde')).join('')}</div>
 
-            <h5 class="text-[10px] font-black uppercase text-blue-700 mb-2">Gastos Exclusivos da Criança (100% Integrais)</h5>
-            <div class="space-y-2 mb-4">
-                ${EXPENSE_CATEGORIES_EXCLUSIVAS.map(c => `
-                    <div class="flex justify-between items-center bg-white p-2.5 rounded-lg border border-blue-100 gap-2">
-                        <div class="flex-1">
-                            <p class="text-[11px] font-bold text-slate-700 uppercase">${c.label}</p>
-                            <p class="text-[9px] text-slate-400">${c.desc}</p>
-                        </div>
-                        <div class="w-32">
-                            <input type="text" id="expense-${c.id}" class="expense-input w-full p-2 bg-slate-50 border border-blue-200 rounded-lg text-right text-xs font-bold" placeholder="R$ 0,00" inputmode="numeric">
-                        </div>
-                    </div>
-                `).join('')}
-            </div>
+            <h5 class="text-[11px] font-black uppercase text-sky-700 mb-2">Gastos exclusivos da criança <span class="font-medium normal-case text-slate-400">(100% integrais)</span></h5>
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-2 mb-5">${EXPENSE_CATEGORIES_EXCLUSIVAS.map(c => linha(c, 'azul')).join('')}</div>
 
-            <div class="bg-slate-800 text-white p-4 rounded-xl shadow-inner mt-4 space-y-1">
-                <div class="flex justify-between text-xs text-slate-300">
-                    <span>Subtotal Rateio da Família:</span>
-                    <span id="subtotal-familia">R$ 0,00</span>
-                </div>
-                <div class="flex justify-between text-xs text-slate-300">
-                    <span>Subtotal Exclusivo Criança:</span>
-                    <span id="subtotal-crianca">R$ 0,00</span>
-                </div>
-                <div class="flex justify-between items-center border-t border-slate-700 pt-2 mt-1">
-                    <span class="text-xs font-black uppercase tracking-wider text-emerald-400">NECESSIDADE MENSAL APURADA:</span>
-                    <span id="expense-total" class="text-lg font-black text-emerald-400">R$ 0,00</span>
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 text-white p-4 rounded-2xl shadow-inner space-y-1.5">
+                <div class="flex justify-between text-xs text-slate-300"><span>Cota da família (rateio)</span><span id="subtotal-familia">R$ 0,00</span></div>
+                <div class="flex justify-between text-xs text-slate-300"><span>Exclusivos da criança</span><span id="subtotal-crianca">R$ 0,00</span></div>
+                <div class="flex justify-between items-center border-t border-slate-600 pt-2 mt-1">
+                    <span class="text-xs font-black uppercase tracking-wider text-emerald-400">Necessidade mensal apurada</span>
+                    <span id="expense-total" class="text-xl font-black text-emerald-400">R$ 0,00</span>
                 </div>
             </div>
 
-            <div class="mt-4 flex gap-2">
-                <button type="button" id="btn-baixar-planilha-isolada" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                    <span>📄</span> Baixar Apenas Planilha (PDF)
-                </button>
-            </div>
-
-            <div class="mt-2 text-right"><button id="fechar-gastos" class="text-[10px] text-gray-500 hover:text-gray-700 underline">Fechar planilha</button></div>
+            <button type="button" id="btn-baixar-planilha-isolada" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
+                <span>📄</span> Baixar apenas a planilha (PDF)
+            </button>
         </div>
     `;
     initExpenseTableEvents(div);
@@ -1066,117 +990,89 @@ function renderExpenseTable() {
 function initExpenseTableEvents(div) {
     const checkGastos = div.querySelector('#check-exibir-gastos');
     const contentGastos = div.querySelector('#content-planilha-gastos');
-    
+
     if (checkGastos && contentGastos) {
-        checkGastos.addEventListener('change', function() {
+        checkGastos.addEventListener('change', function () {
             contentGastos.style.display = this.checked ? 'block' : 'none';
             updateSelectedCounter();
         });
     }
 
     const calcularTotais = () => {
-        let totalFamilia = 0;
-        let totalCrianca = 0;
-        const moradores = parseInt(div.querySelector('#expense-moradores')?.value) || 1;
+        let totalFamilia = 0, totalCrianca = 0;
+        const moradores = Math.max(1, parseInt(div.querySelector('#expense-moradores')?.value) || 1);
 
-        EXPENSE_CATEGORIES_COMUNS.forEach(c => {
-            const el = div.querySelector(`#expense-${c.id}`);
-            if (el) totalFamilia += parseCurrency(el.value);
-        });
-
-        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
-            const el = div.querySelector(`#expense-${c.id}`);
-            if (el) totalCrianca += parseCurrency(el.value);
-        });
+        EXPENSE_CATEGORIES_COMUNS.forEach(c => { const el = div.querySelector(`#expense-${c.id}`); if (el) totalFamilia += parseCurrency(el.value); });
+        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const el = div.querySelector(`#expense-${c.id}`); if (el) totalCrianca += parseCurrency(el.value); });
 
         const cotaFamilia = totalFamilia / moradores;
-        const totalGeral = cotaFamilia + totalCrianca;
-
-        const subFam = div.querySelector('#subtotal-familia');
-        const subCri = div.querySelector('#subtotal-crianca');
-        const totalEl = div.querySelector('#expense-total');
-        if (subFam) subFam.textContent = formatCurrency(cotaFamilia);
-        if (subCri) subCri.textContent = formatCurrency(totalCrianca);
-        if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+        const set = (sel, v) => { const el = div.querySelector(sel); if (el) el.textContent = formatCurrency(v); };
+        set('#subtotal-familia', cotaFamilia);
+        set('#subtotal-crianca', totalCrianca);
+        set('#expense-total', cotaFamilia + totalCrianca);
     };
 
     div.querySelector('#expense-moradores')?.addEventListener('input', calcularTotais);
-
     div.querySelectorAll('.expense-input').forEach(inp => {
-        inp.addEventListener('input', (e) => {
-            let v = e.target.value.replace(/\D/g, '');
-            e.target.value = v ? (Number(v)/100).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }) : '';
-            calcularTotais();
-        });
+        inp.addEventListener('input', (e) => { mascaraMoeda(e); calcularTotais(); });
     });
 
-    setTimeout(() => {
-        div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
-            const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
-            const dadosGastos = getExpenseDataFromForm();
-            
-            if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
-                window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
-            } else {
-                showNotification("Motor de PDF não carregado.", "error");
-            }
-        });
-    }, 100);
+    div.querySelector('#btn-baixar-planilha-isolada')?.addEventListener('click', () => {
+        const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'Assistido';
+        const dadosGastos = getExpenseDataFromForm();
+        if (window.PDFService && typeof window.PDFService.generatePlanilhaGastosPDF === 'function') {
+            window.PDFService.generatePlanilhaGastosPDF(nomeAssistido, dadosGastos);
+        } else {
+            showNotification("Motor de PDF não carregado.", "error");
+        }
+    });
 
-    setTimeout(() => {
-        div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
-            const container = getEl('expense-table-container');
-            if (container) container.innerHTML = '';
-            const btnBox = getEl('expense-button-container');
-            if (btnBox) btnBox.style.display = 'block';
-            updateSelectedCounter();
-        });
-    }, 100);
+    div.querySelector('#fechar-gastos')?.addEventListener('click', () => {
+        const container = getEl('expense-table-container');
+        if (container) container.innerHTML = '';
+        const btnBox = getEl('expense-button-container');
+        if (btnBox) btnBox.style.display = 'block';
+        updateSelectedCounter();
+    });
 }
 
 /* ========================================================
    7. FUNÇÕES DE DADOS (GET/SET)
    ======================================================== */
 function getReuDataFromForm() {
+    const v = (id) => getEl(id)?.value || '';
+    const c = (id) => getEl(id)?.checked || false;
     return {
-        checkReuUnico: getEl('check-reu-unico')?.checked || false,
-        nome: getEl('nome-reu')?.value || '',
-        cpf: getEl('cpf-reu')?.value || '',
-        telefone: getEl('telefone-reu')?.value || '',
-        cep: getEl('cep-reu')?.value || '',
-        rua: getEl('rua-reu')?.value || '',
-        numero: getEl('numero-reu')?.value || '',
-        complemento: getEl('complemento-reu')?.value || '',
-        bairro: getEl('bairro-reu')?.value || '',
-        cidade: getEl('cidade-reu')?.value || '',
-        uf: getEl('estado-reu')?.value || '',
-        referencia: getEl('referencia-reu')?.value || '',
-        empresa: getEl('empresa-reu')?.value || '',
-        rua_comercial: getEl('rua-comercial-reu')?.value || '',
-        numero_comercial: getEl('numero-comercial-reu')?.value || '',
-        complemento_comercial: getEl('complemento-comercial-reu')?.value || '',
-        bairro_comercial: getEl('bairro-comercial-reu')?.value || '',
-        cidade_comercial: getEl('cidade-comercial-reu')?.value || '',
-        uf_comercial: getEl('estado-comercial-reu')?.value || '',
-        cep_comercial: getEl('cep-comercial-reu')?.value || '',
-        ocupacao: getEl('reu-ocupacao')?.value || '',
-        ocupacaoNaoSei: getEl('reu-ocupacao-nao-sei')?.checked || false,
-        profissao: getEl('reu-profissao')?.value || '',
-        profissaoNaoSei: getEl('reu-profissao-nao-sei')?.checked || false,
-        estadoCivil: getEl('reu-estado-civil')?.value || '',
-        estadoCivilNaoSei: getEl('reu-estado-civil-nao-sei')?.checked || false,
-        ganhos: getEl('reu-ganhos')?.value || '',
-        ganhosNaoSei: getEl('reu-ganhos-nao-sei')?.checked || false,
+        checkReuUnico: c('check-reu-unico'),
+        nome: v('nome-reu'), cpf: v('cpf-reu'), telefone: v('telefone-reu'),
+        cep: v('cep-reu'), rua: v('rua-reu'), numero: v('numero-reu'), complemento: v('complemento-reu'),
+        bairro: v('bairro-reu'), cidade: v('cidade-reu'), uf: v('estado-reu'), referencia: v('referencia-reu'),
+        empresa: v('empresa-reu'), rua_comercial: v('rua-comercial-reu'), numero_comercial: v('numero-comercial-reu'),
+        complemento_comercial: v('complemento-comercial-reu'), bairro_comercial: v('bairro-comercial-reu'),
+        cidade_comercial: v('cidade-comercial-reu'), uf_comercial: v('estado-comercial-reu'), cep_comercial: v('cep-comercial-reu'),
+        ocupacao: v('reu-ocupacao'), ocupacaoNaoSei: c('reu-ocupacao-nao-sei'),
+        profissao: v('reu-profissao'), profissaoNaoSei: c('reu-profissao-nao-sei'),
+        estadoCivil: v('reu-estado-civil'), estadoCivilNaoSei: c('reu-estado-civil-nao-sei'),
+        ganhos: v('reu-ganhos'), ganhosNaoSei: c('reu-ganhos-nao-sei'),
         fonteRenda: document.querySelector('input[name="reu-fonte-renda"]:checked')?.value || ''
+    };
+}
+
+function getSocioDataFromForm() {
+    return {
+        ocupacao: document.getElementById('socio-ocupacao')?.value || '',
+        profissao: document.getElementById('socio-profissao')?.value || '',
+        estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
+        ganhos: document.getElementById('socio-ganhos')?.value || '',
+        fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
     };
 }
 
 function getExpenseDataFromForm() {
     const d = {};
-    const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
-    todasCategorias.forEach(cat => {
+    [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS].forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
-        let valor = el ? el.value || '' : '';
+        const valor = el ? el.value || '' : '';
         d[cat.id] = (!valor || valor.trim() === '') ? 'R$ 0,00' : valor;
     });
     d.quantidadeMoradores = getEl('expense-moradores')?.value || '1';
@@ -1187,127 +1083,84 @@ function getExpenseDataFromForm() {
 function fillReuData(d) {
     if (!d) return;
     const setValue = (id, val) => { const el = getEl(id); if (el) el.value = val || ''; };
-    
-    getEl('check-reu-unico').checked = d.checkReuUnico || false;
-    setValue('nome-reu', d.nome);
-    setValue('cpf-reu', d.cpf);
-    setValue('telefone-reu', d.telefone);
-    setValue('cep-reu', d.cep);
-    setValue('rua-reu', d.rua);
-    setValue('numero-reu', d.numero);
-    setValue('complemento-reu', d.complemento);
-    setValue('bairro-reu', d.bairro);
-    setValue('cidade-reu', d.cidade);
-    setValue('estado-reu', d.uf);
-    setValue('referencia-reu', d.referencia);
-    setValue('empresa-reu', d.empresa);
-    setValue('rua-comercial-reu', d.rua_comercial);
-    setValue('numero-comercial-reu', d.numero_comercial);
-    setValue('complemento-comercial-reu', d.complemento_comercial);
-    setValue('bairro-comercial-reu', d.bairro_comercial);
-    setValue('cidade-comercial-reu', d.cidade_comercial);
-    setValue('estado-comercial-reu', d.uf_comercial);
+
+    const chkUnico = getEl('check-reu-unico');
+    if (chkUnico) chkUnico.checked = d.checkReuUnico || false;
+
+    setValue('nome-reu', d.nome); setValue('cpf-reu', d.cpf); setValue('telefone-reu', d.telefone);
+    setValue('cep-reu', d.cep); setValue('rua-reu', d.rua); setValue('numero-reu', d.numero);
+    setValue('complemento-reu', d.complemento); setValue('bairro-reu', d.bairro); setValue('cidade-reu', d.cidade);
+    setValue('estado-reu', d.uf); setValue('referencia-reu', d.referencia); setValue('empresa-reu', d.empresa);
+    setValue('rua-comercial-reu', d.rua_comercial); setValue('numero-comercial-reu', d.numero_comercial);
+    setValue('complemento-comercial-reu', d.complemento_comercial); setValue('bairro-comercial-reu', d.bairro_comercial);
+    setValue('cidade-comercial-reu', d.cidade_comercial); setValue('estado-comercial-reu', d.uf_comercial);
     setValue('cep-comercial-reu', d.cep_comercial);
-    
-    setValue('reu-ocupacao', d.ocupacao);
-    if (d.ocupacaoNaoSei) {
-        const ocupNaoSei = getEl('reu-ocupacao-nao-sei');
-        if (ocupNaoSei) ocupNaoSei.checked = true;
-        const ocupSelect = getEl('reu-ocupacao');
-        if (ocupSelect) ocupSelect.disabled = true;
-    }
-    
-    setValue('reu-profissao', d.profissao);
-    if (d.profissaoNaoSei) {
-        const profNaoSei = getEl('reu-profissao-nao-sei');
-        if (profNaoSei) profNaoSei.checked = true;
-        const profInput = getEl('reu-profissao');
-        if (profInput) profInput.disabled = true;
-    }
-    
-    setValue('reu-estado-civil', d.estadoCivil);
-    if (d.estadoCivilNaoSei) {
-        const civilNaoSei = getEl('reu-estado-civil-nao-sei');
-        if (civilNaoSei) civilNaoSei.checked = true;
-        const civilSelect = getEl('reu-estado-civil');
-        if (civilSelect) civilSelect.disabled = true;
-    }
-    
-    setValue('reu-ganhos', d.ganhos);
-    if (d.ganhosNaoSei) {
-        const ganhosNaoSei = getEl('reu-ganhos-nao-sei');
-        if (ganhosNaoSei) ganhosNaoSei.checked = true;
-        const ganhosInput = getEl('reu-ganhos');
-        if (ganhosInput) ganhosInput.disabled = true;
-    }
-    
+
+    const preencherNaoSei = (campoId, valor, checkId, flag) => {
+        setValue(campoId, valor);
+        if (flag) {
+            const chk = getEl(checkId);
+            const el = getEl(campoId);
+            if (chk) chk.checked = true;
+            if (el) el.disabled = true;
+        }
+    };
+    preencherNaoSei('reu-ocupacao', d.ocupacao, 'reu-ocupacao-nao-sei', d.ocupacaoNaoSei);
+    preencherNaoSei('reu-profissao', d.profissao, 'reu-profissao-nao-sei', d.profissaoNaoSei);
+    preencherNaoSei('reu-estado-civil', d.estadoCivil, 'reu-estado-civil-nao-sei', d.estadoCivilNaoSei);
+    preencherNaoSei('reu-ganhos', d.ganhos, 'reu-ganhos-nao-sei', d.ganhosNaoSei);
+
     if (d.fonteRenda) {
         const radio = document.querySelector(`input[name="reu-fonte-renda"][value="${d.fonteRenda}"]`);
         if (radio) radio.checked = true;
     }
-    
+
     setTimeout(() => {
         const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
-        if (reuOcupacaoSelect && !d.ocupacaoNaoSei) {
-            const event = new Event('change');
-            reuOcupacaoSelect.dispatchEvent(event);
-        }
+        if (reuOcupacaoSelect && !d.ocupacaoNaoSei) reuOcupacaoSelect.dispatchEvent(new Event('change'));
+        // preserva a profissão salva (o evento acima limpa o campo quando a ocupação não a exige)
+        if (d.profissao && !d.profissaoNaoSei && OCUPACOES_COM_PROFISSAO.includes(d.ocupacao)) setValue('reu-profissao', d.profissao);
         updateReuVisibility(d);
     }, 100);
 }
 
 function updateReuVisibility(d) {
-    const contentCompleto = getEl('content-reu-completo'); 
+    const contentCompleto = getEl('content-reu-completo');
     if (contentCompleto) contentCompleto.style.display = d.checkReuUnico ? 'block' : 'none';
     updateSelectedCounter();
 }
 
 function fillExpenseData(d) {
     if (!d) return;
-    const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
-    todasCategorias.forEach(cat => {
+    [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS].forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
         if (el && d[cat.id]) el.value = d[cat.id];
     });
-    if (getEl('expense-moradores') && d.quantidadeMoradores) {
-        getEl('expense-moradores').value = d.quantidadeMoradores;
-    }
+    if (getEl('expense-moradores') && d.quantidadeMoradores) getEl('expense-moradores').value = d.quantidadeMoradores;
 
-    const checkGastos = getEl('check-exibir-gastos'); 
+    const checkGastos = getEl('check-exibir-gastos');
     if (checkGastos && d.checkExibirGastos !== undefined) {
         checkGastos.checked = d.checkExibirGastos;
-        const contentGastos = getEl('content-planilha-gastos'); 
+        const contentGastos = getEl('content-planilha-gastos');
         if (contentGastos) contentGastos.style.display = d.checkExibirGastos ? 'block' : 'none';
     }
 
-    const moradores = parseInt(getEl('expense-moradores')?.value) || 1;
-    let totalFamilia = 0;
-    let totalCrianca = 0;
-
-    EXPENSE_CATEGORIES_COMUNS.forEach(c => {
-        const el = getEl(`expense-${c.id}`);
-        if (el) totalFamilia += parseCurrency(el.value);
-    });
-    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
-        const el = getEl(`expense-${c.id}`);
-        if (el) totalCrianca += parseCurrency(el.value);
-    });
+    const moradores = Math.max(1, parseInt(getEl('expense-moradores')?.value) || 1);
+    let totalFamilia = 0, totalCrianca = 0;
+    EXPENSE_CATEGORIES_COMUNS.forEach(c => { const el = getEl(`expense-${c.id}`); if (el) totalFamilia += parseCurrency(el.value); });
+    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const el = getEl(`expense-${c.id}`); if (el) totalCrianca += parseCurrency(el.value); });
 
     const cotaFamilia = totalFamilia / moradores;
-    const totalGeral = cotaFamilia + totalCrianca;
-
-    const subFam = getEl('subtotal-familia');
-    const subCri = getEl('subtotal-crianca');
-    const totalEl = getEl('expense-total');
-    if (subFam) subFam.textContent = formatCurrency(cotaFamilia);
-    if (subCri) subCri.textContent = formatCurrency(totalCrianca);
-    if (totalEl) totalEl.textContent = formatCurrency(totalGeral);
+    const set = (id, v) => { const el = getEl(id); if (el) el.textContent = formatCurrency(v); };
+    set('subtotal-familia', cotaFamilia);
+    set('subtotal-crianca', totalCrianca);
+    set('expense-total', cotaFamilia + totalCrianca);
 
     updateSelectedCounter();
 }
 
 /* ========================================================
-   8. FUNÇÕES DE AÇÃO DE PDF E SALVAMENTO
+   8. PDF E SALVAMENTO
    ======================================================== */
 async function handlePdf() {
     if (!PDFService || typeof PDFService.generateChecklistPDF !== 'function') {
@@ -1315,36 +1168,29 @@ async function handlePdf() {
         showNotification("Erro: Motor de PDF não carregado. Recarregue a página.", "error");
         return;
     }
-    
+
     showNotification("Gerando PDF unificado...", "info");
     try {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         const documentosTextos = collectCheckedDocuments();
-        
+
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
-        
-        const socioData = {
-            ocupacao: document.getElementById('socio-ocupacao')?.value || '',
-            profissao: document.getElementById('socio-profissao')?.value || '',
-            estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-            ganhos: document.getElementById('socio-ganhos')?.value || '',
-            fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
-        };
-        
+
         if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
         addExpensesToPdfData(documentosTextos, gastos);
-        
+
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            demandasAdicionais: demandasAdicionaisLocais 
+            socioData: getSocioDataFromForm(), // agora também vai para o PDF
+            demandasAdicionais: demandasAdicionaisLocais
         };
-        
-        const resultado = PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+
+        const resultado = await PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
         if (resultado) {
             showNotification("PDF emitido com sucesso!");
             await handleSave(false);
@@ -1360,38 +1206,20 @@ function addReuToPdfData(documentosTextos, reu) {
     if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `    • Nome: ${reu.nome}` });
     if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `    • CPF: ${reu.cpf}` });
     if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `    • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
-    
-    let ocupacao = reu.ocupacao;
-    if (reu.ocupacaoNaoSei) ocupacao = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-ocupacao', text: `    • Ocupação do Réu: ${ocupacao || 'Não informado'}` });
-    
-    let profissao = reu.profissao;
-    if (reu.profissaoNaoSei) profissao = 'Não informado (Não soube informar)';
-    if (profissao && profissao !== '' && !reu.profissaoNaoSei) {
-        documentosTextos.push({ id: 'reu-prof', text: `    • Profissão do Réu: ${profissao}` });
-    }
-    
-    let estadoCivil = reu.estadoCivil;
-    if (reu.estadoCivilNaoSei) estadoCivil = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-civil', text: `    • Estado Civil do Réu: ${estadoCivil || 'Não informado'}` });
-    
-    let ganhos = reu.ganhos;
-    if (reu.ganhosNaoSei) ganhos = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `    • Ganhos Líquidos do Réu: ${ganhos || 'Não informado'}` });
-    
-    if (reu.fonteRenda) {
-        documentosTextos.push({ id: 'reu-fonte', text: `    • Fonte de Renda do Réu: ${reu.fonteRenda}` });
-    }
+
+    const naoSei = 'Não informado (Não soube informar)';
+    documentosTextos.push({ id: 'reu-ocupacao', text: `    • Ocupação do Réu: ${(reu.ocupacaoNaoSei ? naoSei : reu.ocupacao) || 'Não informado'}` });
+    if (reu.profissao && !reu.profissaoNaoSei) documentosTextos.push({ id: 'reu-prof', text: `    • Profissão do Réu: ${reu.profissao}` });
+    documentosTextos.push({ id: 'reu-civil', text: `    • Estado Civil do Réu: ${(reu.estadoCivilNaoSei ? naoSei : reu.estadoCivil) || 'Não informado'}` });
+    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `    • Ganhos Líquidos do Réu: ${(reu.ganhosNaoSei ? naoSei : reu.ganhos) || 'Não informado'}` });
+    if (reu.fonteRenda) documentosTextos.push({ id: 'reu-fonte', text: `    • Fonte de Renda do Réu: ${reu.fonteRenda}` });
 }
 
 function addExpensesToPdfData(documentosTextos, gastos) {
     if (!gastos.checkExibirGastos) return;
 
     const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
-    const limpaMoeda = (v) => {
-        if (!v || v === 'R$ 0,00') return 0;
-        return parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    };
+    const limpaMoeda = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
 
     documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS (COM RATEIO):' });
     documentosTextos.push({ id: 'gastos-moradores', text: `    • Quantidade de pessoas na residência: ${qtdMoradores}` });
@@ -1434,35 +1262,27 @@ function collectCheckedDocuments() {
 
 async function handleSave(closeModal = true) {
     ensureAssistedId();
-    
+
     if (!currentAssistedId || !currentPautaId || !db) {
         showNotification("Erro: assistido não identificado. Feche e reabra o modal.", "error");
         return;
     }
-    
+
     const container = getEl('checklist-container');
     const checkedIds = container ? Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id) : [];
-    
-    const socioData = {
-        ocupacao: document.getElementById('socio-ocupacao')?.value || '',
-        profissao: document.getElementById('socio-profissao')?.value || '',
-        estadoCivil: document.getElementById('socio-estado-civil')?.value || '',
-        ganhos: document.getElementById('socio-ganhos')?.value || '',
-        fonteRenda: document.querySelector('input[name="socio-fonte-renda"]:checked')?.value || ''
-    };
-    
+
     const payload = {
         documentChecklist: {
             action: currentChecklistAction,
-            checkedIds: checkedIds,
+            checkedIds,
             docTypes: getDocTypesFromForm(),
             reuData: getReuDataFromForm(),
             expenseData: getExpenseDataFromForm(),
-            socioData: socioData
+            socioData: getSocioDataFromForm()
         },
         demandas: {
             quantidade: demandasAdicionaisLocais.length,
-            descricoes: demandasAdicionaisLocais 
+            descricoes: demandasAdicionaisLocais
         },
         documentState: 'saved',
         selectedAction: currentChecklistAction ? documentsData[currentChecklistAction]?.title : null,
@@ -1486,7 +1306,7 @@ async function handleSave(closeModal = true) {
 async function handleReset() {
     if (!confirm("Deseja apagar as qualificações e o checklist atual?")) return;
     try {
-        await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), { 
+        await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
             documentChecklist: null,
             documentState: null,
             selectedAction: null,
@@ -1495,7 +1315,7 @@ async function handleReset() {
         demandasAdicionaisLocais = [];
         window._lastOpenedAssistedId = null;
         currentChecklistAction = null;
-        handleBack(); 
+        handleBack();
         showNotification("Triagem limpa.", "info");
     } catch (e) {
         showNotification("Erro ao limpar", "error");
@@ -1504,10 +1324,10 @@ async function handleReset() {
 
 function handleBack() {
     getEl('document-checklist-view')?.classList.add('hidden');
-    getEl('document-checklist-view-header-actions')?.classList.add('hidden'); 
+    getEl('document-checklist-view-header-actions')?.classList.add('hidden');
     getEl('checklist-search-container')?.classList.add('hidden');
-    getEl('address-editor-container')?.classList.add('hidden'); 
-    getEl('document-action-selection')?.classList.remove('hidden'); 
+    getEl('address-editor-container')?.classList.add('hidden');
+    getEl('document-action-selection')?.classList.remove('hidden');
 }
 
 function closeAssistedDetailsModal() {
@@ -1515,9 +1335,9 @@ function closeAssistedDetailsModal() {
     currentAssistedId = null;
     currentPautaId = null;
     currentChecklistAction = null;
-    window._lastOpenedAssistedId = null; 
+    window._lastOpenedAssistedId = null;
     demandasAdicionaisLocais = [];
-    handleBack(); 
+    handleBack();
 }
 
 /* ========================================================
@@ -1526,107 +1346,110 @@ function closeAssistedDetailsModal() {
 window.gerarTextoDespesas = () => {
     const g = getExpenseDataFromForm();
     const nomeAssistido = document.getElementById('assisted-details-name')?.textContent || 'O requerente';
-    const qtdMoradores = parseInt(g.quantidadeMoradores || 1);
+    const qtdMoradores = Math.max(1, parseInt(g.quantidadeMoradores || 1));
 
-    let gastosFamiliaHtml = '';
-    let gastosCriancaHtml = '';
-    let totalFamilia = 0;
-    let totalExclusivoCrianca = 0;
+    const limpaMoeda = (valStr) => (!valStr || valStr === 'R$ 0,00') ? 0 : (parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
 
-    const limpaMoeda = (valStr) => {
-        if (!valStr || valStr === 'R$ 0,00') return 0;
-        return parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0;
-    };
-
-    const formataMoeda = (valor) => {
-        return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor);
-    };
+    // formatCurrency já devolve "R$ 1.234,56": o texto não deve repetir o "R$"
+    const familiaHtml = [], familiaTxt = [];
+    const criancaHtml = [], criancaTxt = [];
+    let totalFamilia = 0, totalCrianca = 0;
 
     EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
         const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
             const cota = val / qtdMoradores;
             totalFamilia += cota;
-            gastosFamiliaHtml += `<li>${cat.label} (Total R$ ${formataMoeda(val)} / Cota: <b>R$ ${formataMoeda(cota)}</b>)</li>`;
+            familiaHtml.push(`<li>${cat.label} (total ${formatCurrency(val)}; cota: <b>${formatCurrency(cota)}</b>)</li>`);
+            familiaTxt.push(`• ${cat.label} (total ${formatCurrency(val)}; cota: ${formatCurrency(cota)})`);
         }
     });
 
     EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
         const val = limpaMoeda(g[cat.id]);
         if (val > 0) {
-            totalExclusivoCrianca += val;
-            gastosCriancaHtml += `<li>${cat.label} (Integral: <b>R$ ${formataMoeda(val)}</b>)</li>`;
+            totalCrianca += val;
+            criancaHtml.push(`<li>${cat.label} (integral: <b>${formatCurrency(val)}</b>)</li>`);
+            criancaTxt.push(`• ${cat.label} (integral: ${formatCurrency(val)})`);
         }
     });
 
-    const totalFinal = totalFamilia + totalExclusivoCrianca;
-
+    const totalFinal = totalFamilia + totalCrianca;
     if (totalFinal === 0) {
         showNotification("Atenção: Os valores de despesa estão zerados. Preencha a planilha.", "warning");
         return;
     }
 
-    const textoGerado = `
-Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a **R$ ${formataMoeda(totalFinal)}**.
+    const intro = `Em relação às despesas mensais para a manutenção e subsistência de ${nomeAssistido}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a`;
+    const explica = `O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${qtdMoradores} ${qtdMoradores === 1 ? 'pessoa' : 'pessoas'}), divididas da seguinte forma:`;
 
-O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${qtdMoradores} pessoas), divididas da seguinte forma:
+    const html = `
+        <p class="mb-3">${intro} <b>${formatCurrency(totalFinal)}</b>.</p>
+        <p class="mb-3">${explica}</p>
+        <p class="font-bold mt-4">Cota-parte de despesas residenciais e alimentares (rateio de 1/${qtdMoradores}):</p>
+        <ul class="list-disc pl-5 my-2 space-y-1">${familiaHtml.join('') || '<li>Nenhuma despesa informada nesta categoria.</li>'}</ul>
+        <p class="italic text-slate-500">Subtotal proporcional: ${formatCurrency(totalFamilia)}</p>
+        <p class="font-bold mt-4">Despesas exclusivas (100% da necessidade):</p>
+        <ul class="list-disc pl-5 my-2 space-y-1">${criancaHtml.join('') || '<li>Nenhuma despesa informada nesta categoria.</li>'}</ul>
+        <p class="italic text-slate-500">Subtotal exclusivo: ${formatCurrency(totalCrianca)}</p>`;
 
-**Cota-parte de Despesas Residenciais e Alimentares (Rateio de 1/${qtdMoradores}):**
-<ul>
-${gastosFamiliaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
-</ul>
-<i>Subtotal proporcional: R$ ${formataMoeda(totalFamilia)}</i>
+    const txt = [
+        `${intro} ${formatCurrency(totalFinal)}.`,
+        '',
+        explica,
+        '',
+        `Cota-parte de despesas residenciais e alimentares (rateio de 1/${qtdMoradores}):`,
+        ...(familiaTxt.length ? familiaTxt : ['• Nenhuma despesa informada nesta categoria.']),
+        `Subtotal proporcional: ${formatCurrency(totalFamilia)}`,
+        '',
+        'Despesas exclusivas (100% da necessidade):',
+        ...(criancaTxt.length ? criancaTxt : ['• Nenhuma despesa informada nesta categoria.']),
+        `Subtotal exclusivo: ${formatCurrency(totalCrianca)}`
+    ].join('\n');
 
-**Despesas Exclusivas (100% da necessidade):**
-<ul>
-${gastosCriancaHtml || '<li>Nenhuma despesa informada nesta categoria.</li>'}
-</ul>
-<i>Subtotal exclusivo: R$ ${formataMoeda(totalExclusivoCrianca)}</i>
-    `.trim();
-
-    exibirModalCopia(textoGerado);
+    exibirModalCopia(html, txt, totalFinal);
 };
 
-function exibirModalCopia(textoHtml) {
-    const existing = document.getElementById('modal-texto-peticao');
-    if (existing) existing.remove();
+function exibirModalCopia(textoHtml, textoPuro, total) {
+    document.getElementById('modal-texto-peticao')?.remove();
 
     const div = document.createElement('div');
     div.id = "modal-texto-peticao";
     div.className = "fixed inset-0 bg-slate-900/80 z-[100] flex items-center justify-center p-4 backdrop-blur-sm";
     div.innerHTML = `
-        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col">
-            <div class="bg-indigo-600 p-4 text-white flex justify-between items-center">
-                <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
-                    <span>📑</span> Texto Base para Petição
-                </h3>
-                <button onclick="document.getElementById('modal-texto-peticao').remove()" class="text-indigo-200 hover:text-white text-2xl font-bold">&times;</button>
-            </div>
-            
-            <div class="p-6">
-                <p class="text-[10px] uppercase font-black text-slate-400 mb-2">Trecho Gerado Pelo Sistema</p>
-                
-                <div id="caixa-texto-copia" class="bg-slate-50 border border-slate-200 rounded-lg p-4 text-sm text-slate-700 leading-relaxed font-serif max-h-64 overflow-y-auto">
-                    ${textoHtml}
+        <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white flex justify-between items-center shrink-0">
+                <div>
+                    <h3 class="font-black uppercase tracking-wide text-sm flex items-center gap-2"><span>📑</span> Texto base para petição</h3>
+                    <p class="text-[11px] text-indigo-100 mt-0.5">Necessidade mensal apurada: <b>${formatCurrency(total)}</b></p>
                 </div>
-
-                <button id="btn-copiar-texto-peticao" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 rounded-xl uppercase tracking-widest text-xs shadow-lg transition-all active:scale-95 flex justify-center items-center gap-2">
-                    <span>📋</span> Copiar para a Área de Transferência
+                <button id="fechar-modal-peticao" class="text-indigo-100 hover:text-white text-2xl font-bold leading-none" aria-label="Fechar">&times;</button>
+            </div>
+            <div class="p-5 overflow-y-auto">
+                <p class="text-[10px] uppercase font-black text-slate-400 mb-2">Trecho gerado pelo sistema (revise antes de usar)</p>
+                <div class="bg-slate-50 border border-slate-200 rounded-xl p-4 text-sm text-slate-700 leading-relaxed font-serif">${textoHtml}</div>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-slate-50 flex gap-2 shrink-0">
+                <button id="btn-fechar-peticao" class="px-4 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl text-xs uppercase hover:bg-slate-100 transition">Fechar</button>
+                <button id="btn-copiar-texto-peticao" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl uppercase tracking-wider text-xs shadow-lg transition active:scale-95 flex justify-center items-center gap-2">
+                    <span>📋</span> Copiar texto
                 </button>
             </div>
-        </div>
-    `;
-
+        </div>`;
     document.body.appendChild(div);
 
+    const fechar = () => div.remove();
+    document.getElementById('fechar-modal-peticao').onclick = fechar;
+    document.getElementById('btn-fechar-peticao').onclick = fechar;
+    div.addEventListener('click', (e) => { if (e.target === div) fechar(); });
+
     document.getElementById('btn-copiar-texto-peticao').onclick = () => {
-        const textoPuro = document.getElementById('caixa-texto-copia').innerText;
         navigator.clipboard.writeText(textoPuro).then(() => {
             const btn = document.getElementById('btn-copiar-texto-peticao');
-            btn.innerHTML = "<span>✅</span> COPIADO COM SUCESSO!";
+            btn.innerHTML = "<span>✅</span> Copiado!";
             btn.classList.replace('bg-emerald-600', 'bg-slate-800');
-            setTimeout(() => document.getElementById('modal-texto-peticao').remove(), 1500);
-        });
+            setTimeout(fechar, 1200);
+        }).catch(() => showNotification("Não foi possível copiar. Selecione o texto manualmente.", "error"));
     };
 }
 
@@ -1636,25 +1459,21 @@ function exibirModalCopia(textoHtml) {
 export function setupDetailsModal(config) {
     db = config.db;
     getEl('close-assisted-details-modal-btn').onclick = closeAssistedDetailsModal;
-    
     getEl('back-to-action-selection-btn').onclick = handleBack;
-    
     getEl('save-checklist-btn').onclick = () => handleSave(true);
-    getEl('print-checklist-btn').onclick = handlePdf; 
+    getEl('print-checklist-btn').onclick = handlePdf;
     getEl('reset-checklist-btn').onclick = handleReset;
-    
+
     const btnCaptacao = getEl('btn-gerar-captacao');
-    if (btnCaptacao) {
-        btnCaptacao.onclick = gerarLinkCaptacao;
-    }
-    
+    if (btnCaptacao) btnCaptacao.onclick = gerarLinkCaptacao;
+
     const searchInput = getEl('checklist-search');
     if (searchInput) {
         searchInput.oninput = (e) => {
             const term = normalizeLocal(e.target.value);
             document.querySelectorAll('label.checklist-row').forEach(row => {
-                const parentDiv = row.closest('div.flex.flex-col.border-b'); 
-                if (parentDiv) parentDiv.style.display = normalizeLocal(row.textContent).includes(term) ? 'block' : 'none';
+                const parentDiv = row.closest('div.flex.flex-col.border-b');
+                if (parentDiv) parentDiv.style.display = normalizeLocal(row.textContent).includes(term) ? 'flex' : 'none';
             });
         };
     }
@@ -1665,21 +1484,20 @@ export async function openDetailsModal(config) {
     currentPautaId = config.pautaId;
     allAssisted = config.allAssisted || [];
     db = config.db || window.app?.db;
-    
+
     _backupAssistedId = currentAssistedId;
     _backupPautaId = currentPautaId;
     window._lastOpenedAssistedId = currentAssistedId;
     window._lastOpenedPautaId = currentPautaId;
-    
+
     try {
         const docSnap = await getDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId));
         if (docSnap.exists()) {
             const data = docSnap.data();
-            
+
             const textoAssunto = data.subject || data.materia || data.assunto || '';
             if (!data.documentChecklist?.action && textoAssunto) {
                 const assuntoDetectado = descobrirAssuntoInteligente(textoAssunto);
-                
                 if (assuntoDetectado) {
                     await updateDoc(doc(db, "pautas", currentPautaId, "attendances", currentAssistedId), {
                         "documentChecklist.action": assuntoDetectado,
@@ -1701,14 +1519,12 @@ export async function openDetailsModal(config) {
             else allAssisted.push({ id: currentAssistedId, ...data });
         }
     } catch (e) { console.error(e); }
-    
+
     const assisted = allAssisted.find(a => a.id === currentAssistedId);
     if (!assisted) return;
-    
+
     const nameHeader = getEl('assisted-details-name');
-    if (nameHeader) {
-        nameHeader.textContent = assisted.name || 'Sem Nome';
-    }
+    if (nameHeader) nameHeader.textContent = assisted.name || 'Sem Nome';
 
     const cpfEl = getEl('assisted-details-cpf');
     if (cpfEl) cpfEl.textContent = assisted.cpf ? `CPF: ${assisted.cpf}` : '';
@@ -1723,7 +1539,7 @@ export async function openDetailsModal(config) {
     const checklistView = getEl('document-checklist-view');
 
     window._lastOpenedAssistedId = currentAssistedId;
-    
+
     if (assisted.documentChecklist && assisted.documentChecklist.action) {
         selectionArea?.classList.add('hidden');
         checklistView?.classList.remove('hidden');
@@ -1733,7 +1549,7 @@ export async function openDetailsModal(config) {
         selectionArea?.classList.remove('hidden');
         renderSubjectSelection(selectionArea);
     }
-    
+
     getEl('assisted-details-modal')?.classList.remove('hidden');
 }
 
@@ -1741,23 +1557,33 @@ function renderSubjectSelection(selectionArea) {
     if (!selectionArea) return;
     selectionArea.innerHTML = `
         <div class="p-2 sm:p-4">
-            <div class="mb-4"><input type="text" id="subject-search-input" placeholder="🔍 Buscar assunto no SIGEP..." class="w-full p-3 border-2 border-gray-200 rounded-xl text-sm outline-none"></div>
-            <p class="text-gray-500 mb-4 text-xs sm:text-sm text-center font-bold uppercase tracking-widest opacity-60">Selecione o Assunto (Ou digite para filtrar)</p>
+            <div class="relative mb-4">
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <input type="text" id="subject-search-input" placeholder="Buscar assunto..." class="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 transition">
+            </div>
+            <p class="text-slate-500 mb-3 text-xs text-center font-bold uppercase tracking-widest opacity-70">Selecione o assunto ou digite para filtrar</p>
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 sm:gap-3 action-grid max-h-[50vh] overflow-y-auto p-1"></div>
+            <p id="subject-empty" class="hidden text-center text-sm text-slate-400 py-8">Nenhum assunto encontrado. Tente outra palavra.</p>
         </div>
     `;
-    
+
     const grid = selectionArea.querySelector('.action-grid');
     const searchInput = selectionArea.querySelector('#subject-search-input');
+    const emptyMsg = selectionArea.querySelector('#subject-empty');
     const subjectsList = Object.keys(documentsData).map(k => ({ key: k, title: documentsData[k].title }));
-    
+
     function renderFilteredSubjects(filterText = '') {
         grid.innerHTML = '';
         const filtered = subjectsList.filter(s => normalizeLocal(s.title).includes(normalizeLocal(filterText)));
-        filtered.forEach(({key, title}) => {
+        emptyMsg.classList.toggle('hidden', filtered.length > 0);
+
+        filtered.forEach(({ key, title }) => {
             const btn = document.createElement('button');
-            btn.className = "text-left p-3 bg-white border-2 border-gray-100 hover:border-green-500 rounded-xl transition-all shadow-sm text-xs sm:text-sm uppercase font-bold text-gray-700 tracking-tighter";
-            btn.textContent = title;
+            btn.type = 'button';
+            btn.className = "flex items-center gap-3 text-left p-3 bg-white border-2 border-slate-100 hover:border-emerald-400 hover:bg-emerald-50/50 rounded-xl transition-all shadow-sm";
+            btn.innerHTML = `
+                <span class="w-10 h-10 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-xl">${ICONES_ACAO[key] || '📁'}</span>
+                <span class="text-xs sm:text-sm font-bold text-slate-700 leading-tight">${title}</span>`;
             btn.onclick = async (e) => {
                 e.preventDefault();
                 try {
@@ -1785,4 +1611,3 @@ window.documentsData = documentsData;
 window.EXPENSE_CATEGORIES_COMUNS = EXPENSE_CATEGORIES_COMUNS;
 window.EXPENSE_CATEGORIES_EXCLUSIVAS = EXPENSE_CATEGORIES_EXCLUSIVAS;
 window.gerarLinkCaptacao = gerarLinkCaptacao;
-window.gerarTextoDespesas = window.gerarTextoDespesas;
