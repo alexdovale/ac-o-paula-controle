@@ -125,7 +125,7 @@ const OCUPACOES = [
 
 const OCUPACOES_COM_PROFISSAO = ['Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo'];
 const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a)'];
-const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
+//const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
 
 const ICONES_ACAO = {
     obrigacao_fazer: '🏥', declaratoria_nulidade: '📜', indenizacao_danos: '💥', revisional_debito: '🏦',
