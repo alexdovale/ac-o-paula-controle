@@ -63,6 +63,103 @@ const loadImageBase64 = async (url) => {
     }
 };
 
+// ---------- Gráficos desenhados direto no PDF (sem biblioteca externa) ----------
+// Tudo é feito com retângulos e textos do jsPDF: barras horizontais, colunas agrupadas e barra empilhada.
+const desenharMarcaDagua = (doc, texto) => {
+    if (!texto) return;
+    try {
+        const W = doc.internal.pageSize.getWidth();
+        const H = doc.internal.pageSize.getHeight();
+        let t = String(texto).toUpperCase();
+        if (t.length > 32) t = t.slice(0, 31) + '…';
+        let tamanho = 54;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(tamanho);
+        while (doc.getTextWidth(t) > W * 0.78 && tamanho > 20) { tamanho -= 4; doc.setFontSize(tamanho); }
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({ opacity: 0.06 }));
+        doc.setTextColor(22, 163, 74);
+        doc.text(t, W / 2, H / 2, { align: 'center', angle: 35 });
+        doc.restoreGraphicsState();
+    } catch (e) { /* marca d'água é opcional */ }
+};
+
+const retanguloArred = (doc, x, y, w, h, r) => {
+    if (w < 4) doc.rect(x, y, w, h, 'F');
+    else doc.roundedRect(x, y, w, h, Math.min(r, w / 2, h / 2), Math.min(r, w / 2, h / 2), 'F');
+};
+
+// Barras horizontais: itens = [{ label, valor, rotulo?, cor? }]
+const desenharBarrasH = (doc, x, y, w, itens, cor = [22, 163, 74]) => {
+    const labelW = 130, valW = 70, rowH = 19, barH = 10;
+    const barW = w - labelW - valW;
+    const maxV = Math.max(1, ...itens.map(i => i.valor));
+    itens.forEach((it, i) => {
+        const ry = y + i * rowH;
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8.5);
+        doc.setTextColor(60, 60, 60);
+        doc.text(doc.splitTextToSize(String(it.label), labelW - 8)[0], x, ry + 8);
+        doc.setFillColor(241, 245, 249);
+        retanguloArred(doc, x + labelW, ry, barW, barH, 2);
+        const bw = it.valor > 0 ? Math.max(2, (it.valor / maxV) * barW) : 0;
+        if (bw > 0) { doc.setFillColor(...(it.cor || cor)); retanguloArred(doc, x + labelW, ry, bw, barH, 2); }
+        doc.setFont("helvetica", "bold");
+        doc.setTextColor(30, 41, 59);
+        doc.text(String(it.rotulo ?? it.valor), x + labelW + barW + 6, ry + 8);
+    });
+    return y + itens.length * rowH + 4;
+};
+
+// Colunas agrupadas: series = [{ nome, cor, valores[] }]
+const desenharColunas = (doc, x, y, w, h, categorias, series) => {
+    const eixo = 22;
+    const maxV = Math.max(1, ...series.flatMap(s => s.valores));
+    const baseY = y + h;
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setLineWidth(0.4);
+    for (let i = 0; i <= 4; i++) {
+        const gy = baseY - (h * i / 4);
+        doc.setDrawColor(226, 232, 240);
+        doc.line(x + eixo, gy, x + w, gy);
+        doc.setTextColor(148, 163, 184);
+        doc.text(String(Math.round(maxV * i / 4)), x + eixo - 4, gy + 2.5, { align: 'right' });
+    }
+    const gW = (w - eixo) / categorias.length;
+    const bW = Math.min(16, (gW * 0.75) / series.length);
+    categorias.forEach((cat, ci) => {
+        const gx = x + eixo + ci * gW + (gW - bW * series.length) / 2;
+        series.forEach((s, si) => {
+            const v = s.valores[ci] || 0;
+            const bh = (v / maxV) * h;
+            if (bh > 0) {
+                doc.setFillColor(...s.cor);
+                doc.rect(gx + si * bW, baseY - bh, bW - 1, bh, 'F');
+                if (gW >= 14) {
+                    doc.setTextColor(60, 60, 60);
+                    doc.text(String(v), gx + si * bW + (bW - 1) / 2, baseY - bh - 2, { align: 'center' });
+                }
+            }
+        });
+        if (categorias.length <= 16 || ci % 2 === 0) {
+            doc.setTextColor(100, 116, 139);
+            doc.text(String(cat), x + eixo + ci * gW + gW / 2, baseY + 10, { align: 'center' });
+        }
+    });
+    // legenda
+    let lx = x + eixo;
+    series.forEach(s => {
+        doc.setFillColor(...s.cor);
+        doc.rect(lx, y - 14, 8, 8, 'F');
+        doc.setFontSize(8);
+        doc.setTextColor(60, 60, 60);
+        doc.text(s.nome, lx + 12, y - 7);
+        lx += 22 + doc.getTextWidth(s.nome);
+    });
+    return baseY + 20;
+};
+
 export const StatisticsService = {
     getTimeDifferenceInMinutes(startTimeISO, endTimeISO) {
         if (!startTimeISO || !endTimeISO) return null;
@@ -106,6 +203,7 @@ export const StatisticsService = {
     },
 
     async novoPDF(titulo, pautaName, totalGeral) {
+        this._marca = pautaName; // usada na marca d'água
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF({ orientation: 'p', unit: 'pt', format: 'a4' });
         const pageWidth = doc.internal.pageSize.getWidth();
@@ -144,6 +242,7 @@ export const StatisticsService = {
         const total = doc.internal.getNumberOfPages();
         for (let i = 1; i <= total; i++) {
             doc.setPage(i);
+            desenharMarcaDagua(doc, this._marca);
             doc.setFontSize(8);
             doc.setTextColor(150);
             doc.setFont("helvetica", "normal");
@@ -354,6 +453,7 @@ export const StatisticsService = {
                     <button id="export-equipes-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 transition-colors">👥 Por equipe</button>
                     <button id="export-grupo-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">📋 Só grupos</button>
                     <button id="export-stats-detalhado-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-orange-500 text-white hover:bg-orange-600 transition-colors">📖 Detalhado</button>
+                    <button id="export-stats-graficos-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors">📈 Com gráficos</button>
                 </div>
                 <details class="mt-3">
                     <summary class="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Escolher o que entra no Resumo geral</summary>
@@ -638,6 +738,19 @@ export const StatisticsService = {
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
         }));
+        comLoading('export-stats-graficos-btn', () => this.exportGraficosPDF(pautaName, {
+            atendidosCount: atendidos.length,
+            faltososCount: faltosos.length,
+            comparecimento,
+            avgTimeDirect,
+            totalDemandas: totalDemandasGeral,
+            grupos: sortedGroups.filter(g => g.total > 0).map(g => ({ nome: g.groupName, total: g.total })),
+            horarios: [...new Set([...sortedTimes, ...sortedTimesFaltosos])].sort(),
+            atendidosPorHorario: statsByTime,
+            faltososPorHorario: statsByTimeFaltosos,
+            assuntos: assuntosOrdenados.slice(0, 8).map(([nome, dd]) => ({ nome, total: dd.total })),
+            ranking: ranking.filter(r => r.atendimentos > 0).slice(0, 10)
+        }));
         comLoading('export-equipes-pdf-btn', () => this.exportEquipesPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-grupo-pdf-btn', () => this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-stats-detalhado-btn', () => this.exportDetailedStatisticsPDF(pautaName, { sortedGroups, totalGeral }));
@@ -752,6 +865,109 @@ export const StatisticsService = {
 
         this.rodapePDF(doc, margin, pageHeight);
         doc.save(`detalhado_${pautaName.replace(/\s+/g, '_')}.pdf`);
+    },
+
+    // Relatório visual: indicadores + gráficos desenhados no próprio PDF
+    async exportGraficosPDF(pautaName, d) {
+        const { doc, yPos: y0, margin, pageWidth, pageHeight } = await this.novoPDF("RELATÓRIO VISUAL COM GRÁFICOS", pautaName);
+        let y = y0;
+        const largura = pageWidth - margin * 2;
+
+        const garantir = (h) => { if (y + h > pageHeight - 50) { doc.addPage(); y = margin + 20; } };
+        const titulo = (t, sub) => {
+            garantir(70);
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(43, 58, 85);
+            doc.text(t, margin, y);
+            y += 14;
+            if (sub) {
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.setTextColor(120, 130, 145);
+                doc.text(sub, margin, y);
+                y += 14;
+            }
+            y += 4;
+        };
+
+        // --- indicadores ---
+        const kpis = [
+            { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74], bg: [240, 253, 244] },
+            { v: String(d.faltososCount), l: 'Faltosos', c: [220, 38, 38], bg: [254, 242, 242] },
+            { v: d.comparecimento + '%', l: 'Comparecimento', c: [79, 70, 229], bg: [238, 242, 255] },
+            { v: d.avgTimeDirect + ' min', l: 'Tempo médio', c: [37, 99, 235], bg: [239, 246, 255] }
+        ];
+        const kw = (largura - 9 * (kpis.length - 1)) / kpis.length;
+        kpis.forEach((k, i) => {
+            const x = margin + i * (kw + 9);
+            doc.setFillColor(...k.bg);
+            doc.roundedRect(x, y, kw, 52, 5, 5, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(20);
+            doc.setTextColor(...k.c);
+            doc.text(k.v, x + kw / 2, y + 26, { align: 'center' });
+            doc.setFontSize(8.5);
+            doc.setTextColor(60, 60, 60);
+            doc.text(k.l, x + kw / 2, y + 42, { align: 'center' });
+        });
+        y += 72;
+
+        // --- comparecimento (barra empilhada) ---
+        const total = d.atendidosCount + d.faltososCount;
+        if (total > 0) {
+            titulo('Comparecimento', `${d.atendidosCount} atendidos e ${d.faltososCount} faltosos de ${total} agendados`);
+            const wAt = largura * d.atendidosCount / total;
+            doc.setFillColor(22, 163, 74);
+            doc.rect(margin, y, wAt, 18, 'F');
+            doc.setFillColor(220, 38, 38);
+            doc.rect(margin + wAt, y, largura - wAt, 18, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(9);
+            doc.setTextColor(255, 255, 255);
+            if (wAt > 40) doc.text(`${pctF(d.atendidosCount, total)}%`, margin + wAt / 2, y + 12.5, { align: 'center' });
+            if (largura - wAt > 40) doc.text(`${pctF(d.faltososCount, total)}%`, margin + wAt + (largura - wAt) / 2, y + 12.5, { align: 'center' });
+            y += 38;
+        }
+
+        // --- equipes ---
+        if (d.grupos.length > 0) {
+            const itens = d.grupos.slice(0, 12).map(g => ({ label: g.nome, valor: g.total, rotulo: `${g.total} (${pctF(g.total, d.atendidosCount)}%)` }));
+            garantir(itens.length * 19 + 50);
+            titulo('Atendimentos por equipe', 'Barra proporcional à equipe com mais atendimentos; o rótulo mostra quantidade e % do total');
+            y = desenharBarrasH(doc, margin, y, largura, itens) + 14;
+        }
+
+        // --- horários ---
+        if (d.horarios.length > 0) {
+            garantir(210);
+            titulo('Atendidos e faltosos por horário agendado');
+            y += 10;
+            y = desenharColunas(doc, margin, y, largura, 120, d.horarios, [
+                { nome: 'Atendidos', cor: [22, 163, 74], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) },
+                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.faltososPorHorario[h] || 0) }
+            ]) + 14;
+        }
+
+        // --- assuntos ---
+        if (d.assuntos.length > 0) {
+            const totalDem = d.totalDemandas;
+            const itens = d.assuntos.map(a => ({ label: a.nome, valor: a.total, cor: [249, 115, 22], rotulo: `${a.total} (${pctF(a.total, totalDem)}%)` }));
+            garantir(itens.length * 19 + 50);
+            titulo('Principais assuntos', `Top ${itens.length} de ${totalDem} demandas registradas`);
+            y = desenharBarrasH(doc, margin, y, largura, itens) + 14;
+        }
+
+        // --- ranking individual ---
+        if (d.ranking.length > 0) {
+            const itens = d.ranking.map(r => ({ label: r.nome, valor: r.atendimentos, cor: [59, 130, 246], rotulo: `${r.atendimentos} (${pctF(r.atendimentos, d.atendidosCount)}%)` }));
+            garantir(itens.length * 19 + 50);
+            titulo('Ranking de atendimentos por colaborador', `Top ${itens.length}; porcentagem sobre o total de atendidos`);
+            y = desenharBarrasH(doc, margin, y, largura, itens) + 6;
+        }
+
+        this.rodapePDF(doc, margin, pageHeight);
+        doc.save(`graficos_${pautaName.replace(/\s+/g, '_')}.pdf`);
     },
 
     async exportStatisticsToPDF(pautaName, s) {
