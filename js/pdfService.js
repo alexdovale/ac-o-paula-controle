@@ -24,6 +24,27 @@ const ensureJsPDF = async () => {
     }
 };
 
+// QR code vetorial (desenhado com quadrados, sem imagem) - biblioteca carregada sob demanda
+const ensureQRCode = async () => {
+    if (typeof window.qrcode === 'undefined') {
+        await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js");
+    }
+};
+
+const drawQR = (doc, texto, x, y, tamanho) => {
+    const qr = window.qrcode(0, 'M');
+    qr.addData(String(texto));
+    qr.make();
+    const n = qr.getModuleCount();
+    const cell = tamanho / n;
+    doc.setFillColor(0, 0, 0);
+    for (let r = 0; r < n; r++) {
+        for (let c = 0; c < n; c++) {
+            if (qr.isDark(r, c)) doc.rect(x + c * cell, y + r * cell, cell + 0.15, cell + 0.15, 'F');
+        }
+    }
+};
+
 // Pausa assíncrona para liberar o navegador e renderizar a UI
 const yieldThread = () => new Promise(resolve => setTimeout(resolve, 50));
 
@@ -207,13 +228,34 @@ const drawKpis = (doc, y, items, margin = 40) => {
     return y + h + 16;
 };
 
-// Rodapé em TODAS as páginas, com "Página X de Y"
-const applyFooters = (doc) => {
+// Marca d'água diagonal discreta (nome da pauta)
+const drawWatermark = (doc, texto) => {
+    if (!texto || !PDFService.options.marcaDagua) return;
+    try {
+        const W = doc.internal.pageSize.getWidth();
+        const H = doc.internal.pageSize.getHeight();
+        let t = String(texto).toUpperCase();
+        if (t.length > 32) t = t.slice(0, 31) + '…';
+        let tamanho = 54;
+        doc.setFont("helvetica", "bold");
+        doc.setFontSize(tamanho);
+        while (doc.getTextWidth(t) > W * 0.78 && tamanho > 20) { tamanho -= 4; doc.setFontSize(tamanho); }
+        doc.saveGraphicsState();
+        doc.setGState(new doc.GState({ opacity: 0.06 }));
+        doc.setTextColor(...C.verde);
+        doc.text(t, W / 2, H / 2, { align: 'center', angle: 35 });
+        doc.restoreGraphicsState();
+    } catch (e) { /* opcional */ }
+};
+
+// Rodapé em TODAS as páginas, com "Página X de Y" (+ marca d'água opcional)
+const applyFooters = (doc, marca = '') => {
     const total = doc.internal.getNumberOfPages();
     const W = doc.internal.pageSize.getWidth();
     const H = doc.internal.pageSize.getHeight();
     for (let i = 1; i <= total; i++) {
         doc.setPage(i);
+        drawWatermark(doc, marca);
         doc.setDrawColor(...C.linha);
         doc.setLineWidth(0.5);
         doc.line(40, H - 28, W - 40, H - 28);
@@ -350,6 +392,9 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
 // PDF SERVICE
 // ========================================================
 export const PDFService = {
+
+    // Liga/desliga recursos: PDFService.options.marcaDagua = false; PDFService.options.qrCode = false;
+    options: { marcaDagua: true, qrCode: true },
 
     // Documento formal: layout original preservado
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
@@ -643,7 +688,7 @@ export const PDFService = {
             });
 
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
-            applyFooters(doc);
+            applyFooters(doc, pautaNome);
 
             doc.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
@@ -704,7 +749,7 @@ export const PDFService = {
                 }
             }));
 
-            applyFooters(doc);
+            applyFooters(doc, pautaNome);
             doc.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
@@ -825,7 +870,7 @@ export const PDFService = {
                 }
             }));
 
-            applyFooters(doc);
+            applyFooters(doc, pautaNome);
             doc.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
@@ -1041,6 +1086,33 @@ export const PDFService = {
                 if (socio.length > 0) {
                     section('PERFIL SOCIOECONÔMICO DO RÉU');
                     tabelaKV(socio);
+                }
+            }
+
+            // ---- Código de conferência (QR) ----
+            if (PDFService.options.qrCode) {
+                try {
+                    await ensureQRCode();
+                    const url = checklistData.qrUrl;
+                    const conteudo = url || `SIGEP | Checklist | ${assistedName} | ${actionTitle} | ${new Date().toLocaleString('pt-BR')}`;
+                    ensure(96);
+                    doc.setFillColor(...C.cinzaClaro);
+                    doc.roundedRect(m, y, contentW, 82, 5, 5, 'F');
+                    drawQR(doc, conteudo, m + 10, y + 9, 64);
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(10);
+                    doc.setTextColor(...C.texto);
+                    doc.text("Código de conferência", m + 88, y + 28);
+                    doc.setFont("helvetica", "normal");
+                    doc.setFontSize(8.5);
+                    doc.setTextColor(...C.cinza);
+                    const legenda = url
+                        ? "Aponta para o registro deste atendimento no SIGEP."
+                        : "Contém o nome do assistido, a ação e a data/hora de emissão deste checklist.";
+                    doc.text(doc.splitTextToSize(legenda, contentW - 100), m + 88, y + 42);
+                    y += 96;
+                } catch (e) {
+                    console.warn("QR code não gerado:", e);
                 }
             }
 
