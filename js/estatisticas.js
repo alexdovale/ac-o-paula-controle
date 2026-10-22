@@ -320,10 +320,9 @@ export const StatisticsService = {
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
 
-        // ---------- equipes e classificação operacional ----------
+        // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
         const nomeParaEquipe = {};
-        const cargoPorNome = {};
         const statsByGroup = {};
 
         const garantirGrupo = (g) => {
@@ -336,17 +335,12 @@ export const StatisticsService = {
             if (!nome) return;
             const grupo = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
             nomeParaEquipe[nome.toLowerCase()] = grupo;
-            cargoPorNome[nome.toLowerCase()] = col.cargo || 'Sem cargo';
             
             const g = garantirGrupo(grupo);
             if (!g.todosColaboradores.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
                 g.todosColaboradores.push({ nome, cargo: col.cargo || 'Sem cargo', id: col.id || ('col-' + slug(nome)) });
             }
         });
-
-        let totalOperacional = 0;
-        let totalDefensores = 0;
-        let totalServidores = 0;
 
         atendidos.forEach(a => {
             const raw = a.attendedBy || a.attendant;
@@ -364,20 +358,6 @@ export const StatisticsService = {
             const seguro = nome || 'Não informado';
             g.collaborators[seguro] = (g.collaborators[seguro] || 0) + 1;
             g.total++;
-            
-            // Separação operacional (Defensores vs Servidores) sem CRC e Coordenadores
-            const grupoLower = grupo.toLowerCase();
-            const isApoio = grupoLower.includes('crc') || grupoLower.includes('coordenadores');
-            
-            if (!isApoio && grupo.trim() !== '') {
-                totalOperacional++;
-                const cargoAtendente = cargoPorNome[nome.toLowerCase()] || '';
-                if (cargoAtendente.toLowerCase().includes('defensor')) {
-                    totalDefensores++;
-                } else {
-                    totalServidores++;
-                }
-            }
 
             g.atendimentos.push({
                 nome: a.name || 'Não informado',
@@ -559,7 +539,7 @@ export const StatisticsService = {
         const corEquipe = (nome) => CORES_EQUIPE[Math.max(0, sortedGroups.findIndex(g => g.groupName === nome)) % CORES_EQUIPE.length];
         const iniciaisDe = (nome) => (String(nome).split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join('') || '?').toUpperCase();
 
-        // Lista individual de todas as equipes (inclui atendentes que não estão na lista de membros)
+        // Lista individual de todas as equipes
         const individuais = [];
         sortedGroups.forEach(({ groupName, total, collaborators, todosColaboradores }) => {
             const conhecidos = new Set();
@@ -572,30 +552,9 @@ export const StatisticsService = {
             });
         });
 
-        // --- Visão GERAL: distribuição + cartões por equipe ---
         const gruposComAtend = sortedGroups.filter(g => g.total > 0);
-        
         const distribuicaoHTML = totalGeral > 0 ? `
             <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                <div class="flex items-baseline justify-between mb-3">
-                    <p class="text-xs font-bold text-slate-700">Produtividade Operacional (Sem CRC/Coordenadores)</p>
-                </div>
-                
-                <div class="flex flex-wrap gap-3 mb-5">
-                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Total Operacional</p>
-                        <p class="text-xl font-black text-slate-700">${totalOperacional}</p>
-                    </div>
-                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Defensores</p>
-                        <p class="text-xl font-black text-purple-700">${totalDefensores}</p>
-                    </div>
-                    <div class="flex-1 bg-white p-3 rounded-lg border border-slate-200 shadow-sm">
-                        <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">Servidores</p>
-                        <p class="text-xl font-black text-orange-700">${totalServidores}</p>
-                    </div>
-                </div>
-
                 <div class="flex items-baseline justify-between mb-2">
                     <p class="text-xs font-bold text-slate-700">Como os ${totalGeral} atendimentos se dividem entre as equipes</p>
                     <p class="text-[11px] text-slate-400">100% = todos os atendidos</p>
@@ -612,19 +571,11 @@ export const StatisticsService = {
                 </div>
             </div>` : '';
 
-        const groupsHTML = sortedGroups.map(({ groupName, total, todosColaboradores, collaborators }) => {
+        const groupsHTML = sortedGroups.map(({ groupName, total, todosColaboradores }) => {
             const gid = 'g-' + slug(groupName);
             const membros = this.sortCollaboratorsByRole(individuais.filter(i => i.equipe === groupName));
             const parteDoTotal = pctF(total, totalGeral);
             const mediaMembro = todosColaboradores.length > 0 ? (total / todosColaboradores.length).toFixed(1).replace('.', ',') : '-';
-
-            let defensoresGrupo = 0;
-            let servidoresGrupo = 0;
-            collaborators.forEach(c => {
-                const cargo = cargoPorNome[c.name.toLowerCase()] || '';
-                if (cargo.toLowerCase().includes('defensor')) defensoresGrupo += c.count;
-                else servidoresGrupo += c.count;
-            });
 
             const linhas = membros.map(({ nome, cargo, atendimentos }) => `
                 <div class="flex items-center gap-3 px-4 py-2 border-t border-slate-50 hover:bg-slate-50/60">
@@ -644,19 +595,16 @@ export const StatisticsService = {
             return `
                 <div class="border border-slate-200 rounded-xl overflow-hidden bg-white" data-group="${gid}">
                     <button type="button" class="group-toggle w-full text-left px-4 pt-3 pb-2.5 bg-slate-50 hover:bg-slate-100 transition-colors" data-target="${gid}" aria-expanded="true">
-                        <div class="flex flex-col gap-2">
-                            <div class="flex items-center gap-3">
-                                <span class="chev text-slate-400 transition-transform">▾</span>
-                                <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
-                                <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
-                                
-                                <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
-                                    <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
-                                    <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${defensoresGrupo} Def.</span>
-                                    <span class="bg-orange-100 text-orange-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${servidoresGrupo} Serv.</span>
-                                    <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
-                                </span>
-                            </div>
+                        <div class="flex items-center gap-3">
+                            <span class="chev text-slate-400 transition-transform">▾</span>
+                            <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
+                            <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
+                            <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
+                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
+                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
+                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${todosColaboradores.length} membro${todosColaboradores.length === 1 ? '' : 's'}</span>
+                                <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">média ${mediaMembro}/membro</span>
+                            </span>
                         </div>
                         <div class="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)}" style="width:${parteDoTotal}%"></div></div>
                     </button>
@@ -666,40 +614,61 @@ export const StatisticsService = {
                 </div>`;
         }).join('');
 
-        // --- Visão INDIVIDUAL: ranking de todos os colaboradores ---
-        const ranking = [...individuais].sort((a, b) => b.atendimentos - a.atendimentos || a.nome.localeCompare(b.nome, 'pt-BR'));
-        const maxIndividual = Math.max(...ranking.map(r => r.atendimentos), 1);
-        const atuaram = ranking.filter(r => r.atendimentos > 0).length;
-        const individualHTML = ranking.length === 0
-            ? '<p class="text-sm text-slate-400 text-center py-6">Nenhum colaborador encontrado.</p>'
-            : `
+        // --- Novas Abas: Filtros Individuais ---
+        const gerarHTMLRanking = (ranking, titulo, corIcone, corBarra) => {
+            const atuaram = ranking.filter(r => r.atendimentos > 0).length;
+            const maxIndividual = Math.max(...ranking.map(r => r.atendimentos), 1);
+            const totalAtendimentosLista = ranking.reduce((s, r) => s + r.atendimentos, 0);
+
+            if (ranking.length === 0) return `<p class="text-sm text-slate-400 text-center py-6">Nenhum colaborador classificado como ${titulo}.</p>`;
+
+            return `
             <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-wrap gap-x-8 gap-y-2 text-xs text-slate-600">
                 <span><strong class="text-slate-800 text-base">${atuaram}</strong> de ${ranking.length} membros atenderam <strong>(${pctF(atuaram, ranking.length)}%)</strong></span>
-                <span>Total atendido: <strong class="text-slate-800">${totalGeral}</strong></span>
+                <span>Total atendido por ${titulo}: <strong class="text-slate-800">${totalAtendimentosLista}</strong></span>
             </div>
             <div class="rounded-xl border border-slate-200 overflow-hidden">
                 ${ranking.map((r, i) => `
                     <div class="flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-slate-100' : ''} hover:bg-slate-50/60">
                         <span class="w-6 text-center text-[11px] font-black ${r.atendimentos > 0 ? 'text-slate-500' : 'text-slate-300'}">${i + 1}º</span>
-                        <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
+                        <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? corIcone : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-slate-700 truncate">${esc(r.nome)}</p>
                             <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} ·${esc(r.cargo || '-')}</p>
                         </div>
-                        <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(r.equipe)} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
+                        <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corBarra} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
                         <div class="text-right leading-tight w-24 shrink-0 hidden sm:block">
                             <p class="text-[11px] font-bold ${r.atendimentos > 0 ? 'text-slate-700' : 'text-slate-300'}">${pctF(r.atendimentos, r.equipeTotal)}% da equipe</p>
                             <p class="text-[10px] text-slate-400">${pctF(r.atendimentos, totalGeral)}% do total</p>
                         </div>
-                        <span class="w-8 text-right text-sm font-black tabular-nums ${r.atendimentos > 0 ? 'text-green-600' : 'text-slate-300'}">${r.atendimentos || '-'}</span>
+                        <span class="w-8 text-right text-sm font-black tabular-nums ${r.atendimentos > 0 ? 'text-slate-800' : 'text-slate-300'}">${r.atendimentos || '-'}</span>
                     </div>`).join('')}
             </div>`;
+        };
 
-        const equipesHTML = this.cartao('Atendimentos por equipe', '🏢', `
+        const isApoio = (eq) => {
+            const e = (eq || '').toLowerCase();
+            return e.includes('crc') || e.includes('coordenador');
+        };
+        const isDefensor = (c) => (c || '').toLowerCase().includes('defensor');
+
+        const rankingTodos = [...individuais].sort((a, b) => b.atendimentos - a.atendimentos || a.nome.localeCompare(b.nome, 'pt-BR'));
+        
+        // Filtros (Excluem CRC e Coordenadores da contagem estritamente operacional)
+        const rankingDefensores = rankingTodos.filter(r => !isApoio(r.equipe) && isDefensor(r.cargo));
+        const rankingServidores = rankingTodos.filter(r => !isApoio(r.equipe) && !isDefensor(r.cargo) && r.cargo !== '-');
+
+        const individualHTML = gerarHTMLRanking(rankingTodos, "todos na pauta", "bg-green-100 text-green-700", "bg-green-500");
+        const defensoresHTML = gerarHTMLRanking(rankingDefensores, "Defensores", "bg-purple-100 text-purple-700", "bg-purple-500");
+        const servidoresHTML = gerarHTMLRanking(rankingServidores, "Servidores", "bg-orange-100 text-orange-700", "bg-orange-500");
+
+        const equipesHTML = this.cartao('Atendimentos por equipe e Rankings', '🏢', `
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div class="inline-flex rounded-lg bg-slate-100 p-1" role="tablist">
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold bg-white shadow text-slate-800" data-view="geral" role="tab">🏢 Geral</button>
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="individual" role="tab">🧑 Individual</button>
+                <div class="inline-flex rounded-lg bg-slate-100 p-1 flex-wrap" role="tablist">
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold bg-white shadow text-slate-800" data-view="geral" role="tab">🏢 Equipes</button>
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="individual" role="tab">🧑 Todos</button>
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="defensores" role="tab">⚖️ Defensores</button>
+                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="servidores" role="tab">👨‍💻 Servidores</button>
                 </div>
                 <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">Recolher todas</button>
             </div>
@@ -707,7 +676,9 @@ export const StatisticsService = {
                 ${distribuicaoHTML}
                 <div class="space-y-3" id="groups-container">${groupsHTML || '<p class="text-sm text-slate-400 text-center py-6">Nenhuma equipe encontrada.</p>'}</div>
             </div>
-            <div id="view-individual" style="display:none">${individualHTML}</div>`);
+            <div id="view-individual" style="display:none">${individualHTML}</div>
+            <div id="view-defensores" style="display:none">${defensoresHTML}</div>
+            <div id="view-servidores" style="display:none">${servidoresHTML}</div>`);
 
         content.innerHTML = `
             <div id="statistics-content-wrapper" class="h-full overflow-y-auto p-3 md:p-5 bg-slate-50/40">
@@ -751,6 +722,7 @@ export const StatisticsService = {
             };
         }
 
+        // Script atualizado para trocar entre as 4 abas perfeitamente
         content.querySelectorAll('.view-tab').forEach(tab => {
             tab.onclick = () => {
                 const v = tab.dataset.view;
@@ -761,8 +733,12 @@ export const StatisticsService = {
                     t.classList.toggle('text-slate-800', ativo);
                     t.classList.toggle('text-slate-500', !ativo);
                 });
-                document.getElementById('view-geral').style.display = v === 'geral' ? '' : 'none';
-                document.getElementById('view-individual').style.display = v === 'individual' ? '' : 'none';
+                
+                ['geral', 'individual', 'defensores', 'servidores'].forEach(id => {
+                    const el = document.getElementById('view-' + id);
+                    if (el) el.style.display = (v === id) ? '' : 'none';
+                });
+
                 const t = document.getElementById('toggle-all-groups-btn');
                 if (t) t.style.display = v === 'geral' ? '' : 'none';
             };
@@ -803,7 +779,7 @@ export const StatisticsService = {
             atendidosPorHorario: statsByTime,
             faltososPorHorario: statsByTimeFaltosos,
             assuntos: assuntosOrdenados.slice(0, 8).map(([nome, dd]) => ({ nome, total: dd.total })),
-            ranking: ranking.filter(r => r.atendimentos > 0).slice(0, 10)
+            ranking: rankingTodos.filter(r => r.atendimentos > 0).slice(0, 10)
         }));
         comLoading('export-equipes-pdf-btn', () => this.exportEquipesPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-grupo-pdf-btn', () => this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }));
