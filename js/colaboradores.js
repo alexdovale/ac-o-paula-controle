@@ -68,7 +68,7 @@ const CollaboratorService = {
     },
 
     rotuloGrupo(g) {
-        return String(g);
+        return /^\d+$/.test(String(g)) ? `Equipe ${g}` : String(g);
     },
 
     // ===================================================================
