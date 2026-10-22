@@ -125,7 +125,7 @@ const OCUPACOES = [
 
 const OCUPACOES_COM_PROFISSAO = ['Empregado com vínculo (CLT)', 'Empregado sem vínculo (Informal)', 'Autônomo'];
 const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciado(a)', 'Viúvo(a)', 'Separado(a)'];
-//const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
+const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
 
 const ICONES_ACAO = {
     obrigacao_fazer: '🏥', declaratoria_nulidade: '📜', indenizacao_danos: '💥', revisional_debito: '🏦',
@@ -799,7 +799,7 @@ function renderReuForm(containerId) {
                         </div>
                         <div>
                             <label for="reu-ganhos" class="${LABEL_CLS}">Ganhos líquidos mensais (R$)</label>
-                            <div class="flex flex-wrap gap-2 items-center">
+                            <div class="flex flex-wrap gap-2 items-center mb-2">
                                 <input type="text" id="reu-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS} flex-1 min-w-[180px]">
                                 ${naoSeiCheck('reu-ganhos-nao-sei')}
                             </div>
@@ -1081,8 +1081,6 @@ function getExpenseDataFromForm() {
     
     d.quantidadeMoradores = moradores.toString();
     d.checkExibirGastos = getEl('check-exibir-gastos')?.checked || false;
-    
-    // Adicionamos essas flags pro PDFService ter certeza que há gastos informados!
     d.temGastos = totalCalculado > 0;
     d.total = totalCalculado;
 
@@ -1127,7 +1125,6 @@ function fillReuData(d) {
     setTimeout(() => {
         const reuOcupacaoSelect = document.getElementById('reu-ocupacao');
         if (reuOcupacaoSelect && !d.ocupacaoNaoSei) reuOcupacaoSelect.dispatchEvent(new Event('change'));
-        // preserva a profissão salva (o evento acima limpa o campo quando a ocupação não a exige)
         if (d.profissao && !d.profissaoNaoSei && OCUPACOES_COM_PROFISSAO.includes(d.ocupacao)) setValue('reu-profissao', d.profissao);
         updateReuVisibility(d);
     }, 100);
@@ -1183,13 +1180,11 @@ async function handlePdf() {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        // Pega APENAS os documentos para a lista de documentos (sem misturar com gastos ou réu)
         const documentosTextos = collectCheckedDocuments();
 
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
 
-        // Montamos os textos da planilha de gastos SEPARADAMENTE
         const despesasTextos = [];
         if (gastos.checkExibirGastos && gastos.temGastos) {
             const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
