@@ -1070,13 +1070,24 @@ function getSocioDataFromForm() {
 
 function getExpenseDataFromForm() {
     const d = {};
+    let totalCalculado = 0;
+    const moradores = Math.max(1, parseInt(getEl('expense-moradores')?.value) || 1);
+
     [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS].forEach(cat => {
         const el = getEl(`expense-${cat.id}`);
         const valor = el ? el.value || '' : '';
         d[cat.id] = (!valor || valor.trim() === '') ? 'R$ 0,00' : valor;
+        
+        totalCalculado += parseCurrency(d[cat.id]);
     });
-    d.quantidadeMoradores = getEl('expense-moradores')?.value || '1';
+    
+    d.quantidadeMoradores = moradores.toString();
     d.checkExibirGastos = getEl('check-exibir-gastos')?.checked || false;
+    
+    // Adicionamos essas flags pro PDFService ter certeza que há gastos informados!
+    d.temGastos = totalCalculado > 0;
+    d.total = totalCalculado;
+
     return d;
 }
 
@@ -1173,20 +1184,19 @@ async function handlePdf() {
     try {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
+        
+        // Pega APENAS os documentos para a lista de documentos (sem misturar com gastos ou réu)
         const documentosTextos = collectCheckedDocuments();
 
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
-
-        if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
-        addExpensesToPdfData(documentosTextos, gastos);
 
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
             docTypes: getDocTypesFromForm(),
             reuData: reu,
             expenseData: gastos,
-            socioData: getSocioDataFromForm(), // agora também vai para o PDF
+            socioData: getSocioDataFromForm(),
             demandasAdicionais: demandasAdicionaisLocais
         };
 
@@ -1199,51 +1209,6 @@ async function handlePdf() {
         console.error("Falha ao processar PDF:", err);
         showNotification("Erro na emissão do PDF", "error");
     }
-}
-
-function addReuToPdfData(documentosTextos, reu) {
-    documentosTextos.push({ id: 'reu-titulo', text: '👤 DADOS DA QUALIFICAÇÃO DO RÉU:' });
-    if (reu.nome) documentosTextos.push({ id: 'reu-n', text: `    • Nome: ${reu.nome}` });
-    if (reu.cpf) documentosTextos.push({ id: 'reu-c', text: `    • CPF: ${reu.cpf}` });
-    if (reu.rua) documentosTextos.push({ id: 'reu-r', text: `    • Citação em: ${reu.rua}, nº ${reu.numero} - ${reu.bairro}` });
-
-    const naoSei = 'Não informado (Não soube informar)';
-    documentosTextos.push({ id: 'reu-ocupacao', text: `    • Ocupação do Réu: ${(reu.ocupacaoNaoSei ? naoSei : reu.ocupacao) || 'Não informado'}` });
-    if (reu.profissao && !reu.profissaoNaoSei) documentosTextos.push({ id: 'reu-prof', text: `    • Profissão do Réu: ${reu.profissao}` });
-    documentosTextos.push({ id: 'reu-civil', text: `    • Estado Civil do Réu: ${(reu.estadoCivilNaoSei ? naoSei : reu.estadoCivil) || 'Não informado'}` });
-    documentosTextos.push({ id: 'reu-ganhos-pdf', text: `    • Ganhos Líquidos do Réu: ${(reu.ganhosNaoSei ? naoSei : reu.ganhos) || 'Não informado'}` });
-    if (reu.fonteRenda) documentosTextos.push({ id: 'reu-fonte', text: `    • Fonte de Renda do Réu: ${reu.fonteRenda}` });
-}
-
-function addExpensesToPdfData(documentosTextos, gastos) {
-    if (!gastos.checkExibirGastos) return;
-
-    const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
-    const limpaMoeda = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
-
-    documentosTextos.push({ id: 'gastos-titulo', text: '💰 EXTRATO DE DESPESAS ACUMULADAS (COM RATEIO):' });
-    documentosTextos.push({ id: 'gastos-moradores', text: `    • Quantidade de pessoas na residência: ${qtdMoradores}` });
-
-    let totalFamiliaCota = 0;
-    EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
-        const val = limpaMoeda(gastos[cat.id]);
-        if (val > 0) {
-            const cota = val / qtdMoradores;
-            totalFamiliaCota += cota;
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `    • ${cat.label}: Total ${gastos[cat.id]} / Cota (1/${qtdMoradores}): ${formatCurrency(cota)}` });
-        }
-    });
-
-    let totalCrianca = 0;
-    EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
-        const val = limpaMoeda(gastos[cat.id]);
-        if (val > 0) {
-            totalCrianca += val;
-            documentosTextos.push({ id: `g-pdf-${cat.id}`, text: `    • ${cat.label}: ${gastos[cat.id]} (Integral)` });
-        }
-    });
-
-    documentosTextos.push({ id: 'gastos-total', text: `    • NECESSIDADE MENSAL APURADA: ${formatCurrency(totalFamiliaCota + totalCrianca)}` });
 }
 
 function collectCheckedDocuments() {
@@ -1350,7 +1315,6 @@ window.gerarTextoDespesas = () => {
 
     const limpaMoeda = (valStr) => (!valStr || valStr === 'R$ 0,00') ? 0 : (parseFloat(valStr.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
 
-    // formatCurrency já devolve "R$ 1.234,56": o texto não deve repetir o "R$"
     const familiaHtml = [], familiaTxt = [];
     const criancaHtml = [], criancaTxt = [];
     let totalFamilia = 0, totalCrianca = 0;
