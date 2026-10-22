@@ -239,7 +239,7 @@ const seletor = (id, label, opcoes, { span = '', primeira = 'Selecione' } = {}) 
 
 // Opções em "pílulas" (substitui os rádios minúsculos)
 const pilulas = (name, valores) => `
-    <div class="flex flex-wrap gap-2">
+    <div class="flex flex-wrap gap-2 mt-1 mb-2">
         ${valores.map(v => `
             <label class="cursor-pointer">
                 <input type="radio" name="${name}" value="${v}" class="peer sr-only">
@@ -519,7 +519,7 @@ function renderChecklist(actionKey) {
     // --- Dados socioeconômicos do assistido ---
     const socioSection = document.createElement('div');
     socioSection.innerHTML = cartaoSecao('Dados socioeconômicos do assistido', '👤', `
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
             ${seletor('socio-ocupacao', 'Ocupação', OCUPACOES, { primeira: 'Selecione a ocupação' })}
             <div id="socio-profissao-container" class="hidden">
                 <label for="socio-profissao" class="${LABEL_CLS}">Profissão / cargo</label>
@@ -531,7 +531,6 @@ function renderChecklist(actionKey) {
                 <input type="text" id="socio-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS}">
             </div>
         </div>
-        <p class="${LABEL_CLS} mt-4">Fonte de renda</p>
         ${pilulas('socio-fonte-renda', FONTES_RENDA)}
     `);
     containerEl.appendChild(socioSection.firstElementChild);
@@ -804,7 +803,6 @@ function renderReuForm(containerId) {
                                 <input type="text" id="reu-ganhos" placeholder="R$ 0,00" inputmode="numeric" class="${INPUT_CLS} flex-1 min-w-[180px]">
                                 ${naoSeiCheck('reu-ganhos-nao-sei')}
                             </div>
-                            <p class="${LABEL_CLS} mt-3">Fonte de renda</p>
                             ${pilulas('reu-fonte-renda', FONTES_RENDA)}
                         </div>
                     </div>`, 'blue')}
@@ -1185,17 +1183,13 @@ async function handlePdf() {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        // 1. Pega apenas os documentos
+        // Pega APENAS os documentos para a lista de documentos (sem misturar com gastos ou réu)
         const documentosTextos = collectCheckedDocuments();
 
-        // 2. Pega dados do formulário
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
 
-        // Se houver réu, adicionamos à lista principal (se preferir isolar o réu futuramente, fazemos o mesmo processo)
-        if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
-
-        // 3. Montamos os textos da planilha de gastos SEPARADAMENTE (sem sujar os documentos)
+        // Montamos os textos da planilha de gastos SEPARADAMENTE
         const despesasTextos = [];
         if (gastos.checkExibirGastos && gastos.temGastos) {
             const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
@@ -1231,14 +1225,10 @@ async function handlePdf() {
             expenseData: gastos,
             socioData: getSocioDataFromForm(),
             demandasAdicionais: demandasAdicionaisLocais,
-            
-            // ENVIAMOS OS GASTOS ISOLADOS PARA O PDF LER:
             textosDespesas: despesasTextos 
         };
 
-        // Enviamos as despesas como 5º argumento também, por precaução
         const resultado = await PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
-        
         if (resultado) {
             showNotification("PDF emitido com sucesso!");
             await handleSave(false);
@@ -1248,6 +1238,7 @@ async function handlePdf() {
         showNotification("Erro na emissão do PDF", "error");
     }
 }
+
 function collectCheckedDocuments() {
     const documentos = [];
     document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
