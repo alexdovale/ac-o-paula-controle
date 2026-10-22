@@ -1185,11 +1185,44 @@ async function handlePdf() {
         const assistedName = getEl('assisted-details-name')?.textContent || 'Assistido';
         const actionTitle = getEl('checklist-title')?.textContent || '';
         
-        // Pega APENAS os documentos para a lista de documentos (sem misturar com gastos ou réu)
+        // 1. Pega apenas os documentos
         const documentosTextos = collectCheckedDocuments();
 
+        // 2. Pega dados do formulário
         const reu = getReuDataFromForm();
         const gastos = getExpenseDataFromForm();
+
+        // Se houver réu, adicionamos à lista principal (se preferir isolar o réu futuramente, fazemos o mesmo processo)
+        if (reu.checkReuUnico) addReuToPdfData(documentosTextos, reu);
+
+        // 3. Montamos os textos da planilha de gastos SEPARADAMENTE (sem sujar os documentos)
+        const despesasTextos = [];
+        if (gastos.checkExibirGastos && gastos.temGastos) {
+            const qtdMoradores = parseInt(gastos.quantidadeMoradores || 1);
+            const limpaMoeda = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(v.replace(/[^\d,]/g, '').replace(',', '.')) || 0);
+
+            despesasTextos.push(`Quantidade de pessoas na residência: ${qtdMoradores}`);
+
+            let cotaTotal = 0;
+            EXPENSE_CATEGORIES_COMUNS.forEach(cat => {
+                const val = limpaMoeda(gastos[cat.id]);
+                if (val > 0) {
+                    cotaTotal += (val / qtdMoradores);
+                    despesasTextos.push(`${cat.label}: Total ${gastos[cat.id]} / Cota (1/${qtdMoradores}): ${formatCurrency(val / qtdMoradores)}`);
+                }
+            });
+
+            let integralTotal = 0;
+            EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(cat => {
+                const val = limpaMoeda(gastos[cat.id]);
+                if (val > 0) {
+                    integralTotal += val;
+                    despesasTextos.push(`${cat.label}: ${gastos[cat.id]} (Integral)`);
+                }
+            });
+
+            despesasTextos.push(`NECESSIDADE MENSAL APURADA: ${formatCurrency(cotaTotal + integralTotal)}`);
+        }
 
         const checklistData = {
             checkedIds: Array.from(document.querySelectorAll('.doc-checkbox:checked')).map(cb => cb.id),
@@ -1197,10 +1230,15 @@ async function handlePdf() {
             reuData: reu,
             expenseData: gastos,
             socioData: getSocioDataFromForm(),
-            demandasAdicionais: demandasAdicionaisLocais
+            demandasAdicionais: demandasAdicionaisLocais,
+            
+            // ENVIAMOS OS GASTOS ISOLADOS PARA O PDF LER:
+            textosDespesas: despesasTextos 
         };
 
-        const resultado = await PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos);
+        // Enviamos as despesas como 5º argumento também, por precaução
+        const resultado = await PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
+        
         if (resultado) {
             showNotification("PDF emitido com sucesso!");
             await handleSave(false);
@@ -1210,7 +1248,6 @@ async function handlePdf() {
         showNotification("Erro na emissão do PDF", "error");
     }
 }
-
 function collectCheckedDocuments() {
     const documentos = [];
     document.querySelectorAll('.doc-checkbox:checked').forEach(cb => {
