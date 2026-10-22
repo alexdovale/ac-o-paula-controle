@@ -68,7 +68,7 @@ const CollaboratorService = {
     },
 
     rotuloGrupo(g) {
-        return /^\d+$/.test(String(g)) ? `Equipe ${g}` : String(g);
+        return String(g);
     },
 
     // ===================================================================
@@ -695,25 +695,44 @@ const CollaboratorService = {
         }
     },
 
-    // Select de grupos: sempre ordenado (1,2,3,4,5...CRC,Coordenadores,...)
     updateTeamSelect(selectedValue = '1') {
         const select = document.getElementById('collaborator-team-modal');
         if (!select) return;
 
-        this.registrarGrupo(selectedValue);
+        if (selectedValue !== 'REMOVE_GROUP' && selectedValue !== 'ADD_NEW') {
+            this.registrarGrupo(selectedValue);
+        }
+        
         const grupos = [...this.gruposPermitidosAta].sort((a, b) => this.compararGrupos(a, b));
 
         select.innerHTML = grupos.map(g =>
             `<option value="${escapeHTML(g)}" ${String(selectedValue) === g ? 'selected' : ''}>${escapeHTML(this.rotuloGrupo(g))}</option>`
-        ).join('') + `<option value="ADD_NEW">+ Adicionar outro grupo...</option>`;
+        ).join('') 
+        + `<option disabled>──────────</option>`
+        + `<option value="ADD_NEW">➕ Adicionar outro grupo...</option>`
+        + `<option value="REMOVE_GROUP">❌ Remover um grupo criado...</option>`;
 
         select.onchange = (e) => {
-            if (e.target.value !== 'ADD_NEW') return;
-            const novo = prompt("Digite o número ou nome do novo grupo (ex: 5):")?.trim();
-            if (novo) {
-                this.registrarGrupo(novo);
-                this.updateTeamSelect(novo); // reconstrói já na ordem correta
-            } else {
+            if (e.target.value === 'ADD_NEW') {
+                const novo = prompt("Digite o número ou nome do novo grupo (ex: 5):")?.trim();
+                if (novo) {
+                    this.registrarGrupo(novo);
+                    this.updateTeamSelect(novo); 
+                } else {
+                    this.updateTeamSelect('1');
+                }
+            } else if (e.target.value === 'REMOVE_GROUP') {
+                const remover = prompt("Digite o nome EXATO do grupo que deseja excluir da lista:\n\nGrupos atuais: " + this.gruposPermitidosAta.join(", "))?.trim();
+                
+                if (remover) {
+                    const index = this.gruposPermitidosAta.findIndex(g => g.toLowerCase() === remover.toLowerCase());
+                    if (index !== -1) {
+                        this.gruposPermitidosAta.splice(index, 1);
+                        if (typeof showNotification !== 'undefined') showNotification(`Grupo "${remover}" excluído com sucesso!`, "success");
+                    } else {
+                        if (typeof showNotification !== 'undefined') showNotification(`Grupo "${remover}" não encontrado.`, "warning");
+                    }
+                }
                 this.updateTeamSelect('1');
             }
         };
@@ -739,7 +758,7 @@ const CollaboratorService = {
             showNotification("Preencha Nome e Matrícula/ID", "warning");
             return;
         }
-        if (data.equipe === 'ADD_NEW') {
+        if (data.equipe === 'ADD_NEW' || data.equipe === 'REMOVE_GROUP') {
             showNotification("Escolha o grupo do colaborador", "warning");
             return;
         }
@@ -775,7 +794,7 @@ const CollaboratorService = {
             app.colaboradores.forEach(c => { if (this.registrarGrupo(c.equipe)) mudou = true; });
             if (mudou && this.editId === null) {
                 const sel = document.getElementById('collaborator-team-modal');
-                this.updateTeamSelect(sel?.value && sel.value !== 'ADD_NEW' ? sel.value : '1');
+                this.updateTeamSelect(sel?.value && sel.value !== 'ADD_NEW' && sel.value !== 'REMOVE_GROUP' ? sel.value : '1');
             }
 
             this.renderTable(app);
