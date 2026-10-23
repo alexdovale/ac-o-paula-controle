@@ -2,7 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
@@ -284,7 +284,6 @@ class SIGEPApp {
 
         if (isAdmin) {
             try {
-                const { getDocs, collection } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                 const snap = await getDocs(collection(this.db, "unidades"));
                 const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
                 
@@ -413,168 +412,24 @@ class SIGEPApp {
         }, 3000);
     }
 
-    async abrirModalConfigTVPauta() {
-        if (!this.currentPauta) return;
-        const pautaId = this.currentPauta.id;
-        const pautaName = this.currentPauta.name;
-        
-        const { getDoc, doc, setDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        
-        let logoAtual = '';
-        try {
-            const configSnap = await getDoc(doc(this.db, "pautas", pautaId, "painel", "config"));
-            if (configSnap.exists()) logoAtual = configSnap.data().logoUrl || '';
-        } catch(e) {}
-
-        const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${pautaId}`) || '{}');
-        const modoAtual = cacheConfig.modo || 'tv';
-        const videoAtual = cacheConfig.video || '';
-        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
-
-        const modalId = 'modal-config-tv-individual';
-        let modal = document.getElementById(modalId);
-        if (modal) modal.remove();
-
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
-        
-        modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
-            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <div>
-                    <h3 class="font-bold text-xl text-slate-800">Configurar Painel da TV</h3>
-                    <p class="text-sm font-semibold text-slate-500 mt-0.5">${escapeHTML(pautaName)}</p>
-                </div>
-                <button class="text-slate-400 hover:text-slate-600 transition-colors fechar-modal-tv bg-white p-2 rounded-full shadow-sm">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            
-            <div class="p-6 overflow-y-auto space-y-7 bg-white flex-1 custom-scrollbar">
-                <div>
-                    <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">1. Modo de visualização</span>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'fila' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">📋</div>
-                            <div class="font-bold text-slate-800 text-sm">Lista (Fila)</div>
-                        </label>
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'tv' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">📺</div>
-                            <div class="font-bold text-slate-800 text-sm">TV Padrão</div>
-                        </label>
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'video' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">▶️</div>
-                            <div class="font-bold text-slate-800 text-sm">TV + Vídeo</div>
-                        </label>
-                    </div>
-                </div>
-                
-                <div id="tv-video-container" class="transition-opacity duration-300 ${modoAtual === 'video' ? 'opacity-100' : 'opacity-50 pointer-events-none'}">
-                    <label class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">2. Link do YouTube</label>
-                    <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none font-mono">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div>
-                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Aviso Sonoro</span>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === true ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200'}">
-                                <input type="radio" name="tv_som" value="1" class="hidden" ${somAtual === true ? 'checked' : ''}>🔔 Ativado
-                            </label>
-                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === false ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200'}">
-                                <input type="radio" name="tv_som" value="0" class="hidden" ${somAtual === false ? 'checked' : ''}>🔕 Silencioso
-                            </label>
-                        </div>
-                    </div>
-                    <div>
-                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Logo do Painel</span>
-                        <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div id="tv-logo-preview" class="w-24 h-24 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 overflow-hidden relative"></div>
-                            <div class="flex-1 flex flex-col gap-2">
-                                <button type="button" id="tv-logo-enviar" class="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg shadow-sm">Subir Imagem</button>
-                                <button type="button" id="tv-logo-remover" class="px-3 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded-lg">Usar Padrão</button>
-                                <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            
-            <div class="px-6 py-5 border-t border-slate-200 bg-slate-50 flex gap-3 justify-end items-center">
-                <button class="px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 fechar-modal-tv text-sm">Cancelar</button>
-                <button id="tv-btn-salvar-abrir" class="px-6 py-3 rounded-xl font-black bg-blue-600 text-white shadow-lg text-sm">🖥️ Salvar e Abrir TV</button>
-            </div>
-        </div>
-        `;
-        
-        modal.addEventListener('click', () => modal.remove());
-        document.body.appendChild(modal);
-
-        const desenharPreview = () => {
-            const box = document.getElementById('tv-logo-preview');
-            box.replaceChildren();
-            if (logoAtual) {
-                const img = document.createElement('img');
-                img.src = logoAtual; img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;padding:4px;';
-                box.appendChild(img);
-            } else {
-                box.innerHTML = '<span class="text-[10px] font-bold text-center text-slate-400">Logo Padrão</span>';
-            }
-        };
-        desenharPreview();
-
-        const updatePreview = () => {
-            const modo  = modal.querySelector('input[name="tv_modo"]:checked').value;
-            const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
-            const som   = modal.querySelector('input[name="tv_som"]:checked').value;
-            document.getElementById('tv-video-container').classList.toggle('opacity-50', modo !== 'video');
-            
-            const nome = encodeURIComponent(pautaName);
-            const baseUrl = window.location.href.split('?')[0];
-            return `${baseUrl}painel_tv.html?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
-        };
-
-        const ligarGrupo = (name, cardClass, extraClasses) => {
-            modal.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-                radio.addEventListener('change', () => {
-                    modal.querySelectorAll(`.${cardClass}`).forEach(c => c.className = `${cardClass} border-2 rounded-xl p-5 text-center cursor-pointer transition-all border-slate-200 hover:border-blue-300 hover:bg-slate-50`);
-                    radio.closest(`.${cardClass}`).className = `${cardClass} border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${extraClasses}`;
-                    updatePreview();
-                });
-            });
-        };
-        ligarGrupo('tv_modo', 'tv-modo-card', 'border-blue-500 bg-blue-50 ring-2 ring-blue-200');
-        ligarGrupo('tv_som', 'tv-som-card', 'border-blue-500 bg-blue-50 ring-1 ring-blue-200');
-
-        document.getElementById('tv-logo-enviar').addEventListener('click', () => document.getElementById('tv-logo-file').click());
-        document.getElementById('tv-logo-file').addEventListener('change', (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            const reader = new FileReader();
-            reader.onload = () => { logoAtual = reader.result; desenharPreview(); updatePreview(); };
-            reader.readAsDataURL(file);
-        });
-        document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); updatePreview(); });
-
-        modal.querySelectorAll('.fechar-modal-tv').forEach(b => b.addEventListener('click', () => modal.remove()));
-
-        document.getElementById('tv-btn-salvar-abrir').addEventListener('click', async () => {
-            const link = updatePreview();
-            const configToSave = { 
-                modo: modal.querySelector('input[name="tv_modo"]:checked').value, 
-                video: document.getElementById('tv_video_url').value.trim(), 
-                som: modal.querySelector('input[name="tv_som"]:checked').value === '1' 
-            };
-            localStorage.setItem(`sigep_tv_config_${pautaId}`, JSON.stringify(configToSave));
+    setupAuthListener() {
+        onAuthStateChanged(this.auth, async (user) => {
             try {
-                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), { logoUrl: logoAtual || '', atualizadoEm: new Date().toISOString() }, { merge: true });
-            } catch (err) {}
-            window.open(link, '_blank');
-            modal.remove();
+                if (user) {
+                    await AuthService.handleAuthState(this, user);
+                    await this.loadUserPreferences();
+                    this.applyRoleBasedUI();
+                    await this.router.resolveInitialRoute();
+                } else {
+                    this.currentUser = null;
+                    await this.router.navigate(ROUTES.LOGIN, {}, true);
+                }
+            } catch (error) {
+                console.error("Erro crítico na verificação de autenticação:", error);
+                await this.router.navigate(ROUTES.LOGIN, {}, true);
+            } finally {
+                this.hideLoadingScreen();
+            }
         });
     }
 
@@ -1011,111 +866,6 @@ class SIGEPApp {
             showNotification("Pauta zerada com sucesso.", "success");
         });
 
-        // INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES
-        const observerMenuAcoes = new MutationObserver(() => {
-            const actionsPanel = document.getElementById('actions-panel');
-            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
-                const tvAtivada = this.currentPautaData?.useTvPanel !== false;
-                let tvGroup = document.getElementById('tv-panel-actions-group');
-                
-                if (!tvGroup) {
-                    tvGroup = document.createElement('div');
-                    tvGroup.id = 'tv-panel-actions-group';
-                    tvGroup.innerHTML = `
-                        <div class="h-px bg-slate-100 my-2 mx-3"></div>
-                        <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Gestão do Painel TV</p>
-                        <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📍</span>
-                            <span>
-                                <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
-                            </span>
-                        </button>
-                        <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
-                            <span>
-                                <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
-                            </span>
-                        </button>
-                    `;
-                    
-                    const totemBtnOriginal = document.getElementById('open-totem-btn');
-                    if (totemBtnOriginal) {
-                        totemBtnOriginal.parentNode.insertBefore(tvGroup, totemBtnOriginal.nextSibling);
-                        totemBtnOriginal.classList.add('hidden'); 
-                    } else {
-                        actionsPanel.appendChild(tvGroup);
-                    }
-
-                    tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (this.currentPauta) {
-                            const localSalvo = localStorage.getItem('sigep_tv_local_' + this.currentPauta.id);
-                            const novoLocal = prompt("Qual o seu Local de Atendimento atual?", localSalvo || "");
-                            if (novoLocal !== null && novoLocal.trim() !== "") {
-                                localStorage.setItem('sigep_tv_local_' + this.currentPauta.id, novoLocal.trim());
-                                if (window.showNotification) window.showNotification("Local salvo!", "success");
-                            }
-                            actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                        }
-                    });
-
-                    tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.abrirModalConfigTVPauta();
-                        actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                    });
-                }
-                tvAtivada ? tvGroup.classList.remove('hidden') : tvGroup.classList.add('hidden');
-            }
-        });
-        
-        const actionsPanel = document.getElementById('actions-panel');
-        if (actionsPanel) observerMenuAcoes.observe(actionsPanel, { attributes: true, attributeFilter: ['class'] });
-
-        // CHECKBOX DE ATIVAR/DESATIVAR TV NAS CONFIGURAÇÕES
-        const observerEdicao = new MutationObserver(() => {
-            const modalEdicao = document.getElementById('edit-pauta-config-modal');
-            if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
-                let divConfigTV = document.getElementById('edit-use-tv-panel-container');
-                if (!divConfigTV) {
-                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
-                    if (btnCancelarSalvar) {
-                        divConfigTV = document.createElement('div');
-                        divConfigTV.id = 'edit-use-tv-panel-container';
-                        divConfigTV.className = 'mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 mx-5';
-                        divConfigTV.innerHTML = `
-                            <label class="flex items-center cursor-pointer gap-3">
-                                <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
-                                <div>
-                                    <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
-                                    <span class="block text-[10px] text-slate-500">Ativa o hub da TV no menu de Ações para esta pauta.</span>
-                                </div>
-                            </label>
-                        `;
-                        btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
-                        
-                        const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
-                        if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
-                            btnSalvar.setAttribute('data-tv-hooked', 'true');
-                            const onClickOriginal = btnSalvar.onclick;
-                            btnSalvar.onclick = async (ev) => {
-                                const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
-                                try {
-                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
-                                    if(this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
-                                } catch(e) {}
-                                if (onClickOriginal) onClickOriginal(ev);
-                            };
-                        }
-
-                        const tvCheck = document.getElementById('edit-use-tv-panel');
-                        if (tvCheck && this.currentPautaData) tvCheck.checked = this.currentPautaData.useTvPanel !== false;
-                    }
-                }
-            }
-        });
-        observerEdicao.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-
         // ------------------------------------------------------------------------------------------
         // 🔥 INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES 🔥
         // ------------------------------------------------------------------------------------------
@@ -1427,7 +1177,7 @@ class SIGEPApp {
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
-        // Abre e fecha a explicação da ordem de atendimento
+        // 🔥 CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
         const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
         const logicContent = document.getElementById('logic-explanation-padrao-content');
         if (toggleLogicBtn && logicContent) {
@@ -1435,7 +1185,6 @@ class SIGEPApp {
                 logicContent.classList.toggle('hidden');
             });
         }
-        
 
         document.querySelectorAll('.p-chip').forEach(chip => {
             chip.addEventListener('click', function(e) {
@@ -1623,6 +1372,258 @@ class SIGEPApp {
         }
     }
 
+    // 🔥 NOVA FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL 🔥
+    async abrirModalConfigTVPauta() {
+        if (!this.currentPauta) return;
+        const pautaId = this.currentPauta.id;
+        const pautaName = this.currentPauta.name;
+        
+        let logoAtual = '';
+        try {
+            const configSnap = await getDoc(doc(this.db, "pautas", pautaId, "painel", "config"));
+            if (configSnap.exists()) logoAtual = configSnap.data().logoUrl || '';
+        } catch(e) {}
+
+        const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${pautaId}`) || '{}');
+        const modoAtual = cacheConfig.modo || 'tv';
+        const videoAtual = cacheConfig.video || '';
+        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
+
+        const modalId = 'modal-config-tv-individual';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+        
+        modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-xl text-slate-800">Configurar Painel da TV</h3>
+                    <p class="text-sm font-semibold text-slate-500 mt-0.5">${escapeHTML(pautaName)}</p>
+                </div>
+                <button class="text-slate-400 hover:text-slate-600 transition-colors fechar-modal-tv bg-white p-2 rounded-full shadow-sm">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-7 bg-white flex-1 custom-scrollbar">
+                <!-- Modos de Visualização -->
+                <div>
+                    <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">1. Modo de visualização</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'fila' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">📋</div>
+                            <div class="font-bold text-slate-800 text-sm">Lista (Fila)</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Visão em grade mostrando quem está nas mesas e os próximos da fila.</div>
+                        </label>
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'tv' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">📺</div>
+                            <div class="font-bold text-slate-800 text-sm">TV Padrão</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Painel de chamada limpo (fundo azul) com aviso sonoro e histórico.</div>
+                        </label>
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'video' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">▶️</div>
+                            <div class="font-bold text-slate-800 text-sm">TV + Vídeo</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Exibe vídeos institucionais dividindo a tela com os últimos chamados.</div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- YouTube (Só aparece se Vídeo selecionado) -->
+                <div id="tv-video-container" class="transition-opacity duration-300 ${modoAtual === 'video' ? 'opacity-100' : 'opacity-50 pointer-events-none'}">
+                    <label class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">2. Link do YouTube (Obrigatório para Modo Vídeo)</label>
+                    <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ex: https://www.youtube.com/watch?v=XyZ123...">
+                </div>
+
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Som -->
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Aviso Sonoro</span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === true ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                                <input type="radio" name="tv_som" value="1" class="hidden" ${somAtual === true ? 'checked' : ''}>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">🔔 Ativado</span>
+                            </label>
+                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === false ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                                <input type="radio" name="tv_som" value="0" class="hidden" ${somAtual === false ? 'checked' : ''}>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">🔕 Silencioso</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Logo -->
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Logo do Painel Público</span>
+                        <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div id="tv-logo-preview" class="w-24 h-24 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 overflow-hidden relative">
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex flex-col gap-2">
+                                    <button type="button" id="tv-logo-enviar" class="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors w-full text-center shadow-sm">Subir Imagem</button>
+                                    <button type="button" id="tv-logo-remover" class="px-3 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors w-full text-center">Usar Padrão</button>
+                                    <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
+                                </div>
+                                <p class="text-[9px] font-semibold text-slate-500 mt-2 leading-tight">Aceito: PNG, JPG, WebP ou SVG (máx. 5MB).</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Link Gerado -->
+                <div class="bg-blue-50/50 border border-blue-100 p-5 rounded-xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="block text-xs font-extrabold text-blue-900 uppercase tracking-wider">Link gerado para a Smart TV</span>
+                        <span class="bg-blue-200 text-blue-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Copia e cola no navegador da TV</span>
+                    </div>
+                    <textarea id="tv_preview_link" readonly class="w-full bg-white border border-blue-200 rounded-lg p-3 text-xs font-mono text-blue-700 outline-none resize-none h-16 shadow-inner"></textarea>
+                </div>
+            </div>
+            
+            <div class="px-6 py-5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end items-center">
+                <button class="w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors fechar-modal-tv text-sm">Cancelar</button>
+                <button id="tv-btn-copiar" class="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors text-sm shadow-md flex items-center justify-center gap-2">📋 Copiar Link</button>
+                <button id="tv-btn-salvar-abrir" class="w-full sm:w-auto px-6 py-3 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg flex items-center justify-center gap-2">🖥️ Salvar e Abrir TV</button>
+            </div>
+        </div>
+        `;
+        
+        modal.addEventListener('click', () => modal.remove());
+        document.body.appendChild(modal);
+
+        const desenharPreview = () => {
+            const box = document.getElementById('tv-logo-preview');
+            box.replaceChildren();
+            if (logoAtual) {
+                const img = document.createElement('img');
+                img.src = logoAtual; img.alt = 'Logo do órgão';
+                img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;padding:4px;';
+                box.appendChild(img);
+            } else {
+                const t = document.createElement('span');
+                t.className = 'text-[10px] font-bold text-center leading-tight'; t.style.color = '#94a3b8'; t.innerHTML = 'Logo<br>SIGEP<br>(Padrão)';
+                box.appendChild(t);
+            }
+        };
+        desenharPreview();
+
+        const updatePreview = () => {
+            const modo  = modal.querySelector('input[name="tv_modo"]:checked').value;
+            const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
+            const som   = modal.querySelector('input[name="tv_som"]:checked').value;
+            
+            const containerVideo = document.getElementById('tv-video-container');
+            if (modo === 'video') {
+                containerVideo.classList.remove('opacity-50', 'pointer-events-none');
+                containerVideo.classList.add('opacity-100');
+            } else {
+                containerVideo.classList.add('opacity-50', 'pointer-events-none');
+                containerVideo.classList.remove('opacity-100');
+            }
+
+            const nome = encodeURIComponent(pautaName);
+            const baseUrl = window.location.href.split('?')[0];
+            const link = `${baseUrl}painel_tv.html?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
+
+            document.getElementById('tv_preview_link').value = link;
+            return { link, modo, video, som };
+        };
+
+        const ligarGrupo = (name, cardClass, extraClassesAtivo) => {
+            modal.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    modal.querySelectorAll(`.${cardClass}`).forEach(c => {
+                        c.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-1', 'ring-blue-200');
+                        c.classList.add('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
+                    });
+                    const pai = radio.closest(`.${cardClass}`);
+                    pai.classList.remove('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
+                    pai.classList.add(...extraClassesAtivo.split(' '));
+                    updatePreview();
+                });
+            });
+        };
+        ligarGrupo('tv_modo', 'tv-modo-card', 'border-blue-500 bg-blue-50 ring-2 ring-blue-200');
+        ligarGrupo('tv_som', 'tv-som-card', 'border-blue-500 bg-blue-50 ring-1 ring-blue-200');
+
+        document.getElementById('tv_video_url').addEventListener('input', updatePreview);
+        updatePreview();
+
+        const reduzirImagem = (file) => new Promise((resolve, reject) => {
+            if (!/^image\//.test(file.type)) return reject(new Error('Arquivo não é uma imagem.'));
+            if (file.size > 5 * 1024 * 1024) return reject(new Error('Imagem maior que 5 MB.'));
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+            reader.onload = () => {
+                if (file.type === 'image/svg+xml') {
+                    return reader.result.length > 400000 ? reject(new Error('SVG muito grande.')) : resolve(reader.result);
+                }
+                const img = new Image();
+                img.onerror = () => reject(new Error('Imagem inválida.'));
+                img.onload = () => {
+                    const escala = Math.min(1, 160 / img.height, 480 / img.width);
+                    const c = document.createElement('canvas');
+                    c.width = Math.max(1, Math.round(img.width * escala));
+                    c.height = Math.max(1, Math.round(img.height * escala));
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    const out = c.toDataURL('image/png');
+                    out.length > 500000 ? reject(new Error('Imagem complexa demais.')) : resolve(out);
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('tv-logo-enviar').addEventListener('click', () => document.getElementById('tv-logo-file').click());
+        document.getElementById('tv-logo-file').addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try { logoAtual = await reduzirImagem(file); desenharPreview(); updatePreview(); }
+            catch (err) { showNotification(err.message, 'error'); }
+            e.target.value = '';
+        });
+        document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); updatePreview(); });
+
+        modal.querySelectorAll('.fechar-modal-tv').forEach(b => b.addEventListener('click', () => modal.remove()));
+
+        const saveConfig = async () => {
+            const data = updatePreview();
+            const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
+
+            localStorage.setItem(`sigep_tv_config_${pautaId}`, JSON.stringify(configToSave));
+
+            const orgaoId = this.currentUser?.orgaoId || null;
+            try {
+                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), { 
+                    logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() 
+                }, { merge: true });
+            } catch (err) {
+                console.warn('Falha ao salvar logo do painel no banco:', err);
+            }
+
+            return data.link;
+        };
+
+        document.getElementById('tv-btn-copiar').addEventListener('click', async () => {
+            const link = await saveConfig();
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification("Configuração salva e link copiado!", "success");
+                modal.remove();
+            }).catch(() => showNotification("Erro ao copiar o link.", "error"));
+        });
+
+        document.getElementById('tv-btn-salvar-abrir').addEventListener('click', async () => {
+            const link = await saveConfig();
+            window.open(link, '_blank');
+            modal.remove();
+        });
+    }
+
     async loadPauta(pautaId, pautaName, pautaType) {
         try {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
@@ -1648,7 +1649,7 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
 
-                // 🔥 NOVA LÓGICA: ESCONDER/MOSTRAR BOTÃO DA TV NO MENU
+                // 🔥 ESCONDER/MOSTRAR BOTÃO DA TV NO MENU
                 const totemBtn = document.getElementById('open-totem-btn');
                 const tvAtivada = this.currentPautaData.useTvPanel !== false; // Por padrão é true se não existir
 
