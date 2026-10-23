@@ -1,5 +1,3 @@
-Aqui está o código completo do ficheiro recepcaoCentral.js já com a funcionalidade da TV individual incorporada nos cartões das pautas.
-Podes simplesmente copiar tudo e substituir no teu projeto:
 // js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO E MULTI-TENANT)
 
 import {
