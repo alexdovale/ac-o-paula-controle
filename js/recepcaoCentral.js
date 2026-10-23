@@ -1,58 +1,208 @@
-// js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO E MULTI-TENANT)
+// js/recepcaoCentral.js - DASHBOARD EXECUTIVO (UI REFINADA + MULTI-TENANT)
 
 import {
-    collection, doc, onSnapshot, updateDoc, setDoc, getDocs, query, where, addDoc
+    collection, doc, onSnapshot, updateDoc, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, playSound, escapeHTML, normalizeText } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PautaConfigService } from './pautaConfig.js';
 import { RecepcaoConfigService } from './recepcaoConfig.js';
 import { flatSubjects } from './assuntos.js';
-import { logAction } from './admin.js';
 
 // ─── ESTADO INTERNO ────────────────────────────────────────────────────────────
 
 const estado = {
-    pautasHoje: [],              
-    assistidosPorPauta: {},      
-    colaboradoresPorPauta: {},   
-    unsubscribers: [],           
-    pautaFocadaId: null,         
-    modoVisao: 'grade',          
+    pautasHoje: [],
+    assistidosPorPauta: {},
+    colaboradoresPorPauta: {},
+    unsubscribers: [],
+    pautaFocadaId: null,
+    modoVisao: 'grade',
     termoBusca: '',
     recepcaoAtual: null,
     unidadeAtual: null,
     recepcoesDisponiveis: [],
 };
 
+const LOGO_URL = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
+
+// ─── DESIGN SYSTEM (CSS INJETADO UMA ÚNICA VEZ) ────────────────────────────────
+
+const CSS = `
+.rc-wrap{
+    --rc-bg:#f6f7f9; --rc-surface:#fff; --rc-line:#e5e7eb; --rc-line-soft:#f0f1f4;
+    --rc-text:#0f172a; --rc-muted:#64748b; --rc-faint:#94a3b8;
+    --rc-brand:#1e3a8a; --rc-brand-soft:#eef2ff;
+    --rc-ok:#059669; --rc-ok-soft:#ecfdf5;
+    --rc-warn:#b45309; --rc-warn-soft:#fffbeb;
+    --rc-info:#1d4ed8; --rc-info-soft:#eff6ff;
+    --rc-danger:#be123c; --rc-danger-soft:#fff1f2;
+    font-feature-settings:"tnum" 1,"cv11" 1; color:var(--rc-text);
+}
+.rc-wrap *{box-sizing:border-box}
+.rc-surface{background:var(--rc-surface);border:1px solid var(--rc-line);border-radius:14px}
+.rc-eyebrow{font-size:10.5px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--rc-faint)}
+.rc-label{display:block;font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--rc-muted);margin-bottom:6px}
+
+/* Botões */
+.rc-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;font-size:13px;font-weight:600;
+    padding:9px 14px;border-radius:10px;border:1px solid var(--rc-line);background:var(--rc-surface);color:var(--rc-text);
+    cursor:pointer;transition:background .15s,border-color .15s,box-shadow .15s,transform .05s;white-space:nowrap}
+.rc-btn:hover{background:#f8fafc;border-color:#cbd5e1}
+.rc-btn:active{transform:translateY(1px)}
+.rc-btn:focus-visible,.rc-input:focus-visible,.rc-chip:focus-visible{outline:2px solid var(--rc-brand);outline-offset:2px}
+.rc-btn:disabled{opacity:.6;cursor:not-allowed}
+.rc-btn--primary{background:var(--rc-brand);border-color:var(--rc-brand);color:#fff}
+.rc-btn--primary:hover{background:#172f72;border-color:#172f72}
+.rc-btn--dark{background:#0f172a;border-color:#0f172a;color:#fff}
+.rc-btn--dark:hover{background:#1e293b;border-color:#1e293b}
+.rc-btn--ok{background:var(--rc-ok);border-color:var(--rc-ok);color:#fff}
+.rc-btn--ok:hover{background:#047857;border-color:#047857}
+.rc-btn--warn{background:var(--rc-warn-soft);border-color:#fcd34d;color:var(--rc-warn)}
+.rc-btn--warn:hover{background:#fef3c7;border-color:#f59e0b}
+.rc-btn--danger{background:var(--rc-danger);border-color:var(--rc-danger);color:#fff}
+.rc-btn--danger:hover{background:#9f1239;border-color:#9f1239}
+.rc-btn--ghost{border-color:transparent;background:transparent;color:var(--rc-muted)}
+.rc-btn--ghost:hover{background:#f1f5f9;color:var(--rc-text);border-color:transparent}
+.rc-btn--sm{padding:6px 10px;font-size:12px;border-radius:8px}
+.rc-btn--icon{padding:0;width:36px;height:36px}
+.rc-btn--block{width:100%}
+
+/* Inputs */
+.rc-input{width:100%;background:var(--rc-surface);border:1px solid var(--rc-line);border-radius:10px;padding:10px 12px;
+    font-size:14px;color:var(--rc-text);transition:border-color .15s,box-shadow .15s}
+.rc-input:focus{outline:none;border-color:var(--rc-brand);box-shadow:0 0 0 3px rgba(30,58,138,.12)}
+.rc-input::placeholder{color:var(--rc-faint)}
+
+/* Badges e dots */
+.rc-badge{display:inline-flex;align-items:center;gap:5px;font-size:11px;font-weight:600;padding:2px 8px;border-radius:999px;border:1px solid var(--rc-line);background:#f8fafc;color:var(--rc-muted)}
+.rc-badge--ok{background:var(--rc-ok-soft);color:var(--rc-ok);border-color:#a7f3d0}
+.rc-badge--warn{background:var(--rc-warn-soft);color:var(--rc-warn);border-color:#fde68a}
+.rc-badge--info{background:var(--rc-info-soft);color:var(--rc-info);border-color:#bfdbfe}
+.rc-badge--danger{background:var(--rc-danger-soft);color:var(--rc-danger);border-color:#fecdd3}
+.rc-badge--cyan{background:#ecfeff;color:#0e7490;border-color:#a5f3fc}
+.rc-badge--mono{font-family:ui-monospace,SFMono-Regular,Menlo,monospace;font-size:10.5px;font-weight:500}
+.rc-dot{width:8px;height:8px;border-radius:999px;display:inline-block;flex-shrink:0}
+
+/* Cards de pauta */
+.rc-pauta{display:flex;flex-direction:column;transition:box-shadow .2s,border-color .2s}
+.rc-pauta:hover{border-color:#cbd5e1;box-shadow:0 8px 24px -12px rgba(15,23,42,.18)}
+.rc-progress{height:4px;background:var(--rc-line-soft);border-radius:999px;overflow:hidden}
+.rc-progress>span{display:block;height:100%;background:var(--rc-brand);border-radius:999px;transition:width .6s ease}
+.rc-metric{flex:1;text-align:center;padding:12px 4px}
+.rc-metric+.rc-metric{border-left:1px solid var(--rc-line-soft)}
+.rc-metric b{display:block;font-size:20px;font-weight:800;line-height:1}
+.rc-metric span{display:block;margin-top:5px;font-size:10px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--rc-faint)}
+
+/* Pílulas */
+.rc-pill{display:inline-flex;align-items:center;gap:8px;padding:7px 14px;border-radius:999px;background:var(--rc-surface);border:1px solid var(--rc-line);font-size:12px;color:var(--rc-muted);font-weight:600}
+.rc-pill b{font-size:14px;color:var(--rc-text);font-weight:800}
+
+/* Segmentado (filtros) */
+.rc-seg{display:inline-flex;gap:2px;padding:3px;background:#eceff3;border-radius:11px;overflow-x:auto;max-width:100%}
+.rc-seg button{border:0;background:transparent;font-size:12.5px;font-weight:600;color:var(--rc-muted);padding:7px 13px;border-radius:8px;cursor:pointer;white-space:nowrap;transition:all .15s}
+.rc-seg button:hover{color:var(--rc-text)}
+.rc-seg button.is-active{background:var(--rc-surface);color:var(--rc-text);box-shadow:0 1px 2px rgba(15,23,42,.1)}
+
+/* Kanban */
+.rc-col{display:flex;flex-direction:column;min-height:0;background:var(--rc-bg)}
+.rc-col-head{display:flex;justify-content:space-between;align-items:center;padding:12px 16px;background:var(--rc-surface);border-bottom:1px solid var(--rc-line)}
+.rc-col-title{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--rc-muted)}
+.rc-count{font-size:11px;font-weight:700;padding:1px 8px;border-radius:999px;background:#eceff3;color:var(--rc-muted)}
+.rc-person{background:var(--rc-surface);border:1px solid var(--rc-line);border-radius:12px;padding:12px;transition:border-color .15s,box-shadow .15s}
+.rc-person:hover{border-color:#cbd5e1;box-shadow:0 2px 8px -4px rgba(15,23,42,.15)}
+.rc-person--prio{border-color:#fecdd3;background:linear-gradient(0deg,#fff,#fff 60%,#fff7f8)}
+.rc-person-actions{display:flex;justify-content:space-between;align-items:center;gap:6px;margin-top:10px;padding-top:10px;border-top:1px solid var(--rc-line-soft)}
+.rc-rank{width:24px;height:24px;border-radius:8px;background:var(--rc-warn-soft);color:var(--rc-warn);font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+
+/* Modais */
+.rc-backdrop{position:fixed;inset:0;background:rgba(15,23,42,.55);backdrop-filter:blur(3px);display:flex;align-items:center;justify-content:center;padding:16px;animation:rcFade .15s ease}
+.rc-modal{background:var(--rc-surface);width:100%;border-radius:18px;box-shadow:0 24px 60px -12px rgba(15,23,42,.4);display:flex;flex-direction:column;max-height:92vh;overflow:hidden;animation:rcPop .18s ease;color:var(--rc-text)}
+.rc-modal-head{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding:20px 24px 16px;border-bottom:1px solid var(--rc-line)}
+.rc-modal-head h3{font-size:17px;font-weight:800;letter-spacing:-.01em;line-height:1.2}
+.rc-modal-head p{font-size:12.5px;color:var(--rc-muted);margin-top:3px}
+.rc-modal-body{padding:20px 24px;overflow-y:auto;flex:1;background:#fbfbfc}
+.rc-modal-foot{display:flex;gap:10px;padding:16px 24px;border-top:1px solid var(--rc-line);background:var(--rc-surface)}
+.rc-modal-foot>*{flex:1}
+.rc-option{display:flex;align-items:center;gap:10px;padding:12px;border:1px solid var(--rc-line);border-radius:12px;background:var(--rc-surface);cursor:pointer;transition:all .15s;font-size:13px;font-weight:600}
+.rc-option:hover{border-color:#cbd5e1}
+.rc-option.is-selected{border-color:var(--rc-brand);background:var(--rc-brand-soft);box-shadow:0 0 0 1px var(--rc-brand)}
+.rc-chip{border:1px solid var(--rc-line);background:var(--rc-surface);border-radius:10px;padding:10px 8px;font-size:12.5px;font-weight:600;color:var(--rc-muted);cursor:pointer;transition:all .15s}
+.rc-chip:hover{border-color:#fda4af}
+.rc-chip.selected{background:var(--rc-danger-soft);border-color:#f43f5e;color:var(--rc-danger)}
+
+/* Utilitários */
+.rc-skeleton{background:linear-gradient(90deg,#eceff3 25%,#f6f7f9 37%,#eceff3 63%);background-size:400% 100%;animation:rcShimmer 1.3s ease infinite;border-radius:14px}
+.rc-empty{text-align:center;padding:56px 24px;border:1px dashed #cbd5e1;border-radius:16px;background:#fff}
+.rc-scroll{overflow-y:auto;scrollbar-width:thin}
+@keyframes rcFade{from{opacity:0}to{opacity:1}}
+@keyframes rcPop{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes rcShimmer{0%{background-position:100% 50%}100%{background-position:0 50%}}
+@media (prefers-reduced-motion:reduce){.rc-wrap *,.rc-backdrop,.rc-modal{animation:none!important;transition:none!important}}
+`;
+
+function injetarEstilos() {
+    if (document.getElementById('rc-styles')) return;
+    const style = document.createElement('style');
+    style.id = 'rc-styles';
+    style.textContent = CSS;
+    document.head.appendChild(style);
+}
+
+// ─── ÍCONES (SVG INLINE, SEM EMOJIS) ───────────────────────────────────────────
+
+const ICONS = {
+    back:     'M10 19l-7-7m0 0l7-7m-7 7h18',
+    arrow:    'M14 5l7 7m0 0l-7 7m7-7H3',
+    search:   'M21 21l-4.35-4.35M11 19a8 8 0 100-16 8 8 0 000 16z',
+    check:    'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z',
+    megaphone:'M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z',
+    tv:       'M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z',
+    refresh:  'M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15',
+    plus:     'M12 4v16m8-8H4',
+    swap:     'M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4',
+    star:     'M11.049 2.927c.3-.921 1.603-.921 1.902 0l1.519 4.674a1 1 0 00.95.69h4.915c.969 0 1.371 1.24.588 1.81l-3.976 2.888a1 1 0 00-.363 1.118l1.518 4.674c.3.922-.755 1.688-1.538 1.118l-3.976-2.888a1 1 0 00-1.176 0l-3.976 2.888c-.783.57-1.838-.197-1.538-1.118l1.518-4.674a1 1 0 00-.363-1.118l-3.976-2.888c-.784-.57-.38-1.81.588-1.81h4.914a1 1 0 00.951-.69l1.519-4.674z',
+    x:        'M6 18L18 6M6 6l12 12',
+    lock:     'M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4',
+    clock:    'M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z',
+    user:     'M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z',
+    folder:   'M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z',
+    undo:     'M3 10h10a8 8 0 018 8v2M3 10l6 6m-6-6l6-6',
+    scale:    'M3 6l3 1m0 0l-3 9a5.002 5.002 0 006.001 0M6 7l3 9M6 7l6-2m6-2l3 1m-3-1l-3 9a5.002 5.002 0 006.001 0M18 5l3 9m-3-9l-6 2m0-2v2m0 16V7m0 0L9 7',
+    list:     'M4 6h16M4 12h16M4 18h7',
+};
+
+const ico = (name, size = 16, extra = '') =>
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" ${extra}><path d="${ICONS[name] || ''}"/></svg>`;
+
 // ─── HELPERS ───────────────────────────────────────────────────────────────────
 
 function statusLabel(status) {
     const map = {
-        pauta:                  { txt: 'Agendado',    cor: 'bg-slate-100 text-slate-600 border-slate-200' },
-        aguardando:             { txt: 'Aguardando',  cor: 'bg-amber-50 text-amber-600 border-amber-200' },
-        emAtendimento:          { txt: 'Atendendo',   cor: 'bg-blue-50 text-blue-600 border-blue-200' },
-        aguardandoDistribuicao: { txt: 'Distribuição',cor: 'bg-cyan-50 text-cyan-600 border-cyan-200' },
-        atendido:               { txt: 'Finalizado',  cor: 'bg-emerald-50 text-emerald-600 border-emerald-200' },
-        faltoso:                { txt: 'Faltou',      cor: 'bg-red-50 text-red-600 border-red-200' },
+        pauta:                  { txt: 'Agendado',     cor: 'rc-badge' },
+        aguardando:             { txt: 'Aguardando',   cor: 'rc-badge rc-badge--warn' },
+        emAtendimento:          { txt: 'Atendendo',    cor: 'rc-badge rc-badge--info' },
+        aguardandoDistribuicao: { txt: 'Distribuição', cor: 'rc-badge rc-badge--cyan' },
+        atendido:               { txt: 'Finalizado',   cor: 'rc-badge rc-badge--ok' },
+        faltoso:                { txt: 'Faltou',       cor: 'rc-badge rc-badge--danger' },
     };
-    return map[status] || { txt: status, cor: 'bg-gray-50 text-gray-500 border-gray-200' };
+    return map[status] || { txt: status, cor: 'rc-badge' };
 }
 
 function contadores(assistidos) {
     return {
-        total:        assistidos.length,
-        naPauta:      assistidos.filter(a => a.status === 'pauta').length,
-        aguardando:   assistidos.filter(a => a.status === 'aguardando').length,
-        emAtendimento:assistidos.filter(a => a.status === 'emAtendimento').length,
-        atendidos:    assistidos.filter(a => a.status === 'atendido').length,
-        faltosos:     assistidos.filter(a => a.status === 'faltoso').length,
-        distribuicao: assistidos.filter(a => a.status === 'aguardandoDistribuicao').length,
+        total:         assistidos.length,
+        naPauta:       assistidos.filter(a => a.status === 'pauta').length,
+        aguardando:    assistidos.filter(a => a.status === 'aguardando').length,
+        emAtendimento: assistidos.filter(a => a.status === 'emAtendimento').length,
+        atendidos:     assistidos.filter(a => a.status === 'atendido').length,
+        faltosos:      assistidos.filter(a => a.status === 'faltoso').length,
+        distribuicao:  assistidos.filter(a => a.status === 'aguardandoDistribuicao').length,
     };
 }
 
 function colaboradoresStatus(colaboradores) {
-    const livres  = colaboradores.filter(c => c.status === 'disponivel' || !c.status);
+    const livres   = colaboradores.filter(c => c.status === 'disponivel' || !c.status);
     const ocupados = colaboradores.filter(c => c.status === 'ocupado');
     return { livres, ocupados };
 }
@@ -60,26 +210,60 @@ function colaboradoresStatus(colaboradores) {
 function renderVerificacoesBadge(a) {
     const docs = a.verifications || a.documentos || a.verificacoes || a.customFields?.verifications;
     if (!docs) return '';
-    
+
     let htmlLista = '';
-    
+
     if (Array.isArray(docs)) {
         const itens = docs.map(d => typeof d === 'string' ? d : (d.nome || d.name || d.label || 'Doc'));
-        if(itens.length === 0) return '';
-        htmlLista = itens.map(i => `<span class="inline-block bg-slate-50 text-slate-500 border border-slate-200 text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1">📄 ${escapeHTML(i)}</span>`).join('');
-    } 
-    else if (typeof docs === 'object') {
+        if (itens.length === 0) return '';
+        htmlLista = itens.map(i => `<span class="rc-badge">${escapeHTML(i)}</span>`).join('');
+    } else if (typeof docs === 'object') {
         const keys = Object.keys(docs);
-        if(keys.length === 0) return '';
-        htmlLista = keys.map(k => {
-            const checked = docs[k];
-            return `<span class="inline-block ${checked ? 'bg-emerald-50 text-emerald-600 border-emerald-200' : 'bg-rose-50 text-rose-500 border-rose-200'} border text-[9px] px-1.5 py-0.5 rounded mr-1 mb-1">
-                ${checked ? '✓' : '✗'} ${escapeHTML(k)}
-            </span>`;
-        }).join('');
+        if (keys.length === 0) return '';
+        htmlLista = keys.map(k => `<span class="rc-badge ${docs[k] ? 'rc-badge--ok' : 'rc-badge--danger'}">${docs[k] ? '✓' : '✗'} ${escapeHTML(k)}</span>`).join('');
     }
-    
-    return htmlLista ? `<div class="mt-1.5 flex flex-wrap gap-0.5">${htmlLista}</div>` : '';
+
+    return htmlLista ? `<div class="flex flex-wrap gap-1 mt-2">${htmlLista}</div>` : '';
+}
+
+// Cria um modal padronizado. Fecha com ESC, clique fora ou [data-rc-close].
+function criarModal({ id, titulo, subtitulo = '', corpo, rodape = '', largura = '448px', z = 200 }) {
+    document.getElementById(id)?.remove();
+
+    const backdrop = document.createElement('div');
+    backdrop.id = id;
+    backdrop.className = 'rc-wrap rc-backdrop';
+    backdrop.style.zIndex = z;
+    backdrop.setAttribute('role', 'dialog');
+    backdrop.setAttribute('aria-modal', 'true');
+    backdrop.innerHTML = `
+        <div class="rc-modal" style="max-width:${largura}">
+            <div class="rc-modal-head">
+                <div>
+                    <h3>${titulo}</h3>
+                    ${subtitulo ? `<p>${subtitulo}</p>` : ''}
+                </div>
+                <button type="button" class="rc-btn rc-btn--ghost rc-btn--icon" data-rc-close aria-label="Fechar">${ico('x', 18)}</button>
+            </div>
+            ${corpo}
+            ${rodape}
+        </div>
+    `;
+    document.body.appendChild(backdrop);
+
+    const onKey = (e) => { if (e.key === 'Escape') close(); };
+    const close = () => { document.removeEventListener('keydown', onKey); backdrop.remove(); };
+    document.addEventListener('keydown', onKey);
+    backdrop.addEventListener('mousedown', (e) => { if (e.target === backdrop) close(); });
+    backdrop.querySelectorAll('[data-rc-close]').forEach(b => b.addEventListener('click', close));
+
+    return { modal: backdrop, close };
+}
+
+function htmlLogo(altura = 28) {
+    return `<div class="rounded-xl flex items-center justify-center shrink-0" style="background:#0d1117;padding:10px 12px;border:1px solid #1f2937">
+        <img src="${LOGO_URL}" alt="SIGEP" style="height:${altura}px;width:auto" class="object-contain">
+    </div>`;
 }
 
 // ─── SERVIÇO PRINCIPAL ─────────────────────────────────────────────────────────
@@ -91,6 +275,7 @@ export const RecepcaoCentralService = {
     async init(app) {
         this._app = app;
         this._filtroTipo = this._filtroTipo || 'todos';
+        injetarEstilos();
 
         await this._carregarRecepcoesDoUsuario();
         await this._mostrarSelectorRecepcoes();
@@ -129,14 +314,12 @@ export const RecepcaoCentralService = {
         if (!container) return;
 
         container.innerHTML = `
-            <div class="max-w-7xl mx-auto px-4 py-12 text-center">
-                <div class="bg-amber-50 border border-amber-200 rounded-3xl p-10 max-w-md mx-auto shadow-sm">
-                    <span class="text-6xl block mb-4">🔒</span>
-                    <h3 class="text-xl font-bold text-amber-800 mb-2">Acesso Restrito</h3>
-                    <p class="text-amber-600 text-sm">Você não tem permissão para acessar nenhuma recepção no momento.</p>
-                    <button id="rc-voltar-sem-permissao" class="mt-8 bg-slate-800 text-white px-8 py-3 rounded-xl hover:bg-slate-900 transition font-bold w-full">
-                        Voltar ao Início
-                    </button>
+            <div class="rc-wrap max-w-lg mx-auto px-4 py-20">
+                <div class="rc-surface text-center" style="padding:40px 32px">
+                    <div class="mx-auto mb-5 flex items-center justify-center rounded-full" style="width:56px;height:56px;background:var(--rc-warn-soft);color:var(--rc-warn)">${ico('lock', 26)}</div>
+                    <h3 class="text-lg font-extrabold mb-1">Acesso restrito</h3>
+                    <p class="text-sm" style="color:var(--rc-muted)">Você não tem permissão para acessar nenhuma recepção no momento.</p>
+                    <button id="rc-voltar-sem-permissao" class="rc-btn rc-btn--dark rc-btn--block mt-7">Voltar ao início</button>
                 </div>
             </div>
         `;
@@ -147,44 +330,38 @@ export const RecepcaoCentralService = {
     _renderSelectorRecepcoes(recepcoes) {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
-    
+
         container.innerHTML = `
-            <div class="max-w-5xl mx-auto px-4 py-12">
-                <div class="flex justify-center mb-6">
-                    <div class="bg-[#0d1117] border border-slate-700 rounded-2xl p-4 shadow-md">
-                        <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-10 w-auto object-contain">
-                    </div>
-                </div>
-                
+            <div class="rc-wrap max-w-5xl mx-auto px-4 py-14">
+                <div class="flex justify-center mb-7">${htmlLogo(34)}</div>
+
                 <div class="text-center mb-10">
-                    <h2 class="text-3xl font-black text-slate-800 tracking-tight">Selecione sua Recepção</h2>
-                    <p class="text-slate-500 mt-2">Escolha qual área ou fluxo você irá operar agora.</p>
+                    <h2 class="text-3xl font-extrabold tracking-tight">Selecione sua recepção</h2>
+                    <p class="mt-2 text-sm" style="color:var(--rc-muted)">Escolha qual área ou fluxo você irá operar agora.</p>
                 </div>
-                
+
                 ${RecepcaoConfigService.renderSelectorRecepcoes(recepcoes)}
-                
+
                 <div class="mt-12 flex justify-center">
-                    <button id="rc-voltar-selector" class="bg-white border border-slate-300 text-slate-600 font-bold px-8 py-3 rounded-xl hover:bg-slate-50 hover:text-slate-800 transition shadow-sm flex items-center gap-2">
-                        ← Voltar para o Painel Principal
-                    </button>
+                    <button id="rc-voltar-selector" class="rc-btn">${ico('back', 16)} Voltar ao painel principal</button>
                 </div>
             </div>
         `;
-    
+
         document.querySelectorAll('.rc-selector-recepcao').forEach(btn => {
             btn.addEventListener('click', async () => {
                 const recepcaoId = btn.dataset.recepcaoId;
                 const recepcaoEncontrada = recepcoes.find(r => r.id === recepcaoId);
-    
+
                 if (recepcaoEncontrada) {
                     this._recepcaoAtual = recepcaoEncontrada;
                     await this._carregarPautasPorRecepcao();
                 }
             });
         });
-        
+
         RecepcaoConfigService.initSelectorEventos();
-    
+
         document.getElementById('rc-voltar-selector')?.addEventListener('click', () => this.fechar());
     },
 
@@ -230,12 +407,16 @@ export const RecepcaoCentralService = {
     _mostrarLoading() {
         const container = document.getElementById('recepcao-central-container');
         if (!container) return;
+        injetarEstilos();
 
         container.innerHTML = `
-            <div class="flex justify-center items-center h-[60vh]">
-                <div class="text-center animate-pulse">
-                    <div class="w-12 h-12 border-4 border-slate-200 border-t-indigo-600 rounded-full animate-spin mx-auto mb-4"></div>
-                    <p class="text-slate-500 font-medium">Carregando painel de recepção...</p>
+            <div class="rc-wrap max-w-[1400px] mx-auto px-4 sm:px-6 py-6" aria-busy="true">
+                <div class="rc-skeleton" style="height:56px;width:320px;margin-bottom:28px"></div>
+                <div class="rc-skeleton" style="height:52px;margin-bottom:24px"></div>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
+                    <div class="rc-skeleton" style="height:340px"></div>
+                    <div class="rc-skeleton" style="height:340px"></div>
+                    <div class="rc-skeleton hidden xl:block" style="height:340px"></div>
                 </div>
             </div>
         `;
@@ -277,7 +458,7 @@ export const RecepcaoCentralService = {
         estado.unsubscribers = [];
     },
 
-    // ── RENDER TELA PRINCIPAL (DESIGN MODERNO) ────────────────────────────────
+    // ── RENDER TELA PRINCIPAL ──────────────────────────────────────────────────
 
     _renderTelaComContexto() {
         const container = document.getElementById('recepcao-central-container');
@@ -285,76 +466,60 @@ export const RecepcaoCentralService = {
 
         const contexto = RecepcaoConfigService.getContextoRecepcao(this._recepcaoAtual);
 
+        const tipos = [
+            ['todos', 'Todos'], ['agendamento', 'Agendamento'], ['avulso', 'Avulso'],
+            ['multisala', 'Multi-sala'], ['mutirao', 'Mutirão'], ['plantao', 'Plantão'], ['acao_social', 'Ação social'],
+        ];
+        const filtroAtual = this._filtroTipo || 'todos';
+
         container.innerHTML = `
-            <div class="recepcao-central-wrap max-w-[1400px] mx-auto px-4 sm:px-6 py-6 animate-fade-in">
+            <div class="rc-wrap max-w-[1400px] mx-auto px-4 sm:px-6 py-6">
 
-                <!-- Header Superior Minimalista -->
-                <div class="flex flex-col sm:flex-row items-start sm:items-center justify-between mb-8 gap-4">
-                    <div class="flex items-center gap-4">
-                        <button id="rc-btn-voltar-home" class="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 flex items-center justify-center text-slate-600 transition-colors shadow-sm shrink-0" title="Voltar ao início">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        </button>
-                        <div class="w-14 h-14 rounded-xl flex items-center justify-center bg-[#0d1117] border border-slate-700 shadow-md shrink-0 overflow-hidden">
-                            <img src="https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6" alt="Logo SIGEP" class="h-8 w-auto object-contain">
-                        </div>
-                        <div>
-                            <h1 class="text-2xl font-black text-slate-800 tracking-tight leading-none">${contexto.titulo}</h1>
-                            <p class="text-sm text-slate-500 font-medium mt-1">${contexto.subtitulo}</p>
+                <!-- Cabeçalho -->
+                <div id="rc-header" class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+                    <div class="flex items-center gap-4 min-w-0">
+                        <button id="rc-btn-voltar-home" class="rc-btn rc-btn--icon shrink-0" title="Voltar ao início" aria-label="Voltar ao início">${ico('back', 18)}</button>
+                        ${htmlLogo(24)}
+                        <div class="min-w-0">
+                            <h1 class="text-xl sm:text-2xl font-extrabold tracking-tight leading-tight truncate">${contexto.titulo}</h1>
+                            <p class="text-sm truncate" style="color:var(--rc-muted)">${contexto.subtitulo}</p>
                         </div>
                     </div>
-                    
-                    <div class="flex items-center gap-3 w-full sm:w-auto">
-                        <button id="rc-trocar-recepcao" class="bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 text-sm font-bold px-4 py-2.5 rounded-xl transition shadow-sm flex items-center gap-2 flex-1 sm:flex-none justify-center">
-                            🔄 Trocar Setor
-                        </button>
-                        <button id="rc-btn-configurar-tv" class="bg-indigo-50 border border-indigo-100 hover:bg-indigo-100 text-indigo-700 text-sm font-bold px-4 py-2.5 rounded-xl transition flex items-center gap-2 flex-1 sm:flex-none justify-center">
-                            📺 Painel TV
-                        </button>
+
+                    <div class="flex items-center gap-2">
+                        <button id="rc-trocar-recepcao" class="rc-btn flex-1 sm:flex-none">${ico('swap', 15)} Trocar setor</button>
+                        <button id="rc-btn-configurar-tv" class="rc-btn rc-btn--primary flex-1 sm:flex-none">${ico('tv', 15)} Painel TV</button>
                     </div>
                 </div>
 
-                <!-- Busca Global em Destaque -->
-                <div class="bg-white rounded-2xl shadow-sm border border-slate-200 p-2 pl-4 mb-8 flex items-center gap-3 focus-within:ring-2 focus-within:ring-indigo-500 focus-within:border-indigo-500 transition-all">
-                    <span class="text-slate-400 text-lg">🔍</span>
-                    <input type="search" id="rc-input-busca" placeholder="Buscar assistido por nome, CPF ou nº de agendamento em todas as pautas..." 
-                        class="w-full bg-transparent border-none text-slate-700 placeholder-slate-400 text-base focus:ring-0 py-2 outline-none">
-                </div>
-                
-                <!-- Container de Resultados da Busca -->
-                <div id="rc-resultados-busca" class="mb-8 space-y-2 max-h-96 overflow-y-auto empty:hidden"></div>
-
-                <!-- Resumo em Pílulas (Pills) -->
-                <div id="rc-sumario" class="flex flex-wrap items-center gap-3 mb-8"></div>
-
-                <!-- Filtros Tipo Tabs -->
-                <div class="flex items-center gap-2 overflow-x-auto pb-4 mb-4 scrollbar-hide">
-                    <span class="text-xs font-bold text-slate-400 uppercase tracking-widest mr-2 shrink-0">Filtrar:</span>
-                    ${['todos','agendamento','avulso','multisala', 'mutirao', 'plantao', 'acao_social'].map(t => `
-                        <button class="rc-filtro-tipo shrink-0 text-xs font-bold px-4 py-2 rounded-full transition-all border
-                            ${(this._filtroTipo || 'todos') === t
-                                ? 'bg-slate-800 text-white border-slate-800 shadow-md'
-                                : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 hover:border-slate-300'}"
-                            data-tipo="${t}">
-                            ${t === 'todos' ? 'Todos'
-                            : t === 'agendamento' ? 'Agendamento'
-                            : t === 'avulso' ? 'Avulso'
-                            : t === 'multisala' ? 'Multi-Sala'
-                            : t === 'mutirao' ? 'Mutirão'
-                            : t === 'plantao' ? 'Plantão'
-                            : 'Ação Social'}
-                        </button>
-                    `).join('')}
-                    <button id="rc-btn-atualizar" class="shrink-0 bg-white border border-slate-200 text-slate-500 hover:text-indigo-600 px-3 py-2 rounded-full transition shadow-sm ml-auto" title="Recarregar pautas">
-                        🔄 Atualizar
-                    </button>
+                <!-- Busca global -->
+                <div id="rc-busca-wrap" class="rc-surface flex items-center gap-3 mb-5" style="padding:4px 6px 4px 16px">
+                    <span style="color:var(--rc-faint)">${ico('search', 18)}</span>
+                    <input type="search" id="rc-input-busca" autocomplete="off"
+                        placeholder="Buscar assistido por nome, CPF ou nº de agendamento em todas as pautas"
+                        class="w-full bg-transparent border-none outline-none text-[15px] py-3" style="color:var(--rc-text)">
                 </div>
 
-                <!-- Grade de Pautas -->
+                <div id="rc-resultados-busca" class="mb-6 space-y-2 max-h-96 rc-scroll empty:hidden"></div>
+
+                <!-- Resumo -->
+                <div id="rc-sumario" class="flex flex-wrap items-center gap-2 mb-6"></div>
+
+                <!-- Filtros -->
+                <div id="rc-filtros" class="flex items-center justify-between gap-3 mb-5">
+                    <div class="rc-seg">
+                        ${tipos.map(([v, l]) => `
+                            <button class="rc-filtro-tipo ${filtroAtual === v ? 'is-active' : ''}" data-tipo="${v}">${l}</button>
+                        `).join('')}
+                    </div>
+                    <button id="rc-btn-atualizar" class="rc-btn rc-btn--ghost rc-btn--sm shrink-0" title="Recarregar pautas">${ico('refresh', 14)} Atualizar</button>
+                </div>
+
+                <!-- Grade -->
                 <div id="rc-grade-pautas" class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5"></div>
 
-                <!-- Painel Foco (Oculto inicialmente) -->
+                <!-- Painel foco -->
                 <div id="rc-painel-foco" class="hidden"></div>
-
             </div>
         `;
 
@@ -369,13 +534,10 @@ export const RecepcaoCentralService = {
             await this._mostrarSelectorRecepcoes();
         });
 
-        // Evento do botão Voltar
-        document.getElementById('rc-btn-voltar-home')?.addEventListener('click', () => {
-            this.fechar();
-        });
+        document.getElementById('rc-btn-voltar-home')?.addEventListener('click', () => this.fechar());
     },
 
-    // ── GRADE DE PAUTAS (CARDS MODERNOS) ───────────────────────────────────────
+    // ── GRADE DE PAUTAS ────────────────────────────────────────────────────────
 
     _renderGrade() {
         const grade = document.getElementById('rc-grade-pautas');
@@ -383,10 +545,10 @@ export const RecepcaoCentralService = {
 
         if (estado.pautasHoje.length === 0) {
             grade.innerHTML = `
-                <div class="col-span-full text-center py-20 bg-slate-50 rounded-3xl border border-dashed border-slate-300">
-                    <span class="text-4xl block mb-3 opacity-50">📂</span>
-                    <p class="font-bold text-slate-500 text-lg">Nenhuma pauta ativa encontrada</p>
-                    <p class="text-sm text-slate-400 mt-1">Verifique os filtros selecionados ou crie uma nova pauta no sistema principal.</p>
+                <div class="col-span-full rc-empty">
+                    <div class="mx-auto mb-3 flex items-center justify-center rounded-full" style="width:48px;height:48px;background:#f1f5f9;color:var(--rc-faint)">${ico('folder', 22)}</div>
+                    <p class="font-bold" style="color:var(--rc-text)">Nenhuma pauta ativa encontrada</p>
+                    <p class="text-sm mt-1" style="color:var(--rc-muted)">Verifique os filtros selecionados ou crie uma nova pauta no sistema principal.</p>
                 </div>
             `;
             return;
@@ -403,109 +565,67 @@ export const RecepcaoCentralService = {
 
         const porcentagem = c.total > 0 ? Math.round((c.atendidos / c.total) * 100) : 0;
 
-        const dataPautaStr = pauta.dataAtuacao || pauta.data || pauta.createdAt 
-            ? new Date(pauta.dataAtuacao || pauta.data || pauta.createdAt).toLocaleDateString('pt-BR') 
-            : '';
-
         const aguardando = PautaService.sortAguardando(
             assistidos.filter(a => a.status === 'aguardando'),
             pauta.ordemAtendimento
         );
 
         const listaNomes = aguardando.length === 0
-            ? `<div class="py-4 text-center text-[11px] text-slate-400 bg-slate-50/50 rounded-lg border border-slate-100 italic">Fila vazia no momento.</div>`
+            ? `<div class="text-center text-xs italic py-5 rounded-lg" style="color:var(--rc-faint);background:#fafbfc;border:1px dashed var(--rc-line)">Fila vazia no momento</div>`
             : aguardando.slice(0, 4).map((a, i) => `
-                <div class="flex items-center gap-3 py-1.5 group">
-                    <span class="w-5 h-5 rounded bg-slate-100 text-slate-500 flex items-center justify-center text-[10px] font-bold shrink-0">${i + 1}</span>
-                    <div class="min-w-0 flex-1">
-                        <p class="text-xs font-bold text-slate-700 truncate group-hover:text-indigo-600 transition-colors">${escapeHTML(a.name)}</p>
-                    </div>
-                    <span class="text-[10px] font-medium text-slate-400 bg-white border border-slate-200 px-1.5 py-0.5 rounded shrink-0">${a.scheduledTime || '---'}</span>
+                <div class="flex items-center gap-3 py-1.5">
+                    <span class="rc-rank" style="width:22px;height:22px;font-size:10.5px">${i + 1}</span>
+                    <p class="text-[13px] font-semibold truncate flex-1 min-w-0">${escapeHTML(a.name)}</p>
+                    ${a.priority ? `<span class="rc-dot" style="background:var(--rc-danger)" title="Prioridade"></span>` : ''}
+                    <span class="text-[11px] tabular-nums shrink-0" style="color:var(--rc-faint)">${a.scheduledTime || '—'}</span>
                 </div>
             `).join('')
             + (aguardando.length > 4
-                ? `<div class="text-[10px] font-bold text-indigo-600 text-center pt-2 mt-1 border-t border-slate-100">+${aguardando.length - 4} aguardando</div>`
+                ? `<div class="text-[11px] font-semibold text-center pt-2 mt-1" style="color:var(--rc-brand);border-top:1px solid var(--rc-line-soft)">+${aguardando.length - 4} na fila</div>`
                 : '');
 
+        const concluida = porcentagem === 100;
+
         return `
-            <div id="rc-card-${pauta.id}" class="bg-white border border-slate-200 rounded-2xl shadow-sm hover:shadow-lg transition-all duration-300 flex flex-col" data-pauta-id="${pauta.id}">
-                
-                <!-- Cabeçalho do Card -->
-                <div class="p-5 border-b border-slate-100">
-                    <div class="flex justify-between items-start mb-1 gap-2">
-                        <h3 class="font-black text-slate-800 text-lg leading-tight tracking-tight truncate flex-1">${escapeHTML(pauta.name)}</h3>
-                        <div class="shrink-0 flex items-center justify-center w-9 h-9 rounded-full ${porcentagem === 100 ? 'bg-emerald-100 text-emerald-600' : 'bg-slate-100 text-slate-600'} font-bold text-[10px]">
-                            ${porcentagem}%
+            <div id="rc-card-${pauta.id}" class="rc-surface rc-pauta" data-pauta-id="${pauta.id}">
+
+                <div style="padding:18px 20px 14px">
+                    <div class="flex justify-between items-start gap-3">
+                        <div class="min-w-0">
+                            <h3 class="font-extrabold text-[17px] leading-snug tracking-tight truncate">${escapeHTML(pauta.name)}</h3>
+                            <p class="rc-eyebrow mt-1">${escapeHTML(pauta.type || 'agendamento')}${pauta.sala ? ` · ${escapeHTML(pauta.sala)}` : ''}</p>
                         </div>
-                    </div>
-                    <p class="text-xs font-bold text-indigo-500 uppercase tracking-wider">${pauta.type || 'agendamento'} ${pauta.sala ? ` • ${escapeHTML(pauta.sala)}` : ''}</p>
-                </div>
-
-                <!-- Barrinha fina de progresso -->
-                <div class="h-1 w-full bg-slate-100">
-                    <div class="h-full bg-indigo-500 transition-all duration-700" style="width:${porcentagem}%"></div>
-                </div>
-
-                <!-- Métricas Horizontais Minimalistas -->
-                <div class="flex items-center justify-between px-5 py-4 border-b border-slate-100">
-                    <div class="flex flex-col">
-                        <span class="text-xl font-black text-slate-700 leading-none">${c.naPauta}</span>
-                        <span class="text-[9px] font-bold text-slate-400 uppercase mt-1">Agenda</span>
-                    </div>
-                    <div class="w-px h-6 bg-slate-200"></div>
-                    <div class="flex flex-col">
-                        <span class="text-xl font-black text-amber-500 leading-none">${c.aguardando}</span>
-                        <span class="text-[9px] font-bold text-amber-600/70 uppercase mt-1">Fila</span>
-                    </div>
-                    <div class="w-px h-6 bg-slate-200"></div>
-                    <div class="flex flex-col">
-                        <span class="text-xl font-black text-blue-500 leading-none">${c.emAtendimento}</span>
-                        <span class="text-[9px] font-bold text-blue-600/70 uppercase mt-1">Mesa</span>
-                    </div>
-                    <div class="w-px h-6 bg-slate-200"></div>
-                    <div class="flex flex-col">
-                        <span class="text-xl font-black text-emerald-500 leading-none">${c.atendidos}</span>
-                        <span class="text-[9px] font-bold text-emerald-600/70 uppercase mt-1">Feitos</span>
+                        <span class="rc-badge ${concluida ? 'rc-badge--ok' : ''} shrink-0 tabular-nums">${porcentagem}%</span>
                     </div>
                 </div>
 
-                <!-- Preview da Fila -->
-                <div class="px-5 py-4 flex-1">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Próximos da Fila</p>
-                    <div class="space-y-1">
-                        ${listaNomes}
-                    </div>
+                <div style="padding:0 20px"><div class="rc-progress"><span style="width:${porcentagem}%"></span></div></div>
+
+                <div class="flex mt-3" style="border-top:1px solid var(--rc-line-soft);border-bottom:1px solid var(--rc-line-soft)">
+                    <div class="rc-metric"><b>${c.naPauta}</b><span>Agenda</span></div>
+                    <div class="rc-metric"><b style="color:var(--rc-warn)">${c.aguardando}</b><span>Fila</span></div>
+                    <div class="rc-metric"><b style="color:var(--rc-info)">${c.emAtendimento}</b><span>Mesa</span></div>
+                    <div class="rc-metric"><b style="color:var(--rc-ok)">${c.atendidos}</b><span>Feitos</span></div>
                 </div>
 
-                <!-- Equipe -->
-                <div class="px-5 py-3 flex items-center justify-between bg-slate-50 border-t border-slate-100">
-                    <div class="flex items-center gap-3">
-                        <div class="flex items-center gap-1.5" title="Livres">
-                            <div class="w-2 h-2 rounded-full bg-emerald-500"></div>
-                            <span class="text-xs font-bold text-slate-600">${livres.length}</span>
-                        </div>
-                        <div class="flex items-center gap-1.5" title="Ocupados">
-                            <div class="w-2 h-2 rounded-full bg-rose-500"></div>
-                            <span class="text-xs font-bold text-slate-600">${ocupados.length}</span>
-                        </div>
-                    </div>
-                    ${c.distribuicao > 0 ? `<span class="bg-cyan-100 text-cyan-700 text-[9px] font-bold px-2 py-1 rounded-md">⚖️ ${c.distribuicao} p/ Assin.</span>` : ''}
+                <div class="flex-1" style="padding:16px 20px">
+                    <p class="rc-eyebrow mb-2">Próximos da fila</p>
+                    ${listaNomes}
                 </div>
 
-                <!-- Botões de Ação Inferiores -->
-                <div class="p-4 grid grid-cols-6 gap-2 bg-white border-t border-slate-100 rounded-b-2xl">
-                    <button class="rc-btn-abrir col-span-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2" data-pauta-id="${pauta.id}">
-                        Abrir Painel <span class="text-lg leading-none">→</span>
-                    </button>
-                    <button class="rc-btn-checkin col-span-1 bg-white border border-slate-200 hover:border-amber-400 hover:bg-amber-50 text-amber-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center" data-pauta-id="${pauta.id}" title="Fazer Check-in rápido">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" /></svg>
-                    </button>
-                    <button class="rc-btn-chamar col-span-1 bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center" data-pauta-id="${pauta.id}" title="Chamar Próximo">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
-                    </button>
-                    <button class="rc-btn-tv-individual col-span-1 bg-indigo-50 border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-100 text-indigo-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center" data-pauta-id="${pauta.id}" title="Painel TV Isolado">
-                        📺
-                    </button>
+                <div class="flex items-center justify-between" style="padding:10px 20px;background:#fafbfc;border-top:1px solid var(--rc-line-soft)">
+                    <div class="flex items-center gap-4 text-xs font-semibold" style="color:var(--rc-muted)">
+                        <span class="flex items-center gap-1.5" title="Colaboradores livres"><span class="rc-dot" style="background:var(--rc-ok)"></span>${livres.length} livres</span>
+                        <span class="flex items-center gap-1.5" title="Colaboradores ocupados"><span class="rc-dot" style="background:var(--rc-danger)"></span>${ocupados.length} ocupados</span>
+                    </div>
+                    ${c.distribuicao > 0 ? `<span class="rc-badge rc-badge--cyan">${c.distribuicao} p/ assinar</span>` : ''}
+                </div>
+
+                <div class="flex gap-2" style="padding:14px 16px 16px">
+                    <button class="rc-btn rc-btn--dark flex-1 rc-btn-abrir" data-pauta-id="${pauta.id}">Abrir painel ${ico('arrow', 15)}</button>
+                    <button class="rc-btn rc-btn--icon rc-btn-checkin" data-pauta-id="${pauta.id}" title="Check-in rápido" aria-label="Check-in rápido">${ico('check', 17)}</button>
+                    <button class="rc-btn rc-btn--icon rc-btn-chamar" data-pauta-id="${pauta.id}" title="Chamar próximo" aria-label="Chamar próximo">${ico('megaphone', 17)}</button>
+                    <button class="rc-btn rc-btn--icon rc-btn-tv-individual" data-pauta-id="${pauta.id}" title="Painel TV isolado" aria-label="Painel TV isolado">${ico('tv', 17)}</button>
                 </div>
             </div>
         `;
@@ -520,7 +640,7 @@ export const RecepcaoCentralService = {
         this._renderSumario();
     },
 
-    // ── SUMÁRIO GERAL (PILLS MODERNOS) ─────────────────────────────────────────
+    // ── SUMÁRIO GERAL ──────────────────────────────────────────────────────────
 
     _renderSumario() {
         const el = document.getElementById('rc-sumario');
@@ -536,50 +656,99 @@ export const RecepcaoCentralService = {
             totalDist += c.distribuicao;
         }
 
-        const pill = (num, label, cor, border) => `
-            <div class="flex items-center gap-2 bg-white px-4 py-2 rounded-full border border-slate-200 shadow-sm shrink-0">
-                <span class="w-2.5 h-2.5 rounded-full ${cor}"></span>
-                <span class="text-sm font-black text-slate-700">${num}</span>
-                <span class="text-xs font-bold text-slate-400 uppercase tracking-wide">${label}</span>
-            </div>
+        const pill = (num, label, cor) => `
+            <div class="rc-pill"><span class="rc-dot" style="background:${cor}"></span><b>${num}</b>${label}</div>
         `;
 
         el.innerHTML = `
-            ${pill(totalNaPauta, 'Agendados', 'bg-slate-300')}
-            ${pill(totalAg, 'Em Fila', 'bg-amber-400')}
-            ${pill(totalEm, 'Mesas', 'bg-blue-500')}
-            ${pill(totalAt, 'Concluídos', 'bg-emerald-500')}
-            ${totalDist > 0 ? pill(totalDist, 'P/ Assinar', 'bg-cyan-400') : ''}
+            ${pill(totalNaPauta, 'Agendados', '#cbd5e1')}
+            ${pill(totalAg, 'Em fila', '#f59e0b')}
+            ${pill(totalEm, 'Nas mesas', '#2563eb')}
+            ${pill(totalAt, 'Concluídos', '#10b981')}
+            ${totalDist > 0 ? pill(totalDist, 'Para assinar', '#06b6d4') : ''}
         `;
     },
 
-    // ── PAINEL DE FOCO (KANBAN CLEAN) ──────────────────────────────────────────
+    // ── PAINEL DE FOCO (KANBAN) ────────────────────────────────────────────────
+
+    _alternarVisibilidadeGrade(mostrar) {
+        ['rc-grade-pautas', 'rc-sumario', 'rc-header', 'rc-filtros', 'rc-busca-wrap', 'rc-resultados-busca'].forEach(id => {
+            document.getElementById(id)?.classList.toggle('hidden', !mostrar);
+        });
+        document.getElementById('rc-painel-foco')?.classList.toggle('hidden', mostrar);
+    },
 
     _abrirFoco(pautaId) {
         estado.pautaFocadaId = pautaId;
         estado.modoVisao     = 'foco';
-
-        document.getElementById('rc-grade-pautas').classList.add('hidden');
-        document.getElementById('rc-sumario').classList.add('hidden');
-        document.querySelector('.recepcao-central-wrap > div.flex.mb-8').classList.add('hidden'); 
-        document.querySelector('.recepcao-central-wrap > div.overflow-x-auto').classList.add('hidden'); 
-
-        const foco = document.getElementById('rc-painel-foco');
-        foco.classList.remove('hidden');
-
+        this._alternarVisibilidadeGrade(false);
         this._renderFoco(pautaId);
     },
 
     _fecharFoco() {
         estado.pautaFocadaId = null;
         estado.modoVisao     = 'grade';
-        
-        document.getElementById('rc-grade-pautas').classList.remove('hidden');
-        document.getElementById('rc-sumario').classList.remove('hidden');
-        document.querySelector('.recepcao-central-wrap > div.flex.mb-8').classList.remove('hidden');
-        document.querySelector('.recepcao-central-wrap > div.overflow-x-auto').classList.remove('hidden');
-        
-        document.getElementById('rc-painel-foco').classList.add('hidden');
+        this._alternarVisibilidadeGrade(true);
+    },
+
+    // Card de assistido reutilizado nas 3 colunas
+    _htmlAssistidoCard(a, pautaId, tipo, posicao = 0) {
+        const busca = normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''));
+        const num = a.numAgendamento ? `<span class="rc-badge rc-badge--mono shrink-0">#${escapeHTML(String(a.numAgendamento))}</span>` : '';
+        const hora = a.scheduledTime
+            ? `<span class="font-semibold tabular-nums" style="color:${tipo === 'fila' ? 'var(--rc-warn)' : 'var(--rc-text)'}">${a.scheduledTime}</span> · `
+            : '';
+        const prio = a.priority
+            ? `<span class="rc-badge rc-badge--danger mt-2">${ico('star', 11)} ${escapeHTML(a.priorityReason || a.priority)}</span>`
+            : '';
+
+        let acoes = '';
+        if (tipo === 'agendado') {
+            acoes = `
+                <div class="rc-person-actions">
+                    <button class="rc-btn rc-btn--warn rc-btn--sm rc-btn--block rc-foco-checkin" data-id="${a.id}" data-pauta="${pautaId}">${ico('check', 14)} Fazer check-in</button>
+                </div>`;
+        } else if (tipo === 'fila') {
+            acoes = `
+                <div class="rc-person-actions">
+                    <div class="flex gap-1">
+                        <button class="rc-btn rc-btn--ghost rc-btn--sm rc-btn--icon rc-foco-abrir-prioridade" style="width:30px;height:30px" title="Definir prioridade" aria-label="Definir prioridade" data-id="${a.id}" data-pauta="${pautaId}">${ico('star', 15)}</button>
+                        ${(a.priority || a.priorityReason) ? `<button class="rc-btn rc-btn--ghost rc-btn--sm rc-btn--icon rc-foco-remover-prioridade" style="width:30px;height:30px;color:var(--rc-danger)" title="Remover prioridade" aria-label="Remover prioridade" data-id="${a.id}" data-pauta="${pautaId}">${ico('x', 15)}</button>` : ''}
+                    </div>
+                    <div class="flex gap-1.5">
+                        <button class="rc-btn rc-btn--ghost rc-btn--sm rc-foco-voltar" data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">${ico('undo', 13)} Desfazer</button>
+                        <button class="rc-btn rc-btn--ok rc-btn--sm rc-foco-chamar-individual" data-id="${a.id}" data-pauta="${pautaId}">${ico('megaphone', 13)} Chamar</button>
+                    </div>
+                </div>`;
+        } else if (tipo === 'mesa') {
+            acoes = `
+                <div class="rc-person-actions" style="justify-content:flex-end">
+                    <button class="rc-btn rc-btn--ghost rc-btn--sm rc-foco-voltar" data-id="${a.id}" data-pauta="${pautaId}" data-destino="aguardando">${ico('undo', 13)} Voltar p/ fila</button>
+                </div>`;
+        }
+
+        const colab = tipo === 'mesa'
+            ? `<span class="rc-badge rc-badge--info mt-2">${ico('user', 11)} ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Mesa não atribuída')}</span>`
+            : '';
+
+        const corpo = `
+            <div class="flex justify-between items-start gap-2">
+                <p class="font-bold text-sm leading-snug ${tipo === 'fila' ? 'truncate' : ''}">${escapeHTML(a.name)}</p>
+                ${num}
+            </div>
+            <p class="text-xs mt-0.5 truncate" style="color:var(--rc-muted)">${tipo === 'mesa' ? '' : hora}${escapeHTML(a.subject || 'Sem assunto')}</p>
+            ${prio}${colab}
+            ${tipo !== 'mesa' ? renderVerificacoesBadge(a) : ''}
+        `;
+
+        return `
+            <div class="rc-person ${a.priority ? 'rc-person--prio' : ''} rc-assistido-card" data-busca="${busca}">
+                ${tipo === 'fila'
+                    ? `<div class="flex gap-3"><div class="rc-rank">${posicao}</div><div class="flex-1 min-w-0">${corpo}</div></div>`
+                    : corpo}
+                ${acoes}
+            </div>
+        `;
     },
 
     _renderFoco(pautaId) {
@@ -600,218 +769,120 @@ export const RecepcaoCentralService = {
         );
         const emAtendimentoList = assistidos.filter(a => a.status === 'emAtendimento');
 
-        foco.innerHTML = `
-            <div class="bg-white rounded-3xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-[80vh] min-h-[600px] animate-fade-in">
+        const vazio = (txt) => `<p class="text-xs text-center py-10 font-medium" style="color:var(--rc-faint)">${txt}</p>`;
+        const colHead = (cor, titulo, qtd) => `
+            <div class="rc-col-head">
+                <h4 class="rc-col-title"><span class="rc-dot" style="background:${cor}"></span>${titulo}</h4>
+                <span class="rc-count">${qtd}</span>
+            </div>`;
 
-                <!-- Header do Foco -->
-                <div class="bg-white px-6 py-4 flex justify-between items-center border-b border-slate-200 shrink-0 gap-4">
-                    <div class="flex items-center gap-4">
-                        <button id="rc-btn-voltar-grade" class="w-10 h-10 rounded-full bg-slate-50 hover:bg-slate-100 flex items-center justify-center text-slate-500 transition-colors">
-                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" /></svg>
-                        </button>
-                        <div>
-                            <h3 class="text-slate-800 font-black text-xl leading-tight">${escapeHTML(pauta.name)}</h3>
-                            <div class="flex gap-3 mt-1">
-                                <span class="text-slate-400 text-xs font-medium">📋 Total: ${c.total}</span>
-                                <span class="text-emerald-500 text-xs font-bold">✓ Feitos: ${c.atendidos}</span>
-                            </div>
+        // Preserva a busca digitada durante re-renderizações em tempo real
+        const termoAnterior = document.getElementById('rc-foco-input-busca')?.value || '';
+
+        foco.innerHTML = `
+            <div class="rc-surface overflow-hidden flex flex-col" style="height:calc(100vh - 48px);min-height:600px">
+
+                <div class="flex flex-wrap items-center justify-between gap-4 shrink-0" style="padding:14px 20px;border-bottom:1px solid var(--rc-line)">
+                    <div class="flex items-center gap-3 min-w-0">
+                        <button id="rc-btn-voltar-grade" class="rc-btn rc-btn--icon shrink-0" aria-label="Voltar para as pautas">${ico('back', 18)}</button>
+                        <div class="min-w-0">
+                            <h3 class="font-extrabold text-lg leading-tight truncate">${escapeHTML(pauta.name)}</h3>
+                            <p class="text-xs mt-0.5 flex gap-3" style="color:var(--rc-muted)">
+                                <span>Total <b style="color:var(--rc-text)">${c.total}</b></span>
+                                <span>Concluídos <b style="color:var(--rc-ok)">${c.atendidos}</b></span>
+                                ${c.faltosos ? `<span>Faltas <b style="color:var(--rc-danger)">${c.faltosos}</b></span>` : ''}
+                            </p>
                         </div>
                     </div>
-                    
-                    <div class="flex flex-1 max-w-md mx-4">
-                        <div class="relative w-full">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                            <input type="search" id="rc-foco-input-busca" placeholder="Pesquisar nesta pauta..." class="w-full bg-slate-50 border border-slate-200 rounded-xl pl-10 pr-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all">
-                        </div>
+
+                    <div class="relative flex-1" style="min-width:220px;max-width:420px">
+                        <span class="absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--rc-faint)">${ico('search', 16)}</span>
+                        <input type="search" id="rc-foco-input-busca" value="${escapeHTML(termoAnterior)}" placeholder="Pesquisar nesta pauta" class="rc-input" style="padding-left:36px">
                     </div>
 
                     <div class="flex gap-2 shrink-0">
-                        <button id="rc-foco-btn-add-assistido" class="bg-slate-800 hover:bg-slate-900 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center gap-1.5">
-                            ➕ Adicionar
-                        </button>
-                        <button id="rc-foco-btn-chamar" class="bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm flex items-center gap-1.5">
-                            📣 Chamar Próximo
-                        </button>
+                        <button id="rc-foco-btn-add-assistido" class="rc-btn">${ico('plus', 15)} Adicionar</button>
+                        <button id="rc-foco-btn-chamar" class="rc-btn rc-btn--ok">${ico('megaphone', 15)} Chamar próximo</button>
                     </div>
                 </div>
 
-                <!-- Colunas Kanban -->
-                <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 divide-y lg:divide-y-0 lg:divide-x divide-slate-100 overflow-hidden bg-slate-50/50">
+                <div class="flex-1 grid grid-cols-1 lg:grid-cols-3 overflow-hidden" style="min-height:0">
 
-                    <!-- Coluna 1: Agendados -->
-                    <div class="flex flex-col h-full overflow-hidden">
-                        <div class="px-5 py-3 border-b border-slate-100 bg-white/80 backdrop-blur shrink-0 flex justify-between items-center">
-                            <h4 class="text-xs font-bold text-slate-500 uppercase tracking-widest flex items-center gap-1.5">
-                                <div class="w-2 h-2 rounded-full bg-slate-300"></div> Agendados
-                            </h4>
-                            <span class="bg-slate-100 text-slate-600 text-[10px] font-black px-2 py-0.5 rounded-md">${naPautaList.length}</span>
-                        </div>
-                        <div class="p-3 flex-1 overflow-y-auto space-y-2 rc-coluna-agendados">
-                            ${naPautaList.length === 0 ? `<p class="text-xs text-slate-400 text-center py-10 font-medium">Nenhum agendado.</p>` : ''}
-                            ${naPautaList.map(a => `
-                                <div class="rc-assistido-card bg-white border border-slate-200 rounded-xl p-3 shadow-sm hover:border-indigo-300 transition-colors group" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <p class="font-bold text-slate-700 text-sm leading-snug pr-2">${escapeHTML(a.name)}</p>
-                                        ${a.numAgendamento ? `<span class="bg-slate-50 text-slate-500 border border-slate-100 text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0">#${a.numAgendamento}</span>` : ''}
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 mb-2 truncate">
-                                        ${a.scheduledTime ? `<span class="font-bold text-slate-700">⏰ ${a.scheduledTime}</span> · ` : ''} ${escapeHTML(a.subject || 'Sem assunto')}
-                                    </p>
-                                    ${a.priority ? `<span class="inline-block mb-2 bg-rose-50 text-rose-600 border border-rose-100 px-2 py-0.5 rounded text-[9px] font-bold uppercase">🚨 ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
-                                    ${renderVerificacoesBadge(a)}
-                                    <div class="mt-2 pt-2 border-t border-slate-100 opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button class="rc-foco-checkin w-full bg-amber-100 hover:bg-amber-200 text-amber-700 font-bold py-1.5 rounded-lg text-xs transition" data-id="${a.id}" data-pauta="${pautaId}">Fazer Check-in</button>
-                                    </div>
-                                </div>
-                            `).join('')}
+                    <div class="rc-col" style="border-right:1px solid var(--rc-line)">
+                        ${colHead('#cbd5e1', 'Agendados', naPautaList.length)}
+                        <div class="p-3 flex-1 rc-scroll space-y-2">
+                            ${naPautaList.length === 0 ? vazio('Nenhum agendado.') : ''}
+                            ${naPautaList.map(a => this._htmlAssistidoCard(a, pautaId, 'agendado')).join('')}
                         </div>
                     </div>
 
-                    <!-- Coluna 2: Fila -->
-                    <div class="flex flex-col h-full overflow-hidden border-l-4 border-l-amber-400 lg:border-l-0">
-                        <div class="px-5 py-3 border-b border-slate-100 bg-white/80 backdrop-blur shrink-0 flex justify-between items-center">
-                            <h4 class="text-xs font-bold text-amber-600 uppercase tracking-widest flex items-center gap-1.5">
-                                <div class="w-2 h-2 rounded-full bg-amber-400"></div> Em Fila
-                            </h4>
-                            <span class="bg-amber-100 text-amber-700 text-[10px] font-black px-2 py-0.5 rounded-md">${aguardando.length}</span>
-                        </div>
-                        <div class="p-3 flex-1 overflow-y-auto space-y-2 rc-coluna-aguardando">
-                            ${aguardando.length === 0 ? `<p class="text-xs text-slate-400 text-center py-10 font-medium">Fila vazia.</p>` : ''}
-                            ${aguardando.map((a, i) => `
-                                <div class="rc-assistido-card bg-white border ${a.priority ? 'border-rose-200 bg-rose-50/30' : 'border-slate-200'} rounded-xl p-3 shadow-sm hover:border-amber-300 transition-colors group flex flex-col" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
-                                    <div class="flex gap-3">
-                                        <div class="w-6 h-6 rounded-full bg-amber-100 text-amber-700 text-[10px] font-black flex items-center justify-center shrink-0 border border-amber-200">${i + 1}</div>
-                                        <div class="flex-1 min-w-0">
-                                            <div class="flex justify-between items-start">
-                                                <p class="font-bold text-slate-800 text-sm leading-snug truncate pr-2">${escapeHTML(a.name)}</p>
-                                                ${a.numAgendamento ? `<span class="bg-slate-50 text-slate-500 border border-slate-100 text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0">#${a.numAgendamento}</span>` : ''}
-                                            </div>
-                                            <p class="text-[11px] text-slate-500 mt-0.5 truncate">
-                                                ${a.scheduledTime ? `<span class="font-bold text-amber-600">⏰ ${a.scheduledTime}</span> · ` : ''} ${escapeHTML(a.subject || 'Sem assunto')}
-                                            </p>
-                                            ${a.priority ? `<span class="inline-block mt-1.5 bg-rose-100 text-rose-700 border border-rose-200 px-2 py-0.5 rounded text-[9px] font-bold uppercase">🚨 Prioridade: ${escapeHTML(a.priorityReason || a.priority)}</span>` : ''}
-                                            ${renderVerificacoesBadge(a)}
-                                        </div>
-                                    </div>
-                                    <div class="mt-3 pt-3 border-t border-slate-100 flex items-center justify-between opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <div class="flex gap-1">
-                                            <button class="rc-foco-abrir-prioridade w-7 h-7 rounded bg-slate-100 text-slate-500 hover:text-amber-600 flex items-center justify-center transition" title="Definir Prioridade" data-id="${a.id}" data-pauta="${pautaId}">⭐</button>
-                                            ${(a.priority || a.priorityReason) ? `<button class="rc-foco-remover-prioridade w-7 h-7 rounded bg-rose-50 text-rose-500 hover:text-rose-700 flex items-center justify-center transition" title="Remover Prioridade" data-id="${a.id}" data-pauta="${pautaId}">✖</button>` : ''}
-                                        </div>
-                                        <div class="flex gap-2">
-                                            <button class="rc-foco-voltar text-[10px] text-slate-500 hover:text-slate-800 font-bold px-2 py-1" data-id="${a.id}" data-pauta="${pautaId}" data-destino="pauta">Desfazer Check-in</button>
-                                            <button class="rc-foco-chamar-individual text-[11px] bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-3 py-1.5 rounded-lg transition shadow-sm" data-id="${a.id}" data-pauta="${pautaId}">📣 Chamar</button>
-                                        </div>
-                                    </div>
-                                </div>
-                            `).join('')}
+                    <div class="rc-col" style="border-right:1px solid var(--rc-line)">
+                        ${colHead('#f59e0b', 'Em fila', aguardando.length)}
+                        <div class="p-3 flex-1 rc-scroll space-y-2">
+                            ${aguardando.length === 0 ? vazio('Fila vazia.') : ''}
+                            ${aguardando.map((a, i) => this._htmlAssistidoCard(a, pautaId, 'fila', i + 1)).join('')}
                         </div>
                     </div>
 
-                    <!-- Coluna 3: Mesas -->
-                    <div class="flex flex-col h-full overflow-hidden border-l-4 border-l-blue-400 lg:border-l-0">
-                        <div class="px-5 py-3 border-b border-slate-100 bg-white/80 backdrop-blur shrink-0 flex justify-between items-center">
-                            <h4 class="text-xs font-bold text-blue-600 uppercase tracking-widest flex items-center gap-1.5">
-                                <div class="w-2 h-2 rounded-full bg-blue-500"></div> Nas Mesas
-                            </h4>
-                            <span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2 py-0.5 rounded-md">${emAtendimentoList.length}</span>
+                    <div class="rc-col">
+                        ${colHead('#2563eb', 'Nas mesas', emAtendimentoList.length)}
+                        <div class="p-3 flex-1 rc-scroll space-y-2">
+                            ${emAtendimentoList.length === 0 ? vazio('Ninguém em atendimento.') : ''}
+                            ${emAtendimentoList.map(a => this._htmlAssistidoCard(a, pautaId, 'mesa')).join('')}
                         </div>
-                        <div class="p-3 flex-1 overflow-y-auto space-y-2 rc-coluna-atendimento">
-                            ${emAtendimentoList.length === 0 ? `<p class="text-xs text-slate-400 text-center py-10 font-medium">Ninguém em atendimento.</p>` : ''}
-                            ${emAtendimentoList.map(a => `
-                                <div class="rc-assistido-card bg-white border border-blue-200 rounded-xl p-3 shadow-sm hover:border-blue-400 transition-colors group flex flex-col" data-busca="${normalizeText(a.name + ' ' + (a.cpf || '') + ' ' + (a.numAgendamento || '') + ' ' + (a.subject || ''))}">
-                                    <div class="flex justify-between items-start mb-2">
-                                        <p class="font-bold text-slate-800 text-sm leading-snug pr-2">${escapeHTML(a.name)}</p>
-                                        ${a.numAgendamento ? `<span class="bg-slate-50 text-slate-500 border border-slate-100 text-[9px] font-mono px-1.5 py-0.5 rounded shrink-0">#${a.numAgendamento}</span>` : ''}
-                                    </div>
-                                    <p class="text-[11px] text-slate-500 mb-2 truncate">
-                                        📝 ${escapeHTML(a.subject || 'Sem assunto')}
-                                    </p>
-                                    <div class="inline-flex items-center gap-1.5 bg-blue-50 text-blue-700 border border-blue-100 text-[10px] font-bold px-2 py-1 rounded-md w-max mt-auto">
-                                        <span>🧑‍💻</span> ${escapeHTML(a.assignedCollaborator?.name || a.attendant || 'Mesa não atribuída')}
-                                    </div>
-                                    <div class="mt-2 pt-2 border-t border-slate-100 flex justify-end opacity-0 group-hover:opacity-100 transition-opacity">
-                                        <button class="rc-foco-voltar text-[10px] text-slate-500 hover:text-blue-600 font-bold px-2 py-1" data-id="${a.id}" data-pauta="${pautaId}" data-destino="aguardando">← Voltar p/ Fila</button>
-                                    </div>
-                                </div>
-                            `).join('')}
-                        </div>
-                        
-                        <!-- Mini Painel de Equipe Embaixo -->
-                        <div class="h-32 border-t border-slate-200 bg-slate-50 flex flex-col shrink-0">
-                            <div class="px-4 py-2 border-b border-slate-200 bg-white flex justify-between items-center">
-                                <span class="text-[10px] font-bold text-slate-500 uppercase tracking-widest">Equipe Online</span>
-                                <span class="text-[10px] font-bold text-slate-400">${colaboradores.length}</span>
+
+                        <div class="shrink-0" style="height:132px;border-top:1px solid var(--rc-line);background:var(--rc-surface);display:flex;flex-direction:column">
+                            <div class="flex justify-between items-center" style="padding:8px 16px;border-bottom:1px solid var(--rc-line-soft)">
+                                <span class="rc-eyebrow">Equipe online</span>
+                                <span class="rc-count">${colaboradores.length}</span>
                             </div>
-                            <div class="flex-1 p-2 overflow-y-auto flex flex-wrap gap-1.5 items-start content-start">
-                                ${colaboradores.length === 0 ? `<p class="text-[10px] text-slate-400 w-full text-center mt-2">Vazio</p>` : ''}
+                            <div class="flex-1 rc-scroll flex flex-wrap gap-1.5 items-start content-start" style="padding:10px 12px">
+                                ${colaboradores.length === 0 ? `<p class="text-xs w-full text-center mt-2" style="color:var(--rc-faint)">Nenhum colaborador</p>` : ''}
                                 ${colaboradores.map(col => {
                                     const livre = col.status === 'disponivel' || !col.status;
-                                    return `
-                                        <div class="flex items-center gap-1.5 px-2 py-1 bg-white border border-slate-200 rounded text-[10px]">
-                                            <div class="w-1.5 h-1.5 rounded-full ${livre ? 'bg-emerald-500' : 'bg-rose-500'}"></div>
-                                            <span class="font-bold text-slate-700 truncate max-w-[80px]" title="${escapeHTML(col.nome)}">${escapeHTML(col.nome.split(' ')[0])}</span>
-                                        </div>
-                                    `;
+                                    const nome = col.nome || 'Sem nome';
+                                    return `<span class="rc-badge" title="${escapeHTML(nome)} — ${livre ? 'livre' : 'ocupado'}">
+                                        <span class="rc-dot" style="width:6px;height:6px;background:${livre ? 'var(--rc-ok)' : 'var(--rc-danger)'}"></span>
+                                        ${escapeHTML(nome.split(' ')[0])}
+                                    </span>`;
                                 }).join('')}
                             </div>
                         </div>
                     </div>
-
                 </div>
             </div>
         `;
 
-        // Refaz os event listeners do foco
+        const aplicarFiltro = (valor) => {
+            const termo = normalizeText((valor || '').trim());
+            foco.querySelectorAll('.rc-assistido-card').forEach(card => {
+                card.style.display = (!termo || (card.dataset.busca || '').includes(termo)) ? '' : 'none';
+            });
+        };
+        if (termoAnterior) aplicarFiltro(termoAnterior);
+
         document.getElementById('rc-btn-voltar-grade')?.addEventListener('click', () => this._fecharFoco());
-
-        document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', async () => {
-            await this._chamarProximo(pautaId);
-        });
-
+        document.getElementById('rc-foco-btn-chamar')?.addEventListener('click', () => this._chamarProximo(pautaId));
         document.getElementById('rc-foco-btn-add-assistido')?.addEventListener('click', () => {
             this._abrirModalAdicionarAssistido(pautaId, pauta.name);
         });
-
-        document.getElementById('rc-foco-input-busca')?.addEventListener('input', (e) => {
-            const termo = normalizeText(e.target.value.trim());
-            foco.querySelectorAll('.rc-assistido-card').forEach(card => {
-                const buscaTexto = card.dataset.busca || '';
-                if (!termo || buscaTexto.includes(termo)) {
-                    card.style.display = '';
-                } else {
-                    card.style.display = 'none';
-                }
-            });
-        });
+        document.getElementById('rc-foco-input-busca')?.addEventListener('input', (e) => aplicarFiltro(e.target.value));
 
         foco.querySelectorAll('.rc-foco-checkin').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
-            });
+            btn.addEventListener('click', () => this._abrirModalCheckinComHorario(pautaId, btn.dataset.id));
         });
-        
         foco.querySelectorAll('.rc-foco-chamar-individual').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._chamarAssistidoEspecifico(pautaId, btn.dataset.id);
-            });
+            btn.addEventListener('click', () => this._chamarAssistidoEspecifico(pautaId, btn.dataset.id));
         });
-
         foco.querySelectorAll('.rc-foco-voltar').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino);
-            });
+            btn.addEventListener('click', () => this._voltarStatusAssistido(pautaId, btn.dataset.id, btn.dataset.destino));
         });
-
         foco.querySelectorAll('.rc-foco-abrir-prioridade').forEach(btn => {
-            btn.addEventListener('click', () => {
-                this._abrirModalDefinirPrioridade(btn.dataset.pauta, btn.dataset.id);
-            });
+            btn.addEventListener('click', () => this._abrirModalDefinirPrioridade(btn.dataset.pauta, btn.dataset.id));
         });
-
         foco.querySelectorAll('.rc-foco-remover-prioridade').forEach(btn => {
             btn.addEventListener('click', async () => {
-                if(confirm("Remover urgência?")) {
+                if (confirm("Remover prioridade deste assistido?")) {
                     await PautaService.updateStatus(
                         this._app.db,
                         btn.dataset.pauta,
@@ -828,73 +899,47 @@ export const RecepcaoCentralService = {
     // ── MODAL DEFINIR PRIORIDADE ───────────────────────────────────────────────
 
     _abrirModalDefinirPrioridade(pautaId, assistidoId) {
-        const existing = document.getElementById('rc-modal-prioridade');
-        if (existing) existing.remove();
+        const categorias = [
+            'Idoso (60+)', 'Idoso (80+)', 'Deficiência (PCD)', 'Autismo (TEA)',
+            'Gestante', 'Criança de Colo', 'Obesidade', 'Urgência Médica',
+        ];
 
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-prioridade';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
-        modal.innerHTML = `
-            <div class="bg-white p-5 sm:p-8 rounded-xl shadow-2xl w-full max-w-md border-t-8 border-rose-500 max-h-[95vh] overflow-y-auto" onclick="event.stopPropagation()">
-                <h2 class="text-xl sm:text-2xl font-black mb-2 text-slate-800">Prioridade Legal</h2>
-                <p class="mb-4 sm:mb-6 text-xs sm:text-sm text-slate-500">Selecione uma ou mais categorias:</p>
-                
-                <div id="rc-priority-types-grid" class="grid grid-cols-2 gap-3 mb-4 sm:mb-6">
-                    <button type="button" data-value="Idoso (60+)" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">👴 Idoso (60+)</button>
-                    <button type="button" data-value="Idoso (80+)" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">🎖️ Idoso (80+)</button>
-                    <button type="button" data-value="Deficiência (PCD)" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">♿ Deficiência</button>
-                    <button type="button" data-value="Autismo (TEA)" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">🧩 Autismo</button>
-                    <button type="button" data-value="Gestante" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">🤰 Gestante</button>
-                    <button type="button" data-value="Criança de Colo" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">👶 Colo</button>
-                    <button type="button" data-value="Obesidade" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">⚖️ Obesidade</button>
-                    <button type="button" data-value="Urgência Médica" class="rc-p-chip bg-white border border-slate-200 rounded-xl py-3 px-2 text-xs font-bold text-slate-600 hover:border-rose-300 transition focus:outline-none">🚑 Médica</button>
-                </div>
-        
-                <label class="block text-xs font-bold text-slate-400 uppercase tracking-widest mb-2">Outros / Observações:</label>
-                <textarea id="rc-priority-reason-input" placeholder="Ex: Prazo vencendo hoje..." class="w-full p-4 border border-slate-200 rounded-xl mb-6 h-20 text-sm outline-none focus:ring-2 focus:ring-rose-500 bg-slate-50"></textarea>
-                
-                <div class="flex gap-3">
-                    <button id="rc-cancel-priority-btn" class="flex-1 bg-white border border-slate-200 text-slate-600 font-bold py-3 rounded-xl hover:bg-slate-50 transition">Cancelar</button>
-                    <button id="rc-confirm-priority-btn" class="flex-1 bg-rose-600 text-white font-bold py-3 rounded-xl hover:bg-rose-700 transition shadow-sm">Confirmar</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const style = document.createElement('style');
-        style.innerHTML = `
-            .rc-p-chip.selected {
-                background-color: #fff1f2 !important; 
-                border-color: #f43f5e !important; 
-                color: #be123c !important; 
-            }
-        `;
-        modal.appendChild(style);
-
-        modal.querySelectorAll('.rc-p-chip').forEach(chip => {
-            chip.addEventListener('click', function(e) {
-                e.preventDefault();
-                this.classList.toggle('selected');
-            });
+        const { modal, close } = criarModal({
+            id: 'rc-modal-prioridade',
+            titulo: 'Prioridade legal',
+            subtitulo: 'Selecione uma ou mais categorias.',
+            z: 250,
+            corpo: `
+                <div class="rc-modal-body">
+                    <div class="grid grid-cols-2 gap-2.5 mb-5">
+                        ${categorias.map(cat => `<button type="button" data-value="${cat}" class="rc-chip">${cat}</button>`).join('')}
+                    </div>
+                    <label class="rc-label" for="rc-priority-reason-input">Outros / observações</label>
+                    <textarea id="rc-priority-reason-input" placeholder="Ex.: prazo vencendo hoje" class="rc-input" style="height:84px;resize:none"></textarea>
+                </div>`,
+            rodape: `
+                <div class="rc-modal-foot">
+                    <button type="button" class="rc-btn" data-rc-close>Cancelar</button>
+                    <button type="button" id="rc-confirm-priority-btn" class="rc-btn rc-btn--danger">Confirmar prioridade</button>
+                </div>`,
         });
 
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-cancel-priority-btn').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        modal.querySelectorAll('.rc-chip').forEach(chip => {
+            chip.addEventListener('click', () => chip.classList.toggle('selected'));
+        });
 
         document.getElementById('rc-confirm-priority-btn').addEventListener('click', async () => {
-            const selectedChips = Array.from(modal.querySelectorAll('.rc-p-chip.selected')).map(chip => chip.dataset.value);
+            const selecionadas = Array.from(modal.querySelectorAll('.rc-chip.selected')).map(chip => chip.dataset.value);
             const customReason = document.getElementById('rc-priority-reason-input').value.trim();
-            
-            let finalReason = selectedChips.join(', ');
+
+            let finalReason = selecionadas.join(', ');
             if (customReason) {
                 finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
             }
 
-            if (!finalReason) { 
-                showNotification("Selecione uma categoria ou descreva o motivo.", "error"); 
-                return; 
+            if (!finalReason) {
+                showNotification("Selecione uma categoria ou descreva o motivo.", "error");
+                return;
             }
 
             await PautaService.updateStatus(
@@ -903,108 +948,89 @@ export const RecepcaoCentralService = {
                 this._app.currentUserName
             );
 
-            closeModal();
-            showNotification("Prioridade Ativada!", "success");
+            close();
+            showNotification("Prioridade ativada!", "success");
         });
     },
 
-    // ── ADICIONAR ASSISTIDO (NOVO MODAL) ───────────────────────────────────────
+    // ── ADICIONAR ASSISTIDO ────────────────────────────────────────────────────
 
     _abrirModalAdicionarAssistido(pautaId, pautaNome) {
-        const existing = document.getElementById('rc-modal-add-assistido');
-        if (existing) existing.remove();
+        const datalist = (flatSubjects && flatSubjects.length > 0)
+            ? `<datalist id="rc-lista-assuntos">
+                   ${flatSubjects.map(s => `<option value="${escapeHTML(s.value)}">${escapeHTML(s.description || '')}</option>`).join('')}
+               </datalist>`
+            : '';
 
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-add-assistido';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
-        
-        let assuntosDatalistHtml = '';
-        if (flatSubjects && flatSubjects.length > 0) {
-            assuntosDatalistHtml = `
-                <datalist id="rc-lista-assuntos">
-                    ${flatSubjects.map(s => `<option value="${escapeHTML(s.value)}">${escapeHTML(s.description || '')}</option>`).join('')}
-                </datalist>
-            `;
-        }
-        
-        modal.innerHTML = `
-            ${assuntosDatalistHtml}
-            <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-                <div class="bg-emerald-600 px-6 py-5 flex justify-between items-center shrink-0">
-                    <div>
-                        <h3 class="text-white font-black text-xl">Novo Atendimento</h3>
-                        <p class="text-emerald-100 text-xs mt-0.5 opacity-90">${escapeHTML(pautaNome)}</p>
-                    </div>
-                    <button id="rc-modal-add-close" class="text-emerald-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
-                </div>
-                
-                <form id="rc-form-add-assistido" class="p-6 space-y-5 overflow-y-auto max-h-[80vh] bg-slate-50">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nome Completo <span class="text-rose-500">*</span></label>
-                        <input type="text" id="rc-add-nome" required class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Maria da Silva">
-                    </div>
-                    
-                    <div class="grid grid-cols-2 gap-4">
+        const { modal, close } = criarModal({
+            id: 'rc-modal-add-assistido',
+            titulo: 'Novo atendimento',
+            subtitulo: escapeHTML(pautaNome),
+            corpo: `
+                ${datalist}
+                <form id="rc-form-add-assistido" class="flex flex-col min-h-0 flex-1">
+                    <div class="rc-modal-body space-y-4">
                         <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">CPF</label>
-                            <input type="text" id="rc-add-cpf" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="000.000.000-00">
+                            <label class="rc-label" for="rc-add-nome">Nome completo <span style="color:var(--rc-danger)">*</span></label>
+                            <input type="text" id="rc-add-nome" required class="rc-input" placeholder="Ex.: Maria da Silva" autocomplete="off">
                         </div>
-                        <div>
-                            <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Nº Agendamento</label>
-                            <input type="text" id="rc-add-agendamento" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none font-mono" placeholder="#12345">
-                        </div>
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Assunto</label>
-                        <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none" placeholder="Ex: Divórcio, Pensão...">
-                    </div>
-
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">Prioridade</label>
-                        <select id="rc-add-prioridade" class="w-full p-3 bg-white border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-emerald-500 outline-none">
-                            <option value="">Nenhuma</option>
-                            <option value="URGENTE">🚨 Urgente / Legal</option>
-                            <option value="Máxima">🔴 Máxima</option>
-                            <option value="Média">🟡 Média</option>
-                        </select>
-                    </div>
-
-                    <div class="pt-2">
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Ação Inicial</label>
                         <div class="grid grid-cols-2 gap-3">
-                            <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:border-slate-300 transition">
-                                <input type="radio" name="rc_add_status" value="pauta" checked class="w-4 h-4 text-emerald-600 focus:ring-emerald-500">
-                                <div class="text-sm font-bold text-slate-700">Apenas Agendar</div>
-                            </label>
-                            <label class="cursor-pointer bg-white border border-amber-200 rounded-xl p-3 flex items-center gap-2 hover:border-amber-400 transition ring-1 ring-amber-100">
-                                <input type="radio" name="rc_add_status" value="aguardando" class="w-4 h-4 text-amber-500 focus:ring-amber-500">
-                                <div class="text-sm font-bold text-amber-700">Fazer Check-in</div>
-                            </label>
+                            <div>
+                                <label class="rc-label" for="rc-add-cpf">CPF</label>
+                                <input type="text" id="rc-add-cpf" class="rc-input" placeholder="000.000.000-00" inputmode="numeric">
+                            </div>
+                            <div>
+                                <label class="rc-label" for="rc-add-agendamento">Nº agendamento</label>
+                                <input type="text" id="rc-add-agendamento" class="rc-input" style="font-family:ui-monospace,monospace" placeholder="12345">
+                            </div>
+                        </div>
+                        <div>
+                            <label class="rc-label" for="rc-add-assunto">Assunto</label>
+                            <input type="text" id="rc-add-assunto" list="rc-lista-assuntos" class="rc-input" placeholder="Ex.: Divórcio, pensão…">
+                        </div>
+                        <div>
+                            <label class="rc-label" for="rc-add-prioridade">Prioridade</label>
+                            <select id="rc-add-prioridade" class="rc-input">
+                                <option value="">Nenhuma</option>
+                                <option value="URGENTE">Urgente / legal</option>
+                                <option value="Máxima">Máxima</option>
+                                <option value="Média">Média</option>
+                            </select>
+                        </div>
+                        <div>
+                            <span class="rc-label">Ação inicial</span>
+                            <div class="grid grid-cols-2 gap-3" id="rc-add-status-grupo">
+                                <label class="rc-option is-selected">
+                                    <input type="radio" name="rc_add_status" value="pauta" checked> Apenas agendar
+                                </label>
+                                <label class="rc-option">
+                                    <input type="radio" name="rc_add_status" value="aguardando"> Fazer check-in
+                                </label>
+                            </div>
                         </div>
                     </div>
-
-                    <div class="pt-4 flex gap-3">
-                        <button type="button" id="rc-btn-add-cancelar" class="w-1/3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
-                        <button type="submit" id="rc-btn-add-salvar" class="w-2/3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-sm">Salvar Assistido</button>
+                    <div class="rc-modal-foot">
+                        <button type="button" class="rc-btn" data-rc-close style="flex:.6">Cancelar</button>
+                        <button type="submit" id="rc-btn-add-salvar" class="rc-btn rc-btn--primary" style="flex:1.4">Salvar assistido</button>
                     </div>
-                </form>
-            </div>
-        `;
+                </form>`,
+        });
 
-        document.body.appendChild(modal);
+        document.getElementById('rc-add-nome')?.focus();
 
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-modal-add-close').onclick = closeModal;
-        document.getElementById('rc-btn-add-cancelar').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        modal.querySelectorAll('input[name="rc_add_status"]').forEach(radio => {
+            radio.addEventListener('change', () => {
+                modal.querySelectorAll('#rc-add-status-grupo .rc-option').forEach(o => o.classList.remove('is-selected'));
+                radio.closest('.rc-option').classList.add('is-selected');
+            });
+        });
 
         document.getElementById('rc-form-add-assistido').onsubmit = async (e) => {
             e.preventDefault();
-            
+
             const btn = document.getElementById('rc-btn-add-salvar');
             btn.disabled = true;
-            btn.innerHTML = '<span class="animate-pulse">Salvando...</span>';
+            btn.textContent = 'Salvando…';
 
             const statusEscolhido = document.querySelector('input[name="rc_add_status"]:checked').value;
             const isAguardando = statusEscolhido === 'aguardando';
@@ -1026,20 +1052,18 @@ export const RecepcaoCentralService = {
 
             const app = this._app;
             const sucesso = await PautaService.addAssistedProgrammatic(
-                app.db, 
-                pautaId, 
-                assistedData, 
+                app.db,
+                pautaId,
+                assistedData,
                 app.currentUserName || 'Recepção Central'
             );
 
             if (sucesso) {
-                closeModal();
-                if (isAguardando) {
-                    playSound('notification');
-                }
+                close();
+                if (isAguardando) playSound('notification');
             } else {
                 btn.disabled = false;
-                btn.innerHTML = 'Tentar Novamente';
+                btn.textContent = 'Tentar novamente';
             }
         };
     },
@@ -1074,35 +1098,28 @@ export const RecepcaoCentralService = {
             }
 
             if (encontrados.length === 0) {
-                resultados.innerHTML = `<p class="text-sm text-slate-500 font-medium py-4 px-2">Nenhum resultado encontrado para "${escapeHTML(input.value)}".</p>`;
+                resultados.innerHTML = `<p class="text-sm font-medium py-4 px-2" style="color:var(--rc-muted)">Nenhum resultado para "${escapeHTML(input.value)}".</p>`;
                 return;
             }
 
             resultados.innerHTML = encontrados.map(({ pauta, assistido: a }) => {
-                const sl            = statusLabel(a.status);
+                const sl = statusLabel(a.status);
                 const podeCheckin = a.status === 'pauta';
                 return `
-                    <div class="bg-white border border-slate-200 hover:border-indigo-300 rounded-xl px-5 py-3 flex items-center gap-4 transition-colors">
+                    <div class="rc-surface flex items-center gap-4" style="padding:12px 16px">
                         <div class="min-w-0 flex-1">
-                            <div class="flex items-center gap-2 mb-1">
-                                <p class="font-black text-slate-800 text-base truncate">${escapeHTML(a.name)}</p>
-                                ${a.numAgendamento ? `<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0 border border-slate-200">#${a.numAgendamento}</span>` : ''}
+                            <div class="flex items-center gap-2 mb-0.5">
+                                <p class="font-bold truncate">${escapeHTML(a.name)}</p>
+                                ${a.numAgendamento ? `<span class="rc-badge rc-badge--mono shrink-0">#${escapeHTML(String(a.numAgendamento))}</span>` : ''}
                             </div>
-                            <p class="text-xs text-slate-500 truncate flex items-center gap-1.5">
-                                <span class="font-bold text-indigo-600">${escapeHTML(pauta.name)}</span>
-                                <span class="text-slate-300">•</span>
-                                ${a.scheduledTime ? `⏰ ${a.scheduledTime}` : ''}
-                                ${escapeHTML(a.subject ? ` • ${a.subject}` : '')}
+                            <p class="text-xs truncate" style="color:var(--rc-muted)">
+                                <span class="font-semibold" style="color:var(--rc-brand)">${escapeHTML(pauta.name)}</span>
+                                ${a.scheduledTime ? ` · ${a.scheduledTime}` : ''}${escapeHTML(a.subject ? ` · ${a.subject}` : '')}
                             </p>
                         </div>
-                        <div class="flex flex-col items-end gap-2 shrink-0">
-                            <span class="text-[10px] font-bold px-2.5 py-1 rounded-md border ${sl.cor}">${sl.txt}</span>
-                            ${podeCheckin ? `
-                                <button class="rc-busca-checkin bg-amber-500 hover:bg-amber-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-lg transition shadow-sm"
-                                    data-pauta="${pauta.id}" data-id="${a.id}">
-                                    Check-in
-                                </button>
-                            ` : ''}
+                        <div class="flex items-center gap-3 shrink-0">
+                            <span class="${sl.cor}">${sl.txt}</span>
+                            ${podeCheckin ? `<button class="rc-btn rc-btn--warn rc-btn--sm rc-busca-checkin" data-pauta="${pauta.id}" data-id="${a.id}">${ico('check', 14)} Check-in</button>` : ''}
                         </div>
                     </div>
                 `;
@@ -1111,7 +1128,7 @@ export const RecepcaoCentralService = {
             resultados.querySelectorAll('.rc-busca-checkin').forEach(btn => {
                 btn.addEventListener('click', () => {
                     this._abrirModalCheckinComHorario(btn.dataset.pauta, btn.dataset.id);
-                    input.value        = '';
+                    input.value = '';
                     resultados.innerHTML = '';
                 });
             });
@@ -1122,7 +1139,7 @@ export const RecepcaoCentralService = {
 
     async _marcarChegadaComDados(pautaId, assistidoId, horarioStr) {
         const app = this._app;
-        
+
         let arrivalTimeISO = new Date().toISOString();
         if (horarioStr) {
             const [h, m] = horarioStr.split(':');
@@ -1147,58 +1164,43 @@ export const RecepcaoCentralService = {
     },
 
     _abrirModalCheckinComHorario(pautaId, assistidoId) {
-        const existing = document.getElementById('rc-modal-checkin-horario');
-        if (existing) existing.remove();
-
-        const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const assistido = assistidos.find(a => a.id === assistidoId);
         if (!assistido) return;
 
         const horaAtual = new Date().toTimeString().slice(0, 5);
 
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-checkin-horario';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[250] p-4 backdrop-blur-sm animate-fade-in';
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-sm rounded-3xl shadow-2xl overflow-hidden p-8 space-y-6">
-                <div class="text-center">
-                    <div class="w-16 h-16 bg-amber-100 text-amber-500 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">⏱️</div>
-                    <h3 class="font-black text-slate-800 text-lg leading-tight">Confirmar Check-in</h3>
-                    <p class="text-slate-500 text-sm mt-1 font-medium">${escapeHTML(assistido.name)}</p>
-                </div>
-                
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-100">
-                    <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2 text-center">Horário de Chegada</label>
-                    <input type="time" id="rc-input-hora-chegada" value="${horaAtual}" class="w-full p-3 bg-white border border-slate-200 rounded-xl font-black text-xl text-center text-slate-700 outline-none focus:ring-2 focus:ring-amber-500 transition-all">
-                </div>
-                
-                <div class="flex gap-3 pt-2">
-                    <button type="button" id="rc-checkin-cancel" class="flex-1 bg-white border border-slate-200 text-slate-600 font-bold py-3 rounded-xl text-sm hover:bg-slate-50 transition">Cancelar</button>
-                    <button type="button" id="rc-checkin-confirm" class="flex-1 bg-amber-500 hover:bg-amber-600 text-white font-bold py-3 rounded-xl text-sm shadow-sm transition">Confirmar</button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-checkin-cancel').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        const { close } = criarModal({
+            id: 'rc-modal-checkin-horario',
+            titulo: 'Confirmar check-in',
+            subtitulo: escapeHTML(assistido.name),
+            largura: '380px',
+            z: 250,
+            corpo: `
+                <div class="rc-modal-body">
+                    <label class="rc-label text-center" for="rc-input-hora-chegada">Horário de chegada</label>
+                    <input type="time" id="rc-input-hora-chegada" value="${horaAtual}" class="rc-input text-center" style="font-size:26px;font-weight:800;padding:14px">
+                </div>`,
+            rodape: `
+                <div class="rc-modal-foot">
+                    <button type="button" class="rc-btn" data-rc-close>Cancelar</button>
+                    <button type="button" id="rc-checkin-confirm" class="rc-btn rc-btn--primary">Confirmar</button>
+                </div>`,
+        });
 
         document.getElementById('rc-checkin-confirm').onclick = async () => {
             const horaStr = document.getElementById('rc-input-hora-chegada').value;
-            closeModal();
+            close();
             await this._marcarChegadaComDados(pautaId, assistidoId, horaStr);
         };
     },
 
     async _voltarStatusAssistido(pautaId, assistidoId, destino) {
         const app = this._app;
-        const msg = destino === 'pauta' ? 'Assistido retornado para Agendados.' : 'Assistido retornado para Fila de Espera.';
-        
+        const msg = destino === 'pauta' ? 'Assistido retornado para Agendados.' : 'Assistido retornado para a fila de espera.';
+
         let updates = { status: destino };
-        
+
         if (destino === 'pauta') {
             updates.arrivalTime = null;
             updates.checkInOrder = null;
@@ -1207,13 +1209,7 @@ export const RecepcaoCentralService = {
             updates.inAttendanceTime = null;
         }
 
-        await PautaService.updateStatus(
-            app.db,
-            pautaId,
-            assistidoId,
-            updates,
-            app.currentUserName
-        );
+        await PautaService.updateStatus(app.db, pautaId, assistidoId, updates, app.currentUserName);
         showNotification(msg, "info");
     },
 
@@ -1223,20 +1219,18 @@ export const RecepcaoCentralService = {
 
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const assistido = assistidos.find(a => a.id === assistidoId);
-        
         if (!assistido) return;
 
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
-        
-        if(colaboradores.length > 0) {
-           this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
+
+        if (colaboradores.length > 0) {
+            this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
         } else {
-             await this._executarChamado(pautaId, assistido, pauta, null);
+            await this._executarChamado(pautaId, assistido, pauta, null);
         }
     },
 
     async _chamarProximo(pautaId) {
-        const app   = this._app;
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
         if (!pauta) return;
 
@@ -1251,129 +1245,94 @@ export const RecepcaoCentralService = {
         }
 
         const proximo = aguardando[0];
-        
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
-        
-        if(colaboradores.length > 0) {
-           this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
+
+        if (colaboradores.length > 0) {
+            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
         } else {
-             await this._executarChamado(pautaId, proximo, pauta, null);
+            await this._executarChamado(pautaId, proximo, pauta, null);
         }
     },
-    
-    _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
-        const existing = document.getElementById('rc-modal-seletor-colaborador');
-        if (existing) existing.remove();
 
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-seletor-colaborador';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
-        
-        let colaboradoresOptions = '<option value="">Chamada Livre (Sem mesa específica)</option>';
-        
-        const colabOrdenados = [...colaboradores].sort((a,b) => {
+    _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
+        let opcoes = '<option value="">Chamada livre (sem mesa específica)</option>';
+
+        const ordenados = [...colaboradores].sort((a, b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
             const bLivre = b.status === 'disponivel' || !b.status;
             if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
             return aLivre ? -1 : 1;
         });
 
-        colabOrdenados.forEach(c => {
-             const livre = c.status === 'disponivel' || !c.status;
-             const statusTxt = livre ? '(🟢 Livre)' : '(🔴 Ocupado)';
-             colaboradoresOptions += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} - ${escapeHTML(c.cargo || 'Membro')} ${statusTxt}</option>`;
+        ordenados.forEach(c => {
+            const livre = c.status === 'disponivel' || !c.status;
+            opcoes += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
         });
 
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col">
-                <div class="bg-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
-                    <div>
-                        <h3 class="text-white font-black text-xl flex items-center gap-2">📣 Direcionar Chamada</h3>
-                        <p class="text-indigo-100 text-xs mt-0.5 opacity-90">${escapeHTML(assistido.name)}</p>
-                    </div>
-                    <button id="rc-modal-colaborador-close" class="text-indigo-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
-                </div>
-                
-                <div class="p-6 space-y-6 bg-slate-50">
-                    <div>
-                        <label class="block text-xs font-bold text-slate-500 uppercase tracking-widest mb-2">Para qual mesa / colaborador?</label>
-                        <select id="rc-select-colaborador-destino" class="w-full p-4 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
-                            ${colaboradoresOptions}
-                        </select>
-                        <p class="text-[10px] text-slate-400 mt-2 font-medium">Deixe em "Chamada Livre" para apenas anunciar na TV sem direcionar a uma mesa específica.</p>
-                    </div>
-
-                    <div class="flex gap-3">
-                        <button type="button" id="rc-btn-colaborador-cancelar" class="w-1/3 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition text-sm">Cancelar</button>
-                        <button type="button" id="rc-btn-colaborador-confirmar" class="w-2/3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow-sm">Confirmar Chamada</button>
-                    </div>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-modal-colaborador-close').onclick = closeModal;
-        document.getElementById('rc-btn-colaborador-cancelar').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
+        const { close } = criarModal({
+            id: 'rc-modal-seletor-colaborador',
+            titulo: 'Direcionar chamada',
+            subtitulo: escapeHTML(assistido.name),
+            corpo: `
+                <div class="rc-modal-body">
+                    <label class="rc-label" for="rc-select-colaborador-destino">Para qual mesa / colaborador?</label>
+                    <select id="rc-select-colaborador-destino" class="rc-input">${opcoes}</select>
+                    <p class="text-xs mt-2" style="color:var(--rc-muted)">Em "Chamada livre", o assistido é anunciado na TV sem direcionamento a uma mesa.</p>
+                </div>`,
+            rodape: `
+                <div class="rc-modal-foot">
+                    <button type="button" class="rc-btn" data-rc-close style="flex:.6">Cancelar</button>
+                    <button type="button" id="rc-btn-colaborador-confirmar" class="rc-btn rc-btn--primary" style="flex:1.4">${ico('megaphone', 15)} Confirmar chamada</button>
+                </div>`,
+        });
 
         document.getElementById('rc-btn-colaborador-confirmar').onclick = async () => {
             const select = document.getElementById('rc-select-colaborador-destino');
             const colaboradorId = select.value;
             let colaboradorObj = null;
-            
-            if(colaboradorId) {
+
+            if (colaboradorId) {
                 const opt = select.options[select.selectedIndex];
-                colaboradorObj = {
-                    id: colaboradorId,
-                    name: opt.getAttribute('data-nome')
-                };
+                colaboradorObj = { id: colaboradorId, name: opt.getAttribute('data-nome') };
             }
-            
-            closeModal();
+
+            close();
             await this._executarChamado(pautaId, assistido, pauta, colaboradorObj);
         };
     },
-    
+
     async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj) {
-         const app = this._app;
-         this._registrarUltimoChamado(pautaId, assistido, pauta.name);
+        const app = this._app;
+        this._registrarUltimoChamado(pautaId, assistido, pauta.name);
 
-         const updates = { 
-             status: 'emAtendimento', 
-             inAttendanceTime: new Date().toISOString() 
-         };
+        const updates = {
+            status: 'emAtendimento',
+            inAttendanceTime: new Date().toISOString()
+        };
 
-         if(colaboradorDestinoObj) {
-             updates.assignedCollaborator = {
-                 id: colaboradorDestinoObj.id,
-                 name: colaboradorDestinoObj.name
-             };
-         }
+        if (colaboradorDestinoObj) {
+            updates.assignedCollaborator = {
+                id: colaboradorDestinoObj.id,
+                name: colaboradorDestinoObj.name
+            };
+        }
 
-         await PautaService.updateStatus(
-             app.db,
-             pautaId,
-             assistido.id,
-             updates,
-             app.currentUserName
-         );
-         
-         if(colaboradorDestinoObj && colaboradorDestinoObj.id) {
-             try {
+        await PautaService.updateStatus(app.db, pautaId, assistido.id, updates, app.currentUserName);
+
+        if (colaboradorDestinoObj && colaboradorDestinoObj.id) {
+            try {
                 const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
                 await updateDoc(colabDocRef, {
                     status: 'ocupado',
                     currentAttendance: assistido.id
                 });
-             } catch(e) {
-                 console.warn("Aviso: Falha ao atualizar status do colaborador para ocupado.", e);
-             }
-         }
+            } catch (e) {
+                console.warn("Aviso: falha ao atualizar status do colaborador para ocupado.", e);
+            }
+        }
 
-         showNotification(`📣 Chamado: ${assistido.name}`, "success");
-         playSound('chime');
+        showNotification(`Chamado: ${assistido.name}`, "success");
+        playSound('chime');
     },
 
     async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
@@ -1401,10 +1360,7 @@ export const RecepcaoCentralService = {
 
         try {
             const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
-            await setDoc(painelRef, {
-                atual: chamado,
-                historico: historico
-            }, { merge: true });
+            await setDoc(painelRef, { atual: chamado, historico: historico }, { merge: true });
         } catch (error) {
             console.error("Erro ao atualizar último chamado no Firebase:", error);
         }
@@ -1459,7 +1415,6 @@ export const RecepcaoCentralService = {
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
             } else if (btn.classList.contains('rc-btn-tv-individual')) {
-                // Abre a TV totalmente isolada e focada só neste evento
                 const pauta = estado.pautasHoje.find(p => p.id === pautaId);
                 const nomeTV = encodeURIComponent(pauta ? pauta.name : 'Painel de Atendimento');
                 const baseUrl = window.location.href.split('?')[0];
@@ -1484,155 +1439,99 @@ export const RecepcaoCentralService = {
         if (!recepcao) return;
 
         const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${recepcao.id}`) || '{}');
-        const modoAtual = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
+        const modoAtual  = cacheConfig.modo || recepcao.modoVisualizacao || 'fila';
         const videoAtual = cacheConfig.video !== undefined ? cacheConfig.video : (recepcao.videoUrl || '');
-        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
+        const somAtual   = cacheConfig.som !== undefined ? cacheConfig.som : true;
 
-        const existing = document.getElementById('rc-modal-config-tv');
-        if (existing) existing.remove();
+        const modos = [
+            ['fila',  'list',      'Lista (fila)', 'Cards e acompanhamento'],
+            ['tv',    'tv',        'TV padrão',    'Painel com histórico'],
+            ['video', 'megaphone', 'TV + vídeo',   'Institucional e chamados'],
+        ];
 
-        const modal = document.createElement('div');
-        modal.id = 'rc-modal-config-tv';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
-        
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[95vh]">
-                <div class="bg-slate-800 px-6 py-5 flex justify-between items-center shrink-0">
+        const { modal, close } = criarModal({
+            id: 'rc-modal-config-tv',
+            titulo: 'Configurar TV / painel',
+            subtitulo: escapeHTML(recepcao.nome || 'Recepção Central'),
+            largura: '640px',
+            corpo: `
+                <div class="rc-modal-body space-y-6">
                     <div>
-                        <h3 class="text-white font-black text-xl flex items-center gap-2">📺 Configurar TV / Painel</h3>
-                        <p class="text-slate-400 text-xs mt-0.5 tracking-wider uppercase">${escapeHTML(recepcao.nome || 'Recepção Central')}</p>
-                    </div>
-                    <button id="rc-modal-tv-close" class="text-slate-400 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
-                </div>
-                
-                <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50">
-                    
-                    <div>
-                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Modo de Visualização</label>
+                        <span class="rc-label">Modo de visualização</span>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                            <label class="tv-modo-card cursor-pointer bg-white border border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'fila' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : ''}">
-                                <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
-                                <span class="text-3xl">📋</span>
-                                <div>
-                                    <p class="font-bold text-slate-800">Lista (Fila)</p>
-                                    <p class="text-[10px] text-slate-500 mt-1">Cards e acompanhamento</p>
-                                </div>
-                            </label>
-                            <label class="tv-modo-card cursor-pointer bg-white border border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'tv' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : ''}">
-                                <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
-                                <span class="text-3xl">🟩</span>
-                                <div>
-                                    <p class="font-bold text-slate-800">TV Padrão</p>
-                                    <p class="text-[10px] text-slate-500 mt-1">Painel com histórico</p>
-                                </div>
-                            </label>
-                            <label class="tv-modo-card cursor-pointer bg-white border border-slate-200 rounded-xl p-4 text-center hover:border-indigo-300 transition-all flex flex-col items-center gap-2 ${modoAtual === 'video' ? 'border-indigo-500 bg-indigo-50/50 ring-1 ring-indigo-500' : ''}">
-                                <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
-                                <span class="text-3xl">🎬</span>
-                                <div>
-                                    <p class="font-bold text-slate-800">TV + Vídeo</p>
-                                    <p class="text-[10px] text-slate-500 mt-1">Institucional e chamados</p>
-                                </div>
-                            </label>
+                            ${modos.map(([v, ic, t, d]) => `
+                                <label class="rc-option tv-modo-card ${modoAtual === v ? 'is-selected' : ''}" style="flex-direction:column;text-align:center;padding:16px 10px">
+                                    <input type="radio" name="tv_modo" value="${v}" class="hidden" ${modoAtual === v ? 'checked' : ''}>
+                                    <span style="color:var(--rc-brand)">${ico(ic, 24)}</span>
+                                    <span>${t}<br><span class="text-[11px] font-medium" style="color:var(--rc-muted)">${d}</span></span>
+                                </label>`).join('')}
                         </div>
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-2">Link do YouTube (Para Modo Vídeo)</label>
-                        <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}"
-                            class="w-full bg-white border border-slate-300 rounded-xl px-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-all text-slate-700 font-mono shadow-sm"
-                            placeholder="https://www.youtube.com/watch?v=...">
+                        <label class="rc-label" for="tv_video_url">Link do YouTube (modo vídeo)</label>
+                        <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="rc-input" style="font-family:ui-monospace,monospace;font-size:13px" placeholder="https://www.youtube.com/watch?v=…">
                     </div>
 
                     <div>
-                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-3">Aviso Sonoro (Campainha)</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                            <label class="tv-som-card cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-indigo-300 transition-all ${somAtual === true ? 'border-indigo-500 bg-indigo-50/50' : ''}">
-                                <input type="radio" name="tv_som" value="1" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500" ${somAtual === true ? 'checked' : ''}>
-                                <div>
-                                    <p class="font-bold text-slate-800 text-sm flex items-center gap-1.5">🔔 Ativado</p>
-                                </div>
+                        <span class="rc-label">Aviso sonoro</span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="rc-option tv-som-card ${somAtual === true ? 'is-selected' : ''}">
+                                <input type="radio" name="tv_som" value="1" ${somAtual === true ? 'checked' : ''}> Ativado
                             </label>
-                            <label class="tv-som-card cursor-pointer bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-indigo-300 transition-all ${somAtual === false ? 'border-indigo-500 bg-indigo-50/50' : ''}">
-                                <input type="radio" name="tv_som" value="0" class="w-4 h-4 text-indigo-600 focus:ring-indigo-500" ${somAtual === false ? 'checked' : ''}>
-                                <div>
-                                    <p class="font-bold text-slate-800 text-sm flex items-center gap-1.5">🔇 Silencioso</p>
-                                </div>
+                            <label class="rc-option tv-som-card ${somAtual === false ? 'is-selected' : ''}">
+                                <input type="radio" name="tv_som" value="0" ${somAtual === false ? 'checked' : ''}> Silencioso
                             </label>
                         </div>
                     </div>
 
-                    <div class="bg-indigo-50/50 border border-indigo-100 rounded-xl p-4 mt-2">
-                        <label class="block text-[10px] font-black text-indigo-400 uppercase tracking-widest mb-2">Link Gerado (Copie para a Smart TV)</label>
-                        <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 text-xs text-indigo-700 font-mono resize-none focus:ring-0 p-0 h-10 outline-none"></textarea>
+                    <div class="rounded-xl" style="padding:14px;background:var(--rc-brand-soft);border:1px solid #c7d2fe">
+                        <span class="rc-label" style="color:var(--rc-brand)">Link gerado (copie para a Smart TV)</span>
+                        <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 resize-none outline-none text-xs" style="font-family:ui-monospace,monospace;color:var(--rc-brand);height:48px"></textarea>
                     </div>
-
-                </div>
-
-                <div class="bg-white border-t border-slate-200 px-6 py-5 flex flex-col sm:flex-row gap-3 shrink-0">
-                    <button id="rc-btn-tv-cancelar" class="flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-bold py-3 rounded-xl transition text-sm">
-                        Cancelar
-                    </button>
-                    <button id="rc-btn-tv-salvar" class="flex-1 bg-slate-800 hover:bg-slate-900 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2">
-                        📋 Copiar Link
-                    </button>
-                    <button id="rc-btn-tv-abrir" class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-3 rounded-xl transition text-sm shadow flex items-center justify-center gap-2">
-                        📺 Abrir Painel
-                    </button>
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
+                </div>`,
+            rodape: `
+                <div class="rc-modal-foot flex-col sm:flex-row">
+                    <button id="rc-btn-tv-cancelar" class="rc-btn" data-rc-close>Cancelar</button>
+                    <button id="rc-btn-tv-salvar" class="rc-btn rc-btn--dark">Copiar link</button>
+                    <button id="rc-btn-tv-abrir" class="rc-btn rc-btn--primary">${ico('tv', 15)} Abrir painel</button>
+                </div>`,
+        });
 
         const updatePreview = () => {
-            const modo = document.querySelector('input[name="tv_modo"]:checked').value;
+            const modo  = modal.querySelector('input[name="tv_modo"]:checked').value;
             const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
-            const som = document.querySelector('input[name="tv_som"]:checked').value;
-            
+            const som   = modal.querySelector('input[name="tv_som"]:checked').value;
+
             const ids  = estado.pautasHoje.map(p => p.id).join(',');
             const nome = encodeURIComponent(recepcao.nome || this._unidadeAtual?.nome || 'Recepção');
-            
-            let baseUrl = window.location.href.split('?')[0];
+
+            const baseUrl = window.location.href.split('?')[0];
             const link = `${baseUrl}?painel=true&pautas=${ids}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
-            
+
             document.getElementById('tv_preview_link').value = link;
             return { link, modo, video, som };
         };
 
-        modal.querySelectorAll('input[name="tv_modo"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                modal.querySelectorAll('.tv-modo-card').forEach(card => {
-                    card.classList.remove('border-indigo-500', 'bg-indigo-50/50', 'ring-1', 'ring-indigo-500');
+        const ligarGrupo = (name, cardClass) => {
+            modal.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    modal.querySelectorAll(`.${cardClass}`).forEach(c => c.classList.remove('is-selected'));
+                    radio.closest(`.${cardClass}`).classList.add('is-selected');
+                    updatePreview();
                 });
-                radio.closest('.tv-modo-card').classList.add('border-indigo-500', 'bg-indigo-50/50', 'ring-1', 'ring-indigo-500');
-                updatePreview();
             });
-        });
-
-        modal.querySelectorAll('input[name="tv_som"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                modal.querySelectorAll('.tv-som-card').forEach(card => {
-                    card.classList.remove('border-indigo-500', 'bg-indigo-50/50');
-                });
-                radio.closest('.tv-som-card').classList.add('border-indigo-500', 'bg-indigo-50/50');
-                updatePreview();
-            });
-        });
+        };
+        ligarGrupo('tv_modo', 'tv-modo-card');
+        ligarGrupo('tv_som', 'tv-som-card');
 
         document.getElementById('tv_video_url').addEventListener('input', updatePreview);
-
         updatePreview();
-
-        const closeModal = () => modal.remove();
-        document.getElementById('rc-modal-tv-close').onclick = closeModal;
-        document.getElementById('rc-btn-tv-cancelar').onclick = closeModal;
-        modal.addEventListener('click', (e) => { if (e.target === modal) closeModal(); });
 
         const saveConfig = async () => {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
-            
+
             localStorage.setItem(`sigep_tv_config_${recepcao.id}`, JSON.stringify(configToSave));
 
             try {
@@ -1640,7 +1539,7 @@ export const RecepcaoCentralService = {
                     modoVisualizacao: configToSave.modo,
                     videoUrl: configToSave.video
                 });
-            } catch(e) { }
+            } catch (e) { /* configuração local já salva */ }
 
             return data.link;
         };
@@ -1648,19 +1547,19 @@ export const RecepcaoCentralService = {
         document.getElementById('rc-btn-tv-abrir').addEventListener('click', async () => {
             const link = await saveConfig();
             window.open(link, '_blank');
-            closeModal();
+            close();
         });
 
         document.getElementById('rc-btn-tv-salvar').addEventListener('click', async () => {
             const link = await saveConfig();
             navigator.clipboard.writeText(link).then(() => {
-                showNotification("Configuração salva e Link copiado com sucesso!", "success");
-                closeModal();
+                showNotification("Configuração salva e link copiado!", "success");
+                close();
             }).catch(() => showNotification("Erro ao copiar o link.", "error"));
         });
     },
 
-    // ── MODAL CHECK-IN (RÁPIDO) ────────────────────────────────────────────────
+    // ── MODAL CHECK-IN RÁPIDO ──────────────────────────────────────────────────
 
     _abrirModalCheckin(pautaId) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
@@ -1669,74 +1568,49 @@ export const RecepcaoCentralService = {
         const assistidos = estado.assistidosPorPauta[pautaId] || [];
         const naPauta    = assistidos.filter(a => a.status === 'pauta');
 
-        const existing = document.getElementById('rc-modal-checkin');
-        if (existing) existing.remove();
-
-        const modal = document.createElement('div');
-        modal.id        = 'rc-modal-checkin';
-        modal.className = 'fixed inset-0 bg-slate-900/60 flex items-center justify-center z-[200] p-4 backdrop-blur-sm animate-fade-in';
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-md rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
-                <div class="bg-amber-500 px-6 py-5 flex justify-between items-center shrink-0">
-                    <div>
-                        <h3 class="text-white font-black text-lg flex items-center gap-2">✅ Check-in Rápido</h3>
-                        <p class="text-amber-100 text-xs mt-0.5 opacity-90">${escapeHTML(pauta.name)}</p>
+        const lista = naPauta.length === 0
+            ? `<div class="text-center py-10">
+                   <div class="mx-auto mb-3 flex items-center justify-center rounded-full" style="width:44px;height:44px;background:var(--rc-ok-soft);color:var(--rc-ok)">${ico('check', 22)}</div>
+                   <p class="text-sm font-semibold" style="color:var(--rc-muted)">Todos os agendados já chegaram.</p>
+               </div>`
+            : naPauta.map(a => `
+                <div class="rc-person flex items-center justify-between gap-3 rc-linha" data-nome="${normalizeText(a.name)}">
+                    <div class="min-w-0 flex-1">
+                        <p class="font-bold text-sm truncate">${escapeHTML(a.name)}</p>
+                        <p class="text-xs truncate mt-0.5" style="color:var(--rc-muted)">
+                            ${a.numAgendamento ? `<span class="rc-badge rc-badge--mono mr-1">#${escapeHTML(String(a.numAgendamento))}</span>` : ''}
+                            ${a.scheduledTime ? `<b class="tabular-nums" style="color:var(--rc-warn)">${a.scheduledTime}</b> · ` : ''}${escapeHTML(a.subject || 'Sem assunto')}
+                        </p>
                     </div>
-                    <button id="rc-modal-checkin-close" class="text-amber-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
-                </div>
-                
-                <div class="p-6 pb-2 shrink-0 bg-slate-50 border-b border-slate-100">
+                    <button class="rc-btn rc-btn--warn rc-btn--sm rc-modal-checkin-btn shrink-0" data-id="${a.id}">Check-in</button>
+                </div>`).join('');
+
+        const { modal, close } = criarModal({
+            id: 'rc-modal-checkin',
+            titulo: 'Check-in rápido',
+            subtitulo: escapeHTML(pauta.name),
+            corpo: `
+                <div style="padding:14px 24px;border-bottom:1px solid var(--rc-line)">
                     <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-                        <input type="search" id="rc-modal-busca" placeholder="Buscar assistido nesta pauta..."
-                            class="w-full bg-white border border-slate-300 rounded-xl pl-10 pr-4 py-3 text-sm focus:outline-none focus:ring-2 focus:ring-amber-500 shadow-sm transition-all">
+                        <span class="absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--rc-faint)">${ico('search', 16)}</span>
+                        <input type="search" id="rc-modal-busca" placeholder="Buscar assistido nesta pauta" class="rc-input" style="padding-left:36px" autocomplete="off">
                     </div>
                 </div>
+                <div class="rc-modal-body space-y-2" id="rc-modal-lista" style="padding:14px 20px">${lista}</div>`,
+        });
 
-                <div id="rc-modal-lista" class="p-4 space-y-2 overflow-y-auto flex-1 bg-slate-50">
-                    ${naPauta.length === 0
-                        ? `<div class="text-center py-10 opacity-60">
-                               <span class="text-4xl block mb-2">🎉</span>
-                               <p class="text-sm font-bold text-slate-600">Todos os agendados já chegaram!</p>
-                           </div>`
-                        : naPauta.map(a => `
-                            <div class="flex items-center justify-between bg-white border border-slate-200 hover:border-amber-300 rounded-xl p-3 transition-colors shadow-sm gap-3">
-                                <div class="min-w-0 flex-1">
-                                    <p class="font-bold text-slate-800 text-sm truncate">${escapeHTML(a.name)}</p>
-                                    <p class="text-[10px] text-slate-500 truncate mt-0.5">
-                                        ${a.numAgendamento ? `<span class="bg-slate-100 text-slate-500 px-1.5 py-0.5 rounded font-mono mr-1">#${a.numAgendamento}</span>` : ''}
-                                        ${a.scheduledTime ? `<span class="font-bold text-amber-600">⏰ ${a.scheduledTime}</span> · ` : ''} 
-                                        ${escapeHTML(a.subject || 'Sem assunto')}
-                                    </p>
-                                </div>
-                                <button class="rc-modal-checkin-btn shrink-0 bg-amber-500 hover:bg-amber-600 text-white font-bold text-xs px-4 py-2 rounded-lg transition shadow-sm"
-                                    data-id="${a.id}" data-nome="${escapeHTML(a.name)}">
-                                    Check-in
-                                </button>
-                            </div>
-                        `).join('')
-                    }
-                </div>
-            </div>
-        `;
-
-        document.body.appendChild(modal);
-
-        document.getElementById('rc-modal-checkin-close').onclick = () => modal.remove();
-        modal.addEventListener('click', (e) => { if (e.target === modal) modal.remove(); });
+        document.getElementById('rc-modal-busca')?.focus();
 
         document.getElementById('rc-modal-busca').addEventListener('input', (e) => {
             const t = normalizeText(e.target.value);
-            modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
-                const linha = btn.closest('.flex');
-                const nome  = normalizeText(btn.dataset.nome);
-                linha.style.display = nome.includes(t) ? '' : 'none';
+            modal.querySelectorAll('.rc-linha').forEach(l => {
+                l.style.display = (l.dataset.nome || '').includes(t) ? '' : 'none';
             });
         });
 
         modal.querySelectorAll('.rc-modal-checkin-btn').forEach(btn => {
-            btn.addEventListener('click', async () => {
-                modal.remove();
+            btn.addEventListener('click', () => {
+                close();
                 this._abrirModalCheckinComHorario(pautaId, btn.dataset.id);
             });
         });
@@ -1748,7 +1622,7 @@ export const RecepcaoCentralService = {
         this._cancelarListeners();
         const app = this._app;
         if (app && app.router) {
-            app.router.navigate('pautas'); // Usa o nome da rota registrado
+            app.router.navigate('pautas');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
@@ -1772,4 +1646,3 @@ export const RecepcaoCentralService = {
 
 export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
-
