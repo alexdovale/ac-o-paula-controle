@@ -754,12 +754,45 @@ export const PautaService = {
             return;
         }
         
-        // INTERRUPTOR DA TV
-        const tipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
+        // 🌟 VERIFICAÇÃO INTELIGENTE DOS FLUXOS ATIVOS NA PAUTA 🌟
+        // Verifica se o fluxo de delegação está ativo nas configurações da pauta
+        const usaDelegação = app.currentPautaData?.useDelegationFlow === true;
+        const usaDistribuição = app.currentPautaData?.useDistributionFlow === true;
+
+        let tipoAcao = 'atender_direto';
+        if (usaDelegação) {
+            tipoAcao = 'delegar';
+        } else if (usaDistribuição) {
+            tipoAcao = 'distribuicao';
+        }
+
+        // Se o painel da TV estiver ativado, abre o modal de chamada com o local. Caso contrário, usa o modal clássico.
         if (app.currentPautaData?.useTvPanel !== false) {
             this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, tipoAcao);
         } else {
             this._abrirModalClassico(app, nextAssisted, tipoAcao);
+        }
+    },
+
+    actionAttendDirectly(app, id, assisted) {
+        const useDist = app.currentPautaData?.useDistributionFlow === true;
+        const useDelegation = app.currentPautaData?.useDelegationFlow === true;
+        const timestampIso = new Date().toISOString();
+
+        if (useDist) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
+            }, app.currentUserName);
+            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+        } else {
+            const tipoAcao = useDelegation ? 'delegar' : 'atender_direto';
+            
+            // INTERRUPTOR DA TV
+            if (app.currentPautaData?.useTvPanel !== false) {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
+            } else {
+                this._abrirModalClassico(app, assisted, tipoAcao);
+            }
         }
     },
 
