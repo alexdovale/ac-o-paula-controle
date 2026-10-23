@@ -1,3 +1,5 @@
+Aqui está o código completo do ficheiro recepcaoCentral.js já com a funcionalidade da TV individual incorporada nos cartões das pautas.
+Podes simplesmente copiar tudo e substituir no teu projeto:
 // js/recepcaoCentral.js - DASHBOARD EXECUTIVO PREMIUM (COM LOGO E MULTI-TENANT)
 
 import {
@@ -493,7 +495,7 @@ export const RecepcaoCentralService = {
                 </div>
 
                 <!-- Botões de Ação Inferiores -->
-                <div class="p-4 grid grid-cols-5 gap-2 bg-white border-t border-slate-100 rounded-b-2xl">
+                <div class="p-4 grid grid-cols-6 gap-2 bg-white border-t border-slate-100 rounded-b-2xl">
                     <button class="rc-btn-abrir col-span-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-sm py-2.5 rounded-xl transition shadow-sm flex items-center justify-center gap-2" data-pauta-id="${pauta.id}">
                         Abrir Painel <span class="text-lg leading-none">→</span>
                     </button>
@@ -502,6 +504,9 @@ export const RecepcaoCentralService = {
                     </button>
                     <button class="rc-btn-chamar col-span-1 bg-white border border-slate-200 hover:border-emerald-400 hover:bg-emerald-50 text-emerald-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center" data-pauta-id="${pauta.id}" title="Chamar Próximo">
                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z" /></svg>
+                    </button>
+                    <button class="rc-btn-tv-individual col-span-1 bg-indigo-50 border border-indigo-200 hover:border-indigo-400 hover:bg-indigo-100 text-indigo-600 font-bold py-2.5 rounded-xl transition flex items-center justify-center" data-pauta-id="${pauta.id}" title="Painel TV Isolado">
+                        📺
                     </button>
                 </div>
             </div>
@@ -1455,6 +1460,13 @@ export const RecepcaoCentralService = {
                 this._chamarProximo(pautaId);
             } else if (btn.classList.contains('rc-btn-abrir')) {
                 this._abrirFoco(pautaId);
+            } else if (btn.classList.contains('rc-btn-tv-individual')) {
+                // Abre a TV totalmente isolada e focada só neste evento
+                const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+                const nomeTV = encodeURIComponent(pauta ? pauta.name : 'Painel de Atendimento');
+                const baseUrl = window.location.href.split('?')[0];
+                const urlIsolada = `${baseUrl}?painel=true&pautas=${pautaId}&nome=${nomeTV}&modo=fila&som=1`;
+                window.open(urlIsolada, '_blank');
             }
         });
 
@@ -1762,3 +1774,4 @@ export const RecepcaoCentralService = {
 
 export const RecepçãoCentralService = RecepcaoCentralService;
 export default RecepcaoCentralService;
+
