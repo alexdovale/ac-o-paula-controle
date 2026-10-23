@@ -1604,8 +1604,8 @@ class SIGEPApp {
             }
 
             const nome = encodeURIComponent(pautaName);
-            const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
-            const link = `${baseUrl}painel_tv.html?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
+            const baseUrl = window.location.origin + window.location.pathname;
+            const link = `${baseUrl}?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
 
             document.getElementById('tv_preview_link').value = link;
             return { link, modo, video, som };
