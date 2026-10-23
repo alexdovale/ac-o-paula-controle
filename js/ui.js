@@ -62,7 +62,6 @@ export const UIService = {
         document.getElementById('recepcao-central-container')?.classList.toggle('hidden', screenName !== 'recepcaoCentral');
         document.getElementById('admin-container')?.classList.toggle('hidden', screenName !== 'admin');
         
-        // 👇 ESTAS DUAS LINHAS CORRIGEM O SEU PROBLEMA 👇
         document.getElementById('coletas-container')?.classList.toggle('hidden', screenName !== 'coletas');
         document.getElementById('meu-perfil-container')?.classList.toggle('hidden', screenName !== 'perfil');
 
@@ -898,12 +897,25 @@ export const UIService = {
                         </button>
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
 
-                        <button onclick="window.abrirMonitoramento('${window.app.currentPauta.id}', '${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
+                        <button onclick="window.abrirMonitoramento('${window.app?.currentPauta?.id}', '${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg> Monitoramento
                         </button>
                         
                         <button data-id="${item.id}" class="edit-assisted-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-slate-100 flex items-center gap-2 transition-colors">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/></svg> Editar Dados
+                        </button>
+
+                        <div class="h-px bg-slate-100 my-1 mx-3"></div>
+                        <p class="px-3 py-1 text-[9px] font-bold text-slate-400 uppercase tracking-wider bg-slate-50 mt-1">Gestão da Pauta</p>
+                        
+                        <button data-id="${item.id}" class="toggle-extrapauta-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg> 
+                            ${item.isExtraPauta ? 'Remover Extra-Pauta' : 'Marcar Extra-Pauta'}
+                        </button>
+
+                        <button data-id="${item.id}" class="cancel-pauta-btn w-full text-left px-4 py-2 text-xs text-red-600 hover:bg-red-50 flex items-center gap-2 transition-colors">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M18 6 6 18"/><path d="M6 6l12 12"/></svg> 
+                            Retirar da Pauta
                         </button>
                     </div>
                 </div>
@@ -1030,6 +1042,7 @@ export const UIService = {
             ${this._getActionButtonsHtml(item)}
 
             <div class="pt-8 text-center">
+                ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                 <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                 <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 
@@ -1398,6 +1411,7 @@ export const UIService = {
                 
                 <div class="text-center pt-8">
                     ${priorityTagHtml}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
 
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
@@ -1579,6 +1593,7 @@ export const UIService = {
 
                 <div class="text-center pt-8">
                     ${priorityTagHtml}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
@@ -1695,6 +1710,7 @@ export const UIService = {
                 ${this._getActionButtonsHtml(item)}
 
                 <div class="text-center pt-8">
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
@@ -1813,6 +1829,7 @@ export const UIService = {
                 </div>
 
                 <div class="text-center pt-8">
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
                     <span class="text-[9px] font-black text-red-700 bg-red-100 px-2 py-1 rounded-md border border-red-200 inline-block uppercase tracking-wider shadow-sm mb-1">🚫 Faltoso</span>
                     
@@ -2018,6 +2035,7 @@ export const UIService = {
                     ${deleteBtnHtml}
 
                     <div class="text-center pt-8">
+                        ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
                         <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
 
                         <div class="text-xs text-slate-600 space-y-1 mb-2">
@@ -2406,7 +2424,6 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 const headerFlex = countBadge.parentElement; 
                 headerFlex.classList.add('relative');
                 
-                // Mantém apenas o botão de desencaixar (popout) perfeitamente alinhado no canto direito
                 const btnGroup = document.createElement('div');
                 btnGroup.className = 'flex items-center gap-1 ml-auto flex-shrink-0';
                 btnGroup.innerHTML = `
