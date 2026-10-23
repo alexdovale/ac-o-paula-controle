@@ -854,6 +854,9 @@ export const UIService = {
     _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
+                <button data-id="${item.id}" class="rechamar-tv-btn text-blue-600 hover:text-blue-800 p-2 rounded-md hover:bg-blue-50 transition-colors border border-transparent hover:border-blue-200" title="Rechamar / Tocar Alarme na TV Novamente">
+                    🔊
+                </button>
                 <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" 
                     class="text-indigo-600 hover:text-indigo-800 p-2 rounded-md hover:bg-indigo-50 transition-colors border border-transparent hover:border-indigo-200" title="Digitalizar Arquivo (Scanner)">
                     <svg xmlns="http://www.w3.org/2000/svg" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
@@ -2017,6 +2020,9 @@ export const UIService = {
                                     Concluir
                                 </button>
                             </div>
+                            <button data-id="${item.id}" class="chamar-distribuicao-tv-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide flex items-center justify-center gap-1.5">
+                                📺 Chamar na TV (Assinatura/Retirada)
+                            </button>
                             ${priorityButtonHtml}
                             <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide border border-slate-200 mt-1">
                                 Reverter para Fila
