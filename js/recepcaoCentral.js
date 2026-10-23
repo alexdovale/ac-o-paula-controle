@@ -122,6 +122,8 @@ function htmlLogo(altura = 28) {
 
 export const RecepcaoCentralService = {
 
+    _chamadosRegistrados: new Set(),
+
     // ── INICIALIZAÇÃO ──────────────────────────────────────────────────────────
 
     async init(app) {
@@ -1075,11 +1077,7 @@ export const RecepcaoCentralService = {
 
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
 
-        if (colaboradores.length > 0) {
-            this._abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta);
-        } else {
-            await this._executarChamado(pautaId, assistido, pauta, null);
-        }
+        this._abrirModalChamada(pautaId, assistido, colaboradores, pauta);
     },
 
     async _chamarProximo(pautaId) {
@@ -1099,15 +1097,18 @@ export const RecepcaoCentralService = {
         const proximo = aguardando[0];
         const colaboradores = estado.colaboradoresPorPauta[pautaId] || [];
 
-        if (colaboradores.length > 0) {
-            this._abrirModalSeletorColaborador(pautaId, proximo, colaboradores, pauta);
-        } else {
-            await this._executarChamado(pautaId, proximo, pauta, null);
-        }
+        this._abrirModalChamada(pautaId, proximo, colaboradores, pauta);
     },
 
-    _abrirModalSeletorColaborador(pautaId, assistido, colaboradores, pauta) {
-        let opcoes = '<option value="">Chamada livre (sem mesa específica)</option>';
+    _abrirModalChamada(pautaId, assistido, colaboradores, pauta) {
+        const ROTULOS = ['Sala', 'Recepção', 'Vara', 'Guichê', 'Mesa', 'Balcão'];
+        const chave = `sigep_local_chamada_${pautaId}`;
+        let salvo = null;
+        try { salvo = JSON.parse(localStorage.getItem(chave)); } catch { salvo = null; }
+
+        const rotuloInicial = salvo?.rotulo || 'Sala';
+        const ehPadrao = ROTULOS.includes(rotuloInicial);
+        const valorInicial = salvo?.valor ?? (pauta?.sala || '');
 
         const ordenados = [...colaboradores].sort((a, b) => {
             const aLivre = a.status === 'disponivel' || !a.status;
@@ -1115,66 +1116,110 @@ export const RecepcaoCentralService = {
             if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
             return aLivre ? -1 : 1;
         });
-
-        ordenados.forEach(c => {
+        const opcoesColab = ordenados.map(c => {
             const livre = c.status === 'disponivel' || !c.status;
-            opcoes += `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
-        });
+            return `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
+        }).join('');
 
         const { close } = criarModal({
-            id: 'rc-modal-seletor-colaborador',
-            titulo: 'Direcionar chamada',
+            id: 'rc-modal-chamada',
+            titulo: 'Chamar assistido',
             subtitulo: escapeHTML(assistido.name),
             corpo: `
-                <div class="rc-modal-body">
-                    <label class="rc-label" for="rc-select-colaborador-destino">Para qual mesa / colaborador?</label>
-                    <select id="rc-select-colaborador-destino" class="rc-input">${opcoes}</select>
-                    <p class="text-xs mt-2" style="color:var(--rc-muted)">Em "Chamada livre", o assistido é anunciado na TV sem direcionamento a uma mesa.</p>
+                <div class="rc-modal-body space-y-4">
+                    <div class="grid grid-cols-5 gap-3">
+                        <div class="col-span-2">
+                            <label class="rc-label" for="rc-chamada-rotulo">Tipo de local</label>
+                            <select id="rc-chamada-rotulo" class="rc-input">
+                                ${ROTULOS.map(r => `<option value="${r}" ${ehPadrao && r === rotuloInicial ? 'selected' : ''}>${r}</option>`).join('')}
+                                <option value="__outro" ${ehPadrao ? '' : 'selected'}>Outro…</option>
+                            </select>
+                        </div>
+                        <div class="col-span-3">
+                            <label class="rc-label" for="rc-chamada-valor">Número / nome</label>
+                            <input type="text" id="rc-chamada-valor" class="rc-input" value="${escapeHTML(valorInicial)}" placeholder="Ex.: 3, DD, 2ª Vara" autocomplete="off">
+                        </div>
+                    </div>
+                    <div id="rc-chamada-outro-wrap" class="${ehPadrao ? 'hidden' : ''}">
+                        <label class="rc-label" for="rc-chamada-outro">Nome do tipo de local</label>
+                        <input type="text" id="rc-chamada-outro" class="rc-input" value="${ehPadrao ? '' : escapeHTML(rotuloInicial)}" placeholder="Ex.: Cartório, Gabinete">
+                    </div>
+
+                    <div class="rounded-xl text-center" style="padding:14px;background:#fff;border:1px dashed var(--rc-line)">
+                        <p class="rc-eyebrow mb-1">Aparecerá na TV</p>
+                        <p id="rc-chamada-preview" class="text-lg font-extrabold"></p>
+                    </div>
+
+                    ${colaboradores.length > 0 ? `
+                    <div>
+                        <label class="rc-label" for="rc-select-colaborador-destino">Colaborador (opcional)</label>
+                        <select id="rc-select-colaborador-destino" class="rc-input">
+                            <option value="">Sem colaborador específico</option>
+                            ${opcoesColab}
+                        </select>
+                    </div>` : ''}
                 </div>`,
             rodape: `
                 <div class="rc-modal-foot">
                     <button type="button" class="rc-btn" data-rc-close style="flex:.6">Cancelar</button>
-                    <button type="button" id="rc-btn-colaborador-confirmar" class="rc-btn rc-btn--primary" style="flex:1.4">${ico('megaphone', 15)} Confirmar chamada</button>
+                    <button type="button" id="rc-btn-chamada-confirmar" class="rc-btn rc-btn--ok" style="flex:1.4">${ico('megaphone', 15)} Chamar</button>
                 </div>`,
         });
 
-        document.getElementById('rc-btn-colaborador-confirmar').onclick = async () => {
-            const select = document.getElementById('rc-select-colaborador-destino');
-            const colaboradorId = select.value;
-            let colaboradorObj = null;
-
-            if (colaboradorId) {
-                const opt = select.options[select.selectedIndex];
-                colaboradorObj = { id: colaboradorId, name: opt.getAttribute('data-nome') };
-            }
-
-            close();
-            await this._executarChamado(pautaId, assistido, pauta, colaboradorObj);
+        const selRotulo = document.getElementById('rc-chamada-rotulo');
+        const inpValor  = document.getElementById('rc-chamada-valor');
+        const inpOutro  = document.getElementById('rc-chamada-outro');
+        const lerLocal = () => {
+            const rotulo = selRotulo.value === '__outro' ? inpOutro.value.trim() : selRotulo.value;
+            return { rotulo, valor: inpValor.value.trim() };
         };
+        const atualizarPreview = () => {
+            document.getElementById('rc-chamada-outro-wrap').classList.toggle('hidden', selRotulo.value !== '__outro');
+            const { rotulo, valor } = lerLocal();
+            document.getElementById('rc-chamada-preview').textContent = [rotulo, valor].filter(Boolean).join(' ') || '—';
+        };
+        [selRotulo, inpValor, inpOutro].forEach(el => el.addEventListener('input', atualizarPreview));
+        selRotulo.addEventListener('change', atualizarPreview);
+        atualizarPreview();
+        inpValor.focus();
+        inpValor.select();
+
+        const confirmar = async () => {
+            const local = lerLocal();
+            try { localStorage.setItem(chave, JSON.stringify(local)); } catch { /* ignora */ }
+
+            const select = document.getElementById('rc-select-colaborador-destino');
+            let colaboradorObj = null;
+            if (select && select.value) {
+                const opt = select.options[select.selectedIndex];
+                colaboradorObj = { id: select.value, name: opt.getAttribute('data-nome') };
+            }
+            close();
+            await this._executarChamado(pautaId, assistido, pauta, colaboradorObj, local);
+        };
+        document.getElementById('rc-btn-chamada-confirmar').onclick = confirmar;
+        inpValor.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); confirmar(); } });
     },
 
-    async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj) {
+    async _executarChamado(pautaId, assistido, pauta, colaboradorDestinoObj, local = null) {
         const app = this._app;
-        this._registrarUltimoChamado(pautaId, assistido, pauta.name);
+        const inAttendanceTime = new Date().toISOString();
 
-        const updates = {
-            status: 'emAtendimento',
-            inAttendanceTime: new Date().toISOString()
-        };
-
+        const updates = { status: 'emAtendimento', inAttendanceTime };
+        if (local && (local.rotulo || local.valor)) updates.localChamada = { rotulo: local.rotulo || '', valor: local.valor || '' };
         if (colaboradorDestinoObj) {
-            updates.assignedCollaborator = {
-                id: colaboradorDestinoObj.id,
-                name: colaboradorDestinoObj.name
-            };
+            updates.assignedCollaborator = { id: colaboradorDestinoObj.id, name: colaboradorDestinoObj.name };
         }
+
+        // Marca como já registrado: evita que o listener republique o chamado (e a TV toque de novo)
+        this._chamadosRegistrados.add(`${assistido.id}:${inAttendanceTime}`);
+        this._registrarUltimoChamado(pautaId, assistido, pauta.name, updates.localChamada || null);
 
         await PautaService.updateStatus(app.db, pautaId, assistido.id, updates, app.currentUserName);
 
         if (colaboradorDestinoObj && colaboradorDestinoObj.id) {
             try {
-                const colabDocRef = doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id);
-                await updateDoc(colabDocRef, {
+                await updateDoc(doc(app.db, "pautas", pautaId, "collaborators", colaboradorDestinoObj.id), {
                     status: 'ocupado',
                     currentAttendance: assistido.id
                 });
@@ -1187,18 +1232,23 @@ export const RecepcaoCentralService = {
         playSound('chime');
     },
 
-    async _registrarUltimoChamado(pautaId, assistido, pautaNome) {
+    async _registrarUltimoChamado(pautaId, assistido, pautaNome, local = null) {
         const pauta = estado.pautasHoje.find(p => p.id === pautaId);
+        const loc = local || assistido.localChamada || null;
+        const rotulo = loc?.rotulo || '';
+        const valor  = loc ? (loc.valor || '') : (pauta?.sala || assistido.room || '');
 
         const chamado = {
-            nome:      assistido.name,
-            assunto:   assistido.subject || '',
-            local:     pautaNome,
-            pautaNome: pautaNome,
-            sala:      pauta?.sala || assistido.room || '',
+            nome:        assistido.name,
+            assunto:     assistido.subject || '',
+            local:       pautaNome,
+            pautaNome:   pautaNome,
+            sala:        valor,
+            rotuloLocal: rotulo,
+            localTexto:  [rotulo, valor].filter(Boolean).join(' '),
             pautaId,
-            hora:      new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-            timestamp: Date.now(),
+            hora:        new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+            timestamp:   Date.now(),
         };
 
         const chave = `sigep_chamados_${pautaId}`;
@@ -1207,12 +1257,11 @@ export const RecepcaoCentralService = {
         historico.unshift(chamado);
         if (historico.length > 5) historico = historico.slice(0, 5);
         localStorage.setItem(chave, JSON.stringify(historico));
-
         localStorage.setItem('sigep_ultimo_chamado_global', JSON.stringify(chamado));
 
         try {
-            const painelRef = doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado");
-            await setDoc(painelRef, { atual: chamado, historico: historico }, { merge: true });
+            await setDoc(doc(this._app.db, "pautas", pautaId, "painel", "ultimoChamado"),
+                { atual: chamado, historico }, { merge: true });
         } catch (error) {
             console.error("Erro ao atualizar último chamado no Firebase:", error);
         }
@@ -1225,13 +1274,16 @@ export const RecepcaoCentralService = {
         const recemChamados = assistidos.filter(a =>
             a.status === 'emAtendimento' &&
             a.inAttendanceTime &&
-            (Date.now() - new Date(a.inAttendanceTime).getTime()) < 10000
+            (Date.now() - new Date(a.inAttendanceTime).getTime()) < 10000 &&
+            !this._chamadosRegistrados.has(`${a.id}:${a.inAttendanceTime}`)
         );
 
         if (recemChamados.length > 0) {
             const pauta = estado.pautasHoje.find(p => p.id === pautaId);
             if (pauta) {
-                this._registrarUltimoChamado(pautaId, recemChamados[0], pauta.name);
+                const a = recemChamados[0];
+                this._chamadosRegistrados.add(`${a.id}:${a.inAttendanceTime}`);
+                this._registrarUltimoChamado(pautaId, a, pauta.name);
             }
         }
     },
@@ -1337,6 +1389,21 @@ export const RecepcaoCentralService = {
                         </div>
                     </div>
 
+                    <div>
+                        <span class="rc-label">Logo do painel público</span>
+                        <div class="flex items-center gap-4 rc-surface" style="padding:14px">
+                            <div id="tv-logo-preview" class="flex items-center justify-center shrink-0" style="width:150px;height:64px;border-radius:10px;background:#f8fafc;border:1px dashed var(--rc-line);overflow:hidden"></div>
+                            <div class="flex-1 min-w-0">
+                                <div class="flex flex-wrap gap-2">
+                                    <button type="button" id="tv-logo-enviar" class="rc-btn rc-btn--sm">Enviar imagem</button>
+                                    <button type="button" id="tv-logo-remover" class="rc-btn rc-btn--ghost rc-btn--sm">Usar logo padrão</button>
+                                    <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
+                                </div>
+                                <p class="text-xs mt-2" style="color:var(--rc-muted)">PNG, JPG, WebP ou SVG. A marca "Tecnologia SIGEP" continua aparecendo abaixo da logo do órgão.</p>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="rounded-xl" style="padding:14px;background:var(--rc-brand-soft);border:1px solid #c7d2fe">
                         <span class="rc-label" style="color:var(--rc-brand)">Link gerado (copie para a Smart TV)</span>
                         <textarea id="tv_preview_link" readonly class="w-full bg-transparent border-0 resize-none outline-none text-xs" style="font-family:ui-monospace,monospace;color:var(--rc-brand);height:48px"></textarea>
@@ -1380,6 +1447,59 @@ export const RecepcaoCentralService = {
         document.getElementById('tv_video_url').addEventListener('input', updatePreview);
         updatePreview();
 
+        // ── Logo do painel público ────────────────────────────────────────────
+        let logoAtual = recepcao.logoPainel || '';
+        const desenharPreview = () => {
+            const box = document.getElementById('tv-logo-preview');
+            box.replaceChildren();
+            if (logoAtual) {
+                const img = document.createElement('img');
+                img.src = logoAtual; img.alt = 'Logo do órgão';
+                img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain';
+                box.appendChild(img);
+            } else {
+                const t = document.createElement('span');
+                t.className = 'text-xs font-semibold'; t.style.color = 'var(--rc-faint)'; t.textContent = 'Logo SIGEP (padrão)';
+                box.appendChild(t);
+            }
+        };
+        desenharPreview();
+
+        const reduzirImagem = (file) => new Promise((resolve, reject) => {
+            if (!/^image\//.test(file.type)) return reject(new Error('Arquivo não é uma imagem.'));
+            if (file.size > 5 * 1024 * 1024) return reject(new Error('Imagem maior que 5 MB.'));
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+            reader.onload = () => {
+                if (file.type === 'image/svg+xml') {
+                    return reader.result.length > 400000 ? reject(new Error('SVG muito grande.')) : resolve(reader.result);
+                }
+                const img = new Image();
+                img.onerror = () => reject(new Error('Imagem inválida.'));
+                img.onload = () => {
+                    const escala = Math.min(1, 160 / img.height, 480 / img.width);
+                    const c = document.createElement('canvas');
+                    c.width = Math.max(1, Math.round(img.width * escala));
+                    c.height = Math.max(1, Math.round(img.height * escala));
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    const out = c.toDataURL('image/png');
+                    out.length > 500000 ? reject(new Error('Imagem complexa demais. Use uma versão mais simples.')) : resolve(out);
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('tv-logo-enviar').addEventListener('click', () => document.getElementById('tv-logo-file').click());
+        document.getElementById('tv-logo-file').addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try { logoAtual = await reduzirImagem(file); desenharPreview(); }
+            catch (err) { showNotification(err.message || 'Não foi possível usar esta imagem.', 'error'); }
+            e.target.value = '';
+        });
+        document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); });
+
         const saveConfig = async () => {
             const data = updatePreview();
             const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
@@ -1389,9 +1509,19 @@ export const RecepcaoCentralService = {
             try {
                 await updateDoc(doc(this._app.db, "recepcoes", recepcao.id), {
                     modoVisualizacao: configToSave.modo,
-                    videoUrl: configToSave.video
+                    videoUrl: configToSave.video,
+                    logoPainel: logoAtual || null
                 });
+                recepcao.logoPainel = logoAtual || '';
             } catch (e) { /* configuração local já salva */ }
+
+            // O painel público lê a logo de pautas/{id}/painel/config (mesmo local do "último chamado")
+            const orgaoId = this._app.currentUser?.orgaoId || null;
+            await Promise.all(estado.pautasHoje.map(p =>
+                setDoc(doc(this._app.db, "pautas", p.id, "painel", "config"),
+                    { logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() }, { merge: true })
+                    .catch(err => console.warn('Falha ao salvar logo do painel:', err))
+            ));
 
             return data.link;
         };
