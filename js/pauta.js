@@ -21,6 +21,17 @@ export const PautaService = {
         return 'atendido';
     },
 
+    closeAllQuickMenus(excludeMenuId = null) {
+        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
+            if (excludeMenuId === null || menu.id !== excludeMenuId) {
+                menu.classList.add('hidden');
+                const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
+                const toggle = document.getElementById(toggleId);
+                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+            }
+        });
+    },
+
     actionAttendDirectly(app, id, assisted) {
         const useDist = app.currentPautaData?.useDistributionFlow === true;
         const useDelegation = app.currentPautaData?.useDelegationFlow === true;
