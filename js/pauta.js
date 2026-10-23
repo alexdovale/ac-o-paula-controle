@@ -1,3 +1,6 @@
+O teu ficheiro js/pauta.js está quase perfeito, Alex! No entanto, notei um pequeno detalhe na função handleCardActions: colaste as novas ações (chamar-distribuicao-tv-btn e rechamar-tv-btn) isoladas mesmo a meio das restrições de perfil de Apoio, o que vai gerar um erro de sintaxe (SyntaxError) no JavaScript.
+Vamos corrigir isso imediatamente! As novas ações de TV devem ficar dentro do dicionário actionMap, que é onde o sistema mapeia os cliques dos botões.
+Aqui está o js/pauta.js corrigido e organizado. Podes copiar e substituir todo o conteúdo do teu ficheiro js/pauta.js por este:
 // js/pauta.js - VERSÃO COM MODO TV OPCIONAL E CORREÇÃO DO FLUXO DE DISTRIBUIÇÃO
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
@@ -10,8 +13,6 @@ export const PautaService = {
     actionCooldown: new Map(),
 
     getDestinoRetorno(app) {
-        // Se a delegação (Em Atendimento) estiver ativa, vai para lá. 
-        // Caso contrário, pula direto para 'atendido' ou 'aguardandoDistribuicao' se a distribuição estiver ligada.
         if (app.currentPautaData?.useDelegationFlow === true) {
             return 'emAtendimento';
         }
@@ -43,10 +44,8 @@ export const PautaService = {
             }, app.currentUserName);
             showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
         } else if (!useDelegation) {
-            // 🔥 Se NEM Mesa (Delegação) NEM Distribuição estão ativas, o atendimento é concluído diretamente!
             this.finishAttendance(app, id, app.currentUserName, []);
         } else {
-            // Caso use delegação normal
             if (app.currentPautaData?.useTvPanel !== false) {
                 this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
             } else {
@@ -778,8 +777,6 @@ export const PautaService = {
             return;
         }
         
-        // 🌟 VERIFICAÇÃO INTELIGENTE DOS FLUXOS ATIVOS NA PAUTA 🌟
-        // Verifica se o fluxo de delegação está ativo nas configurações da pauta
         const usaDelegação = app.currentPautaData?.useDelegationFlow === true;
         const usaDistribuição = app.currentPautaData?.useDistributionFlow === true;
 
@@ -790,7 +787,6 @@ export const PautaService = {
             tipoAcao = 'distribuicao';
         }
 
-        // Se o painel da TV estiver ativado, abre o modal de chamada com o local. Caso contrário, usa o modal clássico.
         if (app.currentPautaData?.useTvPanel !== false) {
             this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, tipoAcao);
         } else {
@@ -811,7 +807,6 @@ export const PautaService = {
         } else {
             const tipoAcao = useDelegation ? 'delegar' : 'atender_direto';
             
-            // INTERRUPTOR DA TV
             if (app.currentPautaData?.useTvPanel !== false) {
                 this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
             } else {
@@ -1315,7 +1310,6 @@ export const PautaService = {
         const currentUserRole = app.currentUser?.role;
         const isApoio = currentUserRole === 'apoio';
 
-        // Adicionado 'cancel-pauta-btn' na lista de proibições para o Apoio
         const acoesProibidasApoio = [
             'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
             'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
@@ -1324,40 +1318,6 @@ export const PautaService = {
             'edit-attendant-btn', 'manage-demands-btn', 'toggle-confirmed-atendido', 
             'toggle-confirmed-faltoso', 'update-doc-status-btn', 'cancel-pauta-btn'
         ];
-        
-            // --- NOVAS AÇÕES DE TV E RECHAMADA ---
-            'chamar-distribuicao-tv-btn': () => {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'distribuicao');
-            },
-            'rechamar-tv-btn': async () => {
-                // Dispara o alerta sonoro e atualiza a TV na hora sem mudar o status do card
-                const localSalvo = localStorage.getItem(`sigep_tv_local_${app.currentPauta.id}`) || assisted.localChamada?.valor || 'Atendimento';
-                const pautaName = app.currentPauta?.name || 'Pauta';
-                
-                const chamado = {
-                    nome: assisted.name,
-                    assunto: assisted.subject || '',
-                    local: pautaName,
-                    pautaNome: pautaName,
-                    sala: localSalvo,
-                    rotuloLocal: assisted.localChamada?.rotulo || 'Guichê',
-                    localTexto: `${assisted.localChamada?.rotulo || 'Guichê'} ${localSalvo}`,
-                    pautaId: app.currentPauta.id,
-                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
-                    timestamp: Date.now(), // Força o timestamp a ser novo para o Firebase detetar a alteração
-                };
-
-                try {
-                    const painelRef = doc(app.db, "pautas", app.currentPauta.id, "painel", "ultimoChamado");
-                    await setDoc(painelRef, { atual: chamado }, { merge: true });
-                    if (typeof playSound === 'function') playSound('chime');
-                    showNotification(`📢 Alerta emitido na TV para ${assisted.name}!`, "success");
-                } catch (error) {
-                    console.error("Erro ao emitir alerta na TV:", error);
-                    showNotification("Erro ao acionar a TV.", "error");
-                }
-            },
-
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
         if (isApoio && acaoAtual) {
@@ -1401,7 +1361,39 @@ export const PautaService = {
             'view-details-btn': () => { if (window.openDetailsModal) window.openDetailsModal({ assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted, db: app.db }); },
             'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted),
             
-            // --- NOVAS AÇÕES AQUI ---
+            // --- NOVAS AÇÕES DE TV E RECHAMADA ---
+            'chamar-distribuicao-tv-btn': () => {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'distribuicao');
+            },
+            'rechamar-tv-btn': async () => {
+                const localSalvo = localStorage.getItem(`sigep_tv_local_${app.currentPauta.id}`) || assisted.localChamada?.valor || 'Atendimento';
+                const pautaName = app.currentPauta?.name || 'Pauta';
+                
+                const chamado = {
+                    nome: assisted.name,
+                    assunto: assisted.subject || '',
+                    local: pautaName,
+                    pautaNome: pautaName,
+                    sala: localSalvo,
+                    rotuloLocal: assisted.localChamada?.rotulo || 'Guichê',
+                    localTexto: `${assisted.localChamada?.rotulo || 'Guichê'} ${localSalvo}`,
+                    pautaId: app.currentPauta.id,
+                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now(),
+                };
+
+                try {
+                    const painelRef = doc(app.db, "pautas", app.currentPauta.id, "painel", "ultimoChamado");
+                    await setDoc(painelRef, { atual: chamado }, { merge: true });
+                    if (typeof playSound === 'function') playSound('chime');
+                    showNotification(`📢 Alerta emitido na TV para ${assisted.name}!`, "success");
+                } catch (error) {
+                    console.error("Erro ao emitir alerta na TV:", error);
+                    showNotification("Erro ao acionar a TV.", "error");
+                }
+            },
+
+            // --- AÇÕES EXTRA ---
             'cancel-pauta-btn': () => {
                 if (confirm("Tem certeza que deseja retirar este assistido da pauta?\n\nEle sairá da fila e NÃO constará como faltoso. Use isso para desistências ou erros.")) {
                     this.updateStatus(app.db, app.currentPauta.id, id, { status: 'cancelado' }, app.currentUserName);
@@ -1466,7 +1458,6 @@ export const PautaService = {
         
         showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
         
-        // INTERRUPTOR DA TV
         if (app.currentPautaData?.useTvPanel !== false) {
             this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
         } else {
@@ -1615,30 +1606,10 @@ export const PautaService = {
     },
 
     actionSelectCollaborator(app, id, assisted) {
-        // INTERRUPTOR DA TV
         if (app.currentPautaData?.useTvPanel !== false) {
             this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
         } else {
             this._abrirModalClassico(app, assisted, 'delegar');
-        }
-    },
-
-    actionAttendDirectly(app, id, assisted) {
-        const useDist = app.currentPautaData?.useDistributionFlow === true;
-        const timestampIso = new Date().toISOString();
-
-        if (useDist) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
-            }, app.currentUserName);
-            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
-        } else {
-            // INTERRUPTOR DA TV
-            if (app.currentPautaData?.useTvPanel !== false) {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'atender_direto');
-            } else {
-                this._abrirModalClassico(app, assisted, 'atender_direto');
-            }
         }
     },
 
@@ -1770,7 +1741,6 @@ export const PautaService = {
             attendedBy: null, 
             attendedAt: null,
             finalizadoPeloColaborador: false, 
-            // CORREÇÃO DO FLUXO: Só muda o distributionStatus se a distribuição estiver ligada
             distributionStatus: useDist ? (statusDestino === 'emAtendimento' ? 'distributed' : 'pending') : null
         };
 
@@ -1913,7 +1883,6 @@ window.confirmarAcessoPdf = async function(assistedId, pdfLink, nomeColaborador)
     }
 };
 
-// 5. Alternar o Modo de Rastreio de PDF (Liga/Desliga)
 window.toggleModoRastreioPdf = function() {
     const atual = localStorage.getItem('sigep_modo_rastreio_pdf') === 'true';
     const novo = !atual;
