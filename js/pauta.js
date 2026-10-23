@@ -1324,6 +1324,40 @@ export const PautaService = {
             'edit-attendant-btn', 'manage-demands-btn', 'toggle-confirmed-atendido', 
             'toggle-confirmed-faltoso', 'update-doc-status-btn', 'cancel-pauta-btn'
         ];
+        
+            // --- NOVAS AÇÕES DE TV E RECHAMADA ---
+            'chamar-distribuicao-tv-btn': () => {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'distribuicao');
+            },
+            'rechamar-tv-btn': async () => {
+                // Dispara o alerta sonoro e atualiza a TV na hora sem mudar o status do card
+                const localSalvo = localStorage.getItem(`sigep_tv_local_${app.currentPauta.id}`) || assisted.localChamada?.valor || 'Atendimento';
+                const pautaName = app.currentPauta?.name || 'Pauta';
+                
+                const chamado = {
+                    nome: assisted.name,
+                    assunto: assisted.subject || '',
+                    local: pautaName,
+                    pautaNome: pautaName,
+                    sala: localSalvo,
+                    rotuloLocal: assisted.localChamada?.rotulo || 'Guichê',
+                    localTexto: `${assisted.localChamada?.rotulo || 'Guichê'} ${localSalvo}`,
+                    pautaId: app.currentPauta.id,
+                    hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                    timestamp: Date.now(), // Força o timestamp a ser novo para o Firebase detetar a alteração
+                };
+
+                try {
+                    const painelRef = doc(app.db, "pautas", app.currentPauta.id, "painel", "ultimoChamado");
+                    await setDoc(painelRef, { atual: chamado }, { merge: true });
+                    if (typeof playSound === 'function') playSound('chime');
+                    showNotification(`📢 Alerta emitido na TV para ${assisted.name}!`, "success");
+                } catch (error) {
+                    console.error("Erro ao emitir alerta na TV:", error);
+                    showNotification("Erro ao acionar a TV.", "error");
+                }
+            },
+
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
         if (isApoio && acaoAtual) {
