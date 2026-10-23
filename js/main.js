@@ -579,9 +579,6 @@ class SIGEPApp {
             }
         });
 
-        // ==========================================
-        // ATENÇÃO: CHAMADA PARA O MONITOR GLOBAL
-        // ==========================================
         document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
@@ -707,9 +704,6 @@ class SIGEPApp {
             document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
         });
 
-        // ==========================================
-        // ATENÇÃO: CHAMADA PARA O MÓDULO BI EXTERNO
-        // ==========================================
         document.getElementById('edit-pauta-config-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.CONFIGURACAO_PAUTA, { pautaId: this.currentPauta.id }, false);
@@ -856,6 +850,48 @@ class SIGEPApp {
             document.getElementById('reset-confirm-modal')?.classList.add('hidden');
             showNotification("Pauta zerada com sucesso.", "success");
         });
+
+        // ------------------------------------------------------------------------------------------
+        // 🔥 INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES 🔥
+        // ------------------------------------------------------------------------------------------
+        const observerEdicao = new MutationObserver(() => {
+            const modalEdicao = document.getElementById('edit-pauta-config-modal');
+            // Só atua se o modal existir na tela e não estiver invisível (hidden)
+            if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
+                // Checa se o nosso botão de TV já foi injetado para não ficar duplicando
+                let divConfigTV = document.getElementById('edit-use-tv-panel-container');
+                if (!divConfigTV) {
+                    // Procura o botão de Salvar para injetar nosso botão logo acima dele
+                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
+                    if (btnCancelarSalvar) {
+                        divConfigTV = document.createElement('div');
+                        divConfigTV.id = 'edit-use-tv-panel-container';
+                        divConfigTV.className = 'mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 mx-5';
+                        divConfigTV.innerHTML = `
+                            <label class="flex items-center cursor-pointer gap-3">
+                                <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                                    <span class="block text-[10px] text-slate-500">Se ativado, chamar abre o seletor de locais e envia para a TV. Se desativado, usa apenas a lista de delegar.</span>
+                                </div>
+                            </label>
+                        `;
+                        // Insere cirurgicamente na tela
+                        btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
+                        
+                        // Garante que a caixinha marque se o banco de dados disser que a TV está ligada
+                        const tvCheck = document.getElementById('edit-use-tv-panel');
+                        if (tvCheck && this.currentPautaData) {
+                            tvCheck.checked = this.currentPautaData.useTvPanel !== false;
+                        }
+                    }
+                }
+            }
+        });
+        
+        // Coloca o observer para vigiar qualquer mudança que a tela fizer no Body
+        observerEdicao.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        // ------------------------------------------------------------------------------------------
     }
 
     setupAttendanceEvents() {
@@ -1378,14 +1414,12 @@ class SIGEPApp {
                     PautaService.populateRoomSelects(this);
                 }
 
-                // 🌟 CONTROLE INTELIGENTE DE ABAS (AGENDAMENTO VS AVULSO) 🌟
                 const tipoConfig = String(this.currentPautaData.type || this.currentPautaData.tipo || 'hibrido').toLowerCase();
                 const tabAgendamento = document.getElementById('tab-agendamento');
                 const tabAvulso = document.getElementById('tab-avulso');
                 const navTabs = document.getElementById('nav-tabs-atendimento');
 
                 if (tabAgendamento && tabAvulso) {
-                    // Reseta as abas mostrando as duas inicialmente
                     tabAgendamento.classList.remove('hidden');
                     tabAvulso.classList.remove('hidden');
                     if (navTabs) navTabs.classList.remove('hidden');
@@ -1399,7 +1433,6 @@ class SIGEPApp {
                         UIService.switchTab('avulso', this);
                     } 
                     else {
-                        // Se for híbrido ou tiver permissões mescladas, mostra as duas e foca no agendamento
                         UIService.switchTab('agendamento', this);
                     }
                 }
@@ -1541,15 +1574,14 @@ class SIGEPApp {
 
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            // Removida a rota incorreta (ROUTES.PAINEL_PUBLICO) que abria a tela de som
             document.getElementById('container-construtor-coleta')?.classList.add('hidden');
             this.showColetasScreen();
         });
 
         document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
             document.getElementById('container-construtor-coleta')?.classList.add('hidden');
-            document.getElementById('coletas-container')?.classList.add('hidden'); // FORÇA A OCULTAÇÃO AQUI
-            this.showPautaSelectionScreen(); // LIMPA TODO O ECRÃ
+            document.getElementById('coletas-container')?.classList.add('hidden'); 
+            this.showPautaSelectionScreen(); 
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
@@ -1662,109 +1694,6 @@ class SIGEPApp {
             }
         });
     }
-
-    async loadUserPreferences() {
-        if (!this.auth?.currentUser || !this.db) return;
-        try {
-            const docSnap = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
-            if (docSnap.exists()) {
-                const userData = docSnap.data();
-                this.currentUser = { ...this.currentUser, ...userData }; 
-                
-                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
-                
-                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
-                this.applyRoleBasedUI(); 
-            }
-        } catch (error) { 
-            console.error("Erro ao carregar perfil:", error); 
-        }
-    }
-
-    applyRoleBasedUI() {
-        if (!this.currentUser) return;
-        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
-        document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
-    }
-
-    async openUserPreferencesModal() {
-        if (!this.auth?.currentUser) return showNotification("Você precisa estar logado.", "error");
-
-        const nameInput = document.getElementById('pref-user-name');
-        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
-        
-        const emailInput = document.getElementById('pref-user-email');
-        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
-
-        await this.loadUserPreferences(); 
-
-        const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
-        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
-        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
-        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
-        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
-        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
-        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
-        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
-        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
-
-        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
-    }
-
-    applyUserPreferences() {
-        console.log("⚙️ Aplicando preferências:", this.userPreferences);
-    }
-
-    getDefaultNotificationPreferences() {
-        return {
-            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
-            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
-        };
-    }
-
-    saveColumnPreferences() {
-        const preferences = {
-            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
-            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
-        };
-        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
-        this.applyColumnPreferences(preferences);
-    }
-
-    loadColumnPreferences() {
-        const savedPreferences = localStorage.getItem('sigap_column_preferences');
-        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
-
-        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const chkDistribuicao = document.getElementById('toggle-distribuicao');
-        const chkFaltosos = document.getElementById('toggle-faltosos');
-        
-        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
-        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
-        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
-        
-        this.applyColumnPreferences(preferences);
-    }
-
-    applyColumnPreferences(preferences) {
-        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
-        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
-
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const distribuicaoColumn = document.getElementById('distribuicao-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
-        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
-        
-        if (faltososColumn) {
-            const pautaColumn = document.getElementById('pauta-column');
-            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
-                 faltososColumn.classList.remove('hidden');
-            }
-        }
-    }
 }
 
 // ============================================================
@@ -1870,10 +1799,6 @@ window.sortColaboradores = function(criterio) {
     }
 };
 
-// ============================================================
-// WRAPPERS GLOBAIS PARA O MONITORAMENTO DA PAUTA
-// ============================================================
-
 window.abrirConstrutor = async (coletaId) => {
     if (!window.app || !window.app.db) return;
     
@@ -1912,7 +1837,6 @@ window.ApiIntegration = {
     }
 };
 
-// Encaminha as chamadas da UI para o Serviço Limpo
 window.abrirMonitoramento = function(pautaId, assistidoId, assistidoNome) {
     if(window.MonitoramentoService) window.MonitoramentoService.abrirMonitoramento(pautaId, assistidoId, assistidoNome, window.app);
 };
@@ -1922,26 +1846,17 @@ window.abrirMonitoramentoGlobal = function() {
 };
 
 window.toggleMonitorVerde = function(pautaId, assistidoId, isVerde) {
-    if(window.MonitoramentoService && window.MonitoramentoService.toggleMonitorVerde) {
-        // Implementamos toggle dentro de main ou monitoramento
-        // Como movemos tudo para monitoramento.js, ele deve cuidar. 
-        // Caso o monitoramento.js precise desta função global, ele acessará.
-    }
+    if(window.MonitoramentoService && window.MonitoramentoService.toggleMonitorVerde) {}
 };
 
-window.salvarMonitorLink = function(pautaId, assistidoId, inputId) {
-    // Mesma coisa: wrapper caso exista.
-};
+window.salvarMonitorLink = function(pautaId, assistidoId, inputId) {};
 
-window.salvarMonitorObs = function(pautaId, assistidoId, inputId) {
-    // Mesma coisa.
-};
+window.salvarMonitorObs = function(pautaId, assistidoId, inputId) {};
 
 window.registrarAcaoHistorico = function(pautaId, assistidoId, descricaoAcao) {
     if(window.MonitoramentoService) window.MonitoramentoService.registrarAcaoHistorico(pautaId, assistidoId, descricaoAcao, window.app);
 };
 
-// E PARA GARANTIR QUE NADA SE PISCA:
 window.renderizarListaMonitorGlobal = function(filtro = '') {
     if(window.MonitoramentoService) window.MonitoramentoService.renderizarListaMonitorGlobal(window.app, filtro);
 };
