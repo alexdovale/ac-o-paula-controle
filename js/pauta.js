@@ -10,25 +10,38 @@ export const PautaService = {
     actionCooldown: new Map(),
 
     getDestinoRetorno(app) {
+        // Se a delegação (Em Atendimento) estiver ativa, vai para lá. 
+        // Caso contrário, pula direto para 'atendido' ou 'aguardandoDistribuicao' se a distribuição estiver ligada.
         if (app.currentPautaData?.useDelegationFlow === true) {
             return 'emAtendimento';
         }
-        return 'aguardando';
+        if (app.currentPautaData?.useDistributionFlow === true) {
+            return 'aguardandoDistribuicao';
+        }
+        return 'atendido';
     },
 
-    isMobileDevice() {
-        return window.innerWidth <= 768;
-    },
+    actionAttendDirectly(app, id, assisted) {
+        const useDist = app.currentPautaData?.useDistributionFlow === true;
+        const useDelegation = app.currentPautaData?.useDelegationFlow === true;
+        const timestampIso = new Date().toISOString();
 
-    closeAllQuickMenus(excludeMenuId = null) {
-        document.querySelectorAll('[id^="quick-menu-"]').forEach(menu => {
-            if (excludeMenuId === null || menu.id !== excludeMenuId) {
-                menu.classList.add('hidden');
-                const toggleId = menu.id.replace('quick-menu', 'quick-toggle');
-                const toggle = document.getElementById(toggleId);
-                if (toggle) toggle.setAttribute('aria-expanded', 'false');
+        if (useDist) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
+            }, app.currentUserName);
+            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+        } else if (!useDelegation) {
+            // 🔥 Se NEM Mesa (Delegação) NEM Distribuição estão ativas, o atendimento é concluído diretamente!
+            this.finishAttendance(app, id, app.currentUserName, []);
+        } else {
+            // Caso use delegação normal
+            if (app.currentPautaData?.useTvPanel !== false) {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
+            } else {
+                this._abrirModalClassico(app, assisted, 'delegar');
             }
-        });
+        }
     },
 
     canPerformAction(actionId, cooldownMs = 500) {
