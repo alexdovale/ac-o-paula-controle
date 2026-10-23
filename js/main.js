@@ -1694,6 +1694,109 @@ class SIGEPApp {
             }
         });
     }
+
+    async loadUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) return;
+        try {
+            const docSnap = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                this.currentUser = { ...this.currentUser, ...userData }; 
+                
+                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
+                
+                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
+                this.applyRoleBasedUI(); 
+            }
+        } catch (error) { 
+            console.error("Erro ao carregar perfil:", error); 
+        }
+    }
+
+    applyRoleBasedUI() {
+        if (!this.currentUser) return;
+        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
+        document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
+    }
+
+    async openUserPreferencesModal() {
+        if (!this.auth?.currentUser) return showNotification("Você precisa estar logado.", "error");
+
+        const nameInput = document.getElementById('pref-user-name');
+        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
+        
+        const emailInput = document.getElementById('pref-user-email');
+        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
+
+        await this.loadUserPreferences(); 
+
+        const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
+        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
+        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
+        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
+        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
+        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
+        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
+        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
+        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
+
+        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
+    }
+
+    applyUserPreferences() {
+        console.log("⚙️ Aplicando preferências:", this.userPreferences);
+    }
+
+    getDefaultNotificationPreferences() {
+        return {
+            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
+            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
+        };
+    }
+
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
+
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
+
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
+
+    applyColumnPreferences(preferences) {
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
+
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
+        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
+        
+        if (faltososColumn) {
+            const pautaColumn = document.getElementById('pauta-column');
+            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            }
+        }
+    }
 }
 
 // ============================================================
