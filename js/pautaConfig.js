@@ -13,10 +13,11 @@ import { ROUTES } from './router.js';
 const TEMPLATES_KEY = 'sigep_pauta_templates';
 
 const DEFAULTS = {
-    ordemAtendimento: 'flexivel', // <-- O PADRÃO É O FLEXÍVEL (ENCAIXE)
-    toleranciaMinutos: 15,        // <-- TOLERÂNCIA PADRÃO (15 MINUTOS)
+    ordemAtendimento: 'flexivel',
+    toleranciaMinutos: 15,
     useDelegationFlow: false,
     useDistributionFlow: false,
+    useTvPanel: true, // <-- MODO TV ATIVADO POR PADRÃO
     type: 'agendamento',
     tipo: 'normal'
 };
@@ -176,7 +177,7 @@ export const PautaConfigService = {
         });
     },
 
-    // ── MODAIS ─────────────────────────────────────────────────────────────────
+    // ── MODAIS E INJEÇÕES DINÂMICAS ────────────────────────────────────────────
 
     _abrirModalTipo() {
         document.getElementById('pauta-type-modal').classList.remove('hidden');
@@ -224,8 +225,9 @@ export const PautaConfigService = {
         // INJEÇÕES DINÂMICAS DE CAMPOS
         this._injetarSeletorUnidade();
         this._injetarCampoData();
-        this._injetarCampoToleranciaCriacao(); // <-- Campo Dinâmico de Tolerância (Criação)
+        this._injetarCampoToleranciaCriacao(); 
         this._adicionarSelectorModo();
+        this._injetarInterruptorTVCriacao(); // <-- NOVO INTERRUPTOR DE TV
 
         createModal.classList.remove('hidden');
     },
@@ -333,7 +335,6 @@ export const PautaConfigService = {
         }
     },
 
-    // INJEÇÃO DA TOLERÂNCIA NA CRIAÇÃO
     _injetarCampoToleranciaCriacao() {
         let tolInput = document.getElementById('create-pauta-tolerancia-input');
 
@@ -353,7 +354,6 @@ export const PautaConfigService = {
         }
     },
 
-    // INJEÇÃO DA TOLERÂNCIA NA EDIÇÃO (DINÂMICO)
     _injetarCampoToleranciaEdicao(pautaData) {
         let tolInput = document.getElementById('edit-pauta-tolerancia-input');
 
@@ -368,7 +368,6 @@ export const PautaConfigService = {
                     <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
-                // Insere logo após a div do input de data no modal de edição
                 dateInput.parentNode.parentNode.insertBefore(tolContainer, dateInput.parentNode.nextSibling);
                 tolInput = document.getElementById('edit-pauta-tolerancia-input');
             }
@@ -376,6 +375,54 @@ export const PautaConfigService = {
 
         if (tolInput) {
             tolInput.value = pautaData.toleranciaMinutos !== undefined ? pautaData.toleranciaMinutos : DEFAULTS.toleranciaMinutos;
+        }
+    },
+
+    _injetarInterruptorTVCriacao() {
+        let containerCriacao = document.getElementById('pauta-tv-container-criacao');
+        if (!containerCriacao) {
+            const ref = document.getElementById('pauta-modo-container') || document.getElementById('pauta-tolerancia-container');
+            if (ref && ref.parentNode) {
+                containerCriacao = document.createElement('div');
+                containerCriacao.id = 'pauta-tv-container-criacao';
+                containerCriacao.className = 'mb-4 mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100';
+                containerCriacao.innerHTML = `
+                    <label class="flex items-center cursor-pointer gap-3">
+                        <input type="checkbox" id="check-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
+                        <div>
+                            <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                            <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV. Se desativado, usa apenas a lista de delegar.</span>
+                        </div>
+                    </label>
+                `;
+                ref.parentNode.insertBefore(containerCriacao, ref.nextSibling);
+            }
+        }
+    },
+
+    _injetarInterruptorTVEdicao(pautaData) {
+        let containerEdicao = document.getElementById('pauta-tv-container-edicao');
+        if (!containerEdicao) {
+            const editRef = document.getElementById('edit-pauta-tolerancia-container') || document.getElementById('edit-pauta-date-input')?.parentNode;
+            if (editRef && editRef.parentNode) {
+                containerEdicao = document.createElement('div');
+                containerEdicao.id = 'pauta-tv-container-edicao';
+                containerEdicao.className = 'mb-4 mt-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100';
+                containerEdicao.innerHTML = `
+                    <label class="flex items-center cursor-pointer gap-3">
+                        <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                        <div>
+                            <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                            <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV. Se desativado, usa apenas a lista de delegar.</span>
+                        </div>
+                    </label>
+                `;
+                editRef.parentNode.insertBefore(containerEdicao, editRef.nextSibling);
+            }
+        }
+        const editTvCheck = document.getElementById('edit-use-tv-panel');
+        if (editTvCheck) {
+            editTvCheck.checked = pautaData.useTvPanel !== false;
         }
     },
 
@@ -456,8 +503,8 @@ export const PautaConfigService = {
             dateInput.value = pautaData.dataOperacao;
         }
 
-        // PREENCHE A TOLERÂNCIA NA EDIÇÃO (Cria o campo na tela de edição dinamicamente)
         this._injetarCampoToleranciaEdicao(pautaData);
+        this._injetarInterruptorTVEdicao(pautaData); // <-- INJETA O INTERRUPTOR DE TV NA EDIÇÃO
 
         const app = this._app;
         const roomConfig = document.getElementById('room-config-container');
@@ -503,9 +550,12 @@ export const PautaConfigService = {
         const orgaoId   = document.getElementById('select-orgao-integracao')?.value || '';
         const dataOp    = document.getElementById('create-pauta-date-input')?.value;
 
-        // CAPTURA A TOLERÂNCIA DA CRIAÇÃO
+        // CAPTURAS
         const tolInputVal = parseInt(document.getElementById('create-pauta-tolerancia-input')?.value);
         const toleranciaMinutos = isNaN(tolInputVal) ? DEFAULTS.toleranciaMinutos : tolInputVal;
+
+        const checkTvPanel = document.getElementById('check-use-tv-panel');
+        const useTvPanel = checkTvPanel ? checkTvPanel.checked : DEFAULTS.useTvPanel;
 
         const isEvento = app?.currentMode === 'evento';
 
@@ -519,20 +569,9 @@ export const PautaConfigService = {
                              || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value
                              || 'normal';
 
-        if (!isEvento && !unidadeId) {
-            showNotification("Por favor, selecione uma Unidade Vinculada.", "error");
-            return;
-        }
-
-        if (!pautaName) {
-            showNotification("O nome da pauta não pode ser vazio.", "error");
-            return;
-        }
-
-        if (!dataOp) {
-            showNotification("A Data de Operação é obrigatória.", "error");
-            return;
-        }
+        if (!isEvento && !unidadeId) { showNotification("Por favor, selecione uma Unidade Vinculada.", "error"); return; }
+        if (!pautaName) { showNotification("O nome da pauta não pode ser vazio.", "error"); return; }
+        if (!dataOp) { showNotification("A Data de Operação é obrigatória.", "error"); return; }
 
         const duplicado = await verificarNomeDuplicadoHoje(app.db, pautaName, user.uid);
         if (duplicado) {
@@ -554,7 +593,8 @@ export const PautaConfigService = {
                 isClosed: false,
                 createdAt: new Date().toISOString(),
                 dataOperacao: dataOp,
-                toleranciaMinutos: toleranciaMinutos, // <--- SALVA NO BANCO
+                toleranciaMinutos: toleranciaMinutos,
+                useTvPanel: useTvPanel, // <--- SALVA A CONFIG DE TV NO BANCO
                 ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
                 useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
                 useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
@@ -568,11 +608,8 @@ export const PautaConfigService = {
             const pautaRef = await addDoc(collection(app.db, "pautas"), novaPautaData);
 
             await logAction(
-                app.db, app.auth,
-                app.currentUserName,
-                pautaRef.id,
-                'CREATE_PAUTA',
-                `Criou pauta "${pautaName}" (${pautaType}) ${isEvento ? `[EVENTO: ${tipoSelecionado}]` : `em ${unidadeNome}`} para ${dataOp} (Tolerância: ${toleranciaMinutos}m)`
+                app.db, app.auth, app.currentUserName, pautaRef.id, 'CREATE_PAUTA',
+                `Criou pauta "${pautaName}" (${pautaType}) [TV: ${useTvPanel}]`
             );
 
             if (orgaoId && !isEvento) {
@@ -614,6 +651,7 @@ export const PautaConfigService = {
         document.getElementById('pauta-data-container')?.remove();
         document.getElementById('pauta-tolerancia-container')?.remove();
         document.getElementById('pauta-modo-container')?.remove();
+        document.getElementById('pauta-tv-container-criacao')?.remove(); // <-- LIMPA O CONTAINER DE TV
 
         document.getElementById('delegation-flow-modal').classList.add('hidden');
         document.getElementById('create-pauta-modal').classList.add('hidden');
@@ -631,9 +669,11 @@ export const PautaConfigService = {
         const newDist       = document.getElementById('edit-use-distribution')?.checked || false;
         const newDate       = document.getElementById('edit-pauta-date-input')?.value || '';
 
-        // CAPTURA A TOLERÂNCIA DA EDIÇÃO QUE FOI INJETADA DINAMICAMENTE
         const tolInputVal   = parseInt(document.getElementById('edit-pauta-tolerancia-input')?.value);
         const newTol        = isNaN(tolInputVal) ? DEFAULTS.toleranciaMinutos : tolInputVal;
+
+        const editTvCheck   = document.getElementById('edit-use-tv-panel');
+        const newTvPanel    = editTvCheck ? editTvCheck.checked : DEFAULTS.useTvPanel;
 
         if (!newType || !newOrdem) {
             showNotification("Selecione todas as opções obrigatórias.", "error");
@@ -646,7 +686,8 @@ export const PautaConfigService = {
                 ordemAtendimento: newOrdem,
                 useDelegationFlow: newDelegation,
                 useDistributionFlow: newDist,
-                toleranciaMinutos: newTol // <--- SALVA A EDIÇÃO NO BANCO
+                toleranciaMinutos: newTol,
+                useTvPanel: newTvPanel // <--- SALVA A EDIÇÃO DE TV
             };
             if (newDate) updates.dataOperacao = newDate;
 
@@ -661,7 +702,7 @@ export const PautaConfigService = {
             // 1. Atualiza as configurações da pauta
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), updates);
 
-            // 🚀 LÓGICA DO BATCH: MOVER ASSISTIDOS SE DESATIVAR COLUNAS (DELEGAÇÃO OU DISTRIBUIÇÃO)
+            // 🚀 LÓGICA DE RESGATE: MOVER ASSISTIDOS SE DESATIVAR COLUNAS
             const batch = writeBatch(app.db);
             let hasBatchUpdates = false;
 
@@ -670,35 +711,47 @@ export const PautaConfigService = {
 
                 app.allAssisted.forEach(assistido => {
                     let needsUpdate = false;
+                    let targetStatus = assistido.status;
                     const status = assistido.status;
 
+                    // A: Se desativou a Distribuição, recua para a Mesa (se estiver ativa) ou avança para Concluído
                     if (!newDist && (status === 'aguardandoDistribuicao' || status === 'aguardandoCorrecao' || status === 'aguardandoNumero')) {
                         needsUpdate = true;
+                        targetStatus = newDelegation ? 'emAtendimento' : 'atendido';
                     }
+                    
+                    // B: Se desativou a Mesa (Delegação), avança para Concluído
                     if (!newDelegation && status === 'emAtendimento') {
                         needsUpdate = true;
+                        targetStatus = 'atendido';
                     }
 
                     if (needsUpdate) {
                         const assistidoRef = doc(app.db, "pautas", app.currentPauta.id, "attendances", assistido.id);
-                        batch.update(assistidoRef, {
-                            status: 'atendido',
-                            attendedAt: now,
+                        
+                        const updateData = {
+                            status: targetStatus,
                             lastActionTimestamp: now,
                             lastActionBy: app.currentUserName || 'Sistema (Mudança de Config)'
-                        });
+                        };
+
+                        if (targetStatus === 'atendido') {
+                            updateData.attendedAt = now;
+                            assistido.attendedAt = now;
+                        }
+
+                        batch.update(assistidoRef, updateData);
                         hasBatchUpdates = true;
-                        
-                        assistido.status = 'atendido';
-                        assistido.attendedAt = now;
+                        assistido.status = targetStatus;
                     }
                 });
 
                 if (hasBatchUpdates) {
                     await batch.commit();
+                    showNotification("Fluxo reorganizado: processos retidos foram realocados.", "info");
                 }
             }
-            // 🛑 FIM DA LÓGICA DO BATCH
+            // 🛑 FIM DA LÓGICA DO BATCH DE RESGATE
 
             // 2. Atualiza a memória local
             Object.assign(app.currentPautaData, updates);
@@ -713,11 +766,8 @@ export const PautaConfigService = {
             }
 
             await logAction(
-                app.db, app.auth,
-                app.currentUserName,
-                app.currentPauta.id,
-                'EDIT_PAUTA_CONFIG',
-                `Editou config: tipo=${newType}, ordem=${newOrdem}, delegação=${newDelegation}, dist=${newDist}, tolerância=${newTol}min`
+                app.db, app.auth, app.currentUserName, app.currentPauta.id, 'EDIT_PAUTA_CONFIG',
+                `Editou config: TV=${newTvPanel}, del=${newDelegation}, dist=${newDist}`
             );
 
             showNotification("Configurações atualizadas com sucesso!", "success");
@@ -738,6 +788,8 @@ export const PautaConfigService = {
         const tipoSelecionado = document.querySelector('input[name="pauta-modo"]:checked')?.value
                              || document.querySelector('input[name="pauta-modo"][type="hidden"]')?.value
                              || DEFAULTS.tipo;
+        
+        const tvCheck = document.getElementById('check-use-tv-panel');
 
         const template = {
             id: Date.now().toString(),
@@ -748,6 +800,7 @@ export const PautaConfigService = {
             ordemAtendimento: document.querySelector('input[name="ordemAtendimento"]:checked')?.value || DEFAULTS.ordemAtendimento,
             useDelegationFlow: document.querySelector('input[name="useDelegationFlow"]:checked')?.value === 'true',
             useDistributionFlow: document.getElementById('check-use-distribution')?.checked || false,
+            useTvPanel: tvCheck ? tvCheck.checked : DEFAULTS.useTvPanel
         };
 
         const templates = lerTemplates();
@@ -787,6 +840,9 @@ export const PautaConfigService = {
 
         const tolInput = document.getElementById('create-pauta-tolerancia-input');
         if (tolInput) tolInput.value = t.toleranciaMinutos !== undefined ? t.toleranciaMinutos : DEFAULTS.toleranciaMinutos;
+        
+        const tvCheck = document.getElementById('check-use-tv-panel');
+        if (tvCheck) tvCheck.checked = t.useTvPanel !== false;
 
         showNotification(`Template "${t.nome}" carregado!`, "info");
     },
@@ -834,6 +890,7 @@ export const PautaConfigService = {
                     ordemAtendimento: item.ordemAtendimento || DEFAULTS.ordemAtendimento,
                     useDelegationFlow: item.useDelegationFlow || false,
                     useDistributionFlow: item.useDistributionFlow || false,
+                    useTvPanel: item.useTvPanel !== undefined ? item.useTvPanel : DEFAULTS.useTvPanel
                 };
 
                 const ref = await addDoc(collection(app.db, "pautas"), novaPauta);
