@@ -674,8 +674,24 @@ class SIGEPApp {
             }
         });
 
+        // 📺 BOTÃO DO PAINEL DA TV + DEFINIR LOCAL PADRÃO
         document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
+                // Antes de abrir a TV, perguntamos se o utilizador quer definir um guichê padrão
+                const localSalvo = localStorage.getItem(`sigep_tv_local_${this.currentPauta.id}`);
+                const mensagem = localSalvo 
+                    ? `O seu local atual para a TV é: [ ${localSalvo} ]\n\nDeseja alterar o local de chamada (Guichê/Mesa)?` 
+                    : `Deseja definir um Local Padrão (Ex: Guichê 1, Sala 3) para enviar os assistidos para a TV?`;
+
+                if (confirm(mensagem)) {
+                    const novoLocal = prompt("Digite o nome do Local (Mesa/Guichê):", localSalvo || "");
+                    if (novoLocal !== null && novoLocal.trim() !== "") {
+                        localStorage.setItem(`sigep_tv_local_${this.currentPauta.id}`, novoLocal.trim());
+                        showNotification(`Local da TV definido como: ${novoLocal.trim()}`, "success");
+                    }
+                }
+
+                // Navega para a TV
                 this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
                 return;
             }
@@ -1381,6 +1397,18 @@ class SIGEPApp {
             const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
+
+                // 🔥 NOVA LÓGICA: ESCONDER/MOSTRAR BOTÃO DA TV NO MENU
+                const totemBtn = document.getElementById('open-totem-btn');
+                const tvAtivada = this.currentPautaData.useTvPanel !== false; // Por padrão é true se não existir
+
+                if (totemBtn) {
+                    if (tvAtivada) {
+                        totemBtn.classList.remove('hidden');
+                    } else {
+                        totemBtn.classList.add('hidden');
+                    }
+                }
                 
                 const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
                 
