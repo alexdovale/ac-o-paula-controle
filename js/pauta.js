@@ -1,5 +1,10 @@
-// js/pauta.js - VERSÃO REFATORADA (COM ACTION MAP E LISTA DE COLAB CORRIGIDA)
-import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+Agora eu entendi perfeitamente o que estava acontecendo, Alex!
+O problema era que o código do "Tipo de Local" e integração direta com a TV foi criado apenas no arquivo novo da Recepção (recepcaoCentral.js). Como o seu arquivo pauta.js não tinha essa tela programada dentro dele, toda vez que você clicava no botão pela interface principal da pauta, ele tentava abrir o modelo de seleção antigo (que não tinha os campos "Vara/Guichê") ou simplesmente travava de forma silenciosa e não fazia nada.
+Para resolver isso definitivamente e deixar o sistema unificado, eu injetei a mesma janela inteligente de "Local + Colaborador" dentro do seu arquivo pauta.js.
+Agora, sempre que você clicar em "Chamar próximo", "Atender" ou "Delegar", ele vai ignorar a janela antiga e abrir essa nova tela completa. Assim, você define o local (Vara, Guichê, etc.), escolhe o colaborador para delegar, e ele já envia tudo automaticamente para a TV.
+Substitua todo o conteúdo do seu arquivo js/pauta.js por este código abaixo:
+// js/pauta.js - VERSÃO REFATORADA COM INTEGRAÇÃO DE TV E LOCAL (SALA/VARA)
+import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
@@ -540,6 +545,165 @@ export const PautaService = {
         }
     },
 
+    // ── GERAÇÃO DO NOVO MODAL DE TV E LOCAL (SUBSTITUI O ANTIGO) ──
+    abrirModalChamadaTV(app, assisted, pauta, tipoAcao) {
+        document.getElementById('modal-chamada-tv-global')?.remove();
+
+        const ROTULOS = ['Sala', 'Recepção', 'Vara', 'Guichê', 'Mesa', 'Balcão'];
+        const pautaId = pauta.id || app.currentPauta?.id;
+        const pautaName = pauta.name || pauta.nome || app.currentPauta?.name || 'Pauta';
+        const chave = `sigep_local_chamada_${pautaId}`;
+        let salvo = null;
+        try { salvo = JSON.parse(localStorage.getItem(chave)); } catch (e) { salvo = null; }
+
+        const rotuloInicial = salvo?.rotulo || 'Sala';
+        const ehPadrao = ROTULOS.includes(rotuloInicial);
+        const valorInicial = salvo?.valor ?? (pauta.sala || '');
+
+        const colaboradores = app.colaboradores || [];
+        const ordenados = [...colaboradores].sort((a, b) => {
+            const aLivre = a.status === 'disponivel' || !a.status;
+            const bLivre = b.status === 'disponivel' || !b.status;
+            if (aLivre === bLivre) return (a.nome || '').localeCompare(b.nome || '');
+            return aLivre ? -1 : 1;
+        });
+
+        let opcoesColab = `<option value="">Ninguém (Apenas registrar chamada e local na TV)</option>`;
+        opcoesColab += ordenados.map(c => {
+            const livre = c.status === 'disponivel' || !c.status;
+            return `<option value="${c.id}" data-nome="${escapeHTML(c.nome)}">${escapeHTML(c.nome)} — ${escapeHTML(c.cargo || 'Membro')} (${livre ? 'livre' : 'ocupado'})</option>`;
+        }).join('');
+
+        const modal = document.createElement('div');
+        modal.id = 'modal-chamada-tv-global';
+        modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4';
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
+                <div class="flex justify-between items-center px-6 py-4 border-b border-slate-200">
+                    <div>
+                        <h3 class="font-extrabold text-lg text-slate-800">Definir Local e Delegar</h3>
+                        <p class="text-sm font-semibold text-blue-600 mt-0.5">${escapeHTML(assisted.name)}</p>
+                    </div>
+                    <button id="btn-fechar-chamada-tv" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">✕</button>
+                </div>
+                
+                <div class="p-6 overflow-y-auto space-y-5 flex-1">
+                    <div class="grid grid-cols-5 gap-3">
+                        <div class="col-span-2">
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Tipo de Local</label>
+                            <select id="tv-chamada-rotulo" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
+                                ${ROTULOS.map(r => `<option value="${r}" ${ehPadrao && r === rotuloInicial ? 'selected' : ''}>${r}</option>`).join('')}
+                                <option value="__outro" ${!ehPadrao ? 'selected' : ''}>Outro...</option>
+                            </select>
+                        </div>
+                        <div class="col-span-3">
+                            <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Número / Nome</label>
+                            <input type="text" id="tv-chamada-valor" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" value="${escapeHTML(valorInicial)}" placeholder="Ex: DD, 1">
+                        </div>
+                    </div>
+                    
+                    <div id="tv-chamada-outro-wrap" class="${ehPadrao ? 'hidden' : ''}">
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Nome do tipo de local</label>
+                        <input type="text" id="tv-chamada-outro" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-800 focus:ring-2 focus:ring-blue-500 outline-none" value="${ehPadrao ? '' : escapeHTML(rotuloInicial)}" placeholder="Ex: Gabinete">
+                    </div>
+
+                    <div class="bg-blue-50 border border-blue-100 rounded-xl p-4 text-center">
+                        <p class="text-[10px] font-bold text-blue-400 uppercase tracking-widest mb-1">Aparecerá na TV assim:</p>
+                        <p id="tv-chamada-preview" class="text-xl font-black text-blue-700"></p>
+                    </div>
+                    
+                    <div>
+                        <label class="block text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2">Atribuir a um colaborador (Opcional)</label>
+                        <select id="tv-chamada-colaborador" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-sm font-semibold text-slate-700 focus:ring-2 focus:ring-blue-500 outline-none">
+                            ${opcoesColab}
+                        </select>
+                        <p class="text-xs text-slate-400 mt-2">Ao escolher um colaborador, o atendimento será delegado a ele automaticamente.</p>
+                    </div>
+                </div>
+
+                <div class="px-6 py-4 bg-slate-50 border-t border-slate-200 flex gap-3">
+                    <button id="btn-cancelar-chamada-tv" class="flex-1 bg-white border border-slate-300 text-slate-700 font-bold text-sm py-3 rounded-xl hover:bg-slate-100 transition-colors">Cancelar</button>
+                    <button id="btn-confirmar-chamada-tv" class="flex-[1.5] bg-blue-600 text-white font-bold text-sm py-3 rounded-xl hover:bg-blue-700 shadow-md shadow-blue-600/20 transition-all flex justify-center items-center gap-2">
+                        <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M11 5.882V19.24a1.76 1.76 0 01-3.417.592l-2.147-6.15M18 13a3 3 0 100-6M5.436 13.683A4.001 4.001 0 017 6h1.832c4.1 0 7.625-1.234 9.168-3v14c-1.543-1.766-5.067-3-9.168-3H7a3.988 3.988 0 01-1.564-.317z"/></svg>
+                        Chamar na TV
+                    </button>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modal);
+
+        const selRotulo = modal.querySelector('#tv-chamada-rotulo');
+        const inpValor  = modal.querySelector('#tv-chamada-valor');
+        const inpOutro  = modal.querySelector('#tv-chamada-outro');
+        const preview   = modal.querySelector('#tv-chamada-preview');
+
+        const atualizarPreview = () => {
+            modal.querySelector('#tv-chamada-outro-wrap').classList.toggle('hidden', selRotulo.value !== '__outro');
+            const rotulo = selRotulo.value === '__outro' ? inpOutro.value.trim() : selRotulo.value;
+            const valor = inpValor.value.trim();
+            preview.textContent = [rotulo, valor].filter(Boolean).join(' ') || '—';
+        };
+
+        [selRotulo, inpValor, inpOutro].forEach(el => el.addEventListener('input', atualizarPreview));
+        selRotulo.addEventListener('change', atualizarPreview);
+        atualizarPreview();
+        inpValor.focus();
+
+        const close = () => modal.remove();
+        modal.querySelector('#btn-fechar-chamada-tv').onclick = close;
+        modal.querySelector('#btn-cancelar-chamada-tv').onclick = close;
+
+        modal.querySelector('#btn-confirmar-chamada-tv').onclick = async () => {
+            const rotulo = selRotulo.value === '__outro' ? inpOutro.value.trim() : selRotulo.value;
+            const valor = inpValor.value.trim();
+            try { localStorage.setItem(chave, JSON.stringify({ rotulo, valor })); } catch (e) {}
+
+            const selColab = modal.querySelector('#tv-chamada-colaborador');
+            const colabId = selColab.value;
+            const colabNome = colabId ? selColab.options[selColab.selectedIndex].dataset.nome : null;
+
+            close();
+
+            const inAttendanceTime = new Date().toISOString();
+            
+            if (colabId) {
+                await this.delegateAttendance(app, assisted.id, colabNome, colabId);
+                await this.updateStatus(app.db, pautaId, assisted.id, {
+                    localChamada: { rotulo, valor }
+                }, app.currentUserName);
+            } else {
+                await this.updateStatus(app.db, pautaId, assisted.id, {
+                    status: 'emAtendimento',
+                    inAttendanceTime,
+                    localChamada: { rotulo, valor }
+                }, app.currentUserName);
+            }
+
+            const chamado = {
+                nome: assisted.name,
+                assunto: assisted.subject || '',
+                local: pautaName,
+                pautaNome: pautaName,
+                sala: valor,
+                rotuloLocal: rotulo,
+                localTexto: [rotulo, valor].filter(Boolean).join(' '),
+                pautaId: pautaId,
+                hora: new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }),
+                timestamp: Date.now(),
+            };
+
+            try {
+                const painelRef = doc(app.db, "pautas", pautaId, "painel", "ultimoChamado");
+                await setDoc(painelRef, { atual: chamado }, { merge: true });
+                if (typeof playSound === 'function') playSound('chime');
+                showNotification(`Pronto! ${assisted.name} chamado na TV.`, "success");
+            } catch (error) {
+                console.error("Erro ao atualizar TV:", error);
+                showNotification("Aviso: Status atualizado, mas houve falha ao enviar o nome para a TV.", "warning");
+            }
+        };
+    },
+
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -562,38 +726,9 @@ export const PautaService = {
             showNotification("Não foi possível identificar o próximo assistido.", "error");
             return;
         }
-
-        window.assistedIdToHandle = nextAssisted.id;
-        window.assistedNameToHandle = nextAssisted.name || '';
-        window.assistedTipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
-
-        const nameElement = document.getElementById('assisted-to-attend-name');
-        if (nameElement) {
-            nameElement.textContent = nextAssisted.name;
-        }
-
-        const selectCollaboratorModal = document.getElementById('select-collaborator-modal');
-        if (selectCollaboratorModal) {
-            selectCollaboratorModal.classList.remove('hidden');
-            showNotification(`Próximo: "${nextAssisted.name}". Selecione o atendente.`, "info");
-            playSound('chime');
-            
-            setTimeout(() => {
-                const searchInput = document.getElementById('collaborator-search-input');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-
-                if (typeof UIService.preencherListaColaboradoresModal === 'function') {
-                    UIService.preencherListaColaboradoresModal(app);
-                } else {
-                    console.error('UIService.preencherListaColaboradoresModal não está disponível');
-                }
-                
-                if (searchInput) searchInput.focus();
-            }, 150);
-        }
+        
+        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
+        this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto');
     },
 
     async deleteAssisted(db, pautaId, assistedId, userName) {
@@ -1210,25 +1345,8 @@ export const PautaService = {
         
         showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
         
-        const modal = document.getElementById('select-collaborator-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                const searchInput = document.getElementById('collaborator-search-input');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-                
-                // Usando UIService diretamente importado do escopo
-                if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
-                    UIService.preencherListaColaboradoresModal(app);
-                }
-                
-                const firstInput = modal.querySelector('input, button, [tabindex="0"]');
-                if (firstInput) firstInput.focus();
-            }, 150);
-        }
+        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
+        this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
     },
 
     actionUpdateDocStatus(button, id, assisted) {
@@ -1372,35 +1490,8 @@ export const PautaService = {
     },
 
     actionSelectCollaborator(app, id, assisted) {
-        if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
-            PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
-        }
-        
-        window.assistedIdToHandle = id;
-        window.assistedNameToHandle = assisted.name || '';
-        window.assistedTipoAcao = 'delegar';
-        
-        const nameElement = document.getElementById('assisted-to-attend-name');
-        if (nameElement) nameElement.textContent = assisted.name || '';
-        
-        const modal = document.getElementById('select-collaborator-modal');
-        if (modal) {
-            modal.classList.remove('hidden');
-            setTimeout(() => {
-                const searchInput = document.getElementById('collaborator-search-input');
-                if (searchInput) {
-                    searchInput.value = '';
-                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                }
-                
-                // Usando UIService diretamente importado do escopo
-                if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
-                    UIService.preencherListaColaboradoresModal(app);
-                }
-                
-                if (searchInput) searchInput.focus();
-            }, 150);
-        }
+        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
+        this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
     },
 
     actionAttendDirectly(app, id, assisted) {
@@ -1413,35 +1504,8 @@ export const PautaService = {
             }, app.currentUserName);
             showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
         } else {
-            if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
-                PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
-            }
-
-            window.assistedIdToHandle = id;
-            window.assistedNameToHandle = assisted.name || '';
-            window.assistedTipoAcao = 'atender_direto';
-            
-            const nameElement = document.getElementById('assisted-to-attend-name');
-            if (nameElement) nameElement.textContent = assisted.name || '';
-            
-            const modal = document.getElementById('select-collaborator-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                setTimeout(() => {
-                    const searchInput = document.getElementById('collaborator-search-input');
-                    if (searchInput) {
-                        searchInput.value = '';
-                        searchInput.dispatchEvent(new Event('input', { bubbles: true }));
-                    }
-                    
-                    // 🐛 AQUI: Chama a função UIService diretamente em vez de tentar buscar no window
-                    if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
-                        UIService.preencherListaColaboradoresModal(app);
-                    }
-                    
-                    if (searchInput) searchInput.focus();
-                }, 150);
-            }
+            // Substitui a chamada antiga pelo novo Modal de TV Inteligente
+            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'atender_direto');
         }
     },
 
@@ -1718,5 +1782,5 @@ window.toggleModoRastreioPdf = function() {
     showNotification(`Modo Rastreio de PDF: ${novo ? 'ATIVADO 🟢' : 'DESATIVADO ⚪'}`, 'info');
 };
 
-
 export default PautaService;
+
