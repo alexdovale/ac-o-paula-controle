@@ -673,7 +673,7 @@ class SIGEPApp {
             }
         });
 
-        // 📱 BOTÃO EXCLUSIVO DO TOTEM (AUTOATENDIMENTO DE CHEGADA - INTACTO)
+        // 🎫 TOTEM (autoatendimento do assistido) - INTACTO, sem relação com o Painel da TV
         document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
                 this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
@@ -852,95 +852,70 @@ class SIGEPApp {
         });
 
         // ------------------------------------------------------------------------------------------
-        // 🔥 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!) 🔥
+        // 📺 HUB DO PAINEL DA TV (isolado do Totem - o botão do Totem nunca é alterado nem escondido)
         // ------------------------------------------------------------------------------------------
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
-            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
-                const tvAtivada = this.currentPautaData?.useTvPanel !== false;
-                let tvGroup = document.getElementById('tv-panel-actions-group');
-                
-                if (!tvGroup) {
-                    tvGroup = document.createElement('div');
-                    tvGroup.id = 'tv-panel-actions-group';
-                    tvGroup.innerHTML = `
-                        <div class="h-px bg-slate-100 my-2 mx-3"></div>
-                        <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Painel da TV / Fila</p>
-                        
-                        <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">📍</span>
-                            <span>
-                                <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
-                                <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Definir de onde estou chamando</span>
-                            </span>
-                        </button>
+            if (!actionsPanel || actionsPanel.classList.contains('hidden') || actionsPanel.classList.contains('opacity-0')) return;
 
-                        <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">📺</span>
-                            <span>
-                                <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
-                                <span class="text-[11px] font-normal text-purple-500 block leading-tight mt-0.5">Logo, Som, Vídeo e Modo Visual</span>
-                            </span>
-                        </button>
-                    `;
-                    
-                    // Insere abaixo do botão do Totem (sem esconder o Totem!)
-                    const totemBtnOriginal = document.getElementById('open-totem-btn');
-                    if (totemBtnOriginal && totemBtnOriginal.parentNode) {
-                        totemBtnOriginal.parentNode.insertBefore(tvGroup, totemBtnOriginal.nextSibling);
-                    } else {
-                        actionsPanel.appendChild(tvGroup);
-                    }
+            const tvAtivada = this.currentPautaData?.useTvPanel !== false;
+            let tvGroup = document.getElementById('tv-panel-actions-group');
 
-                    // Ação 1: Definir Local / Guichê padrão na pauta
-                    tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        if (this.currentPauta) {
-                            const localSalvo = localStorage.getItem('sigep_tv_local_' + this.currentPauta.id);
-                            const novoLocal = prompt(
-                                "Qual o seu Local de Atendimento atual?\n(Ex: Guichê 1, Sala 3, Mesa 5)\n\nIsso será usado para chamar os assistidos na TV de forma automática.",
-                                localSalvo || ""
-                            );
-                            if (novoLocal !== null && novoLocal.trim() !== "") {
-                                localStorage.setItem('sigep_tv_local_' + this.currentPauta.id, novoLocal.trim());
-                                showNotification(`Local da TV definido como: ${novoLocal.trim()}`, "success");
-                            }
-                            actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            if (!tvGroup) {
+                tvGroup = document.createElement('div');
+                tvGroup.id = 'tv-panel-actions-group';
+                tvGroup.innerHTML = `
+                    <div class="h-px bg-slate-100 my-2 mx-3"></div>
+                    <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Gestão do Painel TV</p>
+                    <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📍</span>
+                        <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
+                    </button>
+                    <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
+                        <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
+                        <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
+                    </button>
+                `;
+
+                // Entra como bloco próprio no fim do menu; o botão do Totem fica onde está, intacto
+                actionsPanel.appendChild(tvGroup);
+
+                tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.currentPauta) {
+                        const localSalvo = localStorage.getItem('sigep_tv_local_' + this.currentPauta.id);
+                        const novoLocal = prompt("Qual o seu Local de Atendimento atual? (Ex: Guichê 1, Sala 3)", localSalvo || "");
+                        if (novoLocal !== null && novoLocal.trim() !== "") {
+                            localStorage.setItem('sigep_tv_local_' + this.currentPauta.id, novoLocal.trim());
+                            showNotification("Local salvo!", "success");
                         }
-                    });
-
-                    // Ação 2: Abrir Modal Visual Completo do Painel TV (Igual ao da Recepção Central)
-                    tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
-                        e.stopPropagation();
-                        this.abrirModalConfigTVPauta();
                         actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-                        document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                    });
-                }
+                    }
+                });
 
-                if (tvAtivada) {
-                    tvGroup.classList.remove('hidden');
-                } else {
-                    tvGroup.classList.add('hidden');
-                }
+                tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.abrirModalConfigTVPauta();
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                });
             }
+
+            tvGroup.classList.toggle('hidden', !tvAtivada);
         });
-        
+
         const actionsPanelEl = document.getElementById('actions-panel');
-        if (actionsPanelEl) {
-            observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
-        }
+        if (actionsPanelEl) observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
 
         // ------------------------------------------------------------------------------------------
-        // 🔥 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES 🔥
+        // ☑️ CHECKBOX "UTILIZAR PAINEL DA TV" NO MODAL DE EDIÇÃO DE CONFIGURAÇÕES (agora salva useTvPanel)
         // ------------------------------------------------------------------------------------------
         const observerEdicao = new MutationObserver(() => {
             const modalEdicao = document.getElementById('edit-pauta-config-modal');
             if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
                 let divConfigTV = document.getElementById('edit-use-tv-panel-container');
                 if (!divConfigTV) {
-                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
+                    const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
+                    const btnCancelarSalvar = btnSalvar?.parentNode;
                     if (btnCancelarSalvar) {
                         divConfigTV = document.createElement('div');
                         divConfigTV.id = 'edit-use-tv-panel-container';
@@ -950,40 +925,32 @@ class SIGEPApp {
                                 <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
                                 <div>
                                     <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
-                                    <span class="block text-[10px] text-slate-500">Se ativado, exibe o configurador do Painel TV no menu Ações e envia chamadas para a TV.</span>
+                                    <span class="block text-[10px] text-slate-500">Ativa o hub da TV no menu de Ações para esta pauta.</span>
                                 </div>
                             </label>
                         `;
                         btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
 
-                        // Garante que ao clicar em Salvar Configurações, o valor de useTvPanel seja salvo no Firebase
-                        const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
                         if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
                             btnSalvar.setAttribute('data-tv-hooked', 'true');
                             btnSalvar.addEventListener('click', async () => {
-                                if (!this.currentPauta?.id) return;
                                 const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
                                 try {
                                     await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
                                     if (this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
-                                    const tvGroupMenu = document.getElementById('tv-panel-actions-group');
-                                    if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !tvVal);
-                                } catch (e) {
-                                    console.error("Erro ao salvar useTvPanel:", e);
+                                } catch (err) {
+                                    console.warn('Falha ao salvar useTvPanel:', err);
                                 }
                             });
                         }
+
+                        const tvCheck = document.getElementById('edit-use-tv-panel');
+                        if (tvCheck && this.currentPautaData) tvCheck.checked = this.currentPautaData.useTvPanel !== false;
                     }
-                }
-                const tvCheck = document.getElementById('edit-use-tv-panel');
-                if (tvCheck && this.currentPautaData) {
-                    tvCheck.checked = this.currentPautaData.useTvPanel !== false;
                 }
             }
         });
-        
         observerEdicao.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-        // ------------------------------------------------------------------------------------------
     }
 
     setupAttendanceEvents() {
@@ -1449,7 +1416,7 @@ class SIGEPApp {
         }
     }
 
-    // 🔥 FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL (IGUAL À RECEPÇÃO CENTRAL) 🔥
+    // 🔥 NOVA FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL 🔥
     async abrirModalConfigTVPauta() {
         if (!this.currentPauta) return;
         const pautaId = this.currentPauta.id;
@@ -1604,7 +1571,7 @@ class SIGEPApp {
             }
 
             const nome = encodeURIComponent(pautaName);
-            const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+            const baseUrl = window.location.href.split('?')[0];
             const link = `${baseUrl}painel_tv.html?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
 
             document.getElementById('tv_preview_link').value = link;
@@ -1726,13 +1693,6 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
 
-                // Garante que o bloco do Painel TV no menu Ações respeite a configuração da pauta carregada
-                const tvAtivada = this.currentPautaData.useTvPanel !== false;
-                const tvGroupMenu = document.getElementById('tv-panel-actions-group');
-                if (tvGroupMenu) {
-                    tvGroupMenu.classList.toggle('hidden', !tvAtivada);
-                }
-                
                 const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
                 
                 const descPontuais = document.getElementById('desc-pontuais');
