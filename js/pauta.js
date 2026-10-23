@@ -1,4 +1,4 @@
-// js/pauta.js - VERSÃO REFATORADA COM INTEGRAÇÃO DE TV E LOCAL (SALA/VARA)
+// js/pauta.js - VERSÃO COM MODO TV OPCIONAL E CORREÇÃO DO FLUXO DE DISTRIBUIÇÃO
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -540,7 +540,7 @@ export const PautaService = {
         }
     },
 
-    // ── GERAÇÃO DO NOVO MODAL DE TV E LOCAL (SUBSTITUI O ANTIGO) ──
+    // ── GERAÇÃO DO NOVO MODAL DE TV E LOCAL ──
     abrirModalChamadaTV(app, assisted, pauta, tipoAcao) {
         document.getElementById('modal-chamada-tv-global')?.remove();
 
@@ -699,6 +699,38 @@ export const PautaService = {
         };
     },
 
+    // Abertura Condicional do Modal Clássico
+    _abrirModalClassico(app, assisted, tipoAcao) {
+        if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
+            PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
+        }
+        
+        window.assistedIdToHandle = assisted.id;
+        window.assistedNameToHandle = assisted.name || '';
+        window.assistedTipoAcao = tipoAcao;
+        
+        const nameElement = document.getElementById('assisted-to-attend-name');
+        if (nameElement) nameElement.textContent = assisted.name || '';
+        
+        const modal = document.getElementById('select-collaborator-modal');
+        if (modal) {
+            modal.classList.remove('hidden');
+            setTimeout(() => {
+                const searchInput = document.getElementById('collaborator-search-input');
+                if (searchInput) {
+                    searchInput.value = '';
+                    searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+                }
+                
+                if (typeof UIService !== 'undefined' && typeof UIService.preencherListaColaboradoresModal === 'function') {
+                    UIService.preencherListaColaboradoresModal(app);
+                }
+                
+                if (searchInput) searchInput.focus();
+            }, 150);
+        }
+    },
+
     async callNextAssisted(app) {
         if (!app || !app.currentPauta || !app.currentPauta.id) {
             showNotification("Nenhuma pauta selecionada!", "error");
@@ -722,8 +754,13 @@ export const PautaService = {
             return;
         }
         
-        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
-        this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto');
+        // INTERRUPTOR DA TV
+        const tipoAcao = app.currentPautaData?.useDelegationFlow ? 'delegar' : 'atender_direto';
+        if (app.currentPautaData?.useTvPanel !== false) {
+            this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, tipoAcao);
+        } else {
+            this._abrirModalClassico(app, nextAssisted, tipoAcao);
+        }
     },
 
     async deleteAssisted(db, pautaId, assistedId, userName) {
@@ -1221,7 +1258,6 @@ export const PautaService = {
         const currentUserRole = app.currentUser?.role;
         const isApoio = currentUserRole === 'apoio';
 
-        // Validação centralizada de permissões para perfil "Apoio"
         const acoesProibidasApoio = [
             'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
             'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
@@ -1238,20 +1274,17 @@ export const PautaService = {
             return;
         }
 
-        // Lógica do Quick Menu Toggle
         if (button.classList.contains('quick-action-toggle')) {
             return this.handleMenuToggle(e, button, id);
         }
 
         const assisted = app.allAssisted && app.allAssisted.find(a => a.id === id);
-        if (!assisted) return; // Segurança caso o card não exista mais
+        if (!assisted) return; 
 
-        // Lógica das Ações Rápidas (Agendamento/Consulta)
         if (button.classList.contains('quick-action-item') && !button.classList.contains('update-doc-status-btn')) {
             return this.handleQuickActionItem(app, button, id, assisted);
         }
 
-        // Dicionário de Ações Mapeadas
         const actionMap = {
             'update-doc-status-btn': () => this.actionUpdateDocStatus(button, id, assisted),
             'check-in-btn': () => this.actionCheckIn(id),
@@ -1276,19 +1309,15 @@ export const PautaService = {
             'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted)
         };
 
-        // Identifica qual botão foi clicado e dispara a função correspondente
         const activeActionKey = Object.keys(actionMap).find(key => button.classList.contains(key));
         
         if (activeActionKey) {
-            // Evita a propagação em botões de status específicos
             if (['update-doc-status-btn', 'toggle-confirmed-atendido', 'toggle-confirmed-faltoso'].includes(activeActionKey)) {
                 e.stopPropagation();
             }
             actionMap[activeActionKey]();
         }
     },
-
-    // ── MÉTODOS EXTRAÍDOS PARA MANTER O CÓDIGO LIMPO E ESCALÁVEL ──
 
     handleMenuToggle(e, button, id) {
         e.stopPropagation();
@@ -1330,18 +1359,14 @@ export const PautaService = {
         const tipoMap = { 'reagendar': 'Reagendamento', 'agendar': 'Agendamento', 'consulta': 'Consulta Processual', 'outros': 'Outros Assuntos' };
         const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
         
-        window.assistedIdToHandle = id;
-        window.assistedNameToHandle = assisted.name || '';
-        window.assistedTipoAcao = tipoAcao;
-        window.assistedTipoDescricao = tipoDescricao;
-        
-        const nameElement = document.getElementById('assisted-to-attend-name');
-        if (nameElement) nameElement.textContent = assisted.name || '';
-        
         showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
         
-        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
-        this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
+        // INTERRUPTOR DA TV
+        if (app.currentPautaData?.useTvPanel !== false) {
+            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
+        } else {
+            this._abrirModalClassico(app, assisted, tipoAcao);
+        }
     },
 
     actionUpdateDocStatus(button, id, assisted) {
@@ -1485,8 +1510,12 @@ export const PautaService = {
     },
 
     actionSelectCollaborator(app, id, assisted) {
-        // Substitui a chamada antiga pelo novo Modal de TV Inteligente
-        this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
+        // INTERRUPTOR DA TV
+        if (app.currentPautaData?.useTvPanel !== false) {
+            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'delegar');
+        } else {
+            this._abrirModalClassico(app, assisted, 'delegar');
+        }
     },
 
     actionAttendDirectly(app, id, assisted) {
@@ -1499,8 +1528,12 @@ export const PautaService = {
             }, app.currentUserName);
             showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
         } else {
-            // Substitui a chamada antiga pelo novo Modal de TV Inteligente
-            this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'atender_direto');
+            // INTERRUPTOR DA TV
+            if (app.currentPautaData?.useTvPanel !== false) {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, 'atender_direto');
+            } else {
+                this._abrirModalClassico(app, assisted, 'atender_direto');
+            }
         }
     },
 
@@ -1624,10 +1657,16 @@ export const PautaService = {
     },
 
     actionReturnFromAtendido(app, id, assisted) {
+        const useDist = app.currentPautaData?.useDistributionFlow === true;
         const statusDestino = this.getDestinoRetorno(app);
+        
         let updateData = {
-            status: statusDestino, attendedBy: null, attendedAt: null,
-            finalizadoPeloColaborador: false, distributionStatus: (statusDestino === 'emAtendimento' ? 'distributed' : 'pending')
+            status: statusDestino, 
+            attendedBy: null, 
+            attendedAt: null,
+            finalizadoPeloColaborador: false, 
+            // CORREÇÃO DO FLUXO: Só muda o distributionStatus se a distribuição estiver ligada
+            distributionStatus: useDist ? (statusDestino === 'emAtendimento' ? 'distributed' : 'pending') : null
         };
 
         this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
