@@ -8,7 +8,7 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  --bg:#f4f6f9; --surface:#fff; --line:#e5e7eb; --soft:#f1f3f6; --text:#0f172a; --muted:#64748b; --faint:#94a3b8;
+  --bg:#f3f4f6; --surface:#fff; --line:#e5e7eb; --soft:#f1f3f6; --text:#0f172a; --muted:#64748b; --faint:#94a3b8;
   --navy:#0b1220; --navy2:#111a2e; --amber:#f59e0b; --ok:#16a34a; --ok2:#15803d; --info:#2563eb; --danger:#dc2626;
   --fs-xs:clamp(10px,1vw,12px); --fs-sm:clamp(12px,1.2vw,14px); --fs-md:clamp(14px,1.5vw,17px);
   --fs-lg:clamp(17px,2vw,24px); --fs-xl:clamp(22px,2.8vw,34px); --fs-hero:clamp(36px,5.5vw,72px);
@@ -35,70 +35,75 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 #zoom-level{min-width:44px;text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--muted)}
 
 /* ---------- MODO FILA ---------- */
-#modo-fila{max-width:1680px;margin:0 auto;min-height:100%;padding:clamp(8px,1.6vw,24px);display:flex;flex-direction:column;gap:clamp(10px,1.4vw,18px)}
-.header{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:14px;background:var(--surface);border:1px solid var(--line);border-radius:18px;padding:12px 20px}
-.brand{display:flex;align-items:center;gap:14px;min-width:0}
-.logo{background:var(--navy);border-radius:12px;padding:9px 12px;display:flex}
-.logo img{height:clamp(22px,3vw,32px);width:auto}
-.brand h1{font-size:var(--fs-lg);font-weight:800;letter-spacing:-.02em;line-height:1.1}
-.brand h2{font-size:var(--fs-sm);font-weight:600;color:var(--muted);margin-top:2px}
-.stats{display:flex;align-items:center;gap:clamp(10px,2vw,26px);flex-wrap:wrap}
-.stat{text-align:center}
-.stat b{display:block;font-size:var(--fs-xl);font-weight:800;line-height:1}
-.stat span{display:block;margin-top:4px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.sep{width:1px;height:34px;background:var(--line)}
-.live{display:flex;align-items:center;gap:8px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--ok)}
-.dot{width:9px;height:9px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 0 rgba(22,163,74,.5);animation:pulse 2s infinite}
-@keyframes pulse{70%{box-shadow:0 0 0 9px rgba(22,163,74,0)}100%{box-shadow:0 0 0 0 rgba(22,163,74,0)}}
-.chip-btn{display:flex;align-items:center;gap:7px;border:1px solid var(--line);background:var(--soft);border-radius:10px;padding:8px 12px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);cursor:pointer}
-.chip-btn.on{background:#dcfce7;border-color:#86efac;color:var(--ok2)}
-.clock{font-variant-numeric:tabular-nums;font-size:var(--fs-sm);font-weight:700;color:var(--muted);background:var(--soft);border:1px solid var(--line);border-radius:10px;padding:8px 12px}
+#modo-fila{min-height:100%;flex-direction:column}
+.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:var(--surface);border-bottom:1px solid var(--line);padding:12px clamp(16px,2.4vw,36px)}
+.brand{display:flex;align-items:center;gap:16px;min-width:0}
+.logo{background:var(--navy);border-radius:10px;padding:8px 12px;display:flex}
+.logo img{height:clamp(22px,2.6vw,30px);width:auto}
+.brand-txt{padding-left:16px;border-left:1px solid var(--line)}
+.brand-txt h1{font-size:var(--fs-md);font-weight:700;letter-spacing:-.01em;line-height:1.2}
+.brand-txt h2{font-size:var(--fs-sm);font-weight:500;color:var(--muted);margin-top:2px}
+.metrics{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
+.metric{padding:2px clamp(14px,2vw,28px);border-left:1px solid var(--line)}
+.metric small{display:block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.metric b{display:block;margin-top:3px;font-size:var(--fs-xl);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
+.tools{display:flex;align-items:center;gap:10px;padding-left:clamp(14px,2vw,28px);border-left:1px solid var(--line)}
+.live{display:flex;align-items:center;gap:7px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+.dot{width:7px;height:7px;border-radius:50%;background:#22c55e}
+.chip-btn{display:flex;align-items:center;gap:8px;border:1px solid var(--line);background:#fff;border-radius:8px;padding:7px 12px;font-size:var(--fs-xs);font-weight:600;color:var(--muted);cursor:pointer;transition:border-color .15s,color .15s}
+.chip-btn:hover{border-color:#cbd5e1;color:var(--text)}
+.chip-btn.on{color:var(--text)}
+.chip-btn.on svg{color:#16a34a}
+.chip-btn svg{width:16px;height:16px}
+.clock{font-variant-numeric:tabular-nums;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-align:right;line-height:1.25}
 
-.hero{position:relative;overflow:hidden;border-radius:22px;background:linear-gradient(135deg,var(--navy),var(--navy2));color:#fff;padding:clamp(18px,3vw,44px) clamp(22px,3.5vw,52px)}
-.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:320px;height:320px;border-radius:50%;background:radial-gradient(circle,rgba(245,158,11,.22),transparent 70%)}
-.hero .tag{display:inline-flex;align-items:center;gap:10px;font-size:var(--fs-xs);font-weight:700;letter-spacing:.28em;text-transform:uppercase;color:var(--amber)}
-.hero .tag i{width:8px;height:8px;border-radius:50%;background:var(--amber);animation:pulse 1.6s infinite}
-.hero h2{font-size:var(--fs-hero);font-weight:900;letter-spacing:-.03em;line-height:1.02;text-transform:uppercase;margin:12px 0 18px;position:relative;z-index:1}
-.meta{display:flex;flex-wrap:wrap;gap:10px;align-items:center;position:relative;z-index:1}
-.meta span{font-size:var(--fs-sm);font-weight:600;padding:7px 14px;border-radius:10px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14)}
-.meta .sala{background:rgba(245,158,11,.16);border-color:rgba(245,158,11,.45);color:#fcd34d}
-.meta .hora{background:none;border:0;color:#94a3b8;padding:0}
-.anim-in{animation:enter .55s cubic-bezier(.22,1,.36,1)}
-@keyframes enter{from{opacity:0;transform:translateY(-14px) scale(.98)}to{opacity:1;transform:none}}
+.page{flex:1;display:flex;flex-direction:column;gap:clamp(12px,1.4vw,20px);padding:clamp(12px,1.8vw,28px) clamp(16px,2.4vw,36px);width:100%;max-width:1760px;margin:0 auto}
 
-.cols{display:flex;gap:clamp(10px,1.4vw,18px);flex:1;min-height:380px}
-.col{display:flex;flex-direction:column;background:var(--surface);border:1px solid var(--line);border-radius:20px;overflow:hidden}
-.col.atend{flex:1}.col.espera{flex:2}
-.col-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:16px 20px;border-bottom:1px solid var(--line)}
-.col-head h3{font-size:var(--fs-sm);font-weight:800;letter-spacing:.08em;text-transform:uppercase;display:flex;align-items:center;gap:9px}
-.col-head h3::before{content:"";width:9px;height:9px;border-radius:50%;background:var(--c)}
-.col-head p{font-size:var(--fs-xs);color:var(--muted);margin-top:3px}
-.col-body{flex:1;overflow-y:auto;padding:12px;display:flex;flex-direction:column;gap:10px;background:#fafbfc}
-.empty{margin:auto;text-align:center;color:var(--faint);font-size:var(--fs-sm);font-weight:600}
-#legenda-unidades{display:flex;flex-wrap:wrap;gap:6px;justify-content:flex-end;max-width:360px}
-.leg{font-size:var(--fs-xs);font-weight:700;padding:3px 10px;border-radius:999px;color:var(--u);background:color-mix(in srgb,var(--u) 10%,#fff);border:1px solid color-mix(in srgb,var(--u) 28%,#fff);white-space:nowrap}
+.call{display:grid;grid-template-columns:minmax(0,1fr) auto;background:var(--navy);color:#fff;border-radius:12px;overflow:hidden;border:1px solid #1e293b}
+.call-main{padding:clamp(18px,2.4vw,34px) clamp(22px,3vw,48px);min-width:0}
+.call-label{display:flex;align-items:center;gap:12px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.2em;text-transform:uppercase;color:#94a3b8}
+.call-label::before{content:"";width:28px;height:2px;background:var(--amber)}
+.call-name{margin-top:12px;font-size:var(--fs-hero);font-weight:800;letter-spacing:-.025em;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
+.call-info{display:flex;border-left:1px solid rgba(255,255,255,.1)}
+.call-field{padding:clamp(18px,2.4vw,34px) clamp(18px,2.4vw,40px);display:flex;flex-direction:column;justify-content:center;min-width:clamp(120px,14vw,220px)}
+.call-field+.call-field{border-left:1px solid rgba(255,255,255,.1)}
+.call-field small{font-size:var(--fs-xs);font-weight:600;letter-spacing:.14em;text-transform:uppercase;color:#64748b}
+.call-field b{margin-top:8px;font-size:var(--fs-lg);font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.anim-in{animation:enter .5s cubic-bezier(.22,1,.36,1)}
+@keyframes enter{from{opacity:.2;transform:translateY(-8px)}to{opacity:1;transform:none}}
 
-.grupo{background:var(--surface);border:1px solid var(--line);border-radius:16px;overflow:hidden;position:relative;animation:up .4s ease-out both}
-.grupo::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--u)}
-@keyframes up{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
-.grupo-head{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px 12px 20px;border-bottom:1px solid var(--soft)}
-.grupo-head b{display:block;font-size:var(--fs-sm);font-weight:800;letter-spacing:.04em;text-transform:uppercase;color:var(--u);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.grupo-head small{display:block;font-size:var(--fs-xs);color:var(--muted);margin-top:2px}
-.count{flex-shrink:0;font-size:var(--fs-xs);font-weight:700;padding:4px 12px;border-radius:999px;color:var(--u);background:color-mix(in srgb,var(--u) 10%,#fff)}
-.grupo-body{padding:8px 10px 10px 14px;display:flex;flex-direction:column;gap:6px}
-.pessoa{display:flex;align-items:center;gap:12px;padding:clamp(8px,1vw,12px) clamp(10px,1.4vw,16px);border-radius:12px;background:#fff;border:1px solid var(--soft);animation:up .3s ease-out both}
-.pessoa.urgente{background:#fff7f7;border-color:#fecaca}
-.pessoa.atendendo{border-left:4px solid var(--u);padding-left:14px;box-shadow:0 1px 2px rgba(15,23,42,.04)}
-.ordem{min-width:clamp(30px,3vw,40px);height:clamp(30px,3vw,40px);border-radius:10px;background:var(--soft);color:var(--muted);display:flex;align-items:center;justify-content:center;font-size:var(--fs-sm);font-weight:800}
-.pessoa:first-child .ordem{background:#fef3c7;color:#b45309}
-.nome{flex:1;min-width:0;font-weight:700;text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.pessoa .nome{font-size:var(--fs-md)}
-.pessoa.atendendo .nome{font-size:var(--fs-lg)}
-.pessoa .sub{font-size:var(--fs-xs);font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--u);margin-top:2px}
-.badge{flex-shrink:0;font-size:var(--fs-xs);font-weight:800;letter-spacing:.06em;padding:4px 11px;border-radius:999px}
-.badge.urg{background:#fee2e2;color:#991b1b;border:1px solid #fecaca}
-.badge.sala{background:var(--soft);color:#334155;border:1px solid var(--line);text-transform:uppercase}
-footer{text-align:center;font-size:var(--fs-xs);font-weight:600;letter-spacing:.12em;text-transform:uppercase;color:var(--faint);padding-bottom:4px}
+.cols{display:grid;grid-template-columns:minmax(320px,1fr) minmax(0,1.7fr);gap:clamp(12px,1.4vw,20px);flex:1;min-height:380px}
+.panel{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:14px 20px;border-bottom:1px solid var(--line)}
+.panel-head h3{font-size:var(--fs-sm);font-weight:700;letter-spacing:.1em;text-transform:uppercase}
+.panel-head span{font-size:var(--fs-xs);font-weight:600;color:var(--muted);background:var(--soft);padding:3px 10px;border-radius:6px;font-variant-numeric:tabular-nums}
+.th,.row{display:grid;align-items:center;gap:14px;padding:0 20px}
+.th{padding-top:9px;padding-bottom:9px;background:#f8fafc;border-bottom:1px solid var(--line);font-size:var(--fs-xs);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.g-fila{grid-template-columns:clamp(40px,4vw,56px) minmax(0,1fr) clamp(64px,7vw,96px) clamp(90px,9vw,120px)}
+.g-atend{grid-template-columns:minmax(0,1fr) clamp(56px,6vw,90px) clamp(56px,6vw,80px)}
+.panel-body{flex:1;overflow-y:auto}
+.group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:10px 20px;background:#f8fafc;border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
+.panel-body>.group-head:first-child{border-top:0}
+.group-head b{display:flex;align-items:center;gap:10px;min-width:0;font-size:var(--fs-sm);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--text)}
+.group-head b::before{content:"";width:8px;height:8px;border-radius:2px;background:var(--u);flex-shrink:0}
+.group-head b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.group-head small{font-size:var(--fs-xs);font-weight:500;color:var(--muted);white-space:nowrap}
+.row{min-height:clamp(46px,4.4vw,62px);border-bottom:1px solid var(--soft);animation:fade .3s ease-out both}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+.row.next{background:linear-gradient(90deg,#fffbeb,#fff 60%)}
+.row.prio .pos{color:#be123c}
+.pos{font-size:var(--fs-md);font-weight:700;color:var(--faint);font-variant-numeric:tabular-nums}
+.row.next .pos{color:#b45309}
+.nome{min-width:0;font-weight:600;text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-md)}
+.g-atend .nome{font-size:var(--fs-lg)}
+.sub{font-size:var(--fs-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.num{font-size:var(--fs-sm);font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.tag{justify-self:end;font-size:var(--fs-xs);font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:3px 9px;border-radius:5px;white-space:nowrap}
+.tag.prio{color:#9f1239;background:#fff1f2;border:1px solid #fecdd3}
+.tag.sala{color:#334155;background:var(--soft);border:1px solid var(--line)}
+.next-flag{font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:#b45309}
+.empty{margin:auto;padding:48px 16px;text-align:center;color:var(--faint);font-size:var(--fs-sm);font-weight:500}
+footer{text-align:center;font-size:var(--fs-xs);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 0 4px}
 
 /* ---------- MODO TV ---------- */
 #modo-tv{position:fixed;inset:0;display:grid;grid-template-columns:2fr 1fr;background:var(--navy);overflow:hidden}
@@ -122,7 +127,8 @@ footer{text-align:center;font-size:var(--fs-xs);font-weight:600;letter-spacing:.
 .tv-foot img{height:clamp(26px,3.4vw,48px);width:auto;opacity:.9}
 #data-hora-tv{font-size:clamp(18px,2.2vw,34px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.06em}
 #recepcao-nome-tv{font-size:var(--fs-xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8}
-@media (max-width:760px){#modo-tv{grid-template-columns:1fr;grid-template-rows:3fr 2fr}.cols{flex-direction:column}.sep{display:none}}
+@media (max-width:900px){.call{grid-template-columns:1fr}.call-info{border-left:0;border-top:1px solid rgba(255,255,255,.1)}.call-field{flex:1}.cols{grid-template-columns:1fr}.tools,.metric{border-left:0}}
+@media (max-width:760px){#modo-tv{grid-template-columns:1fr;grid-template-rows:3fr 2fr}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
 </style>
 </head>
@@ -135,44 +141,53 @@ footer{text-align:center;font-size:var(--fs-xs);font-weight:600;letter-spacing:.
 </button>
 
 <div id="modo-fila" class="hidden">
-  <header class="header">
+  <header class="topbar">
     <div class="brand">
       <div class="logo"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="SIGEP"></div>
-      <div><h1>Painel de Atendimento</h1><h2 id="recepcao-nome-fila">—</h2></div>
+      <div class="brand-txt"><h1>Painel de Atendimento</h1><h2 id="recepcao-nome-fila">—</h2></div>
     </div>
-    <div class="stats">
-      <div class="live"><span class="dot"></span>Ao vivo</div>
-      <div class="sep"></div>
-      <div class="stat"><b id="g-aguardando" style="color:#d97706">0</b><span>Aguardando</span></div>
-      <div class="stat"><b id="g-atendendo" style="color:var(--info)">0</b><span>Atendendo</span></div>
-      <button id="btn-som-header" class="chip-btn" onclick="toggleSom()" aria-label="Ativar ou desativar som"><span id="icone-som-header">🔇</span><span id="texto-som-header">Som</span></button>
-      <div id="data-hora-fila" class="clock"></div>
+    <div class="metrics">
+      <div class="metric"><small>Aguardando</small><b id="g-aguardando">0</b></div>
+      <div class="metric"><small>Em atendimento</small><b id="g-atendendo">0</b></div>
+      <div class="tools">
+        <button id="btn-som-header" class="chip-btn" onclick="toggleSom()" aria-label="Ativar ou desativar som"><span id="icone-som-header" style="display:flex"></span><span id="texto-som-header">Som desativado</span></button>
+        <div>
+          <div class="live"><span class="dot"></span>Tempo real</div>
+          <div id="data-hora-fila" class="clock"></div>
+        </div>
+      </div>
     </div>
   </header>
 
-  <div id="ultimo-chamado-wrap" class="hidden">
-    <div id="ultimo-chamado-card" class="hero">
-      <div class="tag"><i></i>Chamando agora</div>
-      <h2 id="uc-nome-fila">—</h2>
-      <div class="meta">
-        <span id="uc-pauta-fila">—</span>
-        <span id="uc-local-fila" class="sala">—</span>
-        <span id="uc-hora-fila" class="hora">—</span>
+  <main class="page">
+    <div id="ultimo-chamado-wrap" class="hidden">
+      <div id="ultimo-chamado-card" class="call">
+        <div class="call-main">
+          <div class="call-label">Chamada atual</div>
+          <h2 id="uc-nome-fila" class="call-name">—</h2>
+        </div>
+        <div class="call-info">
+          <div class="call-field"><small>Pauta</small><b id="uc-pauta-fila">—</b></div>
+          <div class="call-field"><small>Sala / local</small><b id="uc-local-fila">—</b></div>
+          <div class="call-field"><small>Horário</small><b id="uc-hora-fila" style="font-variant-numeric:tabular-nums">—</b></div>
+        </div>
       </div>
     </div>
-  </div>
 
-  <div class="cols">
-    <section class="col atend" style="--c:var(--info)">
-      <div class="col-head"><div><h3>Em atendimento</h3><p>Sendo atendidos neste momento</p></div></div>
-      <div id="lista-atendimento" class="col-body"></div>
-    </section>
-    <section class="col espera" style="--c:var(--amber)">
-      <div class="col-head"><div><h3>Fila de espera</h3><p>Agrupada por pauta · numerada localmente</p></div><div id="legenda-unidades"></div></div>
-      <div id="lista-espera" class="col-body"></div>
-    </section>
-  </div>
-  <footer>SIGEP · Painel público da recepção · Dados em tempo real</footer>
+    <div class="cols">
+      <section class="panel">
+        <div class="panel-head"><h3>Em atendimento</h3><span id="n-atend">0</span></div>
+        <div class="th g-atend"><span>Assistido</span><span>Sala</span><span style="text-align:right">Tempo</span></div>
+        <div id="lista-atendimento" class="panel-body"></div>
+      </section>
+      <section class="panel">
+        <div class="panel-head"><h3>Fila de espera</h3><span id="n-espera">0</span></div>
+        <div class="th g-fila"><span>Nº</span><span>Assistido</span><span>Espera</span><span></span></div>
+        <div id="lista-espera" class="panel-body"></div>
+      </section>
+    </div>
+    <footer>SIGEP · Painel público da recepção</footer>
+  </main>
 </div>
 
 <div id="zoom-controls" class="float">
@@ -213,11 +228,14 @@ const garantirAudio = () => {
   if (audioCtx.state === 'suspended') audioCtx.resume();
   return audioCtx;
 };
+const ICO_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
+const ICO_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
 function atualizarSom() {
-  $('icone-som-header').textContent = somAtivo ? '🔔' : '🔇';
-  $('texto-som-header').textContent = somAtivo ? 'Som ativo' : 'Som';
+  $('icone-som-header').innerHTML = somAtivo ? ICO_ON : ICO_OFF;
+  $('texto-som-header').textContent = somAtivo ? 'Som ativado' : 'Som desativado';
   $('btn-som-header').classList.toggle('on', somAtivo);
 }
+atualizarSom();
 window.ativarSom = () => { try { garantirAudio(); somAtivo = true; atualizarSom(); tocarSom(true); } catch (e) { console.warn(e); } };
 window.toggleSom = () => { if (!somAtivo) window.ativarSom(); else { somAtivo = false; atualizarSom(); } };
 const primeira = () => { if (somPermitido && !somAtivo) { try { garantirAudio(); somAtivo = true; atualizarSom(); } catch (e) {} } };
@@ -272,7 +290,7 @@ const pautasParam = params.get('pautas');
 const recepcaoNome = params.get('nome') || 'Recepção Geral';
 const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
 
-const PALETA = ['#2563eb', '#9333ea', '#16a34a', '#ea580c', '#dc2626', '#0d9488', '#ca8a04', '#7c3aed'];
+const PALETA = ['#1e3a8a', '#0f766e', '#6d28d9', '#9a3412', '#334155', '#155e75', '#854d0e', '#9d174d'];
 const corPor = {}; let proxima = 0;
 const corUnidade = (k) => (corPor[k] ??= PALETA[proxima++ % PALETA.length]);
 
@@ -288,13 +306,19 @@ function relogio() {
 setInterval(relogio, 1000); relogio();
 
 // ── Render: fila ───────────────────────────────────────
+function duracao(ini) {
+  const t = typeof ini === 'number' ? ini : Date.parse(ini);
+  if (!t) return '—';
+  const m = Math.max(0, Math.floor((Date.now() - t) / 60000));
+  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
+}
+
 function renderUltimoFila(c) {
   if (!c) return;
   $('ultimo-chamado-wrap').classList.remove('hidden');
-  const nome = $('uc-nome-fila');
-  nome.textContent = (c.nome || '').toUpperCase();
+  $('uc-nome-fila').textContent = (c.nome || '').toUpperCase();
   $('uc-pauta-fila').textContent = c.pautaNome || c.local || '—';
-  $('uc-local-fila').textContent = c.sala ? `Sala ${c.sala}` : (c.local || '—');
+  $('uc-local-fila').textContent = c.sala || c.local || '—';
   $('uc-hora-fila').textContent = c.hora || horaAgora();
   const card = $('ultimo-chamado-card');
   card.classList.remove('anim-in'); void card.offsetWidth; card.classList.add('anim-in');
@@ -320,42 +344,37 @@ function renderPainel() {
     }
   }
 
-  $('g-aguardando').textContent = total;
-  $('g-atendendo').textContent = atendendo.length;
+  $('g-aguardando').textContent = total; $('n-espera').textContent = total;
+  $('g-atendendo').textContent = atendendo.length; $('n-atend').textContent = atendendo.length;
   atendendo.sort((a, b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
 
   $('lista-atendimento').innerHTML = atendendo.length ? atendendo.map(a => `
-    <div class="pessoa atendendo" style="--u:${corUnidade(a.pautaId)}">
-      <div style="min-width:0;flex:1"><p class="nome">${esc(a.name)}</p><p class="sub">${esc(a.nomePauta)}</p></div>
-      ${a.salaPauta ? `<span class="badge sala">${esc(a.salaPauta)}</span>` : ''}
-    </div>`).join('') : vazio('Nenhum atendimento no momento');
+    <div class="row g-atend">
+      <div style="min-width:0"><p class="nome">${esc(a.name)}</p><p class="sub">${esc(a.nomePauta)}</p></div>
+      <span>${a.salaPauta ? `<span class="tag sala">${esc(a.salaPauta)}</span>` : '<span class="num">—</span>'}</span>
+      <span class="num" style="text-align:right">${duracao(a.inAttendanceTime)}</span>
+    </div>`).join('') : vazio('Nenhum atendimento em andamento');
 
-  if (!total) {
-    $('lista-espera').innerHTML = vazio('Fila vazia');
-    $('legenda-unidades').innerHTML = '';
-    return;
-  }
+  if (!total) { $('lista-espera').innerHTML = vazio('Fila vazia'); return; }
 
   const ordem = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
-  $('legenda-unidades').innerHTML = ordem.map(k =>
-    `<span class="leg" style="--u:${corUnidade(k)}">${esc(grupos[k].nomePauta)} · ${grupos[k].pessoas.length}</span>`).join('');
-
-  $('lista-espera').innerHTML = ordem.map((k, gi) => {
+  $('lista-espera').innerHTML = ordem.map(k => {
     const g = grupos[k];
-    return `<div class="grupo" style="--u:${corUnidade(k)};animation-delay:${gi * .06}s">
-      <div class="grupo-head">
-        <div style="min-width:0"><b>${esc(g.nomePauta)}</b>${g.salaPauta ? `<small>Sala ${esc(g.salaPauta)}</small>` : ''}</div>
-        <span class="count">${g.pessoas.length} na fila</span>
-      </div>
-      <div class="grupo-body">${g.pessoas.map((a, li) => `
-        <div class="pessoa ${a.priority === 'URGENTE' ? 'urgente' : ''}" style="animation-delay:${gi * .06 + li * .03}s">
-          <span class="ordem">${a.ordemLocal}º</span>
-          <p class="nome">${esc(a.name)}</p>
-          ${a.priority === 'URGENTE' ? '<span class="badge urg">URGENTE</span>' : ''}
-        </div>`).join('')}</div>
-    </div>`;
+    return `<div class="group-head" style="--u:${corUnidade(k)}">
+        <b><span>${esc(g.nomePauta)}</span></b>
+        <small>${g.salaPauta ? `Sala ${esc(g.salaPauta)} · ` : ''}${g.pessoas.length} aguardando</small>
+      </div>` + g.pessoas.map((a, i) => {
+        const prio = a.priority === 'URGENTE';
+        return `<div class="row g-fila ${i === 0 ? 'next' : ''} ${prio ? 'prio' : ''}">
+          <span class="pos">${String(a.ordemLocal).padStart(2, '0')}</span>
+          <div style="min-width:0"><p class="nome">${esc(a.name)}</p>${i === 0 ? '<p class="next-flag" style="margin-top:3px">Próximo</p>' : ''}</div>
+          <span class="num">${duracao(a.arrivalTime || a.checkInOrder)}</span>
+          ${prio ? '<span class="tag prio">Prioridade</span>' : '<span></span>'}
+        </div>`;
+      }).join('');
   }).join('');
 }
+setInterval(renderPainel, 30000);
 
 // ── Render: TV ─────────────────────────────────────────
 function renderHistorico() {
