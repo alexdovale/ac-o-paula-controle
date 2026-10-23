@@ -1,6 +1,4 @@
-O teu ficheiro js/pauta.js está quase perfeito, Alex! No entanto, notei um pequeno detalhe na função handleCardActions: colaste as novas ações (chamar-distribuicao-tv-btn e rechamar-tv-btn) isoladas mesmo a meio das restrições de perfil de Apoio, o que vai gerar um erro de sintaxe (SyntaxError) no JavaScript.
-Vamos corrigir isso imediatamente! As novas ações de TV devem ficar dentro do dicionário actionMap, que é onde o sistema mapeia os cliques dos botões.
-Aqui está o js/pauta.js corrigido e organizado. Podes copiar e substituir todo o conteúdo do teu ficheiro js/pauta.js por este:
+
 // js/pauta.js - VERSÃO COM MODO TV OPCIONAL E CORREÇÃO DO FLUXO DE DISTRIBUIÇÃO
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
