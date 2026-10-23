@@ -27,7 +27,6 @@ button{font-family:inherit}
 
 /* Desbloqueio de áudio / carregamento */
 #unlock-audio-overlay{position:fixed;inset:0;z-index:10000;background:var(--navy);color:#fff;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;text-align:center;padding:24px;transition:opacity .5s}
-#unlock-audio-overlay img{height:44px}
 #unlock-audio-overlay h1{font-size:var(--fs-xl);font-weight:800;letter-spacing:-.02em;margin:8px 0 0}
 #unlock-audio-overlay p{max-width:460px;color:#94a3b8;font-size:var(--fs-md);line-height:1.5;margin:0}
 #btn-unlock-audio{display:flex;align-items:center;gap:10px;background:var(--ok);color:#fff;border:0;border-radius:12px;padding:16px 32px;font-size:var(--fs-md);font-weight:700;cursor:pointer;margin-top:10px}
@@ -57,8 +56,11 @@ button{font-family:inherit}
 #modo-fila{height:100%;overflow-y:auto;flex-direction:column}
 .topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:var(--surface);border-bottom:1px solid var(--line);padding:12px clamp(16px,2.4vw,36px)}
 .brand{display:flex;align-items:center;gap:16px;min-width:0}
-.logo{background:var(--navy);border-radius:10px;padding:8px 12px;display:flex}
-.logo img{height:clamp(22px,2.6vw,30px);width:auto}
+.lg{display:inline-flex;flex-direction:column;align-items:center;gap:5px}
+.lg-box{display:flex;align-items:center;justify-content:center;background:var(--navy);border-radius:10px;padding:8px 12px}
+.lg-box img{height:var(--lg-h,30px);max-width:min(var(--lg-w,260px),50vw);width:auto;object-fit:contain;display:block}
+.lg.custom .lg-box{background:#fff;border:1px solid var(--line)}
+.lg-credit{font-size:clamp(9px,.9vw,12px);font-weight:700;letter-spacing:.22em;text-transform:uppercase;color:var(--faint);white-space:nowrap}
 .brand-txt{padding-left:16px;border-left:1px solid var(--line)}
 .brand-txt h1{margin:0;font-size:var(--fs-md);font-weight:700;letter-spacing:-.01em}
 .brand-txt h2{margin:2px 0 0;font-size:var(--fs-sm);font-weight:500;color:var(--muted)}
@@ -134,7 +136,6 @@ button{font-family:inherit}
 .item-hist span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(14px,1.7vw,24px);font-weight:700;text-transform:uppercase;color:#334155}
 .item-hist span:last-child{white-space:nowrap;font-size:clamp(12px,1.4vw,20px);font-weight:800;color:var(--ok2)}
 .tv-foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(14px,2vw,26px);background:var(--navy);color:#fff}
-.tv-foot img{height:clamp(24px,3.2vw,44px)}
 .tv-clock{font-size:clamp(18px,2.2vw,34px);font-weight:800;letter-spacing:.06em}
 .tv-rec{font-size:var(--fs-xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8;text-align:center}
 
@@ -156,8 +157,7 @@ button{font-family:inherit}
 .banner-anim{animation:flash .7s ease 3}
 #faixa-video{width:clamp(260px,25vw,380px);flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:#fff;border-left:1px solid var(--line)}
 .fv-head{padding:20px;border-bottom:1px solid var(--line);background:#f8fafc;flex-shrink:0}
-.fv-logo{display:flex;justify-content:center;background:var(--navy);border-radius:10px;padding:12px;margin-bottom:12px}
-.fv-logo img{height:26px}
+.fv-logo{display:flex;justify-content:center;margin-bottom:12px}
 .fv-rec{margin:0 0 14px;text-align:center;font-size:var(--fs-xs);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--muted)}
 .fv-stats{display:flex;gap:10px}
 .fv-stat{flex:1;background:#fff;border:1px solid var(--line);border-radius:10px;padding:10px;text-align:center}
@@ -222,7 +222,7 @@ export const PainelPublicoService = {
 
         document.body.innerHTML = `
             <div id="unlock-audio-overlay">
-                <img src="${LOGO}" alt="SIGEP">
+                <div class="lg" data-slot style="--lg-h:44px"></div>
                 <h1>Painel de Atendimento</h1>
                 <p>Para que os alertas sonoros e a chamada por voz funcionem, o navegador exige uma interação. Clique abaixo para iniciar.</p>
                 <button id="btn-unlock-audio">${svg('play', 18)} Iniciar painel e ativar som</button>
@@ -246,7 +246,7 @@ export const PainelPublicoService = {
             <div id="modo-fila" class="hidden">
                 <header class="topbar">
                     <div class="brand">
-                        <div class="logo"><img src="${LOGO}" alt="SIGEP"></div>
+                        <div class="lg" data-slot style="--lg-h:clamp(22px,2.6vw,30px)"></div>
                         <div class="brand-txt"><h1>Painel de Atendimento</h1><h2 id="recepcao-nome-fila">—</h2></div>
                     </div>
                     <div class="metrics">
@@ -293,7 +293,7 @@ export const PainelPublicoService = {
                     <div class="hist-head"><span>Nome</span><span>Local</span></div>
                     <div id="lista-historico-tv" class="hist-list"></div>
                     <div class="tv-foot">
-                        <img src="${LOGO}" alt="SIGEP">
+                        <div class="lg" data-slot style="--lg-h:clamp(24px,3.2vw,44px)"></div>
                         <div id="data-hora-tv" class="tv-clock"></div>
                         <div id="recepcao-nome-tv" class="tv-rec">Recepção</div>
                     </div>
@@ -314,7 +314,7 @@ export const PainelPublicoService = {
                 </div>
                 <aside id="faixa-video">
                     <div class="fv-head">
-                        <div class="fv-logo"><img src="${LOGO}" alt="SIGEP"></div>
+                        <div class="fv-logo"><div class="lg" data-slot style="--lg-h:26px"></div></div>
                         <p id="recepcao-nome-video" class="fv-rec">Recepção</p>
                         <div class="fv-stats">
                             <div class="fv-stat"><b id="video-g-aguardando" style="color:#d97706">0</b><span>Na fila</span></div>
@@ -330,6 +330,23 @@ export const PainelPublicoService = {
         `;
 
         const $ = (id) => document.getElementById(id);
+
+        // ── Logo do órgão (com a marca SIGEP sempre visível abaixo) ───────────
+        const urlOk = (u) => /^(data:image\/(png|jpe?g|webp|gif|svg\+xml);base64,|https:\/\/)/i.test(u || '');
+        this._aplicarLogo = (url) => {
+            const custom = urlOk(url);
+            document.querySelectorAll('[data-slot]').forEach(slot => {
+                slot.className = 'lg' + (custom ? ' custom' : '');
+                slot.replaceChildren();
+                const box = document.createElement('span'); box.className = 'lg-box';
+                const img = document.createElement('img');
+                img.alt = custom ? 'Logo do órgão' : 'SIGEP';
+                img.src = custom ? url : LOGO;
+                box.appendChild(img); slot.appendChild(box);
+                if (custom) { const c = document.createElement('span'); c.className = 'lg-credit'; c.textContent = 'Tecnologia SIGEP'; slot.appendChild(c); }
+            });
+        };
+        this._aplicarLogo('');
 
         // ── Áudio e voz ────────────────────────────────────────────────────────
         let somAtivo = false, audioCtx = null;
@@ -579,7 +596,12 @@ export const PainelPublicoService = {
         aplicarModo(initialModo);
         renderChamado(null);
 
+        const logos = {};
         pautasParam.split(',').map(s => s.trim()).filter(Boolean).forEach(pid => {
+            onSnapshot(doc(db, "pautas", pid, "painel", "config"), (s) => {
+                logos[pid] = s.exists() ? (s.data().logoUrl || '') : '';
+                PainelPublicoService._aplicarLogo(Object.values(logos).find(Boolean) || '');
+            });
             onSnapshot(doc(db, "pautas", pid), (s) => { if (!s.exists()) return; estado.pautas[pid] = { id: pid, ...s.data() }; renderPainel(); });
             onSnapshot(collection(db, "pautas", pid, "attendances"), (s) => { estado.assistidos[pid] = s.docs.map(d => ({ id: d.id, ...d.data() })); renderPainel(); });
             onSnapshot(doc(db, "pautas", pid, "painel", "ultimoChamado"), (s) => {
