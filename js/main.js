@@ -673,24 +673,9 @@ class SIGEPApp {
             }
         });
 
-        // 📺 BOTÃO DO PAINEL DA TV + DEFINIR LOCAL PADRÃO
+        // 🎫 TOTEM (autoatendimento do assistido) - INTACTO, sem relação com o Painel da TV
         document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
             if (e.isTrusted && this.currentPauta) {
-                // Antes de abrir a TV, perguntamos se o utilizador quer definir um guichê padrão
-                const localSalvo = localStorage.getItem(`sigep_tv_local_${this.currentPauta.id}`);
-                const mensagem = localSalvo 
-                    ? `O seu local atual para a TV é: [ ${localSalvo} ]\n\nDeseja alterar o local de chamada (Guichê/Mesa)?` 
-                    : `Deseja definir um Local Padrão (Ex: Guichê 1, Sala 3) para enviar os assistidos para a TV?`;
-
-                if (confirm(mensagem)) {
-                    const novoLocal = prompt("Digite o nome do Local (Mesa/Guichê):", localSalvo || "");
-                    if (novoLocal !== null && novoLocal.trim() !== "") {
-                        localStorage.setItem(`sigep_tv_local_${this.currentPauta.id}`, novoLocal.trim());
-                        showNotification(`Local da TV definido como: ${novoLocal.trim()}`, "success");
-                    }
-                }
-
-                // Navega para a TV
                 this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
                 return;
             }
@@ -867,17 +852,70 @@ class SIGEPApp {
         });
 
         // ------------------------------------------------------------------------------------------
-        // 🔥 INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES 🔥
+        // 📺 HUB DO PAINEL DA TV (isolado do Totem - o botão do Totem nunca é alterado nem escondido)
+        // ------------------------------------------------------------------------------------------
+        const observerMenuAcoes = new MutationObserver(() => {
+            const actionsPanel = document.getElementById('actions-panel');
+            if (!actionsPanel || actionsPanel.classList.contains('hidden') || actionsPanel.classList.contains('opacity-0')) return;
+
+            const tvAtivada = this.currentPautaData?.useTvPanel !== false;
+            let tvGroup = document.getElementById('tv-panel-actions-group');
+
+            if (!tvGroup) {
+                tvGroup = document.createElement('div');
+                tvGroup.id = 'tv-panel-actions-group';
+                tvGroup.innerHTML = `
+                    <div class="h-px bg-slate-100 my-2 mx-3"></div>
+                    <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Gestão do Painel TV</p>
+                    <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
+                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📍</span>
+                        <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
+                    </button>
+                    <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
+                        <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
+                        <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
+                    </button>
+                `;
+
+                // Entra como bloco próprio no fim do menu; o botão do Totem fica onde está, intacto
+                actionsPanel.appendChild(tvGroup);
+
+                tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    if (this.currentPauta) {
+                        const localSalvo = localStorage.getItem('sigep_tv_local_' + this.currentPauta.id);
+                        const novoLocal = prompt("Qual o seu Local de Atendimento atual? (Ex: Guichê 1, Sala 3)", localSalvo || "");
+                        if (novoLocal !== null && novoLocal.trim() !== "") {
+                            localStorage.setItem('sigep_tv_local_' + this.currentPauta.id, novoLocal.trim());
+                            showNotification("Local salvo!", "success");
+                        }
+                        actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                    }
+                });
+
+                tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    this.abrirModalConfigTVPauta();
+                    actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                });
+            }
+
+            tvGroup.classList.toggle('hidden', !tvAtivada);
+        });
+
+        const actionsPanelEl = document.getElementById('actions-panel');
+        if (actionsPanelEl) observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
+
+        // ------------------------------------------------------------------------------------------
+        // ☑️ CHECKBOX "UTILIZAR PAINEL DA TV" NO MODAL DE EDIÇÃO DE CONFIGURAÇÕES (agora salva useTvPanel)
         // ------------------------------------------------------------------------------------------
         const observerEdicao = new MutationObserver(() => {
             const modalEdicao = document.getElementById('edit-pauta-config-modal');
-            // Só atua se o modal existir na tela e não estiver invisível (hidden)
             if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
-                // Checa se o nosso botão de TV já foi injetado para não ficar duplicando
                 let divConfigTV = document.getElementById('edit-use-tv-panel-container');
                 if (!divConfigTV) {
-                    // Procura o botão de Salvar para injetar nosso botão logo acima dele
-                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
+                    const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
+                    const btnCancelarSalvar = btnSalvar?.parentNode;
                     if (btnCancelarSalvar) {
                         divConfigTV = document.createElement('div');
                         divConfigTV.id = 'edit-use-tv-panel-container';
@@ -887,26 +925,32 @@ class SIGEPApp {
                                 <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
                                 <div>
                                     <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
-                                    <span class="block text-[10px] text-slate-500">Se ativado, chamar abre o seletor de locais e envia para a TV. Se desativado, usa apenas a lista de delegar.</span>
+                                    <span class="block text-[10px] text-slate-500">Ativa o hub da TV no menu de Ações para esta pauta.</span>
                                 </div>
                             </label>
                         `;
-                        // Insere cirurgicamente na tela
                         btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
-                        
-                        // Garante que a caixinha marque se o banco de dados disser que a TV está ligada
-                        const tvCheck = document.getElementById('edit-use-tv-panel');
-                        if (tvCheck && this.currentPautaData) {
-                            tvCheck.checked = this.currentPautaData.useTvPanel !== false;
+
+                        if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
+                            btnSalvar.setAttribute('data-tv-hooked', 'true');
+                            btnSalvar.addEventListener('click', async () => {
+                                const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
+                                try {
+                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
+                                    if (this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
+                                } catch (err) {
+                                    console.warn('Falha ao salvar useTvPanel:', err);
+                                }
+                            });
                         }
+
+                        const tvCheck = document.getElementById('edit-use-tv-panel');
+                        if (tvCheck && this.currentPautaData) tvCheck.checked = this.currentPautaData.useTvPanel !== false;
                     }
                 }
             }
         });
-        
-        // Coloca o observer para vigiar qualquer mudança que a tela fizer no Body
         observerEdicao.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
-        // ------------------------------------------------------------------------------------------
     }
 
     setupAttendanceEvents() {
@@ -1649,18 +1693,6 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
 
-                // 🔥 ESCONDER/MOSTRAR BOTÃO DA TV NO MENU
-                const totemBtn = document.getElementById('open-totem-btn');
-                const tvAtivada = this.currentPautaData.useTvPanel !== false; // Por padrão é true se não existir
-
-                if (totemBtn) {
-                    if (tvAtivada) {
-                        totemBtn.classList.remove('hidden');
-                    } else {
-                        totemBtn.classList.add('hidden');
-                    }
-                }
-                
                 const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
                 
                 const descPontuais = document.getElementById('desc-pontuais');
