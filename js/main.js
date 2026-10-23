@@ -1162,6 +1162,15 @@ class SIGEPApp {
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
+        // 🔥 CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
+        const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
+        const logicContent = document.getElementById('logic-explanation-padrao-content');
+        if (toggleLogicBtn && logicContent) {
+            toggleLogicBtn.addEventListener('click', () => {
+                logicContent.classList.toggle('hidden');
+            });
+        }
+
         document.querySelectorAll('.p-chip').forEach(chip => {
             chip.addEventListener('click', function(e) {
                 e.preventDefault();
