@@ -847,7 +847,7 @@ export const UIService = {
         `;
     },
 
-    _getActionButtonsHtml(item) {
+        _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
                 <div class="relative">
@@ -859,14 +859,16 @@ export const UIService = {
                     <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 z-30 py-1.5 overflow-hidden" role="menu">
                         <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1 bg-slate-50">Ações Rápidas</div>
                         
-                        <!-- BOTÃO DE RECHAMADA / ALARME SONORO NA TV -->
-                        <button data-id="${item.id}" class="rechamar-tv-btn w-full text-left px-4 py-2 text-xs text-blue-700 hover:bg-blue-50 flex items-center gap-2 transition-colors font-bold">
-                            <span>🔊</span> Rechamar na TV (Alarme)
+                        <!-- RECHAMAR NA TV (PADRÃO CLEAN COM SVG) -->
+                        <button data-id="${item.id}" class="rechamar-tv-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 transition-colors font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
+                            Rechamar na TV (Alarme)
                         </button>
 
-                        <!-- BOTÃO DE DIGITALIZAÇÃO (CÂMERA / SCANNER) -->
-                        <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-indigo-700 hover:bg-indigo-50 flex items-center gap-2 transition-colors font-bold">
-                            <span>📷</span> Digitalizar Arquivo
+                        <!-- DIGITALIZAR / SCANNER (PADRÃO CLEAN COM SVG) -->
+                        <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
+                            Digitalizar Arquivo
                         </button>
                         
                         <div class="h-px bg-slate-100 my-1 mx-3"></div>
@@ -922,6 +924,7 @@ export const UIService = {
             </div>
         `;
     },
+
 
     _getRoomDropdownHtml(item, currentPautaData, canEditPriority) {
         if (currentPautaData?.type === 'multisala') {
