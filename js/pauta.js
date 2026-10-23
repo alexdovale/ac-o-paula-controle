@@ -1,8 +1,3 @@
-Agora eu entendi perfeitamente o que estava acontecendo, Alex!
-O problema era que o código do "Tipo de Local" e integração direta com a TV foi criado apenas no arquivo novo da Recepção (recepcaoCentral.js). Como o seu arquivo pauta.js não tinha essa tela programada dentro dele, toda vez que você clicava no botão pela interface principal da pauta, ele tentava abrir o modelo de seleção antigo (que não tinha os campos "Vara/Guichê") ou simplesmente travava de forma silenciosa e não fazia nada.
-Para resolver isso definitivamente e deixar o sistema unificado, eu injetei a mesma janela inteligente de "Local + Colaborador" dentro do seu arquivo pauta.js.
-Agora, sempre que você clicar em "Chamar próximo", "Atender" ou "Delegar", ele vai ignorar a janela antiga e abrir essa nova tela completa. Assim, você define o local (Vara, Guichê, etc.), escolhe o colaborador para delegar, e ele já envia tudo automaticamente para a TV.
-Substitua todo o conteúdo do seu arquivo js/pauta.js por este código abaixo:
 // js/pauta.js - VERSÃO REFATORADA COM INTEGRAÇÃO DE TV E LOCAL (SALA/VARA)
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
