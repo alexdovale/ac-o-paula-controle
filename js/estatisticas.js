@@ -317,8 +317,11 @@ export const StatisticsService = {
         if (!content) return;
         content.innerHTML = `<div class="flex items-center justify-center h-64"><p class="text-gray-500 font-medium animate-pulse">Calculando estatísticas...</p></div>`;
 
+        // 🌟 SEPARAÇÃO INTELIGENTE DE CANCELADOS / EXTRA-PAUTA
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
+        const cancelados = allAssisted.filter(a => a.status === 'cancelado');
+        const extraPauta = atendidos.filter(a => a.isExtraPauta === true);
 
         // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
@@ -386,6 +389,9 @@ export const StatisticsService = {
 
         // ---------- assuntos ----------
         const statsBySubject = allAssisted.reduce((acc, a) => {
+            // Ignora os cancelados para não sujar o gráfico
+            if (a.status === 'cancelado') return acc;
+            
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
             demandas.forEach(d => {
                 if (!acc[d]) acc[d] = { total: 0, atendidos: 0, faltosos: 0 };
@@ -395,6 +401,7 @@ export const StatisticsService = {
             });
             return acc;
         }, {});
+        
         const somaSubj = (k) => Object.values(statsBySubject).reduce((s, d) => s + d[k], 0);
         const totalDemandasGeral = somaSubj('total');
         const totalDemandasAtendidos = somaSubj('atendidos');
@@ -410,9 +417,12 @@ export const StatisticsService = {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
         }, {});
+        
         const statsByTime = contarPorHorario(atendidos);
         const statsByTimeFaltosos = contarPorHorario(faltosos);
-        const statsByScheduledTime = contarPorHorario(allAssisted);
+        // Exclui os cancelados do gráfico global de horários agendados
+        const statsByScheduledTime = contarPorHorario(allAssisted.filter(a => a.status !== 'cancelado'));
+        
         const sortedTimes = Object.keys(statsByTime).sort();
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
@@ -440,12 +450,13 @@ export const StatisticsService = {
             </div>`;
 
         const kpisHTML = `
-            <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-5 gap-3">
+            <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-6 gap-3">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
                 ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
-                ${kpi('📈', comparecimento + '%', 'Comparecimento', 'bg-indigo-50')}
-                ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo médio', 'bg-blue-50')}
-                ${useDelegationFlow ? kpi('🤝', avgTimeDelegated + ' min', 'Média na delegação', 'bg-amber-50') : ''}
+                ${kpi('🏷️', extraPauta.length, 'Extra-Pauta', 'bg-indigo-50')}
+                ${kpi('❌', cancelados.length, 'Cancelados / Erros', 'bg-gray-100')}
+                ${kpi('📈', comparecimento + '%', 'Comparecimento', 'bg-blue-50')}
+                ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo médio', 'bg-amber-50')}
             </div>`;
 
         const exportHTML = `
@@ -759,15 +770,18 @@ export const StatisticsService = {
         };
 
         comLoading('export-stats-pdf-btn', () => this.exportStatisticsToPDF(pautaName, {
-            agendadosCount: allAssisted.length,
+            agendadosCount: allAssisted.filter(a => a.status !== 'cancelado').length,
             atendidosCount: atendidos.length,
             faltososCount: faltosos.length,
+            extraPautaCount: extraPauta.length,
+            canceladosCount: cancelados.length,
             avgTimeDirect, avgTimeDelegated, useDelegationFlow,
             statsByGroup: Object.fromEntries(sortedGroups.map(g => [g.groupName, statsByGroup[g.groupName]])), statsBySubject, statsByAcaoRapida, totalAcoesRapidas,
             statsByScheduledTime: sortedScheduledTimes.map(time => ({ time, count: statsByScheduledTime[time] })),
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
         }));
+        
         comLoading('export-stats-graficos-btn', () => this.exportGraficosPDF(pautaName, {
             atendidosCount: atendidos.length,
             faltososCount: faltosos.length,
@@ -781,6 +795,7 @@ export const StatisticsService = {
             assuntos: assuntosOrdenados.slice(0, 8).map(([nome, dd]) => ({ nome, total: dd.total })),
             ranking: rankingTodos.filter(r => r.atendimentos > 0).slice(0, 10)
         }));
+        
         comLoading('export-equipes-pdf-btn', () => this.exportEquipesPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-grupo-pdf-btn', () => this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-stats-detalhado-btn', () => this.exportDetailedStatisticsPDF(pautaName, { sortedGroups, totalGeral }));
@@ -1030,11 +1045,12 @@ export const StatisticsService = {
 
         if (exportGeneral) {
             addSectionTitle("Resumo Geral");
-            const colWidth = (pageWidth - margin * 2) / 3;
+            const colWidth = (pageWidth - margin * 2) / 4;
             const cards = [
                 { v: String(s.atendidosCount || 0), l: "Atendidos", bg: [240, 253, 244], fg: [22, 163, 74] },
                 { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] },
-                { v: (s.avgTimeDirect || 0) + ' min', l: "Tempo Médio", bg: [239, 246, 255], fg: [37, 99, 235] }
+                { v: String(s.extraPautaCount || 0), l: "Extra-Pauta", bg: [238, 242, 255], fg: [79, 70, 229] },
+                { v: String(s.canceladosCount || 0), l: "Cancelados", bg: [243, 244, 246], fg: [107, 114, 128] }
             ];
             cards.forEach((c, i) => {
                 const x = margin + colWidth * i;
