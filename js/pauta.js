@@ -1258,13 +1258,14 @@ export const PautaService = {
         const currentUserRole = app.currentUser?.role;
         const isApoio = currentUserRole === 'apoio';
 
+        // Adicionado 'cancel-pauta-btn' na lista de proibições para o Apoio
         const acoesProibidasApoio = [
             'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
             'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
             'return-from-atendido-btn', 'delete-btn', 'select-collaborator-btn',
             'attend-directly-from-aguardando-btn', 'delegate-finalization-btn', 'edit-assisted-btn', 
             'edit-attendant-btn', 'manage-demands-btn', 'toggle-confirmed-atendido', 
-            'toggle-confirmed-faltoso', 'update-doc-status-btn'
+            'toggle-confirmed-faltoso', 'update-doc-status-btn', 'cancel-pauta-btn'
         ];
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
@@ -1285,6 +1286,7 @@ export const PautaService = {
             return this.handleQuickActionItem(app, button, id, assisted);
         }
 
+        // MAPA DE AÇÕES ATUALIZADO COM AS NOVAS FUNÇÕES
         const actionMap = {
             'update-doc-status-btn': () => this.actionUpdateDocStatus(button, id, assisted),
             'check-in-btn': () => this.actionCheckIn(id),
@@ -1306,13 +1308,25 @@ export const PautaService = {
             'edit-attendant-btn': () => this.actionEditAttendant(app, id, assisted),
             'manage-demands-btn': () => this.actionManageDemands(id, assisted),
             'view-details-btn': () => { if (window.openDetailsModal) window.openDetailsModal({ assistedId: id, pautaId: app.currentPauta?.id, allAssisted: app.allAssisted, db: app.db }); },
-            'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted)
+            'return-from-atendido-btn': () => this.actionReturnFromAtendido(app, id, assisted),
+            
+            // --- NOVAS AÇÕES AQUI ---
+            'cancel-pauta-btn': () => {
+                if (confirm("Tem certeza que deseja retirar este assistido da pauta?\n\nEle sairá da fila e NÃO constará como faltoso. Use isso para desistências ou erros.")) {
+                    this.updateStatus(app.db, app.currentPauta.id, id, { status: 'cancelado' }, app.currentUserName);
+                }
+            },
+            'toggle-extrapauta-btn': () => {
+                const novoEstado = !assisted.isExtraPauta;
+                this.updateStatus(app.db, app.currentPauta.id, id, { isExtraPauta: novoEstado }, app.currentUserName);
+                showNotification(novoEstado ? "Selo Extra-Pauta adicionado!" : "Selo Extra-Pauta removido.", "info");
+            }
         };
 
         const activeActionKey = Object.keys(actionMap).find(key => button.classList.contains(key));
         
         if (activeActionKey) {
-            if (['update-doc-status-btn', 'toggle-confirmed-atendido', 'toggle-confirmed-faltoso'].includes(activeActionKey)) {
+            if (['update-doc-status-btn', 'toggle-confirmed-atendido', 'toggle-confirmed-faltoso', 'toggle-extrapauta-btn', 'cancel-pauta-btn'].includes(activeActionKey)) {
                 e.stopPropagation();
             }
             actionMap[activeActionKey]();
