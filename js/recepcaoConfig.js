@@ -1,21 +1,24 @@
-// js/recepcaoConfig.js - CONFIGURAÇÃO HIERÁRQUICA DE RECEPÇÕES (SIGEP)
+// js/recepcaoConfig.js - CONFIGURAÇÃO HIERÁRQUICA DE RECEPÇÕES (SIGEP) · UI REFINADA
 
 import {
-    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot, query, where
+    collection, doc, getDoc, getDocs, setDoc, updateDoc, deleteDoc, onSnapshot
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
+import { injetarEstilos, ico } from './rcDesign.js';
 
 const PAINEL_BASE_URL = 'acompanhamento-recepcao.html';
 
+// bg/text/light/border mantidos por compatibilidade (getContextoRecepcao).
+// hex/tint/line alimentam a nova interface.
 const CORES = {
-    rose:    { bg: 'bg-rose-700',    text: 'text-rose-700',    light: 'bg-rose-50',    border: 'border-rose-200'    },
-    blue:    { bg: 'bg-blue-700',    text: 'text-blue-700',    light: 'bg-blue-50',    border: 'border-blue-200'    },
-    green:   { bg: 'bg-green-700',   text: 'text-green-700',   light: 'bg-green-50',   border: 'border-green-200'   },
-    purple:  { bg: 'bg-purple-700',  text: 'text-purple-700',  light: 'bg-purple-50',  border: 'border-purple-200'  },
-    amber:   { bg: 'bg-amber-600',   text: 'text-amber-600',   light: 'bg-amber-50',   border: 'border-amber-200'   },
-    cyan:    { bg: 'bg-cyan-700',    text: 'text-cyan-700',    light: 'bg-cyan-50',    border: 'border-cyan-200'    },
-    slate:   { bg: 'bg-slate-700',   text: 'text-slate-700',   light: 'bg-slate-50',   border: 'border-slate-200'   },
-    indigo:  { bg: 'bg-indigo-700',  text: 'text-indigo-700',  light: 'bg-indigo-50',  border: 'border-indigo-200'  },
+    rose:    { bg: 'bg-rose-700',    text: 'text-rose-700',    light: 'bg-rose-50',    border: 'border-rose-200',    hex: '#be123c', tint: '#fff1f2', line: '#fecdd3' },
+    blue:    { bg: 'bg-blue-700',    text: 'text-blue-700',    light: 'bg-blue-50',    border: 'border-blue-200',    hex: '#1d4ed8', tint: '#eff6ff', line: '#bfdbfe' },
+    green:   { bg: 'bg-green-700',   text: 'text-green-700',   light: 'bg-green-50',   border: 'border-green-200',   hex: '#15803d', tint: '#f0fdf4', line: '#bbf7d0' },
+    purple:  { bg: 'bg-purple-700',  text: 'text-purple-700',  light: 'bg-purple-50',  border: 'border-purple-200',  hex: '#7e22ce', tint: '#faf5ff', line: '#e9d5ff' },
+    amber:   { bg: 'bg-amber-600',   text: 'text-amber-600',   light: 'bg-amber-50',   border: 'border-amber-200',   hex: '#d97706', tint: '#fffbeb', line: '#fde68a' },
+    cyan:    { bg: 'bg-cyan-700',    text: 'text-cyan-700',    light: 'bg-cyan-50',    border: 'border-cyan-200',    hex: '#0e7490', tint: '#ecfeff', line: '#a5f3fc' },
+    slate:   { bg: 'bg-slate-700',   text: 'text-slate-700',   light: 'bg-slate-50',   border: 'border-slate-200',   hex: '#334155', tint: '#f8fafc', line: '#e2e8f0' },
+    indigo:  { bg: 'bg-indigo-700',  text: 'text-indigo-700',  light: 'bg-indigo-50',  border: 'border-indigo-200',  hex: '#4338ca', tint: '#eef2ff', line: '#c7d2fe' },
 };
 
 const ICONES_SUGERIDOS = {
@@ -29,12 +32,18 @@ const ICONES_SUGERIDOS = {
 };
 
 const MODOS_LABEL = {
-    fila:  { icone: '📋', label: 'Fila (Lista)'   },
-    tv:    { icone: '📺', label: 'TV Chamados'     },
-    video: { icone: '🎬', label: 'TV + Vídeo'      },
+    fila:  { icone: 'list',      label: 'Fila (lista)'  },
+    tv:    { icone: 'tv',        label: 'TV chamados'   },
+    video: { icone: 'video',     label: 'TV + vídeo'    },
 };
 
+const corDe = (rec) => CORES[rec?.cor] || CORES.slate;
+
 export const RecepcaoConfigService = {
+
+    // ═══════════════════════════════════════════════════════════════════════════
+    // DADOS (lógica inalterada)
+    // ═══════════════════════════════════════════════════════════════════════════
 
     async criarRecepcao(db, dados, criadorUid) {
         try {
@@ -45,8 +54,8 @@ export const RecepcaoConfigService = {
                 icone:              dados.icone || ICONES_SUGERIDOS.default,
                 cor:                dados.cor || 'slate',
                 unidadesVinculadas: dados.unidadesVinculadas || [],
-                unidadeId:          dados.unidadesVinculadas?.[0]?.id || '',     
-                unidadeNome:        dados.unidadesVinculadas?.[0]?.nome || '',   
+                unidadeId:          dados.unidadesVinculadas?.[0]?.id || '',
+                unidadeNome:        dados.unidadesVinculadas?.[0]?.nome || '',
                 andar:              dados.andar || '',
                 tipo:               dados.tipo || 'especializada',
                 grupos:             dados.grupos || [],
@@ -95,7 +104,7 @@ export const RecepcaoConfigService = {
             return false;
         }
     },
-    
+
     async buscarTodasRecepcoesAdmin(db) {
         try {
             const snap = await getDocs(collection(db, "recepcoes"));
@@ -113,7 +122,7 @@ export const RecepcaoConfigService = {
             const snap = await getDocs(collection(db, "recepcoes"));
             return snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
-                .filter(r => r.ativo !== false && 
+                .filter(r => r.ativo !== false &&
                     (r.unidadeId === unidadeId || (r.unidadesVinculadas && r.unidadesVinculadas.some(u => u.id === unidadeId)))
                 );
         } catch (err) {
@@ -128,9 +137,9 @@ export const RecepcaoConfigService = {
             const todas = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(r => r.ativo !== false);
-            
+
             if (role === 'superadmin' || role === 'admin') return todas;
-            
+
             return todas.filter(r => r.membros && r.membros.includes(userId));
         } catch (err) {
             console.error("Erro ao buscar recepções do usuário:", err);
@@ -143,10 +152,10 @@ export const RecepcaoConfigService = {
             const todas = snap.docs
                 .map(d => ({ id: d.id, ...d.data() }))
                 .filter(r => r.ativo !== false);
-            
+
             this._cache = {
-                recepcoes: (role === 'superadmin' || role === 'admin') 
-                    ? todas 
+                recepcoes: (role === 'superadmin' || role === 'admin')
+                    ? todas
                     : todas.filter(r => r.membros && r.membros.includes(userId)),
                 carregadoEm: Date.now()
             };
@@ -186,10 +195,10 @@ export const RecepcaoConfigService = {
     gerarLinkPainel(recepcao, pautaIds = []) {
         const base   = window.location.origin + '/' + PAINEL_BASE_URL;
         const params = new URLSearchParams();
-        if (pautaIds.length > 0)                                   params.set('pautas', pautaIds.join(','));
+        if (pautaIds.length > 0)                                               params.set('pautas', pautaIds.join(','));
         if (recepcao.modoVisualizacao && recepcao.modoVisualizacao !== 'fila') params.set('modo', recepcao.modoVisualizacao);
-        if (recepcao.videoUrl)                                     params.set('video', recepcao.videoUrl);
-        if (recepcao.nome)                                         params.set('nome', encodeURIComponent(recepcao.nome));
+        if (recepcao.videoUrl)                                                 params.set('video', recepcao.videoUrl);
+        if (recepcao.nome)                                                     params.set('nome', encodeURIComponent(recepcao.nome));
         return `${base}?${params.toString()}`;
     },
 
@@ -207,13 +216,13 @@ export const RecepcaoConfigService = {
 
     filtrarPautasPorRecepcao(pautas, recepcao) {
         if (!recepcao) return [];
-        
+
         const unidadesPermitidas = recepcao.unidadesVinculadas && recepcao.unidadesVinculadas.length > 0
             ? recepcao.unidadesVinculadas.map(u => u.id)
             : [recepcao.unidadeId];
-        
+
         let pautasDaUnidade = pautas.filter(p => unidadesPermitidas.includes(p.unidadeId));
-        
+
         if (recepcao.tipo === 'central' || recepcao.verTudo === true) {
             return pautasDaUnidade;
         }
@@ -232,17 +241,17 @@ export const RecepcaoConfigService = {
         if (!recepcao) {
             return { icone: '🏛️', titulo: 'Recepção', subtitulo: '', cor: 'bg-slate-800' };
         }
-        const corConfig = CORES[recepcao.cor] || CORES.slate;
-        
+        const corConfig = corDe(recepcao);
+
         let subNome = recepcao.unidadeNome;
         if (recepcao.unidadesVinculadas && recepcao.unidadesVinculadas.length > 1) {
-            subNome = `${recepcao.unidadesVinculadas.length} Unidades Vinculadas`;
+            subNome = `${recepcao.unidadesVinculadas.length} unidades vinculadas`;
         }
 
         return {
             icone:     recepcao.icone || ICONES_SUGERIDOS.default,
-            titulo:    recepcao.nome,
-            subtitulo: [subNome, recepcao.andar].filter(Boolean).join(' · '),
+            titulo:    escapeHTML(recepcao.nome || ''),
+            subtitulo: escapeHTML([subNome, recepcao.andar].filter(Boolean).join(' · ')),
             cor:       corConfig.bg,
             corLight:  corConfig.light,
             corBorder: corConfig.border,
@@ -250,107 +259,101 @@ export const RecepcaoConfigService = {
         };
     },
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // SELETOR DE RECEPÇÕES
+    // ═══════════════════════════════════════════════════════════════════════════
+
     renderSelectorRecepcoes(recepcoes) {
+        injetarEstilos();
+
         if (!recepcoes || recepcoes.length === 0) {
-            return `<p class="text-center text-slate-400 py-8">Nenhuma recepção disponível ou vinculada à sua conta.</p>`;
+            return `<p class="text-center py-10 text-sm" style="color:var(--rc-faint)">Nenhuma recepção disponível ou vinculada à sua conta.</p>`;
         }
 
         const porUnidade = {};
         for (const rec of recepcoes) {
-            const key = rec.unidadesVinculadas?.length > 1 ? 'multi' : (rec.unidadeId || 'sem_unidade');
-            const nomeGrupo = rec.unidadesVinculadas?.length > 1 ? 'Recepções Multi-Unidades' : (rec.unidadeNome || 'Sem Unidade');
-            
+            const multi = rec.unidadesVinculadas?.length > 1;
+            const key = multi ? 'multi' : (rec.unidadeId || 'sem_unidade');
+            const nomeGrupo = multi ? 'Recepções multi-unidades' : (rec.unidadeNome || 'Sem unidade');
+
             if (!porUnidade[key]) porUnidade[key] = { nome: nomeGrupo, recepcoes: [] };
             porUnidade[key].recepcoes.push(rec);
         }
 
         const tiposUnicos = [...new Set(recepcoes.map(r => r.tipo || 'especializada'))];
 
-        const cardsHtml = Object.entries(porUnidade).map(([unidadeId, unidade]) => {
-            const cards = unidade.recepcoes.map(rec => this._cardSelectorBusca(rec)).join('');
-            const total = unidade.recepcoes.length;
-            return `
-                <div class="rc-grupo-unidade mb-2" data-unidade="${unidadeId}">
-                    <button type="button"
-                        class="rc-toggle-unidade w-full flex items-center justify-between px-4 py-2.5 bg-white border border-slate-200 rounded-xl hover:bg-slate-50 transition-colors group"
-                        data-unidade="${unidadeId}" aria-expanded="true">
-                        <span class="flex items-center gap-2.5 min-w-0">
-                            <span class="text-xs font-black text-amber-600 uppercase tracking-widest truncate">${unidade.nome}</span>
-                            <span class="rc-badge-count text-[9px] font-bold bg-amber-100 text-amber-700 px-1.5 py-0.5 rounded-full">${total}</span>
-                        </span>
-                        <span class="rc-chevron text-slate-400 group-hover:text-slate-600 transition-transform duration-200 text-xs">▼</span>
-                    </button>
-                    <div class="rc-unidade-body mt-1 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 px-1" data-unidade="${unidadeId}">
-                        ${cards}
-                    </div>
+        const gruposHtml = Object.entries(porUnidade).map(([unidadeId, unidade]) => `
+            <div class="rc-grupo-unidade" data-unidade="${escapeHTML(unidadeId)}">
+                <button type="button" class="rc-group-toggle rc-toggle-unidade" data-unidade="${escapeHTML(unidadeId)}" aria-expanded="true">
+                    <span class="flex items-center gap-2.5 min-w-0">
+                        <span style="color:var(--rc-faint)">${ico('building', 16)}</span>
+                        <span class="rc-eyebrow truncate" style="color:inherit">${escapeHTML(unidade.nome)}</span>
+                        <span class="rc-count rc-badge-count">${unidade.recepcoes.length}</span>
+                    </span>
+                    <span class="rc-chevron">${ico('chevron', 16)}</span>
+                </button>
+                <div class="rc-unidade-body grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 pt-4 pb-6" data-unidade="${escapeHTML(unidadeId)}">
+                    ${unidade.recepcoes.map(rec => this._cardSelectorBusca(rec)).join('')}
                 </div>
-            `;
-        }).join('');
+            </div>
+        `).join('');
 
         return `
-            <div class="max-w-5xl mx-auto" id="rc-selector-root">
+            <div class="rc-wrap max-w-5xl mx-auto" id="rc-selector-root">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3 mb-6">
-                    <div class="flex-1">
-                        <h2 class="text-xl font-black text-slate-800 uppercase tracking-tight">Selecionar Recepção</h2>
-                        <p class="text-slate-400 text-xs mt-0.5">Mostrando apenas os painéis aos quais você tem acesso.</p>
+                    <div class="rc-surface flex items-center gap-3 flex-1" style="padding:2px 6px 2px 14px">
+                        <span style="color:var(--rc-faint)">${ico('search', 17)}</span>
+                        <input type="text" id="rc-busca-input" autocomplete="off"
+                            class="w-full bg-transparent border-none outline-none text-sm py-2.5"
+                            placeholder="Buscar por nome, grupo ou andar">
+                        <button type="button" id="rc-busca-limpar" class="rc-btn rc-btn--ghost rc-btn--sm rc-btn--icon hidden" style="width:28px;height:28px" aria-label="Limpar busca">${ico('x', 14)}</button>
                     </div>
-                    <div class="flex gap-1.5 flex-shrink-0">
-                        <button type="button" class="rc-filtro-tipo active text-[10px] font-black px-3 py-1.5 rounded-full border border-slate-300 bg-slate-800 text-white transition" data-tipo="todos">Todas</button>
+                    <div class="rc-seg shrink-0">
+                        <button type="button" class="rc-sel-filtro is-active" data-tipo="todos">Todas</button>
                         ${tiposUnicos.map(tipo => `
-                            <button type="button" class="rc-filtro-tipo text-[10px] font-black px-3 py-1.5 rounded-full border border-slate-200 bg-white text-slate-600 hover:bg-slate-100 transition" data-tipo="${tipo}">
-                                ${tipo === 'central' ? '🏛️ Central' : '⚡ Especializada'}
-                            </button>
+                            <button type="button" class="rc-sel-filtro" data-tipo="${escapeHTML(tipo)}">${tipo === 'central' ? 'Central' : 'Especializada'}</button>
                         `).join('')}
                     </div>
                 </div>
 
-                <div class="relative mb-4">
-                    <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
-                    <input type="text" id="rc-busca-input"
-                        class="w-full pl-9 pr-4 py-2.5 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-amber-400 placeholder:text-slate-300"
-                        placeholder="Buscar por nome, grupo ou andar...">
-                    <span id="rc-busca-limpar" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 cursor-pointer hover:text-slate-600 text-lg hidden" title="Limpar">×</span>
+                <div id="rc-sem-resultados" class="hidden rc-empty">
+                    <p class="font-bold" style="color:var(--rc-text)">Nenhuma recepção encontrada</p>
+                    <p class="text-sm mt-1" style="color:var(--rc-muted)">Ajuste a busca ou o filtro de tipo.</p>
                 </div>
 
-                <div id="rc-sem-resultados" class="hidden text-center py-12">
-                    <p class="text-4xl mb-2">🔎</p>
-                    <p class="text-slate-400 text-sm font-semibold">Nenhuma recepção encontrada</p>
-                </div>
-
-                <div id="rc-grupos-wrapper" class="space-y-2">
-                    ${cardsHtml}
-                </div>
+                <div id="rc-grupos-wrapper">${gruposHtml}</div>
             </div>
         `;
     },
 
     _cardSelectorBusca(rec) {
-        const corConfig = CORES[rec.cor] || CORES.slate;
-        const subInfo = (rec.unidadesVinculadas && rec.unidadesVinculadas.length > 1) ? `${rec.unidadesVinculadas.length} Unidades` : (rec.andar || '');
-        
+        const cor = corDe(rec);
+        const subInfo = (rec.unidadesVinculadas && rec.unidadesVinculadas.length > 1)
+            ? `${rec.unidadesVinculadas.length} unidades`
+            : (rec.andar || '');
+        const grupos = rec.grupos || [];
+
         return `
             <button type="button"
-                class="rc-selector-recepcao rc-card-buscavel group w-full text-left bg-white border-2 ${corConfig.border}
-                       hover:${corConfig.bg} rounded-xl p-3 shadow-sm hover:shadow-md transition-all duration-150"
-                data-recepcao-id="${rec.id}"
-                data-unidade-id="${rec.unidadeId}"
-                data-search="${[rec.nome, ...(rec.grupos || []), rec.andar || '', rec.tipo].join(' ').toLowerCase()}"
-                data-tipo="${rec.tipo || 'especializada'}">
-                <div class="flex items-center gap-2.5">
-                    <span class="text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">${rec.icone || '📋'}</span>
-                    <div class="min-w-0 flex-1">
-                        <p class="font-black text-slate-800 group-hover:text-white text-sm truncate leading-tight">${rec.nome}</p>
-                        ${subInfo ? `<p class="text-[9px] font-bold text-slate-400 group-hover:text-white/70 uppercase tracking-wider">${subInfo}</p>` : ''}
-                        ${rec.grupos && rec.grupos.length > 0
-                            ? `<div class="flex flex-wrap gap-1 mt-1.5">${rec.grupos.slice(0, 3).map(g =>
-                                `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded-full ${corConfig.light} ${corConfig.text}
-                                       group-hover:bg-white/20 group-hover:text-white border ${corConfig.border}
-                                       group-hover:border-white/30 transition-colors uppercase">${g}</span>`
-                              ).join('')}${rec.grupos.length > 3 ? `<span class="text-[8px] text-slate-400 group-hover:text-white/60">+${rec.grupos.length - 3}</span>` : ''}</div>`
-                            : ''}
-                    </div>
-                    ${rec.tipo === 'central' ? `<span class="text-base flex-shrink-0 opacity-60 group-hover:opacity-100" title="Recepção Central">🏛️</span>` : ''}
-                </div>
+                class="rc-selector-recepcao rc-card-buscavel rc-sel-card"
+                style="--c:${cor.hex};--tint:${cor.tint};--line:${cor.line}"
+                data-recepcao-id="${escapeHTML(rec.id)}"
+                data-unidade-id="${escapeHTML(rec.unidadeId || '')}"
+                data-search="${escapeHTML([rec.nome, ...grupos, rec.andar || '', rec.tipo].join(' ').toLowerCase())}"
+                data-tipo="${escapeHTML(rec.tipo || 'especializada')}">
+                <span class="rc-tile">${rec.icone || ICONES_SUGERIDOS.default}</span>
+                <span class="min-w-0 flex-1">
+                    <span class="flex items-center gap-2">
+                        <span class="font-extrabold text-[15px] leading-tight truncate" style="color:var(--rc-text)">${escapeHTML(rec.nome)}</span>
+                        ${rec.tipo === 'central' ? `<span class="rc-badge rc-badge--info shrink-0" title="Recepção central">Central</span>` : ''}
+                    </span>
+                    ${subInfo ? `<span class="block rc-eyebrow mt-1">${escapeHTML(subInfo)}</span>` : ''}
+                    ${grupos.length > 0 ? `
+                        <span class="flex flex-wrap gap-1 mt-2">
+                            ${grupos.slice(0, 3).map(g => `<span class="rc-badge" style="background:${cor.tint};border-color:${cor.line};color:${cor.hex}">${escapeHTML(g)}</span>`).join('')}
+                            ${grupos.length > 3 ? `<span class="text-[11px] font-semibold" style="color:var(--rc-faint)">+${grupos.length - 3}</span>` : ''}
+                        </span>` : ''}
+                </span>
             </button>
         `;
     },
@@ -364,7 +367,7 @@ export const RecepcaoConfigService = {
 
         const atualizar = () => {
             const q         = input.value.trim().toLowerCase();
-            const tipoAtivo = document.querySelector('.rc-filtro-tipo.active')?.dataset?.tipo || 'todos';
+            const tipoAtivo = document.querySelector('.rc-sel-filtro.is-active')?.dataset?.tipo || 'todos';
 
             limpar.classList.toggle('hidden', q.length === 0);
 
@@ -390,14 +393,10 @@ export const RecepcaoConfigService = {
         input.addEventListener('input', atualizar);
         limpar.addEventListener('click', () => { input.value = ''; atualizar(); input.focus(); });
 
-        document.querySelectorAll('.rc-filtro-tipo').forEach(btn => {
+        document.querySelectorAll('.rc-sel-filtro').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.rc-filtro-tipo').forEach(b => {
-                    b.classList.remove('active', 'bg-slate-800', 'text-white');
-                    b.classList.add('bg-white', 'text-slate-600');
-                });
-                btn.classList.add('active', 'bg-slate-800', 'text-white');
-                btn.classList.remove('bg-white', 'text-slate-600');
+                document.querySelectorAll('.rc-sel-filtro').forEach(b => b.classList.remove('is-active'));
+                btn.classList.add('is-active');
                 atualizar();
             });
         });
@@ -405,71 +404,72 @@ export const RecepcaoConfigService = {
         document.querySelectorAll('.rc-toggle-unidade').forEach(btn => {
             btn.addEventListener('click', () => {
                 const id   = btn.dataset.unidade;
-                const body = document.querySelector(`.rc-unidade-body[data-unidade="${id}"]`);
+                const body = document.querySelector(`.rc-unidade-body[data-unidade="${CSS.escape(id)}"]`);
                 const chev = btn.querySelector('.rc-chevron');
                 if (!body) return;
                 const aberto = btn.getAttribute('aria-expanded') === 'true';
-                btn.setAttribute('aria-expanded', !aberto);
+                btn.setAttribute('aria-expanded', String(!aberto));
                 body.style.display   = aberto ? 'none' : '';
                 chev.style.transform = aberto ? 'rotate(-90deg)' : '';
             });
         });
     },
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // PAINEL ADMIN
+    // ═══════════════════════════════════════════════════════════════════════════
+
     renderPainelAdmin(recepcoes, unidades) {
+        injetarEstilos();
+
         const totalAtivas  = recepcoes.length;
         const totalCentral = recepcoes.filter(r => r.tipo === 'central').length;
 
         const linhas = recepcoes.map(rec => {
-            const corConfig = CORES[rec.cor] || CORES.slate;
-            const modoInfo  = MODOS_LABEL[rec.modoVisualizacao || 'fila'];
-            const somAtivo  = rec.somPadrao !== false;
-            const unidNomeExibicao = rec.unidadesVinculadas?.length > 1 ? `${rec.unidadesVinculadas.length} Unidades Vinculadas` : (rec.unidadeNome || '');
+            const cor      = corDe(rec);
+            const modoInfo = MODOS_LABEL[rec.modoVisualizacao || 'fila'] || MODOS_LABEL.fila;
+            const somAtivo = rec.somPadrao !== false;
+            const unidade  = rec.unidadesVinculadas?.length > 1
+                ? `${rec.unidadesVinculadas.length} unidades vinculadas`
+                : (rec.unidadeNome || '');
+            const grupos = rec.grupos || [];
 
             return `
-                <tr class="rc-admin-row border-b border-slate-100 hover:bg-slate-50 transition-colors"
-                    data-search="${[rec.nome, rec.unidadeNome || '', ...(rec.grupos || []), rec.andar || ''].join(' ').toLowerCase()}">
-                    <td class="py-3 pl-4 pr-2">
-                        <div class="flex items-center gap-2.5 min-w-0">
-                            <span class="text-xl flex-shrink-0">${rec.icone || '📋'}</span>
+                <tr class="rc-admin-row"
+                    data-search="${escapeHTML([rec.nome, rec.unidadeNome || '', ...grupos, rec.andar || ''].join(' ').toLowerCase())}">
+                    <td>
+                        <div class="flex items-center gap-3 min-w-0">
+                            <span class="rc-tile" style="--tint:${cor.tint};--line:${cor.line};width:38px;height:38px;font-size:19px">${rec.icone || ICONES_SUGERIDOS.default}</span>
                             <div class="min-w-0">
-                                <p class="font-bold text-slate-800 text-sm truncate max-w-[160px]">${rec.nome}</p>
-                                <p class="text-[9px] text-slate-400 uppercase tracking-wider truncate max-w-[160px]">${unidNomeExibicao} ${rec.andar ? '· ' + rec.andar : ''}</p>
+                                <p class="font-bold text-sm truncate" style="max-width:200px">${escapeHTML(rec.nome)}</p>
+                                <p class="text-xs truncate" style="max-width:200px;color:var(--rc-muted)">${escapeHTML([unidade, rec.andar].filter(Boolean).join(' · ')) || '—'}</p>
                             </div>
                         </div>
                     </td>
-                    <td class="py-3 px-2 hidden sm:table-cell">
+                    <td class="hidden sm:table-cell">
                         <div class="flex flex-wrap gap-1">
-                            ${(rec.grupos || []).slice(0, 3).map(g =>
-                                `<span class="text-[8px] font-bold px-1.5 py-0.5 rounded-full ${corConfig.light} ${corConfig.text} border ${corConfig.border} uppercase">${g}</span>`
-                            ).join('')}
-                            ${(rec.grupos || []).length > 3 ? `<span class="text-[9px] text-slate-400">+${rec.grupos.length - 3}</span>` : ''}
-                            ${(rec.grupos || []).length === 0 ? `<span class="text-[9px] text-slate-300 italic">—</span>` : ''}
+                            ${grupos.slice(0, 3).map(g => `<span class="rc-badge" style="background:${cor.tint};border-color:${cor.line};color:${cor.hex}">${escapeHTML(g)}</span>`).join('')}
+                            ${grupos.length > 3 ? `<span class="text-[11px]" style="color:var(--rc-faint)">+${grupos.length - 3}</span>` : ''}
+                            ${grupos.length === 0 ? `<span style="color:var(--rc-faint)">—</span>` : ''}
                         </div>
                     </td>
-                    <td class="py-3 px-2 hidden md:table-cell">
-                        <span class="text-[9px] font-black px-2 py-0.5 rounded-full uppercase ${rec.tipo === 'central' ? 'bg-amber-100 text-amber-700' : 'bg-slate-100 text-slate-500'}">
-                            ${rec.tipo === 'central' ? '🏛️ Central' : '⚡ Espec.'}
-                        </span>
+                    <td class="hidden md:table-cell">
+                        <span class="rc-badge ${rec.tipo === 'central' ? 'rc-badge--info' : ''}">${rec.tipo === 'central' ? 'Central' : 'Especializada'}</span>
                     </td>
-                    <td class="py-3 px-2 hidden lg:table-cell">
+                    <td class="hidden lg:table-cell">
                         <div class="flex items-center gap-1.5">
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full bg-slate-100 text-slate-500 whitespace-nowrap">
-                                ${modoInfo.icone} ${modoInfo.label}
-                            </span>
-                            <span class="text-[9px] font-bold px-1.5 py-0.5 rounded-full ${somAtivo ? 'bg-green-50 text-green-600' : 'bg-slate-100 text-slate-400'}">
-                                ${somAtivo ? '🔔' : '🔇'}
-                            </span>
+                            <span class="rc-badge">${ico(modoInfo.icone, 12)} ${modoInfo.label}</span>
+                            <span class="rc-badge ${somAtivo ? 'rc-badge--ok' : ''}" title="${somAtivo ? 'Som ativado' : 'Silencioso'}">${ico(somAtivo ? 'volume' : 'volumeOff', 12)}</span>
                         </div>
                     </td>
-                    <td class="py-3 pr-4 pl-2">
-                        <div class="flex gap-1.5 justify-end">
-                            <button class="btn-editar-recepcao p-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-600 transition text-xs"
-                                data-recepcao-id="${rec.id}" title="Editar">✏️</button>
-                            <button class="btn-link-recepcao p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 transition text-xs"
-                                data-recepcao-id="${rec.id}" title="Copiar link do painel">🔗</button>
-                            <button class="btn-excluir-recepcao p-1.5 rounded-lg bg-red-50 hover:bg-red-100 text-red-500 transition text-xs"
-                                data-recepcao-id="${rec.id}" data-nome="${rec.nome}" title="Excluir Definitivamente">🗑️</button>
+                    <td>
+                        <div class="flex gap-1 justify-end">
+                            <button class="btn-editar-recepcao rc-btn rc-btn--ghost rc-btn--icon" style="width:32px;height:32px"
+                                data-recepcao-id="${escapeHTML(rec.id)}" title="Editar" aria-label="Editar">${ico('edit', 16)}</button>
+                            <button class="btn-link-recepcao rc-btn rc-btn--ghost rc-btn--icon" style="width:32px;height:32px"
+                                data-recepcao-id="${escapeHTML(rec.id)}" title="Copiar link do painel" aria-label="Copiar link do painel">${ico('link', 16)}</button>
+                            <button class="btn-excluir-recepcao rc-btn rc-btn--ghost rc-btn--icon" style="width:32px;height:32px;color:var(--rc-danger)"
+                                data-recepcao-id="${escapeHTML(rec.id)}" data-nome="${escapeHTML(rec.nome)}" title="Excluir definitivamente" aria-label="Excluir">${ico('trash', 16)}</button>
                         </div>
                     </td>
                 </tr>
@@ -477,54 +477,47 @@ export const RecepcaoConfigService = {
         }).join('');
 
         return `
-            <div class="space-y-4">
+            <div class="rc-wrap space-y-5">
                 <div class="flex flex-col sm:flex-row sm:items-center gap-3">
                     <div class="flex-1">
-                        <h3 class="font-black text-slate-800 text-lg">Gerenciar Recepções</h3>
-                        <p class="text-xs text-slate-400 mt-0.5">${totalAtivas} ativas · ${totalCentral} central · ${totalAtivas - totalCentral} especializadas</p>
+                        <h3 class="text-lg font-extrabold tracking-tight">Gerenciar recepções</h3>
+                        <p class="text-sm mt-0.5" style="color:var(--rc-muted)">${totalAtivas} ativas · ${totalCentral} central · ${totalAtivas - totalCentral} especializadas</p>
                     </div>
-                    <button id="btn-nova-recepcao"
-                        class="bg-green-600 hover:bg-green-700 text-white font-bold px-4 py-2 rounded-xl text-sm transition shadow-sm flex-shrink-0">
-                        + Nova Recepção
-                    </button>
+                    <button id="btn-nova-recepcao" class="rc-btn rc-btn--primary shrink-0">${ico('plus', 15)} Nova recepção</button>
                 </div>
 
                 ${recepcoes.length === 0
-                    ? `<div class="text-center py-12">
-                           <p class="text-4xl mb-2">🏛️</p>
-                           <p class="text-slate-400 text-sm font-semibold">Nenhuma recepção criada ainda.</p>
+                    ? `<div class="rc-empty">
+                           <p class="font-bold">Nenhuma recepção criada ainda</p>
+                           <p class="text-sm mt-1" style="color:var(--rc-muted)">Crie a primeira para começar a organizar os atendimentos.</p>
                        </div>`
                     : `
-                    <div class="relative">
-                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-sm pointer-events-none">🔍</span>
-                        <input type="text" id="rc-admin-busca"
-                            class="w-full pl-9 pr-4 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-green-400 placeholder:text-slate-300"
-                            placeholder="Filtrar por nome, unidade ou grupo...">
+                    <div class="rc-surface flex items-center gap-3" style="padding:2px 14px">
+                        <span style="color:var(--rc-faint)">${ico('search', 17)}</span>
+                        <input type="text" id="rc-admin-busca" autocomplete="off"
+                            class="w-full bg-transparent border-none outline-none text-sm py-2.5"
+                            placeholder="Filtrar por nome, unidade ou grupo">
                     </div>
 
-                    <div class="bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                        <table class="w-full text-left border-collapse">
-                            <thead>
-                                <tr class="border-b border-slate-100 bg-slate-50">
-                                    <th class="py-2.5 pl-4 pr-2 text-[9px] font-black text-slate-400 uppercase tracking-widest">Recepção</th>
-                                    <th class="py-2.5 px-2 text-[9px] font-black text-slate-400 uppercase tracking-widest hidden sm:table-cell">Grupos</th>
-                                    <th class="py-2.5 px-2 text-[9px] font-black text-slate-400 uppercase tracking-widest hidden md:table-cell">Tipo</th>
-                                    <th class="py-2.5 px-2 text-[9px] font-black text-slate-400 uppercase tracking-widest hidden lg:table-cell">Painel</th>
-                                    <th class="py-2.5 pr-4 pl-2 text-[9px] font-black text-slate-400 uppercase tracking-widest text-right">Ações</th>
-                                </tr>
-                            </thead>
-                            <tbody id="rc-admin-tbody">
-                                ${linhas}
-                            </tbody>
-                        </table>
-                        <div class="px-4 py-2 border-t border-slate-100 bg-slate-50 flex items-center justify-between">
-                            <span id="rc-admin-count" class="text-[9px] text-slate-400 font-semibold uppercase tracking-wider">
-                                ${recepcoes.length} recepções
-                            </span>
-                            <span class="text-[9px] text-slate-300">🏛️ Central · ⚡ Especializada</span>
+                    <div class="rc-surface overflow-hidden">
+                        <div style="overflow-x:auto">
+                            <table class="rc-table">
+                                <thead>
+                                    <tr>
+                                        <th>Recepção</th>
+                                        <th class="hidden sm:table-cell">Grupos</th>
+                                        <th class="hidden md:table-cell">Tipo</th>
+                                        <th class="hidden lg:table-cell">Painel</th>
+                                        <th style="text-align:right">Ações</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="rc-admin-tbody">${linhas}</tbody>
+                            </table>
                         </div>
-                    </div>
-                    `
+                        <div style="padding:10px 16px;border-top:1px solid var(--rc-line);background:#fafbfc">
+                            <span id="rc-admin-count" class="text-xs font-semibold" style="color:var(--rc-muted)">${recepcoes.length} recepç${recepcoes.length === 1 ? 'ão' : 'ões'}</span>
+                        </div>
+                    </div>`
                 }
             </div>
         `;
@@ -544,22 +537,35 @@ export const RecepcaoConfigService = {
                 row.style.display = match ? '' : 'none';
                 if (match) visiveis++;
             });
-            if (count) count.textContent = `${visiveis} recepç${visiveis === 1 ? 'ão' : 'ões'}${q ? ' encontradas' : ''}`;
+            if (count) count.textContent = `${visiveis} recepç${visiveis === 1 ? 'ão' : 'ões'}${q ? ' encontrada' + (visiveis === 1 ? '' : 's') : ''}`;
         });
     },
 
+    // ═══════════════════════════════════════════════════════════════════════════
+    // FORMULÁRIO
+    // ═══════════════════════════════════════════════════════════════════════════
+
+    _tagGrupoHtml(g) {
+        const s = escapeHTML(g);
+        return `<span class="rc-tag">${s}<button type="button" class="btn-remove-grupo" data-grupo="${s}" aria-label="Remover ${s}">×</button></span>`;
+    },
+
     renderFormRecepcao(recepcao = null, unidadesDeContexto = []) {
+        injetarEstilos();
+
         const isEdicao = !!recepcao;
-        const titulo   = isEdicao ? 'Editar Recepção' : 'Nova Recepção';
+        const titulo   = isEdicao ? 'Editar recepção' : 'Nova recepção';
+
+        const corAtual   = recepcao?.cor || 'slate';
+        const iconeAtual = recepcao?.icone || ICONES_SUGERIDOS.default;
 
         const coresHtml = Object.entries(CORES).map(([key, val]) => `
-            <button type="button" class="color-option w-8 h-8 rounded-full ${val.bg} ring-offset-2 transition-transform hover:scale-110 ${recepcao?.cor === key ? 'ring-2 ring-offset-2 scale-110 shadow-md' : ''}"
-                data-cor="${key}"></button>
+            <button type="button" class="color-option rc-swatch ${corAtual === key ? 'is-selected' : ''}"
+                style="background:${val.hex}" data-cor="${key}" title="${key}" aria-label="Cor ${key}"></button>
         `).join('');
 
-        const iconesHtml = Object.entries(ICONES_SUGERIDOS).map(([key, icone]) => `
-            <button type="button" class="icone-option text-2xl p-2 rounded-xl hover:bg-slate-100 transition ${recepcao?.icone === icone ? 'bg-slate-100 ring-2 ring-slate-300' : ''}"
-                data-icone="${icone}">${icone}</button>
+        const iconesHtml = Object.values(ICONES_SUGERIDOS).map(icone => `
+            <button type="button" class="icone-option rc-icon-opt ${iconeAtual === icone ? 'is-selected' : ''}" data-icone="${icone}">${icone}</button>
         `).join('');
 
         const modoAtual = recepcao?.modoVisualizacao || 'fila';
@@ -572,183 +578,129 @@ export const RecepcaoConfigService = {
         } else if (defaultVinculadas.length === 0 && unidadesDeContexto.length > 0) {
             defaultVinculadas = [{ id: unidadesDeContexto[0].id, nome: unidadesDeContexto[0].nome }];
         }
-        const jsonVinculadas = JSON.stringify(defaultVinculadas);
+        const jsonVinculadas = escapeHTML(JSON.stringify(defaultVinculadas));
+
+        const opcaoModo = (valor, icone, titulo, desc) => `
+            <label class="rc-option form-rec-modo-card ${modoAtual === valor ? 'is-selected' : ''}">
+                <input type="radio" name="form-rec-modo" value="${valor}" ${modoAtual === valor ? 'checked' : ''}>
+                <span style="color:var(--rc-brand)">${ico(icone, 18)}</span>
+                <span>${titulo}<br><span class="text-[11px] font-medium" style="color:var(--rc-muted)">${desc}</span></span>
+            </label>`;
+
+        const opcaoSom = (valor, ativo, icone, titulo, desc) => `
+            <label class="rc-option form-rec-som-card flex-1 ${ativo ? 'is-selected' : ''}">
+                <input type="radio" name="form-rec-som" value="${valor}" ${ativo ? 'checked' : ''}>
+                <span style="color:var(--rc-brand)">${ico(icone, 18)}</span>
+                <span>${titulo}<br><span class="text-[11px] font-medium" style="color:var(--rc-muted)">${desc}</span></span>
+            </label>`;
 
         return `
-            <div class="space-y-5">
-                <h3 class="font-black text-slate-800 text-lg border-b pb-3">${titulo}</h3>
+            <div class="rc-wrap space-y-5">
+                <h3 class="text-lg font-extrabold tracking-tight pb-3" style="border-bottom:1px solid var(--rc-line)">${titulo}</h3>
 
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Nome da Recepção *</label>
-                    <input type="text" id="form-rec-nome" value="${recepcao?.nome || ''}"
-                        class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                        placeholder="Ex: Família - 2º Andar">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Unidades Vinculadas (Multi-Seleção) *</label>
-                        
-                        <div class="relative mb-2">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 text-xs">🔍</span>
-                            <input type="text" id="form-rec-busca-unidade" class="w-full pl-8 pr-3 py-2 bg-white border border-slate-300 rounded-lg text-xs focus:outline-none focus:ring-2 focus:ring-indigo-500" placeholder="Buscar unidade por nome, sigla ou endereço...">
-                        </div>
-
-                        <div id="form-rec-unidades-lista" class="max-h-56 overflow-y-auto border border-slate-300 rounded-xl p-2 bg-slate-50 space-y-1">
-                            <div class="text-xs text-slate-400 text-center py-4 flex items-center justify-center gap-2">
-                                <div class="loader-small"></div> Carregando unidades...
-                            </div>
-                        </div>
-                        <p class="text-[9px] text-slate-400 mt-1">Marque todas as unidades de onde esta recepção deverá extrair as pautas.</p>
-                        <input type="hidden" id="form-rec-unidades-vinculadas-data" value='${jsonVinculadas}'>
-                    </div>
-                    
-                    <div class="md:col-span-2">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Andar / Localização Detalhada</label>
-                        <input type="text" id="form-rec-andar" value="${recepcao?.andar || ''}"
-                            class="w-full p-3 border border-slate-300 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Ex: 2º Andar - Corredor B">
-                    </div>
+                    <label class="rc-label" for="form-rec-nome">Nome da recepção <span style="color:var(--rc-danger)">*</span></label>
+                    <input type="text" id="form-rec-nome" value="${escapeHTML(recepcao?.nome || '')}" class="rc-input" placeholder="Ex.: Família — 2º andar">
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Tipo de Triagem</label>
-                    <div class="flex gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="form-rec-tipo" value="especializada"
-                                ${!recepcao || recepcao.tipo === 'especializada' ? 'checked' : ''} class="text-indigo-600">
-                            <span class="text-sm font-semibold text-slate-700">Especializada</span>
+                    <label class="rc-label" for="form-rec-busca-unidade">Unidades vinculadas <span style="color:var(--rc-danger)">*</span></label>
+                    <div class="relative mb-2">
+                        <span class="absolute" style="left:12px;top:50%;transform:translateY(-50%);color:var(--rc-faint)">${ico('search', 15)}</span>
+                        <input type="text" id="form-rec-busca-unidade" class="rc-input" style="padding-left:34px" placeholder="Buscar por nome, sigla ou endereço" autocomplete="off">
+                    </div>
+                    <div id="form-rec-unidades-lista" class="rc-unit-list">
+                        <p class="text-xs text-center py-5" style="color:var(--rc-faint)">Carregando unidades…</p>
+                    </div>
+                    <p class="text-xs mt-1.5" style="color:var(--rc-muted)">Marque todas as unidades de onde esta recepção deve extrair as pautas.</p>
+                    <input type="hidden" id="form-rec-unidades-vinculadas-data" value="${jsonVinculadas}">
+                </div>
+
+                <div>
+                    <label class="rc-label" for="form-rec-andar">Andar / localização</label>
+                    <input type="text" id="form-rec-andar" value="${escapeHTML(recepcao?.andar || '')}" class="rc-input" placeholder="Ex.: 2º andar — corredor B">
+                </div>
+
+                <div>
+                    <span class="rc-label">Tipo de triagem</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="rc-option form-rec-tipo-card ${!recepcao || recepcao.tipo === 'especializada' ? 'is-selected' : ''}">
+                            <input type="radio" name="form-rec-tipo" value="especializada" ${!recepcao || recepcao.tipo === 'especializada' ? 'checked' : ''}>
+                            Especializada
                         </label>
-                        <label class="flex items-center gap-2 cursor-pointer">
-                            <input type="radio" name="form-rec-tipo" value="central"
-                                ${recepcao?.tipo === 'central' ? 'checked' : ''} class="text-indigo-600">
-                            <span class="text-sm font-semibold text-slate-700">Central (vê todas as pautas)</span>
+                        <label class="rc-option form-rec-tipo-card ${recepcao?.tipo === 'central' ? 'is-selected' : ''}">
+                            <input type="radio" name="form-rec-tipo" value="central" ${recepcao?.tipo === 'central' ? 'checked' : ''}>
+                            <span>Central<br><span class="text-[11px] font-medium" style="color:var(--rc-muted)">Vê todas as pautas</span></span>
                         </label>
                     </div>
                 </div>
 
                 <div id="form-rec-grupos-wrap" ${recepcao?.tipo === 'central' ? 'class="hidden"' : ''}>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Grupos / Áreas (Tags das Pautas) *</label>
-                    <p class="text-xs text-slate-400 mb-2">Digite a tag e pressione "Enter". A recepção filtrará as pautas que contenham estas tags.</p>
-                    <div class="flex gap-2 mb-2">
-                        <input type="text" id="form-rec-grupo-input"
-                            class="flex-1 p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                            placeholder="Ex: familia, civel, triagem...">
-                        <button type="button" id="btn-add-grupo" class="bg-slate-800 text-white font-bold px-4 py-2 rounded-lg text-sm hover:bg-slate-900 transition">
-                            + Adicionar
-                        </button>
+                    <label class="rc-label" for="form-rec-grupo-input">Grupos / áreas (tags das pautas) <span style="color:var(--rc-danger)">*</span></label>
+                    <p class="text-xs mb-2" style="color:var(--rc-muted)">Digite a tag e pressione Enter. A recepção exibirá as pautas que contenham estas tags.</p>
+                    <div class="flex gap-2 mb-3">
+                        <input type="text" id="form-rec-grupo-input" class="rc-input" placeholder="Ex.: familia, civel, triagem">
+                        <button type="button" id="btn-add-grupo" class="rc-btn rc-btn--dark shrink-0">${ico('plus', 14)} Adicionar</button>
                     </div>
-                    <div id="form-rec-grupos-lista" class="flex flex-wrap gap-2 min-h-[32px]">
-                        ${(recepcao?.grupos || []).map(g => `
-                            <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                                ${g}
-                                <button type="button" class="btn-remove-grupo text-indigo-400 hover:text-red-500 transition font-black" data-grupo="${g}">×</button>
-                            </span>
-                        `).join('')}
+                    <div id="form-rec-grupos-lista" class="flex flex-wrap gap-2" style="min-height:32px">
+                        ${(recepcao?.grupos || []).map(g => this._tagGrupoHtml(g)).join('')}
                     </div>
                 </div>
 
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Ícone de Exibição</label>
-                    <div class="flex flex-wrap gap-1">${iconesHtml}</div>
-                    <input type="hidden" id="form-rec-icone" value="${recepcao?.icone || ICONES_SUGERIDOS.default}">
-                </div>
-
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Cor do Cartão</label>
-                    <div class="flex gap-3 flex-wrap">${coresHtml}</div>
-                    <input type="hidden" id="form-rec-cor" value="${recepcao?.cor || 'slate'}">
-                </div>
-
-                <div class="flex items-center gap-3 p-3 bg-amber-50 border border-amber-200 rounded-xl">
-                    <input type="checkbox" id="form-rec-vertudo" ${recepcao?.verTudo ? 'checked' : ''}
-                        class="w-4 h-4 text-amber-600 rounded cursor-pointer">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                     <div>
-                        <label for="form-rec-vertudo" class="text-sm font-bold text-amber-800 cursor-pointer">Ignorar Filtro de Grupos</label>
-                        <p class="text-[10px] text-amber-600">Se marcado, esta recepção mostrará todas as pautas das unidades vinculadas, sem restrição de tags.</p>
+                        <span class="rc-label">Ícone de exibição</span>
+                        <div class="flex flex-wrap gap-2">${iconesHtml}</div>
+                        <input type="hidden" id="form-rec-icone" value="${escapeHTML(iconeAtual)}">
+                    </div>
+                    <div>
+                        <span class="rc-label">Cor do cartão</span>
+                        <div class="flex gap-3 flex-wrap">${coresHtml}</div>
+                        <input type="hidden" id="form-rec-cor" value="${escapeHTML(corAtual)}">
                     </div>
                 </div>
 
-                <div class="mt-2 pt-4 border-t-2 border-slate-100">
-                    <div class="flex items-center gap-2 mb-4">
-                        <span class="text-lg">📺</span>
-                        <h4 class="text-sm font-black text-slate-800 uppercase tracking-widest">Painel Público da TV</h4>
+                <label class="rc-callout" for="form-rec-vertudo" style="cursor:pointer">
+                    <input type="checkbox" id="form-rec-vertudo" ${recepcao?.verTudo ? 'checked' : ''} class="w-4 h-4 mt-0.5 cursor-pointer">
+                    <span>
+                        <span class="block text-sm font-bold" style="color:#92400e">Ignorar filtro de grupos</span>
+                        <span class="block text-xs mt-0.5" style="color:var(--rc-warn)">Se marcado, mostra todas as pautas das unidades vinculadas, sem restrição de tags.</span>
+                    </span>
+                </label>
+
+                <div class="rc-form-section space-y-5">
+                    <div class="flex items-center gap-2" style="color:var(--rc-text)">
+                        <span style="color:var(--rc-brand)">${ico('tv', 18)}</span>
+                        <h4 class="text-sm font-extrabold">Painel público da TV</h4>
                     </div>
 
-                    <div class="mb-4">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Modo de Visualização Padrão</label>
-                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
-                            <label class="flex items-center gap-2.5 p-3 border-2 rounded-xl cursor-pointer transition-all hover:border-slate-400
-                                ${modoAtual === 'fila' ? 'border-slate-800 bg-slate-50' : 'border-slate-200 bg-white'}">
-                                <input type="radio" name="form-rec-modo" value="fila"
-                                    ${modoAtual === 'fila' ? 'checked' : ''} class="text-slate-800 w-4 h-4">
-                                <div>
-                                    <p class="text-xs font-black text-slate-800">📋 Fila (Lista)</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Mostra a fila e chamados</p>
-                                </div>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 border-2 rounded-xl cursor-pointer transition-all hover:border-green-400
-                                ${modoAtual === 'tv' ? 'border-green-600 bg-green-50' : 'border-slate-200 bg-white'}">
-                                <input type="radio" name="form-rec-modo" value="tv"
-                                    ${modoAtual === 'tv' ? 'checked' : ''} class="text-green-600 w-4 h-4">
-                                <div>
-                                    <p class="text-xs font-black text-slate-800">📺 TV Chamados</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Painel histórico completo</p>
-                                </div>
-                            </label>
-                            <label class="flex items-center gap-2.5 p-3 border-2 rounded-xl cursor-pointer transition-all hover:border-indigo-400
-                                ${modoAtual === 'video' ? 'border-indigo-600 bg-indigo-50' : 'border-slate-200 bg-white'}">
-                                <input type="radio" name="form-rec-modo" value="video"
-                                    ${modoAtual === 'video' ? 'checked' : ''} class="text-indigo-600 w-4 h-4">
-                                <div>
-                                    <p class="text-xs font-black text-slate-800">🎬 TV + Vídeo</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Vídeo na tela principal</p>
-                                </div>
-                            </label>
+                    <div>
+                        <span class="rc-label">Modo de visualização padrão</span>
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                            ${opcaoModo('fila',  'list',      'Fila (lista)', 'Fila e chamados')}
+                            ${opcaoModo('tv',    'tv',        'TV chamados',  'Histórico completo')}
+                            ${opcaoModo('video', 'video',     'TV + vídeo',   'Vídeo na tela principal')}
                         </div>
                     </div>
 
-                    <div class="mb-4" id="form-rec-video-wrap" style="${modoAtual !== 'video' ? 'display:none' : ''}">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5">Link do YouTube / Vídeo .mp4</label>
-                        <input type="text" id="form-rec-video" value="${videoUrl}"
-                            class="w-full p-2.5 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 bg-white"
-                            placeholder="Ex: https://www.youtube.com/watch?v=...">
+                    <div id="form-rec-video-wrap" style="${modoAtual !== 'video' ? 'display:none' : ''}">
+                        <label class="rc-label" for="form-rec-video">Link do YouTube / vídeo .mp4</label>
+                        <input type="text" id="form-rec-video" value="${escapeHTML(videoUrl)}" class="rc-input" placeholder="https://www.youtube.com/watch?v=…">
                     </div>
 
-                    <div class="mb-4">
-                        <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2">Avisos Sonoros</label>
+                    <div>
+                        <span class="rc-label">Avisos sonoros</span>
                         <div class="flex gap-3">
-                            <label class="flex items-center gap-2.5 flex-1 p-3 border-2 rounded-xl cursor-pointer transition-all
-                                ${somPadrao ? 'border-green-500 bg-green-50' : 'border-slate-200 bg-white'} hover:border-green-400">
-                                <input type="radio" name="form-rec-som" value="ativo"
-                                    ${somPadrao ? 'checked' : ''} class="text-green-600 w-4 h-4">
-                                <div>
-                                    <p class="text-xs font-black text-slate-800">🔔 Som Ativado</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Ding-dong ao chamar</p>
-                                </div>
-                            </label>
-                            <label class="flex items-center gap-2.5 flex-1 p-3 border-2 rounded-xl cursor-pointer transition-all
-                                ${!somPadrao ? 'border-slate-500 bg-slate-50' : 'border-slate-200 bg-white'} hover:border-slate-400">
-                                <input type="radio" name="form-rec-som" value="desligado"
-                                    ${!somPadrao ? 'checked' : ''} class="text-slate-600 w-4 h-4">
-                                <div>
-                                    <p class="text-xs font-black text-slate-800">🔇 Silencioso</p>
-                                    <p class="text-[10px] text-slate-400 mt-0.5">Totalmente sem som</p>
-                                </div>
-                            </label>
+                            ${opcaoSom('ativo',     somPadrao,  'volume',    'Som ativado', 'Aviso ao chamar')}
+                            ${opcaoSom('desligado', !somPadrao, 'volumeOff', 'Silencioso',  'Sem nenhum som')}
                         </div>
                     </div>
                 </div>
 
                 <div class="flex gap-3 pt-2">
-                    <button type="button" id="btn-cancelar-form-rec"
-                        class="flex-1 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold py-3 rounded-xl transition text-sm">
-                        Cancelar
-                    </button>
-                    <button type="button" id="btn-salvar-recepcao"
-                        class="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3 rounded-xl transition text-sm shadow"
-                        data-recepcao-id="${recepcao?.id || ''}">
-                        ${isEdicao ? 'Salvar Configurações' : 'Concluir e Criar'}
+                    <button type="button" id="btn-cancelar-form-rec" class="rc-btn flex-1">Cancelar</button>
+                    <button type="button" id="btn-salvar-recepcao" class="rc-btn rc-btn--primary flex-1" data-recepcao-id="${escapeHTML(recepcao?.id || '')}">
+                        ${isEdicao ? 'Salvar configurações' : 'Concluir e criar'}
                     </button>
                 </div>
             </div>
@@ -758,27 +710,27 @@ export const RecepcaoConfigService = {
     initFormRecepcaoEventos(onSalvar, onCancelar) {
         let gruposAtivos = [];
 
-        // 1. CARREGAR A LISTA DE UNIDADES COM BUSCA (Multi-Select)
+        // 1. LISTA DE UNIDADES (multi-seleção com busca)
         const unidadesContainer = document.getElementById('form-rec-unidades-lista');
         if (unidadesContainer && window.app?.db) {
             const db = window.app.db;
-            
+
             Promise.all([
-                getDocs(collection(db, "unidades")).catch(() => ({docs: []})),
-                getDocs(collection(db, "orgaos")).catch(() => ({docs: []})),
-                getDocs(collection(db, "estrutura_unidades")).catch(() => ({docs: []}))
+                getDocs(collection(db, "unidades")).catch(() => ({ docs: [] })),
+                getDocs(collection(db, "orgaos")).catch(() => ({ docs: [] })),
+                getDocs(collection(db, "estrutura_unidades")).catch(() => ({ docs: [] }))
             ]).then(([snapUnidades, snapOrgaos, snapEstrutura]) => {
                 const mapUnidades = new Map();
-                
+
                 const processarDocs = (docs) => {
                     docs.forEach(d => {
                         const data = d.data();
                         if (data.ativo === false || data.status === 'inativo') return;
-                        
-                        const nome = data.nome || data.name || data.titulo || data.descricao || d.id;
-                        const sigla = data.sigla || '';
+
+                        const nome     = data.nome || data.name || data.titulo || data.descricao || d.id;
+                        const sigla    = data.sigla || '';
                         const endereco = data.endereco || '';
-                        
+
                         mapUnidades.set(d.id, { id: d.id, nome, sigla, endereco });
                     });
                 };
@@ -788,65 +740,54 @@ export const RecepcaoConfigService = {
                 processarDocs(snapEstrutura.docs);
 
                 const todas = Array.from(mapUnidades.values());
-                todas.sort((a,b) => a.nome.localeCompare(b.nome));
+                todas.sort((a, b) => a.nome.localeCompare(b.nome));
 
                 const vinculadasRaw = document.getElementById('form-rec-unidades-vinculadas-data')?.value || '[]';
                 let vinculadasIds = [];
-                try { vinculadasIds = JSON.parse(vinculadasRaw).map(v => v.id); } catch(e) {}
+                try { vinculadasIds = JSON.parse(vinculadasRaw).map(v => v.id); } catch (e) { /* ignora */ }
 
                 if (todas.length === 0) {
                     unidadesContainer.innerHTML = `
-                        <div class="bg-amber-50 border border-amber-200 p-4 rounded-xl text-center">
-                            <p class="text-sm font-black text-amber-800 mb-1">⚠️ Nenhuma unidade encontrada</p>
-                            <p class="text-xs text-amber-700">Crie uma unidade/órgão primeiro para vinculá-la à recepção.</p>
+                        <div class="rc-callout" style="margin:6px">
+                            <span>
+                                <span class="block text-sm font-bold" style="color:#92400e">Nenhuma unidade encontrada</span>
+                                <span class="block text-xs mt-0.5" style="color:var(--rc-warn)">Crie uma unidade/órgão primeiro para vinculá-la à recepção.</span>
+                            </span>
                         </div>`;
                     return;
                 }
 
                 unidadesContainer.innerHTML = todas.map(u => {
-                    const textoBusca = escapeHTML(`${u.nome} ${u.sigla} ${u.endereco}`).toLowerCase();
+                    const textoBusca = `${u.nome} ${u.sigla} ${u.endereco}`.toLowerCase();
                     return `
-                    <label class="item-unidade-cb flex items-start gap-3 p-3 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-lg cursor-pointer transition-colors" data-busca="${textoBusca}">
-                        <div class="mt-0.5">
-                            <input type="checkbox" class="form-rec-unidade-cb w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" 
-                                value="${u.id}" data-nome="${escapeHTML(u.nome)}" ${vinculadasIds.includes(u.id) ? 'checked' : ''}>
-                        </div>
-                        <div class="min-w-0 flex-1">
-                            <p class="text-sm text-slate-700 font-bold leading-tight">
-                                ${escapeHTML(u.nome)} 
-                                ${u.sigla ? `<span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded ml-1 font-mono align-middle">${escapeHTML(u.sigla)}</span>` : ''}
-                            </p>
-                            ${u.endereco ? `<p class="text-[10px] text-slate-500 mt-1 truncate">📍 ${escapeHTML(u.endereco)}</p>` : ''}
-                        </div>
-                    </label>
-                `}).join('');
-                
-                // EVENTO DE BUSCA (Filtra a lista em tempo real)
-                const buscaInput = document.getElementById('form-rec-busca-unidade');
-                if (buscaInput) {
-                    buscaInput.addEventListener('input', (e) => {
-                        const termo = e.target.value.toLowerCase().trim();
-                        const labels = unidadesContainer.querySelectorAll('.item-unidade-cb');
-                        labels.forEach(label => {
-                            const textoItem = label.getAttribute('data-busca');
-                            if (textoItem.includes(termo)) {
-                                label.style.display = '';
-                            } else {
-                                label.style.display = 'none';
-                            }
-                        });
+                    <label class="item-unidade-cb rc-unit-item" data-busca="${escapeHTML(textoBusca)}">
+                        <input type="checkbox" class="form-rec-unidade-cb w-4 h-4 mt-0.5 shrink-0"
+                            value="${escapeHTML(u.id)}" data-nome="${escapeHTML(u.nome)}" ${vinculadasIds.includes(u.id) ? 'checked' : ''}>
+                        <span class="min-w-0 flex-1">
+                            <span class="flex items-center gap-2 text-sm font-semibold leading-tight">
+                                <span class="truncate">${escapeHTML(u.nome)}</span>
+                                ${u.sigla ? `<span class="rc-badge rc-badge--mono shrink-0">${escapeHTML(u.sigla)}</span>` : ''}
+                            </span>
+                            ${u.endereco ? `<span class="flex items-center gap-1 text-xs mt-1 truncate" style="color:var(--rc-muted)">${ico('pin', 12)} ${escapeHTML(u.endereco)}</span>` : ''}
+                        </span>
+                    </label>`;
+                }).join('');
+
+                document.getElementById('form-rec-busca-unidade')?.addEventListener('input', (e) => {
+                    const termo = e.target.value.toLowerCase().trim();
+                    unidadesContainer.querySelectorAll('.item-unidade-cb').forEach(label => {
+                        label.style.display = (label.getAttribute('data-busca') || '').includes(termo) ? '' : 'none';
                     });
-                }
+                });
             });
         }
 
-        // 2. RECUPERAR GRUPOS EXISTENTES
-        document.querySelectorAll('#form-rec-grupos-lista span').forEach(span => {
-            const g = span.querySelector('button')?.dataset?.grupo;
-            if (g) gruposAtivos.push(g);
+        // 2. GRUPOS EXISTENTES
+        document.querySelectorAll('#form-rec-grupos-lista .btn-remove-grupo').forEach(btn => {
+            if (btn.dataset.grupo) gruposAtivos.push(btn.dataset.grupo);
         });
 
-        // 3. INSERÇÃO DE GRUPOS
+        // 3. INSERÇÃO / REMOÇÃO DE GRUPOS
         document.getElementById('btn-add-grupo')?.addEventListener('click', () => {
             const input = document.getElementById('form-rec-grupo-input');
             const val   = input.value.trim().toLowerCase().replace(/\s+/g, '_');
@@ -863,8 +804,9 @@ export const RecepcaoConfigService = {
         });
 
         document.getElementById('form-rec-grupos-lista')?.addEventListener('click', (e) => {
-            if (e.target.classList.contains('btn-remove-grupo')) {
-                gruposAtivos = gruposAtivos.filter(x => x !== e.target.dataset.grupo);
+            const alvo = e.target.closest('.btn-remove-grupo');
+            if (alvo) {
+                gruposAtivos = gruposAtivos.filter(x => x !== alvo.dataset.grupo);
                 this._renderGruposLista(gruposAtivos);
             }
         });
@@ -872,8 +814,8 @@ export const RecepcaoConfigService = {
         // 4. ÍCONES E CORES
         document.querySelectorAll('.icone-option').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.icone-option').forEach(b => b.classList.remove('bg-slate-100', 'ring-2', 'ring-slate-300'));
-                btn.classList.add('bg-slate-100', 'ring-2', 'ring-slate-300');
+                document.querySelectorAll('.icone-option').forEach(b => b.classList.remove('is-selected'));
+                btn.classList.add('is-selected');
                 const inp = document.getElementById('form-rec-icone');
                 if (inp) inp.value = btn.dataset.icone;
             });
@@ -881,105 +823,82 @@ export const RecepcaoConfigService = {
 
         document.querySelectorAll('.color-option').forEach(btn => {
             btn.addEventListener('click', () => {
-                document.querySelectorAll('.color-option').forEach(b => b.classList.remove('ring-2', 'scale-110', 'shadow-md'));
-                btn.classList.add('ring-2', 'scale-110', 'shadow-md');
+                document.querySelectorAll('.color-option').forEach(b => b.classList.remove('is-selected'));
+                btn.classList.add('is-selected');
                 const inp = document.getElementById('form-rec-cor');
                 if (inp) inp.value = btn.dataset.cor;
             });
         });
 
-        // 5. EVENTOS DOS RADIOS
-        document.querySelectorAll('input[name="form-rec-tipo"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                const wrap = document.getElementById('form-rec-grupos-wrap');
-                if (wrap) wrap.classList.toggle('hidden', radio.value === 'central' && radio.checked);
-            });
-        });
-
-        document.querySelectorAll('input[name="form-rec-modo"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                const videoWrap = document.getElementById('form-rec-video-wrap');
-                if (videoWrap) videoWrap.style.display = radio.value === 'video' ? 'block' : 'none';
-
-                document.querySelectorAll('input[name="form-rec-modo"]').forEach(r => {
-                    const label = r.closest('label');
-                    if (!label) return;
-                    label.classList.remove(
-                        'border-slate-800', 'bg-slate-50',
-                        'border-green-600',  'bg-green-50',
-                        'border-indigo-600', 'bg-indigo-50'
-                    );
-                    if (r.checked) {
-                        if (r.value === 'fila')  label.classList.add('border-slate-800', 'bg-slate-50');
-                        if (r.value === 'tv')    label.classList.add('border-green-600',  'bg-green-50');
-                        if (r.value === 'video') label.classList.add('border-indigo-600', 'bg-indigo-50');
-                    }
+        // 5. RADIOS (destaque visual padronizado via .is-selected)
+        const ligarRadios = (name, cardSelector, aoMudar) => {
+            document.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    document.querySelectorAll(cardSelector).forEach(c => c.classList.remove('is-selected'));
+                    radio.closest(cardSelector)?.classList.add('is-selected');
+                    aoMudar?.(radio);
                 });
             });
+        };
+
+        ligarRadios('form-rec-tipo', '.form-rec-tipo-card', (radio) => {
+            document.getElementById('form-rec-grupos-wrap')?.classList.toggle('hidden', radio.value === 'central');
         });
 
-        document.querySelectorAll('input[name="form-rec-som"]').forEach(radio => {
-            radio.addEventListener('change', () => {
-                document.querySelectorAll('input[name="form-rec-som"]').forEach(r => {
-                    const label = r.closest('label');
-                    if (!label) return;
-                    label.classList.remove('border-green-500', 'bg-green-50', 'border-slate-500', 'bg-slate-50');
-                    if (r.checked) {
-                        if (r.value === 'ativo')     label.classList.add('border-green-500', 'bg-green-50');
-                        if (r.value === 'desligado') label.classList.add('border-slate-500', 'bg-slate-50');
-                    }
-                });
-            });
+        ligarRadios('form-rec-modo', '.form-rec-modo-card', (radio) => {
+            const videoWrap = document.getElementById('form-rec-video-wrap');
+            if (videoWrap) videoWrap.style.display = radio.value === 'video' ? 'block' : 'none';
         });
 
-        // 6. BOTÕES DE AÇÃO
+        ligarRadios('form-rec-som', '.form-rec-som-card');
+
+        // 6. AÇÕES
         document.getElementById('btn-cancelar-form-rec')?.addEventListener('click', onCancelar);
 
         document.getElementById('btn-salvar-recepcao')?.addEventListener('click', () => {
-            const nome      = document.getElementById('form-rec-nome')?.value.trim();
-            const andar     = document.getElementById('form-rec-andar')?.value.trim();
-            const tipo      = document.querySelector('input[name="form-rec-tipo"]:checked')?.value || 'especializada';
-            const icone     = document.getElementById('form-rec-icone')?.value || ICONES_SUGERIDOS.default;
-            const cor       = document.getElementById('form-rec-cor')?.value || 'slate';
-            const verTudo   = document.getElementById('form-rec-vertudo')?.checked || false;
+            const nome       = document.getElementById('form-rec-nome')?.value.trim();
+            const andar      = document.getElementById('form-rec-andar')?.value.trim();
+            const tipo       = document.querySelector('input[name="form-rec-tipo"]:checked')?.value || 'especializada';
+            const icone      = document.getElementById('form-rec-icone')?.value || ICONES_SUGERIDOS.default;
+            const cor        = document.getElementById('form-rec-cor')?.value || 'slate';
+            const verTudo    = document.getElementById('form-rec-vertudo')?.checked || false;
             const recepcaoId = document.getElementById('btn-salvar-recepcao')?.dataset.recepcaoId || '';
 
             const modoVisualizacao = document.querySelector('input[name="form-rec-modo"]:checked')?.value || 'fila';
             const videoUrl         = document.getElementById('form-rec-video')?.value.trim() || '';
             const somPadrao        = document.querySelector('input[name="form-rec-som"]:checked')?.value !== 'desligado';
 
-            // COLETA AS UNIDADES MARCADAS
             const cbUnidades = document.querySelectorAll('.form-rec-unidade-cb:checked');
             const unidadesVinculadas = Array.from(cbUnidades).map(cb => ({ id: cb.value, nome: cb.dataset.nome }));
 
             if (!nome) {
-                showNotification("Preencha o Nome da Recepção.", "error");
+                showNotification("Preencha o nome da recepção.", "error");
                 return;
             }
             if (unidadesVinculadas.length === 0) {
-                showNotification("Marque pelo menos uma Unidade para esta recepção atuar.", "error");
+                showNotification("Marque pelo menos uma unidade para esta recepção atuar.", "error");
                 return;
             }
             if (tipo === 'especializada' && gruposAtivos.length === 0 && !verTudo) {
-                showNotification("Adicione ao menos uma TAG (Grupo) para esta recepção filtrar.", "error");
+                showNotification("Adicione ao menos uma tag (grupo) para esta recepção filtrar.", "error");
                 return;
             }
             if (modoVisualizacao === 'video' && !videoUrl) {
-                showNotification("Informe o link do vídeo para o modo TV + Vídeo.", "error");
+                showNotification("Informe o link do vídeo para o modo TV + vídeo.", "error");
                 return;
             }
 
             onSalvar({
                 id: recepcaoId || undefined,
-                nome, 
-                andar, 
+                nome,
+                andar,
                 tipo,
-                grupos: gruposAtivos, 
-                icone, 
-                cor, 
+                grupos: gruposAtivos,
+                icone,
+                cor,
                 verTudo,
-                modoVisualizacao, 
-                videoUrl, 
+                modoVisualizacao,
+                videoUrl,
                 somPadrao,
                 unidadesVinculadas
             }, recepcaoId);
@@ -989,12 +908,7 @@ export const RecepcaoConfigService = {
     _renderGruposLista(grupos) {
         const lista = document.getElementById('form-rec-grupos-lista');
         if (!lista) return;
-        lista.innerHTML = grupos.map(g => `
-            <span class="bg-indigo-50 text-indigo-700 border border-indigo-200 text-xs font-bold px-3 py-1 rounded-full flex items-center gap-1">
-                ${g}
-                <button type="button" class="btn-remove-grupo text-indigo-400 hover:text-red-500 transition font-black" data-grupo="${g}">×</button>
-            </span>
-        `).join('');
+        lista.innerHTML = grupos.map(g => this._tagGrupoHtml(g)).join('');
     }
 };
 
