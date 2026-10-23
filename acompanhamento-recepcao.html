@@ -106,13 +106,19 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 footer{text-align:center;font-size:var(--fs-xs);font-weight:500;letter-spacing:.1em;text-transform:uppercase;color:var(--faint);padding:0 0 4px}
 
 /* ---------- MODO TV ---------- */
-#modo-tv{position:fixed;inset:0;display:grid;grid-template-columns:2fr 1fr;background:var(--navy);overflow:hidden}
-#destaque{position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;color:#fff;padding:4vw;background:linear-gradient(160deg,#16a34a,#14532d)}
+#modo-tv{position:fixed;inset:0;height:100dvh;display:grid;grid-template-columns:2fr 1fr;background:var(--navy);overflow:hidden}
+
+/* ATUALIZAÇÃO 1: grid-template-rows ajustado para min-content e padding reduzido para não esmagar os textos */
+#destaque{position:relative;display:grid;grid-template-rows:min-content 1fr min-content min-content;align-items:center;justify-items:center;row-gap:3vh;text-align:center;color:#fff;padding:4vh 4vw;min-width:0;min-height:0;background:linear-gradient(160deg,#16a34a,#14532d)}
+
 #destaque::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 30% 10%,rgba(255,255,255,.14),transparent 55%);pointer-events:none}
 #destaque>*{position:relative}
-.tv-label{font-size:clamp(18px,2.4vw,40px);font-weight:600;letter-spacing:.32em;text-transform:uppercase;opacity:.85}
-#uc-nome-tv{font-size:clamp(2.5rem,6.4vw,7rem);font-weight:900;line-height:1.05;letter-spacing:-.025em;text-transform:uppercase;margin:3vh 0 5vh;min-height:2.2em;display:flex;align-items:center;justify-content:center;width:100%;text-wrap:balance;text-shadow:0 4px 24px rgba(0,0,0,.25)}
-#uc-local-tv{font-size:clamp(2rem,5vw,5.5rem);font-weight:900;line-height:1;letter-spacing:-.02em;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);border-radius:24px;padding:.25em .7em;margin-top:1.5vh}
+.tv-label{font-size:clamp(14px,2vw,34px);font-weight:600;letter-spacing:.32em;text-transform:uppercase;opacity:.85}
+
+/* ATUALIZAÇÃO 1.1: line-height ajustado e padding adicionado para o nome não cortar nas bordas */
+#uc-nome-tv{font-size:6rem;font-weight:900;line-height:1.15;letter-spacing:-.02em;text-transform:uppercase;display:flex;align-items:center;justify-content:center;width:100%;height:100%;overflow:hidden;text-wrap:balance;overflow-wrap:anywhere;text-shadow:0 4px 24px rgba(0,0,0,.25);padding:10px 0}
+
+#uc-local-tv{max-width:100%;font-size:5rem;font-weight:900;line-height:1;letter-spacing:-.02em;background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.3);border-radius:24px;padding:.25em .7em;margin-top:1.5vh}
 #destaque.flash{animation:flash .7s ease 3}
 @keyframes flash{50%{filter:brightness(1.25)}}
 #lateral{display:flex;flex-direction:column;background:#fff;min-width:0}
@@ -127,6 +133,10 @@ footer{text-align:center;font-size:var(--fs-xs);font-weight:500;letter-spacing:.
 .tv-foot img{height:clamp(26px,3.4vw,48px);width:auto;opacity:.9}
 #data-hora-tv{font-size:clamp(18px,2.2vw,34px);font-weight:800;font-variant-numeric:tabular-nums;letter-spacing:.06em}
 #recepcao-nome-tv{font-size:var(--fs-xs);font-weight:600;letter-spacing:.16em;text-transform:uppercase;color:#94a3b8}
+
+/* ATUALIZAÇÃO 2: Bloqueio absoluto da exibição de qualquer QR Code */
+#qrcode, .qr-container, [id*="qr-code"] { display: none !important; }
+
 @media (max-width:900px){.call{grid-template-columns:1fr}.call-info{border-left:0;border-top:1px solid rgba(255,255,255,.1)}.call-field{flex:1}.cols{grid-template-columns:1fr}.tools,.metric{border-left:0}}
 @media (max-width:760px){#modo-tv{grid-template-columns:1fr;grid-template-rows:3fr 2fr}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important}}
@@ -168,7 +178,7 @@ footer{text-align:center;font-size:var(--fs-xs);font-weight:500;letter-spacing:.
         </div>
         <div class="call-info">
           <div class="call-field"><small>Pauta</small><b id="uc-pauta-fila">—</b></div>
-          <div class="call-field"><small>Sala / local</small><b id="uc-local-fila">—</b></div>
+          <div class="call-field"><small>Local</small><b id="uc-local-fila">—</b></div>
           <div class="call-field"><small>Horário</small><b id="uc-hora-fila" style="font-variant-numeric:tabular-nums">—</b></div>
         </div>
       </div>
@@ -318,7 +328,7 @@ function renderUltimoFila(c) {
   $('ultimo-chamado-wrap').classList.remove('hidden');
   $('uc-nome-fila').textContent = (c.nome || '').toUpperCase();
   $('uc-pauta-fila').textContent = c.pautaNome || c.local || '—';
-  $('uc-local-fila').textContent = c.sala || c.local || '—';
+  $('uc-local-fila').textContent = c.localTexto || c.sala || c.local || '—';
   $('uc-hora-fila').textContent = c.hora || horaAgora();
   const card = $('ultimo-chamado-card');
   card.classList.remove('anim-in'); void card.offsetWidth; card.classList.add('anim-in');
@@ -382,11 +392,27 @@ function renderHistorico() {
     ? estado.historico.slice(0, 5).map(h => `<div class="item-hist"><span>${esc(h.nome)}</span><span>${esc(h.sala || h.local || '—')}</span></div>`).join('')
     : vazio('Nenhum chamado recente');
 }
+
+function ajustar(el, max, min) {
+  let size = max; el.style.fontSize = size + 'px';
+  while ((el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) && size > min) { size -= 4; el.style.fontSize = size + 'px'; }
+}
+
+/* ATUALIZAÇÃO 1.2: Ajuste no cálculo para dar mais respiro para o nome */
+function ajustarTV() {
+  const vh = window.innerHeight, vw = window.innerWidth;
+  ajustar($('uc-nome-tv'), Math.min(vh * .16, vw * .075), 24);
+  const l = $('uc-local-tv'); l.style.fontSize = Math.min(vh * .13, vw * .06) + 'px';
+  let sz = parseFloat(l.style.fontSize); while (l.scrollWidth > l.parentElement.clientWidth * .95 && sz > 20) { sz -= 4; l.style.fontSize = sz + 'px'; }
+}
+window.addEventListener('resize', ajustarTV);
+
 function renderUltimoTV(c) {
   if (!c) return;
   $('uc-nome-tv').textContent = (c.nome || '').toUpperCase();
   $('uc-local-tv').textContent = c.sala || c.local || '—';
-  $('label-local-tv').textContent = c.sala ? 'Sala' : 'Local';
+  $('label-local-tv').textContent = c.rotuloLocal || (c.sala ? 'Sala' : 'Local');
+  ajustarTV();
   const d = $('destaque');
   d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
 }
@@ -394,6 +420,7 @@ function renderUltimoTV(c) {
 // ── Inicialização ──────────────────────────────────────
 function init() {
   aplicarModo();
+  ajustarTV();
 
   if (!pautasParam) {
     $('loading').innerHTML = `<div style="background:#fff;border:1px solid var(--line);border-radius:18px;padding:36px 32px;max-width:420px;text-align:center">
