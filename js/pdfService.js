@@ -17,14 +17,12 @@ const ensureJsPDF = async () => {
     if (typeof window.jspdf === 'undefined') {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js");
     }
-    // Confere o plugin de tabelas separadamente (antes só o jsPDF era checado)
     const probe = new window.jspdf.jsPDF();
     if (typeof probe.autoTable !== 'function') {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.5.31/jspdf.plugin.autotable.min.js");
     }
 };
 
-// QR code vetorial (desenhado com quadrados, sem imagem) - biblioteca carregada sob demanda
 const ensureQRCode = async () => {
     if (typeof window.qrcode === 'undefined') {
         await loadScript("https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js");
@@ -45,7 +43,6 @@ const drawQR = (doc, texto, x, y, tamanho) => {
     }
 };
 
-// Pausa assíncrona para liberar o navegador e renderizar a UI
 const yieldThread = () => new Promise(resolve => setTimeout(resolve, 50));
 
 const cleanString = (str) => String(str || '').replace(/"/g, '');
@@ -98,7 +95,6 @@ const sortByScheduledTime = (a, b) => {
     return timeA.localeCompare(timeB);
 };
 
-// Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras A-Z, sem equipe por último
 const compararGrupos = (a, b) => {
     a = String(a ?? '').trim();
     b = String(b ?? '').trim();
@@ -170,7 +166,6 @@ const logoSize = (img) => {
     return { w, h };
 };
 
-// Cabeçalho: logo + título + linhas de contexto + data de emissão + filete verde
 const drawHeader = (doc, logo, { title, lines = [], margin = 40 }) => {
     const W = doc.internal.pageSize.getWidth();
     const top = 28;
@@ -204,7 +199,6 @@ const drawHeader = (doc, logo, { title, lines = [], margin = 40 }) => {
     return lineY + 14;
 };
 
-// Faixa de indicadores (cartões com barra de destaque)
 const drawKpis = (doc, y, items, margin = 40) => {
     const W = doc.internal.pageSize.getWidth();
     const gap = 8, h = 44;
@@ -228,7 +222,6 @@ const drawKpis = (doc, y, items, margin = 40) => {
     return y + h + 16;
 };
 
-// Marca d'água diagonal discreta (nome da pauta)
 const drawWatermark = (doc, texto) => {
     if (!texto || !PDFService.options.marcaDagua) return;
     try {
@@ -245,10 +238,9 @@ const drawWatermark = (doc, texto) => {
         doc.setTextColor(...C.verde);
         doc.text(t, W / 2, H / 2, { align: 'center', angle: 35 });
         doc.restoreGraphicsState();
-    } catch (e) { /* opcional */ }
+    } catch (e) { }
 };
 
-// Rodapé em TODAS as páginas, com "Página X de Y" (+ marca d'água opcional)
 const applyFooters = (doc, marca = '') => {
     const total = doc.internal.getNumberOfPages();
     const W = doc.internal.pageSize.getWidth();
@@ -267,7 +259,6 @@ const applyFooters = (doc, marca = '') => {
     }
 };
 
-// Configuração padrão das tabelas
 const tableBase = (extra = {}) => ({
     theme: 'grid',
     headStyles: { fillColor: C.verde, textColor: [255, 255, 255], fontStyle: 'bold', halign: 'center', fontSize: 8.5, lineColor: C.verde },
@@ -278,7 +269,7 @@ const tableBase = (extra = {}) => ({
 });
 
 // ========================================================
-// ATA AÇÃO SOCIAL (documento oficial - layout original)
+// ATA AÇÃO SOCIAL
 // ========================================================
 const ataTabelaPessoas = (doc, startY, titulo, labelId, lista, larguras) => {
     doc.autoTable({
@@ -337,7 +328,6 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     doc.text(splitIntro, 20, 62);
     let currentY = 62 + (splitIntro.length * 4.5);
 
-    // Ordem estritamente alfabética (ignora equipe na ata)
     const defensores = colaboradores
         .filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
@@ -366,7 +356,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
             ]
         ],
         theme: 'grid',
-        styles: { fontSize: 8, halign: 'center', cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle' },
+        styles: { fontSize: 8, halign: 'center', cellPadding: 3, lineColor: [0, 0, 0], lineWidth: 0.2, valign: 'middle', halign: 'center' },
         columnStyles: { 0: { cellWidth: 110 }, 1: { cellWidth: 60 } },
         margin: { left: 20, right: 20 }
     });
@@ -385,18 +375,14 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
             doc.line(20, lineY, 190, lineY);
         }
     }
-    // Sem rodapé: respeita a Ata oficial
 };
 
 // ========================================================
 // PDF SERVICE
 // ========================================================
 export const PDFService = {
-
-    // Liga/desliga recursos: PDFService.options.marcaDagua = false; PDFService.options.qrCode = false;
     options: { marcaDagua: true, qrCode: true },
 
-    // Documento formal: layout original preservado
     async generatePlanilhaGastosPDF(assistedName, expenseData) {
         if (window.showNotification) window.showNotification("Gerando demonstrativo, aguarde...", "info");
         try {
@@ -537,9 +523,6 @@ export const PDFService = {
         }
     },
 
-    // ----------------------------------------------------
-    // ATENDIDOS
-    // ----------------------------------------------------
     async generateAtendidosPDF(arg1, arg2) {
         return new Promise((resolve) => {
             const modalId = 'pdf-column-selector-modal';
@@ -613,7 +596,6 @@ export const PDFService = {
 
             atendidosList = [...atendidosList].sort(sortByScheduledTime);
 
-            // Dados por linha + métricas do resumo
             let somaMin = 0, nMin = 0;
             const totalDemandas = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
 
@@ -677,7 +659,6 @@ export const PDFService = {
 
             await yieldThread();
 
-            // Colunas curtas com largura fixa; nome/assunto/atendente se ajustam ao espaço
             const fixas = { numAgendamento: 55, scheduledTime: 55, arrivalTime: 50, attendedTime: 60, duration: 55, numeroProcesso: 110 };
             const columnStyles = { 0: { cellWidth: 24, halign: 'center', textColor: C.cinza } };
             activeCols.forEach((c, i) => {
@@ -700,9 +681,6 @@ export const PDFService = {
         }
     },
 
-    // ----------------------------------------------------
-    // FALTOSOS
-    // ----------------------------------------------------
     async generateFaltososPDF(arg1, arg2) {
         if (window.showNotification) window.showNotification("Gerando lista de faltosos, aguarde...", "info");
         try {
@@ -759,9 +737,6 @@ export const PDFService = {
         }
     },
 
-    // ----------------------------------------------------
-    // EQUIPE
-    // ----------------------------------------------------
     async generateCollaboratorsPDF(arg1, arg2, arg3) {
         if (window.showNotification) window.showNotification("Gerando lista de equipe, aguarde...", "info");
         try {
@@ -787,7 +762,6 @@ export const PDFService = {
                 return false;
             }
 
-            // Muitas colunas pedem folha deitada
             const doc = new jsPDF({ orientation: colunas.length > 5 ? 'l' : 'p', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
@@ -816,7 +790,6 @@ export const PDFService = {
                 return w !== 0 ? w : (a.nome || '').localeCompare(b.nome || '', 'pt-BR');
             });
 
-            // Contagem por equipe para o título de cada bloco
             const porEquipe = {};
             ordenados.forEach(c => { const k = c.equipe || ''; porEquipe[k] = (porEquipe[k] || 0) + 1; });
 
@@ -871,7 +844,7 @@ export const PDFService = {
             }));
 
             applyFooters(doc, pautaNome);
-            doc.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
@@ -880,9 +853,6 @@ export const PDFService = {
         }
     },
 
-    // ----------------------------------------------------
-    // CHECKLIST
-    // ----------------------------------------------------
     async generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) {
         if (window.showNotification) window.showNotification("Gerando checklist, aguarde...", "info");
         try {
@@ -901,7 +871,6 @@ export const PDFService = {
                 lines: [`Assistido: ${String(assistedName).toUpperCase()}`, `Ação: ${actionTitle}`]
             });
 
-            // Nova página mantendo a logo (usa imagem já carregada, sem await)
             const ensure = (h) => {
                 if (y + h > H - 48) {
                     doc.addPage();
@@ -924,7 +893,6 @@ export const PDFService = {
                 y += 30;
             };
 
-            // Item com caixa marcada e etiqueta opcional à direita
             const checkItem = (texto, tag) => {
                 doc.setFont("helvetica", "normal");
                 doc.setFontSize(9.5);
@@ -936,7 +904,6 @@ export const PDFService = {
                 const altura = Math.max(linhas.length * 12.5, 14);
                 ensure(altura + 6);
 
-                // caixa
                 doc.setDrawColor(...C.verde);
                 doc.setLineWidth(0.9);
                 doc.rect(m + 8, y - 8, 10, 10);
@@ -971,7 +938,6 @@ export const PDFService = {
                 y += linhas.length * 12.5 + 4;
             };
 
-            // Tabela chave/valor padronizada (gastos e réu)
             const tabelaKV = (rows, opts = {}) => {
                 doc.autoTable(tableBase({
                     startY: y,
@@ -986,7 +952,6 @@ export const PDFService = {
                 y = doc.lastAutoTable.finalY + 18;
             };
 
-            // ---- Documentação entregue ----
             section('DOCUMENTAÇÃO ENTREGUE');
             const docsVisiveis = (documentosTextos || []).filter(item =>
                 !(item.id.startsWith('reu-') || item.id.startsWith('gastos-') || item.id.startsWith('gasto-')));
@@ -1001,7 +966,6 @@ export const PDFService = {
             });
             y += 12;
 
-            // ---- Demandas adicionais ----
             if (checklistData.demandasAdicionais?.length > 0) {
                 section('DEMANDAS ADICIONAIS');
                 checklistData.demandasAdicionais.forEach(d => bullet(d));
@@ -1010,7 +974,6 @@ export const PDFService = {
 
             await yieldThread();
 
-            // ---- Planilha de gastos ----
             if (checklistData.expenseData?.checkExibirGastos) {
                 const g = checklistData.expenseData;
                 section('PLANILHA DE GASTOS');
@@ -1021,7 +984,6 @@ export const PDFService = {
                 };
 
                 const formatMoeda = (num) => num.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-
                 const moradores = Math.max(1, parseInt(g.quantidadeMoradores || 1));
                 
                 const comuns = [
@@ -1086,7 +1048,6 @@ export const PDFService = {
                 tabelaKV(rows, { w0: 260, align1: 'right' });
             }
 
-            // ---- Parte contrária (réu) ----
             if (checklistData.reuData?.checkReuUnico) {
                 const r = checklistData.reuData;
                 const ligar = (...partes) => partes.filter(Boolean).join(' | ');
@@ -1133,7 +1094,6 @@ export const PDFService = {
                 }
             }
 
-            // ---- Código de conferência (QR) ----
             if (PDFService.options.qrCode) {
                 try {
                     await ensureQRCode();
@@ -1172,7 +1132,6 @@ export const PDFService = {
     }
 };
 
-// EXPORTS AVULSOS
 export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
 export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
 export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
