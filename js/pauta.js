@@ -1,6 +1,4 @@
-Para resolver esses dois problemas de uma vez só, vamos ajustar o arquivo js/pauta.js.
-O motivo de o botão "Mover de Volta para Fila" na coluna de Atendidos e as Ações Rápidas (Reagendar, Agendar, Consulta, Outros) estarem a falhar é que os seletores de classe precisavam de estar perfeitamente mapeados no manipulador de cliques.
-Substitua todo o conteúdo do seu arquivo js/pauta.js por esta versão limpa e corrigida abaixo:
+
 // js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO E RETORNO DE ATENDIDOS
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
