@@ -1,3 +1,6 @@
+Para deixar a tela de estatísticas limpa e focada exatamente no que você precisa, removi o indicador de "Sem Vínculo" dos cartões principais (KPIs), mantendo apenas as métricas essenciais e limpas que fazem sentido para o seu dia a dia.
+Código Atualizado (js/estatisticas.js)
+Substitua todo o conteúdo do seu arquivo js/estatisticas.js por esta versão:
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores, barras, cartões por equipe)
@@ -308,15 +311,13 @@ export const StatisticsService = {
         const cancelados = allAssisted.filter(a => a.status === 'cancelado');
         const extraPauta = atendidos.filter(a => a.isExtraPauta === true);
 
-        // 🌟 CLASSIFICAÇÃO ULTRA-PRECISA (Agendados, Reagendados via menu rápido 3 pontinhos e Sem Vínculo)
-        const isAgendadoOuReagendado = (a) => {
-            const t = String(a.type || '').toLowerCase();
+        // Classificação: Agendados ou Reagendados exclusivos vindos dos Três Pontinhos
+        const isReagendadoOuAgendadoViaMenu = (a) => {
             const acao = String(a.tipoAcaoRapida || '').toLowerCase();
-            return t === 'agendamento' || t === 'reagendamento' || acao.includes('reagend') || acao.includes('agend') || acao.includes('reagendar');
+            return acao.includes('reagend') || acao.includes('agend');
         };
 
-        const atendidosComAgenda = atendidos.filter(a => isAgendadoOuReagendado(a));
-        const atendidosSemAgenda = atendidos.filter(a => !isAgendadoOuReagendado(a));
+        const atendidosComAgenda = atendidos.filter(a => isReagendadoOuAgendadoViaMenu(a));
 
         // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
@@ -385,7 +386,7 @@ export const StatisticsService = {
         const statsBySubject = allAssisted.reduce((acc, a) => {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
-            const ehAgenda = isAgendadoOuReagendado(a);
+            const ehReagendadoOuAgendado = isReagendadoOuAgendadoViaMenu(a);
             
             demandas.forEach(d => {
                 if (!acc[d]) {
@@ -394,7 +395,7 @@ export const StatisticsService = {
                 acc[d].total++;
                 if (a.status === 'atendido') {
                     acc[d].atendidos++;
-                    if (ehAgenda) acc[d].agendaAtendidos++;
+                    if (ehReagendadoOuAgendado) acc[d].agendaAtendidos++;
                     else acc[d].semVincAtendidos++;
                 } else if (a.status === 'faltoso') {
                     acc[d].faltosos++;
@@ -445,7 +446,7 @@ export const StatisticsService = {
 
         const comparecimento = pct(atendidos.length, atendidos.length + faltosos.length);
 
-        // =================== HTML ===================
+        // =================== HTML (Sem o cartão "Sem Vínculo" redundante) ===================
         const kpi = (icone, valor, rotulo, cor) => `
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex flex-col justify-between">
                 <div class="flex items-center justify-between mb-1">
@@ -458,10 +459,9 @@ export const StatisticsService = {
             </div>`;
 
         const kpisHTML = `
-            <div class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
+            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
                 ${kpi('📅', atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50')}
-                ${kpi('🚶', atendidosSemAgenda.length, 'Sem Vínculo', 'bg-teal-50')}
                 ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
                 ${kpi('🏷️', extraPauta.length, 'Extra-Pauta', 'bg-indigo-50')}
                 ${kpi('📈', comparecimento + '%', 'Presença', 'bg-blue-50')}
@@ -982,7 +982,7 @@ export const StatisticsService = {
             y += 10;
             y = desenharColunas(doc, margin, y, largura, 120, d.horarios, [
                 { nome: 'Atendidos', cor: [22, 163, 74], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) },
-                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.faltososPorHorario[h] || 0) }
+                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) }
             ]) + 14;
         }
 
@@ -1119,3 +1119,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
+
