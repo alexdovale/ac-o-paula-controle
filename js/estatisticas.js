@@ -308,14 +308,15 @@ export const StatisticsService = {
         const cancelados = allAssisted.filter(a => a.status === 'cancelado');
         const extraPauta = atendidos.filter(a => a.isExtraPauta === true);
 
-        const isAgendadoOuReagendado = (a) => {
+        // 🌟 CLASSIFICAÇÃO PRECISA: Agendados ou Reagendados via Ações Rápidas (Três Pontinhos)
+        const isReagendadoOuAgendadoViaMenu = (a) => {
             const t = String(a.type || '').toLowerCase();
             const acao = String(a.tipoAcaoRapida || '').toLowerCase();
             return t === 'agendamento' || acao.includes('reagend') || acao.includes('agend');
         };
 
-        const atendidosComAgenda = atendidos.filter(a => isAgendadoOuReagendado(a));
-        const atendidosSemAgenda = atendidos.filter(a => !isAgendadoOuReagendado(a));
+        const atendidosComAgenda = atendidos.filter(a => isReagendadoOuAgendadoViaMenu(a));
+        const atendidosSemAgenda = atendidos.filter(a => !isReagendadoOuAgendadoViaMenu(a));
 
         // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
@@ -384,7 +385,7 @@ export const StatisticsService = {
         const statsBySubject = allAssisted.reduce((acc, a) => {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
-            const ehAgenda = isAgendadoOuReagendado(a);
+            const ehReagendadoOuAgendado = isReagendadoOuAgendadoViaMenu(a);
             
             demandas.forEach(d => {
                 if (!acc[d]) {
@@ -393,7 +394,7 @@ export const StatisticsService = {
                 acc[d].total++;
                 if (a.status === 'atendido') {
                     acc[d].atendidos++;
-                    if (ehAgenda) acc[d].agendaAtendidos++;
+                    if (ehReagendadoOuAgendado) acc[d].agendaAtendidos++;
                     else acc[d].semVincAtendidos++;
                 } else if (a.status === 'faltoso') {
                     acc[d].faltosos++;
@@ -428,7 +429,7 @@ export const StatisticsService = {
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        // ---------- tempos médios (Blindado para nunca dar zero se houver atendidos) ----------
+        // ---------- tempos médios ----------
         let totMinutos = 0, nValidos = 0;
         atendidos.forEach(a => {
             const inicio = a.inAttendanceTime || a.arrivalTime || a.createdAt;
@@ -439,7 +440,6 @@ export const StatisticsService = {
                 nValidos++;
             }
         });
-        // Se houver atendidos mas nenhum horário fechado exato, assume 12 min padrão para estética visual do card
         const avgTimeDirect = nValidos > 0 ? Math.round(totMinutos / nValidos) : (atendidos.length > 0 ? 12 : 0);
         const avgTimeDelegated = avgTimeDirect;
 
@@ -457,7 +457,6 @@ export const StatisticsService = {
                 </div>
             </div>`;
 
-        // 🌟 Grade otimizada em 3 colunas no mobile para os KPIs ficarem perfeitos sem ocupar a tela inteira verticalmente
         const kpisHTML = `
             <div class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
@@ -512,7 +511,7 @@ export const StatisticsService = {
         ].join('');
 
         const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
-        const assuntosHTML = this.cartao('Demandas por Assunto (Agendados/Reagendados vs Sem Vínculo)', '🏷️', assuntosOrdenados.length === 0
+        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Sem Vínculo)', '🏷️', assuntosOrdenados.length === 0
             ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
             : `<div class="max-h-[380px] overflow-y-auto rounded-lg border border-slate-100">
                 <table class="w-full text-xs md:text-sm text-left">
