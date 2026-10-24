@@ -1088,6 +1088,40 @@ export const StatisticsService = {
             return doc.lastAutoTable.finalY;
         };
 
+        // ---------- cores por coluna ----------
+        const COR = {
+            slate:   { head: [51, 65, 85],   tint: [226, 232, 240], texto: [30, 41, 59] },
+            indigo:  { head: [79, 70, 229],  tint: [224, 231, 255], texto: [55, 48, 163] },
+            verde:   { head: [22, 163, 74],  tint: [220, 252, 231], texto: [21, 128, 61] },
+            esmeral: { head: [16, 185, 129], tint: [209, 250, 229], texto: [4, 120, 87] },
+            teal:    { head: [20, 184, 166], tint: [204, 251, 241], texto: [15, 118, 110] },
+            vermelho:{ head: [220, 38, 38],  tint: [254, 226, 226], texto: [185, 28, 28] },
+            azul:    { head: [37, 99, 235],  tint: [219, 234, 254], texto: [29, 78, 216] },
+            roxo:    { head: [147, 51, 234], tint: [243, 232, 255], texto: [107, 33, 168] }
+        };
+
+        // aplica a cor de cada coluna no cabeçalho, no corpo e na linha de total
+        const colorir = (cores) => (data) => {
+            const c = cores[data.column.index];
+            if (!c) return;
+            if (data.section === 'head') {
+                data.cell.styles.fillColor = c.head;
+                data.cell.styles.textColor = [255, 255, 255];
+            } else if (data.section === 'body' && data.column.index > 0) {
+                const vazio = data.cell.raw === 0 || data.cell.raw === '-' || data.cell.raw === '0%';
+                data.cell.styles.textColor = vazio ? [148, 163, 184] : c.texto;
+                data.cell.styles.fontStyle = 'bold';
+            } else if (data.section === 'foot') {
+                const primeira = data.column.index === 0;
+                data.cell.styles.fillColor = primeira ? [30, 41, 59] : c.tint;
+                data.cell.styles.textColor = primeira ? [255, 255, 255] : c.texto;
+                data.cell.styles.fontStyle = 'bold';
+                data.cell.styles.fontSize = 10;
+                data.cell.styles.lineColor = primeira ? [30, 41, 59] : c.head;
+                data.cell.styles.lineWidth = 0.8;
+            }
+        };
+
         // ---------- Resumo Geral (cartões) ----------
         if (exportGeneral) {
             secao("Resumo Geral");
@@ -1117,83 +1151,31 @@ export const StatisticsService = {
             yPos += 54 + 28;
         }
 
-        // ---------- Ações rápidas (esquerda) + Equipes (direita) ----------
-        const PALETA = {
-            'Reagendamento': { bg: [255, 251, 235], borda: [252, 211, 77], texto: [146, 64, 14] },
-            'Agendamento': { bg: [236, 253, 245], borda: [110, 231, 183], texto: [6, 95, 70] },
-            'Consulta Processual': { bg: [245, 243, 255], borda: [196, 181, 253], texto: [76, 29, 149] },
-            'Outros Assuntos': { bg: [249, 250, 251], borda: [209, 213, 219], texto: [55, 65, 81] }
-        };
-        const PALETA_PADRAO = { bg: [239, 246, 255], borda: [147, 197, 253], texto: [30, 64, 175] };
-
-        const acoes = (s.statsByAcaoRapida && s.totalAcoesRapidas > 0)
-            ? Object.entries(s.statsByAcaoRapida).sort(([, a], [, b]) => b - a) : [];
+        // ---------- Atendimentos por equipe ----------
         const equipes = (exportCollaborators && s.statsByGroup)
             ? Object.entries(s.statsByGroup)
                 .sort((a, b) => compararGrupos(a[0], b[0]))
                 .map(([nome, d]) => [nome, d.todosColaboradores.length, d.total, pctF(d.total, s.atendidosCount) + '%'])
             : [];
-        const temA = acoes.length > 0, temE = equipes.length > 0;
 
-        if (temA || temE) {
-            const colW = (temA && temE) ? metade : largura;
-            const xDir = (temA && temE) ? margin + metade + GAP : margin;
-            const hCards = temA ? 24 + Math.ceil(acoes.length / 2) * 46 + 22 : 0;
-            const hEq = temE ? 24 + (equipes.length + 2) * 18 : 0;
-            novaPaginaSe(Math.min(Math.max(hCards, hEq), 320));
-
-            const topo = yPos;
-            let fimA = topo, fimE = topo;
-
-            if (temA) {
-                secao("Ações Rápidas", margin);
-                const cardW = (colW - 8) / 2;
-                const cy = topo + 12;
-                acoes.forEach(([tipo, qtd], i) => {
-                    const c = PALETA[tipo] || PALETA_PADRAO;
-                    const cx = margin + (i % 2) * (cardW + 8);
-                    const cyy = cy + Math.floor(i / 2) * 46;
-                    doc.setFillColor(...c.bg);
-                    doc.setDrawColor(...c.borda);
-                    doc.setLineWidth(0.8);
-                    doc.roundedRect(cx, cyy, cardW, 38, 5, 5, 'FD');
-                    doc.setFont("helvetica", "bold");
-                    doc.setFontSize(8);
-                    doc.setTextColor(...c.texto);
-                    doc.text(doc.splitTextToSize(String(tipo), cardW - 14)[0], cx + 8, cyy + 14);
-                    doc.setFontSize(16);
-                    doc.text(String(qtd), cx + 8, cyy + 31);
-                });
-                fimA = cy + Math.ceil(acoes.length / 2) * 46;
-                doc.setFont("helvetica", "normal");
-                doc.setFontSize(8.5);
-                doc.setTextColor(100, 116, 139);
-                doc.text("Total de ações", margin, fimA + 6);
-                doc.setFont("helvetica", "bold");
-                doc.setTextColor(...TXT);
-                doc.text(String(s.totalAcoesRapidas), margin + colW, fimA + 6, { align: 'right' });
-                fimA += 14;
-            }
-
-            if (temE) {
-                yPos = topo;
-                secao("Atendimentos por Equipe", xDir);
-                yPos = topo + 10;
-                const somaMemb = equipes.reduce((a, r) => a + r[1], 0);
-                const somaAtend = equipes.reduce((a, r) => a + r[2], 0);
-                fimE = tabela({
-                    head: [['Equipe', 'Memb.', 'Atend.', '%']],
-                    body: equipes,
-                    foot: [['Total', somaMemb, somaAtend, pctF(somaAtend, s.atendidosCount) + '%']],
-                    columnStyles: {
-                        0: { halign: 'left', fontStyle: 'bold' },
-                        1: { halign: 'center', cellWidth: 40 },
-                        2: { halign: 'center', cellWidth: 44 },
-                        3: { halign: 'center', cellWidth: 44 }
-                    }
-                }, { left: xDir, right: margin, top: margin, bottom: 45 });
-            }
-            yPos = Math.max(fimA, fimE) + 26;
+        if (equipes.length) {
+            novaPaginaSe(120);
+            secao("Atendimentos por Equipe");
+            yPos += 10;
+            const somaMemb = equipes.reduce((a, r) => a + r[1], 0);
+            const somaAtend = equipes.reduce((a, r) => a + r[2], 0);
+            yPos = tabela({
+                head: [['Equipe', 'Membros', 'Atendimentos', '% do total']],
+                body: equipes,
+                foot: [['TOTAL', somaMemb, somaAtend, pctF(somaAtend, s.atendidosCount) + '%']],
+                columnStyles: {
+                    0: { halign: 'left', fontStyle: 'bold', textColor: [30, 41, 59] },
+                    1: { halign: 'center', cellWidth: 90 },
+                    2: { halign: 'center', cellWidth: 110 },
+                    3: { halign: 'center', cellWidth: 90 }
+                },
+                didParseCell: colorir([COR.slate, COR.roxo, COR.verde, COR.azul])
+            }) + 26;
         }
 
         // ---------- Movimento por horário (tabela única) ----------
@@ -1207,9 +1189,9 @@ export const StatisticsService = {
         juntar(s.statsByTimeFaltosos, 'fa');
         const horas = Object.keys(mapa).sort();
         const cols = [
-            { k: 'ag', nome: 'Agendados', on: exportScheduledTime },
-            { k: 'at', nome: 'Atendidos', on: exportTimes },
-            { k: 'fa', nome: 'Faltosos', on: exportAbsenteesTime }
+            { k: 'ag', nome: 'Agendados', on: exportScheduledTime, cor: COR.indigo },
+            { k: 'at', nome: 'Atendidos', on: exportTimes, cor: COR.verde },
+            { k: 'fa', nome: 'Faltosos', on: exportAbsenteesTime, cor: COR.vermelho }
         ].filter(c => c.on);
         const mostrarPres = exportTimes && exportAbsenteesTime;
 
@@ -1218,6 +1200,7 @@ export const StatisticsService = {
             secao("Movimento por Horário");
             yPos += 10;
             const head = ['Horário', ...cols.map(c => c.nome), ...(mostrarPres ? ['Presença'] : [])];
+            const cores = [COR.slate, ...cols.map(c => c.cor), ...(mostrarPres ? [COR.azul] : [])];
             const body = horas.map(h => {
                 const m = mapa[h];
                 const linha = [h, ...cols.map(c => m[c.k])];
@@ -1225,24 +1208,17 @@ export const StatisticsService = {
                 return linha;
             });
             const tot = horas.reduce((a, h) => ({ ag: a.ag + mapa[h].ag, at: a.at + mapa[h].at, fa: a.fa + mapa[h].fa }), { ag: 0, at: 0, fa: 0 });
-            const foot = ['Total', ...cols.map(c => tot[c.k]), ...(mostrarPres ? [pct(tot.at, tot.at + tot.fa) + '%'] : [])];
+            const foot = ['TOTAL', ...cols.map(c => tot[c.k]), ...(mostrarPres ? [pct(tot.at, tot.at + tot.fa) + '%'] : [])];
 
             const colStyles = {};
-            head.forEach((_, i) => { colStyles[i] = { halign: 'center', ...(i === 0 ? { fontStyle: 'bold' } : {}) }; });
+            head.forEach((_, i) => { colStyles[i] = { halign: 'center', ...(i === 0 ? { fontStyle: 'bold', textColor: [30, 41, 59] } : {}) }; });
 
             yPos = tabela({
                 head: [head],
                 body,
                 foot: [foot],
                 columnStyles: colStyles,
-                didParseCell: (data) => {
-                    if (data.section !== 'body') return;
-                    const nome = head[data.column.index];
-                    const vazio = data.cell.raw === 0 || data.cell.raw === '-';
-                    if (nome === 'Atendidos') { data.cell.styles.textColor = vazio ? [148, 163, 184] : [22, 163, 74]; data.cell.styles.fontStyle = 'bold'; }
-                    if (nome === 'Faltosos') { data.cell.styles.textColor = vazio ? [148, 163, 184] : [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
-                    if (nome === 'Presença') { data.cell.styles.fontStyle = 'bold'; }
-                }
+                didParseCell: colorir(cores)
             }) + 26;
         }
 
@@ -1258,20 +1234,15 @@ export const StatisticsService = {
             yPos = tabela({
                 head: [['Assunto', 'Total', 'Agend/Reag', 'Efetivados', 'Faltosos']],
                 body: subjects,
-                foot: [['Total geral', soma(1), soma(2), soma(3), soma(4)]],
+                foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
                 columnStyles: {
-                    0: { halign: 'left', cellWidth: 'auto' },
-                    1: { halign: 'center', cellWidth: 55, fontStyle: 'bold' },
-                    2: { halign: 'center', cellWidth: 70 },
-                    3: { halign: 'center', cellWidth: 70 },
-                    4: { halign: 'center', cellWidth: 60 }
+                    0: { halign: 'left', cellWidth: 'auto', textColor: [30, 41, 59] },
+                    1: { halign: 'center', cellWidth: 55 },
+                    2: { halign: 'center', cellWidth: 75 },
+                    3: { halign: 'center', cellWidth: 75 },
+                    4: { halign: 'center', cellWidth: 65 }
                 },
-                didParseCell: (data) => {
-                    if (data.section === 'body' && data.column.index === 4 && data.cell.raw > 0) {
-                        data.cell.styles.textColor = [220, 38, 38];
-                        data.cell.styles.fontStyle = 'bold';
-                    }
-                }
+                didParseCell: colorir([COR.slate, COR.slate, COR.esmeral, COR.teal, COR.vermelho])
             }) + 20;
         }
 
