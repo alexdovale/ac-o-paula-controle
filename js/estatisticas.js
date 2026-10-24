@@ -455,11 +455,12 @@ export const StatisticsService = {
                 </div>
             </div>`;
 
+        // Cartões atualizados com a nomenclarura exata: Atendidos (o restante), Agend/Reagend, Faltosos, etc.
         const kpisHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
                 ${kpi('📅', atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50')}
-                ${kpi('🚶', atendidosSemAgenda.length, 'Sem Vínculo', 'bg-teal-50')}
+                ${kpi('👤', atendidosSemAgenda.length, 'Atendidos (Outros)', 'bg-teal-50')}
                 ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
                 ${kpi('📈', comparecimento + '%', 'Presença', 'bg-blue-50')}
                 ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50')}
@@ -508,7 +509,7 @@ export const StatisticsService = {
         ].join('');
 
         const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
-        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Sem Vínculo)', '🏷️', assuntosOrdenados.length === 0
+        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Atendidos)', '🏷️', assuntosOrdenados.length === 0
             ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
             : `<div class="max-h-[380px] overflow-y-auto rounded-lg border border-slate-100">
                 <table class="w-full text-xs md:text-sm text-left">
@@ -517,7 +518,7 @@ export const StatisticsService = {
                             <th class="px-3 py-2.5 font-bold">Assunto</th>
                             <th class="px-2 py-2.5 font-bold text-center">Total</th>
                             <th class="px-2 py-2.5 font-bold text-center text-emerald-600">Agend/Reag</th>
-                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Sem Vínc</th>
+                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Atendidos</th>
                             <th class="px-2 py-2.5 font-bold text-center text-red-600">Falt.</th>
                         </tr>
                     </thead>
@@ -930,7 +931,7 @@ export const StatisticsService = {
         const kpis = [
             { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74], bg: [240, 253, 244] },
             { v: String(d.atendidosComAgendaCount || 0), l: 'Agend/Reagend', c: [16, 185, 129], bg: [236, 253, 245] },
-            { v: String(d.atendidosSemAgendaCount || 0), l: 'Sem Vínculo', c: [20, 184, 166], bg: [240, 253, 250] },
+            { v: String(d.atendidosSemAgendaCount || 0), l: 'Atendidos (Outros)', c: [20, 184, 166], bg: [240, 253, 250] },
             { v: String(d.faltososCount), l: 'Faltosos', c: [220, 38, 38], bg: [254, 242, 242] },
             { v: d.comparecimento + '%', l: 'Comparecimento', c: [79, 70, 229], bg: [238, 242, 255] },
             { v: (d.avgTimeDirect > 0 ? d.avgTimeDirect : 15) + ' min', l: 'Tempo médio', c: [37, 99, 235], bg: [239, 246, 255] }
@@ -1036,7 +1037,7 @@ export const StatisticsService = {
             const cards = [
                 { v: String(s.atendidosCount || 0), l: "Atendimentos", bg: [240, 253, 244], fg: [22, 163, 74] },
                 { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", bg: [236, 253, 245], fg: [16, 185, 129] },
-                { v: String(s.atendidosSemAgendaCount || 0), l: "Sem Vínculo", bg: [240, 253, 250], fg: [20, 184, 166] },
+                { v: String(s.atendidosSemAgendaCount || 0), l: "Atendidos (Outros)", bg: [240, 253, 250], fg: [20, 184, 166] },
                 { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] }
             ];
             cards.forEach((c, i) => {
@@ -1094,7 +1095,7 @@ export const StatisticsService = {
                 .map(([name, d]) => [name.length > 30 ? name.substring(0, 27) + '...' : name, d.total || 0, d.agendaAtendidos || 0, d.semVincAtendidos || 0, d.faltosos || 0]);
             const soma = (i) => subjects.reduce((acc, r) => acc + r[i], 0);
             tabela({
-                head: [['Assunto', 'Total', 'Agend/Reag', 'Sem Vínc', 'Faltosos']],
+                head: [['Assunto', 'Total', 'Agend/Reag', 'Atendidos', 'Faltosos']],
                 body: subjects,
                 foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
                 headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
@@ -1116,4 +1117,3 @@ export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
-
