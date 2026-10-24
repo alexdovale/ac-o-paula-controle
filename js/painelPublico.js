@@ -1,6 +1,6 @@
 // js/painelPublico.js - PAINEL PÚBLICO (FILA · TV · TV + VÍDEO) · UI PROFISSIONAL
 
-import { doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { doc, getDoc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const LOGO = "https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_sigep.png?alt=media&token=b067528b-df81-4fbf-bc22-0d2b01acbbe6";
 
@@ -479,10 +479,64 @@ export const PainelPublicoService = {
         if (somParam === '0' || somParam === 'false') iniciar(false);
     },
 
-    _conectarFirebase(app, pautasParam, recepcaoNome, initialModo, aplicarModo) {
+    // ── PIN de acesso (opcional): o hash fica em pautas/{id}/painel/config.tvPinHash ──
+    async _verificarPin(db, ids) {
+        if (!window.crypto?.subtle) return true;
+        const sha = async (t) => {
+            const b = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sigep-tv:' + t));
+            return [...new Uint8Array(b)].map(x => x.toString(16).padStart(2, '0')).join('');
+        };
+        let hash = '', pid = '';
+        for (const id of ids) {
+            try {
+                const s = await getDoc(doc(db, 'pautas', id, 'painel', 'config'));
+                const h = s.exists() ? (s.data().tvPinHash || '') : '';
+                if (h) { hash = h; pid = id; break; }
+            } catch (e) { /* sem leitura: segue sem PIN */ }
+        }
+        if (!hash) return true;
+        const chave = `sigep_tv_pin_${pid}`;
+        if (localStorage.getItem(chave) === hash) return true;
+
+        return new Promise((resolve) => {
+            const ov = document.createElement('div');
+            ov.style.cssText = 'position:fixed;inset:0;z-index:10001;background:#0b1220;display:flex;align-items:center;justify-content:center;padding:24px;font-family:Inter,system-ui,sans-serif';
+            ov.innerHTML = `
+                <div style="background:#111a2e;border:1px solid #1e293b;border-radius:18px;padding:36px 32px;max-width:400px;width:100%;text-align:center;color:#fff">
+                    <h2 style="margin:0 0 6px;font-size:22px;font-weight:800">Painel protegido</h2>
+                    <p style="margin:0 0 20px;font-size:14px;color:#94a3b8">Digite o PIN de acesso para visualizar o painel.</p>
+                    <input id="pin-in" type="password" inputmode="numeric" maxlength="12" autocomplete="off" placeholder="••••" style="width:100%;box-sizing:border-box;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:14px;text-align:center;font-size:26px;letter-spacing:.25em;color:#fff;outline:none;margin-bottom:14px">
+                    <button id="pin-ok" style="width:100%;background:#16a34a;color:#fff;font-weight:700;font-size:15px;padding:14px;border:0;border-radius:12px;cursor:pointer">Desbloquear</button>
+                    <p id="pin-err" style="display:none;margin:12px 0 0;color:#f87171;font-size:13px;font-weight:600">PIN incorreto. Tente novamente.</p>
+                </div>`;
+            document.body.appendChild(ov);
+            const inp = ov.querySelector('#pin-in'), err = ov.querySelector('#pin-err');
+            setTimeout(() => inp.focus(), 100);
+            const tentar = async () => {
+                if ((await sha(inp.value.trim())) === hash) {
+                    localStorage.setItem(chave, hash);
+                    ov.remove(); resolve(true);
+                } else { err.style.display = 'block'; inp.value = ''; inp.focus(); }
+            };
+            ov.querySelector('#pin-ok').addEventListener('click', tentar);
+            inp.addEventListener('keydown', (e) => { if (e.key === 'Enter') tentar(); });
+        });
+    },
+
+    async _conectarFirebase(app, pautasParam, recepcaoNome, initialModo, aplicarModo) {
         const $ = (id) => document.getElementById(id);
         const db = app.db;
         const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
+
+        // Histórico persistente: sobrevive a recarregar a página / reiniciar a TV
+        const chaveHist = `sigep_painel_hist_${pautasParam}`;
+        try {
+            const salvo = JSON.parse(localStorage.getItem(chaveHist) || 'null');
+            if (salvo) { estado.ultimoChamado = salvo.ultimo || null; estado.historico = Array.isArray(salvo.historico) ? salvo.historico.slice(0, 7) : []; }
+        } catch (e) { /* ignora cache inválido */ }
+        const salvarHist = () => {
+            try { localStorage.setItem(chaveHist, JSON.stringify({ ultimo: estado.ultimoChamado, historico: estado.historico })); } catch (e) { /* ignora */ }
+        };
         const PALETA = ['#1e3a8a', '#0f766e', '#6d28d9', '#9a3412', '#334155', '#155e75', '#854d0e', '#9d174d'];
         const corPor = {}; let prox = 0;
         const cor = (k) => (corPor[k] ??= PALETA[prox++ % PALETA.length]);
@@ -593,14 +647,18 @@ export const PainelPublicoService = {
             return;
         }
 
+        const idsPautas = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
+        await PainelPublicoService._verificarPin(db, idsPautas);
+
         const nomeRec = decodeURIComponent(recepcaoNome);
         set('recepcao-nome-fila', nomeRec); set('recepcao-nome-tv', nomeRec); set('recepcao-nome-video', nomeRec);
         $('loading').classList.add('hidden');
         aplicarModo(initialModo);
-        renderChamado(null);
+        renderChamado(estado.ultimoChamado);
 
         const logos = {};
-        pautasParam.split(',').map(s => s.trim()).filter(Boolean).forEach(pid => {
+        const primeiro = {};
+        idsPautas.forEach(pid => {
             onSnapshot(doc(db, "pautas", pid, "painel", "config"), (s) => {
                 logos[pid] = s.exists() ? (s.data().logoUrl || '') : '';
                 PainelPublicoService._aplicarLogo(Object.values(logos).find(Boolean) || '');
@@ -608,8 +666,9 @@ export const PainelPublicoService = {
             onSnapshot(doc(db, "pautas", pid), (s) => { if (!s.exists()) return; estado.pautas[pid] = { id: pid, ...s.data() }; renderPainel(); });
             onSnapshot(collection(db, "pautas", pid, "attendances"), (s) => { estado.assistidos[pid] = s.docs.map(d => ({ id: d.id, ...d.data() })); renderPainel(); });
             onSnapshot(doc(db, "pautas", pid, "painel", "ultimoChamado"), (s) => {
-                if (!s.exists() || !s.data().atual) return;
+                if (!s.exists() || !s.data().atual) { primeiro[pid] = true; return; }
                 const d = s.data().atual;
+                const ehPrimeiro = !primeiro[pid]; primeiro[pid] = true;
                 if ((d.timestamp || 0) <= (estado.ultimoChamado?.timestamp || 0)) return;
 
                 // Se o operador escolheu o local na chamada (rotuloLocal presente), ele tem prioridade sobre a sala padrão da pauta
@@ -618,8 +677,10 @@ export const PainelPublicoService = {
 
                 if (estado.ultimoChamado) { estado.historico.unshift(estado.ultimoChamado); if (estado.historico.length > 7) estado.historico.pop(); }
                 estado.ultimoChamado = novo;
+                salvarHist();
                 renderChamado(novo);
-                PainelPublicoService._tocarSomEDizer(novo);
+                // O primeiro retorno do banco é só o estado atual: não toca som nem voz ao abrir/recarregar
+                if (!ehPrimeiro) PainelPublicoService._tocarSomEDizer(novo);
             });
         });
     }
