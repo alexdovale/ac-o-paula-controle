@@ -3,6 +3,7 @@
 //  - Grupos sempre em sequência: 1, 2, 3 ... 10, depois CRC, Coordenadores, depois outros (A-Z)
 //  - Importar equipe de outra pauta colando apenas o ID (ou o link) da pauta de origem
 //  - Interface do modal reorganizada (barra de ferramentas, cartões por equipe, avatares, badges)
+//  - Ícones SVG (estilo Lucide) no lugar de emojis
 
 import {
     collection,
@@ -21,6 +22,30 @@ import { escapeHTML, showNotification } from './utils.js';
 // Ordem fixa para grupos "nomeados" (depois dos numéricos)
 const ORDEM_FIXA = ['CRC', 'Coordenadores'];
 
+// ---------- ícones (SVG inline, herdam a cor do texto) ----------
+const ICONS = {
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    folder: '<path d="M20 20a2 2 0 0 0 2-2V8a2 2 0 0 0-2-2h-7.9a2 2 0 0 1-1.69-.9L9.6 3.9A2 2 0 0 0 7.93 3H4a2 2 0 0 0-2 2v13a2 2 0 0 0 2 2Z"/>',
+    type: '<path d="M4 7V4h16v3M9 20h6M12 4v16"/>',
+    idCard: '<rect x="2" y="4" width="20" height="16" rx="2"/><circle cx="9" cy="11" r="2"/><path d="M15 9h3M15 13h3M5.5 17c.6-1.4 1.9-2 3.5-2s2.9.6 3.5 2"/>',
+    download: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m7 10 5 5 5-5"/><path d="M12 15V3"/>',
+    loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    save: '<path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><path d="M17 21v-8H7v8M7 3v5h8"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h20a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    x: '<path d="M18 6 6 18M6 6l12 12"/>'
+};
+
+const ico = (nome, cls = 'w-4 h-4') =>
+    `<svg class="${cls} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
+
 const CollaboratorService = {
     currentListener: null,
     editId: null,
@@ -30,7 +55,7 @@ const CollaboratorService = {
     ataAutoSaveTimer: null,
 
     // ===================================================================
-    // ⭐ ORDENAÇÃO DE GRUPOS (1,2,3,4,5... depois CRC, Coordenadores, outros)
+    // ORDENAÇÃO DE GRUPOS (1,2,3,4,5... depois CRC, Coordenadores, outros)
     // ===================================================================
     compararGrupos(a, b) {
         a = String(a ?? '').trim();
@@ -99,14 +124,14 @@ const CollaboratorService = {
             modal.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
                     <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center">
-                        <h3 class="text-white font-bold text-lg">📄 Exportar PDF da equipe</h3>
-                        <button data-close class="text-white hover:text-gray-200 text-2xl leading-none">&times;</button>
+                        <h3 class="text-white font-bold text-lg flex items-center gap-2">${ico('fileText', 'w-5 h-5')} Exportar PDF da equipe</h3>
+                        <button data-close class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Fechar">${ico('x', 'w-5 h-5')}</button>
                     </div>
                     <div class="p-6">
                         <p class="text-sm text-slate-600 mb-4">Escolha os campos que aparecerão no PDF:</p>
                         <div id="pdf-field-selector-modal" class="grid grid-cols-2 gap-2 mb-6"></div>
                         <div class="flex gap-3">
-                            <button id="confirm-export-pdf-btn" class="flex-1 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition">Gerar PDF</button>
+                            <button id="confirm-export-pdf-btn" class="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition">${ico('download')} Gerar PDF</button>
                             <button data-close class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition">Cancelar</button>
                         </div>
                     </div>
@@ -163,11 +188,14 @@ const CollaboratorService = {
             modal.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col h-[85vh]">
                     <div class="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
-                        <h3 class="text-white font-black text-xl flex items-center gap-2"><span>👥</span> Base geral de colaboradores</h3>
-                        <button data-close class="text-white hover:text-violet-200 text-3xl font-bold leading-none transition-colors">&times;</button>
+                        <h3 class="text-white font-black text-xl flex items-center gap-2">${ico('users', 'w-6 h-6')} Base geral de colaboradores</h3>
+                        <button data-close class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Fechar">${ico('x', 'w-6 h-6')}</button>
                     </div>
                     <div class="p-5 bg-slate-50 border-b border-slate-200 shrink-0">
-                        <input type="text" id="search-master-list" placeholder="🔎  Pesquisar por nome, matrícula, cargo ou equipe..." class="w-full px-4 py-3 rounded-xl border-2 border-violet-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 text-slate-700 font-medium transition-all">
+                        <div class="relative">
+                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-violet-400 pointer-events-none">${ico('search', 'w-5 h-5')}</span>
+                            <input type="text" id="search-master-list" placeholder="Pesquisar por nome, matrícula, cargo ou equipe..." class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-violet-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 text-slate-700 font-medium transition-all">
+                        </div>
                         <p id="master-count" class="text-xs text-slate-500 mt-2 ml-1"></p>
                     </div>
                     <div class="overflow-y-auto p-3 sm:p-5 flex-1 bg-white" id="master-list-container"></div>
@@ -203,8 +231,8 @@ const CollaboratorService = {
             const querySnapshot = await getDocs(collection(app.db, "colaboradores_gerais"));
             if (querySnapshot.empty) {
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-slate-400">
-                        <span class="text-4xl mb-2">📭</span>
+                    <div class="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
+                        <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">${ico('inbox', 'w-7 h-7')}</div>
                         <p class="text-center font-medium">Nenhum colaborador cadastrado na base.</p>
                     </div>`;
                 return;
@@ -226,12 +254,12 @@ const CollaboratorService = {
                         <div class="flex-1 mb-3 sm:mb-0">
                             <div class="font-black text-slate-800 text-base group-hover:text-violet-700">${escapeHTML(dados.nome || 'Sem nome')}</div>
                             <div class="text-xs font-semibold text-slate-500 mt-1 flex flex-wrap gap-2 items-center">
-                                <span class="bg-slate-100 text-slate-700 px-2 py-0.5 rounded border border-slate-200">${escapeHTML(cargo)}</span>
+                                <span class="px-2 py-0.5 rounded border ${this.badgeCargo(cargo)}">${escapeHTML(cargo)}</span>
                                 <span>${escapeHTML(tipoId)}: <strong class="text-slate-700">${escapeHTML(dados.id)}</strong></span>
                                 ${dados.equipe ? `<span class="bg-violet-100 text-violet-700 px-2 py-0.5 rounded">${escapeHTML(this.rotuloGrupo(dados.equipe))}</span>` : ''}
                             </div>
                         </div>
-                        <button class="w-full sm:w-auto bg-white border-2 border-violet-200 text-violet-700 group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:text-white px-5 py-2 rounded-xl font-bold transition-all text-sm">Preencher</button>
+                        <button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border-2 border-violet-200 text-violet-700 group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:text-white px-5 py-2 rounded-xl font-bold transition-all text-sm">${ico('check')} Preencher</button>
                     </div>`;
             }).join('');
 
@@ -251,8 +279,8 @@ const CollaboratorService = {
         } catch (error) {
             console.error("Erro ao listar master:", error);
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-red-500">
-                    <span class="text-4xl mb-2">⚠️</span>
+                <div class="flex flex-col items-center justify-center h-full text-red-500 gap-3">
+                    <div class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">${ico('alert', 'w-7 h-7')}</div>
                     <p class="text-center font-bold">Não foi possível carregar a base. Tente novamente.</p>
                 </div>`;
         }
@@ -285,14 +313,14 @@ const CollaboratorService = {
             if (rTransp) rTransp.checked = true;
 
             this.configurarLogicaCargo();
-            showNotification(`Dados de ${dados.nome} preenchidos! ✅`, "success");
+            showNotification(`Dados de ${dados.nome} preenchidos!`, "success");
         } catch (e) {
             console.error("Erro ao buscar master:", e);
         }
     },
 
     // ===================================================================
-    // ⭐ IMPORTAR EQUIPE DE OUTRA PAUTA (só com o ID)
+    // IMPORTAR EQUIPE DE OUTRA PAUTA (só com o ID)
     // ===================================================================
     extrairPautaId(texto) {
         const t = String(texto || '').trim();
@@ -324,7 +352,7 @@ const CollaboratorService = {
         }
 
         const textoOriginal = btn?.innerHTML;
-        if (btn) { btn.disabled = true; btn.innerHTML = '⏳ Buscando...'; }
+        if (btn) { btn.disabled = true; btn.innerHTML = `${ico('loader', 'w-4 h-4 animate-spin')} Buscando...`; }
 
         try {
             const origemSnap = await getDoc(doc(app.db, "pautas", origemId));
@@ -390,7 +418,7 @@ const CollaboratorService = {
             }
 
             if (input) input.value = '';
-            showNotification(`${novos.length} membro(s) importado(s) de "${nomeOrigem}" ✅`, "success");
+            showNotification(`${novos.length} membro(s) importado(s) de "${nomeOrigem}"`, "success");
         } catch (error) {
             console.error("Erro ao importar equipe:", error);
             showNotification("Erro ao importar a equipe. Tente novamente.", "error");
@@ -435,8 +463,8 @@ const CollaboratorService = {
         const btn = document.getElementById('toggle-order-btn');
         if (btn) {
             btn.innerHTML = this.ordemAtual === 'grupo'
-                ? '<span>📁</span> Por grupo'
-                : '<span>🔤</span> Por nome';
+                ? `${ico('folder', 'w-3.5 h-3.5')} Por grupo`
+                : `${ico('type', 'w-3.5 h-3.5')} Por nome`;
         }
     },
 
@@ -472,27 +500,35 @@ const CollaboratorService = {
         };
     },
 
+    // Mostra o estado do salvamento automático (ícone + texto)
+    estadoSalvamento(tipo) {
+        const indicator = document.getElementById('ata-save-indicator');
+        if (!indicator) return;
+        const estados = {
+            salvando: { cls: 'text-amber-600', html: `${ico('loader', 'w-3.5 h-3.5 animate-spin')} Salvando...` },
+            salvo: { cls: 'text-green-600', html: `${ico('check', 'w-3.5 h-3.5')} Salvo` },
+            erro: { cls: 'text-red-600', html: `${ico('alert', 'w-3.5 h-3.5')} Erro ao salvar` }
+        };
+        const e = estados[tipo];
+        if (!e) { indicator.innerHTML = ''; return; }
+        indicator.className = `inline-flex items-center gap-1 text-xs font-semibold ${e.cls}`;
+        indicator.innerHTML = e.html;
+    },
+
     async autoSaveAtaData(app) {
         if (!app?.currentPauta?.id) return;
         if (this.ataAutoSaveTimer) { clearTimeout(this.ataAutoSaveTimer); this.ataAutoSaveTimer = null; }
 
         const data = this.lerCamposAta();
-        const indicator = document.getElementById('ata-save-indicator');
 
         try {
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), data);
             if (app.currentPautaData) app.currentPautaData = { ...app.currentPautaData, ...data };
-            if (indicator) {
-                indicator.textContent = '💾 Salvo';
-                indicator.className = 'text-green-600 text-xs font-semibold';
-                setTimeout(() => { indicator.textContent = ''; }, 2000);
-            }
+            this.estadoSalvamento('salvo');
+            setTimeout(() => this.estadoSalvamento(null), 2000);
         } catch (error) {
             console.error("Erro ao salvar dados da ata:", error);
-            if (indicator) {
-                indicator.textContent = '⚠️ Erro ao salvar';
-                indicator.className = 'text-red-600 text-xs font-semibold';
-            }
+            this.estadoSalvamento('erro');
         }
     },
 
@@ -500,11 +536,7 @@ const CollaboratorService = {
         if (!app?.currentPauta?.id) return;
         if (this.ataAutoSaveTimer) clearTimeout(this.ataAutoSaveTimer);
 
-        const indicator = document.getElementById('ata-save-indicator');
-        if (indicator) {
-            indicator.textContent = '💾 Salvando...';
-            indicator.className = 'text-amber-600 text-xs font-semibold';
-        }
+        this.estadoSalvamento('salvando');
         this.ataAutoSaveTimer = setTimeout(() => this.autoSaveAtaData(app), 1000);
     },
 
@@ -521,7 +553,7 @@ const CollaboratorService = {
             await updateDoc(doc(app.db, "pautas", app.currentPauta.id), data);
             if (app.currentPautaData) app.currentPautaData = { ...app.currentPautaData, ...data };
             this.atualizarLogoAta();
-            showNotification("Dados da ata salvos com sucesso! 💾", "success");
+            showNotification("Dados da ata salvos com sucesso!", "success");
             document.getElementById('ata-social-modal')?.classList.add('hidden');
         } catch (error) {
             console.error("Erro ao salvar dados da ata:", error);
@@ -605,15 +637,17 @@ const CollaboratorService = {
         const tabela = document.querySelector('#collaborators-list-table-modal');
         if (!tabela) return;
 
+        const btnNeutro = 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition-colors';
+
         const bar = document.createElement('div');
         bar.id = 'collab-toolbar';
         bar.className = 'mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden';
         bar.innerHTML = `
             <div class="flex flex-wrap items-center gap-2 p-3 border-b border-slate-100 bg-slate-50/70">
-                <span class="text-sm font-black text-slate-700 mr-auto flex items-center gap-2">👥 Organização da equipe</span>
-                <button id="copy-pauta-id-btn" class="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition-colors" title="Copie para colar em outra pauta">🆔 Copiar ID desta pauta</button>
-                <button id="toggle-order-btn" class="inline-flex items-center gap-2 bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition-colors"></button>
-                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors">📄 Exportar PDF</button>
+                <span class="text-sm font-black text-slate-700 mr-auto flex items-center gap-2"><span class="text-violet-600">${ico('users', 'w-[18px] h-[18px]')}</span> Organização da equipe</span>
+                <button id="copy-pauta-id-btn" class="${btnNeutro}" title="Copie para colar em outra pauta">${ico('idCard', 'w-3.5 h-3.5')} Copiar ID desta pauta</button>
+                <button id="toggle-order-btn" class="${btnNeutro}"></button>
+                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors">${ico('fileText', 'w-3.5 h-3.5')} Exportar PDF</button>
             </div>
             <div class="p-3">
                 <label for="import-pauta-id-input" class="block text-[11px] font-bold text-slate-500 mb-1.5">Copiar equipe de outra pauta <span class="font-normal text-slate-400">(na pauta antiga, use "Copiar ID desta pauta")</span></label>
@@ -621,7 +655,7 @@ const CollaboratorService = {
                     <input id="import-pauta-id-input" type="text" autocomplete="off"
                         placeholder="Cole aqui o ID da pauta de origem"
                         class="flex-1 min-w-0 px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15 text-sm text-slate-700 transition-all">
-                    <button id="import-pauta-btn" class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm shadow-sm transition-colors whitespace-nowrap">📥 Importar equipe</button>
+                    <button id="import-pauta-btn" class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm shadow-sm transition-colors whitespace-nowrap">${ico('download')} Importar equipe</button>
                 </div>
                 <label class="mt-2 inline-flex items-center gap-2 text-[11px] text-slate-500 cursor-pointer">
                     <input type="checkbox" id="import-replace-check" class="h-3.5 w-3.5 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
@@ -702,35 +736,36 @@ const CollaboratorService = {
         if (selectedValue !== 'REMOVE_GROUP' && selectedValue !== 'ADD_NEW') {
             this.registrarGrupo(selectedValue);
         }
-        
+
         const grupos = [...this.gruposPermitidosAta].sort((a, b) => this.compararGrupos(a, b));
 
+        // <option> não aceita SVG, então as ações usam texto simples
         select.innerHTML = grupos.map(g =>
             `<option value="${escapeHTML(g)}" ${String(selectedValue) === g ? 'selected' : ''}>${escapeHTML(this.rotuloGrupo(g))}</option>`
-        ).join('') 
-        + `<option disabled>──────────</option>`
-        + `<option value="ADD_NEW">➕ Adicionar outro grupo...</option>`
-        + `<option value="REMOVE_GROUP">❌ Remover um grupo criado...</option>`;
+        ).join('')
+            + `<option disabled>──────────</option>`
+            + `<option value="ADD_NEW">+ Adicionar outro grupo...</option>`
+            + `<option value="REMOVE_GROUP">− Remover um grupo criado...</option>`;
 
         select.onchange = (e) => {
             if (e.target.value === 'ADD_NEW') {
                 const novo = prompt("Digite o número ou nome do novo grupo (ex: 5):")?.trim();
                 if (novo) {
                     this.registrarGrupo(novo);
-                    this.updateTeamSelect(novo); 
+                    this.updateTeamSelect(novo);
                 } else {
                     this.updateTeamSelect('1');
                 }
             } else if (e.target.value === 'REMOVE_GROUP') {
                 const remover = prompt("Digite o nome EXATO do grupo que deseja excluir da lista:\n\nGrupos atuais: " + this.gruposPermitidosAta.join(", "))?.trim();
-                
+
                 if (remover) {
                     const index = this.gruposPermitidosAta.findIndex(g => g.toLowerCase() === remover.toLowerCase());
                     if (index !== -1) {
                         this.gruposPermitidosAta.splice(index, 1);
-                        if (typeof showNotification !== 'undefined') showNotification(`Grupo "${remover}" excluído com sucesso!`, "success");
+                        showNotification(`Grupo "${remover}" excluído com sucesso!`, "success");
                     } else {
-                        if (typeof showNotification !== 'undefined') showNotification(`Grupo "${remover}" não encontrado.`, "warning");
+                        showNotification(`Grupo "${remover}" não encontrado.`, "warning");
                     }
                 }
                 this.updateTeamSelect('1');
@@ -842,7 +877,7 @@ const CollaboratorService = {
         if (ordenados.length === 0) {
             html.push(`
                 <tr><td colspan="5" class="p-10 text-center">
-                    <div class="text-4xl mb-2">🧑‍🤝‍🧑</div>
+                    <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">${ico('users', 'w-7 h-7')}</div>
                     <p class="font-bold text-slate-600">Nenhum membro na equipe ainda</p>
                     <p class="text-xs text-slate-400 mt-1">Cadastre pelo formulário ou importe de outra pauta usando o ID dela.</p>
                 </td></tr>`);
@@ -859,7 +894,7 @@ const CollaboratorService = {
                     <tr class="grupo-header">
                         <td colspan="5" class="px-3 py-2.5 bg-gradient-to-r from-violet-50 to-white border-y border-violet-200">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-black text-violet-900 text-xs sm:text-sm flex items-center gap-2">📁 ${escapeHTML(nomeGrupo)}</span>
+                                <span class="font-black text-violet-900 text-xs sm:text-sm flex items-center gap-2"><span class="text-violet-500">${ico('folder')}</span> ${escapeHTML(nomeGrupo)}</span>
                                 <span class="flex gap-1.5">
                                     <span class="bg-white text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-[10px] font-bold">${r.total} membro${r.total === 1 ? '' : 's'}</span>
                                     <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">${r.presentes} presente${r.presentes === 1 ? '' : 's'}</span>
@@ -894,12 +929,12 @@ const CollaboratorService = {
                     <td class="p-3 hidden md:table-cell">
                         <span class="px-2 py-1 rounded-md border text-[11px] font-bold ${this.badgeCargo(colab.cargo)}">${escapeHTML(colab.cargo)}</span>
                     </td>
-                    <td class="p-3 text-center text-xs font-black ${presente ? 'text-emerald-600' : 'text-slate-300'}">${escapeHTML(colab.horario || '--:--')}</td>
+                    <td class="p-3 text-center text-xs font-black tabular-nums ${presente ? 'text-emerald-600' : 'text-slate-300'}">${escapeHTML(colab.horario || '--:--')}</td>
                     <td class="p-3">
                         <div class="flex justify-center gap-1.5">
-                            <button data-action="link" data-nome="${nomeSafe}" class="text-emerald-600 hover:text-white hover:bg-emerald-500 bg-emerald-50 p-2 rounded-lg transition-colors" title="Copiar link da mesa">🔗</button>
-                            <button data-action="edit" data-id="${colab.id}" class="text-blue-600 hover:text-white hover:bg-blue-500 bg-blue-50 p-2 rounded-lg transition-colors" title="Editar">✏️</button>
-                            <button data-action="delete" data-id="${colab.id}" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 p-2 rounded-lg transition-colors" title="Excluir">🗑️</button>
+                            <button data-action="link" data-nome="${nomeSafe}" class="text-emerald-600 hover:text-white hover:bg-emerald-500 bg-emerald-50 p-2 rounded-lg transition-colors" title="Copiar link da mesa" aria-label="Copiar link da mesa">${ico('link')}</button>
+                            <button data-action="edit" data-id="${colab.id}" class="text-blue-600 hover:text-white hover:bg-blue-500 bg-blue-50 p-2 rounded-lg transition-colors" title="Editar" aria-label="Editar">${ico('pencil')}</button>
+                            <button data-action="delete" data-id="${colab.id}" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 p-2 rounded-lg transition-colors" title="Excluir" aria-label="Excluir">${ico('trash')}</button>
                         </div>
                     </td>
                 </tr>`);
@@ -970,8 +1005,8 @@ const CollaboratorService = {
 
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
-            btnSubmit.innerHTML = "💾 Atualizar cadastro";
-            btnSubmit.className = "w-full bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition shadow-lg uppercase tracking-widest text-sm";
+            btnSubmit.innerHTML = `${ico('save', 'w-5 h-5')} Atualizar cadastro`;
+            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition shadow-lg uppercase tracking-widest text-sm";
         }
         this.configurarLogicaCargo();
 
@@ -1034,8 +1069,8 @@ const CollaboratorService = {
         this.editId = null;
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
-            btnSubmit.innerHTML = "➕ Adicionar à equipe";
-            btnSubmit.className = "w-full bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
+            btnSubmit.innerHTML = `${ico('plus', 'w-5 h-5')} Adicionar à equipe`;
+            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
         }
         this.configurarLogicaCargo();
     }
