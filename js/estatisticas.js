@@ -308,15 +308,15 @@ export const StatisticsService = {
         const cancelados = allAssisted.filter(a => a.status === 'cancelado');
         const extraPauta = atendidos.filter(a => a.isExtraPauta === true);
 
-        // 🌟 CLASSIFICAÇÃO PRECISA: Agendados ou Reagendados via Ações Rápidas (Três Pontinhos)
-        const isReagendadoOuAgendadoViaMenu = (a) => {
+        // 🌟 CLASSIFICAÇÃO ULTRA-PRECISA (Agendados, Reagendados via menu rápido 3 pontinhos e Sem Vínculo)
+        const isAgendadoOuReagendado = (a) => {
             const t = String(a.type || '').toLowerCase();
             const acao = String(a.tipoAcaoRapida || '').toLowerCase();
-            return t === 'agendamento' || acao.includes('reagend') || acao.includes('agend');
+            return t === 'agendamento' || t === 'reagendamento' || acao.includes('reagend') || acao.includes('agend') || acao.includes('reagendar');
         };
 
-        const atendidosComAgenda = atendidos.filter(a => isReagendadoOuAgendadoViaMenu(a));
-        const atendidosSemAgenda = atendidos.filter(a => !isReagendadoOuAgendadoViaMenu(a));
+        const atendidosComAgenda = atendidos.filter(a => isAgendadoOuReagendado(a));
+        const atendidosSemAgenda = atendidos.filter(a => !isAgendadoOuReagendado(a));
 
         // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
@@ -385,7 +385,7 @@ export const StatisticsService = {
         const statsBySubject = allAssisted.reduce((acc, a) => {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
-            const ehReagendadoOuAgendado = isReagendadoOuAgendadoViaMenu(a);
+            const ehAgenda = isAgendadoOuReagendado(a);
             
             demandas.forEach(d => {
                 if (!acc[d]) {
@@ -394,7 +394,7 @@ export const StatisticsService = {
                 acc[d].total++;
                 if (a.status === 'atendido') {
                     acc[d].atendidos++;
-                    if (ehReagendadoOuAgendado) acc[d].agendaAtendidos++;
+                    if (ehAgenda) acc[d].agendaAtendidos++;
                     else acc[d].semVincAtendidos++;
                 } else if (a.status === 'faltoso') {
                     acc[d].faltosos++;
