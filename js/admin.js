@@ -18,6 +18,53 @@ let cachedPendentes = [];
 let cachedLogs = [];
 let globalApp = null;
 
+// ==========================================
+// ÍCONES (SVG inline, estilo Lucide, herdam a cor do texto)
+// ==========================================
+const ICONS = {
+    x: '<path d="M18 6 6 18M6 6l12 12"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
+    pencil: '<path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/>',
+    trash: '<path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+    plus: '<path d="M5 12h14M12 5v14"/>',
+    upload: '<path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><path d="m17 8-5-5-5 5"/><path d="M12 3v12"/>',
+    check: '<path d="M20 6 9 17l-5-5"/>',
+    checkCircle: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+    alert: '<path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/>',
+    loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+    clipboard: '<rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
+    building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+    megaphone: '<path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/>',
+    tv: '<rect x="2" y="7" width="20" height="15" rx="2"/><path d="m17 2-5 5-5-5"/>',
+    ban: '<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    lock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>',
+    unlock: '<rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/>',
+    chevronLeft: '<path d="m15 18-6-6 6-6"/>',
+    chevronRight: '<path d="m9 18 6-6-6-6"/>',
+    mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
+    fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+};
+
+const ico = (nome, cls = 'w-4 h-4') =>
+    `<svg class="${cls} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
+
+// Botão de fechar dos modais (cabeçalho escuro)
+const btnX = ({ id = '', cls = '' } = {}) =>
+    `<button ${id ? `id="${id}"` : ''} class="${cls} text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition" aria-label="Fechar">${ico('x', 'w-5 h-5')}</button>`;
+
+const iniciais = (nome) => {
+    const p = String(nome || '?').trim().split(/\s+/).filter(Boolean);
+    if (p.length === 0) return '?';
+    return (p[0][0] + (p.length > 1 ? p[p.length - 1][0] : '')).toUpperCase();
+};
+
+const spinnerTxt = (txt) => `${ico('loader', 'w-3.5 h-3.5 animate-spin')} ${txt}`;
+
 export const logAction = async (db, auth, userName, currentPautaId, actionType, details, targetId = null) => {
     try {
         if (!auth?.currentUser) return;
@@ -196,27 +243,28 @@ const importarUnidadesEmMassa = async (db, unidades) => {
 
 export const abrirImportadorUnidades = async (db) => {
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto';
+    modal.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
-                <h2 class="text-base font-bold text-white tracking-wide">Importação em Massa de Unidades</h2>
-                <button id="fechar-importador-unidades" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                <h2 class="text-base font-bold text-white tracking-wide flex items-center gap-2">${ico('upload', 'w-5 h-5')} Importação em Massa de Unidades</h2>
+                ${btnX({ id: 'fechar-importador-unidades' })}
             </div>
             <div class="flex-1 overflow-y-auto p-6 space-y-6">
-                <div class="flex border-b border-slate-200">
-                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-900 border-b-2 border-slate-900" data-tab="upload">Upload de Arquivo</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="modelo">Layout Padrão</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="manual">Entrada Manual</button>
-                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700" data-tab="estrutura">Estrutura Atual</button>
+                <div class="flex border-b border-slate-200 overflow-x-auto">
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-900 border-b-2 border-slate-900 whitespace-nowrap" data-tab="upload">Upload de Arquivo</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700 whitespace-nowrap" data-tab="modelo">Layout Padrão</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700 whitespace-nowrap" data-tab="manual">Entrada Manual</button>
+                    <button class="tab-importador-unidades py-2 px-4 font-semibold text-xs text-slate-500 hover:text-slate-700 whitespace-nowrap" data-tab="estrutura">Estrutura Atual</button>
                 </div>
                 <div id="painel-upload-unidades" class="space-y-4">
                     <div class="border-2 border-dashed border-slate-300 rounded-xl p-8 text-center bg-slate-50">
                         <input type="file" id="arquivo-unidades" accept=".csv,.json" class="hidden">
+                        <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-white border border-slate-200 text-slate-400 flex items-center justify-center">${ico('upload', 'w-6 h-6')}</div>
                         <button id="btn-selecionar-arquivo-unidades" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2.5 px-6 rounded-lg text-xs transition">Selecionar Arquivo (CSV/JSON)</button>
                     </div>
                     <div id="info-arquivo-unidades" class="hidden p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                        <p class="text-emerald-800 font-bold text-xs">Arquivo validado com sucesso.</p>
+                        <p class="text-emerald-800 font-bold text-xs flex items-center gap-1.5">${ico('checkCircle', 'w-4 h-4')} Arquivo validado com sucesso.</p>
                         <p id="info-arquivo-unidades-detalhes" class="text-xs text-emerald-600 mt-1"></p>
                         <div class="mt-3 flex gap-3">
                             <button id="btn-previsualizar-unidades" class="bg-white border border-emerald-300 text-emerald-700 px-3 py-1.5 rounded-lg text-xs font-semibold">Pré-visualizar</button>
@@ -324,7 +372,7 @@ export const abrirImportadorUnidades = async (db) => {
 
 export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) => {
     const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4';
+    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm';
     modal.innerHTML = `<div class="bg-white p-6 rounded-2xl w-full max-w-lg shadow-2xl text-center"><div class="loader-small mx-auto mb-4"></div></div>`;
     document.body.appendChild(modal);
 
@@ -338,24 +386,30 @@ export const abrirModalUsuariosPorUnidade = async (db, unidadeId, unidadeNome) =
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg overflow-hidden flex flex-col max-h-[80vh]">
                 <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-bold text-sm tracking-wide">Usuários Vinculados</h3>
+                        <h3 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico('users')} Usuários Vinculados</h3>
                         <p class="text-slate-400 text-xs mt-0.5">${escapeHTML(unidadeNome)}</p>
                     </div>
-                    <button id="fechar-usuarios-unidade" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                    ${btnX({ id: 'fechar-usuarios-unidade' })}
                 </div>
                 <div class="p-4 overflow-y-auto flex-1">
                     ${usuariosVinculados.length > 0 
                         ? `<div class="space-y-2">
                             ${usuariosVinculados.map(u => `
-                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center">
-                                <div>
-                                    <p class="font-bold text-slate-800 text-xs">${escapeHTML(u.name || 'Sem nome')}</p>
-                                    <p class="text-[11px] text-slate-500">${escapeHTML(u.email || '')}</p>
+                            <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 flex justify-between items-center gap-3">
+                                <div class="flex items-center gap-3 min-w-0">
+                                    <div class="w-8 h-8 rounded-full bg-slate-200 text-slate-600 flex items-center justify-center text-[11px] font-black shrink-0">${escapeHTML(iniciais(u.name || u.email))}</div>
+                                    <div class="min-w-0">
+                                        <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(u.name || 'Sem nome')}</p>
+                                        <p class="text-[11px] text-slate-500 truncate">${escapeHTML(u.email || '')}</p>
+                                    </div>
                                 </div>
-                                <span class="text-[10px] bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded font-mono uppercase">${u.role || 'user'}</span>
+                                <span class="text-[10px] bg-slate-200 text-slate-700 px-2.5 py-0.5 rounded font-mono uppercase shrink-0">${escapeHTML(u.role || 'user')}</span>
                             </div>`).join('')}
                           </div>`
-                        : '<div class="text-center py-12 text-slate-400 text-xs">Nenhum usuário vinculado.</div>'
+                        : `<div class="text-center py-12 text-slate-400 text-xs flex flex-col items-center gap-3">
+                                <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">${ico('users', 'w-6 h-6')}</div>
+                                Nenhum usuário vinculado.
+                           </div>`
                     }
                 </div>
                 <div class="p-4 border-t border-slate-200 bg-slate-50 flex justify-end shrink-0">
@@ -386,31 +440,35 @@ export const abrirGerenciadorUnidades = async (db) => {
         if (!container) return;
         
         if (filtradas.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400 text-xs">Nenhuma unidade encontrada.</div>';
+            container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">${ico('building', 'w-6 h-6')}</div>
+                Nenhuma unidade encontrada.
+            </div>`;
             return;
         }
         
         container.innerHTML = filtradas.map(unidade => `
             <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm hover:border-slate-300 transition-all">
-                <div class="flex justify-between items-start">
-                    <div class="flex-1 min-w-0 pr-2">
+                <div class="flex justify-between items-start gap-3">
+                    <div class="w-9 h-9 rounded-lg bg-slate-100 text-slate-500 flex items-center justify-center shrink-0">${ico('building', 'w-[18px] h-[18px]')}</div>
+                    <div class="flex-1 min-w-0">
                         <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(unidade.nome)}</h4>
                         <p class="text-xs text-slate-500 mt-0.5">${escapeHTML(unidade.sigla || 'Sem sigla')}</p>
-                        ${unidade.endereco ? `<p class="text-[11px] text-slate-400 mt-1 truncate">Local: ${escapeHTML(unidade.endereco)}</p>` : ''}
+                        ${unidade.endereco ? `<p class="text-[11px] text-slate-400 mt-1 truncate flex items-center gap-1">${ico('mapPin', 'w-3 h-3')} ${escapeHTML(unidade.endereco)}</p>` : ''}
                     </div>
                     <div class="flex gap-1 shrink-0">
                         <button class="btn-ver-usuarios text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Visualizar membros">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Visualizar membros" aria-label="Visualizar membros">
+                            ${ico('users')}
                         </button>
                         <button class="btn-editar-unidade text-slate-600 hover:text-slate-900 p-1.5 rounded-lg hover:bg-slate-100 transition" 
                                 data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" data-sigla="${escapeHTML(unidade.sigla || '')}" 
-                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}" title="Editar">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"/></svg>
+                                data-endereco="${escapeHTML(unidade.endereco || '')}" data-telefone="${escapeHTML(unidade.telefone || '')}" data-email="${escapeHTML(unidade.email || '')}" title="Editar" aria-label="Editar">
+                            ${ico('pencil')}
                         </button>
                         <button class="btn-excluir-unidade text-red-500 hover:text-red-700 p-1.5 rounded-lg hover:bg-red-50 transition" 
-                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir">
-                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                                data-id="${unidade.id}" data-nome="${escapeHTML(unidade.nome)}" title="Excluir" aria-label="Excluir">
+                            ${ico('trash')}
                         </button>
                     </div>
                 </div>
@@ -445,15 +503,18 @@ export const abrirGerenciadorUnidades = async (db) => {
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
-                <h2 class="text-base font-bold text-white tracking-wide">Gerenciamento de Unidades e Órgãos</h2>
-                <button id="fechar-gerenciador-unidades" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                <h2 class="text-base font-bold text-white tracking-wide flex items-center gap-2">${ico('building', 'w-5 h-5')} Gerenciamento de Unidades e Órgãos</h2>
+                ${btnX({ id: 'fechar-gerenciador-unidades' })}
             </div>
             <div class="flex-1 overflow-y-auto p-6 bg-slate-50/50">
                 <div class="flex flex-col sm:flex-row justify-between items-center gap-4 mb-6">
-                    <div class="relative w-full sm:w-80"><input type="text" id="pesquisa-unidades" placeholder="Pesquisar unidade..." class="w-full p-2.5 pl-9 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-slate-900"></div>
+                    <div class="relative w-full sm:w-80">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-4 h-4')}</span>
+                        <input type="text" id="pesquisa-unidades" placeholder="Pesquisar unidade..." class="w-full p-2.5 pl-9 bg-white border border-slate-200 rounded-xl text-xs outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
                     <div class="flex gap-2 w-full sm:w-auto">
-                        <button id="btn-importar-unidades-massa" class="flex-1 sm:flex-none bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">Importação em Massa</button>
-                        <button id="btn-nova-unidade" class="flex-1 sm:flex-none bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">Nova Unidade</button>
+                        <button id="btn-importar-unidades-massa" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-white border border-slate-300 hover:bg-slate-50 text-slate-700 font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">${ico('upload', 'w-3.5 h-3.5')} Importação em Massa</button>
+                        <button id="btn-nova-unidade" class="flex-1 sm:flex-none inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">${ico('plus', 'w-3.5 h-3.5')} Nova Unidade</button>
                     </div>
                 </div>
                 <div id="lista-unidades-admin" class="grid grid-cols-1 md:grid-cols-2 gap-3"></div>
@@ -482,10 +543,10 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
         <div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
                 <div>
-                    <h2 class="text-base font-bold text-white tracking-wide">Unidades de Apoio e Recepções</h2>
+                    <h2 class="text-base font-bold text-white tracking-wide flex items-center gap-2">${ico('clipboard', 'w-5 h-5')} Unidades de Apoio e Recepções</h2>
                     <p class="text-slate-400 text-xs mt-0.5">Configuração de hubs operacionais e distribuição de atendimento</p>
                 </div>
-                <button id="fechar-gerenciador-recepcoes" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                ${btnX({ id: 'fechar-gerenciador-recepcoes' })}
             </div>
             
             <div class="flex-1 overflow-y-auto p-6" id="painel-conteudo-recepcoes">
@@ -512,14 +573,15 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                     <h3 class="font-bold text-slate-800 text-sm">Gestão de Recepções</h3>
                     <p class="text-xs text-slate-500 mt-0.5">Vincule unidades operacionais e defina equipes alocadas.</p>
                 </div>
-                <button id="btn-nova-recepcao-custom" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
-                    Nova Recepção
+                <button id="btn-nova-recepcao-custom" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
+                    ${ico('plus', 'w-3.5 h-3.5')} Nova Recepção
                 </button>
             </div>
             
             <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
                 ${recepcoes.length === 0 ? `
-                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300">
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 gap-3">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">${ico('clipboard', 'w-6 h-6')}</div>
                         <p class="text-xs text-slate-500 font-medium">Nenhuma recepção configurada no sistema.</p>
                     </div>
                 ` : recepcoes.map(rec => `
@@ -531,8 +593,8 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                         </div>
                         
                         <div class="flex items-center gap-3 mb-4">
-                            <div class="w-10 h-10 bg-slate-100 rounded-xl border border-slate-200 flex items-center justify-center text-lg">
-                                📋
+                            <div class="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 flex items-center justify-center">
+                                ${ico('clipboard', 'w-5 h-5')}
                             </div>
                             <div class="flex-1 min-w-0 pr-12">
                                 <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</h4>
@@ -557,14 +619,14 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                         
                         <div class="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-100">
                             <button class="btn-vincular-usuarios bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2 rounded-xl text-xs transition col-span-2 flex items-center justify-center gap-1.5" data-id="${rec.id}">
-                                Gerenciar Lotação de Equipe
+                                ${ico('users', 'w-3.5 h-3.5')} Gerenciar Lotação de Equipe
                             </button>
-                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}">
-                                Editar
+                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1.5" data-id="${rec.id}">
+                                ${ico('pencil', 'w-3.5 h-3.5')} Editar
                             </button>
                             <div class="flex gap-1.5">
-                                <button class="btn-link-recepcao flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}" title="Copiar link da TV">Link TV</button>
-                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-xl text-xs transition" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir">Excluir</button>
+                                <button class="btn-link-recepcao flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1" data-id="${rec.id}" title="Copiar link da TV">${ico('tv', 'w-3.5 h-3.5')} TV</button>
+                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir">${ico('trash', 'w-3.5 h-3.5')} Excluir</button>
                             </div>
                         </div>
                     </div>
@@ -642,15 +704,18 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col h-[80vh]">
                 <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
                     <div>
-                        <h3 class="font-bold text-sm">Lotação de Servidores: ${escapeHTML(recepcao.nome)}</h3>
+                        <h3 class="font-bold text-sm flex items-center gap-2">${ico('users')} Lotação de Servidores: ${escapeHTML(recepcao.nome)}</h3>
                         <p class="text-slate-400 text-xs mt-0.5">Selecione os usuários com permissão operacional</p>
                     </div>
-                    <button class="fechar-vinculo text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                    ${btnX({ cls: 'fechar-vinculo' })}
                 </div>
                 
                 <div class="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
-                    <input type="text" id="busca-membros-recepcao" placeholder="Filtrar por nome ou e-mail..." 
-                        class="w-full px-3 py-2 bg-white rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-slate-900">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-4 h-4')}</span>
+                        <input type="text" id="busca-membros-recepcao" placeholder="Filtrar por nome ou e-mail..." 
+                            class="w-full pl-9 pr-3 py-2 bg-white rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
                 </div>
 
                 <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
@@ -661,7 +726,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                     <span id="contagem-membros" class="text-xs font-semibold text-slate-500"></span>
                     <div class="flex gap-2">
                         <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg text-xs">Cancelar</button>
-                        <button id="salvar-vinculo" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2 rounded-lg text-xs shadow-sm">Salvar Alterações</button>
+                        <button id="salvar-vinculo" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2 rounded-lg text-xs shadow-sm">${ico('check', 'w-3.5 h-3.5')} Salvar Alterações</button>
                     </div>
                 </div>
             </div>
@@ -699,11 +764,12 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                             return `
                                 <label class="flex items-center gap-3 p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition ${isChecked ? 'border-slate-900 bg-slate-50' : ''}">
                                     <input type="checkbox" class="cb-membro w-4 h-4 text-slate-900 rounded focus:ring-0" value="${u.id}" ${isChecked ? 'checked' : ''}>
+                                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-black shrink-0">${escapeHTML(iniciais(u.name || u.email))}</div>
                                     <div class="flex-1 min-w-0">
                                         <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(u.name || 'Sem nome')}</p>
                                         <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
                                     </div>
-                                    <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">${u.role || 'user'}</span>
+                                    <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">${escapeHTML(u.role || 'user')}</span>
                                 </label>
                             `;
                         }).join('')}
@@ -738,8 +804,9 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
             document.getElementById('salvar-vinculo')?.addEventListener('click', async () => {
                 const btn = document.getElementById('salvar-vinculo');
                 if (!btn) return;
+                const original = btn.innerHTML;
                 btn.disabled = true;
-                btn.textContent = 'Salvando...';
+                btn.innerHTML = spinnerTxt('Salvando...');
 
                 try {
                     await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
@@ -749,7 +816,7 @@ const abrirModalGerenciarRecepcoesGlobal = async (app) => {
                 } catch (error) {
                     showNotification("Erro ao salvar lotação.", "error");
                     btn.disabled = false;
-                    btn.textContent = 'Salvar Alterações';
+                    btn.innerHTML = original;
                 }
             });
 
@@ -769,19 +836,19 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
     modal.innerHTML = `
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
-                <h3 class="font-bold text-sm tracking-wide">${isEdicao ? 'Editar Unidade' : 'Cadastrar Nova Unidade'}</h3>
-                <button class="fechar-form-unidade text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                <h3 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico(isEdicao ? 'pencil' : 'plus')} ${isEdicao ? 'Editar Unidade' : 'Cadastrar Nova Unidade'}</h3>
+                ${btnX({ cls: 'fechar-form-unidade' })}
             </div>
             <div class="p-6 space-y-3.5 text-xs">
-                <div><label class="block font-semibold text-slate-700 mb-1">Nome *</label><input type="text" id="unidade-nome" value="${unidade?.nome || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: Defensoria Caxias"></div>
-                <div><label class="block font-semibold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${unidade?.sigla || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: DPDC"></div>
-                <div><label class="block font-semibold text-slate-700 mb-1">Endereço</label><input type="text" id="unidade-endereco" value="${unidade?.endereco || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Logradouro completo"></div>
-                <div><label class="block font-semibold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${unidade?.telefone || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="(00) 0000-0000"></div>
-                <div><label class="block font-semibold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${unidade?.email || ''}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="email@dominio.br"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Nome *</label><input type="text" id="unidade-nome" value="${escapeHTML(unidade?.nome || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: Defensoria Caxias"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${escapeHTML(unidade?.sigla || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: DPDC"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Endereço</label><input type="text" id="unidade-endereco" value="${escapeHTML(unidade?.endereco || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Logradouro completo"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${escapeHTML(unidade?.telefone || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="(00) 0000-0000"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${escapeHTML(unidade?.email || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="email@dominio.br"></div>
             </div>
             <div class="bg-slate-50 px-6 py-3.5 flex justify-end gap-2 border-t border-slate-200">
                 <button class="fechar-form-unidade bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Cancelar</button>
-                <button id="btn-salvar-unidade" class="bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
+                <button id="btn-salvar-unidade" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${ico('check', 'w-3.5 h-3.5')} ${isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
             </div>
         </div>
     `;
@@ -802,11 +869,13 @@ const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
 function renderPagination(containerId, currentPage, totalPages, onPageChange) {
     const container = document.getElementById(containerId);
     if (!container) return;
+    container.classList.remove('hidden');
     if (totalPages <= 1) { container.innerHTML = ''; return; }
+    const btnCls = 'pag-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition';
     let html = '<div class="flex items-center justify-center gap-1.5 mt-4">';
-    html += `<button class="pag-btn px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Anterior</button>`;
-    html += `<span class="px-2 py-1 text-xs font-medium text-slate-500">Pág. ${currentPage} de ${totalPages}</span>`;
-    html += `<button class="pag-btn px-2.5 py-1 rounded bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Próxima</button>`;
+    html += `<button class="${btnCls}" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>${ico('chevronLeft', 'w-3.5 h-3.5')} Anterior</button>`;
+    html += `<span class="px-2 py-1 text-xs font-medium text-slate-500 tabular-nums">Pág. ${currentPage} de ${totalPages}</span>`;
+    html += `<button class="${btnCls}" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Próxima ${ico('chevronRight', 'w-3.5 h-3.5')}</button>`;
     html += '</div>';
     container.innerHTML = html;
     container.querySelectorAll('.pag-btn').forEach(btn => {
@@ -822,7 +891,7 @@ function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
     container.innerHTML = `
         <div class="flex items-center gap-2">
             <span class="text-xs text-slate-500">Exibir:</span>
-            <select id="page-size-select-${containerId}" class="text-xs border border-slate-300 rounded px-2 py-1 bg-white outline-none">
+            <select id="page-size-select-${containerId}" class="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white outline-none">
                 <option value="5" ${currentSize === 5 ? 'selected' : ''}>5</option>
                 <option value="10" ${currentSize === 10 ? 'selected' : ''}>10</option>
                 <option value="15" ${currentSize === 15 ? 'selected' : ''}>15</option>
@@ -841,9 +910,9 @@ function renderSearchInput(containerId, placeholder, onSearch) {
     if (!container) return;
     container.innerHTML = `
         <div class="relative">
-            <input type="text" id="search-input-${containerId}" placeholder="${placeholder}" class="w-full p-2 pl-8 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
-            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
-            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden">✕</button>
+            <input type="text" id="search-input-${containerId}" placeholder="${escapeHTML(placeholder)}" class="w-full p-2 pl-8 pr-8 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
+            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-3.5 h-3.5')}</span>
+            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden" aria-label="Limpar busca">${ico('x', 'w-3.5 h-3.5')}</button>
         </div>
     `;
     const input = document.getElementById(`search-input-${containerId}`);
@@ -925,17 +994,24 @@ function renderPendentesList(db) {
     const totalPages = Math.ceil(pendentes.length / pageSize);
     
     if (pendentes.length === 0) {
-        pendingList.innerHTML = '<div class="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200">Nenhum cadastro pendente de aprovação.</div>';
+        pendingList.innerHTML = `<div class="text-center py-6 text-slate-400 text-xs bg-slate-50 rounded-xl border border-dashed border-slate-200 flex flex-col items-center gap-2">
+            <div class="w-10 h-10 rounded-full bg-white border border-slate-200 flex items-center justify-center text-emerald-500">${ico('checkCircle', 'w-5 h-5')}</div>
+            Nenhum cadastro pendente de aprovação.
+        </div>`;
         document.getElementById('pagination-pendentes')?.classList.add('hidden');
         return;
     }
     
     pendingList.innerHTML = paginated.map(user => `
         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 bg-white rounded-xl border border-slate-200 mb-2 shadow-sm gap-3">
-            <div class="flex-1 min-w-0">
-                <div class="flex items-center gap-2">
-                    <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(user.name || 'Sem nome')} (${escapeHTML(user.email)})</p>
-                    <span class="bg-amber-100 text-amber-800 text-[9px] font-mono px-2 py-0.5 rounded">Pendente</span>
+            <div class="flex items-center gap-3 flex-1 min-w-0">
+                <div class="w-9 h-9 rounded-full bg-amber-100 text-amber-700 flex items-center justify-center text-xs font-black shrink-0">${escapeHTML(iniciais(user.name || user.email))}</div>
+                <div class="min-w-0">
+                    <div class="flex items-center gap-2">
+                        <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(user.name || 'Sem nome')}</p>
+                        <span class="bg-amber-100 text-amber-800 text-[9px] font-mono px-2 py-0.5 rounded shrink-0">Pendente</span>
+                    </div>
+                    <p class="text-[11px] text-slate-400 truncate">${escapeHTML(user.email)}</p>
                 </div>
             </div>
             <div class="flex items-center gap-2 shrink-0">
@@ -946,8 +1022,8 @@ function renderPendentesList(db) {
                     <option value="superadmin">Superadmin</option>
                     <option value="suspended">Suspenso</option>
                 </select>
-                <button onclick="window.approveUser('${user.id}')" class="bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">Aprovar</button>
-                <button onclick="window.deleteUser('${user.id}')" class="text-red-500 hover:text-red-700 px-2 py-1.5 text-xs font-semibold">Rejeitar</button>
+                <button onclick="window.approveUser('${user.id}')" class="inline-flex items-center gap-1 bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition">${ico('check', 'w-3.5 h-3.5')} Aprovar</button>
+                <button onclick="window.deleteUser('${user.id}')" class="inline-flex items-center gap-1 text-red-500 hover:text-red-700 hover:bg-red-50 px-2 py-1.5 rounded-lg text-xs font-semibold transition">${ico('x', 'w-3.5 h-3.5')} Rejeitar</button>
             </div>
         </div>
     `).join('');
@@ -997,17 +1073,22 @@ function renderAprovadosTable(db) {
         return `
             <tr class="border-b border-slate-200 ${rowClass} transition">
                 <td class="px-3 py-3">
-                    <p class="font-bold text-slate-800 text-xs">${escapeHTML(user.name || 'Sem nome')}</p>
-                    <p class="text-[11px] text-slate-400">${escapeHTML(user.email)}</p>
-                    <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold border mt-1 ${cfg.color}">
-                        ${cfg.label}
-                    </span>
-                    ${user.orgaoId ? `<span class="text-[9px] text-slate-400 block mt-0.5 font-mono">Órgão: ${escapeHTML(user.orgaoId)}</span>` : ''}
+                    <div class="flex items-start gap-3">
+                        <div class="w-9 h-9 rounded-full ${isSuspended ? 'bg-red-100 text-red-600' : 'bg-slate-100 text-slate-600'} flex items-center justify-center text-xs font-black shrink-0">${escapeHTML(iniciais(user.name || user.email))}</div>
+                        <div class="min-w-0">
+                            <p class="font-bold text-slate-800 text-xs">${escapeHTML(user.name || 'Sem nome')}</p>
+                            <p class="text-[11px] text-slate-400">${escapeHTML(user.email)}</p>
+                            <span class="inline-flex items-center px-2 py-0.5 rounded text-[9px] font-semibold border mt-1 ${cfg.color}">
+                                ${cfg.label}
+                            </span>
+                            ${user.orgaoId ? `<span class="text-[9px] text-slate-400 block mt-0.5 font-mono">Órgão: ${escapeHTML(user.orgaoId)}</span>` : ''}
+                        </div>
+                    </div>
                 </td>
                 <td class="px-3 py-3 text-center">
-                    <button class="btn-gerenciar-unidades bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold flex items-center gap-1.5 mx-auto transition shadow-sm"
+                    <button class="btn-gerenciar-unidades bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 mx-auto transition shadow-sm"
                         data-userid="${user.id}" title="Vincular unidades">
-                        Unidades (${unidadesCount})
+                        ${ico('building', 'w-3.5 h-3.5')} Unidades (${unidadesCount})
                     </button>
                 </td>
                 <td class="px-3 py-3">
@@ -1021,20 +1102,20 @@ function renderAprovadosTable(db) {
                     </select>
                 </td>
                 <td class="px-3 py-3">
-                    <div class="flex flex-col gap-1.5 min-w-[120px]">
+                    <div class="flex flex-col gap-1.5 min-w-[130px]">
                         <button onclick="window.updateUserRole('${user.id}')"
-                            class="bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition shadow-sm">
-                            Atualizar Perfil
+                            class="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition shadow-sm">
+                            ${ico('refresh', 'w-3.5 h-3.5')} Atualizar Perfil
                         </button>
                         <button onclick="window.toggleSuspendUser('${user.id}', ${isSuspended})"
                             class="${isSuspended
                                 ? 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-300'
-                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-300'} border px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
-                            ${isSuspended ? 'Reativar Conta' : 'Suspender Conta'}
+                                : 'bg-amber-50 hover:bg-amber-100 text-amber-700 border-amber-300'} inline-flex items-center justify-center gap-1.5 border px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
+                            ${isSuspended ? ico('checkCircle', 'w-3.5 h-3.5') + ' Reativar Conta' : ico('ban', 'w-3.5 h-3.5') + ' Suspender Conta'}
                         </button>
                         <button onclick="window.deleteUser('${user.id}')"
-                            class="bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
-                            Remover
+                            class="inline-flex items-center justify-center gap-1.5 bg-white hover:bg-red-50 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg text-xs font-semibold w-full transition">
+                            ${ico('trash', 'w-3.5 h-3.5')} Remover
                         </button>
                     </div>
                 </td>
@@ -1193,7 +1274,7 @@ export const loadAuditLogs = async (db) => {
     if (!logsContainer || !tableBody) return;
     if (filterSection) filterSection.classList.remove('hidden');
     logsContainer.classList.remove('hidden');
-    tableBody.innerHTML = '<tr><td colspan="4" class="text-center py-6 text-xs text-slate-400">Carregando registros...</td></tr>';
+    tableBody.innerHTML = `<tr><td colspan="4" class="text-center py-6 text-xs text-slate-400"><span class="inline-flex items-center gap-2">${ico('loader', 'w-4 h-4 animate-spin')} Carregando registros...</span></td></tr>`;
     if (pdfBtn) pdfBtn.classList.add('hidden');
 
     try {
@@ -1399,7 +1480,7 @@ export const loadDashboardData = async (db) => {
     if (!resultsArea) return;
 
     resultsArea.classList.remove('hidden');
-    resultsArea.innerHTML = '<div class="text-center py-6 text-xs text-slate-500">Calculando indicadores executivos...</div>';
+    resultsArea.innerHTML = `<div class="text-center py-6 text-xs text-slate-500"><span class="inline-flex items-center gap-2">${ico('loader', 'w-4 h-4 animate-spin')} Calculando indicadores executivos...</span></div>`;
     
     try {
         const snapshot = await getDocs(collection(db, "estatisticas_permanentes"));
@@ -1436,17 +1517,26 @@ export const loadDashboardData = async (db) => {
         
         resultsArea.innerHTML = `
             <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
-                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Demanda Total</p>
-                    <h4 class="text-xl font-black text-slate-800 mt-1">${totalGeral}</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center shrink-0">${ico('users', 'w-5 h-5')}</div>
+                    <div>
+                        <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Demanda Total</p>
+                        <h4 class="text-xl font-black text-slate-800 leading-tight tabular-nums">${totalGeral}</h4>
+                    </div>
                 </div>
-                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Atendimentos Realizados</p>
-                    <h4 class="text-xl font-black text-emerald-700 mt-1">${totalAtendidos}</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-emerald-50 text-emerald-600 flex items-center justify-center shrink-0">${ico('checkCircle', 'w-5 h-5')}</div>
+                    <div>
+                        <p class="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Atendimentos Realizados</p>
+                        <h4 class="text-xl font-black text-emerald-700 leading-tight tabular-nums">${totalAtendidos}</h4>
+                    </div>
                 </div>
-                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm text-center">
-                    <p class="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Taxa de Absenteísmo</p>
-                    <h4 class="text-xl font-black text-amber-700 mt-1">${taxa}%</h4>
+                <div class="p-4 bg-white rounded-xl border border-slate-200 shadow-sm flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center shrink-0">${ico('userX', 'w-5 h-5')}</div>
+                    <div>
+                        <p class="text-[10px] text-amber-600 font-bold uppercase tracking-wider">Taxa de Absenteísmo</p>
+                        <h4 class="text-xl font-black text-amber-700 leading-tight tabular-nums">${taxa}%</h4>
+                    </div>
                 </div>
             </div>
             
@@ -1466,10 +1556,14 @@ export const loadDashboardData = async (db) => {
             const el = document.getElementById(elementId);
             const sorted = Object.entries(dataMap).sort((a,b) => b[1] - a[1]).slice(0, 5);
             if (sorted.length === 0) { el.innerHTML = '<p class="text-center text-slate-400 py-3 text-xs italic">Sem dados suficientes.</p>'; return; }
-            el.innerHTML = sorted.map(([name, count]) => `
-                <div class="flex justify-between items-center bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 text-xs">
-                    <span class="truncate pr-2 font-medium text-slate-700">${escapeHTML(name)}</span>
-                    <span class="font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded text-[11px]">${count}</span>
+            const maxV = Math.max(...sorted.map(s => s[1]), 1);
+            el.innerHTML = sorted.map(([name, count], i) => `
+                <div class="bg-slate-50 px-3 py-2 rounded-lg border border-slate-100 text-xs">
+                    <div class="flex justify-between items-center">
+                        <span class="truncate pr-2 font-medium text-slate-700"><span class="text-slate-400 font-bold mr-1.5">${i + 1}º</span>${escapeHTML(name)}</span>
+                        <span class="font-bold text-slate-900 bg-white border border-slate-200 px-2 py-0.5 rounded text-[11px] tabular-nums">${count}</span>
+                    </div>
+                    <div class="mt-1.5 h-1 bg-slate-200 rounded-full overflow-hidden"><div class="h-full bg-slate-700 rounded-full" style="width:${Math.round((count / maxV) * 100)}%"></div></div>
                 </div>
             `).join('');
         };
@@ -1478,7 +1572,7 @@ export const loadDashboardData = async (db) => {
         renderRanking('dash-users-list', mapUsers);
         
     } catch (error) { 
-        resultsArea.innerHTML = `<div class="text-center py-6 text-xs text-red-500 font-semibold border border-red-200 bg-red-50 rounded-xl">Erro ao carregar BI: ${error.message}</div>`; 
+        resultsArea.innerHTML = `<div class="text-center py-6 text-xs text-red-500 font-semibold border border-red-200 bg-red-50 rounded-xl">Erro ao carregar BI: ${escapeHTML(error.message)}</div>`; 
     }
 };
 
@@ -1525,27 +1619,35 @@ export const abrirGerenciadorTenants = async (db) => {
         if (!container) return;
         
         if (orgaos.length === 0) {
-            container.innerHTML = '<div class="col-span-full text-center py-8 text-slate-400 text-xs">Nenhum cliente cadastrado.</div>';
+            container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 text-xs flex flex-col items-center gap-3">
+                <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">${ico('building', 'w-6 h-6')}</div>
+                Nenhum cliente cadastrado.
+            </div>`;
             return;
         }
         
-        container.innerHTML = orgaos.map(org => `
+        container.innerHTML = orgaos.map(org => {
+            const ativo = org.ativo !== false;
+            return `
             <div class="border border-slate-200 rounded-xl p-4 bg-white shadow-sm flex flex-col justify-between">
                 <div>
-                    <div class="flex justify-between items-start mb-2">
-                        <h4 class="font-bold text-slate-800 text-sm">${escapeHTML(org.nome)}</h4>
-                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase ${org.ativo !== false ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
-                            ${org.ativo !== false ? 'Ativo' : 'Bloqueado'}
+                    <div class="flex justify-between items-start gap-2 mb-2">
+                        <div class="flex items-center gap-3 min-w-0">
+                            <div class="w-9 h-9 rounded-lg ${ativo ? 'bg-slate-100 text-slate-500' : 'bg-red-50 text-red-500'} flex items-center justify-center shrink-0">${ico('building', 'w-[18px] h-[18px]')}</div>
+                            <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(org.nome)}</h4>
+                        </div>
+                        <span class="px-2 py-0.5 rounded text-[10px] font-semibold uppercase shrink-0 ${ativo ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-red-50 text-red-700 border border-red-200'}">
+                            ${ativo ? 'Ativo' : 'Bloqueado'}
                         </span>
                     </div>
                     <p class="text-[11px] font-mono text-slate-400 mb-4">Identificador: ${escapeHTML(org.id)}</p>
                 </div>
                 
-                <button class="btn-toggle-tenant w-full ${org.ativo !== false ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'} font-semibold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${org.ativo !== false}">
-                    ${org.ativo !== false ? 'Bloquear Acesso' : 'Desbloquear Acesso'}
+                <button class="btn-toggle-tenant w-full inline-flex items-center justify-center gap-1.5 ${ativo ? 'bg-red-50 hover:bg-red-100 text-red-700 border border-red-200' : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border border-emerald-200'} font-semibold py-2 rounded-lg text-xs transition" data-id="${org.id}" data-ativo="${ativo}">
+                    ${ativo ? ico('lock', 'w-3.5 h-3.5') + ' Bloquear Acesso' : ico('unlock', 'w-3.5 h-3.5') + ' Desbloquear Acesso'}
                 </button>
-            </div>
-        `).join('');
+            </div>`;
+        }).join('');
         
         container.querySelectorAll('.btn-toggle-tenant').forEach(btn => {
             btn.addEventListener('click', async () => {
@@ -1555,7 +1657,7 @@ export const abrirGerenciadorTenants = async (db) => {
                 
                 if (confirm(`Confirma a alteração para ${acao} este cliente?`)) {
                     btn.disabled = true;
-                    btn.textContent = 'Salvando...';
+                    btn.innerHTML = spinnerTxt('Salvando...');
                     try {
                         await updateDoc(doc(db, "orgaos_clientes", btn.dataset.id), { ativo: novoStatus, updatedAt: new Date().toISOString() });
                         showNotification("Status do cliente atualizado.", "success");
@@ -1564,6 +1666,7 @@ export const abrirGerenciadorTenants = async (db) => {
                     } catch (e) {
                         showNotification("Erro ao atualizar status.", "error");
                         btn.disabled = false;
+                        renderLista();
                     }
                 }
             });
@@ -1577,10 +1680,10 @@ export const abrirGerenciadorTenants = async (db) => {
         <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col">
             <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0 border-b border-slate-800">
                 <div>
-                    <h2 class="font-bold text-sm tracking-wide">Gestão Corporativa de Clientes (Tenants)</h2>
+                    <h2 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico('building', 'w-5 h-5')} Gestão Corporativa de Clientes (Tenants)</h2>
                     <p class="text-slate-400 text-xs mt-0.5">Painel de controle de órgãos e prefeituras contratantes</p>
                 </div>
-                <button id="fechar-gerenciador-tenants" class="text-slate-400 hover:text-white text-2xl leading-none">&times;</button>
+                ${btnX({ id: 'fechar-gerenciador-tenants' })}
             </div>
             
             <div class="flex-1 overflow-y-auto p-6 bg-slate-50 space-y-6">
@@ -1588,7 +1691,7 @@ export const abrirGerenciadorTenants = async (db) => {
                     <h3 class="font-bold text-slate-800 text-xs uppercase tracking-wider mb-3">Cadastrar Novo Cliente</h3>
                     <div class="flex flex-col sm:flex-row gap-3">
                         <input type="text" id="novo-tenant-nome" placeholder="Nome do Órgão ou Cliente (Ex: Prefeitura de Maricá)" class="flex-1 p-2.5 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
-                        <button id="btn-salvar-tenant" class="bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-xs transition shrink-0">Cadastrar Cliente</button>
+                        <button id="btn-salvar-tenant" class="inline-flex items-center justify-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2.5 rounded-lg text-xs transition shrink-0">${ico('plus', 'w-3.5 h-3.5')} Cadastrar Cliente</button>
                     </div>
                 </div>
                 
@@ -1614,8 +1717,9 @@ export const abrirGerenciadorTenants = async (db) => {
         }
         
         const btn = document.getElementById('btn-salvar-tenant');
+        const original = btn.innerHTML;
         btn.disabled = true;
-        btn.textContent = 'Salvando...';
+        btn.innerHTML = spinnerTxt('Salvando...');
         
         try {
             const tenantId = nome.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '_').replace(/[^a-z0-9_]/g, '');
@@ -1636,7 +1740,7 @@ export const abrirGerenciadorTenants = async (db) => {
             showNotification("Erro ao cadastrar cliente.", "error");
         } finally {
             btn.disabled = false;
-            btn.textContent = 'Cadastrar Cliente';
+            btn.innerHTML = original;
         }
     });
 };
@@ -1658,10 +1762,10 @@ export const carregarFeedbacksSistema = async (db) => {
         wrapper.innerHTML = `
             <div class="flex justify-between items-center mb-4">
                 <h3 class="text-lg font-bold text-slate-800 flex items-center gap-2">
-                    <span>📢</span> Ouvidoria, Erros e Sugestões do Sistema
+                    <span class="text-slate-500">${ico('megaphone', 'w-5 h-5')}</span> Ouvidoria, Erros e Sugestões do Sistema
                 </h3>
-                <button id="btn-atualizar-feedbacks" class="bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
-                    Atualizar Lista
+                <button id="btn-atualizar-feedbacks" class="inline-flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-3 py-1.5 rounded-lg text-xs font-semibold transition">
+                    ${ico('refresh', 'w-3.5 h-3.5')} Atualizar Lista
                 </button>
             </div>
             <div class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
@@ -1711,7 +1815,12 @@ export const carregarFeedbacksSistema = async (db) => {
         } catch(e) {}
 
         if (todosFeedbacks.length === 0) {
-            tbody.innerHTML = '<tr><td colspan="6" class="text-center py-8 text-slate-400">Nenhum feedback ou erro reportado até o momento. 🎉</td></tr>';
+            tbody.innerHTML = `<tr><td colspan="6" class="text-center py-8 text-slate-400">
+                <div class="flex flex-col items-center gap-2">
+                    <div class="w-10 h-10 rounded-full bg-emerald-50 text-emerald-500 flex items-center justify-center">${ico('checkCircle', 'w-5 h-5')}</div>
+                    Nenhum feedback ou erro reportado até o momento.
+                </div>
+            </td></tr>`;
             return;
         }
 
@@ -1742,8 +1851,8 @@ export const carregarFeedbacksSistema = async (db) => {
                     <td class="p-3 font-semibold text-slate-700">${escapeHTML(fb.nome || fb.enviadoPor || 'Anônimo')}</td>
                     <td class="p-3 text-slate-800 font-medium max-w-xs break-words">${escapeHTML(fb.mensagem || '')}</td>
                     <td class="p-3 text-center">
-                        <button onclick="window.excluirFeedbackAdmin('${fb.pautaId || 'global'}', '${fb.id}')" class="text-red-400 hover:text-red-600 font-bold p-1 rounded transition" title="Excluir mensagem">
-                            ✕
+                        <button onclick="window.excluirFeedbackAdmin('${fb.pautaId || 'global'}', '${fb.id}')" class="text-red-400 hover:text-white hover:bg-red-500 p-1.5 rounded-lg transition" title="Excluir mensagem" aria-label="Excluir mensagem">
+                            ${ico('trash')}
                         </button>
                     </td>
                 </tr>
@@ -1763,7 +1872,7 @@ export const setupAdminEvents = (app) => {
     loadUsersList(app.db);
     populateUserFilter(app.db);
 
-    // 🌟 ADICIONADO PARA CARREGAR OS FEEDBACKS NA TELA DE ADMIN:
+    // Carrega os feedbacks na tela de admin
     carregarFeedbacksSistema(app.db);
 
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
@@ -1814,7 +1923,7 @@ export const setupAdminEvents = (app) => {
             const btnTenants = document.createElement('button');
             btnTenants.id = 'btn-gerenciar-tenants';
             btnTenants.className = 'bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 ml-auto';
-            btnTenants.innerHTML = 'Gestão de Clientes';
+            btnTenants.innerHTML = `${ico('building', 'w-3.5 h-3.5')} Gestão de Clientes`;
             btnTenants.onclick = () => abrirGerenciadorTenants(app.db);
             btnContainer.appendChild(btnTenants);
         }
@@ -1850,7 +1959,8 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
-    if (globalApp) abrirGerenciarUnidades(globalApp.db);
+    // Corrigido: o nome certo da função é abrirGerenciadorUnidades
+    if (globalApp) abrirGerenciadorUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
 
@@ -1899,11 +2009,10 @@ window.exportAuditLogsPDF = () => {
     else console.error("App não inicializado");
 };
 
-// 🌟 INJEÇÃO GLOBAL PARA EXCLUIR FEEDBACK DA OUVIDORIA:
+// Exclusão de feedback da ouvidoria
 window.excluirFeedbackAdmin = async (pautaId, feedbackId) => {
     if (!confirm("Deseja remover este registro do painel?")) return;
     try {
-        const { doc, deleteDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         if (pautaId === 'global') {
             await deleteDoc(doc(globalApp.db, "feedbacks_sistema", feedbackId));
         } else {
