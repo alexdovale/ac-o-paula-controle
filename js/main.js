@@ -1561,6 +1561,12 @@ class SIGEPApp {
                 </div>
 
                 <!-- Link Gerado -->
+                 <div>
+                    <span class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">PIN de acesso (opcional)</span>
+                    <input type="password" id="tv_pin_novo" maxlength="12" autocomplete="new-password" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Digite um PIN para proteger o painel (vazio = manter)">
+                    <label class="flex items-center gap-2 mt-2 text-xs font-semibold text-slate-600"><input type="checkbox" id="tv_pin_remover"> Remover PIN (deixar o painel aberto)</label>
+                </div>
+                
                 <div class="bg-blue-50/50 border border-blue-100 p-5 rounded-xl">
                     <div class="flex justify-between items-center mb-2">
                         <span class="block text-xs font-extrabold text-blue-900 uppercase tracking-wider">Link gerado para a Smart TV</span>
@@ -1684,9 +1690,15 @@ class SIGEPApp {
 
             const orgaoId = this.currentUser?.orgaoId || null;
             try {
-                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), { 
-                    logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() 
-                }, { merge: true });
+                const payload = { logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() };
+                const pinNovo = document.getElementById('tv_pin_novo')?.value.trim();
+                if (document.getElementById('tv_pin_remover')?.checked) {
+                    payload.tvPinHash = '';
+                } else if (pinNovo) {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sigep-tv:' + pinNovo));
+                    payload.tvPinHash = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), payload, { merge: true });
             } catch (err) {
                 console.warn('Falha ao salvar logo do painel no banco:', err);
             }
