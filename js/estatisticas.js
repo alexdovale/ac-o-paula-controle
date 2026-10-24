@@ -1,6 +1,7 @@
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores, barras, cartões por equipe)
+ * - Ícones SVG (estilo Lucide) no lugar de emojis
  * - Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras, "Não definida" por último
  * - IDs estáveis (sem Math.random) e nomes protegidos contra HTML
  * - PDFs: Resumo Geral, Por Equipe, Só Grupos, Detalhado (com logo SIGEP e quebra de página)
@@ -13,6 +14,35 @@ const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<'
 
 const slug = (s) => String(s ?? '').normalize('NFD').replace(/[\u0300-\u036f]/g, '')
     .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+
+// ---------- ícones (SVG inline, herdam a cor do texto) ----------
+const ICONS = {
+    check: '<path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/>',
+    calendar: '<rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+    userCheck: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m16 11 2 2 4-4"/>',
+    userX: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="m17 8 5 5M22 8l-5 5"/>',
+    trend: '<path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/>',
+    clock: '<circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/>',
+    printer: '<path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/>',
+    users: '<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87M16 3.13a4 4 0 0 1 0 7.75"/>',
+    list: '<path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/>',
+    fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
+    chart: '<path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/>',
+    zap: '<path d="M13 2 3 14h9l-1 8 10-12h-9z"/>',
+    tag: '<path d="M12.59 2.59A2 2 0 0 0 11.17 2H4a2 2 0 0 0-2 2v7.17a2 2 0 0 0 .59 1.42l8.82 8.82a2 2 0 0 0 2.83 0l7.17-7.17a2 2 0 0 0 0-2.83z"/><path d="M7 7h.01"/>',
+    pin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
+    building: '<rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/>',
+    scale: '<path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/>',
+    monitor: '<rect x="2" y="3" width="20" height="14" rx="2"/><path d="M8 21h8M12 17v4"/>',
+    refresh: '<path d="M3 12a9 9 0 0 1 9-9 9.75 9.75 0 0 1 6.74 2.74L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-9 9 9.75 9.75 0 0 1-6.74-2.74L3 16"/><path d="M8 16H3v5"/>',
+    search: '<circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/>',
+    settings: '<circle cx="12" cy="12" r="3"/><path d="M12 1v4M12 19v4M4.2 4.2 7 7M17 17l2.8 2.8M1 12h4M19 12h4M4.2 19.8 7 17M17 7l2.8-2.8"/>',
+    loader: '<path d="M21 12a9 9 0 1 1-6.22-8.56"/>',
+    chevron: '<path d="m6 9 6 6 6-6"/>'
+};
+
+const ico = (nome, cls = 'w-4 h-4') =>
+    `<svg class="${cls} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
 
 const pct = (parte, total) => total > 0 ? Math.round((parte / total) * 100) : 0;
 const pctF = (parte, total) => total > 0 ? Math.round((parte / total) * 1000) / 10 : 0;
@@ -281,7 +311,7 @@ export const StatisticsService = {
         return `
             <section class="bg-white rounded-2xl border border-slate-200 shadow-sm ${extra}">
                 <header class="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-                    <span class="text-base">${icone}</span>
+                    <span class="text-slate-500 inline-flex">${icone}</span>
                     <h3 class="text-sm font-bold text-slate-800">${titulo}</h3>
                 </header>
                 <div class="p-5">${corpo}</div>
@@ -297,7 +327,7 @@ export const StatisticsService = {
         if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
 
         const titleEl = modal.querySelector('h2');
-        if (titleEl) titleEl.innerHTML = `<span class="text-blue-600 mr-2">📊</span> Estatísticas - <span class="text-gray-700">${esc(pautaName)}</span>`;
+        if (titleEl) titleEl.innerHTML = `<span class="text-blue-600 mr-2 inline-flex align-middle">${ico('chart', 'w-5 h-5')}</span> Estatísticas - <span class="text-gray-700">${esc(pautaName)}</span>`;
 
         const content = document.getElementById('statistics-content');
         if (!content) return;
@@ -313,6 +343,8 @@ export const StatisticsService = {
             return acao.includes('reagend') || acao.includes('agend');
         };
 
+        // Agend/Reagend = atendidos via ação de agendar/reagendar.
+        // Efetivados = os demais atendidos (atendimento efetivado).
         const atendidosComAgenda = atendidos.filter(a => isReagendadoOuAgendadoViaMenu(a));
         const atendidosSemAgenda = atendidos.filter(a => !isReagendadoOuAgendadoViaMenu(a));
 
@@ -331,7 +363,7 @@ export const StatisticsService = {
             if (!nome) return;
             const grupo = col.equipe ? `Equipe ${col.equipe}` : 'Equipe Não Definida';
             nomeParaEquipe[nome.toLowerCase()] = grupo;
-            
+
             const g = garantirGrupo(grupo);
             if (!g.todosColaboradores.some(c => c.nome.toLowerCase() === nome.toLowerCase())) {
                 g.todosColaboradores.push({ nome, cargo: col.cargo || 'Sem cargo', id: col.id || ('col-' + slug(nome)) });
@@ -384,7 +416,7 @@ export const StatisticsService = {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
             const ehReagendadoOuAgendado = isReagendadoOuAgendadoViaMenu(a);
-            
+
             demandas.forEach(d => {
                 if (!acc[d]) {
                     acc[d] = { total: 0, atendidos: 0, faltosos: 0, agendaAtendidos: 0, semVincAtendidos: 0 };
@@ -400,7 +432,7 @@ export const StatisticsService = {
             });
             return acc;
         }, {});
-        
+
         const somaSubj = (k) => Object.values(statsBySubject).reduce((s, d) => s + d[k], 0);
         const totalDemandasGeral = somaSubj('total');
         const totalDemandasAtendidos = somaSubj('atendidos');
@@ -418,11 +450,11 @@ export const StatisticsService = {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
         }, {});
-        
+
         const statsByTime = contarPorHorario(atendidos);
         const statsByTimeFaltosos = contarPorHorario(faltosos);
         const statsByScheduledTime = contarPorHorario(allAssisted.filter(a => a.status !== 'cancelado'));
-        
+
         const sortedTimes = Object.keys(statsByTime).sort();
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
@@ -445,36 +477,34 @@ export const StatisticsService = {
 
         // =================== HTML ===================
         const kpi = (icone, valor, rotulo, cor) => `
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex flex-col justify-between">
-                <div class="flex items-center justify-between mb-1">
-                    <span class="text-sm">${icone}</span>
-                </div>
-                <div>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3">
+                <div class="w-9 h-9 rounded-lg ${cor} flex items-center justify-center shrink-0">${icone}</div>
+                <div class="min-w-0">
                     <p class="text-xl font-black text-slate-800 leading-none tabular-nums">${valor}</p>
                     <p class="text-[10px] text-slate-500 font-bold mt-1 truncate">${rotulo}</p>
                 </div>
             </div>`;
 
-        // Cartões atualizados com a nomenclarura exata: Atendidos (o restante), Agend/Reagend, Faltosos, etc.
         const kpisHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-                ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
-                ${kpi('📅', atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50')}
-                ${kpi('👤', atendidosSemAgenda.length, 'Atendidos (Outros)', 'bg-teal-50')}
-                ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
-                ${kpi('📈', comparecimento + '%', 'Presença', 'bg-blue-50')}
-                ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50')}
+                ${kpi(ico('check', 'w-[18px] h-[18px]'), atendidos.length, 'Atendidos', 'bg-green-50 text-green-600')}
+                ${kpi(ico('calendar', 'w-[18px] h-[18px]'), atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50 text-emerald-600')}
+                ${kpi(ico('userCheck', 'w-[18px] h-[18px]'), atendidosSemAgenda.length, 'Efetivados', 'bg-teal-50 text-teal-600')}
+                ${kpi(ico('userX', 'w-[18px] h-[18px]'), faltosos.length, 'Faltosos', 'bg-red-50 text-red-600')}
+                ${kpi(ico('trend', 'w-[18px] h-[18px]'), comparecimento + '%', 'Presença', 'bg-blue-50 text-blue-600')}
+                ${kpi(ico('clock', 'w-[18px] h-[18px]'), avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50 text-amber-600')}
             </div>`;
 
+        const btnCls = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white transition-colors';
         const exportHTML = `
             <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
                 <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm font-bold text-slate-800 mr-auto">🖨️ Exportar relatórios</span>
-                    <button id="export-stats-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-blue-600 text-white hover:bg-blue-700 transition-colors">📊 Resumo geral</button>
-                    <button id="export-equipes-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-purple-600 text-white hover:bg-purple-700 transition-colors">👥 Por equipe</button>
-                    <button id="export-grupo-pdf-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-emerald-600 text-white hover:bg-emerald-700 transition-colors">📋 Só grupos</button>
-                    <button id="export-stats-detalhado-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-orange-500 text-white hover:bg-orange-600 transition-colors">📖 Detalhado</button>
-                    <button id="export-stats-graficos-btn" class="px-3 py-2 rounded-lg text-xs font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors">📈 Com gráficos</button>
+                    <span class="text-sm font-bold text-slate-800 mr-auto inline-flex items-center gap-2">${ico('printer')} Exportar relatórios</span>
+                    <button id="export-stats-pdf-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700">${ico('chart', 'w-3.5 h-3.5')} Resumo geral</button>
+                    <button id="export-equipes-pdf-btn" class="${btnCls} bg-purple-600 hover:bg-purple-700">${ico('users', 'w-3.5 h-3.5')} Por equipe</button>
+                    <button id="export-grupo-pdf-btn" class="${btnCls} bg-emerald-600 hover:bg-emerald-700">${ico('list', 'w-3.5 h-3.5')} Só grupos</button>
+                    <button id="export-stats-detalhado-btn" class="${btnCls} bg-orange-500 hover:bg-orange-600">${ico('fileText', 'w-3.5 h-3.5')} Detalhado</button>
+                    <button id="export-stats-graficos-btn" class="${btnCls} bg-slate-800 hover:bg-slate-900">${ico('trend', 'w-3.5 h-3.5')} Com gráficos</button>
                 </div>
                 <details class="mt-3">
                     <summary class="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Escolher o que entra no Resumo geral</summary>
@@ -486,30 +516,30 @@ export const StatisticsService = {
             </div>`;
 
         const acoesCores = {
-            'Reagendamento': { icon: '🔄', bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
-            'Agendamento': { icon: '📅', bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
-            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
-            'Outros Assuntos': { icon: '⚙️', bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
+            'Reagendamento': { icon: ico('refresh', 'w-3.5 h-3.5'), bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
+            'Agendamento': { icon: ico('calendar', 'w-3.5 h-3.5'), bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
+            'Consulta Processual': { icon: ico('search', 'w-3.5 h-3.5'), bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
+            'Outros Assuntos': { icon: ico('settings', 'w-3.5 h-3.5'), bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
         };
-        const acoesHTML = totalAcoesRapidas > 0 ? this.cartao('Ações rápidas utilizadas', '⚡', `
+        const acoesHTML = totalAcoesRapidas > 0 ? this.cartao('Ações rápidas utilizadas', ico('zap'), `
             <div class="grid grid-cols-2 gap-3">
                 ${Object.entries(statsByAcaoRapida).sort(([, a], [, b]) => b - a).map(([tipo, qtd]) => {
-            const c = acoesCores[tipo] || { icon: '⚡', bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
+            const c = acoesCores[tipo] || { icon: ico('zap', 'w-3.5 h-3.5'), bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
             return `<div style="background:${c.bg};border:1px solid ${c.border};color:${c.text}" class="rounded-xl px-3 py-2.5">
-                        <div class="text-[11px] font-bold opacity-80">${c.icon}${esc(tipo)}</div>
+                        <div class="text-[11px] font-bold opacity-80 inline-flex items-center gap-1.5">${c.icon}${esc(tipo)}</div>
                         <div class="text-xl font-black tabular-nums">${qtd}</div></div>`;
         }).join('')}
             </div>
             <p class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between"><span>Total de ações ágeis</span><strong class="text-slate-700">${totalAcoesRapidas}</strong></p>`) : '';
 
         const horariosHTML = [
-            sortedScheduledTimes.length ? this.cartao('Agendados por horário', '📅', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedScheduledTimes.map(t => ({ label: t, count: statsByScheduledTime[t] })), 'bg-slate-500')}</div>`) : '',
-            sortedTimes.length ? this.cartao('Atendidos por horário', '📍', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimes.map(t => ({ label: t, count: statsByTime[t] })), 'bg-green-500')}</div>`) : '',
-            sortedTimesFaltosos.length ? this.cartao('Faltosos por horário', '🚫', `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimesFaltosos.map(t => ({ label: t, count: statsByTimeFaltosos[t] })), 'bg-red-500')}</div>`) : ''
+            sortedScheduledTimes.length ? this.cartao('Agendados por horário', ico('calendar'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedScheduledTimes.map(t => ({ label: t, count: statsByScheduledTime[t] })), 'bg-slate-500')}</div>`) : '',
+            sortedTimes.length ? this.cartao('Atendidos por horário', ico('pin'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimes.map(t => ({ label: t, count: statsByTime[t] })), 'bg-green-500')}</div>`) : '',
+            sortedTimesFaltosos.length ? this.cartao('Faltosos por horário', ico('userX'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimesFaltosos.map(t => ({ label: t, count: statsByTimeFaltosos[t] })), 'bg-red-500')}</div>`) : ''
         ].join('');
 
         const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
-        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Atendidos)', '🏷️', assuntosOrdenados.length === 0
+        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Efetivados)', ico('tag'), assuntosOrdenados.length === 0
             ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
             : `<div class="max-h-[380px] overflow-y-auto rounded-lg border border-slate-100">
                 <table class="w-full text-xs md:text-sm text-left">
@@ -518,7 +548,7 @@ export const StatisticsService = {
                             <th class="px-3 py-2.5 font-bold">Assunto</th>
                             <th class="px-2 py-2.5 font-bold text-center">Total</th>
                             <th class="px-2 py-2.5 font-bold text-center text-emerald-600">Agend/Reag</th>
-                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Atendidos</th>
+                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Efetivados</th>
                             <th class="px-2 py-2.5 font-bold text-center text-red-600">Falt.</th>
                         </tr>
                     </thead>
@@ -568,7 +598,7 @@ export const StatisticsService = {
                     <p class="text-[11px] text-slate-400">100% = todos os atendidos</p>
                 </div>
                 <div class="flex h-4 rounded-full overflow-hidden bg-slate-200">
-                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}:${pctF(g.total, totalGeral)}%"></div>`).join('')}
+                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}: ${pctF(g.total, totalGeral)}%"></div>`).join('')}
                 </div>
                 <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
                     ${gruposComAtend.map(g => `
@@ -604,7 +634,7 @@ export const StatisticsService = {
                 <div class="border border-slate-200 rounded-xl overflow-hidden bg-white" data-group="${gid}">
                     <button type="button" class="group-toggle w-full text-left px-4 pt-3 pb-2.5 bg-slate-50 hover:bg-slate-100 transition-colors" data-target="${gid}" aria-expanded="true">
                         <div class="flex items-center gap-3">
-                            <span class="chev text-slate-400 transition-transform">▾</span>
+                            <span class="chev text-slate-400 transition-transform inline-flex">${ico('chevron')}</span>
                             <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
                             <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
                             <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
@@ -641,7 +671,7 @@ export const StatisticsService = {
                         <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? corIcone : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
                         <div class="min-w-0 flex-1">
                             <p class="text-sm font-semibold text-slate-700 truncate">${esc(r.nome)}</p>
-                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} ·${esc(r.cargo || '-')}</p>
+                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} · ${esc(r.cargo || '-')}</p>
                         </div>
                         <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corBarra} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
                         <div class="text-right leading-tight w-24 shrink-0 hidden sm:block">
@@ -667,13 +697,14 @@ export const StatisticsService = {
         const defensoresHTML = gerarHTMLRanking(rankingDefensores, "Defensores", "bg-purple-100 text-purple-700", "bg-purple-500");
         const servidoresHTML = gerarHTMLRanking(rankingServidores, "Servidores", "bg-orange-100 text-orange-700", "bg-orange-500");
 
-        const equipesHTML = this.cartao('Atendimentos por equipe e Rankings', '🏢', `
+        const tabCls = 'view-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold';
+        const equipesHTML = this.cartao('Atendimentos por equipe e Rankings', ico('building'), `
             <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
                 <div class="inline-flex rounded-lg bg-slate-100 p-1 flex-wrap" role="tablist">
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold bg-white shadow text-slate-800" data-view="geral" role="tab">🏢 Equipes</button>
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="individual" role="tab">🧑 Todos</button>
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="defensores" role="tab">⚖️ Defensores</button>
-                    <button type="button" class="view-tab px-3 py-1.5 rounded-md text-xs font-bold text-slate-500" data-view="servidores" role="tab">👨‍💻 Servidores</button>
+                    <button type="button" class="${tabCls} bg-white shadow text-slate-800" data-view="geral" role="tab">${ico('building', 'w-3.5 h-3.5')} Equipes</button>
+                    <button type="button" class="${tabCls} text-slate-500" data-view="individual" role="tab">${ico('users', 'w-3.5 h-3.5')} Todos</button>
+                    <button type="button" class="${tabCls} text-slate-500" data-view="defensores" role="tab">${ico('scale', 'w-3.5 h-3.5')} Defensores</button>
+                    <button type="button" class="${tabCls} text-slate-500" data-view="servidores" role="tab">${ico('monitor', 'w-3.5 h-3.5')} Servidores</button>
                 </div>
                 <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">Recolher todas</button>
             </div>
@@ -736,7 +767,7 @@ export const StatisticsService = {
                     t.classList.toggle('text-slate-800', ativo);
                     t.classList.toggle('text-slate-500', !ativo);
                 });
-                
+
                 ['geral', 'individual', 'defensores', 'servidores'].forEach(id => {
                     const el = document.getElementById('view-' + id);
                     if (el) el.style.display = (v === id) ? '' : 'none';
@@ -752,7 +783,7 @@ export const StatisticsService = {
             if (!btn) return;
             btn.onclick = () => {
                 const original = btn.innerHTML;
-                btn.innerHTML = '⏳ Aguarde...';
+                btn.innerHTML = `${ico('loader', 'w-3.5 h-3.5 animate-spin')} Aguarde...`;
                 btn.disabled = true;
                 Promise.resolve(acao()).catch(e => { console.error(e); }).finally(() => {
                     btn.innerHTML = original;
@@ -775,7 +806,7 @@ export const StatisticsService = {
             statsByTime: sortedTimes.map(time => ({ time, count: statsByTime[time] })),
             statsByTimeFaltosos: sortedTimesFaltosos.map(time => ({ time, count: statsByTimeFaltosos[time] }))
         }));
-        
+
         comLoading('export-stats-graficos-btn', () => this.exportGraficosPDF(pautaName, {
             atendidosCount: atendidos.length,
             atendidosComAgendaCount: atendidosComAgenda.length,
@@ -791,7 +822,7 @@ export const StatisticsService = {
             assuntos: assuntosOrdenados.slice(0, 8).map(([nome, dd]) => ({ nome, total: dd.total })),
             ranking: rankingTodos.filter(r => r.atendimentos > 0).slice(0, 10)
         }));
-        
+
         comLoading('export-equipes-pdf-btn', () => this.exportEquipesPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-grupo-pdf-btn', () => this.exportGrupoPDF(pautaName, { sortedGroups, totalGeral }));
         comLoading('export-stats-detalhado-btn', () => this.exportDetailedStatisticsPDF(pautaName, { sortedGroups, totalGeral }));
@@ -931,7 +962,7 @@ export const StatisticsService = {
         const kpis = [
             { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74], bg: [240, 253, 244] },
             { v: String(d.atendidosComAgendaCount || 0), l: 'Agend/Reagend', c: [16, 185, 129], bg: [236, 253, 245] },
-            { v: String(d.atendidosSemAgendaCount || 0), l: 'Atendidos (Outros)', c: [20, 184, 166], bg: [240, 253, 250] },
+            { v: String(d.atendidosSemAgendaCount || 0), l: 'Efetivados', c: [20, 184, 166], bg: [240, 253, 250] },
             { v: String(d.faltososCount), l: 'Faltosos', c: [220, 38, 38], bg: [254, 242, 242] },
             { v: d.comparecimento + '%', l: 'Comparecimento', c: [79, 70, 229], bg: [238, 242, 255] },
             { v: (d.avgTimeDirect > 0 ? d.avgTimeDirect : 15) + ' min', l: 'Tempo médio', c: [37, 99, 235], bg: [239, 246, 255] }
@@ -980,7 +1011,7 @@ export const StatisticsService = {
             y += 10;
             y = desenharColunas(doc, margin, y, largura, 120, d.horarios, [
                 { nome: 'Atendidos', cor: [22, 163, 74], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) },
-                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.atendidosPorHorario[h] || 0) }
+                { nome: 'Faltosos', cor: [220, 38, 38], valores: d.horarios.map(h => d.faltososPorHorario[h] || 0) }
             ]) + 14;
         }
 
@@ -1037,7 +1068,7 @@ export const StatisticsService = {
             const cards = [
                 { v: String(s.atendidosCount || 0), l: "Atendimentos", bg: [240, 253, 244], fg: [22, 163, 74] },
                 { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", bg: [236, 253, 245], fg: [16, 185, 129] },
-                { v: String(s.atendidosSemAgendaCount || 0), l: "Atendidos (Outros)", bg: [240, 253, 250], fg: [20, 184, 166] },
+                { v: String(s.atendidosSemAgendaCount || 0), l: "Efetivados", bg: [240, 253, 250], fg: [20, 184, 166] },
                 { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] }
             ];
             cards.forEach((c, i) => {
@@ -1095,7 +1126,7 @@ export const StatisticsService = {
                 .map(([name, d]) => [name.length > 30 ? name.substring(0, 27) + '...' : name, d.total || 0, d.agendaAtendidos || 0, d.semVincAtendidos || 0, d.faltosos || 0]);
             const soma = (i) => subjects.reduce((acc, r) => acc + r[i], 0);
             tabela({
-                head: [['Assunto', 'Total', 'Agend/Reag', 'Atendidos', 'Faltosos']],
+                head: [['Assunto', 'Total', 'Agend/Reag', 'Efetivados', 'Faltosos']],
                 body: subjects,
                 foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
                 headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
