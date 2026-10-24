@@ -1,6 +1,4 @@
-Para deixar a tela de estatísticas limpa e focada exatamente no que você precisa, removi o indicador de "Sem Vínculo" dos cartões principais (KPIs), mantendo apenas as métricas essenciais e limpas que fazem sentido para o seu dia a dia.
-Código Atualizado (js/estatisticas.js)
-Substitua todo o conteúdo do seu arquivo js/estatisticas.js por esta versão:
+
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores, barras, cartões por equipe)
