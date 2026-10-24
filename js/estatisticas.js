@@ -231,13 +231,19 @@ export const StatisticsService = {
 
     rodapePDF(doc, margin, pageHeight) {
         const total = doc.internal.getNumberOfPages();
+        const W = doc.internal.pageSize.getWidth();
+        const H = doc.internal.pageSize.getHeight();
         for (let i = 1; i <= total; i++) {
             doc.setPage(i);
-            desenharMarcaDagua(doc, this._marca);
-            doc.setFontSize(8);
-            doc.setTextColor(150);
+            drawWatermark(doc, this._marca);
+            doc.setDrawColor(...C.linha);
+            doc.setLineWidth(0.5);
+            doc.line(40, H - 28, W - 40, H - 28);
             doc.setFont("helvetica", "normal");
-            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${total}`, margin, pageHeight - 20);
+            doc.setFontSize(8);
+            doc.setTextColor(150, 150, 150);
+            doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
+            doc.text(`Página ${i} de ${total}`, W - 40, H - 16, { align: 'right' });
         }
     },
 
@@ -456,12 +462,13 @@ export const StatisticsService = {
                 </div>
             </div>`;
 
+        // 🌟 Incluindo o cartão "Sem Vínculo" explicitamente nos KPIs visuais conforme pedido
         const kpisHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
                 ${kpi('📅', atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50')}
+                ${kpi('🚶', atendidosSemAgenda.length, 'Sem Vínculo', 'bg-teal-50')}
                 ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
-                ${kpi('🏷️', extraPauta.length, 'Extra-Pauta', 'bg-indigo-50')}
                 ${kpi('📈', comparecimento + '%', 'Presença', 'bg-blue-50')}
                 ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50')}
             </div>`;
@@ -931,6 +938,7 @@ export const StatisticsService = {
         const kpis = [
             { v: String(d.atendidosCount), l: 'Atendidos', c: [22, 163, 74], bg: [240, 253, 244] },
             { v: String(d.atendidosComAgendaCount || 0), l: 'Agend/Reagend', c: [16, 185, 129], bg: [236, 253, 245] },
+            { v: String(d.atendidosSemAgendaCount || 0), l: 'Sem Vínculo', c: [20, 184, 166], bg: [240, 253, 250] },
             { v: String(d.faltososCount), l: 'Faltosos', c: [220, 38, 38], bg: [254, 242, 242] },
             { v: d.comparecimento + '%', l: 'Comparecimento', c: [79, 70, 229], bg: [238, 242, 255] },
             { v: (d.avgTimeDirect > 0 ? d.avgTimeDirect : 15) + ' min', l: 'Tempo médio', c: [37, 99, 235], bg: [239, 246, 255] }
@@ -1032,10 +1040,11 @@ export const StatisticsService = {
 
         if (exportGeneral) {
             addSectionTitle("Resumo Geral");
-            const colWidth = (pageWidth - margin * 2) / 3;
+            const colWidth = (pageWidth - margin * 2) / 4;
             const cards = [
                 { v: String(s.atendidosCount || 0), l: "Atendimentos", bg: [240, 253, 244], fg: [22, 163, 74] },
                 { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", bg: [236, 253, 245], fg: [16, 185, 129] },
+                { v: String(s.atendidosSemAgendaCount || 0), l: "Sem Vínculo", bg: [240, 253, 250], fg: [20, 184, 166] },
                 { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] }
             ];
             cards.forEach((c, i) => {
@@ -1108,11 +1117,16 @@ export const StatisticsService = {
     }
 };
 
-export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) =>
-    StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
-
 export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
-window.StatisticsService = StatisticsService;
+export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) =>
+    StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
+
+export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
+export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
+export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
+export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
+
+window.PDFService = PDFService;
 
