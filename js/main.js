@@ -80,6 +80,14 @@ class SIGEPApp {
             const app = initializeApp(firebaseConfig);
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
+
+            // PAINEL PÚBLICO: link ?painel=true abre direto, sem login
+            if (new URLSearchParams(window.location.search).get('painel') === 'true') {
+                window.app = this;
+                const { PainelPublicoService } = await import('./painelPublico.js');
+                await PainelPublicoService.init(this);
+                return; // não cria router nem listener de login
+            }
     
             this.router = new SIGEPRouter(this, {
                 UIService,
