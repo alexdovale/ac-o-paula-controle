@@ -8,7 +8,6 @@
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
 <style>
 :root{
-  /* Paleta mais séria e corporativa */
   --bg:#f8fafc; --surface:#ffffff; --line:#e2e8f0; --soft:#f1f5f9; --text:#0f172a; --muted:#475569; --faint:#94a3b8;
   --navy:#0f172a; --navy2:#1e293b; --amber:#d97706; --ok:#059669; --ok2:#047857; --info:#2563eb; --danger:#dc2626;
   --fs-xs:clamp(10px,1vw,12px); --fs-sm:clamp(12px,1.2vw,14px); --fs-md:clamp(14px,1.5vw,16px);
@@ -20,7 +19,7 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 .hidden{display:none!important}
 ::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
 
-/* ---------- Carregamento ---------- */
+/* ---------- Carregamento e Bloqueio PIN ---------- */
 #loading{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
 .spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--navy);animation:spin .8s linear infinite}
 @keyframes spin{to{transform:rotate(360deg)}}
@@ -105,10 +104,8 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 .empty{margin:auto;padding:40px 16px;text-align:center;color:var(--faint);font-size:var(--fs-sm);font-weight:500}
 footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:4px 0}
 
-/* ---------- MODO TV (Correção Anti-Sobreposição) ---------- */
+/* ---------- MODO TV ---------- */
 #modo-tv{position:fixed;inset:0;height:100dvh;display:grid;grid-template-columns:2fr 1fr;background:var(--navy);overflow:hidden}
-
-/* Flexbox em vez de Grid para evitar esmagamento dos textos */
 #destaque{
     position:relative;
     display:flex;
@@ -121,50 +118,11 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
     background:linear-gradient(160deg,#16a34a,#14532d);
     overflow:hidden;
 }
-
 #destaque::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 30% 10%,rgba(255,255,255,.12),transparent 55%);pointer-events:none}
 #destaque > * { position:relative; z-index: 2; }
-
-.tv-label{
-    font-size:clamp(16px,2vw,32px);
-    font-weight:600;
-    letter-spacing:.25em;
-    text-transform:uppercase;
-    opacity:.85;
-    margin: 1vh 0;
-    flex-shrink: 0;
-}
-
-#uc-nome-tv{
-    font-size:6rem; /* Controlado via JS */
-    font-weight:900;
-    line-height:1.1;
-    letter-spacing:-.02em;
-    text-transform:uppercase;
-    text-shadow:0 4px 16px rgba(0,0,0,.25);
-    margin: 2vh 0 4vh 0;
-    width:100%;
-    display:flex;
-    align-items:center;
-    justify-content:center;
-    overflow:hidden;
-    text-wrap:balance;
-    word-break:break-word;
-    flex: 1 1 auto; /* Permite esticar ou encolher sem encavalar */
-}
-
-#uc-local-tv{
-    font-size:5rem; /* Controlado via JS */
-    font-weight:900;
-    line-height:1;
-    letter-spacing:-.02em;
-    background:rgba(255,255,255,.1);
-    border:2px solid rgba(255,255,255,.2);
-    border-radius:16px;
-    padding:.3em .8em;
-    flex-shrink: 0;
-}
-
+.tv-label{font-size:clamp(16px,2vw,32px);font-weight:600;letter-spacing:.25em;text-transform:uppercase;opacity:.85;margin: 1vh 0;flex-shrink: 0;}
+#uc-nome-tv{font-size:6rem;font-weight:900;line-height:1.1;letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 16px rgba(0,0,0,.25);margin: 2vh 0 4vh 0;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;text-wrap:balance;word-break:break-word;flex: 1 1 auto;}
+#uc-local-tv{font-size:5rem;font-weight:900;line-height:1;letter-spacing:-.02em;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:16px;padding:.3em .8em;flex-shrink: 0;}
 #destaque.flash{animation:flash .7s ease 3}
 @keyframes flash{50%{filter:brightness(1.25)}}
 
@@ -181,14 +139,9 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 #data-hora-tv{font-size:clamp(16px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.05em}
 #recepcao-nome-tv{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
 
-/* Bloqueio ABOSLUTO de QR Code e mensagem de acompanhar pelo celular */
 #qrcode, .qr-container, [id*="qr"], [class*="qr-"], 
 .acompanhar-celular, [class*="mobile-track"], div:has(canvas) { 
-    display: none !important; 
-    opacity: 0 !important; 
-    visibility: hidden !important; 
-    height: 0 !important; 
-    width: 0 !important;
+    display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; width: 0 !important;
 }
 
 @media (max-width:900px){.call{grid-template-columns:1fr}.call-info{border-left:0;border-top:1px solid rgba(255,255,255,.05)}.call-field{flex:1}.cols{grid-template-columns:1fr}.tools,.metric{border-left:0}}
@@ -279,11 +232,94 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 
 <script type="module">
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, collection } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, doc, onSnapshot, collection, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
 const $ = (id) => document.getElementById(id);
 const params = new URLSearchParams(location.search);
 const somPermitido = params.get('som') !== '0';
+
+// ── Firebase ───────────────────────────────────────────
+const db = getFirestore(initializeApp({
+  apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
+  authDomain: "pauta-ce162.firebaseapp.com",
+  projectId: "pauta-ce162",
+  storageBucket: "pauta-ce162.appspot.com",
+  messagingSenderId: "87113750208",
+  appId: "1:87113750208:web:4abba0024f4d4af699bf25"
+}));
+
+const pautasParam = params.get('pautas');
+const recepcaoNome = params.get('nome') || 'Recepção Geral';
+
+// ── Verificação de Segurança por Token/PIN ──────────────
+async function verificarSegurancaTV() {
+  if (!pautasParam) return true;
+  const ids = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
+  if (!ids.length) return true;
+
+  const pautaIdPrincipal = ids[0];
+  const chaveAuth = `sigep_tv_auth_${pautaIdPrincipal}`;
+
+  try {
+    const pautaDoc = await getDoc(doc(db, 'pautas', pautaIdPrincipal));
+    if (!pautaDoc.exists()) return true;
+
+    const data = pautaDoc.data();
+    const tokenExigido = data.tvToken;
+
+    if (!tokenExigido) return true; // Sem senha cadastrada, acesso liberado
+
+    if (localStorage.getItem(chaveAuth) === tokenExigido) {
+      return true; // Já autenticado neste navegador/Smart TV
+    }
+
+    return solicitarSenhaTV(tokenExigido, chaveAuth);
+  } catch (e) {
+    console.warn("Erro ao verificar token de segurança:", e);
+    return true; // Falha de rede não bloqueia o painel
+  }
+}
+
+function solicitarSenhaTV(tokenCorreto, chaveAuth) {
+  return new Promise((resolve) => {
+    $('loading').innerHTML = `
+      <div style="background:#0f172a;border:1px solid #1e293b;padding:36px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);border-radius:16px;color:#fff">
+        <div style="width:56px;height:56px;background:rgba(37,99,235,0.2);color:#60a5fa;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:1px solid rgba(59,130,246,0.3)">
+          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+        </div>
+        <h2 style="font-size:18px;font-weight:800;margin-bottom:6px">Painel Protegido</h2>
+        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">Insira o PIN de acesso da TV para visualizar o painel.</p>
+        
+        <input type="password" id="tv-pin-input" maxlength="10" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;text-align:center;font-size:24px;font-family:monospace;color:#fff;letter-spacing:0.2em;outline:none;margin-bottom:14px" placeholder="••••">
+        
+        <button id="tv-pin-submit" style="width:100%;background:#2563eb;color:#fff;font-weight:700;padding:12px;border-radius:12px;border:none;cursor:pointer;font-size:14px;box-shadow:0 4px 6px -1px rgba(37,99,235,0.4)">
+          Desbloquear Painel
+        </button>
+        <p id="tv-pin-erro" style="color:#f87171;font-size:12px;font-weight:600;margin-top:12px" class="hidden">Senha incorreta. Tente novamente.</p>
+      </div>
+    `;
+
+    const input = document.getElementById('tv-pin-input');
+    const btn = document.getElementById('tv-pin-submit');
+    const erro = document.getElementById('tv-pin-erro');
+
+    setTimeout(() => input.focus(), 100);
+
+    const tentar = () => {
+      if (input.value.trim() === tokenCorreto) {
+        localStorage.setItem(chaveAuth, tokenCorreto);
+        resolve(true);
+      } else {
+        erro.classList.remove('hidden');
+        input.value = '';
+        input.focus();
+      }
+    };
+
+    btn.onclick = tentar;
+    input.onkeypress = (e) => { if (e.key === 'Enter') tentar(); };
+  });
+}
 
 // ── Som ────────────────────────────────────────────────
 let audioCtx = null, somAtivo = false;
@@ -340,18 +376,6 @@ window.mudarZoom = (d) => {
   $('zoom-level').textContent = Math.round(window.zoomAtual * 100) + '%';
 };
 
-// ── Firebase ───────────────────────────────────────────
-const db = getFirestore(initializeApp({
-  apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
-  authDomain: "pauta-ce162.firebaseapp.com",
-  projectId: "pauta-ce162",
-  storageBucket: "pauta-ce162.appspot.com",
-  messagingSenderId: "87113750208",
-  appId: "1:87113750208:web:4abba0024f4d4af699bf25"
-}));
-
-const pautasParam = params.get('pautas');
-const recepcaoNome = params.get('nome') || 'Recepção Geral';
 const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
 
 const PALETA = ['#1e3a8a', '#0f766e', '#6d28d9', '#9a3412', '#334155', '#155e75', '#854d0e', '#9d174d'];
@@ -369,7 +393,6 @@ function relogio() {
 }
 setInterval(relogio, 1000); relogio();
 
-// ── Render: fila ───────────────────────────────────────
 function duracao(ini) {
   const t = typeof ini === 'number' ? ini : Date.parse(ini);
   if (!t) return '—';
@@ -440,7 +463,6 @@ function renderPainel() {
 }
 setInterval(renderPainel, 30000);
 
-// ── Render: TV ─────────────────────────────────────────
 function renderHistorico() {
   $('lista-historico-tv').innerHTML = estado.historico.length
     ? estado.historico.slice(0, 5).map(h => `<div class="item-hist"><span>${esc(h.nome)}</span><span>${esc(h.sala || h.local || '—')}</span></div>`).join('')
@@ -454,7 +476,6 @@ function ajustar(el, max, min) {
 
 function ajustarTV() {
   const vh = window.innerHeight, vw = window.innerWidth;
-  // Margem e cálculos seguros para o Flexbox
   ajustar($('uc-nome-tv'), Math.min(vh * 0.18, vw * 0.08), 28);
   const l = $('uc-local-tv'); 
   l.style.fontSize = Math.min(vh * 0.12, vw * 0.06) + 'px';
@@ -492,7 +513,7 @@ function renderUltimoTV(c) {
 }
 
 // ── Inicialização ──────────────────────────────────────
-function init() {
+async function init() {
   aplicarModo();
   ajustarTV();
 
@@ -503,6 +524,9 @@ function init() {
       <code style="background:var(--soft);color:var(--muted);font-size:var(--fs-xs);padding:8px 12px;border-radius:6px;display:block;word-break:break-all;font-weight:600">?pautas=ID_DA_PAUTA</code></div>`;
     return;
   }
+
+  // Valida a segurança por PIN antes de carregar os dados
+  await verificarSegurancaTV();
 
   const ids = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
   if (!ids.length) return;
@@ -549,7 +573,6 @@ function init() {
     });
   });
 
-  // Ocultador forçado e constante de mensagens de celular injetadas por terceiros
   setInterval(() => {
     document.querySelectorAll('p, div, span, label').forEach(el => {
       if (el.textContent && el.textContent.toLowerCase().includes('acompanhar pelo celular')) {
