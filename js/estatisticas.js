@@ -230,19 +230,13 @@ export const StatisticsService = {
 
     rodapePDF(doc, margin, pageHeight) {
         const total = doc.internal.getNumberOfPages();
-        const W = doc.internal.pageSize.getWidth();
-        const H = doc.internal.pageSize.getHeight();
         for (let i = 1; i <= total; i++) {
             doc.setPage(i);
-            drawWatermark(doc, this._marca);
-            doc.setDrawColor(...C.linha);
-            doc.setLineWidth(0.5);
-            doc.line(40, H - 28, W - 40, H - 28);
-            doc.setFont("helvetica", "normal");
+            desenharMarcaDagua(doc, this._marca);
             doc.setFontSize(8);
-            doc.setTextColor(150, 150, 150);
-            doc.text("SIGEP · Sistema de Gerenciamento de Pauta", 40, H - 16);
-            doc.text(`Página ${i} de ${total}`, W - 40, H - 16, { align: 'right' });
+            doc.setTextColor(150);
+            doc.setFont("helvetica", "normal");
+            doc.text(`SIGEP - Sistema de Gerenciamento de Pauta | Página ${i} de ${total}`, margin, pageHeight - 20);
         }
     },
 
@@ -461,7 +455,6 @@ export const StatisticsService = {
                 </div>
             </div>`;
 
-        // 🌟 Incluindo o cartão "Sem Vínculo" explicitamente nos KPIs visuais conforme pedido
         const kpisHTML = `
             <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
                 ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
@@ -1116,16 +1109,11 @@ export const StatisticsService = {
     }
 };
 
-export const exportStatisticsToPDF = (pautaName, statsData) =>
-    StatisticsService.exportStatisticsToPDF(pautaName, statsData);
-
 export const renderStatisticsModal = (allAssisted, useDelegationFlow, pautaName) =>
     StatisticsService.showModal(allAssisted, useDelegationFlow, pautaName);
 
-export const generateAtendidosPDF = (arg1, arg2) => PDFService.generateAtendidosPDF(arg1, arg2);
-export const generateChecklistPDF = (assistedName, actionTitle, checklistData, documentosTextos, despesasTextos) => PDFService.generateChecklistPDF(assistedName, actionTitle, checklistData, documentosTextos, despesasTextos);
-export const generateCollaboratorsPDF = (arg1, arg2, arg3) => PDFService.generateCollaboratorsPDF(arg1, arg2, arg3);
-export const generateFaltososPDF = (arg1, arg2) => PDFService.generateFaltososPDF(arg1, arg2);
+export const exportStatisticsToPDF = (pautaName, statsData) =>
+    StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
-window.PDFService = PDFService;
+window.StatisticsService = StatisticsService;
 
