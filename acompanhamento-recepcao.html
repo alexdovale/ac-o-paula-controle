@@ -1,3 +1,7 @@
+Aqui está o seu ficheiro painel_tv.html totalmente completo e atualizado, contendo:
+ * A segurança por Token/PIN (sem exigir login do SIGEP, com ecrã de desbloqueio minimalista e gravação no localStorage).
+ * A logomarca totalmente limpa, sem fundo/borda quadrada e com tamanho otimizado e maior.
+Podes copiar todo o código abaixo e substituir o conteúdo atual do teu painel_tv.html:
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -34,12 +38,15 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 #zoom-controls button{width:28px;height:28px;border:0;border-radius:6px;background:var(--soft);font-weight:700;font-size:14px;cursor:pointer}
 #zoom-level{min-width:44px;text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--muted)}
 
-/* ---------- MODO FILA (Mais Profissional) ---------- */
+/* ---------- MODO FILA ---------- */
 #modo-fila{min-height:100%;flex-direction:column}
 .topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:var(--surface);border-bottom:1px solid var(--line);padding:14px clamp(16px,2.4vw,32px);box-shadow:0 1px 2px rgba(0,0,0,0.02)}
 .brand{display:flex;align-items:center;gap:14px;min-width:0}
-.logo{background:var(--navy);border-radius:6px;padding:6px 10px;display:flex}
-.logo img{height:clamp(18px,2vw,24px);width:auto}
+
+/* LOGO SEM BORDA E MAIOR */
+.logo{background:transparent !important;border:none !important;border-radius:0 !important;padding:0 !important;display:flex;align-items:center}
+.logo img{height:clamp(32px,4vw,48px);width:auto;max-height:none !important}
+
 .brand-txt{padding-left:14px;border-left:1px solid var(--line)}
 .brand-txt h1{font-size:var(--fs-md);font-weight:700;letter-spacing:-.02em;line-height:1.2}
 .brand-txt h2{font-size:var(--fs-sm);font-weight:500;color:var(--muted);margin-top:2px}
@@ -135,7 +142,10 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 .item-hist span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(14px,1.6vw,22px);font-weight:700;text-transform:uppercase;color:#334155}
 .item-hist span:last-child{white-space:nowrap;font-size:clamp(13px,1.5vw,20px);font-weight:800;color:var(--ok2)}
 .tv-foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(14px,2vw,24px);background:var(--navy);color:#fff}
-.tv-foot img{height:clamp(24px,3vw,42px);width:auto;opacity:.9}
+
+/* LOGO DO RODAPÉ TAMBÉM SEM BORDA */
+.tv-foot img{height:clamp(32px,4vw,48px);width:auto;opacity:.9;background:transparent !important;border:none !important}
+
 #data-hora-tv{font-size:clamp(16px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.05em}
 #recepcao-nome-tv{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
 
@@ -586,3 +596,4 @@ init();
 </script>
 </body>
 </html>
+
