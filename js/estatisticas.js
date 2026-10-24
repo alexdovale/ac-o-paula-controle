@@ -1,4 +1,3 @@
-
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores, barras, cartões por equipe)
