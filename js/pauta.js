@@ -1888,5 +1888,80 @@ window.toggleModoRastreioPdf = function() {
     showNotification(`Modo Rastreio de PDF: ${novo ? 'ATIVADO 🟢' : 'DESATIVADO ⚪'}`, 'info');
 };
 
+// --- FUNÇÃO DE PROTEÇÃO INDIVIDUAL DO PAINEL DA TV ---
+window.abrirPainelTvProtegido = async function(app, pautaId) {
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const pautaDoc = await getDoc(doc(app.db, "pautas", pautaId));
+        
+        if (!pautaDoc.exists()) {
+            window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
+            return;
+        }
+
+        const data = pautaDoc.data();
+        const tokenExigido = data.tvToken;
+
+        // Se a pauta NÃO tem senha configurada, abre o painel direto
+        if (!tokenExigido) {
+            window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
+            return;
+        }
+
+        // Se TEM senha, abre um modal rápido pedindo a senha antes de liberar o link
+        abrirModalSenhaPainel(pautaId, tokenExigido);
+
+    } catch (e) {
+        console.error("Erro ao verificar senha do painel:", e);
+        window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
+    }
+};
+
+function abrirModalSenhaPainel(pautaId, tokenCorreto) {
+    document.getElementById('modal-senha-painel-tv')?.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'modal-senha-painel-tv';
+    modal.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-[99999] flex items-center justify-center p-4';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm text-center">
+            <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-xl flex items-center justify-center mx-auto mb-3">
+                <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
+            </div>
+            <h3 class="font-extrabold text-base text-slate-800 mb-1">Painel Protegido</h3>
+            <p class="text-xs text-slate-500 mb-4">Esta pauta exige a senha/token configurada para abrir o painel da TV.</p>
+            
+            <input type="password" id="input-senha-painel" class="w-full bg-slate-50 border border-slate-200 rounded-xl px-3 py-2.5 text-center text-lg font-mono tracking-widest outline-none focus:ring-2 focus:ring-blue-500 mb-3" placeholder="••••">
+            
+            <div class="flex gap-2">
+                <button id="btn-cancelar-senha" class="flex-1 bg-slate-100 text-slate-700 font-bold py-2.5 rounded-xl text-xs">Cancelar</button>
+                <button id="btn-entrar-senha" class="flex-1 bg-blue-600 text-white font-bold py-2.5 rounded-xl text-xs shadow-md">Aceder Painel</button>
+            </div>
+            <p id="erro-senha-painel" class="text-[11px] text-red-500 font-semibold mt-2 hidden">Senha incorreta!</p>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const input = document.getElementById('input-senha-painel');
+    const erro = document.getElementById('erro-senha-painel');
+    input.focus();
+
+    const validar = () => {
+        if (input.value.trim() === tokenCorreto) {
+            modal.remove();
+            window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
+        } else {
+            erro.classList.remove('hidden');
+            input.value = '';
+            input.focus();
+        }
+    };
+
+    document.getElementById('btn-entrar-senha').onclick = validar;
+    document.getElementById('btn-cancelar-senha').onclick = () => modal.remove();
+    input.onkeypress = (e) => { if (e.key === 'Enter') validar(); };
+}
+
+
 export default PautaService;
 
