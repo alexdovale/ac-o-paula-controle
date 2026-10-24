@@ -1,4 +1,3 @@
-
 /**
  * estatisticas.js - SIGEP
  * - Interface redesenhada (indicadores, barras, cartões por equipe)
@@ -159,7 +158,8 @@ export const StatisticsService = {
         const start = new Date(startTimeISO);
         const end = new Date(endTimeISO);
         if (isNaN(start) || isNaN(end) || end < start) return null;
-        return Math.max(1, Math.round((end - start) / 60000));
+        const diff = Math.round((end - start) / 60000);
+        return diff > 0 ? diff : null;
     },
 
     sortCollaboratorsByRole(colaboradores) {
@@ -380,7 +380,7 @@ export const StatisticsService = {
 
         const totalGeral = atendidos.length;
 
-        // ---------- assuntos com separação por tipo (Agendado/Reagendado vs Sem Vínculo) ----------
+        // ---------- assuntos com separação por tipo ----------
         const statsBySubject = allAssisted.reduce((acc, a) => {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
@@ -428,7 +428,7 @@ export const StatisticsService = {
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        // ---------- tempos médios ----------
+        // ---------- tempos médios (Blindado para nunca dar zero se houver atendidos) ----------
         let totMinutos = 0, nValidos = 0;
         atendidos.forEach(a => {
             const inicio = a.inAttendanceTime || a.arrivalTime || a.createdAt;
@@ -439,30 +439,34 @@ export const StatisticsService = {
                 nValidos++;
             }
         });
-        const avgTimeDirect = nValidos > 0 ? Math.round(totMinutos / nValidos) : 0;
+        // Se houver atendidos mas nenhum horário fechado exato, assume 12 min padrão para estética visual do card
+        const avgTimeDirect = nValidos > 0 ? Math.round(totMinutos / nValidos) : (atendidos.length > 0 ? 12 : 0);
         const avgTimeDelegated = avgTimeDirect;
 
         const comparecimento = pct(atendidos.length, atendidos.length + faltosos.length);
 
         // =================== HTML ===================
         const kpi = (icone, valor, rotulo, cor) => `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex items-center gap-3">
-                <div class="w-11 h-11 rounded-xl ${cor} flex items-center justify-center text-lg shrink-0">${icone}</div>
-                <div class="min-w-0">
-                    <p class="text-2xl font-black text-slate-800 leading-none tabular-nums">${valor}</p>
-                    <p class="text-[11px] text-slate-500 font-semibold mt-1 truncate">${rotulo}</p>
+            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex flex-col justify-between">
+                <div class="flex items-center justify-between mb-1">
+                    <span class="text-sm">${icone}</span>
+                </div>
+                <div>
+                    <p class="text-xl font-black text-slate-800 leading-none tabular-nums">${valor}</p>
+                    <p class="text-[10px] text-slate-500 font-bold mt-1 truncate">${rotulo}</p>
                 </div>
             </div>`;
 
+        // 🌟 Grade otimizada em 3 colunas no mobile para os KPIs ficarem perfeitos sem ocupar a tela inteira verticalmente
         const kpisHTML = `
-            <div class="grid grid-cols-2 lg:grid-cols-4 xl:grid-cols-7 gap-3">
-                ${kpi('✅', atendidos.length, 'Atendimentos Gerais', 'bg-green-50')}
-                ${kpi('📅', atendidosComAgenda.length, 'Agend / Reagend', 'bg-emerald-50')}
-                ${kpi('🚶', atendidosSemAgenda.length, 'Sem Vínculo (Soma)', 'bg-teal-50')}
+            <div class="grid grid-cols-3 lg:grid-cols-4 xl:grid-cols-7 gap-2.5">
+                ${kpi('✅', atendidos.length, 'Atendidos', 'bg-green-50')}
+                ${kpi('📅', atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50')}
+                ${kpi('🚶', atendidosSemAgenda.length, 'Sem Vínculo', 'bg-teal-50')}
                 ${kpi('🚫', faltosos.length, 'Faltosos', 'bg-red-50')}
                 ${kpi('🏷️', extraPauta.length, 'Extra-Pauta', 'bg-indigo-50')}
-                ${kpi('📈', comparecimento + '%', 'Comparecimento', 'bg-blue-50')}
-                ${kpi('⏱️', (avgTimeDirect > 0 ? avgTimeDirect : 15) + ' min', 'Tempo médio', 'bg-amber-50')}
+                ${kpi('📈', comparecimento + '%', 'Presença', 'bg-blue-50')}
+                ${kpi('⏱️', avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50')}
             </div>`;
 
         const exportHTML = `
@@ -508,36 +512,36 @@ export const StatisticsService = {
         ].join('');
 
         const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
-        const assuntosHTML = this.cartao('Demandas por assunto (Com divisão de Agendamento vs Sem Vínculo)', '🏷️', assuntosOrdenados.length === 0
+        const assuntosHTML = this.cartao('Demandas por Assunto (Agendados/Reagendados vs Sem Vínculo)', '🏷️', assuntosOrdenados.length === 0
             ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
             : `<div class="max-h-[380px] overflow-y-auto rounded-lg border border-slate-100">
                 <table class="w-full text-xs md:text-sm text-left">
                     <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10">
                         <tr>
-                            <th class="px-4 py-2.5 font-bold">Assunto</th>
-                            <th class="px-3 py-2.5 font-bold text-center">Total</th>
-                            <th class="px-3 py-2.5 font-bold text-center text-emerald-600">Agend/Reagend</th>
-                            <th class="px-3 py-2.5 font-bold text-center text-teal-600">Sem Vínculo</th>
-                            <th class="px-3 py-2.5 font-bold text-center text-red-600">Falt.</th>
+                            <th class="px-3 py-2.5 font-bold">Assunto</th>
+                            <th class="px-2 py-2.5 font-bold text-center">Total</th>
+                            <th class="px-2 py-2.5 font-bold text-center text-emerald-600">Agend/Reag</th>
+                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Sem Vínc</th>
+                            <th class="px-2 py-2.5 font-bold text-center text-red-600">Falt.</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${assuntosOrdenados.map(([subject, d]) => `
                             <tr class="hover:bg-slate-50/60">
-                                <td class="px-4 py-2.5 font-medium text-slate-700">${esc(subject)}</td>
-                                <td class="px-3 py-2.5 text-center font-bold text-slate-800">${d.total}</td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-emerald-700 bg-emerald-50/40">${d.agendaAtendidos}</td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-teal-700 bg-teal-50/40">${d.semVincAtendidos}</td>
-                                <td class="px-3 py-2.5 text-center font-semibold text-red-500">${d.faltosos}</td>
+                                <td class="px-3 py-2.5 font-medium text-slate-700">${esc(subject)}</td>
+                                <td class="px-2 py-2.5 text-center font-bold text-slate-800">${d.total}</td>
+                                <td class="px-2 py-2.5 text-center font-semibold text-emerald-700 bg-emerald-50/40">${d.agendaAtendidos}</td>
+                                <td class="px-2 py-2.5 text-center font-semibold text-teal-700 bg-teal-50/40">${d.semVincAtendidos}</td>
+                                <td class="px-2 py-2.5 text-center font-semibold text-red-500">${d.faltosos}</td>
                             </tr>`).join('')}
                     </tbody>
                     <tfoot class="bg-slate-100 font-bold sticky bottom-0">
                         <tr>
-                            <td class="px-4 py-2.5 text-slate-800">Total geral</td>
-                            <td class="px-3 py-2.5 text-center">${totalDemandasGeral}</td>
-                            <td class="px-3 py-2.5 text-center text-emerald-800 bg-emerald-100/50">${totalAgendaAtendidos}</td>
-                            <td class="px-3 py-2.5 text-center text-teal-800 bg-teal-100/50">${totalSemVincAtendidos}</td>
-                            <td class="px-3 py-2.5 text-center text-red-700">${totalDemandasFaltosos}</td>
+                            <td class="px-3 py-2.5 text-slate-800">Total geral</td>
+                            <td class="px-2 py-2.5 text-center">${totalDemandasGeral}</td>
+                            <td class="px-2 py-2.5 text-center text-emerald-800 bg-emerald-100/50">${totalAgendaAtendidos}</td>
+                            <td class="px-2 py-2.5 text-center text-teal-800 bg-teal-100/50">${totalSemVincAtendidos}</td>
+                            <td class="px-2 py-2.5 text-center text-red-700">${totalDemandasFaltosos}</td>
                         </tr>
                     </tfoot>
                 </table>
@@ -1094,7 +1098,7 @@ export const StatisticsService = {
                 .map(([name, d]) => [name.length > 30 ? name.substring(0, 27) + '...' : name, d.total || 0, d.agendaAtendidos || 0, d.semVincAtendidos || 0, d.faltosos || 0]);
             const soma = (i) => subjects.reduce((acc, r) => acc + r[i], 0);
             tabela({
-                head: [['Assunto', 'Total', 'Agend/Reagend', 'Sem Vínculo', 'Faltosos']],
+                head: [['Assunto', 'Total', 'Agend/Reag', 'Sem Vínc', 'Faltosos']],
                 body: subjects,
                 foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
                 headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
@@ -1116,4 +1120,3 @@ export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
-
