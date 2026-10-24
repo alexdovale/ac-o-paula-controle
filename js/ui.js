@@ -1,4 +1,3 @@
-
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT E LAYOUT BLINDADO)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
@@ -6,7 +5,7 @@ import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-// INJEÇÃO DE CORREÇÕES GLOBAIS PARA MOBILE E ESTILOS COMPORTAMENTAIS
+// INJEÇÃO DE CORREÇÕES GLOBAIS E CSS DA LOGO NO MODAL DA TV
 if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes')) {
     const style = document.createElement('style');
     style.id = 'sigep-ui-fixes';
@@ -15,6 +14,22 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         button, a, select, input[type="file"], .touch-manipulation { touch-action: manipulation !important; }
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
+        
+        /* 🔥 LOGO GRANDE E SEM FUNDO NO MODAL DE CONFIGURAÇÃO DA TV 🔥 */
+        #tv-logo-preview img {
+            background: transparent !important;
+            border: none !important;
+            border-radius: 0 !important;
+            padding: 0 !important;
+            max-height: 48px !important; /* Tamanho maior */
+            width: auto !important;
+            box-shadow: none !important;
+            object-fit: contain !important;
+        }
+        #tv-logo-preview {
+            background: transparent !important;
+            border: none !important;
+        }
     `;
     document.head.appendChild(style);
 
@@ -176,7 +191,7 @@ export const UIService = {
             colabs.forEach(c => {
                 try {
                     const btn = document.createElement('button');
-                    btn.className = "collaborator-item w-full text-left p-3 mb-2 bg-white border border-slate-200 rounded-lg hover:border-blue-500 hover:shadow-md transition-all flex items-center gap-3";
+                    btn.className = "collaborator-item w-full text-left p-3 mb-2 bg-white border border-slate-200 rounded-lg hover:border-blue-50 hover:shadow-md transition-all flex items-center gap-3";
                     
                     const rawNome = typeof c.nome === 'object' ? (c.nome.nome || c.nome.name || '') : (c.nome || '');
                     const nomeSeguro = String(rawNome).trim() || 'Nome não informado';
@@ -291,6 +306,7 @@ export const UIService = {
                 <div class="flex-1 min-w-[250px]">
                     <label class="block text-xs font-bold text-indigo-800 uppercase mb-1">Selecione a Origem / Unidade</label>
                     <select id="filter-unidade-select" class="w-full p-2 border border-indigo-200 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none">
+                        <option value="todas">Todas as Unidades</option>
                         <option value="todas">Todas as Unidades</option>
                         ${unidadesOptions}
                     </select>
@@ -847,7 +863,7 @@ export const UIService = {
         `;
     },
 
-        _getActionButtonsHtml(item) {
+    _getActionButtonsHtml(item) {
         return `
             <div class="absolute top-2 right-2 flex items-center z-30 gap-1 bg-white/90 backdrop-blur-sm rounded-lg p-0.5 shadow-sm border border-slate-100">
                 <div class="relative">
@@ -859,13 +875,11 @@ export const UIService = {
                     <div id="quick-menu-${item.id}" class="quick-menu hidden absolute right-0 mt-1 w-52 bg-white rounded-xl shadow-lg border border-slate-200 z-30 py-1.5 overflow-hidden" role="menu">
                         <div class="px-3 py-2 text-[10px] font-bold text-slate-400 uppercase tracking-wider border-b border-slate-100 mb-1 bg-slate-50">Ações Rápidas</div>
                         
-                        <!-- RECHAMAR NA TV (PADRÃO CLEAN COM SVG) -->
                         <button data-id="${item.id}" class="rechamar-tv-btn w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-blue-50 hover:text-blue-700 flex items-center gap-2 transition-colors font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M15.54 8.46a5 5 0 0 1 0 7.07"></path><path d="M19.07 4.93a10 10 0 0 1 0 14.14"></path></svg>
                             Rechamar na TV (Alarme)
                         </button>
 
-                        <!-- DIGITALIZAR / SCANNER (PADRÃO CLEAN COM SVG) -->
                         <button onclick="window.abrirModalDigitalizacao && window.abrirModalDigitalizacao('${item.id}', '${escapeHTML(item.name || '')}')" class="w-full text-left px-4 py-2 text-xs text-slate-700 hover:bg-indigo-50 hover:text-indigo-700 flex items-center gap-2 transition-colors font-medium">
                             <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M23 19a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h4l2-3h6l2 3h4a2 2 0 0 1 2 2z"></path><circle cx="12" cy="13" r="4"></circle></svg>
                             Digitalizar Arquivo
@@ -924,7 +938,6 @@ export const UIService = {
             </div>
         `;
     },
-
 
     _getRoomDropdownHtml(item, currentPautaData, canEditPriority) {
         if (currentPautaData?.type === 'multisala') {
