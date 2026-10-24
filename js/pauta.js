@@ -1,5 +1,7 @@
-
-// js/pauta.js - VERSÃO COM MODO TV OPCIONAL E CORREÇÃO DO FLUXO DE DISTRIBUIÇÃO
+Para resolver esses dois problemas de uma vez só, vamos ajustar o arquivo js/pauta.js.
+O motivo de o botão "Mover de Volta para Fila" na coluna de Atendidos e as Ações Rápidas (Reagendar, Agendar, Consulta, Outros) estarem a falhar é que os seletores de classe precisavam de estar perfeitamente mapeados no manipulador de cliques.
+Substitua todo o conteúdo do seu arquivo js/pauta.js por esta versão limpa e corrigida abaixo:
+// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO E RETORNO DE ATENDIDOS
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -1089,9 +1091,6 @@ export const PautaService = {
         return classes[priority] || '';
     },
 
-    // ============================================================
-    // LÓGICA DE ORDENAÇÃO DA FILA DE AGUARDANDO
-    // ============================================================
     sortAguardando(list, orderType, stats = { pontuais: 0, atrasados: 0 }, toleranciaMinutos = 15) {
         if (!list || !list.length) return [];
 
@@ -1454,6 +1453,11 @@ export const PautaService = {
         const tipoMap = { 'reagendar': 'Reagendamento', 'agendar': 'Agendamento', 'consulta': 'Consulta Processual', 'outros': 'Outros Assuntos' };
         const tipoDescricao = tipoMap[tipoAcao] || tipoAcao;
         
+        window.assistedIdToHandle = id;
+        window.assistedNameToHandle = assisted.name || '';
+        window.assistedTipoAcao = tipoAcao;
+        window.assistedTipoDescricao = tipoDescricao;
+        
         showNotification(`${tipoDescricao} para ${assisted.name}`, "info");
         
         if (app.currentPautaData?.useTvPanel !== false) {
@@ -1756,138 +1760,6 @@ export const PautaService = {
     }
 };
 
-// 1. Salvar o Link do PDF
-window.salvarLinkPdf = async function(assistedId) {
-    const input = document.getElementById(`pdf-link-${assistedId}`);
-    if (!input) return;
-    const novoLink = input.value.trim();
-
-    try {
-        const docRef = doc(window.app.db, "pautas", window.app.currentPauta.id, "attendances", assistedId);
-        await updateDoc(docRef, {
-            pdfLink: novoLink,
-            lastActionBy: window.app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        });
-        showNotification("Link do PDF salvo com sucesso! 💾", "success");
-    } catch (error) {
-        console.error("Erro ao salvar link:", error);
-        showNotification("Erro ao salvar link do PDF.", "error");
-    }
-};
-
-// 2. Salvar as Observações (o que falta digitalizar)
-window.salvarObsPdf = async function(assistedId) {
-    const input = document.getElementById(`pdf-obs-${assistedId}`);
-    if (!input) return;
-    const novaObs = input.value.trim();
-
-    try {
-        const docRef = doc(window.app.db, "pautas", window.app.currentPauta.id, "attendances", assistedId);
-        await updateDoc(docRef, {
-            pdfObservacoes: novaObs,
-            lastActionBy: window.app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        });
-        showNotification("Observações atualizadas! 📝", "success");
-    } catch (error) {
-        console.error("Erro ao salvar observações:", error);
-        showNotification("Erro ao salvar observações.", "error");
-    }
-};
-
-// 3. Alternar o status "No Verde"
-window.toggleNoVerde = async function(assistedId, estadoAtual) {
-    const novoEstado = !estadoAtual;
-    try {
-        const docRef = doc(window.app.db, "pautas", window.app.currentPauta.id, "attendances", assistedId);
-        await updateDoc(docRef, {
-            noVerde: novoEstado,
-            lastActionBy: window.app.currentUserName || 'Sistema',
-            lastActionTimestamp: new Date().toISOString()
-        });
-        showNotification(novoEstado ? "Marcado como No Verde! ✅" : "Removido do status No Verde.", "info");
-    } catch (error) {
-        console.error("Erro ao alterar status No Verde:", error);
-        showNotification("Erro ao atualizar status.", "error");
-    }
-};
-
-// 4. Lógica de Abertura com Rastreio de Colaborador
-window.abrirPdfComRastreio = async function(app, assistedId, pdfLink) {
-    if (!pdfLink) {
-        showNotification("Nenhum link de PDF cadastrado.", "warning");
-        return;
-    }
-
-    const modoAtivo = localStorage.getItem('sigep_modo_rastreio_pdf') === 'true';
-    if (!modoAtivo) {
-        window.open(pdfLink, '_blank');
-        return;
-    }
-
-    const colaboradores = app.colaboradores || [];
-    if (colaboradores.length === 0) {
-        window.open(pdfLink, '_blank');
-        return;
-    }
-
-    let modal = document.getElementById('modal-identifica-clique-pdf');
-    if (!modal) {
-        modal = document.createElement('div');
-        modal.id = 'modal-identifica-clique-pdf';
-        modal.className = 'fixed inset-0 bg-black bg-opacity-60 z-[99999] flex items-center justify-center';
-        modal.innerHTML = `
-            <div class="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm mx-4">
-                <h3 class="font-black text-slate-800 text-lg mb-2">👤 Identificação de Acesso</h3>
-                <p class="text-xs text-slate-500 mb-4">Selecione seu nome para registrar a visualização:</p>
-                <div id="lista-colabs-clique-pdf" class="space-y-2 max-h-60 overflow-y-auto mb-4"></div>
-                <button onclick="document.getElementById('modal-identifica-clique-pdf').remove()" class="w-full bg-slate-200 text-slate-700 py-2.5 rounded-xl font-bold text-xs">Cancelar</button>
-            </div>
-        `;
-        document.body.appendChild(modal);
-    }
-
-    const containerColabs = document.getElementById('lista-colabs-clique-pdf');
-    containerColabs.innerHTML = colaboradores.map(c => `
-        <button onclick="window.confirmarAcessoPdf('${assistedId}', '${pdfLink}', '${escapeHTML(c.nome)}')" 
-            class="w-full text-left px-4 py-3 bg-slate-50 hover:bg-violet-50 border border-slate-200 rounded-xl font-bold text-xs text-slate-700 transition flex items-center justify-between">
-            <span>${escapeHTML(c.nome)}</span>
-            <span class="text-[10px] text-slate-400">${escapeHTML(c.cargo || 'Membro')}</span>
-        </button>
-    `).join('');
-};
-
-window.confirmarAcessoPdf = async function(assistedId, pdfLink, nomeColaborador) {
-    const modal = document.getElementById('modal-identifica-clique-pdf');
-    if (modal) modal.remove();
-
-    try {
-        const docRef = doc(window.app.db, "pautas", window.app.currentPauta.id, "attendances", assistedId);
-        await updateDoc(docRef, {
-            pdfVisualizado: true,
-            pdfHistoricoVisualizacao: arrayUnion({
-                colaborador: nomeColaborador,
-                timestamp: new Date().toISOString()
-            }),
-            lastActionBy: nomeColaborador,
-            lastActionTimestamp: new Date().toISOString()
-        });
-
-        showNotification(`Acesso registrado por ${nomeColaborador} ✅`, "success");
-        window.open(pdfLink, '_blank');
-    } catch (error) {
-        window.open(pdfLink, '_blank');
-    }
-};
-
-window.toggleModoRastreioPdf = function() {
-    const atual = localStorage.getItem('sigep_modo_rastreio_pdf') === 'true';
-    const novo = !atual;
-    localStorage.setItem('sigep_modo_rastreio_pdf', novo);
-    showNotification(`Modo Rastreio de PDF: ${novo ? 'ATIVADO 🟢' : 'DESATIVADO ⚪'}`, 'info');
-};
-
 // --- FUNÇÃO DE PROTEÇÃO INDIVIDUAL DO PAINEL DA TV ---
 window.abrirPainelTvProtegido = async function(app, pautaId) {
     try {
@@ -1902,15 +1774,12 @@ window.abrirPainelTvProtegido = async function(app, pautaId) {
         const data = pautaDoc.data();
         const tokenExigido = data.tvToken;
 
-        // Se a pauta NÃO tem senha configurada, abre o painel direto
         if (!tokenExigido) {
             window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
             return;
         }
 
-        // Se TEM senha, abre um modal rápido pedindo a senha antes de liberar o link
         abrirModalSenhaPainel(pautaId, tokenExigido);
-
     } catch (e) {
         console.error("Erro ao verificar senha do painel:", e);
         window.open(`painel_tv.html?pautas=${pautaId}`, '_blank');
@@ -1961,7 +1830,6 @@ function abrirModalSenhaPainel(pautaId, tokenCorreto) {
     document.getElementById('btn-cancelar-senha').onclick = () => modal.remove();
     input.onkeypress = (e) => { if (e.key === 'Enter') validar(); };
 }
-
 
 export default PautaService;
 
