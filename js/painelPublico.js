@@ -144,18 +144,19 @@ button{font-family:inherit}
 /* ========== TV + VÍDEO ========== */
 #modo-video{position:fixed;inset:0;height:100dvh;display:flex;background:#000}
 #coluna-midia{flex:1;min-width:0;display:flex;flex-direction:column;background:#000}
-#video-container{flex:1;min-height:0;position:relative;overflow:hidden;pointer-events:none}
+#video-container{flex:1 1 0;min-height:60vh;position:relative;overflow:hidden;pointer-events:none}
 #video-placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;background:var(--navy);color:#64748b;text-align:center;padding:24px}
 #video-placeholder b{color:#fff;font-size:var(--fs-lg);font-weight:700}
 #video-embed{position:absolute;inset:0}
 #video-embed iframe{position:absolute;top:-10%;left:-10%;width:120%;height:120%;border:0}
 #video-embed video{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
-#banner-chamado{flex-shrink:0;display:flex;align-items:center;justify-content:space-between;gap:28px;background:linear-gradient(90deg,#16a34a,#14532d);color:#fff;padding:clamp(18px,3.2vh,40px) clamp(24px,3.4vw,64px);border-top:4px solid #86efac}
+#banner-chamado{flex:0 0 auto;max-height:40vh;overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:28px;background:linear-gradient(90deg,#16a34a,#14532d);color:#fff;padding:clamp(12px,2vh,28px) clamp(24px,3.4vw,64px);border-top:4px solid #86efac}
 #banner-chamado .b-main{flex:1;min-width:0}
-#banner-chamado small{display:block;font-size:clamp(18px,2.4vw,40px);font-weight:800;letter-spacing:.22em;text-transform:uppercase;opacity:.9}
-#banner-nome{display:block;max-height:34vh;overflow:hidden;margin-top:6px;font-size:7rem;font-weight:900;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;overflow-wrap:anywhere}
-.b-local{flex-shrink:0;max-width:34%;text-align:right;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:18px;padding:clamp(12px,1.8vh,24px) clamp(18px,2.4vw,36px)}
-#banner-local{display:block;margin-top:6px;font-size:3.5rem;font-weight:900;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
+#banner-chamado small{display:block;font-size:clamp(13px,1.5vw,24px);font-weight:700;letter-spacing:.2em;text-transform:uppercase;opacity:.85}
+#banner-label-local{font-size:clamp(10px,1vw,15px)!important;letter-spacing:.1em!important;line-height:1.2}
+#banner-nome{display:block;max-height:17vh;overflow:hidden;margin-top:4px;font-size:6rem;font-weight:900;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;overflow-wrap:anywhere}
+.b-local{flex:0 0 auto;min-width:16vw;max-width:34%;text-align:right;background:rgba(255,255,255,.14);border:1px solid rgba(255,255,255,.3);border-radius:18px;padding:clamp(10px,1.6vh,22px) clamp(16px,2vw,32px)}
+#banner-local{display:block;margin-top:4px;font-size:3rem;font-weight:900;line-height:1.05;text-transform:uppercase;overflow-wrap:normal;word-break:normal}
 .banner-anim{animation:flash .7s ease 3}
 #faixa-video{width:clamp(300px,30vw,460px);flex-shrink:0;display:flex;flex-direction:column;min-height:0;background:#fff;border-left:1px solid var(--line)}
 .fv-head{padding:20px;border-bottom:1px solid var(--line);background:#f8fafc;flex-shrink:0}
@@ -414,9 +415,9 @@ export const PainelPublicoService = {
                 while (l.scrollWidth > l.parentElement.clientWidth + 1 && s > 18) { s -= 3; l.style.fontSize = s + 'px'; }
             }
             if (!$('modo-video').classList.contains('hidden')) {
-                ajustar($('banner-nome'), Math.min(vh * .17, vw * .085), 32);
-                const bl = $('banner-local'); let s = Math.min(vh * .09, vw * .045); bl.style.fontSize = s + 'px';
-                while (bl.scrollWidth > bl.parentElement.clientWidth - 30 && s > 18) { s -= 3; bl.style.fontSize = s + 'px'; }
+                ajustar($('banner-nome'), Math.min(vh * .12, vw * .06), 26);
+                const bl = $('banner-local'); let s = Math.min(vh * .07, vw * .035); bl.style.fontSize = s + 'px';
+                while ((bl.scrollWidth > bl.parentElement.clientWidth - 30 || bl.scrollHeight > vh * .16) && s > 16) { s -= 3; bl.style.fontSize = s + 'px'; }
             }
         };
         window.addEventListener('resize', () => this._ajustarTV());
