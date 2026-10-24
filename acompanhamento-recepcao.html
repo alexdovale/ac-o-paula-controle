@@ -1,7 +1,3 @@
-Aqui está o seu ficheiro painel_tv.html totalmente completo e atualizado, contendo:
- * A segurança por Token/PIN (sem exigir login do SIGEP, com ecrã de desbloqueio minimalista e gravação no localStorage).
- * A logomarca totalmente limpa, sem fundo/borda quadrada e com tamanho otimizado e maior.
-Podes copiar todo o código abaixo e substituir o conteúdo atual do teu painel_tv.html:
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -45,7 +41,7 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 
 /* LOGO SEM BORDA E MAIOR */
 .logo{background:transparent !important;border:none !important;border-radius:0 !important;padding:0 !important;display:flex;align-items:center}
-.logo img{height:clamp(32px,4vw,48px);width:auto;max-height:none !important}
+.logo img{height:clamp(48px,6.5vw,88px);width:auto;max-height:none !important}
 
 .brand-txt{padding-left:14px;border-left:1px solid var(--line)}
 .brand-txt h1{font-size:var(--fs-md);font-weight:700;letter-spacing:-.02em;line-height:1.2}
@@ -70,12 +66,12 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 .call-main{padding:clamp(16px,2vw,28px) clamp(20px,2.5vw,40px);min-width:0}
 .call-label{display:flex;align-items:center;gap:10px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
 .call-label::before{content:"";width:20px;height:2px;background:var(--amber)}
-.call-name{margin-top:8px;font-size:var(--fs-hero);font-weight:800;letter-spacing:-.02em;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
+.call-name{margin-top:8px;font-size:clamp(40px,7vw,96px);font-weight:900;letter-spacing:-.02em;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
 .call-info{display:flex;border-left:1px solid rgba(255,255,255,.05)}
 .call-field{padding:clamp(16px,2vw,28px) clamp(16px,2vw,32px);display:flex;flex-direction:column;justify-content:center;min-width:clamp(100px,12vw,180px)}
 .call-field+.call-field{border-left:1px solid rgba(255,255,255,.05)}
 .call-field small{font-size:var(--fs-xs);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
-.call-field b{margin-top:6px;font-size:var(--fs-lg);font-weight:700;line-height:1.2;overflow-wrap:anywhere}
+.call-field b{margin-top:6px;font-size:var(--fs-xl);font-weight:800;line-height:1.2;overflow-wrap:anywhere}
 .anim-in{animation:enter .4s cubic-bezier(.22,1,.36,1)}
 @keyframes enter{from{opacity:.2;transform:translateY(-4px)}to{opacity:1;transform:none}}
 
@@ -86,24 +82,24 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 .panel-head span{font-size:var(--fs-xs);font-weight:600;color:var(--muted);background:var(--line);padding:2px 8px;border-radius:4px;font-variant-numeric:tabular-nums}
 .th,.row{display:grid;align-items:center;gap:14px;padding:0 20px}
 .th{padding-top:8px;padding-bottom:8px;background:var(--surface);border-bottom:2px solid var(--line);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
-.g-fila{grid-template-columns:clamp(36px,3vw,48px) minmax(0,1fr) clamp(64px,7vw,90px) clamp(80px,8vw,110px)}
-.g-atend{grid-template-columns:minmax(0,1fr) clamp(56px,6vw,90px) clamp(56px,6vw,80px)}
+.g-fila{grid-template-columns:clamp(44px,4vw,64px) minmax(0,1fr) clamp(80px,8vw,120px) clamp(90px,9vw,130px)}
+.g-atend{grid-template-columns:minmax(0,1fr) clamp(70px,7vw,110px) clamp(70px,7vw,100px)}
 .panel-body{flex:1;overflow-y:auto}
 .group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 20px;background:var(--soft);border-bottom:1px solid var(--line)}
 .group-head b{display:flex;align-items:center;gap:8px;min-width:0;font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--text)}
 .group-head b::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--u);flex-shrink:0}
 .group-head b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .group-head small{font-size:var(--fs-xs);font-weight:600;color:var(--muted);white-space:nowrap}
-.row{min-height:clamp(42px,4vw,56px);border-bottom:1px solid var(--line);animation:fade .3s ease-out both}
+.row{min-height:clamp(60px,6vw,88px);border-bottom:1px solid var(--line);animation:fade .3s ease-out both}
 @keyframes fade{from{opacity:0}to{opacity:1}}
 .row.next{background:#fafbfc; border-left: 3px solid var(--amber);}
 .row.prio .pos{color:var(--danger)}
-.pos{font-size:var(--fs-sm);font-weight:700;color:var(--muted);font-variant-numeric:tabular-nums}
+.pos{font-size:clamp(16px,1.8vw,24px);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
 .row.next .pos{color:var(--amber)}
-.nome{min-width:0;font-weight:600;text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:var(--fs-md);color:var(--navy)}
-.g-atend .nome{font-size:var(--fs-md)}
-.sub{font-size:11px;font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.num{font-size:var(--fs-sm);font-weight:500;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
+.nome{min-width:0;font-weight:800;text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(20px,2.4vw,34px);color:var(--navy)}
+.g-atend .nome{font-size:clamp(20px,2.4vw,34px)}
+.sub{font-size:clamp(12px,1.2vw,15px);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.num{font-size:clamp(14px,1.5vw,20px);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
 .tag{justify-self:end;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap}
 .tag.prio{color:#9f1239;background:#fff1f2;border:1px solid #fecdd3}
 .tag.sala{color:#334155;background:var(--soft);border:1px solid var(--line)}
@@ -112,7 +108,7 @@ body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11
 footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:4px 0}
 
 /* ---------- MODO TV ---------- */
-#modo-tv{position:fixed;inset:0;height:100dvh;display:grid;grid-template-columns:2fr 1fr;background:var(--navy);overflow:hidden}
+#modo-tv{position:fixed;inset:0;height:100dvh;display:grid;grid-template-columns:3fr 2fr;background:var(--navy);overflow:hidden}
 #destaque{
     position:relative;
     display:flex;
@@ -128,23 +124,23 @@ footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;tex
 #destaque::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 30% 10%,rgba(255,255,255,.12),transparent 55%);pointer-events:none}
 #destaque > * { position:relative; z-index: 2; }
 .tv-label{font-size:clamp(16px,2vw,32px);font-weight:600;letter-spacing:.25em;text-transform:uppercase;opacity:.85;margin: 1vh 0;flex-shrink: 0;}
-#uc-nome-tv{font-size:6rem;font-weight:900;line-height:1.1;letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 16px rgba(0,0,0,.25);margin: 2vh 0 4vh 0;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;text-wrap:balance;word-break:break-word;flex: 1 1 auto;}
+#uc-nome-tv{font-size:9rem;font-weight:900;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 16px rgba(0,0,0,.25);margin:2vh 0 4vh 0;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;text-wrap:balance;word-break:break-word;flex:1 1 auto}
 #uc-local-tv{font-size:5rem;font-weight:900;line-height:1;letter-spacing:-.02em;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:16px;padding:.3em .8em;flex-shrink: 0;}
 #destaque.flash{animation:flash .7s ease 3}
 @keyframes flash{50%{filter:brightness(1.25)}}
 
 #lateral{display:flex;flex-direction:column;background:#fff;min-width:0;border-left:1px solid rgba(0,0,0,0.1)}
 #lateral h3{padding:clamp(16px,2vw,32px) 24px 12px;text-align:center;font-size:clamp(14px,1.5vw,22px);font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--ok2)}
-.hist-head{display:flex;justify-content:space-between;margin:0 24px 6px;padding-bottom:6px;border-bottom:2px solid var(--line);font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
+.hist-head{display:flex;justify-content:space-between;margin:0 24px 6px;padding-bottom:6px;border-bottom:2px solid var(--line);font-size:clamp(12px,1.2vw,16px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
 #lista-historico-tv{flex:1;overflow:hidden;padding:8px 20px;display:flex;flex-direction:column;gap:10px}
-.item-hist{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(10px,1.4vw,16px) clamp(12px,1.6vw,20px);border-radius:10px;background:var(--bg);border:1px solid var(--line);animation:inleft .4s ease-out both}
+.item-hist{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(14px,1.8vw,24px);border-radius:10px;background:var(--bg);border:1px solid var(--line);animation:inleft .4s ease-out both}
 @keyframes inleft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
-.item-hist span:first-child{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(14px,1.6vw,22px);font-weight:700;text-transform:uppercase;color:#334155}
-.item-hist span:last-child{white-space:nowrap;font-size:clamp(13px,1.5vw,20px);font-weight:800;color:var(--ok2)}
+.item-hist span:first-child{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;line-height:1.15;font-size:clamp(20px,2.6vw,38px);font-weight:800;text-transform:uppercase;color:#1e293b}
+.item-hist span:last-child{white-space:nowrap;font-size:clamp(18px,2.2vw,32px);font-weight:900;color:var(--ok2)}
 .tv-foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(14px,2vw,24px);background:var(--navy);color:#fff}
 
 /* LOGO DO RODAPÉ TAMBÉM SEM BORDA */
-.tv-foot img{height:clamp(32px,4vw,48px);width:auto;opacity:.9;background:transparent !important;border:none !important}
+.tv-foot img{height:clamp(56px,8vw,110px);width:auto;opacity:.95;background:transparent !important;border:none !important}
 
 #data-hora-tv{font-size:clamp(16px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.05em}
 #recepcao-nome-tv{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
@@ -486,9 +482,9 @@ function ajustar(el, max, min) {
 
 function ajustarTV() {
   const vh = window.innerHeight, vw = window.innerWidth;
-  ajustar($('uc-nome-tv'), Math.min(vh * 0.18, vw * 0.08), 28);
+  ajustar($('uc-nome-tv'), Math.min(vh * 0.28, vw * 0.12), 40);
   const l = $('uc-local-tv'); 
-  l.style.fontSize = Math.min(vh * 0.12, vw * 0.06) + 'px';
+  l.style.fontSize = Math.min(vh * 0.14, vw * 0.07) + 'px';
   let sz = parseFloat(l.style.fontSize); 
   while (l.scrollWidth > l.parentElement.clientWidth * 0.9 && sz > 24) { 
       sz -= 4; l.style.fontSize = sz + 'px'; 
@@ -596,4 +592,3 @@ init();
 </script>
 </body>
 </html>
-
