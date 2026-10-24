@@ -1046,94 +1046,233 @@ export const StatisticsService = {
         const { doc, yPos: y0, margin, pageWidth, pageHeight } = await this.novoPDF("RESUMO GERAL ESTATÍSTICO", pautaName);
         let yPos = y0;
 
-        const novaPaginaSe = (limite) => { if (yPos > pageHeight - limite) { doc.addPage(); yPos = margin + 30; } };
-        const addSectionTitle = (title) => {
-            novaPaginaSe(100);
-            doc.setFont("helvetica", "bold");
-            doc.setFontSize(14);
-            doc.setTextColor(43, 58, 85);
-            doc.text(title, margin, yPos);
-            yPos += 20;
-        };
-        const tabela = (config) => {
-            doc.autoTable({ startY: yPos, theme: 'grid', styles: { fontSize: 9 }, margin: { left: margin, right: margin }, ...config });
-            yPos = doc.lastAutoTable.finalY + 20;
-        };
-        const verde = { fillColor: [22, 163, 74], textColor: '#FFFFFF' };
-        const rodapeCinza = { fillColor: [240, 240, 240], fontStyle: 'bold' };
+        const largura = pageWidth - margin * 2;
+        const GAP = 18;
+        const metade = (largura - GAP) / 2;
+        const VERDE = [22, 163, 74];
+        const TXT = [30, 41, 59];
 
+        const novaPaginaSe = (h) => {
+            if (yPos + h > pageHeight - 50) { doc.addPage(); yPos = margin + 10; }
+        };
+
+        // título de seção com barrinha verde (não altera yPos)
+        const secao = (titulo, x = margin) => {
+            doc.setFillColor(...VERDE);
+            doc.roundedRect(x, yPos - 10, 3, 13, 1.5, 1.5, 'F');
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(12);
+            doc.setTextColor(...TXT);
+            doc.text(titulo, x + 9, yPos);
+        };
+
+        const base = {
+            theme: 'grid',
+            styles: { fontSize: 8.5, cellPadding: 4.5, valign: 'middle', lineColor: [226, 232, 240], lineWidth: 0.4, textColor: [51, 65, 85] },
+            headStyles: { fillColor: VERDE, textColor: [255, 255, 255], fontStyle: 'bold', fontSize: 8.5 },
+            alternateRowStyles: { fillColor: [248, 250, 252] },
+            footStyles: { fillColor: [226, 232, 240], textColor: TXT, fontStyle: 'bold' }
+        };
+
+        // desenha a tabela e devolve o Y final
+        const tabela = (config, margens) => {
+            doc.autoTable({
+                startY: yPos,
+                ...base,
+                ...config,
+                styles: { ...base.styles, ...(config.styles || {}) },
+                headStyles: { ...base.headStyles, ...(config.headStyles || {}) },
+                footStyles: { ...base.footStyles, ...(config.footStyles || {}) },
+                margin: margens || { left: margin, right: margin, top: margin, bottom: 45 }
+            });
+            return doc.lastAutoTable.finalY;
+        };
+
+        // ---------- Resumo Geral (cartões) ----------
         if (exportGeneral) {
-            addSectionTitle("Resumo Geral");
-            const colWidth = (pageWidth - margin * 2) / 4;
+            secao("Resumo Geral");
+            yPos += 14;
+            const totalPres = (s.atendidosCount || 0) + (s.faltososCount || 0);
             const cards = [
                 { v: String(s.atendidosCount || 0), l: "Atendimentos", bg: [240, 253, 244], fg: [22, 163, 74] },
                 { v: String(s.atendidosComAgendaCount || 0), l: "Agend/Reagend", bg: [236, 253, 245], fg: [16, 185, 129] },
                 { v: String(s.atendidosSemAgendaCount || 0), l: "Efetivados", bg: [240, 253, 250], fg: [20, 184, 166] },
-                { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] }
+                { v: String(s.faltososCount || 0), l: "Faltosos", bg: [254, 242, 242], fg: [220, 38, 38] },
+                { v: pct(s.atendidosCount || 0, totalPres) + '%', l: "Presença", bg: [239, 246, 255], fg: [37, 99, 235] }
             ];
+            const cw = (largura - 8 * (cards.length - 1)) / cards.length;
             cards.forEach((c, i) => {
-                const x = margin + colWidth * i;
+                const x = margin + i * (cw + 8);
                 doc.setFillColor(...c.bg);
-                doc.roundedRect(x, yPos - 15, colWidth - 10, 60, 5, 5, 'F');
+                doc.roundedRect(x, yPos, cw, 54, 6, 6, 'F');
                 doc.setFont("helvetica", "bold");
-                doc.setFontSize(22);
+                doc.setFontSize(20);
                 doc.setTextColor(...c.fg);
-                doc.text(c.v, x + (colWidth - 10) / 2, yPos + 15, { align: 'center' });
-                doc.setFontSize(9.5);
-                doc.setTextColor(0);
-                doc.text(c.l, x + (colWidth - 10) / 2, yPos + 35, { align: 'center' });
+                doc.text(c.v, x + cw / 2, yPos + 27, { align: 'center' });
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8);
+                doc.setTextColor(71, 85, 105);
+                doc.text(c.l, x + cw / 2, yPos + 43, { align: 'center' });
             });
-            yPos += 70;
+            yPos += 54 + 28;
         }
 
-        if (s.statsByAcaoRapida && s.totalAcoesRapidas > 0) {
-            addSectionTitle("Ações Rápidas");
-            tabela({
-                head: [['Tipo de Ação', 'Total']],
-                body: Object.entries(s.statsByAcaoRapida).sort(([, a], [, b]) => b - a),
-                foot: [['TOTAL', s.totalAcoesRapidas]],
-                headStyles: { fillColor: [99, 102, 241], textColor: '#FFFFFF' },
-                footStyles: rodapeCinza
-            });
-        }
-
-        if (exportCollaborators && s.statsByGroup) {
-            addSectionTitle("Atendimentos por Equipe");
-            const equipes = Object.entries(s.statsByGroup)
-                .sort((a, b) => compararGrupos(a[0], b[0]))
-                .map(([nome, d]) => [nome, d.todosColaboradores.length, d.total, pctF(d.total, s.atendidosCount) + '%']);
-            tabela({ head: [['Equipe', 'Membros', 'Atendimentos', '% do total']], body: equipes, headStyles: verde });
-        }
-
-        const tabelaHorario = (titulo, itens, total, headFill, footFill) => {
-            addSectionTitle(titulo);
-            tabela({
-                head: [['Horário', 'Quantidade']],
-                body: itens.map(i => [i.time, i.count]),
-                foot: [['Total', total]],
-                headStyles: { fillColor: headFill, textColor: '#FFFFFF' },
-                footStyles: footFill ? { fillColor: footFill, fontStyle: 'bold' } : rodapeCinza
-            });
+        // ---------- Ações rápidas (esquerda) + Equipes (direita) ----------
+        const PALETA = {
+            'Reagendamento': { bg: [255, 251, 235], borda: [252, 211, 77], texto: [146, 64, 14] },
+            'Agendamento': { bg: [236, 253, 245], borda: [110, 231, 183], texto: [6, 95, 70] },
+            'Consulta Processual': { bg: [245, 243, 255], borda: [196, 181, 253], texto: [76, 29, 149] },
+            'Outros Assuntos': { bg: [249, 250, 251], borda: [209, 213, 219], texto: [55, 65, 81] }
         };
-        if (exportScheduledTime && s.statsByScheduledTime?.length) tabelaHorario("Agendados por Horário", s.statsByScheduledTime, s.agendadosCount || 0, [22, 163, 74]);
-        if (exportTimes && s.statsByTime?.length) tabelaHorario("Atendimentos por Horário (Chegada)", s.statsByTime, s.atendidosCount || 0, [22, 163, 74]);
-        if (exportAbsenteesTime && s.statsByTimeFaltosos?.length) tabelaHorario("Faltosos por Horário", s.statsByTimeFaltosos, s.faltososCount || 0, [220, 38, 38], [255, 240, 240]);
+        const PALETA_PADRAO = { bg: [239, 246, 255], borda: [147, 197, 253], texto: [30, 64, 175] };
 
+        const acoes = (s.statsByAcaoRapida && s.totalAcoesRapidas > 0)
+            ? Object.entries(s.statsByAcaoRapida).sort(([, a], [, b]) => b - a) : [];
+        const equipes = (exportCollaborators && s.statsByGroup)
+            ? Object.entries(s.statsByGroup)
+                .sort((a, b) => compararGrupos(a[0], b[0]))
+                .map(([nome, d]) => [nome, d.todosColaboradores.length, d.total, pctF(d.total, s.atendidosCount) + '%'])
+            : [];
+        const temA = acoes.length > 0, temE = equipes.length > 0;
+
+        if (temA || temE) {
+            const colW = (temA && temE) ? metade : largura;
+            const xDir = (temA && temE) ? margin + metade + GAP : margin;
+            const hCards = temA ? 24 + Math.ceil(acoes.length / 2) * 46 + 22 : 0;
+            const hEq = temE ? 24 + (equipes.length + 2) * 18 : 0;
+            novaPaginaSe(Math.min(Math.max(hCards, hEq), 320));
+
+            const topo = yPos;
+            let fimA = topo, fimE = topo;
+
+            if (temA) {
+                secao("Ações Rápidas", margin);
+                const cardW = (colW - 8) / 2;
+                const cy = topo + 12;
+                acoes.forEach(([tipo, qtd], i) => {
+                    const c = PALETA[tipo] || PALETA_PADRAO;
+                    const cx = margin + (i % 2) * (cardW + 8);
+                    const cyy = cy + Math.floor(i / 2) * 46;
+                    doc.setFillColor(...c.bg);
+                    doc.setDrawColor(...c.borda);
+                    doc.setLineWidth(0.8);
+                    doc.roundedRect(cx, cyy, cardW, 38, 5, 5, 'FD');
+                    doc.setFont("helvetica", "bold");
+                    doc.setFontSize(8);
+                    doc.setTextColor(...c.texto);
+                    doc.text(doc.splitTextToSize(String(tipo), cardW - 14)[0], cx + 8, cyy + 14);
+                    doc.setFontSize(16);
+                    doc.text(String(qtd), cx + 8, cyy + 31);
+                });
+                fimA = cy + Math.ceil(acoes.length / 2) * 46;
+                doc.setFont("helvetica", "normal");
+                doc.setFontSize(8.5);
+                doc.setTextColor(100, 116, 139);
+                doc.text("Total de ações", margin, fimA + 6);
+                doc.setFont("helvetica", "bold");
+                doc.setTextColor(...TXT);
+                doc.text(String(s.totalAcoesRapidas), margin + colW, fimA + 6, { align: 'right' });
+                fimA += 14;
+            }
+
+            if (temE) {
+                yPos = topo;
+                secao("Atendimentos por Equipe", xDir);
+                yPos = topo + 10;
+                const somaMemb = equipes.reduce((a, r) => a + r[1], 0);
+                const somaAtend = equipes.reduce((a, r) => a + r[2], 0);
+                fimE = tabela({
+                    head: [['Equipe', 'Memb.', 'Atend.', '%']],
+                    body: equipes,
+                    foot: [['Total', somaMemb, somaAtend, pctF(somaAtend, s.atendidosCount) + '%']],
+                    columnStyles: {
+                        0: { halign: 'left', fontStyle: 'bold' },
+                        1: { halign: 'center', cellWidth: 40 },
+                        2: { halign: 'center', cellWidth: 44 },
+                        3: { halign: 'center', cellWidth: 44 }
+                    }
+                }, { left: xDir, right: margin, top: margin, bottom: 45 });
+            }
+            yPos = Math.max(fimA, fimE) + 26;
+        }
+
+        // ---------- Movimento por horário (tabela única) ----------
+        const mapa = {};
+        const juntar = (lista, chave) => (lista || []).forEach(i => {
+            if (!mapa[i.time]) mapa[i.time] = { ag: 0, at: 0, fa: 0 };
+            mapa[i.time][chave] = i.count;
+        });
+        juntar(s.statsByScheduledTime, 'ag');
+        juntar(s.statsByTime, 'at');
+        juntar(s.statsByTimeFaltosos, 'fa');
+        const horas = Object.keys(mapa).sort();
+        const cols = [
+            { k: 'ag', nome: 'Agendados', on: exportScheduledTime },
+            { k: 'at', nome: 'Atendidos', on: exportTimes },
+            { k: 'fa', nome: 'Faltosos', on: exportAbsenteesTime }
+        ].filter(c => c.on);
+        const mostrarPres = exportTimes && exportAbsenteesTime;
+
+        if (horas.length && cols.length) {
+            novaPaginaSe(120);
+            secao("Movimento por Horário");
+            yPos += 10;
+            const head = ['Horário', ...cols.map(c => c.nome), ...(mostrarPres ? ['Presença'] : [])];
+            const body = horas.map(h => {
+                const m = mapa[h];
+                const linha = [h, ...cols.map(c => m[c.k])];
+                if (mostrarPres) linha.push((m.at + m.fa) > 0 ? pct(m.at, m.at + m.fa) + '%' : '-');
+                return linha;
+            });
+            const tot = horas.reduce((a, h) => ({ ag: a.ag + mapa[h].ag, at: a.at + mapa[h].at, fa: a.fa + mapa[h].fa }), { ag: 0, at: 0, fa: 0 });
+            const foot = ['Total', ...cols.map(c => tot[c.k]), ...(mostrarPres ? [pct(tot.at, tot.at + tot.fa) + '%'] : [])];
+
+            const colStyles = {};
+            head.forEach((_, i) => { colStyles[i] = { halign: 'center', ...(i === 0 ? { fontStyle: 'bold' } : {}) }; });
+
+            yPos = tabela({
+                head: [head],
+                body,
+                foot: [foot],
+                columnStyles: colStyles,
+                didParseCell: (data) => {
+                    if (data.section !== 'body') return;
+                    const nome = head[data.column.index];
+                    const vazio = data.cell.raw === 0 || data.cell.raw === '-';
+                    if (nome === 'Atendidos') { data.cell.styles.textColor = vazio ? [148, 163, 184] : [22, 163, 74]; data.cell.styles.fontStyle = 'bold'; }
+                    if (nome === 'Faltosos') { data.cell.styles.textColor = vazio ? [148, 163, 184] : [220, 38, 38]; data.cell.styles.fontStyle = 'bold'; }
+                    if (nome === 'Presença') { data.cell.styles.fontStyle = 'bold'; }
+                }
+            }) + 26;
+        }
+
+        // ---------- Demandas por assunto ----------
         if (exportSubjects && s.statsBySubject && Object.keys(s.statsBySubject).length > 0) {
-            addSectionTitle("Demandas por Assunto");
+            novaPaginaSe(100);
+            secao("Demandas por Assunto");
+            yPos += 10;
             const subjects = Object.entries(s.statsBySubject)
                 .sort(([, a], [, b]) => b.total - a.total)
-                .map(([name, d]) => [name.length > 30 ? name.substring(0, 27) + '...' : name, d.total || 0, d.agendaAtendidos || 0, d.semVincAtendidos || 0, d.faltosos || 0]);
+                .map(([name, d]) => [name, d.total || 0, d.agendaAtendidos || 0, d.semVincAtendidos || 0, d.faltosos || 0]);
             const soma = (i) => subjects.reduce((acc, r) => acc + r[i], 0);
-            tabela({
+            yPos = tabela({
                 head: [['Assunto', 'Total', 'Agend/Reag', 'Efetivados', 'Faltosos']],
                 body: subjects,
-                foot: [['TOTAL GERAL', soma(1), soma(2), soma(3), soma(4)]],
-                headStyles: { fillColor: [75, 85, 99], textColor: '#FFFFFF' },
-                footStyles: rodapeCinza,
-                styles: { fontSize: 8 },
-                columnStyles: { 0: { cellWidth: 160 } }
-            });
+                foot: [['Total geral', soma(1), soma(2), soma(3), soma(4)]],
+                columnStyles: {
+                    0: { halign: 'left', cellWidth: 'auto' },
+                    1: { halign: 'center', cellWidth: 55, fontStyle: 'bold' },
+                    2: { halign: 'center', cellWidth: 70 },
+                    3: { halign: 'center', cellWidth: 70 },
+                    4: { halign: 'center', cellWidth: 60 }
+                },
+                didParseCell: (data) => {
+                    if (data.section === 'body' && data.column.index === 4 && data.cell.raw > 0) {
+                        data.cell.styles.textColor = [220, 38, 38];
+                        data.cell.styles.fontStyle = 'bold';
+                    }
+                }
+            }) + 20;
         }
 
         this.rodapePDF(doc, margin, pageHeight);
