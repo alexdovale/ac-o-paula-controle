@@ -720,7 +720,6 @@ export const PautaService = {
         };
     },
 
-    // Abertura Condicional do Modal Clássico
     _abrirModalClassico(app, assisted, tipoAcao) {
         if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
             PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
@@ -1384,13 +1383,23 @@ export const PautaService = {
                 }
             },
 
-            // --- AÇÕES EXTRA ---
+            // --- AÇÕES EXTRA E ZONA DE RISCO ---
             'cancel-pauta-btn': () => {
+                // 🛡️ PERMISSÃO GRANULAR: Controle do Cancelamento / Retirada da Pauta
+                if (!isSuper && perms.pauta_zerar_pauta !== true) {
+                    showNotification("Acesso restrito: Só um coordenador pode retirar assistidos da pauta sem lançar falta.", "warning");
+                    return;
+                }
                 if (confirm("Tem certeza que deseja retirar este assistido da pauta?\n\nEle sairá da fila e NÃO constará como faltoso. Use isso para desistências ou erros.")) {
                     this.updateStatus(app.db, app.currentPauta.id, id, { status: 'cancelado' }, app.currentUserName);
                 }
             },
             'toggle-extrapauta-btn': () => {
+                // 🛡️ PERMISSÃO GRANULAR: Controle de Inserção de Extra-Pauta (Zona de Risco Menor)
+                if (!isSuper && perms.pauta_zerar_pauta !== true && perms.pauta_configuracoes !== true) {
+                    showNotification("Acesso restrito: Você não tem permissão para manipular o status extra-pauta.", "warning");
+                    return;
+                }
                 const novoEstado = !assisted.isExtraPauta;
                 this.updateStatus(app.db, app.currentPauta.id, id, { isExtraPauta: novoEstado }, app.currentUserName);
                 showNotification(novoEstado ? "Selo Extra-Pauta adicionado!" : "Selo Extra-Pauta removido.", "info");
