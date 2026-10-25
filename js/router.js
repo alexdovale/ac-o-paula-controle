@@ -1,3 +1,6 @@
+Aqui está o seu arquivo js/router.js completo, atualizado e integrado com as correções que fizemos:
+ * Limpeza profunda do DOM (_hideAllScreens): Remove elementos órfãos, resultados de pesquisa e resíduos flutuantes (como o bug do Coletor BI no rodapé) sempre que houver navegação ou ao clicar no botão voltar.
+ * Guarda de Permissão Dinâmica (_guard): Valida tanto o perfil padrão (role) quanto as exceções customizadas que o superadministrador definir para o usuário (permissoesPersonalizadas).
 // js/router.js
 // Sistema de roteamento SPA completo para o SIGEP - Prioridade Absoluta para URLs (Deep Linking)
 
@@ -181,9 +184,9 @@ export class SIGEPRouter {
         });
 
         // ==========================================
-        // CORREÇÃO DE BUG (COLETOR BI / ELEMENTOS ÓRFÃOS)
+        // CORREÇÃO DE BUG: LIMPEZA PROFUNDA DO DOM
         // ==========================================
-        // Limpa resíduos e resultados flutuantes que possam ter ficados presos no DOM ao trocar de tela
+        // Remove resíduos, resultados de busca flutuantes ou elementos do Coletor BI presos no final da página
         document.querySelectorAll('.bi-result-item, .bi-floating-container, .bi-floating-result, .modal-backdrop, .modal-overlay').forEach(el => {
             el.remove();
         });
@@ -214,6 +217,31 @@ export class SIGEPRouter {
         if (route === ROUTES.LOGIN && isAuth && isApproved) {
             const savedScreen = localStorage.getItem('sigep_active_screen');
             return (savedScreen && savedScreen !== ROUTES.LOGIN) ? savedScreen : ROUTES.MODO_SELECTION;
+        }
+
+        // ==========================================
+        // CONTROLE DE PERMISSÃO DINÂMICA POR USUÁRIO (Perfil Base + Exceções do Superadmin)
+        // ==========================================
+        if (user) {
+            const role = user.role;
+            const isSuper = role === 'admin' || role === 'superadmin' || role === 'superadmin_global';
+            
+            if (!isSuper) {
+                const customPerms = user.permissoesPersonalizadas || {};
+                
+                // Mapeia restrições baseadas nas regras do Superadmin
+                const restricoes = {
+                    [ROUTES.ADMIN]: false,
+                    [ROUTES.ESTATISTICAS]: customPerms.estatisticas !== undefined ? customPerms.estatisticas : ['gestor'].includes(role)
+                };
+
+                if (restricoes[route] === false) {
+                    if (this._deps.showNotification) {
+                        this._deps.showNotification('Acesso restrito: O administrador não liberou esta função para o seu perfil.', 'error');
+                    }
+                    return ROUTES.PAUTA_SELECTION;
+                }
+            }
         }
 
         if (guard.roles && !guard.roles.includes(user?.role)) {
@@ -458,3 +486,4 @@ export class SIGEPRouter {
         };
     }
 }
+
