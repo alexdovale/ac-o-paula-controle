@@ -1,10 +1,7 @@
 
-
-// js/admin.js - Painel Administrativo Completo com Permissões Granulares, Unidades e Auditoria
-
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, setDoc, getDoc
+    query, orderBy, limit, where, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -58,6 +55,7 @@ const ICONS = {
 const ico = (nome, cls = 'w-4 h-4') =>
     `<svg class="${cls} shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICONS[nome] || ''}</svg>`;
 
+// Botão de fechar dos modais (cabeçalho escuro)
 const btnX = ({ id = '', cls = '' } = {}) =>
     `<button ${id ? `id="${id}"` : ''} class="${cls} text-slate-400 hover:text-white p-1 rounded-lg hover:bg-white/10 transition" aria-label="Fechar">${ico('x', 'w-5 h-5')}</button>`;
 
@@ -536,6 +534,404 @@ export const abrirGerenciadorUnidades = async (db) => {
     document.getElementById('btn-nova-unidade')?.addEventListener('click', () => { abrirModalFormUnidade(db, null, () => { fechar(); abrirGerenciadorUnidades(db); }); });
     document.getElementById('btn-importar-unidades-massa')?.addEventListener('click', () => { fechar(); abrirImportadorUnidades(db); });
 };
+
+const abrirModalGerenciarRecepcoesGlobal = async (app) => {
+    const { db } = app;
+    const { RecepcaoConfigService } = await import('./recepcaoConfig.js');
+
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/70 z-[800] flex items-center justify-center p-4 overflow-y-auto backdrop-blur-sm';
+    modal.innerHTML = `
+        <div class="bg-slate-50 rounded-2xl shadow-2xl w-full max-w-6xl max-h-[95vh] overflow-hidden flex flex-col relative">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center shrink-0 border-b border-slate-800">
+                <div>
+                    <h2 class="text-base font-bold text-white tracking-wide flex items-center gap-2">${ico('clipboard', 'w-5 h-5')} Unidades de Apoio e Recepções</h2>
+                    <p class="text-slate-400 text-xs mt-0.5">Configuração de hubs operacionais e distribuição de atendimento</p>
+                </div>
+                ${btnX({ id: 'fechar-gerenciador-recepcoes' })}
+            </div>
+            
+            <div class="flex-1 overflow-y-auto p-6" id="painel-conteudo-recepcoes">
+                <div class="flex justify-center items-center h-40">
+                    <div class="loader-small mx-auto mb-4"></div>
+                </div>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    const fechar = () => modal.remove();
+    document.getElementById('fechar-gerenciador-recepcoes').onclick = fechar;
+
+    const renderizarTelaAdmin = async () => {
+        const recepcoes = await RecepcaoConfigService.buscarTodasRecepcoesAdmin(db);
+
+        const container = document.getElementById('painel-conteudo-recepcoes');
+        if (!container) return;
+
+        let html = `
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-6 gap-4">
+                <div>
+                    <h3 class="font-bold text-slate-800 text-sm">Gestão de Recepções</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Vincule unidades operacionais e defina equipes alocadas.</p>
+                </div>
+                <button id="btn-nova-recepcao-custom" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm">
+                    ${ico('plus', 'w-3.5 h-3.5')} Nova Recepção
+                </button>
+            </div>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                ${recepcoes.length === 0 ? `
+                    <div class="col-span-full flex flex-col items-center justify-center py-16 bg-white rounded-2xl border border-dashed border-slate-300 gap-3">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">${ico('clipboard', 'w-6 h-6')}</div>
+                        <p class="text-xs text-slate-500 font-medium">Nenhuma recepção configurada no sistema.</p>
+                    </div>
+                ` : recepcoes.map(rec => `
+                    <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:border-slate-300 transition-all relative flex flex-col h-full">
+                        <div class="absolute top-4 right-4">
+                            <span class="text-[9px] font-bold px-2 py-0.5 rounded uppercase tracking-wider border ${rec.tipo === 'central' ? 'bg-amber-50 text-amber-700 border-amber-200' : 'bg-slate-50 text-slate-600 border-slate-200'}">
+                                ${rec.tipo === 'central' ? 'Central' : 'Específica'}
+                            </span>
+                        </div>
+                        
+                        <div class="flex items-center gap-3 mb-4">
+                            <div class="w-10 h-10 bg-slate-100 text-slate-500 rounded-xl border border-slate-200 flex items-center justify-center">
+                                ${ico('clipboard', 'w-5 h-5')}
+                            </div>
+                            <div class="flex-1 min-w-0 pr-12">
+                                <h4 class="font-bold text-slate-800 text-sm truncate">${escapeHTML(rec.nome)}</h4>
+                                <p class="text-[10px] text-slate-400 mt-0.5 uppercase tracking-wider">${rec.andar ? escapeHTML(rec.andar) : 'Global'}</p>
+                            </div>
+                        </div>
+                        
+                        <div class="mb-4 flex-1 bg-slate-50 rounded-xl p-3.5 border border-slate-100 space-y-2.5 text-xs">
+                            <div>
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Unidades Vinculadas</span>
+                                <div class="text-slate-700 font-medium truncate">
+                                    ${(rec.unidadesVinculadas || []).length > 0 
+                                        ? `${rec.unidadesVinculadas.length} unidade(s) associada(s)`
+                                        : (rec.unidadeNome ? escapeHTML(rec.unidadeNome) : '<span class="text-slate-400 italic">Nenhuma</span>')}
+                                </div>
+                            </div>
+                            <div class="pt-2 border-t border-slate-200 flex justify-between items-center">
+                                <span class="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Membros Autorizados</span>
+                                <span class="bg-slate-200 text-slate-800 font-bold px-2 py-0.5 rounded-full text-[10px]">${(rec.membros || []).length}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="grid grid-cols-2 gap-2 mt-auto pt-2 border-t border-slate-100">
+                            <button class="btn-vincular-usuarios bg-slate-900 hover:bg-slate-800 text-white font-semibold py-2 rounded-xl text-xs transition col-span-2 flex items-center justify-center gap-1.5" data-id="${rec.id}">
+                                ${ico('users', 'w-3.5 h-3.5')} Gerenciar Lotação de Equipe
+                            </button>
+                            <button class="btn-editar-recepcao bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1.5" data-id="${rec.id}">
+                                ${ico('pencil', 'w-3.5 h-3.5')} Editar
+                            </button>
+                            <div class="flex gap-1.5">
+                                <button class="btn-link-recepcao flex-1 bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1" data-id="${rec.id}" title="Copiar link da TV">${ico('tv', 'w-3.5 h-3.5')} TV</button>
+                                <button class="btn-excluir-recepcao flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-semibold py-2 rounded-xl text-xs transition inline-flex items-center justify-center gap-1" data-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}" title="Excluir">${ico('trash', 'w-3.5 h-3.5')} Excluir</button>
+                            </div>
+                        </div>
+                    </div>
+                `).join('')}
+            </div>
+        `;
+
+        container.innerHTML = html;
+
+        document.getElementById('btn-nova-recepcao-custom')?.addEventListener('click', () => renderizarFormularioRecepcao());
+
+        container.querySelectorAll('.btn-editar-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) renderizarFormularioRecepcao(rec);
+            });
+        });
+
+        container.querySelectorAll('.btn-link-recepcao').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) RecepcaoConfigService.copiarLinkPainel(rec);
+            });
+        });
+
+        container.querySelectorAll('.btn-excluir-recepcao').forEach(btn => {
+            btn.addEventListener('click', async () => {
+                if (confirm(`Confirma a exclusão da recepção "${btn.dataset.nome}"?`)) {
+                    try {
+                        await deleteDoc(doc(db, "recepcoes", btn.dataset.id));
+                        showNotification("Recepção excluída.", "success");
+                        renderizarTelaAdmin();
+                    } catch (error) {
+                        showNotification("Erro ao excluir recepção.", "error");
+                    }
+                }
+            });
+        });
+
+        container.querySelectorAll('.btn-vincular-usuarios').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const rec = recepcoes.find(r => r.id === btn.dataset.id);
+                if (rec) abrirModalVincularUsuarios(rec);
+            });
+        });
+    };
+
+    const renderizarFormularioRecepcao = (recepcaoEdicao = null) => {
+        const container = document.getElementById('painel-conteudo-recepcoes');
+        if (!container) return;
+
+        container.innerHTML = `
+            <div class="max-w-2xl mx-auto bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
+                ${RecepcaoConfigService.renderFormRecepcao(recepcaoEdicao, [])}
+            </div>
+        `;
+
+        RecepcaoConfigService.initFormRecepcaoEventos(
+            async (dadosSalvos, idEdicao) => {
+                if (idEdicao) {
+                    await RecepcaoConfigService.atualizarRecepcao(db, idEdicao, dadosSalvos);
+                } else {
+                    await RecepcaoConfigService.criarRecepcao(db, dadosSalvos, app.currentUser.uid);
+                }
+                renderizarTelaAdmin();
+            },
+            () => { renderizarTelaAdmin(); }
+        );
+    };
+
+    const abrirModalVincularUsuarios = async (recepcao) => {
+        const modalVinculo = document.createElement('div');
+        modalVinculo.className = 'fixed inset-0 bg-black/70 z-[900] flex items-center justify-center p-4 backdrop-blur-sm';
+        modalVinculo.innerHTML = `
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-xl overflow-hidden flex flex-col h-[80vh]">
+                <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
+                    <div>
+                        <h3 class="font-bold text-sm flex items-center gap-2">${ico('users')} Lotação de Servidores: ${escapeHTML(recepcao.nome)}</h3>
+                        <p class="text-slate-400 text-xs mt-0.5">Selecione os usuários com permissão operacional</p>
+                    </div>
+                    ${btnX({ cls: 'fechar-vinculo' })}
+                </div>
+                
+                <div class="p-3 border-b border-slate-200 bg-slate-50 shrink-0">
+                    <div class="relative">
+                        <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-4 h-4')}</span>
+                        <input type="text" id="busca-membros-recepcao" placeholder="Filtrar por nome ou e-mail..." 
+                            class="w-full pl-9 pr-3 py-2 bg-white rounded-lg border border-slate-300 text-xs outline-none focus:ring-1 focus:ring-slate-900">
+                    </div>
+                </div>
+
+                <div class="flex-1 overflow-y-auto p-4 bg-slate-50/50" id="lista-usuarios-vinculo">
+                    <div class="flex justify-center items-center h-full"><div class="loader-small"></div></div>
+                </div>
+                
+                <div class="bg-white border-t border-slate-200 p-4 flex justify-between items-center shrink-0">
+                    <span id="contagem-membros" class="text-xs font-semibold text-slate-500"></span>
+                    <div class="flex gap-2">
+                        <button class="fechar-vinculo bg-slate-100 hover:bg-slate-200 text-slate-700 font-semibold px-4 py-2 rounded-lg text-xs">Cancelar</button>
+                        <button id="salvar-vinculo" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white font-semibold px-5 py-2 rounded-lg text-xs shadow-sm">${ico('check', 'w-3.5 h-3.5')} Salvar Alterações</button>
+                    </div>
+                </div>
+            </div>
+        `;
+        document.body.appendChild(modalVinculo);
+
+        const fecharVinculo = () => modalVinculo.remove();
+        modalVinculo.querySelectorAll('.fechar-vinculo').forEach(b => b.addEventListener('click', fecharVinculo));
+
+        try {
+            const usersSnap = await getDocs(collection(db, "users"));
+            const todosUsuarios = usersSnap.docs.map(d => ({id: d.id, ...d.data()})).filter(u => u.status === 'approved' && u.role !== 'suspended');
+            todosUsuarios.sort((a,b) => (a.name || a.email || '').localeCompare(b.name || b.email || ''));
+
+            let membrosAtuais = [...(recepcao.membros || [])];
+
+            const renderUsuarios = (termo = '') => {
+                const listContainer = document.getElementById('lista-usuarios-vinculo');
+                if (!listContainer) return;
+                const q = termo.toLowerCase();
+                const filtrados = todosUsuarios.filter(u => 
+                    (u.name || '').toLowerCase().includes(q) || 
+                    (u.email || '').toLowerCase().includes(q)
+                );
+
+                if (filtrados.length === 0) {
+                    listContainer.innerHTML = '<p class="text-center text-slate-400 py-10 text-xs font-semibold">Nenhum registro encontrado.</p>';
+                    return;
+                }
+
+                listContainer.innerHTML = `
+                    <div class="space-y-1.5">
+                        ${filtrados.map(u => {
+                            const isChecked = membrosAtuais.includes(u.id);
+                            return `
+                                <label class="flex items-center gap-3 p-2.5 bg-white border border-slate-200 rounded-xl cursor-pointer hover:border-slate-300 transition ${isChecked ? 'border-slate-900 bg-slate-50' : ''}">
+                                    <input type="checkbox" class="cb-membro w-4 h-4 text-slate-900 rounded focus:ring-0" value="${u.id}" ${isChecked ? 'checked' : ''}>
+                                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-[11px] font-black shrink-0">${escapeHTML(iniciais(u.name || u.email))}</div>
+                                    <div class="flex-1 min-w-0">
+                                        <p class="font-bold text-slate-800 text-xs truncate">${escapeHTML(u.name || 'Sem nome')}</p>
+                                        <p class="text-[10px] text-slate-500 truncate">${escapeHTML(u.email)}</p>
+                                    </div>
+                                    <span class="text-[9px] font-mono px-2 py-0.5 rounded bg-slate-100 text-slate-600 uppercase">${escapeHTML(u.role || 'user')}</span>
+                                </label>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+
+                listContainer.querySelectorAll('.cb-membro').forEach(cb => {
+                    cb.addEventListener('change', () => {
+                        const label = cb.closest('label');
+                        if (cb.checked) {
+                            label.classList.add('border-slate-900', 'bg-slate-50');
+                            if (!membrosAtuais.includes(cb.value)) membrosAtuais.push(cb.value);
+                        } else {
+                            label.classList.remove('border-slate-900', 'bg-slate-50');
+                            membrosAtuais = membrosAtuais.filter(id => id !== cb.value);
+                        }
+                        atualizarContador();
+                    });
+                });
+            };
+
+            const atualizarContador = () => {
+                const el = document.getElementById('contagem-membros');
+                if (el) el.textContent = `${membrosAtuais.length} servidor(es) selecionado(s)`;
+            };
+
+            renderUsuarios();
+            atualizarContador();
+
+            document.getElementById('busca-membros-recepcao')?.addEventListener('input', (e) => renderUsuarios(e.target.value));
+
+            document.getElementById('salvar-vinculo')?.addEventListener('click', async () => {
+                const btn = document.getElementById('salvar-vinculo');
+                if (!btn) return;
+                const original = btn.innerHTML;
+                btn.disabled = true;
+                btn.innerHTML = spinnerTxt('Salvando...');
+
+                try {
+                    await updateDoc(doc(db, "recepcoes", recepcao.id), { membros: membrosAtuais });
+                    showNotification("Lotação atualizada.", "success");
+                    fecharVinculo();
+                    renderizarTelaAdmin();
+                } catch (error) {
+                    showNotification("Erro ao salvar lotação.", "error");
+                    btn.disabled = false;
+                    btn.innerHTML = original;
+                }
+            });
+
+        } catch (err) {
+            const listContainer = document.getElementById('lista-usuarios-vinculo');
+            if (listContainer) listContainer.innerHTML = '<p class="text-center text-red-500 py-10 text-xs font-semibold">Erro ao carregar dados.</p>';
+        }
+    };
+
+    await renderizarTelaAdmin();
+};
+
+const abrirModalFormUnidade = async (db, unidade = null, onClose) => {
+    const isEdicao = !!unidade;
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/60 z-[800] flex items-center justify-center p-4 backdrop-blur-sm';
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden">
+            <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
+                <h3 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico(isEdicao ? 'pencil' : 'plus')} ${isEdicao ? 'Editar Unidade' : 'Cadastrar Nova Unidade'}</h3>
+                ${btnX({ cls: 'fechar-form-unidade' })}
+            </div>
+            <div class="p-6 space-y-3.5 text-xs">
+                <div><label class="block font-semibold text-slate-700 mb-1">Nome *</label><input type="text" id="unidade-nome" value="${escapeHTML(unidade?.nome || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: Defensoria Caxias"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Sigla</label><input type="text" id="unidade-sigla" value="${escapeHTML(unidade?.sigla || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Ex: DPDC"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Endereço</label><input type="text" id="unidade-endereco" value="${escapeHTML(unidade?.endereco || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="Logradouro completo"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">Telefone</label><input type="text" id="unidade-telefone" value="${escapeHTML(unidade?.telefone || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="(00) 0000-0000"></div>
+                <div><label class="block font-semibold text-slate-700 mb-1">E-mail</label><input type="email" id="unidade-email" value="${escapeHTML(unidade?.email || '')}" class="w-full p-2.5 border border-slate-300 rounded-lg outline-none focus:ring-1 focus:ring-slate-900" placeholder="email@dominio.br"></div>
+            </div>
+            <div class="bg-slate-50 px-6 py-3.5 flex justify-end gap-2 border-t border-slate-200">
+                <button class="fechar-form-unidade bg-slate-200 hover:bg-slate-300 text-slate-700 px-4 py-2 rounded-lg text-xs font-semibold">Cancelar</button>
+                <button id="btn-salvar-unidade" class="inline-flex items-center gap-1.5 bg-slate-900 hover:bg-slate-800 text-white px-5 py-2 rounded-lg text-xs font-semibold">${ico('check', 'w-3.5 h-3.5')} ${isEdicao ? 'Salvar Alterações' : 'Criar Unidade'}</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    const fechar = () => modal.remove();
+    modal.querySelectorAll('.fechar-form-unidade').forEach(btn => btn.addEventListener('click', fechar));
+    document.getElementById('btn-salvar-unidade')?.addEventListener('click', async () => {
+        const nome = document.getElementById('unidade-nome').value.trim();
+        if (!nome) { showNotification("Nome da unidade é obrigatório.", "error"); return; }
+        const dados = { nome, sigla: document.getElementById('unidade-sigla').value.trim(), endereco: document.getElementById('unidade-endereco').value.trim(), telefone: document.getElementById('unidade-telefone').value.trim(), email: document.getElementById('unidade-email').value.trim() };
+        if (isEdicao) await atualizarUnidade(db, unidade.id, dados);
+        else await criarUnidade(db, dados);
+        fechar();
+        if (onClose) onClose();
+    });
+};
+
+function renderPagination(containerId, currentPage, totalPages, onPageChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.classList.remove('hidden');
+    if (totalPages <= 1) { container.innerHTML = ''; return; }
+    const btnCls = 'pag-btn inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-semibold transition';
+    let html = '<div class="flex items-center justify-center gap-1.5 mt-4">';
+    html += `<button class="${btnCls}" data-page="${currentPage - 1}" ${currentPage === 1 ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>${ico('chevronLeft', 'w-3.5 h-3.5')} Anterior</button>`;
+    html += `<span class="px-2 py-1 text-xs font-medium text-slate-500 tabular-nums">Pág. ${currentPage} de ${totalPages}</span>`;
+    html += `<button class="${btnCls}" data-page="${currentPage + 1}" ${currentPage === totalPages ? 'disabled style="opacity:40%;cursor:not-allowed"' : ''}>Próxima ${ico('chevronRight', 'w-3.5 h-3.5')}</button>`;
+    html += '</div>';
+    container.innerHTML = html;
+    container.querySelectorAll('.pag-btn').forEach(btn => {
+        if (!btn.disabled) {
+            btn.addEventListener('click', () => { if (onPageChange) onPageChange(parseInt(btn.dataset.page)); });
+        }
+    });
+}
+
+function renderPageSizeSelector(containerId, currentSize, onSizeChange) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <div class="flex items-center gap-2">
+            <span class="text-xs text-slate-500">Exibir:</span>
+            <select id="page-size-select-${containerId}" class="text-xs border border-slate-300 rounded-lg px-2 py-1 bg-white outline-none">
+                <option value="5" ${currentSize === 5 ? 'selected' : ''}>5</option>
+                <option value="10" ${currentSize === 10 ? 'selected' : ''}>10</option>
+                <option value="15" ${currentSize === 15 ? 'selected' : ''}>15</option>
+                <option value="20" ${currentSize === 20 ? 'selected' : ''}>20</option>
+            </select>
+        </div>
+    `;
+    const select = document.getElementById(`page-size-select-${containerId}`);
+    if (select) {
+        select.addEventListener('change', (e) => { if (onSizeChange) onSizeChange(parseInt(e.target.value)); });
+    }
+}
+
+function renderSearchInput(containerId, placeholder, onSearch) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    container.innerHTML = `
+        <div class="relative">
+            <input type="text" id="search-input-${containerId}" placeholder="${escapeHTML(placeholder)}" class="w-full p-2 pl-8 pr-8 bg-white border border-slate-300 rounded-lg text-xs outline-none focus:ring-1 focus:ring-slate-900">
+            <span class="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-3.5 h-3.5')}</span>
+            <button id="clear-search-${containerId}" class="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 hidden" aria-label="Limpar busca">${ico('x', 'w-3.5 h-3.5')}</button>
+        </div>
+    `;
+    const input = document.getElementById(`search-input-${containerId}`);
+    const clearBtn = document.getElementById(`clear-search-${containerId}`);
+    if (input) {
+        input.addEventListener('input', (e) => {
+            const val = e.target.value;
+            if (clearBtn) clearBtn.classList.toggle('hidden', !val);
+            if (onSearch) onSearch(val);
+        });
+    }
+    if (clearBtn) {
+        clearBtn.addEventListener('click', () => {
+            if (input) { input.value = ''; input.dispatchEvent(new Event('input')); }
+        });
+    }
+}
 
 // ==========================================
 // GESTAO DE PERMISSÕES GRANULARES POR USUÁRIO (COMPLETA E DETALHADA)
@@ -1724,7 +2120,7 @@ export const setupAdminEvents = (app) => {
             btnTenants.id = 'btn-gerenciar-tenants';
             btnTenants.className = 'bg-slate-900 hover:bg-slate-800 text-white font-semibold px-4 py-2 rounded-xl text-xs transition shadow-sm flex items-center gap-1.5 ml-auto';
             btnTenants.innerHTML = `${ico('building', 'w-3.5 h-3.5')} Gestão de Clientes`;
-            btnTenants.onclick = () => abrirGerenciarTenants(app.db);
+            btnTenants.onclick = () => abrirGerenciadorTenants(app.db);
             btnContainer.appendChild(btnTenants);
         }
     }
@@ -1851,4 +2247,3 @@ export const AdminService = {
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
-
