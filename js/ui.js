@@ -1,4 +1,7 @@
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT E LAYOUT BLINDADO)
+
+
+Código Completo (js/ui.js):
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT, LAYOUT BLINDADO E PERMISSÕES)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
@@ -78,6 +81,52 @@ export const UIService = {
 
         if (screenName !== 'loading' && screenName !== 'login') {
             localStorage.setItem('lastScreen', screenName);
+        }
+        
+        // Sempre que mudar de tela que não seja o login, reaplica o bloqueio de botões
+        if (window.app && screenName !== 'loading' && screenName !== 'login') {
+            this.aplicarPermissoesDeMenu(window.app);
+        }
+    },
+
+    // ==========================================
+    // 🔥 NOVA FUNÇÃO: Oculta botões baseado em permissões
+    // ==========================================
+    aplicarPermissoesDeMenu(app) {
+        if (!app || !app.currentUser) return;
+
+        const role = app.currentUser.role;
+        const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(role);
+        const perms = app.currentUser.permissoesDetalhadas || {};
+
+        const btnDashboard = document.getElementById('view-dashboard-btn');
+        const btnRecepcao = document.getElementById('btn-recepcao-central');
+        const btnColetor = document.getElementById('btn-modulo-coletas');
+        const btnAdmin = document.getElementById('admin-panel-btn');
+        
+        // Dashboard
+        if (btnDashboard) {
+            if (!isSuper && perms.menu_dashboard === false) btnDashboard.classList.add('hidden');
+            else btnDashboard.classList.remove('hidden');
+        }
+
+        // Recepção Central
+        if (btnRecepcao) {
+            if (!isSuper && perms.menu_recepcao_central === false) btnRecepcao.classList.add('hidden');
+            else btnRecepcao.classList.remove('hidden');
+        }
+
+        // Coletor BI
+        if (btnColetor) {
+            // Nota: Conforme o admin.js, o coletor padrão é false (só mostra se true explícito)
+            if (!isSuper && perms.menu_coletor_bi !== true) btnColetor.classList.add('hidden');
+            else btnColetor.classList.remove('hidden');
+        }
+        
+        // Painel Admin (Se tem permissão forçada de admin mas perfil user/apoio)
+        if (btnAdmin) {
+            if (isSuper || perms.menu_admin === true) btnAdmin.classList.remove('hidden');
+            else btnAdmin.classList.add('hidden');
         }
     },
 
@@ -2522,3 +2571,4 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
+
