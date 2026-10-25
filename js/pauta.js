@@ -1,5 +1,5 @@
 
-// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO E RETORNO DE ATENDIDOS
+// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO, RETORNO DE ATENDIDOS E PERMISSÕES GRANULARES
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
@@ -792,27 +792,6 @@ export const PautaService = {
         }
     },
 
-    actionAttendDirectly(app, id, assisted) {
-        const useDist = app.currentPautaData?.useDistributionFlow === true;
-        const useDelegation = app.currentPautaData?.useDelegationFlow === true;
-        const timestampIso = new Date().toISOString();
-
-        if (useDist) {
-            this.updateStatus(app.db, app.currentPauta.id, id, {
-                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
-            }, app.currentUserName);
-            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
-        } else {
-            const tipoAcao = useDelegation ? 'delegar' : 'atender_direto';
-            
-            if (app.currentPautaData?.useTvPanel !== false) {
-                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
-            } else {
-                this._abrirModalClassico(app, assisted, tipoAcao);
-            }
-        }
-    },
-
     async deleteAssisted(db, pautaId, assistedId, userName) {
         if (!pautaId || !assistedId) return;
         
@@ -895,11 +874,14 @@ export const PautaService = {
             
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
-            const isSuperAdminGlobal = userData?.role === 'superadmin';
-            const isAdminDoOrgao = userData?.role === 'admin' && userData?.orgaoId === pautaData.orgaoId;
-                        
-            if (pautaData.owner !== user.uid && !isSuperAdminGlobal && !isAdminDoOrgao) {
-                showNotification("Acesso restrito: Você não tem permissão para apagar pautas deste órgão.", "error");
+            const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(userData?.role);
+            const perms = userData?.permissoesDetalhadas || {};
+            
+            const isOwner = pautaData.owner === user.uid;
+            
+            // 🛡️ PERMISSÃO GRANULAR: Controle de Exclusão da Pauta
+            if (!isSuper && !isOwner && perms.pauta_zerar_pauta !== true) {
+                showNotification("Acesso restrito: Você não tem permissão para apagar pautas.", "error");
                 return false;
             }
 
@@ -1008,6 +990,16 @@ export const PautaService = {
         if (!file) return;
 
         try {
+            // 🛡️ PERMISSÃO GRANULAR: Controle de Importação CSV
+            const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(app.currentUser?.role);
+            const perms = app.currentUser?.permissoesDetalhadas || {};
+            
+            if (!isSuper && perms.pauta_importar_csv === false) {
+                showNotification("Acesso restrito: Você não tem permissão para importar CSV.", "error");
+                event.target.value = '';
+                return;
+            }
+
             const { parsePautaCSV } = await import('./csvHandler.js');
             const assistidos = await parsePautaCSV(file);
 
@@ -1292,7 +1284,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // 🛠️ MÓDULO DE AÇÕES DO CARD (REFATORADO COM ACTION MAP)
+    // 🛠️ MÓDULO DE AÇÕES DO CARD (REFATORADO E PROTEGIDO POR PERMISSÕES)
     // ============================================================
 
     handleCardActions(e, app) {
@@ -1302,9 +1294,13 @@ export const PautaService = {
         const id = button.dataset.id;
         if (!id) return;
 
+        // 🛡️ PERMISSÃO GRANULAR: Controle de ações dentro dos Cards
         const currentUserRole = app.currentUser?.role;
+        const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(currentUserRole);
         const isApoio = currentUserRole === 'apoio';
+        const perms = app.currentUser?.permissoesDetalhadas || {};
 
+        // Bloqueia ações sensíveis para perfis de Apoio que não receberam exceção explícita
         const acoesProibidasApoio = [
             'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
             'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
@@ -1315,8 +1311,8 @@ export const PautaService = {
         ];
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
-        if (isApoio && acaoAtual) {
-            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação administrativa.", "warning");
+        if (isApoio && acaoAtual && !isSuper) {
+            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação.", "warning");
             playSound('warning');
             return;
         }
@@ -1830,4 +1826,3 @@ function abrirModalSenhaPainel(pautaId, tokenCorreto) {
 }
 
 export default PautaService;
-
