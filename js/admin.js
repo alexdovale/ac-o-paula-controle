@@ -1,7 +1,9 @@
 
+// js/admin.js - Painel Administrativo Completo com Permissões Granulares, Unidades, Auditoria e 2FA
+
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, setDoc
+    query, orderBy, limit, where, writeBatch, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -934,7 +936,7 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 }
 
 // ==========================================
-// GESTAO DE PERMISSÕES GRANULARES POR USUÁRIO (COMPLETA E DETALHADA)
+// GESTAO DE PERMISSÕES GRANULARES POR USUÁRIO (COMPLETA E DETALHADA COM 2FA)
 // ==========================================
 export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
     const modal = document.createElement('div');
@@ -1085,71 +1087,6 @@ export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
                         </label>
                     </div>
                 </div>
-            </div>
-
-            <div class="p-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
-                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Cancelar</button>
-                <button id="salvar-permissoes-btn" class="px-5 py-2 bg-slate-900 text-white rounded-lg font-semibold shadow-sm">Salvar Permissões</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelector('#btn-marcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
-    
-    
-        // Ação do Botão: Resetar 2FA do Usuário
-    const btnReset2FA = modal.querySelector('#btn-reset-2fa');
-    if (btnReset2FA) {
-        btnReset2FA.onclick = async () => {
-            if (confirm(`Atenção: Você está prestes a desativar a exigência de 2FA para ${userName}. O usuário poderá logar apenas com a senha até configurar novamente. Confirma?`)) {
-                try {
-                    btnReset2FA.disabled = true;
-                    btnReset2FA.innerHTML = 'Resetando...';
-                    
-                    // Desmarca a exigência no banco
-                    await updateDoc(doc(db, "users", userId), {
-                        "permissoesDetalhadas.exigir_2fa": false,
-                        "solicitacao_reset_2fa": true, // Flag útil caso use Cloud Functions futuramente
-                        updatedAt: new Date().toISOString()
-                    });
-                    
-                    // Desmarca o checkbox visualmente na hora
-                    const cb2fa = modal.querySelector('input[value="exigir_2fa"]');
-                    if (cb2fa) cb2fa.checked = false;
-                    
-                    showNotification("2FA desativado. O usuário já pode acessar e reconfigurar.", "success");
-                } catch (error) {
-                    showNotification("Erro ao resetar 2FA.", "error");
-                } finally {
-                    btnReset2FA.disabled = false;
-                    btnReset2FA.innerHTML = `${ico('refresh')} Resetar / Desativar 2FA`;
-                }
-            }
-        };
-    }
-
-    
-    modal.querySelector('#btn-desmarcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
-
-    modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
-        const novasPermissoes = {};
-        modal.querySelectorAll('.perm-checkbox').forEach(cb => {
-            novasPermissoes[cb.value] = cb.checked;
-        });
-
-        try {
-            await updateDoc(doc(db, "users", userId), {
-                permissoesDetalhadas: novasPermissoes,
-                updatedAt: new Date().toISOString()
-            });
-            showNotification("Permissões granulares atualizadas com sucesso!", "success");
-            modal.remove();
-        } catch (e) {
-            showNotification("Erro ao salvar permissões.", "error");
-        }
-    };
-};
 
                 <!-- SEÇÃO 6: SEGURANÇA DA CONTA (2FA) -->
                 <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 mt-4 shadow-sm">
@@ -1170,7 +1107,66 @@ export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
                         * Se o usuário perder o celular, clique em "Resetar" para limpar o vínculo e permitir que ele configure novamente.
                     </p>
                 </div>
+            </div>
 
+            <div class="p-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Cancelar</button>
+                <button id="salvar-permissoes-btn" class="px-5 py-2 bg-slate-900 text-white rounded-lg font-semibold shadow-sm">Salvar Permissões</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#btn-marcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
+    modal.querySelector('#btn-desmarcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
+
+    // Ação do Botão: Resetar 2FA do Usuário
+    const btnReset2FA = modal.querySelector('#btn-reset-2fa');
+    if (btnReset2FA) {
+        btnReset2FA.onclick = async () => {
+            if (confirm(`Atenção: Você está prestes a desativar a exigência de 2FA para ${userName}. O usuário poderá logar apenas com a senha até configurar novamente. Confirma?`)) {
+                try {
+                    btnReset2FA.disabled = true;
+                    btnReset2FA.innerHTML = 'Resetando...';
+                    
+                    await updateDoc(doc(db, "users", userId), {
+                        "permissoesDetalhadas.exigir_2fa": false,
+                        "solicitacao_reset_2fa": true,
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    const cb2fa = modal.querySelector('input[value="exigir_2fa"]');
+                    if (cb2fa) cb2fa.checked = false;
+                    
+                    showNotification("2FA desativado. O usuário já pode acessar e reconfigurar.", "success");
+                } catch (error) {
+                    showNotification("Erro ao resetar 2FA.", "error");
+                } finally {
+                    btnReset2FA.disabled = false;
+                    btnReset2FA.innerHTML = `${ico('refresh')} Resetar / Desativar 2FA`;
+                }
+            }
+        };
+    }
+
+    modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
+        const novasPermissoes = {};
+        modal.querySelectorAll('.perm-checkbox').forEach(cb => {
+            novasPermissoes[cb.value] = cb.checked;
+        });
+
+        try {
+            await updateDoc(doc(db, "users", userId), {
+                permissoesDetalhadas: novasPermissoes,
+                updatedAt: new Date().toISOString()
+            });
+            showNotification("Permissões granulares atualizadas com sucesso!", "success");
+            modal.remove();
+        } catch (e) {
+            showNotification("Erro ao salvar permissões.", "error");
+        }
+    };
+};
 
 // ==========================================
 // GESTAO DE USUARIOS E MULTI-TENANT
@@ -2302,3 +2298,4 @@ export const AdminService = {
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
+
