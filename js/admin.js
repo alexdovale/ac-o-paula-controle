@@ -2145,5 +2145,3 @@ export const AdminService = {
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
-
-.=
