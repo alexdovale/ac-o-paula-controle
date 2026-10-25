@@ -179,6 +179,14 @@ export class SIGEPRouter {
                 el.classList.remove('animate-fade-in'); 
             }
         });
+
+        // ==========================================
+        // CORREÇÃO DE BUG (COLETOR BI / ELEMENTOS ÓRFÃOS)
+        // ==========================================
+        // Limpa resíduos e resultados flutuantes que possam ter ficados presos no DOM ao trocar de tela
+        document.querySelectorAll('.bi-result-item, .bi-floating-container, .bi-floating-result, .modal-backdrop, .modal-overlay').forEach(el => {
+            el.remove();
+        });
     }
 
     _showScreen(id) {
