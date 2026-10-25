@@ -2,7 +2,13 @@ import {
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, 
     signOut, 
-    sendPasswordResetEmail 
+    sendPasswordResetEmail,
+    multiFactor,
+    PhoneAuthProvider,
+    PhoneMultiFactorGenerator,
+    RecaptchaVerifier,
+    TotpMultiFactorGenerator,
+    TotpSecret
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import { doc, getDoc, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
@@ -33,14 +39,239 @@ export const AuthService = {
             await signInWithEmailAndPassword(app.auth, email, password);
             // O redirecionamento é feito automaticamente pelo listener onAuthStateChanged no main.js
         } catch (error) {
-            console.error("Login erro:", error);
-            showNotification(this.getErrorMessage(error.code), "error");
+            // Intercepta o erro se a conta exigir 2FA (MFA)
+            if (error.code === 'auth/multi-factor-auth-required') {
+                await this.handleMfaLogin(error, app);
+            } else {
+                console.error("Login erro:", error);
+                showNotification(this.getErrorMessage(error.code), "error");
+            }
         } finally {
             if (btn) {
                 btn.disabled = false;
                 btn.textContent = 'Entrar';
             }
         }
+    },
+
+    // Novo fluxo: Intercepta o login quando o 2FA está ativo
+    async handleMfaLogin(error, app) {
+        const resolver = multiFactor(app.auth).getResolver(error);
+        
+        // Verifica se há métodos MFA disponíveis para este usuário
+        if (resolver.hints.length === 0) {
+            showNotification("Erro no 2FA: Nenhum método de verificação encontrado.", "error");
+            return;
+        }
+
+        // Procura por TOTP (Google Authenticator) como método preferencial
+        const totpHint = resolver.hints.find(hint => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID);
+
+        if (totpHint) {
+            // O usuário já cadastrou TOTP antes, então pede o código.
+            const codigo = await this.showMfaCodePrompt("Verificação em 2 Fatores", "Abra seu aplicativo autenticador e digite o código de 6 dígitos.");
+            if (!codigo) {
+                showNotification("Login cancelado.", "warning");
+                return;
+            }
+
+            try {
+                const multiFactorAssertion = TotpMultiFactorGenerator.assertionForSignIn(totpHint.uid, codigo);
+                await resolver.resolveSignIn(multiFactorAssertion);
+                showNotification("Login confirmado com sucesso!", "success");
+            } catch (mfaError) {
+                console.error("Erro no MFA:", mfaError);
+                showNotification("Código inválido. Tente novamente.", "error");
+                await this.logout(app.auth);
+            }
+        } else {
+             // Caso caia num cenário onde tem MFA mas não é TOTP, avisa o usuário (ex: SMS)
+             showNotification("Método MFA atual não suportado por esta interface. Contate o administrador.", "error");
+        }
+    },
+
+    // Modal para pedir os 6 dígitos do 2FA
+    showMfaCodePrompt(title, message) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-slate-900/60 backdrop-blur-sm flex items-center justify-center z-[9999] px-4 opacity-0 transition-opacity duration-300';
+            
+            const modal = document.createElement('div');
+            modal.className = 'bg-white rounded-2xl p-6 w-full max-w-sm shadow-2xl transform scale-95 transition-all duration-300 text-center';
+            
+            modal.innerHTML = `
+                <div class="w-16 h-16 bg-indigo-100 text-indigo-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                </div>
+                <h3 class="text-xl font-bold text-slate-800 mb-2">${title}</h3>
+                <p class="text-sm text-slate-600 mb-5 leading-relaxed">${message}</p>
+                <input type="text" id="mfa-code-input" class="w-full px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 mb-6 outline-none transition-all shadow-sm" placeholder="------" maxlength="6" autocomplete="one-time-code">
+                <div class="flex gap-3 justify-center">
+                    <button id="mfa-cancel" class="px-5 py-2.5 text-slate-600 hover:bg-slate-100 rounded-xl transition-colors text-sm font-bold w-full">Cancelar</button>
+                    <button id="mfa-confirm" class="px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl transition-colors text-sm font-bold shadow-md w-full">Verificar</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            requestAnimationFrame(() => {
+                overlay.classList.remove('opacity-0');
+                modal.classList.remove('scale-95');
+            });
+
+            const input = modal.querySelector('#mfa-code-input');
+            const btnCancel = modal.querySelector('#mfa-cancel');
+            const btnConfirm = modal.querySelector('#mfa-confirm');
+
+            // Formata input para apenas números
+            input.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+            });
+
+            setTimeout(() => input.focus(), 150);
+
+            const closeModal = (value) => {
+                overlay.classList.add('opacity-0');
+                modal.classList.add('scale-95');
+                setTimeout(() => overlay.remove(), 300);
+                resolve(value);
+            };
+
+            btnCancel.addEventListener('click', () => closeModal(null));
+            btnConfirm.addEventListener('click', () => closeModal(input.value.trim()));
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') closeModal(input.value.trim());
+            });
+        });
+    },
+
+    // Modal de SETUP (Enrolment) do 2FA - Exibe o QR Code
+    async setupMFA(app, user) {
+        try {
+            // Gera um segredo TOTP para o usuário autenticado
+            const multiFactorSession = await multiFactor(user).getSession();
+            const totpSecret = await TotpMultiFactorGenerator.generateSecret(multiFactorSession);
+            
+            // Opcional: Pegar o nome do órgão para colocar no autenticador
+            let orgaoId = 'SIGEP';
+            try {
+                const userDoc = await getDoc(doc(app.db, "users", user.uid));
+                if (userDoc.exists()) {
+                    orgaoId = userDoc.data().orgaoId || 'SIGEP';
+                }
+            } catch (e) {}
+
+            // Gera a URI para o QR Code. Formato: otpauth://totp/NOME_EMPRESA:user@email.com?secret=XXX&issuer=NOME_EMPRESA
+            const qrUri = totpSecret.generateQrCodeUrl(user.email, orgaoId);
+
+            // Abre o modal para o usuário escanear
+            const codigo = await this.showMfaSetupPrompt(qrUri, totpSecret.secretKey);
+            
+            if (!codigo) {
+                showNotification("Configuração do 2FA cancelada.", "warning");
+                return false;
+            }
+
+            // O usuário escaneou e digitou o código. Finalizar a configuração:
+            const multiFactorAssertion = TotpMultiFactorGenerator.assertionForEnrollment(totpSecret, codigo);
+            
+            // Ativa o 2FA de fato na conta do Firebase
+            await multiFactor(user).enroll(multiFactorAssertion, 'Google Authenticator');
+            
+            showNotification("Segurança 2FA ativada com sucesso!", "success");
+            return true;
+
+        } catch (error) {
+            console.error("Erro ao configurar MFA:", error);
+            showNotification("Falha ao configurar a Autenticação em 2 Fatores.", "error");
+            return false;
+        }
+    },
+
+    showMfaSetupPrompt(qrUri, textSecret) {
+        return new Promise((resolve) => {
+            const overlay = document.createElement('div');
+            overlay.className = 'fixed inset-0 bg-slate-900/80 backdrop-blur-sm flex items-center justify-center z-[9999] p-4 opacity-0 transition-opacity duration-300';
+            
+            const modal = document.createElement('div');
+            modal.className = 'bg-white rounded-2xl w-full max-w-lg shadow-2xl transform scale-95 transition-all duration-300 flex flex-col max-h-[90vh] overflow-hidden';
+            
+            modal.innerHTML = `
+                <div class="bg-indigo-600 px-6 py-4 flex justify-between items-center shrink-0">
+                    <h3 class="text-white font-bold text-lg flex items-center gap-2">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                        Proteja sua Conta (2FA)
+                    </h3>
+                </div>
+                
+                <div class="p-6 overflow-y-auto bg-slate-50 space-y-6">
+                    <div class="text-center">
+                        <p class="text-sm text-slate-600 font-medium">Baixe o <b>Google Authenticator</b> ou <b>Authy</b> no seu celular e escaneie o código abaixo:</p>
+                    </div>
+
+                    <div class="flex justify-center bg-white p-4 rounded-xl border border-slate-200 shadow-sm mx-auto w-fit">
+                        <div id="mfa-qrcode" class="p-2 bg-white"></div>
+                    </div>
+
+                    <div class="text-center">
+                        <p class="text-xs text-slate-500 mb-1">Não consegue escanear? Digite o código manualmente no app:</p>
+                        <code class="bg-slate-200 px-3 py-1.5 rounded font-mono text-xs text-slate-800 font-bold select-all">${textSecret}</code>
+                    </div>
+
+                    <div class="pt-4 border-t border-slate-200">
+                        <label class="block text-sm font-bold text-slate-700 mb-2 text-center">Digite o código de 6 dígitos gerado no app:</label>
+                        <input type="text" id="mfa-setup-code" class="w-full sm:w-2/3 mx-auto block px-4 py-3 text-center text-2xl tracking-[0.5em] font-mono rounded-xl border border-slate-300 focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 outline-none transition-all shadow-sm" placeholder="------" maxlength="6" autocomplete="one-time-code">
+                    </div>
+                </div>
+
+                <div class="p-4 bg-white border-t border-slate-200 flex justify-end gap-3 shrink-0">
+                    <button id="mfa-setup-cancel" class="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold rounded-xl transition-colors text-sm">Pular por enquanto</button>
+                    <button id="mfa-setup-confirm" class="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors shadow-md text-sm">Ativar Segurança</button>
+                </div>
+            `;
+
+            overlay.appendChild(modal);
+            document.body.appendChild(overlay);
+
+            // Gera o QR Code visual
+            const qrcodeContainer = modal.querySelector('#mfa-qrcode');
+            new QRCode(qrcodeContainer, {
+                text: qrUri,
+                width: 180,
+                height: 180,
+                colorDark : "#000000",
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.M
+            });
+
+            requestAnimationFrame(() => {
+                overlay.classList.remove('opacity-0');
+                modal.classList.remove('scale-95');
+            });
+
+            const input = modal.querySelector('#mfa-setup-code');
+            const btnCancel = modal.querySelector('#mfa-setup-cancel');
+            const btnConfirm = modal.querySelector('#mfa-setup-confirm');
+
+            // Formata input para apenas números
+            input.addEventListener('input', (e) => {
+                e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
+            });
+
+            const closeModal = (value) => {
+                overlay.classList.add('opacity-0');
+                modal.classList.add('scale-95');
+                setTimeout(() => overlay.remove(), 300);
+                resolve(value);
+            };
+
+            btnCancel.addEventListener('click', () => closeModal(null));
+            btnConfirm.addEventListener('click', () => closeModal(input.value.trim()));
+            input.addEventListener('keypress', (e) => {
+                if (e.key === 'Enter') closeModal(input.value.trim());
+            });
+        });
     },
 
     async register(app) {
@@ -127,6 +358,33 @@ export const AuthService = {
                     showNotification("Seu acesso ao sistema foi recusado.", "error", 6000);
                     await this.logout(app.auth);
                     return;
+                }
+
+                // ==========================================
+                // 🔥 NOVA LÓGICA: VERIFICA OBRIGATORIEDADE DE 2FA
+                // ==========================================
+                const enrolledMfaFactors = multiFactor(user).enrolledFactors;
+                const hasMfa = enrolledMfaFactors.length > 0;
+                
+                // Se o admin exigiu 2FA e o usuário ainda não ativou
+                if (userData.permissoesDetalhadas?.exigir_2fa === true && !hasMfa) {
+                    showNotification("Seu administrador exige que você ative a verificação em 2 fatores.", "warning");
+                    
+                    const configurado = await this.setupMFA(app, user);
+                    
+                    if (!configurado) {
+                        // Se o admin exige, mas o usuário cancelou o modal de configurar o QR Code, joga ele para fora.
+                        showNotification("Acesso negado: Você deve configurar o 2FA para entrar no sistema.", "error");
+                        await this.logout(app.auth);
+                        return;
+                    }
+                }
+
+                // Opcional: Se não é obrigatório, mas queremos "Sugerir" que ele ative uma única vez (opcional)
+                if (userData.permissoesDetalhadas?.exigir_2fa !== true && !hasMfa && !localStorage.getItem('mfa_prompted_' + user.uid)) {
+                    // Abre o modal sugerindo, mas se ele clicar em "Pular", deixa entrar normal.
+                    const qrResult = await this.setupMFA(app, user);
+                    localStorage.setItem('mfa_prompted_' + user.uid, 'true'); // Marca para não encher o saco todo login
                 }
 
                 // Acesso Aprovado - Configura a Sessão Local
