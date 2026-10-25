@@ -1,6 +1,5 @@
 
 
-Código Completo (js/ui.js):
 // js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT, LAYOUT BLINDADO E PERMISSÕES)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
