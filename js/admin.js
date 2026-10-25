@@ -1,6 +1,9 @@
+
+// js/admin.js - Painel Administrativo Completo com Permissões Granulares, Unidades e Auditoria
+
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, setDoc
+    query, orderBy, limit, where, writeBatch, setDoc, getDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
@@ -47,7 +50,8 @@ const ICONS = {
     mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
-    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
 };
 
 const ico = (nome, cls = 'w-4 h-4') =>
@@ -932,6 +936,86 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 }
 
 // ==========================================
+// GESTAO DE PERMISSÕES GRANULARES POR USUÁRIO
+// ==========================================
+export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
+    const modal = document.createElement('div');
+    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm';
+    
+    let userData = {};
+    try {
+        const userDoc = await getDoc(doc(db, "users", userId));
+        if (userDoc.exists()) userData = userDoc.data();
+    } catch(e) {}
+
+    const perms = userData.permissoesDetalhadas || {};
+
+    modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col max-h-[90vh]">
+            <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
+                <h3 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico('shield')} Permissões Granulares: ${escapeHTML(userName)}</h3>
+                <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white">✕</button>
+            </div>
+            
+            <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
+                <p class="text-slate-500">Marque ou desmarque abaixo exatamente o que este usuário pode visualizar ou executar nas pautas e no menu principal:</p>
+                
+                <div>
+                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-400">Funcionalidades do Menu de Ações da Pauta</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_estatisticas" ${perms.pauta_estatisticas !== false ? 'checked' : ''}> Ver Estatísticas
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_totem" ${perms.pauta_totem === true ? 'checked' : ''}> Acessar Totem
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_gerenciar_colaboradores" ${perms.pauta_gerenciar_colaboradores !== false ? 'checked' : ''}> Gestão de Colaboradores
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_link_publico" ${perms.pauta_link_publico !== false ? 'checked' : ''}> Link Público / Compartilhamento
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_gerar_pdf" ${perms.pauta_gerar_pdf !== false ? 'checked' : ''}> Gerar Relatórios PDF
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_zerar_pauta" ${perms.pauta_zerar_pauta === true ? 'checked' : ''}> Zona de Risco (Zerar/Fechar Pauta)
+                        </label>
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-slate-50 rounded-xl border border-slate-200 hover:bg-slate-100">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="menu_coletor_bi" ${perms.menu_coletor_bi === true ? 'checked' : ''}> Acessar Coletor BI
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="p-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
+                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Cancelar</button>
+                <button id="salvar-permissoes-btn" class="px-5 py-2 bg-slate-900 text-white rounded-lg font-semibold shadow-sm">Salvar Permissões</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+
+    modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
+        const novasPermissoes = {};
+        modal.querySelectorAll('.perm-checkbox').forEach(cb => {
+            novasPermissoes[cb.value] = cb.checked;
+        });
+
+        try {
+            await updateDoc(doc(db, "users", userId), {
+                permissoesDetalhadas: novasPermissoes,
+                updatedAt: new Date().toISOString()
+            });
+            showNotification("Permissões granulares atualizadas com sucesso!", "success");
+            modal.remove();
+        } catch (e) {
+            showNotification("Erro ao salvar permissões.", "error");
+        }
+    };
+};
+
+// ==========================================
 // GESTAO DE USUARIOS E MULTI-TENANT
 // ==========================================
 
@@ -1086,10 +1170,16 @@ function renderAprovadosTable(db) {
                     </div>
                 </td>
                 <td class="px-3 py-3 text-center">
-                    <button class="btn-gerenciar-unidades bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 mx-auto transition shadow-sm"
-                        data-userid="${user.id}" title="Vincular unidades">
-                        ${ico('building', 'w-3.5 h-3.5')} Unidades (${unidadesCount})
-                    </button>
+                    <div class="flex flex-col sm:flex-row items-center justify-center gap-1.5">
+                        <button class="btn-gerenciar-unidades bg-white hover:bg-slate-50 text-slate-700 border border-slate-300 px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
+                            data-userid="${user.id}" title="Vincular unidades">
+                            ${ico('building', 'w-3.5 h-3.5')} Unidades (${unidadesCount})
+                        </button>
+                        <button class="btn-permissoes-granulares bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
+                            data-userid="${user.id}" data-username="${escapeHTML(user.name || user.email)}" title="Configurar Permissões Granulares">
+                            ${ico('shield', 'w-3.5 h-3.5')} Permissões
+                        </button>
+                    </div>
                 </td>
                 <td class="px-3 py-3">
                     <select id="role-select-${user.id}" class="w-full text-xs border border-slate-300 rounded-lg p-2 bg-white outline-none font-medium cursor-pointer">
@@ -1126,6 +1216,13 @@ function renderAprovadosTable(db) {
     tableBody.querySelectorAll('.btn-gerenciar-unidades').forEach(btn => {
         btn.addEventListener('click', () => {
             if (globalApp) abrirGerenciarUnidadesUsuario(globalApp, btn.dataset.userid);
+            else showNotification("Erro de inicialização.", "error");
+        });
+    });
+
+    tableBody.querySelectorAll('.btn-permissoes-granulares').forEach(btn => {
+        btn.addEventListener('click', () => {
+            if (globalApp) abrirModalPermissoesGranulares(db, btn.dataset.userid, btn.dataset.username);
             else showNotification("Erro de inicialização.", "error");
         });
     });
@@ -1753,7 +1850,6 @@ export const carregarFeedbacksSistema = async (db) => {
     const container = document.getElementById('admin-content');
     if (!container) return;
 
-    // Injeta a aba/seção de Ouvidoria se ela ainda não existir no HTML do Admin
     let secaoOuvidoria = document.getElementById('secao-ouvidoria-admin');
     if (!secaoOuvidoria) {
         const wrapper = document.createElement('div');
@@ -1872,7 +1968,6 @@ export const setupAdminEvents = (app) => {
     loadUsersList(app.db);
     populateUserFilter(app.db);
 
-    // Carrega os feedbacks na tela de admin
     carregarFeedbacksSistema(app.db);
 
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
@@ -1915,7 +2010,6 @@ export const setupAdminEvents = (app) => {
     document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
 
-    // INJECAO DO BOTAO DE GESTAO DE CLIENTES (EXCLUSIVO PARA SUPERADMIN_GLOBAL)
     const roleUsuario = app?.currentUser?.role;
     if (roleUsuario === 'superadmin_global') {
         const btnContainer = document.getElementById('btn-unidades-master')?.parentElement;
@@ -1936,7 +2030,6 @@ window.approveUser = (userId) => {
 };
 
 window.updateUserRole = (dbOrUserId, possibleUserId) => {
-    // Permite lidar com flexibilidade de parâmetros
     const db = typeof dbOrUserId === 'object' ? dbOrUserId : (globalApp?.db || null);
     const userId = typeof dbOrUserId === 'string' ? dbOrUserId : possibleUserId;
     if (db && userId) updateUserRole(db, userId);
@@ -1959,7 +2052,6 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
-    // Corrigido: o nome certo da função é abrirGerenciadorUnidades
     if (globalApp) abrirGerenciadorUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
@@ -2009,7 +2101,6 @@ window.exportAuditLogsPDF = () => {
     else console.error("App não inicializado");
 };
 
-// Exclusão de feedback da ouvidoria
 window.excluirFeedbackAdmin = async (pautaId, feedbackId) => {
     if (!confirm("Deseja remover este registro do painel?")) return;
     try {
@@ -2049,7 +2140,10 @@ export const AdminService = {
     abrirGerenciadorTenants,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
-    carregarFeedbacksSistema, // Exportado para caso precise chamar externamente
+    carregarFeedbacksSistema,
+    abrirModalPermissoesGranulares,
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
+
+.=
