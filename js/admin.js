@@ -1096,6 +1096,40 @@ export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
     document.body.appendChild(modal);
 
     modal.querySelector('#btn-marcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
+    
+    
+        // Ação do Botão: Resetar 2FA do Usuário
+    const btnReset2FA = modal.querySelector('#btn-reset-2fa');
+    if (btnReset2FA) {
+        btnReset2FA.onclick = async () => {
+            if (confirm(`Atenção: Você está prestes a desativar a exigência de 2FA para ${userName}. O usuário poderá logar apenas com a senha até configurar novamente. Confirma?`)) {
+                try {
+                    btnReset2FA.disabled = true;
+                    btnReset2FA.innerHTML = 'Resetando...';
+                    
+                    // Desmarca a exigência no banco
+                    await updateDoc(doc(db, "users", userId), {
+                        "permissoesDetalhadas.exigir_2fa": false,
+                        "solicitacao_reset_2fa": true, // Flag útil caso use Cloud Functions futuramente
+                        updatedAt: new Date().toISOString()
+                    });
+                    
+                    // Desmarca o checkbox visualmente na hora
+                    const cb2fa = modal.querySelector('input[value="exigir_2fa"]');
+                    if (cb2fa) cb2fa.checked = false;
+                    
+                    showNotification("2FA desativado. O usuário já pode acessar e reconfigurar.", "success");
+                } catch (error) {
+                    showNotification("Erro ao resetar 2FA.", "error");
+                } finally {
+                    btnReset2FA.disabled = false;
+                    btnReset2FA.innerHTML = `${ico('refresh')} Resetar / Desativar 2FA`;
+                }
+            }
+        };
+    }
+
+    
     modal.querySelector('#btn-desmarcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
 
     modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
@@ -1116,6 +1150,27 @@ export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
         }
     };
 };
+
+                <!-- SEÇÃO 6: SEGURANÇA DA CONTA (2FA) -->
+                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 mt-4 shadow-sm">
+                    <h4 class="font-bold text-indigo-900 uppercase tracking-wider mb-3 border-b border-indigo-200 pb-2 flex items-center gap-2">
+                        ${ico('shield')} 6. Segurança da Conta (2FA)
+                    </h4>
+                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-white rounded-lg border border-indigo-200 w-full sm:w-auto hover:bg-indigo-50 transition">
+                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" value="exigir_2fa" ${p.exigir_2fa === true ? 'checked' : ''}>
+                            <span class="text-sm font-bold text-indigo-900">Exigir Autenticação 2FA (App)</span>
+                        </label>
+                        
+                        <button type="button" id="btn-reset-2fa" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-2">
+                            ${ico('refresh')} Resetar / Desativar 2FA
+                        </button>
+                    </div>
+                    <p class="text-[10px] text-indigo-700 mt-2 font-medium">
+                        * Se o usuário perder o celular, clique em "Resetar" para limpar o vínculo e permitir que ele configure novamente.
+                    </p>
+                </div>
+
 
 // ==========================================
 // GESTAO DE USUARIOS E MULTI-TENANT
