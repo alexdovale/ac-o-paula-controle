@@ -1,3 +1,4 @@
+
 import { 
     signInWithEmailAndPassword, 
     createUserWithEmailAndPassword, 
@@ -58,17 +59,17 @@ export const AuthService = {
     async handleMfaLogin(error, app) {
         const resolver = multiFactor(app.auth).getResolver(error);
         
-        // Verifica se há métodos MFA disponíveis para este usuário
+        // Verifica se há métodos MFA disponíveis para este utilizador
         if (resolver.hints.length === 0) {
             showNotification("Erro no 2FA: Nenhum método de verificação encontrado.", "error");
             return;
         }
 
-        // Procura por TOTP (Google Authenticator) como método preferencial
+        // Procura por TOTP (Google Authenticator / Authy) como método preferencial
         const totpHint = resolver.hints.find(hint => hint.factorId === TotpMultiFactorGenerator.FACTOR_ID);
 
         if (totpHint) {
-            // O usuário já cadastrou TOTP antes, então pede o código.
+            // O utilizador já cadastrou TOTP antes, então pede o código.
             const codigo = await this.showMfaCodePrompt("Verificação em 2 Fatores", "Abra seu aplicativo autenticador e digite o código de 6 dígitos.");
             if (!codigo) {
                 showNotification("Login cancelado.", "warning");
@@ -85,8 +86,9 @@ export const AuthService = {
                 await this.logout(app.auth);
             }
         } else {
-             // Caso caia num cenário onde tem MFA mas não é TOTP, avisa o usuário (ex: SMS)
+             // Caso caia num cenário onde tem MFA mas não é TOTP, avisa o utilizador
              showNotification("Método MFA atual não suportado por esta interface. Contate o administrador.", "error");
+             await this.logout(app.auth);
         }
     },
 
@@ -149,23 +151,23 @@ export const AuthService = {
     // Modal de SETUP (Enrolment) do 2FA - Exibe o QR Code
     async setupMFA(app, user) {
         try {
-            // Gera um segredo TOTP para o usuário autenticado
+            // Gera um segredo TOTP para o utilizador autenticado
             const multiFactorSession = await multiFactor(user).getSession();
             const totpSecret = await TotpMultiFactorGenerator.generateSecret(multiFactorSession);
             
-            // Opcional: Pegar o nome do órgão para colocar no autenticador
+            // Vai buscar o nome do órgão (se existir) para colocar no Google Authenticator
             let orgaoId = 'SIGEP';
             try {
                 const userDoc = await getDoc(doc(app.db, "users", user.uid));
-                if (userDoc.exists()) {
-                    orgaoId = userDoc.data().orgaoId || 'SIGEP';
+                if (userDoc.exists() && userDoc.data().orgaoId) {
+                    orgaoId = userDoc.data().orgaoId;
                 }
             } catch (e) {}
 
-            // Gera a URI para o QR Code. Formato: otpauth://totp/NOME_EMPRESA:user@email.com?secret=XXX&issuer=NOME_EMPRESA
+            // Gera a URI para o QR Code
             const qrUri = totpSecret.generateQrCodeUrl(user.email, orgaoId);
 
-            // Abre o modal para o usuário escanear
+            // Abre o modal interativo para o utilizador ler o código
             const codigo = await this.showMfaSetupPrompt(qrUri, totpSecret.secretKey);
             
             if (!codigo) {
@@ -173,10 +175,10 @@ export const AuthService = {
                 return false;
             }
 
-            // O usuário escaneou e digitou o código. Finalizar a configuração:
+            // O utilizador leu o QR Code e digitou os 6 números. Vamos finalizar a configuração:
             const multiFactorAssertion = TotpMultiFactorGenerator.assertionForEnrollment(totpSecret, codigo);
             
-            // Ativa o 2FA de fato na conta do Firebase
+            // Ativa o 2FA definitivamente na conta Firebase
             await multiFactor(user).enroll(multiFactorAssertion, 'Google Authenticator');
             
             showNotification("Segurança 2FA ativada com sucesso!", "success");
@@ -234,7 +236,7 @@ export const AuthService = {
             overlay.appendChild(modal);
             document.body.appendChild(overlay);
 
-            // Gera o QR Code visual
+            // Gera o QR Code visual recorrendo à biblioteca externa no index.html
             const qrcodeContainer = modal.querySelector('#mfa-qrcode');
             new QRCode(qrcodeContainer, {
                 text: qrUri,
@@ -254,7 +256,6 @@ export const AuthService = {
             const btnCancel = modal.querySelector('#mfa-setup-cancel');
             const btnConfirm = modal.querySelector('#mfa-setup-confirm');
 
-            // Formata input para apenas números
             input.addEventListener('input', (e) => {
                 e.target.value = e.target.value.replace(/[^0-9]/g, '').slice(0, 6);
             });
@@ -316,7 +317,7 @@ export const AuthService = {
 
             showNotification("Conta criada com sucesso! Aguarde a aprovação do administrador.", "success", 5000);
             
-            // Força o logout imediatamente, pois o usuário ainda é 'pending'
+            // Força o logout imediatamente, pois o utilizador ainda é 'pending'
             await this.logout(app.auth); 
             
             if (typeof UIService.toggleAuthTabs === 'function') {
@@ -366,25 +367,18 @@ export const AuthService = {
                 const enrolledMfaFactors = multiFactor(user).enrolledFactors;
                 const hasMfa = enrolledMfaFactors.length > 0;
                 
-                // Se o admin exigiu 2FA e o usuário ainda não ativou
+                // Se o admin exigiu 2FA (no admin.js) e o utilizador ainda não ativou
                 if (userData.permissoesDetalhadas?.exigir_2fa === true && !hasMfa) {
-                    showNotification("Seu administrador exige que você ative a verificação em 2 fatores.", "warning");
+                    showNotification("Seu administrador exige que ative a verificação em 2 fatores.", "warning");
                     
                     const configurado = await this.setupMFA(app, user);
                     
                     if (!configurado) {
-                        // Se o admin exige, mas o usuário cancelou o modal de configurar o QR Code, joga ele para fora.
-                        showNotification("Acesso negado: Você deve configurar o 2FA para entrar no sistema.", "error");
+                        // Se o admin exige, mas o utilizador cancelou o modal do QR Code, bloqueia a entrada.
+                        showNotification("Acesso negado: Deve configurar o 2FA para entrar no sistema.", "error");
                         await this.logout(app.auth);
                         return;
                     }
-                }
-
-                // Opcional: Se não é obrigatório, mas queremos "Sugerir" que ele ative uma única vez (opcional)
-                if (userData.permissoesDetalhadas?.exigir_2fa !== true && !hasMfa && !localStorage.getItem('mfa_prompted_' + user.uid)) {
-                    // Abre o modal sugerindo, mas se ele clicar em "Pular", deixa entrar normal.
-                    const qrResult = await this.setupMFA(app, user);
-                    localStorage.setItem('mfa_prompted_' + user.uid, 'true'); // Marca para não encher o saco todo login
                 }
 
                 // Acesso Aprovado - Configura a Sessão Local
@@ -392,7 +386,7 @@ export const AuthService = {
                 app.currentUserName = userData.nome || user.email.split('@')[0];
                 
             } else {
-                // Cenário raro: o usuário foi criado no Firebase Console, mas não possui doc correspondente no Firestore.
+                // Cenário raro: o utilizador foi criado no Firebase Console, mas não possui doc no Firestore.
                 console.warn("Perfil Firestore não encontrado. Criando base de restrição (pending).");
                 await setDoc(doc(app.db, "users", user.uid), {
                     nome: user.email.split('@')[0],
@@ -407,7 +401,7 @@ export const AuthService = {
             }
         } catch (error) {
             console.error("Auth state error:", error);
-            showNotification("Erro ao validar seu perfil de acesso.", "error");
+            showNotification("Erro ao validar o seu perfil de acesso.", "error");
         }
     },
 
@@ -438,7 +432,7 @@ export const AuthService = {
             );
         }
 
-        if (!emailValue) return; // Usuário cancelou ou deixou em branco
+        if (!emailValue) return; // Utilizador cancelou ou deixou em branco
 
         try {
             await sendPasswordResetEmail(auth, emailValue);
@@ -527,20 +521,32 @@ export const AuthService = {
         document.querySelectorAll('#logout-btn-main, #logout-btn-app, .logout-action').forEach(btn => {
             if (btn) btn.addEventListener('click', () => this.logout(app.auth));
         });
+
+        // Evento do novo link da tela de login para o 2FA
+        document.getElementById('info-2fa-login-link')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            this.showCustomPrompt(
+                "Autenticação em 2 Fatores (2FA)",
+                "Para aceder com o seu 2FA ou configurar a aplicação de autenticação, insira o seu e-mail e senha normalmente e clique em 'Entrar'. O sistema solicitará o código de segurança no passo seguinte."
+            ).then(() => {
+                document.getElementById('login-email')?.focus();
+            });
+        });
     },
 
     getErrorMessage(errorCode) {
         switch (errorCode) {
             case 'auth/invalid-email': return 'O e-mail digitado não é válido.';
-            case 'auth/user-disabled': return 'Este usuário foi desativado por um administrador.';
-            case 'auth/user-not-found': return 'Não encontramos uma conta cadastrada com este e-mail.';
+            case 'auth/user-disabled': return 'Este utilizador foi desativado por um administrador.';
+            case 'auth/user-not-found': return 'Não encontrámos uma conta registada com este e-mail.';
             case 'auth/wrong-password': return 'Senha incorreta. Tente novamente.';
-            case 'auth/email-already-in-use': return 'Este e-mail já está sendo utilizado por outra conta.';
+            case 'auth/email-already-in-use': return 'Este e-mail já está a ser utilizado por outra conta.';
             case 'auth/weak-password': return 'A senha informada é muito fraca (use no mínimo 6 caracteres).';
             case 'auth/invalid-credential': return 'E-mail ou senha incorretos.';
-            case 'auth/too-many-requests': return 'Muitas tentativas falhas. Tente novamente mais tarde.';
-            case 'auth/network-request-failed': return 'Erro de conexão. Verifique sua internet.';
+            case 'auth/too-many-requests': return 'Demasiadas tentativas falhadas. Tente novamente mais tarde.';
+            case 'auth/network-request-failed': return 'Erro de ligação. Verifique a sua internet.';
             default: return `Ocorreu um erro na autenticação (${errorCode}).`;
         }
     }
 };
+
