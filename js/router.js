@@ -1,6 +1,4 @@
-Aqui está o seu arquivo js/router.js completo, atualizado e integrado com as correções que fizemos:
- * Limpeza profunda do DOM (_hideAllScreens): Remove elementos órfãos, resultados de pesquisa e resíduos flutuantes (como o bug do Coletor BI no rodapé) sempre que houver navegação ou ao clicar no botão voltar.
- * Guarda de Permissão Dinâmica (_guard): Valida tanto o perfil padrão (role) quanto as exceções customizadas que o superadministrador definir para o usuário (permissoesPersonalizadas).
+
 // js/router.js
 // Sistema de roteamento SPA completo para o SIGEP - Prioridade Absoluta para URLs (Deep Linking)
 
