@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -276,6 +278,13 @@
                         <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
                     </div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
+                    
+                    <!-- NOVO LINK: Autenticação em dois fatores -->
+                    <div class="mt-4 text-center">
+                        <a href="#" id="info-2fa-login-link" class="text-sm text-sky-600 hover:text-sky-800 font-medium transition-colors">
+                            Autenticação em dois fatores
+                        </a>
+                    </div>
                 </form>
                 <form id="register-form" class="hidden space-y-4">
                     <div><label for="register-name" class="block text-sm font-medium text-slate-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
@@ -510,6 +519,20 @@
                         <div>
                             <label class="block text-sm font-medium text-slate-700">Nova Senha</label>
                             <input type="password" id="perfil-nova-senha" placeholder="Deixe em branco para não alterar" class="mt-1 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
+                        </div>
+                    </div>
+                    
+                    <!-- ADICIONADO: Seção de Segurança 2FA -->
+                    <div class="pt-4 border-t border-slate-100">
+                        <h4 class="text-sm font-bold text-slate-600 mb-3">Segurança Extra</h4>
+                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
+                            <div>
+                                <p class="text-sm font-bold text-indigo-900">Autenticação em 2 Fatores</p>
+                                <p class="text-xs text-indigo-700 mt-1">Proteja sua conta usando o celular.</p>
+                            </div>
+                            <button type="button" id="btn-ativar-2fa-perfil" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-xs">
+                                Configurar 2FA
+                            </button>
                         </div>
                     </div>
 
@@ -1386,7 +1409,7 @@
         <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
                 <div>
-                    <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
+                    <h3 class="font-bold uppercase tracking-wider text-sm flex items-center gap-2">
                         <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         Monitoramento e Auditoria do Caso
                     </h3>
@@ -1419,7 +1442,7 @@
                         <div id="monitor-box-upload" class="block space-y-3">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Título / Descrição do Documento</label>
-                                <input type="text" id="monitor-upload-titulo" placeholder="Ex: RG, CNH, Comprovante..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium mt-1">
+                                <input type="text" id="monitor-upload-titulo" placeholder="Ex: RG, CNH, Comprovante..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-50 font-medium mt-1">
                             </div>
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Selecionar Arquivo PDF ou Imagem</label>
@@ -1809,3 +1832,4 @@
     </script>
 </body>
 </html>
+
