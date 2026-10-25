@@ -1,4 +1,3 @@
-
 // js/router.js
 // Sistema de roteamento SPA completo para o SIGEP - Prioridade Absoluta para URLs (Deep Linking)
 
@@ -121,7 +120,6 @@ export class SIGEPRouter {
     async resolveInitialRoute() {
         const urlParams = new URLSearchParams(window.location.search);
         
-        // 1. REGRA SUPREMA: Se a URL tem uma rota explícita (?r=...), ELA MANDA em tudo
         const urlRoute = urlParams.get('r');
         if (urlRoute && ROUTE_GUARDS[urlRoute]) {
             const params = Object.fromEntries(urlParams.entries());
@@ -129,23 +127,19 @@ export class SIGEPRouter {
             return;
         }
 
-        // 1.5 Tratamento específico para o painel público antigo via parâmetro
         if (urlParams.get('painel') === 'true') {
             await this._execute(ROUTES.PAINEL_PUBLICO, {}, false);
             return;
         }
 
-        // 2. Verifica se a página foi RECARREGADA propositalmente (F5 / Refresh)
         const isReload = window.performance && 
             window.performance.getEntriesByType("navigation").some(nav => nav.type === "reload");
 
-        // Pega as últimas informações salvas no navegador
         const savedScreen = localStorage.getItem('sigep_active_screen');
         const pautaId     = localStorage.getItem('lastPautaId');
         const pautaName   = localStorage.getItem('lastPautaName');
         const pautaType   = localStorage.getItem('lastPautaType');
 
-        // Se FOI um recarregamento (F5) E existe uma tela salva, restaura de onde parou
         if (isReload && savedScreen) {
             const routeMap = {
                 'app': async () => {
@@ -164,8 +158,6 @@ export class SIGEPRouter {
             }
         }
 
-        // 3. Acesso LIMPO (link principal sem parâmetros, nova aba, ou primeiro acesso do dia)
-        // Ignora o localStorage e manda para a tela inicial padrão do sistema!
         await this.navigate(ROUTES.MODO_SELECTION, {}, true);
     }
 
@@ -184,7 +176,7 @@ export class SIGEPRouter {
         // ==========================================
         // CORREÇÃO DE BUG: LIMPEZA PROFUNDA DO DOM
         // ==========================================
-        // Remove resíduos, resultados de busca flutuantes ou elementos do Coletor BI presos no final da página
+        // Remove resíduos, resultados de busca flutuantes ou elementos órfãos presos no rodapé
         document.querySelectorAll('.bi-result-item, .bi-floating-container, .bi-floating-result, .modal-backdrop, .modal-overlay').forEach(el => {
             el.remove();
         });
@@ -218,21 +210,23 @@ export class SIGEPRouter {
         }
 
         // ==========================================
-        // CONTROLE DE PERMISSÃO DINÂMICA POR USUÁRIO (Perfil Base + Exceções do Superadmin)
+        // CONTROLE DE PERMISSÃO DINÂMICA (Perfil Base + Exceções Granulares)
         // ==========================================
         if (user) {
             const role = user.role;
             const isSuper = role === 'admin' || role === 'superadmin' || role === 'superadmin_global';
             
             if (!isSuper) {
-                const customPerms = user.permissoesPersonalizadas || {};
+                const customPerms = user.permissoesDetalhadas || {};
                 
-                // Mapeia restrições baseadas nas regras do Superadmin
                 const restricoes = {
                     [ROUTES.ADMIN]: false,
-                    [ROUTES.ESTATISTICAS]: customPerms.estatisticas !== undefined ? customPerms.estatisticas : ['gestor'].includes(role)
+                    [ROUTES.ESTATISTICAS]: customPerms.pauta_estatisticas !== false,
+                    [ROUTES.COLABORADORES_PAUTA]: customPerms.pauta_gerenciar_colaboradores !== false,
+                    [ROUTES.ESTATISTICAS]: customPerms.pauta_estatisticas !== false
                 };
 
+                // Se houver restrição explícita bloqueando
                 if (restricoes[route] === false) {
                     if (this._deps.showNotification) {
                         this._deps.showNotification('Acesso restrito: O administrador não liberou esta função para o seu perfil.', 'error');
@@ -484,4 +478,3 @@ export class SIGEPRouter {
         };
     }
 }
-
