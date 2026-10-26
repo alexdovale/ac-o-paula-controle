@@ -9,6 +9,7 @@ import { logAction } from './admin.js';
 import { PautaService } from './pauta.js';
 import { ROUTES } from './router.js';
 
+import { ico } from './icons.js';
 // ─── CONSTANTES ────────────────────────────────────────────────────────────────
 
 const TEMPLATES_KEY = 'sigep_pauta_templates';
@@ -246,7 +247,7 @@ export const PautaConfigService = {
 
         list.innerHTML = app.customRoomsList.map((room, i) => `
             <div class="flex items-center justify-between bg-white border border-slate-200 rounded-lg px-3 py-2 text-sm shadow-sm mb-2">
-                <span class="font-semibold text-slate-700">🏢 ${room}</span>
+                <span class="font-semibold text-slate-700">${ico('building')} ${room}</span>
                 <button class="remove-room-btn text-red-500 hover:text-red-700 text-xs font-bold" data-index="${i}">Remover</button>
             </div>
         `).join('');
@@ -272,7 +273,7 @@ export const PautaConfigService = {
             unidadeContainer.id = 'pauta-unidade-container';
             unidadeContainer.className = 'mb-4';
             unidadeContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-700 mb-1">🏢 Unidade Vinculada <span class="text-red-500">*</span></label>
+                <label class="block text-sm font-medium text-gray-700 mb-1">${ico('building')} Unidade Vinculada <span class="text-red-500">*</span></label>
                 <select id="create-pauta-unidade-select" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <option value="">Carregando unidades...</option>
                 </select>
@@ -324,7 +325,7 @@ export const PautaConfigService = {
                 dateContainer.id = 'pauta-data-container';
                 dateContainer.className = 'mb-4 mt-4';
                 dateContainer.innerHTML = `
-                    <label class="block text-sm font-medium text-gray-700 mb-1">📅 Data de Operação <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${ico('calendar')} Data de Operação <span class="text-red-500">*</span></label>
                     <input type="date" id="create-pauta-date-input" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                 `;
                 nameInput.parentNode.insertBefore(dateContainer, nameInput.nextSibling);
@@ -347,7 +348,7 @@ export const PautaConfigService = {
                 tolContainer.id = 'pauta-tolerancia-container';
                 tolContainer.className = 'mb-4 mt-4';
                 tolContainer.innerHTML = `
-                    <label class="block text-sm font-medium text-gray-700 mb-1">⏳ Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${ico('clock')} Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
                     <input type="number" id="create-pauta-tolerancia-input" value="${DEFAULTS.toleranciaMinutos}" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
@@ -366,7 +367,7 @@ export const PautaConfigService = {
                 tolContainer.id = 'edit-pauta-tolerancia-container';
                 tolContainer.className = 'mb-4 mt-4';
                 tolContainer.innerHTML = `
-                    <label class="block text-sm font-medium text-gray-700 mb-1">⏳ Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
+                    <label class="block text-sm font-medium text-gray-700 mb-1">${ico('clock')} Tolerância de Atraso (minutos) <span class="text-red-500">*</span></label>
                     <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
                     <p class="text-[10px] text-gray-500 mt-1">Tempo limite antes do assistido perder a prioridade e virar encaixe.</p>
                 `;
@@ -392,12 +393,12 @@ export const PautaConfigService = {
                     <label class="flex items-center cursor-pointer gap-3">
                         <input type="checkbox" id="check-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer" checked>
                         <div>
-                            <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                            <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
                             <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV.</span>
                         </div>
                     </label>
                     <div class="pt-2 border-t border-indigo-200">
-                        <label class="block text-xs font-bold text-slate-800 mb-1">🔑 Senha / Token de Acesso da TV (Opcional)</label>
+                        <label class="block text-xs font-bold text-slate-800 mb-1">${ico('key', 'w-3.5 h-3.5')} Senha / Token de Acesso da TV (Opcional)</label>
                         <input type="text" id="create-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
                         <p class="text-[9px] text-slate-500 mt-0.5">Se preenchido, exigirá este PIN numérico para abrir o link da TV sem login.</p>
                     </div>
@@ -419,12 +420,12 @@ export const PautaConfigService = {
                     <label class="flex items-center cursor-pointer gap-3">
                         <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
                         <div>
-                            <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                            <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
                             <span class="block text-[10px] text-slate-500">Se ativado, chamar um assistido abre o seletor inteligente de locais e TV.</span>
                         </div>
                     </label>
                     <div class="pt-2 border-t border-indigo-200">
-                        <label class="block text-xs font-bold text-slate-800 mb-1">🔑 Senha / Token de Acesso da TV (Opcional)</label>
+                        <label class="block text-xs font-bold text-slate-800 mb-1">${ico('key', 'w-3.5 h-3.5')} Senha / Token de Acesso da TV (Opcional)</label>
                         <input type="text" id="edit-pauta-tv-token" class="w-full p-2 bg-white border border-slate-300 rounded-lg text-xs font-mono focus:ring-2 focus:ring-indigo-500 outline-none" placeholder="Ex: 1234 (Deixe em branco para acesso livre)">
                         <p class="text-[9px] text-slate-500 mt-0.5">Se preenchido, exigirá este PIN numérico para abrir o link da TV sem login.</p>
                     </div>
@@ -464,31 +465,31 @@ export const PautaConfigService = {
             modoContainer.innerHTML = `<input type="hidden" name="pauta-modo" value="normal">`;
         } else {
             modoContainer.innerHTML = `
-                <label class="block text-sm font-medium text-gray-700 mb-2">📋 Tipo de Evento</label>
+                <label class="block text-sm font-medium text-gray-700 mb-2">${ico('clipboard')} Tipo de Evento</label>
                 <div class="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="pauta-modo" value="mutirao" class="w-4 h-4 text-green-600" checked>
                         <div>
-                            <span class="text-sm font-bold">🤝 Mutirão</span>
+                            <span class="text-sm font-bold">${ico('userPlus')} Mutirão</span>
                             <p class="text-[9px] text-gray-500">Evento concentrado</p>
                         </div>
                     </label>
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="pauta-modo" value="plantao" class="w-4 h-4 text-green-600">
                         <div>
-                            <span class="text-sm font-bold">🚨 Plantão</span>
+                            <span class="text-sm font-bold">${ico('alertCircle')} Plantão</span>
                             <p class="text-[9px] text-gray-500">Atendimento emergencial</p>
                         </div>
                     </label>
                     <label class="flex items-center gap-2 p-2 border rounded-lg cursor-pointer hover:bg-gray-50 transition">
                         <input type="radio" name="pauta-modo" value="acao_social" class="w-4 h-4 text-green-600">
                         <div>
-                            <span class="text-sm font-bold">❤️ Ação Social</span>
+                            <span class="text-sm font-bold">${ico('heart')} Ação Social</span>
                             <p class="text-[9px] text-gray-500">Atividade comunitária</p>
                         </div>
                     </label>
                 </div>
-                <p class="text-[10px] text-amber-600 mt-2">⚠️ Modos Mutirão, Plantão e Ação Social NÃO terão acesso à Recepção Central</p>
+                <p class="text-[10px] text-amber-600 mt-2">${ico('alert', 'w-3 h-3')} Modos Mutirão, Plantão e Ação Social NÃO terão acesso à Recepção Central</p>
             `;
         }
     },
@@ -877,7 +878,7 @@ export const PautaConfigService = {
         templates.forEach(t => {
             const opt = document.createElement('option');
             opt.value = t.id;
-            opt.textContent = `${t.nome} (${t.tipo === 'normal' ? '🏛️' : t.tipo === 'mutirao' ? '🤝' : t.tipo === 'plantao' ? '🚨' : '❤️'} ${t.tipo || 'normal'})`;
+            opt.textContent = `${t.nome} (${t.tipo || 'normal'})`;
             select.appendChild(opt);
         });
     },
