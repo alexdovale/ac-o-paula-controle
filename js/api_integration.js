@@ -50,7 +50,7 @@ const ApiIntegration = {
      * AUTENTICAÇÃO NO NPF
      */
     async autenticarNoNPF(identificador) {
-        console.log(`📡 [Mock NPF] Validando credenciais de acesso para: ${identificador}`);
+        console.log(`[Mock NPF] Validando credenciais de acesso para: ${identificador}`);
         this._toggleLoading(true, "Conectando ao NPF...");
         
         await new Promise(resolve => setTimeout(resolve, 800));
@@ -75,7 +75,7 @@ const ApiIntegration = {
      * REGISTRO DE COMPLIANCE
      */
     async confirmarAceiteCompliance(uid) {
-        console.log(`🔒 [Compliance] Termo aceito por: ${uid}`);
+        console.log(`[Compliance] Termo aceito por: ${uid}`);
         const index = this._mockNPF.findIndex(s => s.uid === uid);
         if (index !== -1) this._mockNPF[index].complianceAceito = true;
         localStorage.setItem(`compliance_accepted_${uid}`, 'true');
@@ -87,7 +87,7 @@ const ApiIntegration = {
      */
     async buscarAgendamentos(setorId) {
         if (!setorId) return [];
-        console.log(`📡 [Mock BDA] Consultando carga de trabalho: ${setorId}`);
+        console.log(`[Mock BDA] Consultando carga de trabalho: ${setorId}`);
         await new Promise(resolve => setTimeout(resolve, 1200));
         return this._mockBDA[setorId] || [];
     },
@@ -112,7 +112,7 @@ const ApiIntegration = {
                 status: "OPERACIONAL"
             };
         } catch (error) {
-            console.error("❌ Erro no fluxo:", error);
+            console.error("Erro no fluxo:", error);
             return null;
         }
     },
