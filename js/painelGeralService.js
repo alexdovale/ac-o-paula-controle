@@ -1,6 +1,4 @@
-Compreendido perfeitamente! O módulo de Monitor da Equipe (painelGeralService.js) que você enviou também estava com um estilo visual de barras coloridas e elementos mais pesados que destoavam do padrão limpo e minimalista dos outros modais do SIGEP.
-Para alinhar 100% com a identidade visual que você aprovou (fundo branco total, cantos com arredondamento suave rounded-2xl, cinzentos discretos, títulos fortes e botões compactos sem excesso de cores berrantes), refiz todo o design do painel.
-Substitua todo o conteúdo do seu ficheiro js/painelGeralService.js pelo código abaixo:
+
 // js/painelGeralService.js - MONITOR DE EQUIPE (PADRÃO MINIMALISTA SIGEP)
 
 import { escapeHTML } from './utils.js';
