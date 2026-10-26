@@ -24,7 +24,7 @@ export const EmailService = {
 
     async sendDelegationEmail(toEmail, toName, assistedName, senderName, pautaId, assistidoId, delegationToken) {
         if (!toEmail || !toEmail.includes('@')) {
-            console.error("❌ Envio cancelado: E-mail inválido ou ausente.");
+            console.error("Envio cancelado: E-mail inválido ou ausente.");
             if (window.showNotification) {
                 window.showNotification(`O colaborador ${toName} não possui e-mail válido cadastrado no sistema!`, "warning", 6000);
             } else {
@@ -44,9 +44,9 @@ export const EmailService = {
 
             const delegationLink = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}&colab=${encodeURIComponent(toName)}&token=${delegationToken}`;
             
-            console.log("🔗 Link gerado para e-mail:", delegationLink);
+            console.log("Link gerado para e-mail:", delegationLink);
 
-            // ⭐ BLINDAGEM: Se alguma variável vier nula do banco, injetamos um texto padrão
+            // BLINDAGEM: Se alguma variável vier nula do banco, injetamos um texto padrão
             // para evitar o erro "One or more dynamic variables are corrupted" no EmailJS
             const templateParams = {
                 to_email: toEmail,
@@ -58,16 +58,16 @@ export const EmailService = {
             };
 
             await window.emailjs.send(this.serviceId, this.templateId, templateParams, this.publicKey);
-            console.log(`✅ Notificação entregue com sucesso para o e-mail: ${toEmail}`);
+            console.log(`Notificação entregue com sucesso para o e-mail: ${toEmail}`);
             return true;
 
         } catch (error) {
-            console.error("❌ Falha crítica no servidor EmailJS:", error);
+            console.error("Falha crítica no servidor EmailJS:", error);
             
             if (window.showNotification) {
                 window.showNotification(`Falha técnica no EmailJS ao notificar ${toName}. Verifique as credenciais ou limite de cotas.`, "error", 7000);
             } else {
-                alert(`⚠️ O servidor de e-mail falhou ao enviar a notificação para ${toName}.`);
+                alert(`O servidor de e-mail falhou ao enviar a notificação para ${toName}.`);
             }
             
             return false;
