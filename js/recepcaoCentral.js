@@ -72,7 +72,7 @@ function renderVerificacoesBadge(a) {
     } else if (typeof docs === 'object') {
         const keys = Object.keys(docs);
         if (keys.length === 0) return '';
-        htmlLista = keys.map(k => `<span class="rc-badge ${docs[k] ? 'rc-badge--ok' : 'rc-badge--danger'}">${docs[k] ? '✓' : '✗'} ${escapeHTML(k)}</span>`).join('');
+        htmlLista = keys.map(k => `<span class="rc-badge ${docs[k] ? 'rc-badge--ok' : 'rc-badge--danger'}">${docs[k] ? ico('check', 12) : ico('x', 12)} ${escapeHTML(k)}</span>`).join('');
     }
 
     return htmlLista ? `<div class="flex flex-wrap gap-1 mt-2">${htmlLista}</div>` : '';
@@ -900,7 +900,7 @@ export const RecepcaoCentralService = {
                 arrivalTime: isAguardando ? new Date().toISOString() : null,
                 checkInOrder: isAguardando ? Date.now() : null,
                 priority: prioridadeSelecionada || null,
-                // 🔒 GARANTIA DE INJEÇÃO DO ÓRGÃO (MULTI-TENANT)
+                // GARANTIA DE INJEÇÃO DO ÓRGÃO (MULTI-TENANT)
                 orgaoId: this._app.currentUser?.orgaoId || 'padrao_dprj'
             };
 
@@ -1604,7 +1604,7 @@ export const RecepcaoCentralService = {
         this._cancelarListeners();
         const app = this._app;
         if (app && app.router) {
-            app.router.navigate('pautas');
+            app.router.navigate('pauta-selection');
         } else if (app && typeof app.showPautaSelectionScreen === 'function') {
             app.showPautaSelectionScreen();
         }
