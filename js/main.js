@@ -2,7 +2,7 @@
 
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getFirestore, collection, doc, onSnapshot, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { AuthService } from './auth.js';
 import { PautaService } from './pauta.js';
@@ -200,16 +200,21 @@ class SIGEPApp {
                 document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
                 document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
+            // 🔥 AQUI É ONDE O ROUTER ABRE A NOVA MODAL DE CONFIGURAÇÃO PADRONIZADA 🔥
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
-                const modal = document.getElementById('bi-links-modal');
-                if (!modal) return;
-                modal.classList.remove('hidden');
-                if (window.BiEventosService && this.currentPautaData) {
-                    document.getElementById('container-bi-links-pauta').innerHTML = window.BiEventosService.renderConfiguradorLinksHTML(this.currentPautaData);
-                    document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
-                        window.BiEventosService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
-                    });
-                }
+                const modalConfig = document.getElementById('config-pauta-modal');
+                if (!modalConfig || !this.currentPauta) return;
+
+                const tipoAtual = this.currentPautaData?.type || 'agendamento';
+                const ordemAtual = this.currentPautaData?.ordemAtendimento || 'flexivel';
+
+                const radiosTipo = document.querySelectorAll('input[name="config-tipo-pauta"]');
+                radiosTipo.forEach(r => r.checked = (r.value === tipoAtual));
+
+                const radiosOrdem = document.querySelectorAll('input[name="config-ordem-atendimento"]');
+                radiosOrdem.forEach(r => r.checked = (r.value === ordemAtual));
+
+                modalConfig.classList.remove('hidden');
             },
             [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
             [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
@@ -224,7 +229,7 @@ class SIGEPApp {
 
     // Fecha os modais do menu de Ações (usado ao sair de uma rota de modal)
     closePautaModals() {
-        ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal']
+        ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal', 'config-pauta-modal']
             .forEach(id => document.getElementById(id)?.classList.add('hidden'));
         document.getElementById('painel-geral-externo-modal')?.remove();
     }
@@ -641,8 +646,7 @@ class SIGEPApp {
     setupPautaMenuEvents() {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
-        // (não há mais "clique falso" nem checagem de isTrusted)
+        // Botões do menu de Ações usam a rota do router (que abre o modal mapeado)
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
                 if (!this.currentPauta) return;
@@ -729,7 +733,51 @@ class SIGEPApp {
             }
         });
 
-        // BOTÃO EXCLUSIVO DO TOTEM (AUTOATENDIMENTO DE CHEGADA - INTACTO)
+        // =========================================================================================
+        // 🔥 LÓGICA DE SALVAR DO NOVO MODAL DE CONFIGURAÇÃO PADRONIZADA 🔥
+        // =========================================================================================
+        document.getElementById('cancel-config-pauta-btn')?.addEventListener('click', () => {
+            document.getElementById('config-pauta-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('save-config-pauta-btn')?.addEventListener('click', async () => {
+            if (!this.currentPauta) return;
+
+            const tipoSelecionado = document.querySelector('input[name="config-tipo-pauta"]:checked')?.value;
+            const ordemSelecionada = document.querySelector('input[name="config-ordem-atendimento"]:checked')?.value;
+
+            const btn = document.getElementById('save-config-pauta-btn');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = 'Salvando...';
+            btn.disabled = true;
+
+            try {
+                const docRef = doc(this.db, "pautas", this.currentPauta.id);
+                
+                await updateDoc(docRef, {
+                    type: tipoSelecionado,
+                    ordemAtendimento: ordemSelecionada
+                });
+
+                if (this.currentPautaData) {
+                    this.currentPautaData.type = tipoSelecionado;
+                    this.currentPautaData.ordemAtendimento = ordemSelecionada;
+                }
+
+                showNotification("Configurações atualizadas com sucesso!", "success");
+                document.getElementById('config-pauta-modal')?.classList.add('hidden');
+                
+                if (typeof UIService.renderAssistedLists === 'function') {
+                    UIService.renderAssistedLists(this);
+                }
+            } catch (error) {
+                console.error("Erro ao salvar config:", error);
+                showNotification("Erro ao salvar configurações.", "error");
+            } finally {
+                btn.innerHTML = originalText;
+                btn.disabled = false;
+            }
+        });
     }
 
     setupPautaSettingsEvents() {
@@ -870,7 +918,6 @@ class SIGEPApp {
                         </button>
                     `;
                     
-                    // Insere abaixo do botão do Totem (sem esconder o Totem!)
                     const totemBtnOriginal = document.getElementById('open-totem-btn');
                     if (totemBtnOriginal && totemBtnOriginal.parentNode) {
                         totemBtnOriginal.parentNode.insertBefore(tvGroup, totemBtnOriginal.nextSibling);
@@ -878,7 +925,6 @@ class SIGEPApp {
                         actionsPanel.appendChild(tvGroup);
                     }
 
-                    // Ação 1: Definir Local / Guichê padrão na pauta
                     tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
                         if (this.currentPauta) {
@@ -896,7 +942,6 @@ class SIGEPApp {
                         }
                     });
 
-                    // Ação 2: Abrir Modal Visual Completo do Painel TV (Igual ao da Recepção Central)
                     tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
                         e.stopPropagation();
                         this.abrirModalConfigTVPauta();
@@ -918,60 +963,6 @@ class SIGEPApp {
         if (actionsPanelEl) {
             observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
         }
-
-        // ------------------------------------------------------------------------------------------
-        // 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES
-        // ------------------------------------------------------------------------------------------
-        const observerEdicao = new MutationObserver(() => {
-            const modalEdicao = document.getElementById('edit-pauta-config-modal');
-            if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
-                let divConfigTV = document.getElementById('edit-use-tv-panel-container');
-                if (!divConfigTV) {
-                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
-                    if (btnCancelarSalvar) {
-                        divConfigTV = document.createElement('div');
-                        divConfigTV.id = 'edit-use-tv-panel-container';
-                        divConfigTV.className = 'mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 mx-5';
-                        divConfigTV.innerHTML = `
-                            <label class="flex items-center cursor-pointer gap-3">
-                                <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
-                                <div>
-                                    <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
-                                    <span class="block text-[10px] text-slate-500">Se ativado, exibe o configurador do Painel TV no menu Ações e envia chamadas para a TV.</span>
-                                </div>
-                            </label>
-                        `;
-                        btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
-
-                        // Garante que ao clicar em Salvar Configurações, o valor de useTvPanel seja salvo no Firebase
-                        const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
-                        if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
-                            btnSalvar.setAttribute('data-tv-hooked', 'true');
-                            btnSalvar.addEventListener('click', async () => {
-                                if (!this.currentPauta?.id) return;
-                                const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
-                                try {
-                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
-                                    if (this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
-                                    const tvGroupMenu = document.getElementById('tv-panel-actions-group');
-                                    if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !tvVal);
-                                } catch (e) {
-                                    console.error("Erro ao salvar useTvPanel:", e);
-                                }
-                            });
-                        }
-                    }
-                }
-                const tvCheck = document.getElementById('edit-use-tv-panel');
-                if (tvCheck && this.currentPautaData) {
-                    tvCheck.checked = this.currentPautaData.useTvPanel !== false;
-                }
-            }
-        });
-        
-        const modalEdicaoEl = document.getElementById('edit-pauta-config-modal');
-        if (modalEdicaoEl) observerEdicao.observe(modalEdicaoEl, { attributes: true, attributeFilter: ['class'] });
-        // ------------------------------------------------------------------------------------------
     }
 
     setupAttendanceEvents() {
@@ -1020,7 +1011,6 @@ class SIGEPApp {
             
             await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
             
-            // AUDITORIA AUTOMÁTICA DE EDIÇÃO
             if (window.MonitoramentoService) {
                 await window.MonitoramentoService.registrarAcaoHistorico(this.currentPauta.id, window.assistedIdToHandle, "Dados do assistido editados manualmente", this);
             }
@@ -1195,7 +1185,15 @@ class SIGEPApp {
                 if (f.length === 0) return showNotification("Nenhum assistido faltoso.", "info");
                 PDFService.generateFaltososPDF(f, nomePauta);
             }
-            if (type === 'colaboradores') PDFService.generateCollaboratorsPDF(this.colaboradores, this.allAssisted || [], nomePauta);
+            // Chama a mesma função que vinculámos ao menu Ações!
+            if (type === 'colaboradores') {
+                if (window.PDFService && typeof window.PDFService.generateCollaboratorsPDF === 'function') {
+                    window.PDFService.generateCollaboratorsPDF({
+                        colaboradores: this.colaboradores || [],
+                        pautaNome: nomePauta
+                    });
+                }
+            }
         };
         document.getElementById('download-pdf-btn')?.addEventListener('click', () => handlePDF('atendidos'));
         document.getElementById('btn-metrica-atendidos')?.addEventListener('click', () => handlePDF('atendidos'));
@@ -1242,7 +1240,6 @@ class SIGEPApp {
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
-        // CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
         const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
         const logicContent = document.getElementById('logic-explanation-padrao-content');
         if (toggleLogicBtn && logicContent) {
@@ -1726,7 +1723,6 @@ class SIGEPApp {
             if (pautaDoc.exists()) {
                 this.currentPautaData = pautaDoc.data();
 
-                // Garante que o bloco do Painel TV no menu Ações respeite a configuração da pauta carregada
                 const tvAtivada = this.currentPautaData.useTvPanel !== false;
                 const tvGroupMenu = document.getElementById('tv-panel-actions-group');
                 if (tvGroupMenu) {
