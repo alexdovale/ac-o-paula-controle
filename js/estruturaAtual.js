@@ -18,6 +18,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function initials(name = '') {
@@ -126,9 +127,9 @@ export async function renderEstruturaAtual(app, containerEl) {
     // Tabs
     function renderTabs() {
         const tabs = [
-            { id: 'estrutura',  label: '🏛️ Estrutura'  },
-            { id: 'hierarquia', label: '🗂️ Hierarquia' },
-            { id: 'usuarios',   label: '👥 Usuários'   },
+            { id: 'estrutura',  label: 'Estrutura'  },
+            { id: 'hierarquia', label: 'Hierarquia' },
+            { id: 'usuarios',   label: 'Usuários'   },
         ];
         document.getElementById('ea-tabs').innerHTML = tabs.map(t => `
             <button data-tab="${t.id}" style="
@@ -175,7 +176,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                      background:var(--color-background-secondary,#f9fafb);border-bottom:${isOpen ? '0.5px solid var(--color-border-tertiary,#e5e7eb)' : 'none'};
                      cursor:pointer;user-select:none">
                     <div style="width:32px;height:32px;border-radius:8px;background:#EEEDFE;color:#3C3489;
-                                display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">🏛️</div>
+                                display:flex;align-items:center;justify-content:center;font-size:15px;flex-shrink:0">${ico('landmark')}</div>
                     <div style="flex:1;min-width:0">
                         <p style="font-size:14px;font-weight:500;color:var(--color-text-primary,#111)">${escapeHTML(org.nome || '')}</p>
                         <p style="font-size:11px;color:var(--color-text-secondary,#6b7280)">${escapeHTML(org.sigla || '')} · ${unids.length} unid. · ${recTotal} recep. · ${usrTotal} usuários</p>
@@ -204,7 +205,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                                  border-bottom:${isUOpen ? '0.5px solid var(--color-border-tertiary,#e5e7eb)' : 'none'};
                                  cursor:pointer;user-select:none">
                                 <div style="width:24px;height:24px;border-radius:5px;background:#E6F1FB;color:#185FA5;
-                                            display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">🚪</div>
+                                            display:flex;align-items:center;justify-content:center;font-size:12px;flex-shrink:0">${ico('doorOpen')}</div>
                                 <div style="flex:1;min-width:0">
                                     <p style="font-size:13px;font-weight:500;color:var(--color-text-primary,#111)">${escapeHTML(u.nome || '')}</p>
                                 </div>
@@ -221,7 +222,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                                 <!-- RECEPÇÕES -->
                                 <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;
                                           color:var(--color-text-secondary,#6b7280);margin-bottom:6px">
-                                    🚪 Recepções (${recs.length})
+                                    ${ico('doorOpen')} Recepções (${recs.length})
                                 </p>
                                 ${recs.length === 0 ? `
                                     <p style="font-size:11px;color:var(--color-text-secondary,#6b7280);font-style:italic;margin-bottom:10px">
@@ -232,9 +233,9 @@ export async function renderEstruturaAtual(app, containerEl) {
                                                 border:0.5px solid var(--color-border-tertiary,#e5e7eb);border-radius:8px;
                                                 background:var(--color-background-primary,#fff)">
                                         <div style="width:20px;height:20px;border-radius:4px;background:#E1F5EE;color:#085041;
-                                                    display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">📋</div>
+                                                    display:flex;align-items:center;justify-content:center;font-size:10px;flex-shrink:0">${ico('clipboard')}</div>
                                         <span style="font-size:12px;color:var(--color-text-primary,#111);flex:1">${escapeHTML(r.nome || '')}</span>
-                                        ${r.sala ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC">🏠 ${escapeHTML(r.sala)}</span>` : ''}
+                                        ${r.sala ? `<span style="font-size:10px;padding:1px 6px;border-radius:8px;background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC">${ico('home')} ${escapeHTML(r.sala)}</span>` : ''}
                                         <span style="font-size:10px;padding:1px 6px;border-radius:8px;font-weight:500;
                                                      ${TIPO_STYLE[r.tipo] || 'background:#f3f4f6;color:#374151;border:0.5px solid #d1d5db'}">
                                             ${TIPO_LABEL[r.tipo] || r.tipo || '—'}
@@ -245,7 +246,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                                 <!-- USUÁRIOS -->
                                 <p style="font-size:10px;text-transform:uppercase;letter-spacing:.05em;
                                           color:var(--color-text-secondary,#6b7280);margin:10px 0 6px">
-                                    👥 Usuários (${usrs.length})
+                                    ${ico('users')} Usuários (${usrs.length})
                                 </p>
                                 <div style="border:0.5px solid var(--color-border-tertiary,#e5e7eb);border-radius:8px;overflow:hidden">
                                     ${usrs.length === 0 ? `
@@ -314,7 +315,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                     <div style="display:flex;align-items:center;gap:8px;padding:8px 0 6px;
                                 border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb);margin-bottom:6px">
                         <div style="width:28px;height:28px;border-radius:7px;background:#EEEDFE;color:#3C3489;
-                                    display:flex;align-items:center;justify-content:center;font-size:13px">🏛️</div>
+                                    display:flex;align-items:center;justify-content:center;font-size:13px">${ico('landmark')}</div>
                         <span style="font-size:14px;font-weight:500;color:var(--color-text-primary,#111)">${escapeHTML(org.nome || '')}</span>
                         <span style="font-size:10px;padding:1px 7px;border-radius:10px;background:#EEEDFE;color:#3C3489;border:0.5px solid #AFA9EC">${escapeHTML(org.sigla || '')}</span>
                     </div>
@@ -327,7 +328,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                                         display:flex;align-items:center;gap:8px">
                                 <span style="font-size:14px;color:var(--color-text-secondary,#6b7280);cursor:grab">⠿</span>
                                 <div style="width:22px;height:22px;border-radius:4px;background:#E6F1FB;color:#185FA5;
-                                            display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">🚪</div>
+                                            display:flex;align-items:center;justify-content:center;font-size:11px;flex-shrink:0">${ico('doorOpen')}</div>
                                 <span style="flex:1;font-size:13px;color:var(--color-text-primary,#111)">${escapeHTML(u.nome || '')}</span>
                                 <span style="font-size:10px;color:var(--color-text-secondary,#6b7280);margin-right:8px">${recs.length} rec.</span>
                                 <div style="display:flex;gap:3px">
@@ -349,7 +350,7 @@ export async function renderEstruturaAtual(app, containerEl) {
                                                 border:0.5px solid var(--color-border-tertiary,#e5e7eb);border-radius:8px;
                                                 background:var(--color-background-primary,#fff)">
                                         <div style="width:18px;height:18px;border-radius:3px;background:#E1F5EE;color:#085041;
-                                                    display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">📋</div>
+                                                    display:flex;align-items:center;justify-content:center;font-size:9px;flex-shrink:0">${ico('clipboard')}</div>
                                         <span style="font-size:12px;color:var(--color-text-primary,#111);flex:1">${escapeHTML(r.nome || '')}</span>
                                         <span style="font-size:10px;padding:1px 5px;border-radius:8px;font-weight:500;
                                                      ${TIPO_STYLE[r.tipo] || ''}">
