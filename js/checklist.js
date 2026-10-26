@@ -1,6 +1,7 @@
 // js/checklist.js
 import { escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 export const getChecklistHTML = (acao, savedData = null) => {
     const documentos = getDocumentosPorAcao(acao);
     
@@ -46,7 +47,7 @@ export const getChecklistHTML = (acao, savedData = null) => {
 function getEnderecoHTML(reuData = {}) {
     return `
         <div class="mt-8 border-t pt-6">
-            <h4 class="text-md font-bold text-gray-700 mb-4">🏠 Endereço do Réu / Obrigado</h4>
+            <h4 class="text-md font-bold text-gray-700 mb-4">${ico('home', 'w-5 h-5')} Endereço do Réu / Obrigado</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Nome Completo</label>
@@ -100,7 +101,7 @@ function getEnderecoHTML(reuData = {}) {
 function getGastosHTML(expenseData = {}) {
     return `
         <div class="mt-8 border-t pt-6">
-            <h4 class="text-md font-bold text-gray-700 mb-4">💰 Gastos Mensais</h4>
+            <h4 class="text-md font-bold text-gray-700 mb-4">${ico('coins', 'w-5 h-5')} Gastos Mensais</h4>
             <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                     <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Moradia (Aluguel/Prestação)</label>
@@ -218,7 +219,7 @@ export const generateCompletePDF = async (assistedData, checklistData) => {
     if (checklistData?.checkedIds?.length > 0) {
         doc.setFontSize(14);
         doc.setTextColor(22, 163, 74);
-        doc.text("📋 Documentação Apresentada:", margin, y);
+        doc.text("Documentação Apresentada:", margin, y);
         y += 10;
         
         doc.setFontSize(10);
@@ -228,7 +229,7 @@ export const generateCompletePDF = async (assistedData, checklistData) => {
             const docType = checklistData.docTypes?.[id] || 'Físico';
             const docText = document.getElementById(id)?.closest('label')?.querySelector('span')?.textContent || id;
             
-            doc.text(`✓ ${docText} (${docType})`, margin + 5, y);
+            doc.text(`${docText} (${docType})`, margin + 5, y);
             y += 6;
             
             if (y > 280) {
@@ -248,7 +249,7 @@ export const generateCompletePDF = async (assistedData, checklistData) => {
         
         doc.setFontSize(14);
         doc.setTextColor(22, 163, 74);
-        doc.text("🏠 Dados do Réu/Obrigado:", margin, y);
+        doc.text("Dados do Réu/Obrigado:", margin, y);
         y += 10;
         
         doc.setFontSize(10);
@@ -292,7 +293,7 @@ export const generateCompletePDF = async (assistedData, checklistData) => {
         
         doc.setFontSize(14);
         doc.setTextColor(22, 163, 74);
-        doc.text("💰 Gastos Mensais:", margin, y);
+        doc.text("Gastos Mensais:", margin, y);
         y += 10;
         
         doc.setFontSize(10);
