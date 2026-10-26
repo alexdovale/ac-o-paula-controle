@@ -167,6 +167,7 @@ class SIGEPApp {
     }
 
     // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
+    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
     _modalOpeners() {
         return {
             [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
@@ -201,7 +202,7 @@ class SIGEPApp {
                 document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
             
-            // 🔥 CORREÇÃO: DIRECIONA O ROUTER PARA O SEU pautaConfig.js 🔥
+            // 🔥 AQUI ESTÁ A CORREÇÃO: CARREGA OS DADOS E ABRE O NOVO MODAL 🔥
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
                 const modalConfig = document.getElementById('config-pauta-modal');
                 if (!modalConfig || !this.currentPauta) return;
