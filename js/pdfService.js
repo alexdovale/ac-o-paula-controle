@@ -1,3 +1,4 @@
+import { ico } from './icons.js';
 // js/pdfService.js - SIGEP
 // Visual unificado: cabeçalho com logo, resumo (KPIs), tabelas padronizadas e rodapé "Página X de Y" em todas as páginas.
 // A ATA e o DEMONSTRATIVO DE DESPESAS (documentos oficiais) mantêm o layout original.
@@ -153,7 +154,7 @@ const imgCache = {};
 const loadImageSafe = async (url) => {
     if (imgCache[url] === undefined) {
         try { imgCache[url] = await loadImage(url); }
-        catch (e) { console.error("❌ Erro ao carregar logo:", e); imgCache[url] = null; }
+        catch (e) { console.error("Erro ao carregar logo:", e); imgCache[url] = null; }
     }
     return imgCache[url];
 };
@@ -314,7 +315,7 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
         const logoHeight = logoWidth / LOGO_DEFENSORIA_RATIO;
         doc.addImage(img, 'PNG', (pageWidth - logoWidth) / 2, 8, logoWidth, logoHeight);
     } catch (e) {
-        console.error("❌ Erro ao inserir logo RAW no PDF da Ata:", e);
+        console.error("Erro ao inserir logo RAW no PDF da Ata:", e);
     }
 
     doc.setFont("helvetica", "bold");
@@ -546,7 +547,7 @@ export const PDFService = {
             modal.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                     <div class="p-5 border-b border-slate-100 bg-slate-50">
-                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">📄 Configurar relatório</h3>
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">${ico('fileText', 'w-5 h-5')} Configurar relatório</h3>
                     </div>
                     <div class="p-5 overflow-y-auto">
                         <p class="text-xs text-slate-500 mb-4 font-medium">Selecione quais informações devem constar no PDF final:</p>
@@ -573,7 +574,7 @@ export const PDFService = {
 
             document.getElementById('confirm-pdf-btn').onclick = async () => {
                 const btn = document.getElementById('confirm-pdf-btn');
-                btn.innerHTML = `<span class="animate-spin">⏳</span> Gerando...`;
+                btn.innerHTML = `<span class="animate-spin">${ico('loader', 'w-4 h-4 animate-spin')}</span> Gerando...`;
                 btn.disabled = true;
 
                 const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
