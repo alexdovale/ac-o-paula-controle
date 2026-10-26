@@ -55,7 +55,7 @@ export const NotesService = {
             // Opcional: Feedback bem sutil no botão de salvar para mostrar que salvou sozinho
             if (saveNotesBtn) {
                 const textoOriginal = saveNotesBtn.textContent;
-                saveNotesBtn.textContent = "✓ Salvo";
+                saveNotesBtn.textContent = "Salvo";
                 saveNotesBtn.classList.replace('bg-indigo-600', 'bg-emerald-500');
                 setTimeout(() => {
                     saveNotesBtn.textContent = textoOriginal;
