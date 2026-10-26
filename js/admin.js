@@ -1,11 +1,9 @@
-
-// js/admin.js - Painel Administrativo Completo com Permissões Granulares, Unidades, Auditoria e 2FA
-
 import { 
     collection, addDoc, getDocs, updateDoc, deleteDoc, doc, 
-    query, orderBy, limit, where, writeBatch, setDoc, getDoc
+    query, orderBy, limit, where, writeBatch, setDoc
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
+import { PermissoesService } from './permissoes.js';
 
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { renderEstruturaAtual } from './estruturaAtual.js';
@@ -50,8 +48,8 @@ const ICONS = {
     mapPin: '<path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0"/><circle cx="12" cy="10" r="3"/>',
     link: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
     fileText: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/>',
-    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>',
-    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>'
+    shield: '<path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>',
+    inbox: '<path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/>'
 };
 
 const ico = (nome, cls = 'w-4 h-4') =>
@@ -936,237 +934,11 @@ function renderSearchInput(containerId, placeholder, onSearch) {
 }
 
 // ==========================================
-// GESTAO DE PERMISSÕES GRANULARES POR USUÁRIO (COMPLETA E DETALHADA COM 2FA)
+// PERMISSÕES GRANULARES POR USUÁRIO (+ 2FA)
+// A tela e as regras ficam em permissoes.js; aqui só abrimos o modal.
 // ==========================================
-export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
-    const modal = document.createElement('div');
-    modal.className = 'fixed inset-0 bg-black/70 z-[1000] flex items-center justify-center p-4 backdrop-blur-sm';
-    
-    let userData = {};
-    try {
-        const userDoc = await getDoc(doc(db, "users", userId));
-        if (userDoc.exists()) userData = userDoc.data();
-    } catch(e) {}
-
-    const p = userData.permissoesDetalhadas || {};
-
-    modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl overflow-hidden flex flex-col max-h-[92vh]">
-            <div class="bg-slate-900 px-6 py-4 text-white flex justify-between items-center shrink-0">
-                <div>
-                    <h3 class="font-bold text-sm tracking-wide flex items-center gap-2">${ico('shield')} Controle de Permissões Granulares</h3>
-                    <p class="text-slate-400 text-xs mt-0.5">Usuário: <span class="text-white font-semibold">${escapeHTML(userName)}</span></p>
-                </div>
-                <button onclick="this.closest('.fixed').remove()" class="text-slate-400 hover:text-white">✕</button>
-            </div>
-            
-            <div class="p-6 overflow-y-auto space-y-6 flex-1 text-xs">
-                <div class="bg-blue-50 border border-blue-100 p-3.5 rounded-xl text-blue-900 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                    <span>Marque ou desmarque abaixo exatamente o que este usuário pode visualizar ou executar nas pautas, colunas e módulos.</span>
-                    <div class="flex gap-2 shrink-0">
-                        <button type="button" id="btn-marcar-todos" class="bg-blue-600 text-white px-3 py-1 rounded font-bold hover:bg-blue-700">Marcar Todos</button>
-                        <button type="button" id="btn-desmarcar-todos" class="bg-white border border-blue-300 text-blue-800 px-3 py-1 rounded font-bold hover:bg-blue-50">Desmarcar Todos</button>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 1: MÓDULOS GLOBAIS E MENU PRINCIPAL -->
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-700 border-b pb-2">1. Módulos do Menu Principal</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="menu_dashboard" ${p.menu_dashboard !== false ? 'checked' : ''}> Ver Dashboard
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="menu_recepcao_central" ${p.menu_recepcao_central !== false ? 'checked' : ''}> Recepção Central
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="menu_coletor_bi" ${p.menu_coletor_bi === true ? 'checked' : ''}> Coletor BI / Coletas
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="menu_admin" ${p.menu_admin === true ? 'checked' : ''}> Painel Admin
-                        </label>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 2: GESTÃO DE COLABORADORES -->
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-700 border-b pb-2">2. Módulo de Colaboradores (Equipe)</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_ver" ${p.colaboradores_ver !== false ? 'checked' : ''}> Ver Colaboradores
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_adicionar" ${p.colaboradores_adicionar !== false ? 'checked' : ''}> Adicionar Colaborador
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_excluir" ${p.colaboradores_excluir === true ? 'checked' : ''}> Excluir Colaborador
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_marcar_presenca" ${p.colaboradores_marcar_presenca !== false ? 'checked' : ''}> Marcar Presença / Status
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_gerar_pdf" ${p.colaboradores_gerar_pdf !== false ? 'checked' : ''}> Gerar PDF Equipe
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="colaboradores_gerar_ata" ${p.colaboradores_gerar_ata !== false ? 'checked' : ''}> Gerar Ata Social
-                        </label>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 3: MENU DE AÇÕES DA PAUTA -->
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-700 border-b pb-2">3. Menu de Ações e Atalhos da Pauta</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_monitor_equipe" ${p.pauta_monitor_equipe !== false ? 'checked' : ''}> Monitor da Equipe
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_estatisticas" ${p.pauta_estatisticas !== false ? 'checked' : ''}> Ver Estatísticas
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_anotacoes" ${p.pauta_anotacoes !== false ? 'checked' : ''}> Anotações Internas
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_convidar_pessoas" ${p.pauta_convidar_pessoas === true ? 'checked' : ''}> Convidar Pessoas
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_link_publico" ${p.pauta_link_publico !== false ? 'checked' : ''}> Link Público (Compartilhar)
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_totem" ${p.pauta_totem === true ? 'checked' : ''}> Acessar Totem
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_renomear" ${p.pauta_renomear !== false ? 'checked' : ''}> Renomear Pauta
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_configuracoes" ${p.pauta_configuracoes === true ? 'checked' : ''}> Configurações da Pauta
-                        </label>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 4: COLUNAS E CARDS DA PAUTA (KANBAN) -->
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-700 border-b pb-2">4. Colunas de Atendimento (Kanban)</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_pauta" ${p.coluna_pauta !== false ? 'checked' : ''}> Ver Coluna Pauta (Fila Inicial)
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_aguardando" ${p.coluna_aguardando !== false ? 'checked' : ''}> Ver Coluna Aguardando
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_em_atendimento" ${p.coluna_em_atendimento !== false ? 'checked' : ''}> Ver Coluna Em Atendimento
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_distribuicao" ${p.coluna_distribuicao !== false ? 'checked' : ''}> Ver Coluna Distribuição
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_atendidos" ${p.coluna_atendidos !== false ? 'checked' : ''}> Ver Coluna Atendidos
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="coluna_faltosos" ${p.coluna_faltosos !== false ? 'checked' : ''}> Ver Coluna Faltosos
-                        </label>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 5: OPERAÇÕES E ZONA DE RISCO -->
-                <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
-                    <h4 class="font-bold text-slate-800 uppercase tracking-wider mb-3 text-slate-700 border-b pb-2">5. Operações e Zona de Risco</h4>
-                    <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-3">
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_gerar_pdf_atendidos" ${p.pauta_gerar_pdf_atendidos !== false ? 'checked' : ''}> Gerar PDF Atendidos
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_gerar_pdf_faltosos" ${p.pauta_gerar_pdf_faltosos !== false ? 'checked' : ''}> Gerar PDF Faltosos
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2 bg-white rounded-lg border border-slate-200">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-slate-900 rounded" value="pauta_importar_csv" ${p.pauta_importar_csv !== false ? 'checked' : ''}> Carregar / Descarregar CSV
-                        </label>
-                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-red-50 rounded-lg border border-red-200 text-red-900 font-bold">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-red-600 rounded" value="pauta_zerar_pauta" ${p.pauta_zerar_pauta === true ? 'checked' : ''}> Zona de Risco (Zerar/Fechar)
-                        </label>
-                    </div>
-                </div>
-
-                <!-- SEÇÃO 6: SEGURANÇA DA CONTA (2FA) -->
-                <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-200 mt-4 shadow-sm">
-                    <h4 class="font-bold text-indigo-900 uppercase tracking-wider mb-3 border-b border-indigo-200 pb-2 flex items-center gap-2">
-                        ${ico('shield')} 6. Segurança da Conta (2FA)
-                    </h4>
-                    <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
-                        <label class="flex items-center gap-2 cursor-pointer p-2.5 bg-white rounded-lg border border-indigo-200 w-full sm:w-auto hover:bg-indigo-50 transition">
-                            <input type="checkbox" class="perm-checkbox w-4 h-4 text-indigo-600 rounded focus:ring-indigo-500" value="exigir_2fa" ${p.exigir_2fa === true ? 'checked' : ''}>
-                            <span class="text-sm font-bold text-indigo-900">Exigir Autenticação 2FA (App)</span>
-                        </label>
-                        
-                        <button type="button" id="btn-reset-2fa" class="w-full sm:w-auto bg-white hover:bg-red-50 text-red-600 border border-red-200 px-4 py-2.5 rounded-lg font-bold text-xs transition flex items-center justify-center gap-2">
-                            ${ico('refresh')} Resetar / Desativar 2FA
-                        </button>
-                    </div>
-                    <p class="text-[10px] text-indigo-700 mt-2 font-medium">
-                        * Se o usuário perder o celular, clique em "Resetar" para limpar o vínculo e permitir que ele configure novamente.
-                    </p>
-                </div>
-            </div>
-
-            <div class="p-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
-                <button onclick="this.closest('.fixed').remove()" class="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Cancelar</button>
-                <button id="salvar-permissoes-btn" class="px-5 py-2 bg-slate-900 text-white rounded-lg font-semibold shadow-sm">Salvar Permissões</button>
-            </div>
-        </div>
-    `;
-    document.body.appendChild(modal);
-
-    modal.querySelector('#btn-marcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = true);
-    modal.querySelector('#btn-desmarcar-todos').onclick = () => modal.querySelectorAll('.perm-checkbox').forEach(cb => cb.checked = false);
-
-    // Ação do Botão: Resetar 2FA do Usuário
-    const btnReset2FA = modal.querySelector('#btn-reset-2fa');
-    if (btnReset2FA) {
-        btnReset2FA.onclick = async () => {
-            if (confirm(`Atenção: Você está prestes a desativar a exigência de 2FA para ${userName}. O usuário poderá logar apenas com a senha até configurar novamente. Confirma?`)) {
-                try {
-                    btnReset2FA.disabled = true;
-                    btnReset2FA.innerHTML = 'Resetando...';
-                    
-                    await updateDoc(doc(db, "users", userId), {
-                        "permissoesDetalhadas.exigir_2fa": false,
-                        "solicitacao_reset_2fa": true,
-                        updatedAt: new Date().toISOString()
-                    });
-                    
-                    const cb2fa = modal.querySelector('input[value="exigir_2fa"]');
-                    if (cb2fa) cb2fa.checked = false;
-                    
-                    showNotification("2FA desativado. O usuário já pode acessar e reconfigurar.", "success");
-                } catch (error) {
-                    showNotification("Erro ao resetar 2FA.", "error");
-                } finally {
-                    btnReset2FA.disabled = false;
-                    btnReset2FA.innerHTML = `${ico('refresh')} Resetar / Desativar 2FA`;
-                }
-            }
-        };
-    }
-
-    modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
-        const novasPermissoes = {};
-        modal.querySelectorAll('.perm-checkbox').forEach(cb => {
-            novasPermissoes[cb.value] = cb.checked;
-        });
-
-        try {
-            await updateDoc(doc(db, "users", userId), {
-                permissoesDetalhadas: novasPermissoes,
-                updatedAt: new Date().toISOString()
-            });
-            showNotification("Permissões granulares atualizadas com sucesso!", "success");
-            modal.remove();
-        } catch (e) {
-            showNotification("Erro ao salvar permissões.", "error");
-        }
-    };
-};
+export const abrirModalPermissoesGranulares = (db, userId, userName) =>
+    PermissoesService.abrirModalUsuario(db, userId, userName, globalApp || window.app);
 
 // ==========================================
 // GESTAO DE USUARIOS E MULTI-TENANT
@@ -1175,7 +947,7 @@ export const abrirModalPermissoesGranulares = async (db, userId, userName) => {
 export const loadUsersList = async (db) => {
     try {
         const isAdminGlobal = globalApp?.currentUser?.role === 'superadmin' || globalApp?.currentUser?.role === 'superadmin_global';
-        const meuTenant = globalApp?.currentUser?.orgaoId || 'padrao_dprj';
+        const meuTenant = globalApp?.currentUser?.orgaoId || 'padrao_dprj'; // Blindagem contra undefined
         
         const allUsers = [];
         
@@ -1329,7 +1101,7 @@ function renderAprovadosTable(db) {
                             ${ico('building', 'w-3.5 h-3.5')} Unidades (${unidadesCount})
                         </button>
                         <button class="btn-permissoes-granulares bg-slate-900 hover:bg-slate-800 text-white px-3 py-1.5 rounded-lg text-xs font-semibold inline-flex items-center gap-1.5 transition shadow-sm"
-                            data-userid="${user.id}" data-username="${escapeHTML(user.name || user.email)}" title="Configurar Permissões Granulares">
+                            data-userid="${user.id}" data-username="${escapeHTML(user.name || user.email)}" title="Configurar permissões desta pessoa">
                             ${ico('shield', 'w-3.5 h-3.5')} Permissões
                         </button>
                     </div>
@@ -1374,10 +1146,7 @@ function renderAprovadosTable(db) {
     });
 
     tableBody.querySelectorAll('.btn-permissoes-granulares').forEach(btn => {
-        btn.addEventListener('click', () => {
-            if (globalApp) abrirModalPermissoesGranulares(db, btn.dataset.userid, btn.dataset.username);
-            else showNotification("Erro de inicialização.", "error");
-        });
+        btn.addEventListener('click', () => abrirModalPermissoesGranulares(db, btn.dataset.userid, btn.dataset.username));
     });
 
     renderPageSizeSelector('page-size-usuarios', pageSize, (newSize) => {
@@ -2003,6 +1772,7 @@ export const carregarFeedbacksSistema = async (db) => {
     const container = document.getElementById('admin-content');
     if (!container) return;
 
+    // Injeta a aba/seção de Ouvidoria se ela ainda não existir no HTML do Admin
     let secaoOuvidoria = document.getElementById('secao-ouvidoria-admin');
     if (!secaoOuvidoria) {
         const wrapper = document.createElement('div');
@@ -2121,6 +1891,7 @@ export const setupAdminEvents = (app) => {
     loadUsersList(app.db);
     populateUserFilter(app.db);
 
+    // Carrega os feedbacks na tela de admin
     carregarFeedbacksSistema(app.db);
 
     document.getElementById('btn-unidades-master')?.addEventListener('click', () => {
@@ -2163,6 +1934,7 @@ export const setupAdminEvents = (app) => {
     document.getElementById('filter-log-start')?.addEventListener('change', () => loadAuditLogs(app.db));
     document.getElementById('filter-log-end')?.addEventListener('change', () => loadAuditLogs(app.db));
 
+    // INJECAO DO BOTAO DE GESTAO DE CLIENTES (EXCLUSIVO PARA SUPERADMIN_GLOBAL)
     const roleUsuario = app?.currentUser?.role;
     if (roleUsuario === 'superadmin_global') {
         const btnContainer = document.getElementById('btn-unidades-master')?.parentElement;
@@ -2183,6 +1955,7 @@ window.approveUser = (userId) => {
 };
 
 window.updateUserRole = (dbOrUserId, possibleUserId) => {
+    // Permite lidar com flexibilidade de parâmetros
     const db = typeof dbOrUserId === 'object' ? dbOrUserId : (globalApp?.db || null);
     const userId = typeof dbOrUserId === 'string' ? dbOrUserId : possibleUserId;
     if (db && userId) updateUserRole(db, userId);
@@ -2205,6 +1978,7 @@ window.gerenciarUnidades = (userId) => {
 };
 
 window.abrirGerenciadorUnidades = () => {
+    // Corrigido: o nome certo da função é abrirGerenciadorUnidades
     if (globalApp) abrirGerenciadorUnidades(globalApp.db);
     else console.error("App não inicializado");
 };
@@ -2254,6 +2028,7 @@ window.exportAuditLogsPDF = () => {
     else console.error("App não inicializado");
 };
 
+// Exclusão de feedback da ouvidoria
 window.excluirFeedbackAdmin = async (pautaId, feedbackId) => {
     if (!confirm("Deseja remover este registro do painel?")) return;
     try {
@@ -2293,9 +2068,8 @@ export const AdminService = {
     abrirGerenciadorTenants,
     setupAdminEvents,
     abrirModalGerenciarRecepcoesGlobal,
-    carregarFeedbacksSistema,
     abrirModalPermissoesGranulares,
+    carregarFeedbacksSistema, // Exportado para caso precise chamar externamente
 };
 
 console.log("AdminService executivo com suporte Multi-Tenant registrado com sucesso.");
-
