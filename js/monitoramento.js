@@ -1,10 +1,10 @@
-// js/monitoramento.js - Módulo de Auditoria, Linha do Tempo e Visualização Global
+// js/monitoramento.js - Módulo de Auditoria, Linha do Tempo e Visualização Global (Padrão SIGEP)
 
 import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { showNotification, escapeHTML } from './utils.js';
-
 import { ico } from './icons.js';
+
 export const MonitoramentoService = {
 
     // ========================================================
@@ -25,7 +25,7 @@ export const MonitoramentoService = {
     },
 
     // ========================================================
-    // MONITORAMENTO INDIVIDUAL (PERMITE UPLOAD E EDIÇÃO)
+    // MONITORAMENTO INDIVIDUAL (PADRÃO MINIMALISTA SIGEP)
     // ========================================================
     async abrirMonitoramento(pautaId, assistidoId, assistidoNome, app) {
         const modal = document.getElementById('monitoramento-modal');
@@ -57,7 +57,6 @@ export const MonitoramentoService = {
             const btnVerde = document.getElementById('monitor-btn-verde');
             const btnVerPdf = document.getElementById('monitor-btn-ver-pdf');
             
-            // Inserir Botão de Dossiê PDF
             let btnImprimir = document.getElementById('monitor-btn-imprimir');
             if (!btnImprimir && btnVerde) {
                 btnImprimir = document.createElement('button');
@@ -84,7 +83,7 @@ export const MonitoramentoService = {
             const isVerde = data.noVerde || false;
             if(btnVerde) {
                 btnVerde.textContent = isVerde ? 'NO VERDE' : 'PENDENTE';
-                btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
+                btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
                 
                 btnVerde.onclick = async () => {
                     await updateDoc(assistidoRef, { noVerde: !isVerde });
@@ -118,14 +117,14 @@ export const MonitoramentoService = {
 
             if(btnTabUpload && btnTabLink) {
                 btnTabUpload.onclick = () => {
-                    btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
+                    btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded-lg text-green-700 border border-slate-200 transition-all";
                     btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
                     boxUpload.classList.remove('hidden');
                     boxLink.classList.add('hidden');
                 };
 
                 btnTabLink.onclick = () => {
-                    btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded text-blue-600 border border-slate-200 transition-all";
+                    btnTabLink.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest bg-white shadow-sm rounded-lg text-green-700 border border-slate-200 transition-all";
                     btnTabUpload.className = "flex-1 py-2 text-[10px] font-black uppercase tracking-widest text-slate-400 hover:text-slate-600 transition-all";
                     boxLink.classList.remove('hidden');
                     boxUpload.classList.add('hidden');
@@ -137,14 +136,14 @@ export const MonitoramentoService = {
             
             if (listaArquivosContainer) {
                 if (docsDigitalizados.length === 0) {
-                    listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum ficheiro enviado diretamente pelo sistema.</p>';
+                    listaArquivosContainer.innerHTML = '<p class="text-[10px] text-slate-400 italic">Nenhum ficheiro enviado diretamente.</p>';
                 } else {
                     listaArquivosContainer.innerHTML = '';
                     docsDigitalizados.forEach(docItem => {
                         listaArquivosContainer.innerHTML += `
-                            <div class="flex justify-between items-center bg-blue-50 p-2 rounded-lg border border-blue-100">
-                                <span class="text-[10px] font-bold text-blue-800 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">${ico('fileText', 'w-3 h-3')} ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
-                                <a href="${docItem.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
+                            <div class="flex justify-between items-center bg-slate-50 p-2 rounded-xl border border-slate-200">
+                                <span class="text-[10px] font-bold text-slate-700 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">${ico('fileText', 'w-3 h-3')} ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
+                                <a href="${docItem.url}" target="_blank" class="bg-slate-700 text-white text-[9px] font-bold px-2.5 py-1 rounded-lg shadow-sm hover:bg-slate-800 ml-2 shrink-0">Abrir</a>
                             </div>
                         `;
                     });
@@ -206,11 +205,11 @@ export const MonitoramentoService = {
     },
 
     // ========================================================
-    // GERAÇÃO DE DOSSIÊ PDF (NOVA FUNCIONALIDADE)
+    // GERAÇÃO DE DOSSIÊ PDF
     // ========================================================
     _gerarDossierPDF(data, assistidoNome) {
         if (!window.jspdf) {
-            showNotification("Motor de PDF não carregado. Recarregue a página.", "error");
+            showNotification("Motor de PDF não carregado.", "error");
             return;
         }
         showNotification("A gerar Dossiê em PDF...", "info");
@@ -234,7 +233,6 @@ export const MonitoramentoService = {
         doc.setFont("helvetica", "normal");
         doc.setFontSize(10);
         
-        // Tratar múltiplos assuntos ou números
         const assuntosStr = Array.isArray(data.subject) ? data.subject.join(' | ') : (data.subject || 'Não informado');
         const agendamentosStr = Array.isArray(data.numAgendamento) ? data.numAgendamento.join(', ') : (data.numeroAgendamento || data.numAgendamento || 'Avulso');
 
@@ -271,7 +269,7 @@ export const MonitoramentoService = {
     },
 
     // ========================================================
-    // MONITORAMENTO GLOBAL (APENAS LEITURA DE DOCUMENTOS E SLA)
+    // MONITORAMENTO GLOBAL (PADRÃO MINIMALISTA)
     // ========================================================
     abrirMonitoramentoGlobal(app) {
         let modal = document.getElementById('monitoramento-global-modal');
@@ -293,7 +291,6 @@ export const MonitoramentoService = {
             return;
         }
 
-        // ORDENAÇÃO INTELIGENTE (SLA): Quem espera há mais tempo aparece primeiro
         assistidos.sort((a, b) => {
             if (a.status === 'aguardando' && b.status !== 'aguardando') return -1;
             if (a.status !== 'aguardando' && b.status === 'aguardando') return 1;
@@ -311,32 +308,28 @@ export const MonitoramentoService = {
         assistidos.forEach(a => {
             const isVerde = a.noVerde || false;
             
-            // Tratamento SLA Visual
             let borderSlaClass = "border-slate-200";
             let badgeSlaHtml = "";
-            let animPulse = "";
 
             if (a.status === 'aguardando' && a.arrivalTime) {
                 const timeDiff = Math.floor((agora - new Date(a.arrivalTime).getTime()) / 60000);
                 if (timeDiff >= 60) {
                     borderSlaClass = "border-red-400 shadow-red-100 ring-1 ring-red-400";
-                    animPulse = "animate-pulse";
-                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">${ico('alert', 'w-3 h-3')} ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
                 } else if (timeDiff >= 30) {
                     borderSlaClass = "border-amber-400 shadow-amber-100 ring-1 ring-amber-400";
-                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">${ico('clock', 'w-3 h-3')} ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
                 }
             }
 
-            // Tratamento APENAS LEITURA dos documentos
             let docsUploadHTML = '';
             const docsDigitalizados = a.documentosDigitalizados || [];
             if (docsDigitalizados.length > 0) {
                 docsDigitalizados.forEach(d => {
                     docsUploadHTML += `
-                        <div class="flex justify-between items-center bg-blue-50 p-1.5 rounded-lg border border-blue-100 mb-1">
-                            <span class="text-[9px] font-bold text-blue-800 truncate flex-1">${ico('fileText', 'w-3 h-3')} ${escapeHTML(d.titulo || d.nomeArquivo)}</span>
-                            <a href="${d.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
+                        <div class="flex justify-between items-center bg-slate-50 p-1.5 rounded-xl border border-slate-200 mb-1">
+                            <span class="text-[9px] font-bold text-slate-700 truncate flex-1">${escapeHTML(d.titulo || d.nomeArquivo)}</span>
+                            <a href="${d.url}" target="_blank" class="bg-slate-700 text-white text-[9px] font-bold px-2 py-0.5 rounded-lg shadow-sm hover:bg-slate-800 ml-2 shrink-0">Abrir</a>
                         </div>`;
                 });
             } else {
@@ -344,17 +337,15 @@ export const MonitoramentoService = {
             }
 
             const linkPrincipalHtml = a.pdfLink 
-                ? `<a href="${a.pdfLink}" target="_blank" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 hover:bg-blue-200 w-full justify-center shadow-sm">${ico('link', 'w-3 h-3')} Abrir Link Principal</a>` 
-                : `<span class="text-[10px] text-slate-400 italic block text-center p-1 border border-dashed rounded">Nenhum link externo</span>`;
+                ? `<a href="${a.pdfLink}" target="_blank" class="bg-slate-100 text-slate-700 px-3 py-1.5 rounded-xl text-[10px] font-bold inline-flex items-center gap-1 hover:bg-slate-200 w-full justify-center shadow-sm border border-slate-200">Abrir Link Principal</a>` 
+                : `<span class="text-[10px] text-slate-400 italic block text-center p-1 border border-dashed rounded-xl">Nenhum link externo</span>`;
 
-            // Tratamento Múltiplos Assuntos/Agendamentos
             const assuntosRenderizados = Array.isArray(a.subject) ? a.subject.join(' | ') : escapeHTML(a.subject || 'Sem Nome');
             const agendamentoRenderizado = Array.isArray(a.numAgendamento) ? a.numAgendamento.join(', ') : escapeHTML(a.numeroAgendamento || a.numAgendamento || 'N/A');
 
             html += `
                 <div class="bg-white p-4 rounded-2xl shadow-sm border ${borderSlaClass} mb-3 flex flex-col md:flex-row gap-4 transition-all">
                     
-                    <!-- DADOS DO ASSISTIDO -->
                     <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col justify-between">
                         <div>
                             <div class="flex items-center justify-between gap-2 mb-1">
@@ -364,19 +355,18 @@ export const MonitoramentoService = {
                             <p class="text-[10px] text-slate-500 font-bold mb-2 uppercase line-clamp-2">${assuntosRenderizados}</p>
                             
                             <div class="mt-2 space-y-1.5 flex flex-wrap gap-2">
-                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded shadow-sm">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
-                                <span class="bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-1 rounded shadow-sm">Agendamento: #${agendamentoRenderizado}</span>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
+                                <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">Agendamento: #${agendamentoRenderizado}</span>
                             </div>
                         </div>
-                        <div class="mt-4 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
+                        <div class="mt-4 flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
                             <span class="font-bold text-[10px] text-slate-600">Verde:</span>
-                            <span class="px-2 py-1 rounded font-bold text-[9px] uppercase ${isVerde ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
+                            <span class="px-2.5 py-1 rounded-lg font-bold text-[9px] uppercase ${isVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-600'}">
                                 ${isVerde ? 'Inserido' : 'Pendente'}
                             </span>
                         </div>
                     </div>
 
-                    <!-- GESTÃO DE DOCUMENTOS (SOMENTE CONSULTA) -->
                     <div class="w-full md:w-1/3 border-b md:border-b-0 md:border-r border-slate-100 pb-3 md:pb-0 md:pr-4 flex flex-col gap-2">
                         <label class="text-[9px] font-black text-slate-400 uppercase">Documentos Enviados</label>
                         <div class="max-h-20 overflow-y-auto mb-2 pr-1 custom-scrollbar">
@@ -387,12 +377,11 @@ export const MonitoramentoService = {
                         ${linkPrincipalHtml}
 
                         <label class="text-[9px] font-black text-slate-400 uppercase mt-2 border-t border-slate-100 pt-2">Observações / Pendências</label>
-                        <p class="text-[10px] text-slate-600 bg-slate-50 p-2 rounded border border-slate-100 min-h-[30px] italic">
+                        <p class="text-[10px] text-slate-600 bg-slate-50 p-2 rounded-xl border border-slate-200 min-h-[30px] italic">
                             ${escapeHTML(a.pdfObservacoes || 'Nenhuma observação.')}
                         </p>
                     </div>
 
-                    <!-- TIMELINE -->
                     <div class="w-full md:w-1/3 pl-2 max-h-[160px] overflow-y-auto custom-scrollbar">
                         <h5 class="text-[9px] font-black text-slate-400 uppercase mb-3 sticky top-0 bg-white z-10 pb-1">Últimos Eventos</h5>
                         <div class="relative border-l-2 border-slate-200 ml-2">
@@ -406,14 +395,10 @@ export const MonitoramentoService = {
         container.innerHTML = html;
     },
 
-    // ========================================================
-    // MÉTODOS DE APOIO PARA A LINHA DO TEMPO
-    // ========================================================
     _renderTimeline(data, containerId) {
         const timelineContainer = document.getElementById(containerId);
         if(!timelineContainer) return;
         timelineContainer.innerHTML = this._gerarHtmlTimeline(data, false);
-        // O scroll desce automaticamente se os eventos ultrapassarem o tamanho da div
         timelineContainer.scrollTop = timelineContainer.scrollHeight;
     },
 
@@ -422,7 +407,6 @@ export const MonitoramentoService = {
         const acoes = data.historicoAcoes || [];
         const horaChegada = data.arrivalTime ? new Date(data.arrivalTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
         
-        // 1. Mostrar o status de Agendamento ou Avulso
         const agendamentoRenderizado = Array.isArray(data.scheduledTime) ? data.scheduledTime.join(', ') : escapeHTML(data.scheduledTime);
         const assuntoRenderizado = Array.isArray(data.subject) ? data.subject.join(' | ') : escapeHTML(data.subject || 'Não informado');
 
@@ -446,10 +430,9 @@ export const MonitoramentoService = {
             `;
         }
 
-        // 2. Mostrar a hora exata da Chegada
         historicoHTML += `
             <div class="relative pl-6 ${data.scheduledTime || data.type === 'avulso' ? 'mt-4' : ''}">
-                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-500 ring-4 ring-slate-50"></span>
+                <span class="absolute left-[-9px] top-1 h-4 w-4 rounded-full bg-blue-600 ring-4 ring-slate-50"></span>
                 <p class="text-[10px] font-bold text-blue-600 uppercase mb-0.5">CHEGADA • ${horaChegada}</p>
                 ${!resumida ? '<p class="text-xs text-slate-700 font-medium">Assistido registado na recepção.</p>' : ''}
             </div>
@@ -467,16 +450,9 @@ export const MonitoramentoService = {
                 const match = acao.match(/(.+) às (\d{2}:\d{2})$/);
                 if (match) { texto = match[1]; hora = match[2]; }
 
-                let colorClass = "bg-slate-400";
-                const tLower = texto.toLowerCase();
-                if (tLower.includes('documento') || tLower.includes('link') || tLower.includes('upload')) colorClass = "bg-violet-500";
-                if (tLower.includes('edit') || tLower.includes('alterad')) colorClass = "bg-amber-500";
-                if (tLower.includes('verde')) colorClass = "bg-emerald-500";
-                if (tLower.includes('triagem')) colorClass = "bg-indigo-500";
-
                 historicoHTML += `
                     <div class="relative pl-6 mt-4">
-                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full ${colorClass} ring-4 ring-slate-50 shadow-sm"></span>
+                        <span class="absolute left-[-7px] top-1 h-3 w-3 rounded-full bg-slate-400 ring-4 ring-slate-50 shadow-sm"></span>
                         <p class="text-[9px] font-black text-slate-400 uppercase mb-0.5">${hora}</p>
                         <p class="text-[10px] text-slate-600 font-medium leading-tight">${escapeHTML(texto)}</p>
                     </div>
