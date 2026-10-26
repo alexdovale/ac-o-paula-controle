@@ -4,6 +4,7 @@ import { collection, query, where, getDocs } from "https://www.gstatic.com/fireb
 import { showNotification } from './utils.js';
 import { UIService } from './ui.js';
 
+import { ico } from './icons.js';
 export const DashboardService = {
     appInstance: null,
 
@@ -122,7 +123,7 @@ export const DashboardService = {
 
             metricas.ativas = pautasAtivas.length;
 
-            // 🛠️ OTIMIZAÇÃO: Busca todas as attendances de todas as pautas em PARALELO (Muito mais rápido!)
+            // OTIMIZAÇÃO: Busca todas as attendances de todas as pautas em PARALELO (Muito mais rápido!)
             const pautasProcessadasPromises = pautasAtivas.map(async (pauta) => {
                 const attendancesRef = collection(db, "pautas", pauta.id, "attendances");
                 const attSnapshot = await getDocs(attendancesRef);
@@ -165,7 +166,7 @@ export const DashboardService = {
             showNotification("Falha ao montar o Dashboard geral.", "error");
             document.getElementById('dashboard-content').innerHTML = `
                 <div class="bg-red-50 p-6 rounded-xl border border-red-200 text-center">
-                    <span class="text-4xl block mb-2">⚠️</span>
+                    <span class="text-4xl block mb-2">${ico('alert', 'w-10 h-10')}</span>
                     <h3 class="text-red-800 font-bold">Erro de Carregamento</h3>
                     <p class="text-red-600 text-sm mt-1">Verifique sua conexão e tente novamente.</p>
                 </div>`;
@@ -190,8 +191,8 @@ export const DashboardService = {
                     <div class="flex justify-between items-start mb-4 pl-2 w-full gap-2">
                         <div class="min-w-0 flex-1">
                             <h4 class="font-black text-slate-800 text-base sm:text-lg leading-tight group-hover:text-indigo-700 transition-colors truncate" title="${pauta.name}">${pauta.name}</h4>
-                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.unidade}">📍 ${pauta.unidade}</p>
-                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? '👤 Criada por você' : '🤝 Compartilhada'}</span>
+                            <p class="text-[10px] sm:text-xs font-bold text-indigo-600 truncate mt-1" title="${pauta.unidade}">${ico('mapPin', 'w-3.5 h-3.5')} ${pauta.unidade}</p>
+                            <span class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-1 block truncate">${pauta.isOwner ? 'Criada por você' : 'Compartilhada'}</span>
                         </div>
                         <span class="bg-slate-100 text-slate-600 text-xs font-black px-2.5 py-1 rounded-lg shrink-0">
                             ${pauta.total}
@@ -221,7 +222,7 @@ export const DashboardService = {
         } else {
             pautasListHtml = `
                 <div class="col-span-full bg-white p-10 rounded-2xl border border-dashed border-slate-300 text-center opacity-70">
-                    <span class="text-5xl block mb-4">📭</span>
+                    <span class="text-5xl block mb-4">${ico('inbox', 'w-12 h-12')}</span>
                     <h3 class="text-lg font-bold text-slate-700">Nenhuma Pauta Encontrada</h3>
                     <p class="text-slate-500 text-sm mt-2">Nenhuma pauta correspondente ao filtro ativo foi localizada.</p>
                 </div>
@@ -231,31 +232,31 @@ export const DashboardService = {
         dashboardContent.innerHTML = `
             <div class="grid grid-cols-2 lg:grid-cols-5 gap-3 sm:gap-4 mb-8">
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">📁</div>
+                    <div class="w-8 h-8 rounded-full bg-indigo-100 text-indigo-600 flex items-center justify-center mb-3">${ico('folder')}</div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Pautas Filtradas</p>
                     <h3 class="text-3xl font-black text-slate-800">${data.metricas.ativas}</h3>
                 </div>
                 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mb-3">👥</div>
+                    <div class="w-8 h-8 rounded-full bg-slate-100 text-slate-600 flex items-center justify-center mb-3">${ico('users')}</div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Assistidos (Total)</p>
                     <h3 class="text-3xl font-black text-slate-800">${data.metricas.total}</h3>
                 </div>
                 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3">⏳</div>
+                    <div class="w-8 h-8 rounded-full bg-blue-100 text-blue-600 flex items-center justify-center mb-3">${ico('clock')}</div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Na Recepção</p>
                     <h3 class="text-3xl font-black text-blue-600">${data.metricas.aguardando}</h3>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">✅</div>
+                    <div class="w-8 h-8 rounded-full bg-emerald-100 text-emerald-600 flex items-center justify-center mb-3">${ico('checkCircle')}</div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Atendidos</p>
                     <h3 class="text-3xl font-black text-emerald-600">${data.metricas.concluidos}</h3>
                 </div>
 
                 <div class="bg-white rounded-2xl border border-slate-200 p-5 shadow-sm">
-                    <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">🚫</div>
+                    <div class="w-8 h-8 rounded-full bg-rose-100 text-rose-600 flex items-center justify-center mb-3">${ico('ban')}</div>
                     <p class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-1 truncate">Faltosos</p>
                     <h3 class="text-3xl font-black text-rose-600">${data.metricas.faltosos}</h3>
                 </div>
@@ -263,7 +264,7 @@ export const DashboardService = {
 
             <div class="flex items-center justify-between mb-4 mt-8 px-1 border-b border-slate-200 pb-2">
                 <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">
-                    <span class="text-indigo-500">📋</span> Painéis Disponíveis
+                    <span class="text-indigo-500">${ico('clipboard', 'w-5 h-5')}</span> Painéis Disponíveis
                 </h3>
             </div>
             
