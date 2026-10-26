@@ -17,6 +17,7 @@ import { showNotification, escapeHTML } from './utils.js';
 import { flatSubjects } from './assuntos.js';
 import { PDFService } from './pdfService.js';
 
+import { ico, icoFrom } from './icons.js';
 /* ========================================================
    CÉREBRO DE DETECÇÃO DE ASSUNTO
    ======================================================== */
@@ -128,11 +129,11 @@ const ESTADOS_CIVIS = ['Solteiro(a)', 'Casado(a)', 'União Estável', 'Divorciad
 const FONTES_RENDA = ['CLT', 'Autônomo', 'Aposentadoria', 'Bolsa Família', 'Desempregado', 'Outros'];
 
 const ICONES_ACAO = {
-    obrigacao_fazer: '🏥', declaratoria_nulidade: '📜', indenizacao_danos: '💥', revisional_debito: '🏦',
-    exigir_contas: '🧾', alimentos_fixacao_majoracao_oferta: '👶', alimentos_gravidicos: '🤰',
-    alimentos_avoengos: '👵', divorcio_consensual: '🤝', divorcio_litigioso: '⚖️', uniao_estavel: '💍',
-    guarda: '🧒', regulamentacao_convivencia: '🕒', investigacao_paternidade: '🧬', curatela: '🛡️',
-    retificacao_registro_civil: '✏️', alvara_valores: '💰', vaga_escola_creche: '🏫'
+    obrigacao_fazer: 'building', declaratoria_nulidade: 'fileText', indenizacao_danos: 'zap', revisional_debito: 'landmark',
+    exigir_contas: 'fileText', alimentos_fixacao_majoracao_oferta: 'baby', alimentos_gravidicos: 'heart',
+    alimentos_avoengos: 'user', divorcio_consensual: 'userPlus', divorcio_litigioso: 'scale', uniao_estavel: 'heart',
+    guarda: 'baby', regulamentacao_convivencia: 'clock', investigacao_paternidade: 'userCheck', curatela: 'shield',
+    retificacao_registro_civil: 'pencil', alvara_valores: 'coins', vaga_escola_creche: 'building'
 };
 
 /* ========================================================
@@ -260,7 +261,7 @@ const cartaoSecao = (titulo, icone, corpo, tom = 'slate') => {
     return `
         <section class="mb-5 rounded-2xl border ${tons[tom]} shadow-sm overflow-hidden">
             <header class="px-4 py-3 border-b border-slate-100 flex items-center gap-2">
-                <span class="text-base">${icone}</span>
+                <span class="text-slate-500">${icoFrom(icone, 'w-4 h-4')}</span>
                 <h4 class="text-xs font-black text-slate-700 uppercase tracking-wide">${titulo}</h4>
             </header>
             <div class="p-4">${corpo}</div>
@@ -292,7 +293,7 @@ export async function gerarLinkCaptacao() {
 
         const assisted = allAssisted.find(a => a.id === assistidoId);
         const nome = assisted?.name ? assisted.name.split(' ')[0] : 'assistido(a)';
-        const mensagem = encodeURIComponent(`Olá, ${nome}! Clique aqui para preencher seus dados preliminares:\n\n🔗 ${link}`);
+        const mensagem = encodeURIComponent(`Olá, ${nome}! Clique aqui para preencher seus dados preliminares:\n\n${link}`);
 
         await navigator.clipboard.writeText(link);
         showNotification("Link seguro gerado e copiado!", "success");
@@ -404,7 +405,7 @@ function injectDemandasAdicionaisInterface(containerEl) {
     }
 
     divDemanda.innerHTML = `
-        <h4 class="text-xs font-black text-violet-700 uppercase tracking-wide mb-1 flex items-center gap-2"><span>⚖️</span> Casos acumulados no atendimento</h4>
+        <h4 class="text-xs font-black text-violet-700 uppercase tracking-wide mb-1 flex items-center gap-2"><span>${ico('scale', 'w-3.5 h-3.5')}</span> Casos acumulados no atendimento</h4>
         <p class="text-[11px] text-violet-500 mb-3">Some outras demandas do mesmo assistido para que entrem nas estatísticas.</p>
         <div class="flex gap-2 mb-3">
             <input type="text" id="input-nova-demanda-triagem" list="subjects-list-triagem-dinamico" class="flex-grow px-3 py-2.5 border border-violet-200 rounded-lg text-sm bg-white outline-none focus:ring-2 focus:ring-violet-500" placeholder="Busque ou digite uma demanda...">
@@ -509,16 +510,16 @@ function renderChecklist(actionKey) {
         calc.onclick = () => window.gerarTextoDespesas(currentAssistedId);
         calc.innerHTML = `
             <span>
-                <span class="block font-black text-indigo-800 text-xs sm:text-sm uppercase">🧮 Gerador de texto para petição</span>
+                <span class="block font-black text-indigo-800 text-xs sm:text-sm uppercase">${ico('calculator', 'w-3.5 h-3.5')} Gerador de texto para petição</span>
                 <span class="block text-[11px] sm:text-xs text-indigo-600 mt-1 font-medium">Usa os gastos apurados e cria um texto pronto para o Word/SEI.</span>
             </span>
-            <span class="bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-3 group-hover:scale-105 transition">📑</span>`;
+            <span class="bg-indigo-600 text-white w-10 h-10 rounded-xl flex items-center justify-center shrink-0 ml-3 group-hover:scale-105 transition">${ico('fileText')}</span>`;
         containerEl.appendChild(calc);
     }
 
     // --- Dados socioeconômicos do assistido ---
     const socioSection = document.createElement('div');
-    socioSection.innerHTML = cartaoSecao('Dados socioeconômicos do assistido', '👤', `
+    socioSection.innerHTML = cartaoSecao('Dados socioeconômicos do assistido', 'user', `
         <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-2">
             ${seletor('socio-ocupacao', 'Ocupação', OCUPACOES, { primeira: 'Selecione a ocupação' })}
             <div id="socio-profissao-container" class="hidden">
@@ -597,11 +598,11 @@ function renderChecklist(actionKey) {
                             <div class="inline-flex rounded-lg bg-slate-100 p-0.5">
                                 <label class="cursor-pointer">
                                     <input type="radio" name="type-${id}" value="Físico" class="peer sr-only" ${savedType !== 'Digital' ? 'checked' : ''}>
-                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow transition">📄 FÍSICO</span>
+                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-emerald-700 peer-checked:shadow transition">${ico('fileText', 'w-3 h-3')} FÍSICO</span>
                                 </label>
                                 <label class="cursor-pointer">
                                     <input type="radio" name="type-${id}" value="Digital" class="peer sr-only" ${savedType === 'Digital' ? 'checked' : ''}>
-                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-sky-700 peer-checked:shadow transition">📱 DIGITAL</span>
+                                    <span class="block px-3 py-1 rounded-md text-[10px] font-black text-slate-500 peer-checked:bg-white peer-checked:text-sky-700 peer-checked:shadow transition">${ico('smartphone', 'w-3 h-3')} DIGITAL</span>
                                 </label>
                             </div>
                         </div>
@@ -642,7 +643,7 @@ function addExpenseButton(containerEl, saved) {
     const expenseButton = document.createElement('div');
     expenseButton.className = 'mt-4 p-4 bg-white border border-dashed border-emerald-300 rounded-2xl text-center';
     expenseButton.id = 'expense-button-container';
-    expenseButton.innerHTML = `<button id="btn-abrir-gastos" type="button" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 shadow-sm transition">💰 Adicionar planilha de gastos</button>`;
+    expenseButton.innerHTML = `<button id="btn-abrir-gastos" type="button" class="bg-emerald-600 text-white px-5 py-2.5 rounded-xl text-sm font-bold hover:bg-emerald-700 shadow-sm transition">${ico('coins')} Adicionar planilha de gastos</button>`;
     containerEl.appendChild(expenseButton);
 
     const todasCategorias = [...EXPENSE_CATEGORIES_COMUNS, ...EXPENSE_CATEGORIES_EXCLUSIVAS];
@@ -717,7 +718,7 @@ function renderReuForm(containerId) {
     container.innerHTML = `
         <div class="mt-6 rounded-2xl border-2 border-red-200 bg-red-50/50 shadow-sm overflow-hidden">
             <div class="px-4 py-3 bg-red-600 text-white flex flex-wrap items-center justify-between gap-2">
-                <h3 class="text-sm font-black uppercase tracking-wide flex items-center gap-2">🏠 Dados da parte contrária (réu)</h3>
+                <h3 class="text-sm font-black uppercase tracking-wide flex items-center gap-2">${ico('home')} Dados da parte contrária (réu)</h3>
                 <label for="check-reu-unico" class="flex items-center gap-2 text-xs font-bold cursor-pointer bg-white/15 px-3 py-1.5 rounded-lg hover:bg-white/25 transition">
                     <input type="checkbox" id="check-reu-unico" class="h-4 w-4 rounded border-white text-red-600 focus:ring-white" checked>
                     Incluir no checklist
@@ -725,14 +726,14 @@ function renderReuForm(containerId) {
             </div>
 
             <div id="content-reu-completo" class="p-4 space-y-4">
-                ${cartaoSecao('1. Identificação', '🪪', `
+                ${cartaoSecao('1. Identificação', 'idCard', `
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         ${campo('nome-reu', 'Nome completo', { placeholder: 'Nome completo do réu', span: 'md:col-span-2' })}
                         ${campo('cpf-reu', 'CPF', { placeholder: '000.000.000-00', maxlength: 14, inputmode: 'numeric' })}
                         ${campo('telefone-reu', 'Telefone', { placeholder: '(21) 99999-9999', maxlength: 15, inputmode: 'tel' })}
                     </div>`)}
 
-                ${cartaoSecao('2. Endereço residencial', '📍', `
+                ${cartaoSecao('2. Endereço residencial', 'mapPin', `
                     <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
                         <div class="md:col-span-2">
                             <label for="cep-reu" class="${LABEL_CLS}">CEP</label>
@@ -750,7 +751,7 @@ function renderReuForm(containerId) {
                         ${campo('referencia-reu', 'Ponto de referência', { span: 'md:col-span-6' })}
                     </div>`, 'red')}
 
-                ${cartaoSecao('3. Dados de trabalho', '🏢', `
+                ${cartaoSecao('3. Dados de trabalho', 'building', `
                     <div class="grid grid-cols-1 md:grid-cols-6 gap-3">
                         ${campo('empresa-reu', 'Empresa', { span: 'md:col-span-6' })}
                         ${campo('rua-comercial-reu', 'Logradouro comercial', { span: 'md:col-span-6' })}
@@ -768,7 +769,7 @@ function renderReuForm(containerId) {
                         </div>
                     </div>`)}
 
-                ${cartaoSecao('4. Perfil socioeconômico', '📊', `
+                ${cartaoSecao('4. Perfil socioeconômico', 'chart', `
                     <div class="space-y-4">
                         <div>
                             <label for="reu-ocupacao" class="${LABEL_CLS}">Ocupação</label>
@@ -808,7 +809,7 @@ function renderReuForm(containerId) {
                     </div>`, 'blue')}
 
                 <div class="text-right">
-                    <button type="button" id="salvar-reu-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase shadow-sm transition">💾 Salvar dados do réu</button>
+                    <button type="button" id="salvar-reu-btn" class="bg-red-600 hover:bg-red-700 text-white font-bold py-2.5 px-5 rounded-xl text-xs uppercase shadow-sm transition">${ico('save', 'w-3.5 h-3.5')} Salvar dados do réu</button>
                 </div>
             </div>
         </div>
@@ -948,7 +949,7 @@ function renderExpenseTable() {
         <div class="px-4 py-3 bg-emerald-600 text-white flex items-center justify-between gap-2">
             <label for="check-exibir-gastos" class="flex items-center gap-2 text-sm font-black uppercase cursor-pointer">
                 <input type="checkbox" id="check-exibir-gastos" class="h-4 w-4 rounded border-white text-emerald-700 focus:ring-white" checked>
-                💰 Planilha de gastos com rateio
+                ${ico('coins')} Planilha de gastos com rateio
             </label>
             <button id="fechar-gastos" type="button" class="text-[11px] font-bold bg-white/15 hover:bg-white/25 px-2.5 py-1 rounded-lg transition">Fechar</button>
         </div>
@@ -977,7 +978,7 @@ function renderExpenseTable() {
             </div>
 
             <button type="button" id="btn-baixar-planilha-isolada" class="mt-4 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs uppercase shadow transition flex items-center justify-center gap-2">
-                <span>📄</span> Baixar apenas a planilha (PDF)
+                <span>${ico('fileText', 'w-3.5 h-3.5')}</span> Baixar apenas a planilha (PDF)
             </button>
         </div>
     `;
@@ -1407,7 +1408,7 @@ function exibirModalCopia(textoHtml, textoPuro, total) {
         <div class="bg-white w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-gradient-to-r from-indigo-600 to-violet-600 p-4 text-white flex justify-between items-center shrink-0">
                 <div>
-                    <h3 class="font-black uppercase tracking-wide text-sm flex items-center gap-2"><span>📑</span> Texto base para petição</h3>
+                    <h3 class="font-black uppercase tracking-wide text-sm flex items-center gap-2"><span>${ico('fileText')}</span> Texto base para petição</h3>
                     <p class="text-[11px] text-indigo-100 mt-0.5">Necessidade mensal apurada: <b>${formatCurrency(total)}</b></p>
                 </div>
                 <button id="fechar-modal-peticao" class="text-indigo-100 hover:text-white text-2xl font-bold leading-none" aria-label="Fechar">&times;</button>
@@ -1419,7 +1420,7 @@ function exibirModalCopia(textoHtml, textoPuro, total) {
             <div class="p-4 border-t border-slate-100 bg-slate-50 flex gap-2 shrink-0">
                 <button id="btn-fechar-peticao" class="px-4 bg-white border border-slate-300 text-slate-600 font-bold rounded-xl text-xs uppercase hover:bg-slate-100 transition">Fechar</button>
                 <button id="btn-copiar-texto-peticao" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl uppercase tracking-wider text-xs shadow-lg transition active:scale-95 flex justify-center items-center gap-2">
-                    <span>📋</span> Copiar texto
+                    <span>${ico('clipboard', 'w-3.5 h-3.5')}</span> Copiar texto
                 </button>
             </div>
         </div>`;
@@ -1433,7 +1434,7 @@ function exibirModalCopia(textoHtml, textoPuro, total) {
     document.getElementById('btn-copiar-texto-peticao').onclick = () => {
         navigator.clipboard.writeText(textoPuro).then(() => {
             const btn = document.getElementById('btn-copiar-texto-peticao');
-            btn.innerHTML = "<span>✅</span> Copiado!";
+            btn.innerHTML = "<span>" + ico('checkCircle') + "</span> Copiado!";
             btn.classList.replace('bg-emerald-600', 'bg-slate-800');
             setTimeout(fechar, 1200);
         }).catch(() => showNotification("Não foi possível copiar. Selecione o texto manualmente.", "error"));
@@ -1545,7 +1546,7 @@ function renderSubjectSelection(selectionArea) {
     selectionArea.innerHTML = `
         <div class="p-2 sm:p-4">
             <div class="relative mb-4">
-                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">${ico('search')}</span>
                 <input type="text" id="subject-search-input" placeholder="Buscar assunto..." class="w-full pl-10 pr-4 py-3 border-2 border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-500 focus:ring-4 focus:ring-emerald-500/15 transition">
             </div>
             <p class="text-slate-500 mb-3 text-xs text-center font-bold uppercase tracking-widest opacity-70">Selecione o assunto ou digite para filtrar</p>
@@ -1569,7 +1570,7 @@ function renderSubjectSelection(selectionArea) {
             btn.type = 'button';
             btn.className = "flex items-center gap-3 text-left p-3 bg-white border-2 border-slate-100 hover:border-emerald-400 hover:bg-emerald-50/50 rounded-xl transition-all shadow-sm";
             btn.innerHTML = `
-                <span class="w-10 h-10 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-xl">${ICONES_ACAO[key] || '📁'}</span>
+                <span class="w-10 h-10 shrink-0 rounded-lg bg-slate-100 flex items-center justify-center text-xl">${icoFrom(ICONES_ACAO[key] || 'folder', 'w-5 h-5')}</span>
                 <span class="text-xs sm:text-sm font-bold text-slate-700 leading-tight">${title}</span>`;
             btn.onclick = async (e) => {
                 e.preventDefault();
@@ -1591,7 +1592,7 @@ function renderSubjectSelection(selectionArea) {
     searchInput.addEventListener('input', (e) => renderFilteredSubjects(e.target.value));
 }
 
-// ⭐ EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
+// EXPORTAÇÕES PARA O WINDOW (ACESSO GLOBAL)
 window.openDetailsModal = openDetailsModal;
 window.setupDetailsModal = setupDetailsModal;
 window.documentsData = documentsData;
