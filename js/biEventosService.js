@@ -2,6 +2,7 @@
 import { doc, getDoc, updateDoc, collection, addDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 export const BiEventosService = {
 
     // Gera o HTML do painel de configuração de links externos na pauta
@@ -10,7 +11,7 @@ export const BiEventosService = {
         
         return `
             <div class="bg-slate-50 border border-slate-200 rounded-2xl p-5 mt-4">
-                <h4 class="text-sm font-black text-slate-700 uppercase tracking-wider mb-2">🔗 Links Externos de Coleta (Órgãos / Parceiros)</h4>
+                <h4 class="text-sm font-black text-slate-700 uppercase tracking-wider mb-2">${ico('link')} Links Externos de Coleta (Órgãos / Parceiros)</h4>
                 <p class="text-xs text-slate-500 mb-4">Gere links protegidos por senha para que órgãos externos ou colaboradores enviem dados estatísticos diretamente para esta pauta.</p>
                 
                 <div id="bi-lista-parceiros" class="space-y-3 mb-4">
@@ -18,7 +19,7 @@ export const BiEventosService = {
                         parceiros.map((p, idx) => `
                             <div class="bg-white border border-slate-200 rounded-xl p-3 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3 shadow-sm">
                                 <div>
-                                    <p class="font-bold text-slate-800 text-sm">📍 ${escapeHTML(p.nome)}</p>
+                                    <p class="font-bold text-slate-800 text-sm">${ico('mapPin')} ${escapeHTML(p.nome)}</p>
                                     <p class="text-[10px] text-slate-400 font-mono">Token: ${p.token} | Senha: ••••••</p>
                                 </div>
                                 <div class="flex gap-2 w-full sm:w-auto">
@@ -89,7 +90,7 @@ export const BiEventosService = {
         let baseUrl = window.location.href.split('?')[0].replace('index.html', '');
         const link = `${baseUrl}coleta.html?token=${token}`;
         navigator.clipboard.writeText(link).then(() => {
-            showNotification("Link de coleta copiado para a área de transferência! 📋", "success");
+            showNotification("Link de coleta copiado para a área de transferência!", "success");
         });
     }
 };
