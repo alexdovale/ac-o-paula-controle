@@ -116,64 +116,16 @@ const CollaboratorService = {
     },
 
     abrirModalExportacaoPDF(app) {
-        let modal = document.getElementById('export-pdf-config-modal');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'export-pdf-config-modal';
-            modal.className = 'fixed inset-0 bg-black/50 z-[9999] flex items-center justify-center hidden backdrop-blur-sm';
-            modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md mx-4 overflow-hidden">
-                    <div class="bg-gradient-to-r from-emerald-600 to-teal-600 px-6 py-4 flex justify-between items-center">
-                        <h3 class="text-white font-bold text-lg flex items-center gap-2">${ico('fileText', 'w-5 h-5')} Exportar PDF da equipe</h3>
-                        <button data-close class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Fechar">${ico('x', 'w-5 h-5')}</button>
-                    </div>
-                    <div class="p-6">
-                        <p class="text-sm text-slate-600 mb-4">Escolha os campos que aparecerão no PDF:</p>
-                        <div id="pdf-field-selector-modal" class="grid grid-cols-2 gap-2 mb-6"></div>
-                        <div class="flex gap-3">
-                            <button id="confirm-export-pdf-btn" class="flex-1 inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-bold py-3 rounded-xl hover:bg-emerald-700 transition">${ico('download')} Gerar PDF</button>
-                            <button data-close class="flex-1 bg-slate-200 text-slate-700 font-bold py-3 rounded-xl hover:bg-slate-300 transition">Cancelar</button>
-                        </div>
-                    </div>
-                </div>`;
-            document.body.appendChild(modal);
-            modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.classList.add('hidden'));
-            modal.addEventListener('click', e => { if (e.target === modal) modal.classList.add('hidden'); });
-        }
-
-        const campos = [
-            { value: 'nome', label: 'Nome', default: true },
-            { value: 'cargo', label: 'Cargo', default: true },
-            { value: 'equipe', label: 'Equipe', default: true },
-            { value: 'identificador', label: 'Matrícula/ID', default: false },
-            { value: 'telefone', label: 'Telefone', default: false },
-            { value: 'email', label: 'E-mail', default: false },
-            { value: 'transporte', label: 'Transporte', default: false },
-            { value: 'horario', label: 'Horário de chegada', default: true }
-        ];
-
-        document.getElementById('pdf-field-selector-modal').innerHTML = campos.map(c => `
-            <label class="flex items-center gap-2 p-3 rounded-xl border border-slate-200 hover:bg-emerald-50 hover:border-emerald-300 cursor-pointer transition">
-                <input type="checkbox" class="pdf-col-selector w-4 h-4 text-emerald-600 rounded focus:ring-emerald-500" value="${c.value}" ${c.default ? 'checked' : ''}>
-                <span class="text-sm text-slate-700 font-medium">${c.label}</span>
-            </label>`).join('');
-
-        document.getElementById('confirm-export-pdf-btn').onclick = async () => {
-            const checks = document.querySelectorAll('#pdf-field-selector-modal .pdf-col-selector:checked');
-            const camposEscolhidos = Array.from(checks).map(el => el.value);
-            if (camposEscolhidos.length === 0) {
-                showNotification("Selecione pelo menos um campo para o PDF", "warning");
-                return;
-            }
-            await window.PDFService.generateCollaboratorsPDF({
+        // Usa a função do pdfService que já gera e gerencia esse modal, 
+        // em vez de criar um modal duplicado aqui.
+        if (window.PDFService && typeof window.PDFService.generateCollaboratorsPDF === 'function') {
+            window.PDFService.generateCollaboratorsPDF({
                 colaboradores: this.ordenarColaboradores(app.colaboradores || []),
-                pautaNome: app.currentPauta.name,
-                colunas: camposEscolhidos
+                pautaNome: app.currentPauta.name
             });
-            modal.classList.add('hidden');
-        };
-
-        modal.classList.remove('hidden');
+        } else {
+            showNotification("O serviço de PDF não está disponível no momento.", "error");
+        }
     },
 
     // ===================================================================
@@ -486,7 +438,7 @@ const CollaboratorService = {
     },
 
     // ===================================================================
-    // ATA SOCIAL
+    // ATA SOCIAL E BARRA DE FERRAMENTAS
     // ===================================================================
     lerCamposAta() {
         return {
@@ -500,7 +452,6 @@ const CollaboratorService = {
         };
     },
 
-    // Mostra o estado do salvamento automático (ícone + texto)
     estadoSalvamento(tipo) {
         const indicator = document.getElementById('ata-save-indicator');
         if (!indicator) return;
@@ -598,7 +549,6 @@ const CollaboratorService = {
         ['ata-acao-nome', 'ata-endereco', 'ata-data', 'ata-total', 'ata-orgao'].forEach(id => {
             const el = document.getElementById(id);
             if (el) {
-                // Atribuição por propriedade evita listeners duplicados
                 el.oninput = () => this.triggerAutoSave(app);
                 el.onchange = () => this.triggerAutoSave(app);
             }
@@ -610,7 +560,7 @@ const CollaboratorService = {
     },
 
     // ===================================================================
-    // MODAL DA EQUIPE
+    // MODAL DA EQUIPE - INITIALIZER
     // ===================================================================
     openModal(app) {
         const modal = document.getElementById('collaborators-modal');
@@ -620,6 +570,10 @@ const CollaboratorService = {
         this.resetForm();
         this.updateTeamSelect();
         this.configurarLogicaCargo();
+        
+        // Remove botões duplicados fora da toolbar, se existirem
+        document.querySelectorAll('.btn-exportar-pdf-antigo').forEach(el => el.remove());
+        
         this.montarBarraFerramentas(app);
         this.bindBotoesEstaticos(app);
 
@@ -647,7 +601,7 @@ const CollaboratorService = {
                 <span class="text-sm font-black text-slate-700 mr-auto flex items-center gap-2"><span class="text-violet-600">${ico('users', 'w-[18px] h-[18px]')}</span> Organização da equipe</span>
                 <button id="copy-pauta-id-btn" class="${btnNeutro}" title="Copie para colar em outra pauta">${ico('idCard', 'w-3.5 h-3.5')} Copiar ID desta pauta</button>
                 <button id="toggle-order-btn" class="${btnNeutro}"></button>
-                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors">${ico('fileText', 'w-3.5 h-3.5')} Exportar PDF</button>
+                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors">${ico('fileText', 'w-3.5 h-3.5')} Configurar Relatório</button>
             </div>
             <div class="p-3">
                 <label for="import-pauta-id-input" class="block text-[11px] font-bold text-slate-500 mb-1.5">Copiar equipe de outra pauta <span class="font-normal text-slate-400">(na pauta antiga, use "Copiar ID desta pauta")</span></label>
@@ -678,14 +632,16 @@ const CollaboratorService = {
                 prompt("Copie o ID da pauta:", id);
             }
         };
+        
+        // Aqui chamamos o modal do pdfService.js que ajustámos!
         document.getElementById('export-pdf-custom-btn').onclick = () => this.abrirModalExportacaoPDF(app);
+        
         document.getElementById('import-pauta-btn').onclick = () => this.importarEquipeDePauta(app);
         document.getElementById('import-pauta-id-input').onkeydown = (e) => {
             if (e.key === 'Enter') { e.preventDefault(); this.importarEquipeDePauta(app); }
         };
     },
 
-    // Botões que existem no HTML da página (ligados uma única vez ao abrir o modal)
     bindBotoesEstaticos(app) {
         const btnAta = document.getElementById('btn-gerar-ata-social');
         if (btnAta) {
@@ -701,7 +657,7 @@ const CollaboratorService = {
 
         const btnBuscar = document.getElementById('buscar-master-btn');
         if (btnBuscar) {
-            const clone = btnBuscar.cloneNode(true); // remove listeners antigos
+            const clone = btnBuscar.cloneNode(true); 
             btnBuscar.parentNode.replaceChild(clone, btnBuscar);
             clone.onclick = (e) => { e.preventDefault(); this.abrirModalListagemMaster(app); };
         }
@@ -739,7 +695,6 @@ const CollaboratorService = {
 
         const grupos = [...this.gruposPermitidosAta].sort((a, b) => this.compararGrupos(a, b));
 
-        // <option> não aceita SVG, então as ações usam texto simples
         select.innerHTML = grupos.map(g =>
             `<option value="${escapeHTML(g)}" ${String(selectedValue) === g ? 'selected' : ''}>${escapeHTML(this.rotuloGrupo(g))}</option>`
         ).join('')
@@ -806,7 +761,6 @@ const CollaboratorService = {
                 await addDoc(colRef, { ...data, presente: false, horario: '--:--' });
             }
 
-            // Atualiza a base master sempre que salva/edita
             await setDoc(doc(app.db, "colaboradores_gerais", data.identificador), data, { merge: true });
 
             this.registrarGrupo(data.equipe);
@@ -824,7 +778,6 @@ const CollaboratorService = {
         this.currentListener = onSnapshot(ref, (snapshot) => {
             app.colaboradores = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
 
-            // Qualquer grupo que exista na pauta entra na lista, já na ordem certa
             let mudou = false;
             app.colaboradores.forEach(c => { if (this.registrarGrupo(c.equipe)) mudou = true; });
             if (mudou && this.editId === null) {
@@ -861,7 +814,6 @@ const CollaboratorService = {
         const lista = app.colaboradores || [];
         const ordenados = this.ordenarColaboradores(lista);
 
-        // Contagem por grupo (para o cabeçalho de cada equipe)
         const resumo = {};
         lista.forEach(c => {
             const g = c.equipe || '';
@@ -942,7 +894,6 @@ const CollaboratorService = {
 
         tbody.innerHTML = html.join('');
 
-        // Delegação de eventos (um único handler, sem risco de aspas no nome)
         tbody.onclick = (e) => {
             const btn = e.target.closest('button[data-action]');
             if (!btn) return;
@@ -975,7 +926,6 @@ const CollaboratorService = {
         if (document.getElementById('toggle-css-colaboradores')) return;
         const style = document.createElement('style');
         style.id = 'toggle-css-colaboradores';
-        // Switch feito com classes "peer" do Tailwind; só garante o foco visível
         style.innerHTML = `
             .checkin-checkbox:focus-visible + span { outline: 2px solid #10b981; outline-offset: 2px; }
             #collaborators-list-table-modal tr.grupo-header td { position: sticky; top: 0; z-index: 1; }
