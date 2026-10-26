@@ -203,31 +203,39 @@ class SIGEPApp {
             
             // 🔥 CORREÇÃO: DIRECIONA O ROUTER PARA O SEU pautaConfig.js 🔥
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
-                // Tenta usar a função nativa do seu pautaConfig.js
-                if (window.PautaConfigService && typeof window.PautaConfigService.openModal === 'function') {
-                    window.PautaConfigService.openModal(this);
-                } else if (window.PautaConfigService && typeof window.PautaConfigService.abrirModal === 'function') {
-                    window.PautaConfigService.abrirModal(this);
-                } else {
-                    // Fallback de segurança caso a função chame-se de outra forma
-                    const modalIds = ['edit-pauta-config-modal', 'config-pauta-modal'];
-                    let modalEncontrado = null;
-                    
-                    for (let id of modalIds) {
-                        const m = document.getElementById(id);
-                        if (m) { modalEncontrado = m; break; }
-                    }
+                const modalConfig = document.getElementById('config-pauta-modal');
+                if (!modalConfig || !this.currentPauta) return;
 
-                    if (modalEncontrado) {
-                        const tipoAtual = this.currentPautaData?.type || 'agendamento';
-                        const ordemAtual = this.currentPautaData?.ordemAtendimento || 'flexivel';
-                        document.querySelectorAll('input[name="config-tipo-pauta"]').forEach(r => r.checked = (r.value === tipoAtual));
-                        document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === ordemAtual));
-                        modalEncontrado.classList.remove('hidden');
-                    } else {
-                        console.error("Janela de configurações não encontrada no HTML!");
-                    }
+                const pData = this.currentPautaData || {};
+
+                // Tipo e Ordem
+                document.querySelectorAll('input[name="config-tipo-pauta"]').forEach(r => r.checked = (r.value === (pData.type || 'agendamento')));
+                document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === (pData.ordemAtendimento || 'flexivel')));
+
+                // Tolerância
+                const tolInput = document.getElementById('config-tolerancia');
+                if (tolInput) tolInput.value = pData.toleranciaAtraso || pData.tolerancia || 15;
+
+                // Fluxo (Delegação vs Direto)
+                const isDelegation = pData.useDelegationFlow !== false; 
+                document.querySelectorAll('input[name="config-fluxo"]').forEach(r => r.checked = isDelegation ? r.value === 'delegacao' : r.value === 'direto');
+                
+                // Distribuição
+                const distCheck = document.getElementById('config-distribuicao');
+                const distContainer = document.getElementById('config-distribuicao-container');
+                if (distCheck) distCheck.checked = pData.useDistributionFlow === true;
+                
+                if (!isDelegation && distContainer) {
+                    distContainer.classList.add('opacity-50', 'pointer-events-none');
+                } else if (distContainer) {
+                    distContainer.classList.remove('opacity-50', 'pointer-events-none');
                 }
+
+                // Painel TV
+                const tvCheck = document.getElementById('config-use-tv');
+                if (tvCheck) tvCheck.checked = pData.useTvPanel !== false;
+
+                modalConfig.classList.remove('hidden');
             },
 
             [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
