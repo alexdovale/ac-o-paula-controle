@@ -1,8 +1,11 @@
-// js/painelGeralService.js - MONITOR DE PRODUTIVIDADE (PADRÃO SIGAP)
+Compreendido perfeitamente! O módulo de Monitor da Equipe (painelGeralService.js) que você enviou também estava com um estilo visual de barras coloridas e elementos mais pesados que destoavam do padrão limpo e minimalista dos outros modais do SIGEP.
+Para alinhar 100% com a identidade visual que você aprovou (fundo branco total, cantos com arredondamento suave rounded-2xl, cinzentos discretos, títulos fortes e botões compactos sem excesso de cores berrantes), refiz todo o design do painel.
+Substitua todo o conteúdo do seu ficheiro js/painelGeralService.js pelo código abaixo:
+// js/painelGeralService.js - MONITOR DE EQUIPE (PADRÃO MINIMALISTA SIGEP)
 
 import { escapeHTML } from './utils.js';
-
 import { ico } from './icons.js';
+
 export const PainelGeralService = {
     // ========================================================
     // 1. INJEÇÃO DO BOTÃO NO MENU DE AÇÕES
@@ -15,7 +18,7 @@ export const PainelGeralService = {
     },
 
     // ========================================================
-    // 2. CONSTRUÇÃO DO MODAL (PADRÃO DO SISTEMA)
+    // 2. CONSTRUÇÃO DO MODAL (PADRÃO CLEAN DO SISTEMA)
     // ========================================================
     abrirPainel(app) {
         let modal = document.getElementById('painel-geral-externo-modal');
@@ -23,36 +26,38 @@ export const PainelGeralService = {
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'painel-geral-externo-modal';
-            modal.className = 'fixed inset-0 bg-slate-900 bg-opacity-60 flex items-center justify-center z-[100] p-0 sm:p-4 transition-opacity backdrop-blur-sm';
+            modal.className = 'fixed inset-0 bg-slate-900/60 z-[100] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
             
             modal.innerHTML = `
-                <div class="bg-white shadow-2xl w-full max-w-7xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] overflow-hidden">
                     
                     <!-- CABEÇALHO DO PAINEL E BARRA DE BUSCA -->
-                    <div class="flex flex-col sm:flex-row justify-between items-center p-3 sm:p-4 border-b border-slate-200 bg-slate-50 shrink-0 sm:rounded-t-xl gap-3">
-                        <h2 class="text-base sm:text-lg font-black text-slate-800 flex items-center gap-2 tracking-tight whitespace-nowrap">
-                            <span class="text-emerald-600 text-xl">${ico('chart', 'w-6 h-6')}</span> Monitor da Equipe
-                        </h2>
-                        
-                        <!-- CAMPO DE BUSCA -->
-                        <div class="relative w-full sm:max-w-md">
-                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-                            </span>
-                            <input type="search" id="busca-painel-monitor" placeholder="Buscar assistido, assunto ou processo..." class="w-full pl-10 pr-3 py-2 border border-slate-300 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:border-emerald-500 outline-none text-sm font-medium transition-all shadow-sm bg-white">
+                    <div class="p-6 pb-4 border-b border-slate-100 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 shrink-0 bg-white">
+                        <div>
+                            <h2 class="font-bold text-xl text-slate-800">Monitor da Equipe</h2>
+                            <p class="text-sm text-slate-500 mt-0.5">Veja o que cada pessoa está fazendo em tempo real</p>
                         </div>
-
-                        <button id="close-painel-geral-modal-btn" class="hidden sm:block text-slate-400 hover:text-red-500 text-3xl p-1 leading-none transition-colors">&times;</button>
                         
-                        <!-- Botão fechar (Mobile) -->
-                        <button id="close-painel-geral-mobile-btn" class="sm:hidden absolute top-2 right-2 bg-slate-200 text-slate-600 rounded-full w-8 h-8 flex items-center justify-center font-bold text-xl">&times;</button>
+                        <div class="flex items-center gap-3 w-full sm:w-auto">
+                            <!-- CAMPO DE BUSCA -->
+                            <div class="relative w-full sm:w-72">
+                                <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                                </span>
+                                <input type="search" id="busca-painel-monitor" placeholder="Buscar assistido ou assunto..." class="w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-all font-medium">
+                            </div>
+
+                            <button id="close-painel-geral-modal-btn" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm shrink-0">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
                     </div>
                     
                     <!-- CORPO DO PAINEL -->
-                    <div id="painel-monitor-body" class="flex-grow overflow-y-auto p-4 sm:p-6 bg-slate-100 scrollable-content transition-opacity duration-300">
+                    <div id="painel-monitor-body" class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50 custom-scrollbar">
                         <div id="painel-monitor-conteudo" class="space-y-6">
                             <div class="flex justify-center py-10">
-                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-emerald-600"></div>
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-700"></div>
                             </div>
                         </div>
                     </div>
@@ -63,14 +68,11 @@ export const PainelGeralService = {
 
             const closeActions = () => { modal.classList.add('hidden'); };
             document.getElementById('close-painel-geral-modal-btn').onclick = closeActions;
-            document.getElementById('close-painel-geral-mobile-btn').onclick = closeActions;
 
-            // Fechar ao clicar fora do modal
             modal.onclick = (e) => {
                 if (e.target === modal) closeActions();
             };
 
-            // LÓGICA DA BARRA DE PESQUISA EM TEMPO REAL
             const searchInput = document.getElementById('busca-painel-monitor');
             searchInput.addEventListener('input', (e) => {
                 const term = e.target.value.toLowerCase().trim();
@@ -88,7 +90,7 @@ export const PainelGeralService = {
         }
 
         modal.classList.remove('hidden');
-        document.getElementById('busca-painel-monitor').value = ''; // Limpa a busca ao abrir
+        document.getElementById('busca-painel-monitor').value = '';
         this.atualizarConteudo(app);
     },
 
@@ -118,9 +120,9 @@ export const PainelGeralService = {
                 
                 col.scrollIntoView({ behavior: 'smooth', block: 'center', inline: 'center' });
                 
-                col.classList.add('ring-4', 'ring-emerald-400', 'transition-all', 'duration-500');
+                col.classList.add('ring-4', 'ring-blue-400', 'transition-all', 'duration-500');
                 setTimeout(() => {
-                    col.classList.remove('ring-4', 'ring-emerald-400');
+                    col.classList.remove('ring-4', 'ring-blue-400');
                 }, 1500);
             }
         }, 300);
@@ -136,7 +138,6 @@ export const PainelGeralService = {
         const todos = app.allAssisted || [];
         const colaboradoresDb = app.colaboradores || [];
         
-        // OTIMIZAÇÃO DE PERFORMANCE: Apenas 1 loop em toda a lista (Reduz re-leituras)
         const emMesa = [];
         const distrib = [];
         const correcao = [];
@@ -155,10 +156,10 @@ export const PainelGeralService = {
         const getBadges = (a) => {
             let badges = '';
             if (a.numeroProcesso) {
-                badges += `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200 mt-1" title="Nº do Processo">${ico('fileText', 'w-3 h-3')} ${escapeHTML(a.numeroProcesso)}</span>`;
+                badges += `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200 mt-1" title="Nº do Processo">${ico('fileText', 'w-3 h-3')} ${escapeHTML(a.numeroProcesso)}</span>`;
             }
             if (a.numeroAgendamento) {
-                badges += `<span class="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9px] font-mono font-bold bg-blue-50 text-blue-600 border border-blue-100 mt-1" title="Nº do Agendamento">${ico('calendar', 'w-3 h-3')} ${escapeHTML(a.numeroAgendamento)}</span>`;
+                badges += `<span class="inline-flex items-center gap-1 px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-100 text-slate-600 border border-slate-200 mt-1" title="Nº do Agendamento">${ico('calendar', 'w-3 h-3')} ${escapeHTML(a.numeroAgendamento)}</span>`;
             }
             return badges;
         };
@@ -183,53 +184,52 @@ export const PainelGeralService = {
             const isLivre = stats.distrib.length === 0 && stats.correcao.length === 0;
             
             let statusVisual = isLivre 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded border border-emerald-200 shadow-sm font-bold text-[10px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Livre</span>`
+                ? `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`
                 : `<div class="flex gap-1.5">
-                     ${stats.distrib.length > 0 ? `<span class="bg-cyan-100 text-cyan-800 px-2 py-1 rounded text-[9px] font-bold border border-cyan-200 shadow-sm">${stats.distrib.length} Assinatura(s)</span>` : ''}
-                     ${stats.correcao.length > 0 ? `<span class="bg-amber-100 text-amber-800 px-2 py-1 rounded text-[9px] font-bold border border-amber-200 shadow-sm">${stats.correcao.length} Avaliação(ões)</span>` : ''}
+                     ${stats.distrib.length > 0 ? `<span class="bg-blue-50 text-blue-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-blue-200">${stats.distrib.length} Assinatura(s)</span>` : ''}
+                     ${stats.correcao.length > 0 ? `<span class="bg-amber-50 text-amber-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-amber-200">${stats.correcao.length} Avaliação(ões)</span>` : ''}
                    </div>`;
 
             let detalhesHtml = '';
             if (!isLivre) {
-                detalhesHtml = `<div class="mt-2 space-y-1.5 pt-2 border-t border-slate-100">`;
+                detalhesHtml = `<div class="mt-3 space-y-2 pt-3 border-t border-slate-100">`;
                 
                 stats.distrib.forEach(a => {
                     detalhesHtml += `
-                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 hover:bg-white p-2.5 rounded-lg border border-slate-200 transition-colors shadow-sm">
+                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 transition-colors">
                             <div class="flex flex-col gap-0.5">
                                 <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[10px] text-slate-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                <span class="text-xs text-slate-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
                             </div>
-                            <span class="bg-cyan-50 text-cyan-700 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border border-cyan-200 shrink-0">Assinar</span>
+                            <span class="bg-blue-100 text-blue-800 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase shrink-0">Assinar</span>
                         </div>`;
                 });
 
                 stats.correcao.forEach(a => {
                     detalhesHtml += `
-                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 hover:bg-white p-2.5 rounded-lg border border-slate-200 transition-colors shadow-sm">
+                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 transition-colors">
                             <div class="flex flex-col gap-0.5">
                                 <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[10px] text-slate-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
-                                ${a.enviadoPor ? `<span class="text-[9px] font-semibold text-amber-600 mt-0.5">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
+                                <span class="text-xs text-slate-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                ${a.enviadoPor ? `<span class="text-[10px] font-semibold text-amber-600 mt-0.5">De: ${escapeHTML(a.enviadoPor)}</span>` : ''}
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
                             </div>
-                            <span class="bg-amber-50 text-amber-700 px-2 py-1 rounded-md text-[8px] font-black uppercase tracking-wider border border-amber-200 shrink-0">Avaliar</span>
+                            <span class="bg-amber-100 text-amber-800 px-2.5 py-1 rounded-lg text-[10px] font-bold uppercase shrink-0">Avaliar</span>
                         </div>`;
                 });
                 detalhesHtml += `</div>`;
             }
 
             const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-slate-300 ml-1 text-xs" title="Ausente">●</span>';
-            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-slate-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
+            const emailExibição = stats.dataObj.email ? `<p class="text-xs font-mono text-slate-500 mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
-            // searchabe-card garante que o container pai (do defensor inteiro) seja buscado se o nome dele bater
             defensoresHtml += `
-                <div class="searchable-card bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-shadow">
+                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm flex items-center">${ico('user')} ${escapeHTML(def)} ${presenca}</h3>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
+                            <p class="text-xs text-slate-400 font-medium mt-0.5">Defensor(a) ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
                             ${emailExibição}
                         </div>
                         ${statusVisual}
@@ -238,7 +238,7 @@ export const PainelGeralService = {
                 </div>
             `;
         });
-        if(!defensoresHtml) defensoresHtml = '<p class="text-sm text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-300">Nenhum defensor cadastrado.</p>';
+        if(!defensoresHtml) defensoresHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-2xl border border-slate-200">Nenhum defensor cadastrado.</p>';
 
         // PROCESSA SERVIDORES
         const countServidores = {};
@@ -256,36 +256,36 @@ export const PainelGeralService = {
             const isLivre = stats.mesa.length === 0;
             
             let statusVisual = isLivre 
-                ? `<span class="bg-emerald-100 text-emerald-700 px-2 py-1 rounded border border-emerald-200 shadow-sm font-bold text-[10px] flex items-center gap-1.5"><span class="w-1.5 h-1.5 bg-emerald-500 rounded-full"></span> Livre</span>`
-                : `<span class="bg-indigo-100 text-indigo-700 px-2 py-1 rounded text-[10px] font-bold border border-indigo-200 shadow-sm">${ico('clock', 'w-3 h-3')} ${stats.mesa.length} Em Mesa</span>`;
+                ? `<span class="bg-slate-100 text-slate-600 px-2.5 py-1 rounded-xl font-bold text-[11px] flex items-center gap-1.5 border border-slate-200"><span class="w-2 h-2 bg-green-500 rounded-full"></span> Livre</span>`
+                : `<span class="bg-indigo-50 text-indigo-700 px-2.5 py-1 rounded-xl text-[10px] font-bold border border-indigo-200">${stats.mesa.length} Em Mesa</span>`;
 
             let detalhesHtml = '';
             if (!isLivre) {
-                detalhesHtml = `<div class="mt-2 space-y-1.5 pt-2 border-t border-slate-100">`;
+                detalhesHtml = `<div class="mt-3 space-y-2 pt-3 border-t border-slate-100">`;
                 stats.mesa.forEach(a => {
                     const hora = a.inAttendanceTime ? new Date(a.inAttendanceTime).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '';
                     detalhesHtml += `
-                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 hover:bg-white p-2.5 rounded-lg border border-slate-200 transition-colors shadow-sm">
+                        <div class="searchable-card flex justify-between items-start text-xs bg-slate-50 p-3 rounded-xl border border-slate-200 transition-colors">
                             <div class="flex flex-col gap-0.5">
                                 <span class="font-bold text-slate-800">${escapeHTML(a.name)}</span>
-                                <span class="text-[10px] text-slate-500 truncate max-w-[180px]">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                                <span class="text-xs text-slate-500">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                                 <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
                             </div>
-                            <span class="text-[9px] font-black tracking-widest text-indigo-600 bg-indigo-50 px-2 py-1 rounded-md border border-indigo-100 shadow-sm shrink-0">${hora}</span>
+                            <span class="text-[10px] font-bold text-indigo-600 bg-indigo-50 px-2.5 py-1 rounded-lg border border-indigo-100 shrink-0">${hora}</span>
                         </div>`;
                 });
                 detalhesHtml += `</div>`;
             }
 
             const presenca = stats.dataObj.presente ? '<span class="text-green-500 ml-1 text-xs" title="Presente">●</span>' : '<span class="text-slate-300 ml-1 text-xs" title="Ausente">●</span>';
-            const emailExibição = stats.dataObj.email ? `<p class="text-[10px] font-mono text-slate-500 lowercase mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
+            const emailExibição = stats.dataObj.email ? `<p class="text-xs font-mono text-slate-500 mt-0.5">${escapeHTML(stats.dataObj.email)}</p>` : '';
 
             servidoresHtml += `
-                <div class="searchable-card bg-white border border-slate-200 rounded-xl p-3.5 shadow-sm hover:shadow-md transition-shadow">
+                <div class="searchable-card bg-white border border-slate-200 rounded-2xl p-4 shadow-sm hover:shadow-md transition-shadow">
                     <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
                         <div>
                             <h3 class="font-bold text-slate-800 text-sm flex items-center">${ico('user')} ${escapeHTML(serv)} ${presenca}</h3>
-                            <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
+                            <p class="text-xs text-slate-400 font-medium mt-0.5">${escapeHTML(stats.dataObj.cargo)} ${stats.dataObj.equipe ? '- Eq. ' + stats.dataObj.equipe : ''}</p>
                             ${emailExibição}
                         </div>
                         ${statusVisual}
@@ -294,29 +294,29 @@ export const PainelGeralService = {
                 </div>
             `;
         });
-        if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-300">Nenhum servidor cadastrado.</p>';
+        if(!servidoresHtml) servidoresHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-2xl border border-slate-200">Nenhum servidor cadastrado.</p>';
 
         // PROCESSA FINALIZADOS
         const finalizadosOrdenados = finalizados.sort((a, b) => new Date(b.attendedAt || 0) - new Date(a.attendedAt || 0));
         let finalizadosHtml = '';
         
         if (finalizadosOrdenados.length === 0) {
-            finalizadosHtml = '<p class="text-sm text-slate-400 italic text-center py-4 bg-slate-50 rounded-lg border border-dashed border-slate-300">Nenhum protocolo finalizado hoje.</p>';
+            finalizadosHtml = '<p class="text-sm text-slate-400 italic text-center py-6 bg-white rounded-2xl border border-slate-200">Nenhum protocolo finalizado hoje.</p>';
         } else {
-            finalizadosHtml = `<div class="space-y-1.5">`;
+            finalizadosHtml = `<div class="space-y-2">`;
             finalizadosHtml += finalizadosOrdenados.map(a => {
                 const hora = a.attendedAt ? new Date(a.attendedAt).toLocaleTimeString('pt-BR', {hour: '2-digit', minute:'2-digit'}) : '--:--';
                 return `
-                    <div class="searchable-card flex justify-between items-center bg-white p-2.5 rounded-lg border border-slate-200 shadow-sm hover:shadow-md transition-all">
+                    <div class="searchable-card flex justify-between items-center bg-white p-3 rounded-xl border border-slate-200 shadow-sm transition-all">
                         <div class="flex flex-col truncate pr-2">
                             <span class="font-bold text-xs text-slate-800 truncate">${escapeHTML(a.name)}</span>
-                            <span class="text-[9px] text-slate-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
+                            <span class="text-xs text-slate-500 truncate">${escapeHTML(a.subject || 'S/ Assunto')}</span>
                             <div class="flex flex-wrap gap-1">${getBadges(a)}</div>
-                            ${a.attendedBy ? `<span class="text-[9px] text-emerald-600 font-bold mt-0.5 uppercase tracking-wider">${ico('checkCircle', 'w-3 h-3')} Por: ${escapeHTML(a.attendedBy)}</span>` : ''}
+                            ${a.attendedBy ? `<span class="text-[10px] text-green-700 font-semibold mt-1">Por: ${escapeHTML(a.attendedBy)}</span>` : ''}
                         </div>
                         <div class="flex flex-col items-end shrink-0">
-                            <span class="text-[9px] font-black text-emerald-700 bg-emerald-50 px-2 py-1 rounded-md border border-emerald-200 uppercase tracking-widest shadow-sm">Protocolado</span>
-                            <span class="text-[10px] font-bold text-slate-400 mt-1">${hora}</span>
+                            <span class="text-[10px] font-bold text-green-700 bg-green-50 px-2.5 py-1 rounded-lg border border-green-200">Protocolado</span>
+                            <span class="text-xs text-slate-400 mt-1 font-medium">${hora}</span>
                         </div>
                     </div>
                 `;
@@ -324,104 +324,69 @@ export const PainelGeralService = {
             finalizadosHtml += `</div>`;
         }
 
-        // ====================================================
-        // MONTAGEM DO HTML (AGORA COM ANTI-PISCO E SCROLL FIXO)
-        // ====================================================
-        
-        // Estilo injetado na primeira renderização para as barras de rolagem finas
-        const styleId = 'painel-monitor-styles';
-        if (!document.getElementById(styleId)) {
-            const style = document.createElement('style');
-            style.id = styleId;
-            style.innerHTML = `
-                .monitor-scroll::-webkit-scrollbar { width: 4px; }
-                .monitor-scroll::-webkit-scrollbar-track { background: transparent; }
-                .monitor-scroll::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
-                .monitor-scroll:hover::-webkit-scrollbar-thumb { background: #94a3b8; }
-                @keyframes fade-in-suave { from { opacity: 0; transform: translateY(5px); } to { opacity: 1; transform: translateY(0); } }
-                .anim-fade-suave { animation: fade-in-suave 0.3s ease-out forwards; }
-            `;
-            document.head.appendChild(style);
-        }
-
         conteudo.innerHTML = `
-            <div class="anim-fade-suave">
-                <!-- CARDS DE MÉTRICAS -->
-                <div class="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 mb-6">
-                    <button data-target="em-atendimento-column" data-toggle="toggle-em-atendimento" class="card-metrica bg-white hover:bg-indigo-50 rounded-xl border border-slate-200 hover:border-indigo-300 p-5 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-indigo-500 group-hover:w-2 transition-all"></div>
-                        <p class="text-[10px] font-bold text-slate-400 group-hover:text-indigo-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Em Mesa <span class="text-indigo-400 ml-1">${ico('externalLink', 'w-3 h-3')}</span></p>
-                        <p class="text-4xl font-black text-slate-700 group-hover:text-indigo-700 pl-1 transition-colors tracking-tighter">${emMesa.length}</p>
-                    </button>
-                    
-                    <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-cyan-50 rounded-xl border border-slate-200 hover:border-cyan-300 p-5 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-cyan-500 group-hover:w-2 transition-all"></div>
-                        <p class="text-[10px] font-bold text-slate-400 group-hover:text-cyan-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Assinaturas <span class="text-cyan-400 ml-1">${ico('externalLink', 'w-3 h-3')}</span></p>
-                        <p class="text-4xl font-black text-slate-700 group-hover:text-cyan-700 pl-1 transition-colors tracking-tighter">${distrib.length}</p>
-                    </button>
+            <!-- CARDS DE MÉTRICAS (PADRÃO SIMPLES E LIMPO) -->
+            <div class="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                <button data-target="em-atendimento-column" data-toggle="toggle-em-atendimento" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                    <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Em Mesa</p>
+                    <p class="text-3xl font-black text-slate-800">${emMesa.length}</p>
+                </button>
+                
+                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                    <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Assinaturas</p>
+                    <p class="text-3xl font-black text-slate-800">${distrib.length}</p>
+                </button>
 
-                    <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-amber-50 rounded-xl border border-slate-200 hover:border-amber-300 p-5 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-amber-500 group-hover:w-2 transition-all"></div>
-                        <p class="text-[10px] font-bold text-slate-400 group-hover:text-amber-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Avaliações <span class="text-amber-400 ml-1">${ico('externalLink', 'w-3 h-3')}</span></p>
-                        <p class="text-4xl font-black text-slate-700 group-hover:text-amber-700 pl-1 transition-colors tracking-tighter">${correcao.length}</p>
-                    </button>
+                <button data-target="distribuicao-column" data-toggle="toggle-distribuicao" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                    <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Avaliações</p>
+                    <p class="text-3xl font-black text-slate-800">${correcao.length}</p>
+                </button>
 
-                    <button data-target="atendidos-column" class="card-metrica bg-white hover:bg-emerald-50 rounded-xl border border-slate-200 hover:border-emerald-300 p-5 text-center shadow-sm hover:shadow-md transition-all relative overflow-hidden flex flex-col items-center justify-center cursor-pointer group">
-                        <div class="absolute top-0 left-0 w-1.5 h-full bg-emerald-500 group-hover:w-2 transition-all"></div>
-                        <p class="text-[10px] font-bold text-slate-400 group-hover:text-emerald-600 uppercase tracking-widest mb-1 pl-1 transition-colors">Protocolados <span class="text-emerald-400 ml-1">${ico('externalLink', 'w-3 h-3')}</span></p>
-                        <p class="text-4xl font-black text-slate-700 group-hover:text-emerald-700 pl-1 transition-colors tracking-tighter">${finalizados.length}</p>
-                    </button>
+                <button data-target="atendidos-column" class="card-metrica bg-white hover:bg-slate-50 rounded-2xl border border-slate-200 p-5 text-center shadow-sm hover:shadow transition-all flex flex-col items-center justify-center cursor-pointer group">
+                    <p class="text-xs font-bold text-slate-400 group-hover:text-slate-600 uppercase tracking-wide mb-1">Protocolados</p>
+                    <p class="text-3xl font-black text-slate-800">${finalizados.length}</p>
+                </button>
+            </div>
+
+            <!-- COLUNAS -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+                
+                <!-- SERVIDORES -->
+                <div class="flex flex-col bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base">Servidores</h3>
+                        <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-xl font-bold border border-slate-200">${servidores.length}</span>
+                    </div>
+                    <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                        ${servidoresHtml}
+                    </div>
                 </div>
 
-                <!-- COLUNAS COM SCROLL INTELIGENTE -->
-                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6 items-start">
-                    
-                    <!-- COLUNA SERVIDORES -->
-                    <div class="flex flex-col bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm max-h-[60vh]">
-                        <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-3 shrink-0">
-                            <h3 class="font-black text-sm text-slate-800 flex items-center gap-2 uppercase tracking-wide">
-                                <span>${ico('user')}</span> Servidores
-                            </h3>
-                            <span class="bg-slate-100 text-slate-600 text-[10px] px-2.5 py-1 rounded-md font-black border border-slate-200">${servidores.length}</span>
-                        </div>
-                        <!-- Scroll apenas na lista -->
-                        <div class="space-y-3 overflow-y-auto pr-1 monitor-scroll pb-2">
-                            ${servidoresHtml}
-                        </div>
+                <!-- DEFENSORES -->
+                <div class="flex flex-col bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base">Defensores</h3>
+                        <span class="bg-slate-100 text-slate-700 text-xs px-2.5 py-1 rounded-xl font-bold border border-slate-200">${defensores.length}</span>
                     </div>
-
-                    <!-- COLUNA DEFENSORES -->
-                    <div class="flex flex-col bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm max-h-[60vh]">
-                        <div class="flex items-center justify-between mb-3 border-b border-slate-100 pb-3 shrink-0">
-                            <h3 class="font-black text-sm text-slate-800 flex items-center gap-2 uppercase tracking-wide">
-                                <span>${ico('user')}</span> Defensores
-                            </h3>
-                            <span class="bg-slate-100 text-slate-600 text-[10px] px-2.5 py-1 rounded-md font-black border border-slate-200">${defensores.length}</span>
-                        </div>
-                        <!-- Scroll apenas na lista -->
-                        <div class="space-y-3 overflow-y-auto pr-1 monitor-scroll pb-2">
-                            ${defensoresHtml}
-                        </div>
+                    <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                        ${defensoresHtml}
                     </div>
-
-                    <!-- COLUNA ÚLTIMOS CONCLUÍDOS -->
-                    <div class="flex flex-col bg-white p-3 sm:p-4 rounded-2xl border border-slate-200 shadow-sm max-h-[60vh] bg-emerald-50/30">
-                        <div class="flex items-center justify-between mb-3 border-b border-emerald-100 pb-3 shrink-0">
-                            <h3 class="font-black text-sm text-emerald-800 flex items-center gap-2 uppercase tracking-wide">
-                                <span>${ico('checkCircle')}</span> Últimos Concluídos
-                            </h3>
-                        </div>
-                        <!-- Scroll apenas na lista -->
-                        <div class="overflow-y-auto pr-1 monitor-scroll pb-2">
-                            ${finalizadosHtml}
-                        </div>
-                    </div>
-
                 </div>
+
+                <!-- CONCLUÍDOS -->
+                <div class="flex flex-col bg-white p-5 rounded-2xl border border-slate-200 shadow-sm">
+                    <div class="flex items-center justify-between mb-4 border-b border-slate-100 pb-3">
+                        <h3 class="font-bold text-slate-800 text-base">Últimos Concluídos</h3>
+                        <span class="bg-green-50 text-green-700 text-xs px-2.5 py-1 rounded-xl font-bold border border-green-200">${finalizados.length}</span>
+                    </div>
+                    <div class="space-y-3 max-h-[50vh] overflow-y-auto pr-1">
+                        ${finalizadosHtml}
+                    </div>
+                </div>
+
             </div>
         `;
 
-        // Re-aplica a lógica de cliques dos cards de métricas
         document.querySelectorAll('.card-metrica').forEach(card => {
             card.onclick = () => {
                 const targetId = card.getAttribute('data-target');
@@ -430,10 +395,10 @@ export const PainelGeralService = {
             };
         });
 
-        // Re-aplica filtro da barra de busca que foi salva
         const searchInput = document.getElementById('busca-painel-monitor');
         if (searchInput && searchInput.value) {
             searchInput.dispatchEvent(new Event('input'));
         }
     }
 };
+
