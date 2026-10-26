@@ -5,6 +5,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 import { injetarEstilos, ico } from './rcDesign.js';
+import { icoFrom, nomeIcone } from './icons.js';
 
 const PAINEL_BASE_URL = 'acompanhamento-recepcao.html';
 
@@ -22,13 +23,13 @@ const CORES = {
 };
 
 const ICONES_SUGERIDOS = {
-    familia:  '👨‍👩‍👧',
-    civel:    '⚖️',
-    criminal: '🔫',
-    infancia: '🧒',
-    fazenda:  '🏛️',
-    cejusc:   '🤝',
-    default:  '📋',
+    familia:  'users',
+    civel:    'scale',
+    criminal: 'alertCircle',
+    infancia: 'baby',
+    fazenda:  'landmark',
+    cejusc:   'userPlus',
+    default:  'clipboard',
 };
 
 const MODOS_LABEL = {
@@ -239,7 +240,7 @@ export const RecepcaoConfigService = {
 
     getContextoRecepcao(recepcao) {
         if (!recepcao) {
-            return { icone: '🏛️', titulo: 'Recepção', subtitulo: '', cor: 'bg-slate-800' };
+            return { icone: 'landmark', titulo: 'Recepção', subtitulo: '', cor: 'bg-slate-800' };
         }
         const corConfig = corDe(recepcao);
 
@@ -341,7 +342,7 @@ export const RecepcaoConfigService = {
                 data-unidade-id="${escapeHTML(rec.unidadeId || '')}"
                 data-search="${escapeHTML([rec.nome, ...grupos, rec.andar || '', rec.tipo].join(' ').toLowerCase())}"
                 data-tipo="${escapeHTML(rec.tipo || 'especializada')}">
-                <span class="rc-tile">${rec.icone || ICONES_SUGERIDOS.default}</span>
+                <span class="rc-tile">${icoFrom(rec.icone || ICONES_SUGERIDOS.default, 'w-5 h-5')}</span>
                 <span class="min-w-0 flex-1">
                     <span class="flex items-center gap-2">
                         <span class="font-extrabold text-[15px] leading-tight truncate" style="color:var(--rc-text)">${escapeHTML(rec.nome)}</span>
@@ -439,7 +440,7 @@ export const RecepcaoConfigService = {
                     data-search="${escapeHTML([rec.nome, rec.unidadeNome || '', ...grupos, rec.andar || ''].join(' ').toLowerCase())}">
                     <td>
                         <div class="flex items-center gap-3 min-w-0">
-                            <span class="rc-tile" style="--tint:${cor.tint};--line:${cor.line};width:38px;height:38px;font-size:19px">${rec.icone || ICONES_SUGERIDOS.default}</span>
+                            <span class="rc-tile" style="--tint:${cor.tint};--line:${cor.line};width:38px;height:38px;font-size:19px">${icoFrom(rec.icone || ICONES_SUGERIDOS.default, 'w-5 h-5')}</span>
                             <div class="min-w-0">
                                 <p class="font-bold text-sm truncate" style="max-width:200px">${escapeHTML(rec.nome)}</p>
                                 <p class="text-xs truncate" style="max-width:200px;color:var(--rc-muted)">${escapeHTML([unidade, rec.andar].filter(Boolean).join(' · ')) || '—'}</p>
@@ -557,7 +558,7 @@ export const RecepcaoConfigService = {
         const titulo   = isEdicao ? 'Editar recepção' : 'Nova recepção';
 
         const corAtual   = recepcao?.cor || 'slate';
-        const iconeAtual = recepcao?.icone || ICONES_SUGERIDOS.default;
+        const iconeAtual = nomeIcone(recepcao?.icone || ICONES_SUGERIDOS.default);
 
         const coresHtml = Object.entries(CORES).map(([key, val]) => `
             <button type="button" class="color-option rc-swatch ${corAtual === key ? 'is-selected' : ''}"
@@ -565,7 +566,7 @@ export const RecepcaoConfigService = {
         `).join('');
 
         const iconesHtml = Object.values(ICONES_SUGERIDOS).map(icone => `
-            <button type="button" class="icone-option rc-icon-opt ${iconeAtual === icone ? 'is-selected' : ''}" data-icone="${icone}">${icone}</button>
+            <button type="button" class="icone-option rc-icon-opt ${iconeAtual === icone ? 'is-selected' : ''}" data-icone="${icone}">${icoFrom(icone, 'w-5 h-5')}</button>
         `).join('');
 
         const modoAtual = recepcao?.modoVisualizacao || 'fila';
