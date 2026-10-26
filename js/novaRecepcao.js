@@ -16,6 +16,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
+import { ico, icoFrom } from './icons.js';
 // ─── ASSUNTOS PADRÃO ──────────────────────────────────────────────────────────
 
 const ASSUNTOS_PADRAO = [
@@ -40,7 +41,7 @@ const TIPOS = [
     {
         value: 'central',
         label: 'Central',
-        emoji: '🏛️',
+        emoji: 'landmark',
         cor: '#EEEDFE',
         corTexto: '#3C3489',
         descricao: 'Painel principal da unidade. Exibe e gerencia <strong>todas</strong> as filas e áreas.',
@@ -48,7 +49,7 @@ const TIPOS = [
     {
         value: 'especializada',
         label: 'Especializada',
-        emoji: '⚖️',
+        emoji: 'scale',
         cor: '#FAEEDA',
         corTexto: '#633806',
         descricao: 'Focada em um <strong>único assunto</strong> (ex: Família, Criminal).',
@@ -56,7 +57,7 @@ const TIPOS = [
     {
         value: 'mista',
         label: 'Mista',
-        emoji: '📋',
+        emoji: 'clipboard',
         cor: '#E6F1FB',
         corTexto: '#0C447C',
         descricao: 'Agrupa <strong>duas ou mais áreas diferentes</strong> no mesmo ponto de atendimento.',
@@ -64,7 +65,7 @@ const TIPOS = [
     {
         value: 'generalista',
         label: 'Generalista',
-        emoji: '🗂️',
+        emoji: 'folder',
         cor: '#EAF3DE',
         corTexto: '#27500A',
         descricao: 'Focada em <strong>triagem inicial</strong>. Serve para recepcionar e encaminhar.',
@@ -208,7 +209,7 @@ export async function abrirModalNovaRecepcao(app, { unidadeId, unidadeNome, orga
                                        transition:border-color .15s,background .15s" class="nr-tipo-card">
                                     <div style="display:flex;align-items:center;gap:8px">
                                         <input type="radio" name="nr-tipo" value="${t.value}" style="accent-color:#1e293b">
-                                        <span style="font-size:13px;font-weight:500;color:var(--color-text-primary,#111)">${t.emoji} ${t.label}</span>
+                                        <span style="font-size:13px;font-weight:500;color:var(--color-text-primary,#111)">${icoFrom(t.emoji, 'w-4 h-4')} ${t.label}</span>
                                     </div>
                                     <p style="font-size:11px;color:var(--color-text-secondary,#6b7280);line-height:1.5;margin-left:22px">
                                         ${t.descricao}
@@ -228,7 +229,7 @@ export async function abrirModalNovaRecepcao(app, { unidadeId, unidadeNome, orga
                                 <button id="nr-btn-gerenciar-assuntos" type="button"
                                     style="font-size:11px;padding:3px 8px;border:0.5px solid var(--color-border-secondary,#d1d5db);
                                            border-radius:6px;background:transparent;cursor:pointer;color:var(--color-text-secondary,#6b7280)">
-                                    ⚙️ Gerenciar lista
+                                    ${ico('settings')} Gerenciar lista
                                 </button>
                             ` : ''}
                         </div>
@@ -400,7 +401,7 @@ export async function abrirModalNovaRecepcao(app, { unidadeId, unidadeNome, orga
         console.log("Modal de Nova Recepção carregado e desenhado com sucesso!");
         
     } catch (criticalError) {
-        console.error("❌ Erro ao abrir Modal Nova Recepção:", criticalError);
+        console.error("Erro ao abrir Modal Nova Recepção:", criticalError);
         alert("Não foi possível abrir a tela de recepção. Erro: " + criticalError.message);
     }
 }
@@ -429,7 +430,7 @@ function abrirSubModalAssuntos(db, listaAtual, onSalvar) {
                         display:flex;flex-direction:column;box-shadow:0 4px 32px rgba(0,0,0,.25)">
                 <div style="padding:16px 20px;border-bottom:0.5px solid var(--color-border-tertiary,#e5e7eb);
                             display:flex;align-items:center;justify-content:space-between;flex-shrink:0">
-                    <h3 style="font-size:14px;font-weight:500;color:var(--color-text-primary,#111)">⚙️ Gerenciar assuntos</h3>
+                    <h3 style="font-size:14px;font-weight:500;color:var(--color-text-primary,#111)">${ico('settings', 'w-5 h-5')} Gerenciar assuntos</h3>
                     <button id="nra-fechar" style="width:28px;height:28px;border-radius:6px;border:0.5px solid var(--color-border-secondary,#d1d5db);
                              background:transparent;cursor:pointer;font-size:16px;color:var(--color-text-secondary,#6b7280);
                              display:flex;align-items:center;justify-content:center">×</button>
