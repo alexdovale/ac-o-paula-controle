@@ -13,6 +13,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 function initials(name = '') {
@@ -163,7 +164,7 @@ export async function abrirGerenciarUnidades(app, usuarioId) {
                     
                     <div class="p-3 border-b border-slate-200 bg-white">
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">🔍</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400">${ico('search')}</span>
                             <input type="search" id="guu-filtro-disp" value="${escapeHTML(filtroDisponivel)}"
                                 placeholder="Filtrar por nome ou sigla..."
                                 class="w-full bg-slate-50 border border-slate-300 rounded-lg pl-9 pr-3 py-2 text-xs outline-none focus:ring-1 focus:ring-slate-900">
