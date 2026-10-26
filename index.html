@@ -276,6 +276,13 @@
                         <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
                     </div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
+                    
+                    <!-- NOVO LINK: Autenticação em dois fatores -->
+                    <div class="mt-4 text-center">
+                        <a href="#" id="info-2fa-login-link" class="text-sm text-sky-600 hover:text-sky-800 font-medium transition-colors">
+                            Autenticação em dois fatores
+                        </a>
+                    </div>
                 </form>
                 <form id="register-form" class="hidden space-y-4">
                     <div><label for="register-name" class="block text-sm font-medium text-slate-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
@@ -437,7 +444,7 @@
             
             <div id="filters-container" class="mb-4"></div>
             
-            <!-- BARRA DE PESQUISA DE PAUTAS -->
+            <!-- 🌟 BARRA DE PESQUISA DE PAUTAS 🌟 -->
             <div class="mb-6 flex justify-end w-full">
                 <div class="relative w-full sm:w-96">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -1189,7 +1196,150 @@
     </div>
 
     <!-- RECIPIENTE DE MODAIS -->
-    <div id="modals-container"></div>
+    <div id="modals-container">
+        
+        <!-- MODAL DE CONFIGURAÇÕES DA PAUTA (PADRÃO SIGEP) -->
+        <div id="config-pauta-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+            <div class="bg-white rounded-2xl shadow-2xl w-full max-w-lg flex flex-col max-h-[90vh] overflow-hidden">
+                <div class="p-6 text-center shrink-0 border-b border-slate-100">
+                    <h2 class="text-2xl font-black text-slate-800">Editar Configurações</h2>
+                    <p class="text-sm text-slate-500 mt-1 font-medium">Edite as configurações da pauta no SIGEP</p>
+                </div>
+                
+                <div class="p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/50">
+                    <!-- TIPO DE PAUTA -->
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-700 mb-3">Tipo de Pauta</h3>
+                        <div class="space-y-3">
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-tipo-pauta" value="agendamento" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Agendado</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Atendimentos com hora marcada</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-tipo-pauta" value="avulso" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Avulso</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Atendimentos por ordem de chegada</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-tipo-pauta" value="multisala" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Multi-Salas</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Atendimentos distribuídos em salas</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- ORDEM DE ATENDIMENTO -->
+                    <div>
+                        <h3 class="text-sm font-bold text-slate-700 mb-3">Ordem de Atendimento</h3>
+                        <div class="space-y-3">
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-orange-300 transition-colors">
+                                <input type="radio" name="config-ordem-atendimento" value="flexivel_alerta" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-orange-500 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-orange-500 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Flexível c/ Alertas (Pisca-Alerta)</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Avisa atrasos visualmente. Garante a prioridade absoluta de quem é pontual.</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-orange-500 pointer-events-none transition-colors"></div>
+                            </label>
+
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-ordem-atendimento" value="flexivel" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Flexível (Encaixe)</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Pontuais não perdem a vez. Atrasados viram encaixe na ordem de chegada.</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+                            
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-ordem-atendimento" value="proporcional" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Proporcional (3x1)</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">A cada 3 pontuais, puxa 1 atrasado.</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+
+                            <label class="relative flex cursor-pointer rounded-xl border border-slate-200 bg-white p-4 shadow-sm hover:border-blue-300 transition-colors">
+                                <input type="radio" name="config-ordem-atendimento" value="chegada" class="peer sr-only">
+                                <div class="flex items-start w-full">
+                                    <div class="flex h-5 items-center justify-center mt-0.5">
+                                        <div class="w-4 h-4 rounded-full border-2 border-slate-300 peer-checked:border-blue-600 flex items-center justify-center transition-colors">
+                                            <div class="w-2 h-2 rounded-full bg-blue-600 opacity-0 transition-opacity peer-checked:opacity-100"></div>
+                                        </div>
+                                    </div>
+                                    <div class="ml-3 flex flex-col">
+                                        <span class="text-sm font-bold text-slate-800">Ordem de Chegada</span>
+                                        <span class="text-xs text-slate-500 font-medium mt-0.5">Atende estritamente na ordem do check-in na recepção.</span>
+                                    </div>
+                                </div>
+                                <div class="absolute inset-0 rounded-xl border-2 border-transparent peer-checked:border-blue-600 pointer-events-none transition-colors"></div>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="p-6 bg-white border-t border-slate-100 flex gap-3 shrink-0">
+                    <button id="cancel-config-pauta-btn" class="flex-1 bg-slate-100 text-slate-700 font-bold py-3.5 rounded-xl hover:bg-slate-200 transition-colors">Cancelar</button>
+                    <button id="save-config-pauta-btn" class="flex-1 bg-blue-600 text-white font-bold py-3.5 rounded-xl hover:bg-blue-700 transition-colors shadow-md">Salvar</button>
+                </div>
+            </div>
+        </div>
+        
+    </div>
 
     <!-- MODAL DE OUVIDORIA / FEEDBACK -->
     <div id="feedback-global-modal" class="hidden fixed inset-0 bg-slate-900/80 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in">
@@ -1803,9 +1953,6 @@
                 }
             });
         }
-    </script>
-    
-   
     </script>
 </body>
 </html>
