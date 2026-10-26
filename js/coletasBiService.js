@@ -49,6 +49,7 @@ export const ColetasBiService = {
     async abrirResultados(db, coletaId) {
         const container = document.getElementById('container-construtor-coleta');
         if (!container) return;
+        this._aberto = true;
 
         container.classList.remove('hidden');
         container.innerHTML = `
@@ -541,8 +542,9 @@ export const ColetasBiService = {
             </div>
         </div>`;
 
+        // Se o usuário já saiu do BI enquanto os dados carregavam, não desenha nada
+        if (this._aberto === false) return;
         container.innerHTML = html;
-        container.scrollIntoView({ behavior: 'smooth' });
     },
 
     // ============================================================
@@ -695,6 +697,18 @@ export const ColetasBiService = {
 
         document.getElementById('btn-parar-refresh')?.classList.remove('hidden');
         showNotification("Atualização automática ativada (5 minutos).", "info");
+    },
+
+    // Chamado ao sair do módulo de Coletas: encerra tudo que o BI deixou rodando ou aberto
+    fechar() {
+        this._aberto = false;
+        if (this._refreshInterval) {
+            clearInterval(this._refreshInterval);
+            this._refreshInterval = null;
+        }
+        ['modal-insights', 'modal-config-exportacao'].forEach(id => document.getElementById(id)?.remove());
+        const container = document.getElementById('container-construtor-coleta');
+        if (container) { container.classList.add('hidden'); container.innerHTML = ''; }
     },
 
     pararAutoRefresh() {
