@@ -1,3 +1,4 @@
+import { ico } from './icons.js';
 const todosOsModaisHTML = `
     <!-- MODAL DE ACEITE LGPD -->
     <div id="lgpd-acceptance-modal" class="hidden fixed inset-0 bg-gray-900 bg-opacity-50 flex items-center justify-center z-50 p-2 sm:p-4">
@@ -99,7 +100,7 @@ const todosOsModaisHTML = `
         <div id="admin-window" class="bg-white shadow-2xl w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl transition-all duration-300 animate-scale-up" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center bg-slate-50 px-4 py-3 border-b select-none shrink-0 sm:rounded-t-xl">
                 <div class="flex items-center gap-2">
-                    <span class="text-blue-600 text-base">🛡️</span>
+                    <span class="text-blue-600 text-base">${ico('shield', 'w-5 h-5')}</span>
                     <h2 class="text-xs sm:text-sm font-bold text-slate-700 uppercase tracking-wider">Painel do Administrador SIGEP</h2>
                 </div>
                 <div class="flex items-center gap-1 sm:gap-2">
@@ -121,7 +122,7 @@ const todosOsModaisHTML = `
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
                     <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm hover:shadow-md transition">
                         <button id="btn-unidades-master" class="w-full text-left flex items-start gap-3">
-                            <span class="text-2xl">🏢</span>
+                            <span class="text-2xl">${ico('building', 'w-7 h-7')}</span>
                             <div>
                                 <h3 class="font-bold text-slate-800 text-sm">Unidades / Órgãos</h3>
                                 <p class="text-[10px] text-slate-500 mt-0.5">Gerenciar ou importar estrutura hierárquica</p>
@@ -344,7 +345,7 @@ const todosOsModaisHTML = `
 
             <!-- INSERÇÃO DA TOLERÂNCIA AQUI! -->
             <div class="mb-4 sm:mb-6">
-                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">⏳ Tolerância de Atraso</h3>
+                <h3 class="font-semibold text-gray-700 mb-2 text-sm sm:text-base">${ico('clock')} Tolerância de Atraso</h3>
                 <label class="block text-[10px] sm:text-xs text-gray-500 mb-1">Tempo limite (em minutos) antes de virar encaixe:</label>
                 <input type="number" id="edit-pauta-tolerancia-input" min="0" class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-indigo-500 outline-none shadow-sm">
             </div>
@@ -580,7 +581,7 @@ const todosOsModaisHTML = `
         <div class="bg-white w-full max-w-4xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 sm:rounded-t-xl shrink-0">
                 <h2 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <span class="text-violet-600">👥</span> Lista de Presença da Equipe
+                    <span class="text-violet-600">${ico('users', 'w-5 h-5')}</span> Lista de Presença da Equipe
                 </h2>
                 <button id="close-collaborators-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
             </div>
@@ -664,9 +665,9 @@ const todosOsModaisHTML = `
                     <table id="collaborators-list-table-modal" class="w-full min-w-max text-left border-collapse bg-white">
                         <thead class="bg-gray-50 text-[9px] font-black text-gray-400 uppercase border-b">
                             <tr>
-                                <th class="p-2 sm:p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('nome')">Membro ↕️</th>
+                                <th class="p-2 sm:p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('nome')">Membro ${ico('arrowUpDown', 'w-3 h-3')}</th>
                                 <th class="p-2 sm:p-3 text-center">Presença</th>
-                                <th class="p-2 sm:p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('equipe')">Cargo/Equipe ↕️</th>
+                                <th class="p-2 sm:p-3 cursor-pointer hover:text-violet-600" onclick="window.sortColaboradores('equipe')">Cargo/Equipe ${ico('arrowUpDown', 'w-3 h-3')}</th>
                                 <th class="p-2 sm:p-3">Horário</th>
                                 <th class="p-2 sm:p-3 text-center">Ações</th>
                             </tr>
@@ -731,7 +732,7 @@ const todosOsModaisHTML = `
             <div class="mb-4 shrink-0">
                 <input type="text" 
                        id="collaborator-search-input" 
-                       placeholder="🔍 Pesquisar colaborador..." 
+                       placeholder="Pesquisar colaborador..." 
                        class="w-full p-3 border border-gray-300 rounded-lg text-sm sm:text-base focus:ring-2 focus:ring-blue-500 focus:border-blue-500 outline-none transition-all">
             </div>
             
@@ -922,14 +923,14 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             <p class="mb-4 sm:mb-6 text-xs sm:text-sm text-gray-500">Selecione uma ou mais categorias:</p>
             
             <div id="priority-types-grid" class="grid grid-cols-2 gap-2 mb-4 sm:mb-6">
-                <button type="button" data-value="Idoso (60+)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👴 Idoso (60+)</button>
-                <button type="button" data-value="Idoso (80+)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🎖️ Idoso (80+)</button>
-                <button type="button" data-value="Deficiência (PCD)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">♿ Deficiência</button>
-                <button type="button" data-value="Autismo (TEA)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🧩 Autismo</button>
-                <button type="button" data-value="Gestante" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🤰 Gestante</button>
-                <button type="button" data-value="Criança de Colo" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">👶 Colo</button>
-                <button type="button" data-value="Obesidade" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">⚖️ Obesidade</button>
-                <button type="button" data-value="Urgência Médica" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">🚑 Médica</button>
+                <button type="button" data-value="Idoso (60+)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('user', 'w-3.5 h-3.5')} Idoso (60+)</button>
+                <button type="button" data-value="Idoso (80+)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('award', 'w-3.5 h-3.5')} Idoso (80+)</button>
+                <button type="button" data-value="Deficiência (PCD)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('accessibility', 'w-3.5 h-3.5')} Deficiência</button>
+                <button type="button" data-value="Autismo (TEA)" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('layoutGrid', 'w-3.5 h-3.5')} Autismo</button>
+                <button type="button" data-value="Gestante" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('heart', 'w-3.5 h-3.5')} Gestante</button>
+                <button type="button" data-value="Criança de Colo" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('baby', 'w-3.5 h-3.5')} Colo</button>
+                <button type="button" data-value="Obesidade" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('scale', 'w-3.5 h-3.5')} Obesidade</button>
+                <button type="button" data-value="Urgência Médica" class="p-chip border border-gray-200 rounded-lg py-2.5 px-2 text-[10px] sm:text-xs font-semibold hover:bg-red-50 hover:border-red-200 transition">${ico('heartPulse', 'w-3.5 h-3.5')} Médica</button>
             </div>
     
             <label class="block text-[10px] sm:text-xs font-bold text-gray-400 uppercase mb-1">Outros / Observações:</label>
@@ -1024,7 +1025,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                             </div>
                         </div>
                         <div class="flex flex-wrap sm:flex-nowrap grid-cols-3 sm:grid-cols-none gap-2 w-full">
-                            <button id="btn-gerar-captacao" class="flex-1 sm:flex-none sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-3 rounded-lg text-xs uppercase shadow-sm hover:bg-blue-700 transition-colors">🔗 Captação</button>
+                            <button id="btn-gerar-captacao" class="flex-1 sm:flex-none sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-3 rounded-lg text-xs uppercase shadow-sm hover:bg-blue-700 transition-colors">${ico('link', 'w-3.5 h-3.5')} Captação</button>
                             <button id="print-checklist-btn" class="flex-1 sm:flex-none sm:w-24 bg-red-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm hover:bg-red-700 transition-colors">PDF</button>
                             <button id="reset-checklist-btn" class="flex-1 sm:flex-none sm:w-24 bg-amber-500 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-sm hover:bg-amber-600 transition-colors">Mudar</button>
                             <button id="save-checklist-btn" class="flex-1 sm:flex-none sm:w-32 bg-green-600 text-white font-bold py-2.5 rounded-lg text-xs uppercase shadow-lg hover:bg-green-700 transition-colors">Salvar</button>
@@ -1058,7 +1059,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 </div>
 
                 <div class="pt-4 border-t border-gray-100">
-                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">🔊 Sons de Notificação</h3>
+                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">${ico('volume', 'w-5 h-5')} Sons de Notificação</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
                             <input type="checkbox" id="pref-enable-sounds-success" class="h-4 w-4 text-green-600 rounded" checked>
@@ -1080,7 +1081,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
                 </div>
 
                 <div class="pt-4 border-t border-gray-100">
-                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">💬 Mensagens na Tela (Toasts)</h3>
+                    <h3 class="font-bold text-gray-700 mb-3 flex items-center gap-2">${ico('messageCircle', 'w-5 h-5')} Mensagens na Tela (Toasts)</h3>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
                         <label class="flex items-center p-2 hover:bg-gray-50 rounded-lg cursor-pointer border border-transparent hover:border-gray-200">
                             <input type="checkbox" id="pref-show-toasts-success" class="h-4 w-4 text-green-600 rounded" checked>
@@ -1137,7 +1138,7 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
         <div class="bg-white shadow-xl w-full max-w-6xl flex flex-col h-full sm:h-auto sm:rounded-xl sm:max-h-[95vh]" style="max-height: 100vh;" onclick="event.stopPropagation()">
             <div class="flex justify-between items-center p-3 sm:p-4 border-b bg-gray-50 shrink-0 sm:rounded-t-xl">
                 <h2 class="text-base sm:text-lg font-bold text-gray-800 flex items-center gap-2">
-                    <span class="text-green-600">📊</span> Estatísticas da Pauta
+                    <span class="text-green-600">${ico('chart', 'w-5 h-5')}</span> Estatísticas da Pauta
                 </h2>
                 <button id="close-statistics-modal-btn" class="text-gray-400 hover:text-red-500 text-3xl p-1 leading-none">&times;</button>
             </div>
@@ -1154,25 +1155,25 @@ Nome Completo do Assistido;HH:MM;Matéria do Assunto;CPF(opcional)</code></pre>
             </div>
             <div class="p-5 sm:p-6 space-y-4 overflow-y-auto scrollable-content">
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🏷️ Nome da Ação / Projeto</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">${ico('tag', 'w-3.5 h-3.5')} Nome da Ação / Projeto</label>
                     <input type="text" id="ata-acao-nome" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Mutirão de Documentação">
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📍 Endereço do Evento</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">${ico('mapPin', 'w-3.5 h-3.5')} Endereço do Evento</label>
                     <input type="text" id="ata-endereco" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Praça do Pacificador, Centro, Caxias">
                 </div>
                 <div class="grid grid-cols-2 gap-3">
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">📅 Data</label>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">${ico('calendar', 'w-3.5 h-3.5')} Data</label>
                         <input type="date" id="ata-data" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm">
                     </div>
                     <div>
-                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🔢 Total Assistidos</label>
+                        <label class="block text-xs font-bold text-gray-700 uppercase mb-1">${ico('hash', 'w-3.5 h-3.5')} Total Assistidos</label>
                         <input type="number" id="ata-total" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm bg-gray-50 font-bold" min="0" title="Calculado automaticamente ou manual">
                     </div>
                 </div>
                 <div>
-                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">🏢 Órgão de Atendimento (SIGEP)</label>
+                    <label class="block text-xs font-bold text-gray-700 uppercase mb-1">${ico('building', 'w-3.5 h-3.5')} Órgão de Atendimento (SIGEP)</label>
                     <input type="text" id="ata-orgao" class="w-full p-2.5 border border-gray-300 rounded-lg text-sm" placeholder="Ex: Defensoria Pública - Duque de Caxias">
                 </div>
             </div>
