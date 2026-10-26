@@ -4,6 +4,7 @@ import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/fire
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
 import { showNotification, escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 export const MonitoramentoService = {
 
     // ========================================================
@@ -62,7 +63,7 @@ export const MonitoramentoService = {
                 btnImprimir = document.createElement('button');
                 btnImprimir.id = 'monitor-btn-imprimir';
                 btnImprimir.className = 'px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider bg-slate-700 text-white hover:bg-slate-800 ml-2 flex items-center gap-1';
-                btnImprimir.innerHTML = '🖨️ Dossiê';
+                btnImprimir.innerHTML = 'Dossiê';
                 btnVerde.parentNode.appendChild(btnImprimir);
             }
 
@@ -82,7 +83,7 @@ export const MonitoramentoService = {
 
             const isVerde = data.noVerde || false;
             if(btnVerde) {
-                btnVerde.textContent = isVerde ? '✅ NO VERDE' : '⏳ PENDENTE';
+                btnVerde.textContent = isVerde ? 'NO VERDE' : 'PENDENTE';
                 btnVerde.className = `px-3 py-1.5 rounded-lg font-bold text-[10px] transition-all shadow-sm uppercase tracking-wider ${isVerde ? 'bg-emerald-600 text-white' : 'bg-slate-200 text-slate-700 hover:bg-slate-300'}`;
                 
                 btnVerde.onclick = async () => {
@@ -142,7 +143,7 @@ export const MonitoramentoService = {
                     docsDigitalizados.forEach(docItem => {
                         listaArquivosContainer.innerHTML += `
                             <div class="flex justify-between items-center bg-blue-50 p-2 rounded-lg border border-blue-100">
-                                <span class="text-[10px] font-bold text-blue-800 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">📄 ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
+                                <span class="text-[10px] font-bold text-blue-800 truncate flex-1" title="${escapeHTML(docItem.titulo || docItem.nomeArquivo)}">${ico('fileText', 'w-3 h-3')} ${escapeHTML(docItem.titulo || docItem.nomeArquivo)}</span>
                                 <a href="${docItem.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-1 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
                             </div>
                         `;
@@ -163,7 +164,7 @@ export const MonitoramentoService = {
                     }
 
                     btnEnviarUpload.disabled = true;
-                    btnEnviarUpload.innerHTML = "⌛ A ENVIAR...";
+                    btnEnviarUpload.innerHTML = "A ENVIAR...";
 
                     try {
                         const storage = getStorage(app.db.app);
@@ -191,7 +192,7 @@ export const MonitoramentoService = {
                         console.error(err);
                         showNotification("Erro ao enviar o documento para a nuvem.", "error");
                         btnEnviarUpload.disabled = false;
-                        btnEnviarUpload.innerHTML = "🚀 ENVIAR PARA A NUVEM";
+                        btnEnviarUpload.innerHTML = "ENVIAR PARA A NUVEM";
                     }
                 };
             }
@@ -292,7 +293,7 @@ export const MonitoramentoService = {
             return;
         }
 
-        // 🌟 ORDENAÇÃO INTELIGENTE (SLA): Quem espera há mais tempo aparece primeiro
+        // ORDENAÇÃO INTELIGENTE (SLA): Quem espera há mais tempo aparece primeiro
         assistidos.sort((a, b) => {
             if (a.status === 'aguardando' && b.status !== 'aguardando') return -1;
             if (a.status !== 'aguardando' && b.status === 'aguardando') return 1;
@@ -320,10 +321,10 @@ export const MonitoramentoService = {
                 if (timeDiff >= 60) {
                     borderSlaClass = "border-red-400 shadow-red-100 ring-1 ring-red-400";
                     animPulse = "animate-pulse";
-                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">⚠️ ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">${ico('alert', 'w-3 h-3')} ESPERA: ${timeDiff} MIN</span>`;
                 } else if (timeDiff >= 30) {
                     borderSlaClass = "border-amber-400 shadow-amber-100 ring-1 ring-amber-400";
-                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">⏳ ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded shadow-sm flex items-center gap-1">${ico('clock', 'w-3 h-3')} ESPERA: ${timeDiff} MIN</span>`;
                 }
             }
 
@@ -334,7 +335,7 @@ export const MonitoramentoService = {
                 docsDigitalizados.forEach(d => {
                     docsUploadHTML += `
                         <div class="flex justify-between items-center bg-blue-50 p-1.5 rounded-lg border border-blue-100 mb-1">
-                            <span class="text-[9px] font-bold text-blue-800 truncate flex-1">📄 ${escapeHTML(d.titulo || d.nomeArquivo)}</span>
+                            <span class="text-[9px] font-bold text-blue-800 truncate flex-1">${ico('fileText', 'w-3 h-3')} ${escapeHTML(d.titulo || d.nomeArquivo)}</span>
                             <a href="${d.url}" target="_blank" class="bg-blue-600 text-white text-[9px] font-bold px-2 py-0.5 rounded shadow-sm hover:bg-blue-700 ml-2 shrink-0">Abrir</a>
                         </div>`;
                 });
@@ -343,7 +344,7 @@ export const MonitoramentoService = {
             }
 
             const linkPrincipalHtml = a.pdfLink 
-                ? `<a href="${a.pdfLink}" target="_blank" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 hover:bg-blue-200 w-full justify-center shadow-sm">🔗 Abrir Link Principal</a>` 
+                ? `<a href="${a.pdfLink}" target="_blank" class="bg-blue-100 text-blue-700 px-3 py-1.5 rounded-lg text-[10px] font-bold inline-flex items-center gap-1 hover:bg-blue-200 w-full justify-center shadow-sm">${ico('link', 'w-3 h-3')} Abrir Link Principal</a>` 
                 : `<span class="text-[10px] text-slate-400 italic block text-center p-1 border border-dashed rounded">Nenhum link externo</span>`;
 
             // Tratamento Múltiplos Assuntos/Agendamentos
@@ -370,7 +371,7 @@ export const MonitoramentoService = {
                         <div class="mt-4 flex items-center justify-between bg-slate-50 p-2 rounded-lg border border-slate-100">
                             <span class="font-bold text-[10px] text-slate-600">Verde:</span>
                             <span class="px-2 py-1 rounded font-bold text-[9px] uppercase ${isVerde ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-200 text-slate-600'}">
-                                ${isVerde ? '✅ Inserido' : '⏳ Pendente'}
+                                ${isVerde ? 'Inserido' : 'Pendente'}
                             </span>
                         </div>
                     </div>
