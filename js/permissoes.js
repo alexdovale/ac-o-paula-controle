@@ -138,6 +138,15 @@ export const PermissoesService = {
         return (item?.padrao || TODOS)[perfil] ?? true;
     },
 
+    // Valor que o PERFIL dá para uma chave de permissão individual (ex.: 'pauta_totem')
+    _valorDoPerfil(userKey, role) {
+        const item = CATALOGO.flatMap(g => g.itens).find(i => i.userKey === userKey);
+        if (!item) return undefined;
+        const perfil = perfilDe(role);
+        if (item.fixo && item.fixo[perfil] !== undefined) return item.fixo[perfil];
+        return this._doPerfil(item.key, perfil);
+    },
+
     // Valor definido pela matriz de perfis (ou o padrão)
     _doPerfil(key, perfil) {
         const salvo = this.config?.perfis?.[perfil]?.[key];
@@ -328,7 +337,14 @@ export const PermissoesService = {
             if (snap.exists()) userData = snap.data();
         } catch (e) { /* segue com valores padrão */ }
         const p = userData.permissoesDetalhadas || {};
-        const marcado = (key, padrao) => (p[key] === undefined ? padrao : p[key] === true);
+        // Mostra o valor individual; se não houver, o que o perfil dá hoje
+        const marcado = (key, padrao) => {
+            if (p[key] !== undefined) return p[key] === true;
+            const doPerfil = this._valorDoPerfil(key, userData.role);
+            return doPerfil !== undefined ? doPerfil : padrao;
+        };
+        // Gravados sempre (2FA e a regra do Firestore de zerar pauta leem esses campos)
+        const SEMPRE_SALVAR = ['exigir_2fa', 'pauta_zerar_pauta'];
 
         const secoes = SECOES_USUARIO.map(s => `
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -376,6 +392,7 @@ export const PermissoesService = {
                 </div>
 
                 <div class="p-4 bg-slate-50 border-t flex justify-end gap-2 shrink-0">
+                    <button id="btn-seguir-perfil" class="mr-auto inline-flex items-center gap-1.5 px-4 py-2 bg-white border border-slate-300 rounded-lg font-semibold text-slate-700 hover:bg-slate-100" title="Apaga as permissões individuais e volta a valer o perfil">${ico('refresh', 'w-3.5 h-3.5')} Seguir o perfil</button>
                     <button data-fechar class="px-4 py-2 bg-slate-200 rounded-lg font-semibold text-slate-700">Cancelar</button>
                     <button id="salvar-permissoes-btn" class="inline-flex items-center gap-1.5 px-5 py-2 bg-slate-900 text-white rounded-lg font-semibold shadow-sm">${ico('check', 'w-3.5 h-3.5')} Salvar Permissões</button>
                 </div>
@@ -409,9 +426,33 @@ export const PermissoesService = {
             }
         };
 
+        modal.querySelector('#btn-seguir-perfil').onclick = async () => {
+            if (!confirm(`Apagar as permissões individuais de ${userName}? Ele(a) passa a seguir exatamente o perfil.`)) return;
+            // Mantém só o que não faz parte da matriz (2FA) e o campo lido pelas regras do Firestore
+            const novas = {
+                exigir_2fa: p.exigir_2fa === true,
+                pauta_zerar_pauta: this._valorDoPerfil('pauta_zerar_pauta', userData.role) === true
+            };
+            try {
+                await updateDoc(doc(db, 'users', userId), { permissoesDetalhadas: novas, updatedAt: new Date().toISOString() });
+                showNotification('Agora esta pessoa segue o perfil.', 'success');
+                if (app?.currentUser && (app.auth?.currentUser?.uid === userId)) {
+                    app.currentUser.permissoesDetalhadas = novas;
+                    this.aplicarUI(app.currentUser);
+                }
+                modal.remove();
+            } catch (e) {
+                showNotification('Erro ao atualizar permissões.', 'error');
+            }
+        };
+
         modal.querySelector('#salvar-permissoes-btn').onclick = async () => {
+            // Só grava o que é diferente do perfil: o resto continua obedecendo à matriz
             const novas = {};
-            modal.querySelectorAll('.perm-checkbox').forEach(cb => { novas[cb.value] = cb.checked; });
+            modal.querySelectorAll('.perm-checkbox').forEach(cb => {
+                const doPerfil = this._valorDoPerfil(cb.value, userData.role);
+                if (SEMPRE_SALVAR.includes(cb.value) || doPerfil === undefined || cb.checked !== doPerfil) novas[cb.value] = cb.checked;
+            });
             try {
                 await updateDoc(doc(db, 'users', userId), { permissoesDetalhadas: novas, updatedAt: new Date().toISOString() });
                 showNotification('Permissões atualizadas com sucesso.', 'success');
