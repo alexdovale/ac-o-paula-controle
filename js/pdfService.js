@@ -791,7 +791,7 @@ export const PDFService = {
             modal.innerHTML = `
                 <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
                     <div class="p-5 border-b border-slate-100 bg-slate-50">
-                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">📄 Configurar relatório de Equipe</h3>
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">${ico('fileText', 'w-5 h-5')} Configurar relatório de Equipe</h3>
                     </div>
                     <div class="p-5 overflow-y-auto">
                         <p class="text-xs text-slate-500 mb-4 font-medium">Selecione quais colunas deseja exibir no PDF:</p>
