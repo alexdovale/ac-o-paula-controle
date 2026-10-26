@@ -92,7 +92,7 @@ export const PerfilService = {
         btnVoltar.parentNode.replaceChild(newBtnVoltar, btnVoltar);
 
         newBtnVoltar.addEventListener('click', () => {
-            // 🔴 CORREÇÃO AQUI: Volta para a tela anterior usando apenas ROUTES
+            // CORREÇÃO AQUI: Volta para a tela anterior usando apenas ROUTES
             app.router.navigate(ROUTES.PAUTA_SELECTION);
         });
 
