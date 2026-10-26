@@ -4,7 +4,8 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification } from './utils.js';
 import { logAction } from './admin.js';
-import { abrirModalNovaRecepcao } from './novaRecepcao.js'; // 👈 IMPORTAÇÃO DO MODAL NOVO!
+import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { ico, icoFrom } from './icons.js';
 
 // ─── HELPER ───────────────────────────────────────────────────────────────────
 
@@ -16,10 +17,10 @@ function escapeHTML(str) {
 }
 
 const TIPO_VISUAL = {
-    central:      { icone: '🏛️', cor: 'slate'  },
-    especializada:{ icone: '⚖️', cor: 'blue'   },
-    mista:        { icone: '📋', cor: 'green'  },
-    generalista:  { icone: '🗂️', cor: 'amber'  },
+    central:      { icone: 'landmark', cor: 'slate'  },
+    especializada:{ icone: 'scale', cor: 'blue'   },
+    mista:        { icone: 'clipboard', cor: 'green'  },
+    generalista:  { icone: 'folder', cor: 'amber'  },
 };
 
 // ─── SERVIÇO PRINCIPAL ───────────────────────────────────────────────────────
@@ -93,7 +94,7 @@ export const ImportadorOrgaosService = {
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md overflow-hidden animate-fade-in">
                 <div class="bg-gradient-to-r from-zinc-800 to-zinc-700 px-6 py-4 flex justify-between items-center">
                     <div>
-                        <h2 class="text-xl font-black text-white flex items-center gap-2">🏢 Gestão de Unidades</h2>
+                        <h2 class="text-xl font-black text-white flex items-center gap-2">${ico('building', 'w-6 h-6')} Gestão de Unidades</h2>
                         <p class="text-zinc-300 text-xs mt-1">Escolha uma opção abaixo</p>
                     </div>
                     <button id="fechar-modal-unidades-master" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
@@ -102,7 +103,7 @@ export const ImportadorOrgaosService = {
                 <div class="p-6 space-y-4">
                     <button id="btn-opcao-gerenciar"
                         class="w-full flex items-center gap-4 p-4 border-2 border-zinc-200 rounded-xl hover:border-zinc-500 hover:bg-zinc-50 transition-all group">
-                        <div class="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-zinc-200 transition">📋</div>
+                        <div class="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-zinc-200 transition">${ico('clipboard', 'w-7 h-7')}</div>
                         <div class="text-left flex-1">
                             <p class="font-bold text-zinc-800 text-base">Gerenciar Unidades</p>
                             <p class="text-[10px] text-zinc-500">Cadastrar, editar e excluir unidades/órgãos</p>
@@ -114,7 +115,7 @@ export const ImportadorOrgaosService = {
 
                     <button id="btn-opcao-importar"
                         class="w-full flex items-center gap-4 p-4 border-2 border-zinc-200 rounded-xl hover:border-zinc-500 hover:bg-zinc-50 transition-all group">
-                        <div class="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-zinc-200 transition">📁</div>
+                        <div class="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center text-2xl group-hover:bg-zinc-200 transition">${ico('folder', 'w-7 h-7')}</div>
                         <div class="text-left flex-1">
                             <p class="font-bold text-zinc-800 text-base">Importar Órgãos</p>
                             <p class="text-[10px] text-zinc-500">Importar estrutura hierárquica via CSV/JSON</p>
@@ -159,17 +160,17 @@ export const ImportadorOrgaosService = {
 
             <div class="bg-gradient-to-r from-zinc-800 to-zinc-700 px-6 py-4 flex justify-between items-center shrink-0">
                 <div>
-                    <h2 class="text-xl font-black text-white flex items-center gap-2">📁 Importador e Gerenciador de Órgãos</h2>
+                    <h2 class="text-xl font-black text-white flex items-center gap-2">${ico('folder', 'w-6 h-6')} Importador e Gerenciador de Órgãos</h2>
                     <p class="text-zinc-300 text-xs mt-1">Gerencie ou importe a hierarquia completa da Defensoria</p>
                 </div>
                 <button id="fechar-importador" class="text-white/60 hover:text-white text-3xl leading-none">&times;</button>
             </div>
 
             <div class="flex border-b border-zinc-200 bg-white shrink-0">
-                <button class="tab-imp active-tab py-3 px-5 font-bold text-sm text-zinc-800 border-b-2 border-zinc-800" data-tab="upload">📤 Upload</button>
-                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="preview">👁️ Prévia</button>
-                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="estrutura">🗂️ Estrutura Atual</button>
-                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="modelo">📄 Modelo</button>
+                <button class="tab-imp active-tab py-3 px-5 font-bold text-sm text-zinc-800 border-b-2 border-zinc-800" data-tab="upload">${ico('upload')} Upload</button>
+                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="preview">${ico('eye')} Prévia</button>
+                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="estrutura">${ico('folder')} Estrutura Atual</button>
+                <button class="tab-imp py-3 px-5 font-bold text-sm text-zinc-400 hover:text-zinc-600" data-tab="modelo">${ico('fileText')} Modelo</button>
             </div>
 
             <div class="flex-1 overflow-y-auto min-h-0">
@@ -177,7 +178,7 @@ export const ImportadorOrgaosService = {
                 <div id="painel-upload" class="p-6">
                     <div class="border-2 border-dashed border-zinc-300 rounded-2xl p-10 text-center hover:border-zinc-500 transition cursor-pointer" id="drop-zone">
                         <input type="file" id="arquivo-estrutura" accept=".csv,.json" class="hidden">
-                        <p class="text-5xl mb-4">📂</p>
+                        <p class="text-5xl mb-4">${ico('folder', 'w-12 h-12')}</p>
                         <button id="btn-selecionar-arquivo" class="bg-zinc-800 hover:bg-zinc-700 text-white font-bold py-3 px-8 rounded-xl transition shadow-lg text-sm">
                             Selecionar Arquivo
                         </button>
@@ -186,7 +187,7 @@ export const ImportadorOrgaosService = {
 
                     <div id="info-arquivo" class="hidden mt-5 p-4 bg-green-50 rounded-xl border border-green-200 flex items-start justify-between gap-4">
                         <div>
-                            <p class="text-green-700 font-bold text-sm">✅ Arquivo carregado!</p>
+                            <p class="text-green-700 font-bold text-sm">${ico('checkCircle')} Arquivo carregado!</p>
                             <p id="info-arquivo-detalhes" class="text-xs text-green-600 mt-1"></p>
                         </div>
                         <button id="btn-processar-arquivo" class="bg-green-600 text-white px-5 py-2 rounded-lg hover:bg-green-700 font-bold text-sm shrink-0">
@@ -195,7 +196,7 @@ export const ImportadorOrgaosService = {
                     </div>
 
                     <div class="mt-6 p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700">
-                        <strong>⚠️ Sobre duplicatas:</strong> o sistema compara pelo nome da unidade. Unidades com o mesmo nome serão ignoradas na importação.
+                        <strong>${ico('alert', 'w-3.5 h-3.5')} Sobre duplicatas:</strong> o sistema compara pelo nome da unidade. Unidades com o mesmo nome serão ignoradas na importação.
                     </div>
                 </div>
 
@@ -205,7 +206,7 @@ export const ImportadorOrgaosService = {
                         <div class="flex gap-2">
                             <button id="btn-voltar-upload" class="bg-zinc-100 text-zinc-700 px-4 py-2 rounded-lg hover:bg-zinc-200 font-bold text-sm">← Voltar</button>
                             <button id="btn-importar-confirmar" class="bg-green-600 text-white px-6 py-2 rounded-xl hover:bg-green-700 font-black text-sm shadow">
-                                🚀 Importar para o Sistema
+                                ${ico('rocket')} Importar para o Sistema
                             </button>
                         </div>
                     </div>
@@ -227,7 +228,7 @@ export const ImportadorOrgaosService = {
                         </div>
 
                         <div class="relative">
-                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">🔍</span>
+                            <span class="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-sm pointer-events-none">${ico('search')}</span>
                             <input
                                 id="est-busca"
                                 type="text"
@@ -236,17 +237,17 @@ export const ImportadorOrgaosService = {
                             />
                             <button id="est-busca-limpar"
                                 class="hidden absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400 hover:text-zinc-700 text-xs font-black w-5 h-5 flex items-center justify-center rounded-full hover:bg-zinc-100 transition">
-                                ✕
+                                ${ico('x', 'w-3.5 h-3.5')}
                             </button>
                         </div>
 
                         <div class="flex items-center gap-2 flex-wrap">
                             <span class="text-[10px] font-black text-zinc-400 uppercase tracking-wider shrink-0">Filtrar:</span>
                             <button class="est-filtro-tipo" data-tipo="todos">Todos</button>
-                            <button class="est-filtro-tipo" data-tipo="central">🏛️ Central</button>
-                            <button class="est-filtro-tipo" data-tipo="especializada">⚖️ Especializada</button>
-                            <button class="est-filtro-tipo" data-tipo="mista">📋 Mista</button>
-                            <button class="est-filtro-tipo" data-tipo="generalista">🗂️ Generalista</button>
+                            <button class="est-filtro-tipo" data-tipo="central">${ico('landmark')} Central</button>
+                            <button class="est-filtro-tipo" data-tipo="especializada">${ico('scale')} Especializada</button>
+                            <button class="est-filtro-tipo" data-tipo="mista">${ico('clipboard')} Mista</button>
+                            <button class="est-filtro-tipo" data-tipo="generalista">${ico('folder')} Generalista</button>
                             <span id="est-contador" class="ml-auto text-[11px] text-zinc-400 font-bold shrink-0"></span>
                         </div>
                     </div>
@@ -294,11 +295,11 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
 }`)}</pre>
                     </div>
                     <div class="flex gap-3">
-                        <button id="btn-baixar-modelo-csv" class="bg-zinc-800 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-bold transition">📥 Baixar CSV</button>
-                        <button id="btn-baixar-modelo-json" class="bg-zinc-800 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-bold transition">📥 Baixar JSON</button>
+                        <button id="btn-baixar-modelo-csv" class="bg-zinc-800 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-bold transition">${ico('download')} Baixar CSV</button>
+                        <button id="btn-baixar-modelo-json" class="bg-zinc-800 text-white px-4 py-2 rounded-lg hover:bg-zinc-700 text-sm font-bold transition">${ico('download')} Baixar JSON</button>
                     </div>
                     <div class="p-4 bg-amber-50 border border-amber-200 rounded-xl text-xs text-amber-700 space-y-1">
-                        <p class="font-bold">⚠️ Regras do arquivo:</p>
+                        <p class="font-bold">${ico('alert', 'w-3.5 h-3.5')} Regras do arquivo:</p>
                         <ul class="list-disc list-inside space-y-1">
                             <li>No CSV, sempre defina UNIDADE antes das RECEPCAO que pertencem a ela.</li>
                             <li>Use <code>;</code> (ponto e vírgula) para separar múltiplos valores em salas, responsáveis e assuntos.</li>
@@ -517,7 +518,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             <div class="border border-zinc-200 rounded-2xl overflow-hidden shadow-sm">
                 <div class="bg-zinc-50 border-b border-zinc-200 px-5 py-4 flex items-center justify-between gap-3">
                     <div class="flex items-center gap-3 min-w-0">
-                        <span class="text-2xl">🏢</span>
+                        <span class="text-2xl">${ico('building', 'w-7 h-7')}</span>
                         <div class="min-w-0">
                             <p class="font-black text-zinc-800 truncate">${escapeHTML(unidade.nome)}</p>
                             <p class="text-[10px] text-zinc-500 uppercase tracking-wider">${escapeHTML(unidade.sigla || '')} ${unidade.endereco ? '· ' + escapeHTML(unidade.endereco) : ''}</p>
@@ -525,7 +526,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                     </div>
                     <div class="flex gap-2 shrink-0">
                         <button class="prev-btn-remover-unidade text-red-400 hover:text-red-600 text-xs font-bold px-2 py-1 rounded transition"
-                            data-u-idx="${uIdx}" title="Remover unidade">🗑️</button>
+                            data-u-idx="${uIdx}" title="Remover unidade">${ico('trash', 'w-3.5 h-3.5')}</button>
                     </div>
                 </div>
                 <div class="p-4 space-y-3">
@@ -535,7 +536,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                         <div class="border border-zinc-200 rounded-xl p-4 bg-white hover:border-zinc-400 transition">
                             <div class="flex items-start justify-between gap-3">
                                 <div class="flex items-center gap-2 min-w-0 flex-1">
-                                    <span class="text-xl">${visual.icone}</span>
+                                    <span class="text-xl">${icoFrom(visual.icone, 'w-5 h-5')}</span>
                                     <div class="min-w-0">
                                         <div class="flex items-center gap-2 flex-wrap">
                                             <p class="font-bold text-zinc-800 text-sm truncate">${escapeHTML(rec.nome)}</p>
@@ -546,9 +547,9 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                 </div>
                                 <div class="flex gap-1 shrink-0">
                                     <button class="prev-btn-editar-rec text-zinc-400 hover:text-blue-600 text-xs font-bold px-2 py-1 rounded transition"
-                                        data-u-idx="${uIdx}" data-r-idx="${rIdx}" title="Editar">✏️</button>
+                                        data-u-idx="${uIdx}" data-r-idx="${rIdx}" title="Editar">${ico('pencil', 'w-3.5 h-3.5')}</button>
                                     <button class="prev-btn-remover-rec text-zinc-400 hover:text-red-500 text-xs font-bold px-2 py-1 rounded transition"
-                                        data-u-idx="${uIdx}" data-r-idx="${rIdx}" title="Remover">🗑️</button>
+                                        data-u-idx="${uIdx}" data-r-idx="${rIdx}" title="Remover">${ico('trash', 'w-3.5 h-3.5')}</button>
                                 </div>
                             </div>
                         </div>`;
@@ -613,7 +614,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-                <h4 class="font-black text-zinc-800 text-lg">✏️ Editar Recepção</h4>
+                <h4 class="font-black text-zinc-800 text-lg">${ico('pencil', 'w-5 h-5')} Editar Recepção</h4>
                 <div><label class="block text-[10px] font-black text-zinc-500 uppercase">Nome</label><input id="frp-nome" type="text" value="${escapeHTML(rec.nome)}" class="w-full p-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"></div>
                 <div class="grid grid-cols-2 gap-3">
                     <div><label class="block text-[10px] font-black text-zinc-500 uppercase">Andar</label><input id="frp-andar" type="text" value="${escapeHTML(rec.andar || '')}" class="w-full p-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"></div>
@@ -730,7 +731,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             if (operacoesBatch > 0) await batch.commit();
 
             await logAction(db, this._app.auth, this._app.currentUserName, null, 'IMPORT_ESTRUTURA', `Importou ${unidadesCriadas} unidades e ${recepcoesCriadas} recepções`);
-            showNotification(`✅ ${unidadesCriadas} unidade(s) e ${recepcoesCriadas} recepção(ões) criadas!`, "success");
+            showNotification(`${unidadesCriadas} unidade(s) e ${recepcoesCriadas} recepção(ões) criadas!`, "success");
 
             document.querySelector('.tab-imp[data-tab="estrutura"]')?.click();
             window.dispatchEvent(new CustomEvent('estrutura:importada'));
@@ -740,7 +741,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             showNotification("Erro ao importar: " + err.message, "error");
         } finally {
             btnImportar.disabled = false;
-            btnImportar.textContent = '🚀 Importar para o Sistema';
+            btnImportar.textContent = 'Importar para o Sistema';
         }
     },
 
@@ -818,7 +819,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         if (unidadesFiltradas.length === 0) {
             lista.innerHTML = `
                 <div class="text-center py-16">
-                    <span class="text-4xl block mb-3">🔍</span>
+                    <span class="text-4xl block mb-3">${ico('search', 'w-10 h-10')}</span>
                     <p class="text-zinc-500 text-sm font-bold">Nenhum resultado encontrado</p>
                     <p class="text-zinc-400 text-xs mt-1">Tente outro termo ou remova os filtros</p>
                 </div>`;
@@ -864,7 +865,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                     <span class="text-xs font-black text-zinc-700">${recs.length}</span>
                                     ${tiposUnicos.map(t => {
                                         const v = TIPO_VISUAL[t] || TIPO_VISUAL.especializada;
-                                        return `<span class="text-[10px]" title="${t}">${v.icone}</span>`;
+                                        return `<span class="text-[10px]" title="${t}">${icoFrom(v.icone, 'w-3 h-3')}</span>`;
                                     }).join('')}
                                 </div>
                             </td>
@@ -881,11 +882,11 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                         data-endereco="${escapeHTML(unidade.endereco || '')}"
                                         data-telefone="${escapeHTML(unidade.telefone || '')}"
                                         data-email="${escapeHTML(unidade.email || '')}"
-                                        title="Editar unidade">✏️</button>
+                                        title="Editar unidade">${ico('pencil')}</button>
                                     <button class="est-btn-del-unidade text-zinc-300 hover:text-red-500 px-2 py-1.5 rounded-lg hover:bg-red-50 transition text-sm"
                                         data-unidade-id="${unidade.id}"
                                         data-nome="${escapeHTML(unidade.nome)}"
-                                        title="Excluir unidade">🗑️</button>
+                                        title="Excluir unidade">${ico('trash')}</button>
                                 </div>
                             </td>
                         </tr>
@@ -916,7 +917,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                                 <tr class="border-t border-zinc-100 hover:bg-zinc-100 transition">
                                                     <td class="py-2.5 pr-4">
                                                         <div class="flex items-center gap-2">
-                                                            <span>${v.icone}</span>
+                                                            <span>${icoFrom(v.icone, 'w-4 h-4')}</span>
                                                             <span class="font-bold text-zinc-700">${escapeHTML(rec.nome)}</span>
                                                         </div>
                                                     </td>
@@ -934,9 +935,9 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
                                                     <td class="py-2.5 text-right">
                                                         <div class="flex items-center justify-end gap-1">
                                                             <button class="est-btn-editar-rec text-zinc-400 hover:text-blue-600 hover:bg-blue-50 px-2 py-1 rounded-lg transition font-bold"
-                                                                data-recepcao-id="${rec.id}">✏️</button>
+                                                                data-recepcao-id="${rec.id}">${ico('pencil')}</button>
                                                             <button class="est-btn-del-rec text-zinc-400 hover:text-red-500 hover:bg-red-50 px-2 py-1 rounded-lg transition font-bold"
-                                                                data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">🗑️</button>
+                                                                data-recepcao-id="${rec.id}" data-nome="${escapeHTML(rec.nome)}">${ico('trash')}</button>
                                                         </div>
                                                     </td>
                                                 </tr>`;
@@ -1118,7 +1119,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
             if (unSnap.empty) {
                 lista.innerHTML = `
                     <div class="text-center py-16">
-                        <span class="text-4xl block mb-3">🏢</span>
+                        <span class="text-4xl block mb-3">${ico('building', 'w-10 h-10')}</span>
                         <p class="text-zinc-500 text-sm font-bold">Nenhuma unidade cadastrada ainda.</p>
                         <p class="text-zinc-400 text-xs mt-1">Importe um arquivo ou clique em "+ Nova Unidade".</p>
                     </div>`;
@@ -1163,7 +1164,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-                <h4 class="font-black text-zinc-800 text-lg">${isNova ? '+ Nova Unidade' : '✏️ Editar Unidade'}</h4>
+                <h4 class="font-black text-zinc-800 text-lg">${isNova ? '+ Nova Unidade' : 'Editar Unidade'}</h4>
                 <div><label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">Nome *</label>
                     <input id="fu-nome" value="${escapeHTML(unidade?.nome || '')}" class="w-full p-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"></div>
                 <div class="grid grid-cols-2 gap-3">
@@ -1221,7 +1222,7 @@ RECEPCAO,,,,,,2º Andar,Núcleo de Família,especializada,"1ª Vara Família;2ª
         overlay.className = 'fixed inset-0 bg-black/50 flex items-center justify-center z-[500] p-4';
         overlay.innerHTML = `
             <div class="bg-white rounded-2xl shadow-2xl w-full max-w-md p-6 space-y-4">
-                <h4 class="font-black text-zinc-800 text-lg">${isNova ? '+ Nova Recepção' : '✏️ Editar Recepção'}</h4>
+                <h4 class="font-black text-zinc-800 text-lg">${isNova ? '+ Nova Recepção' : 'Editar Recepção'}</h4>
                 <div><label class="block text-[10px] font-black text-zinc-500 uppercase mb-1">Nome *</label>
                     <input id="fr-nome" value="${escapeHTML(rec?.nome || '')}" class="w-full p-2.5 border border-zinc-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-zinc-400"></div>
                 <div class="grid grid-cols-2 gap-3">
