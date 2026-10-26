@@ -59,7 +59,18 @@ async function verificarNomeDuplicadoHoje(db, nome, userId) {
 
 export const PautaConfigService = {
 
+    // Abre a janela de Configuração da Pauta (modo operante, fluxos, tolerância...)
+    abrirModalEdicao(app = this.app) {
+        if (!app?.currentPautaData) return;
+        document.getElementById('bi-links-modal')?.classList.add('hidden');
+        document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+        document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+        this._preencherFormEdicao(app.currentPautaData);
+        document.getElementById('edit-pauta-config-modal')?.classList.remove('hidden');
+    },
+
     init(app) {
+        this.app = app;
         this._app = app;
         this._setupEventListeners();
         this._renderTemplatesSelect();
@@ -154,25 +165,6 @@ export const PautaConfigService = {
         document.getElementById('edit-pauta-name-btn')?.addEventListener('click', () => {
             document.getElementById('edit-pauta-name-input').value = app.currentPauta?.name || '';
             document.getElementById('edit-pauta-modal').classList.remove('hidden');
-        });
-
-        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', () => {
-            if (!app.currentPautaData) return;
-            
-            const biModal = document.getElementById('bi-links-modal');
-            if (biModal) biModal.classList.add('hidden');
-            
-            const actionsPanel = document.getElementById('actions-panel');
-            const actionsArrow = document.getElementById('actions-arrow');
-            if (actionsPanel) {
-                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
-            }
-            if (actionsArrow) {
-                actionsArrow.classList.remove('rotate-180');
-            }
-
-            this._preencherFormEdicao(app.currentPautaData);
-            document.getElementById('edit-pauta-config-modal').classList.remove('hidden');
         });
 
         document.getElementById('confirm-edit-pauta-config-btn')?.addEventListener('click', async () => {
