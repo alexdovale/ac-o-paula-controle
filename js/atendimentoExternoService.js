@@ -10,6 +10,7 @@ import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 
+import { ico } from './icons.js';
 // ─── HELPERS ──────────────────────────────────────────────────────────────────
 
 const statusMap = {
@@ -60,7 +61,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("⚡ Atendimento Externo Inicializado (Focado no Link)");
+        console.log("Atendimento Externo Inicializado (Focado no Link)");
 
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
@@ -182,7 +183,7 @@ export const AtendimentoExternoService = {
                             const novoCaso = change.doc.data();
                             if (novoCaso.status === 'aguardando') {
                                 if (typeof showNotification === 'function') {
-                                    showNotification(`🚨 Novo assistido na fila: ${novoCaso.name}`, "info");
+                                    showNotification(`Novo assistido na fila: ${novoCaso.name}`, "info");
                                 }
                                 if (typeof playSound === 'function') playSound();
                             }
@@ -238,20 +239,20 @@ export const AtendimentoExternoService = {
                         </div>
                     </div>
                     <div class="flex gap-2 relative mt-4 sm:mt-0 w-full sm:w-auto justify-end items-center">
-                        <span id="badge-status-header" class="bg-white/20 text-white/80 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300">⏳</span>
+                        <span id="badge-status-header" class="bg-white/20 text-white/80 text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300">${ico('loader', 'w-3 h-3 animate-spin')}</span>
                         
                         ${this.modoVisualizacao === 'abas' ? `
                         <button id="btn-voltar-dashboard" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition" title="Voltar ao modo Mesa">
                             ← Mesa
                         </button>` : `
                         <button id="btn-ir-abas" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-3 py-2 rounded-lg transition" title="Ver pauta completa">
-                            📋 Pauta
+                            ${ico('clipboard', 'w-3 h-3')} Pauta
                         </button>`}
 
                         <button id="btn-install-pwa" class="hidden bg-white/20 hover:bg-white/30 text-white p-2 sm:px-4 sm:py-2 rounded-lg transition font-bold text-xs shadow-sm flex items-center gap-2">
-                            <span>📱</span><span class="hidden sm:inline">Instalar App</span>
+                            <span>${ico('smartphone', 'w-3.5 h-3.5')}</span><span class="hidden sm:inline">Instalar App</span>
                         </button>
-                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm">⚙️</button>
+                        <button id="btn-dash-settings" class="bg-white/20 hover:bg-white/30 text-white p-2 rounded-lg transition shadow-sm">${ico('settings')}</button>
 
                         <div id="dash-settings-menu" class="hidden absolute top-full right-0 mt-2 w-64 bg-white rounded-xl shadow-2xl border p-4 z-[999] origin-top-right">
                             <h4 class="text-[10px] font-black uppercase text-gray-400 mb-2 tracking-widest border-b pb-1">Layout da Tela</h4>
@@ -337,13 +338,13 @@ export const AtendimentoExternoService = {
             <div class="mb-4 border-b border-slate-200">
                 <div class="flex gap-1 sm:gap-2 overflow-x-auto">
                     <button id="btn-tab-minha-mesa" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-amber-600 text-white shadow-md">
-                        🖥️ Minha Mesa
+                        ${ico('monitor', 'w-3.5 h-3.5')} Minha Mesa
                     </button>
                     <button id="btn-tab-aguardando" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        📥 Aguardando Atendimento
+                        ${ico('download', 'w-3.5 h-3.5')} Aguardando Atendimento
                     </button>
                     <button id="btn-tab-pauta-atual" class="tab-principal-btn shrink-0 px-4 py-3 text-xs font-black uppercase tracking-widest rounded-t-lg transition-all bg-slate-100 text-slate-600 hover:bg-slate-200">
-                        📋 Pauta Atual
+                        ${ico('clipboard', 'w-3.5 h-3.5')} Pauta Atual
                     </button>
                 </div>
             </div>
@@ -356,7 +357,7 @@ export const AtendimentoExternoService = {
     _htmlDashboardTradicional() {
         return `
             <div id="wrapper-busca-historico" class="hidden mb-4 animate-fade-in">
-                <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="🔍 Digite o nome do assistido ou assunto para buscar...">
+                <input type="text" id="input-busca-local" class="w-full p-3 border border-slate-300 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-indigo-500 shadow-inner font-sans" placeholder="Digite o nome do assistido ou assunto para buscar...">
             </div>
             <div id="tabs-container-wrapper" class="bg-white p-3 rounded-xl shadow-sm border border-slate-200 mb-6">
                 <div id="tabs-dashboard" class="flex gap-2 overflow-x-auto custom-scrollbar"></div>
@@ -415,7 +416,7 @@ export const AtendimentoExternoService = {
         if (meusCasos.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
-                    <span class="text-5xl block mb-4">🖥️</span>
+                    <span class="text-5xl block mb-4">${ico('monitor', 'w-12 h-12')}</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Sua mesa está limpa.</p>
                     <p class="text-xs text-slate-400 mt-2">Clique na aba <strong>Aguardando Atendimento</strong> para iniciar novos casos.</p>
                 </div>`;
@@ -433,7 +434,7 @@ export const AtendimentoExternoService = {
         if (aguardando.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
-                    <span class="text-5xl block mb-4">✅</span>
+                    <span class="text-5xl block mb-4">${ico('checkCircle', 'w-12 h-12')}</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum assistido na fila de espera.</p>
                 </div>`;
             return;
@@ -441,7 +442,7 @@ export const AtendimentoExternoService = {
 
         container.innerHTML = `
             <div class="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-4 text-sm text-blue-700 font-semibold">
-                👇 Os casos abaixo estão aguardando. Clique em <strong>"Atender"</strong> para abrir o processo.
+                ${ico('chevronDown')} Os casos abaixo estão aguardando. Clique em <strong>"Atender"</strong> para abrir o processo.
             </div>
             <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
                 ${aguardando.map(a => this._htmlCardAba(a, 'puxar')).join('')}
@@ -454,7 +455,7 @@ export const AtendimentoExternoService = {
         if (assistidos.length === 0) {
             container.innerHTML = `
                 <div class="text-center py-16 bg-white rounded-xl border border-slate-200">
-                    <span class="text-5xl block mb-4">📋</span>
+                    <span class="text-5xl block mb-4">${ico('clipboard', 'w-12 h-12')}</span>
                     <p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum atendimento registrado nesta pauta.</p>
                 </div>`;
             return;
@@ -518,10 +519,10 @@ export const AtendimentoExternoService = {
                     </div>` : ''}
                 </div>
 
-                ${this._htmlGrupoStatus('⏳ Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', this.pautaId)}
-                ${this._htmlGrupoStatus('👩‍💻 Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', this.pautaId)}
-                ${dist > 0 ? this._htmlGrupoStatus('⚖️ Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', this.pautaId) : ''}
-                ${this._htmlGrupoStatus('✅ Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', this.pautaId)}
+                ${this._htmlGrupoStatus('Aguardando', assistidos.filter(a => a.status === 'aguardando'), 'geral', this.pautaId)}
+                ${this._htmlGrupoStatus('Em Atendimento', assistidos.filter(a => a.status === 'emAtendimento'), 'geral', this.pautaId)}
+                ${dist > 0 ? this._htmlGrupoStatus('Distribuição', assistidos.filter(a => a.status === 'aguardandoDistribuicao'), 'geral', this.pautaId) : ''}
+                ${this._htmlGrupoStatus('Atendidos', assistidos.filter(a => a.status === 'atendido'), 'geral', this.pautaId)}
             </div>
             <hr class="border-slate-200 mb-6">
         `;
@@ -547,10 +548,10 @@ export const AtendimentoExternoService = {
         const pid = pautaIdOverride || this.pautaId;
         const st = statusMap[assistido.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: assistido.status };
         const donoLabel = assistido.assignedCollaborator?.name
-            ? `👤 ${escapeHTML(assistido.assignedCollaborator.name)}`
-            : '⚠️ Sem dono';
+            ? `${escapeHTML(assistido.assignedCollaborator.name)}`
+            : 'Sem dono';
         const badgeUrgencia = assistido.priority === 'URGENTE'
-            ? `<span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse">🚨</span>`
+            ? `<span class="bg-red-600 text-white text-[9px] font-black px-1.5 py-0.5 rounded animate-pulse">${ico('alertCircle', 'w-3 h-3')}</span>`
             : '';
         const baseUrl = window.location.href.split('?')[0];
         const linkIndividual = `${baseUrl}?pautaId=${pid}&assistidoId=${assistido.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${assistido.delegationToken || ''}`;
@@ -559,18 +560,18 @@ export const AtendimentoExternoService = {
         if (modo === 'puxar') {
             botoesHtml = `
                 <a href="${linkIndividual}" class="block w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">
-                    📋 Atender
+                    ${ico('clipboard', 'w-3.5 h-3.5')} Atender
                 </a>`;
         } else if (modo === 'mesa') {
             botoesHtml = `
                 <div class="flex gap-2 mt-3">
-                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">📋 Continuar</a>
+                    <a href="${linkIndividual}" class="flex-1 bg-green-600 hover:bg-green-700 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center">${ico('clipboard', 'w-3.5 h-3.5')} Continuar</a>
                     <button class="btn-devolver-caso flex-1 bg-slate-100 hover:bg-slate-200 border border-slate-300 text-slate-700 font-black text-xs py-2 rounded-lg transition"
                         data-pauta-id="${pid}" data-assistido-id="${assistido.id}">Devolver</button>
                 </div>`;
         } else {
             botoesHtml = `
-                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">🔍 Ver Detalhes</a>`;
+                <a href="${linkIndividual}" class="block w-full mt-3 bg-slate-700 hover:bg-slate-800 text-white font-black text-xs py-2 rounded-lg transition text-center flex items-center justify-center gap-2">${ico('search', 'w-3.5 h-3.5')} Ver Detalhes</a>`;
         }
 
         return `
@@ -582,9 +583,9 @@ export const AtendimentoExternoService = {
                     <span class="text-[9px] font-black uppercase px-2 py-1 rounded border ${st.cor} shrink-0">${st.txt}</span>
                 </div>
                 <div class="bg-slate-50 p-2 rounded border border-slate-100 flex-grow text-xs text-slate-600 space-y-1">
-                    <p class="truncate">📄 ${escapeHTML(assistido.subject || 'Assunto não informado')}</p>
+                    <p class="truncate">${ico('fileText', 'w-3.5 h-3.5')} ${escapeHTML(assistido.subject || 'Assunto não informado')}</p>
                     ${modo === 'geral' || modo === 'mesa' ? `<p class="${assistido.assignedCollaborator ? 'text-blue-600' : 'text-red-500'} font-bold">${donoLabel}</p>` : ''}
-                    ${assistido.scheduledTime ? `<p class="text-slate-400">🕐 ${assistido.scheduledTime}</p>` : ''}
+                    ${assistido.scheduledTime ? `<p class="text-slate-400">${ico('clock')} ${assistido.scheduledTime}</p>` : ''}
                     ${assistido.numeroProcesso ? `<p class="font-mono text-slate-400">CNP: ${escapeHTML(assistido.numeroProcesso)}</p>` : ''}
                 </div>
                 ${botoesHtml}
@@ -650,7 +651,7 @@ export const AtendimentoExternoService = {
 
         const livre = meusCasos.length === 0 && !isNaTelaIndividual;
 
-        badge.textContent = livre ? "🟢 LIVRE" : "🔴 OCUPADO";
+        badge.textContent = livre ? "LIVRE" : "OCUPADO";
         badge.className = `bg-white/20 ${livre ? 'text-emerald-300' : 'text-red-300'} text-[10px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-wider transition-colors duration-300`;
 
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
@@ -676,7 +677,7 @@ export const AtendimentoExternoService = {
 
         const desenharCard = (item, isAberto) => {
             const st = statusMap[item.status] || { cor: 'bg-gray-100 text-gray-600 border-gray-200', txt: item.status };
-            const notas = item.notasRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">⚠️ ${escapeHTML(item.notasRevisao)}</div>` : '';
+            const notas = item.notasRevisao ? `<div class="mt-2 bg-yellow-50 p-2 rounded text-xs text-yellow-900 border border-yellow-200">${ico('alert', 'w-3.5 h-3.5')} ${escapeHTML(item.notasRevisao)}</div>` : '';
             const numCNP = item.numeroProcesso ? `<span class="font-mono text-[10px] bg-slate-100 border border-slate-200 px-2 py-0.5 rounded">CNP: ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
             const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
@@ -712,7 +713,7 @@ export const AtendimentoExternoService = {
 
         const renderLista = (lista, isAberto, aviso) => {
             if (lista.length === 0) {
-                container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">📭</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${aviso}</p></div>`;
+                container.innerHTML = `<div class="text-center py-16 opacity-50"><span class="text-5xl mb-4 block">${ico('inbox', 'w-12 h-12')}</span><p class="text-sm font-black uppercase tracking-widest text-slate-500">${aviso}</p></div>`;
                 return;
             }
             container.innerHTML = lista.map(i => desenharCard(i, isAberto)).join('');
@@ -740,7 +741,7 @@ export const AtendimentoExternoService = {
                 tabsDiv.innerHTML = `
                     <button id="tab-pendentes" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer / Assinar <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${pendentes.length}</span></button>
                     <button id="tab-assinados" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">Distribuídos <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${distribuidos.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">🔍 Buscar</button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-2 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">${ico('search', 'w-3 h-3')} Buscar</button>
                 `;
 
                 document.getElementById('tab-pendentes')?.addEventListener('click', () => { resetTabs(); document.getElementById('tab-pendentes').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(pendentes, true, 'Mesa limpa.'); });
@@ -774,7 +775,7 @@ export const AtendimentoExternoService = {
                     <button id="tab-em-mesa" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-slate-800 text-white shadow mode-btn-active">Fazer <span class="ml-1 bg-white/20 px-1.5 py-0.5 rounded text-[9px]">${emAndamento.length}</span></button>
                     <button id="tab-enviados" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">No Defensor <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${enviados.length}</span></button>
                     <button id="tab-finalizados" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-slate-500 hover:bg-slate-100">Prontos <span class="ml-1 bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded text-[9px]">${finalizados.length}</span></button>
-                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">🔍</button>
+                    <button id="tab-historico-busca" class="tab-btn flex-1 py-2 px-1 text-[10px] font-black uppercase tracking-widest rounded-lg transition bg-white text-indigo-500 hover:bg-indigo-50">${ico('search', 'w-3 h-3')}</button>
                 `;
 
                 document.getElementById('tab-em-mesa')?.addEventListener('click',    () => { resetTabs(); document.getElementById('tab-em-mesa').classList.add('bg-slate-800','text-white','shadow','mode-btn-active'); renderLista(emAndamento, true, 'Mesa limpa.'); });
@@ -806,7 +807,7 @@ export const AtendimentoExternoService = {
 
         corpo.innerHTML = `
             <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100">
-                <div class="flex justify-center mb-6"><div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100"><span class="text-5xl">🔒</span></div></div>
+                <div class="flex justify-center mb-6"><div class="bg-indigo-50 p-5 rounded-full border-4 border-indigo-100"><span class="text-5xl">${ico('lock', 'w-12 h-12')}</span></div></div>
                 <h2 class="text-2xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Acesso Restrito</h2>
                 <p class="text-center text-sm text-slate-500 mb-6">Olá, <strong class="text-indigo-600">${escapeHTML(this.colaboradorNome)}</strong>!</p>
                 <form id="form-login-colaborador" class="space-y-4">
@@ -904,7 +905,7 @@ export const AtendimentoExternoService = {
         const corpo = document.querySelector('.w-full.max-w-md');
         corpo.innerHTML = `
             <div class="bg-white p-8 rounded-3xl shadow-2xl border border-gray-100 animate-fade-in">
-                <div class="flex justify-center mb-6"><div class="bg-emerald-50 p-5 rounded-full border-4 border-emerald-100"><span class="text-5xl">🔑</span></div></div>
+                <div class="flex justify-center mb-6"><div class="bg-emerald-50 p-5 rounded-full border-4 border-emerald-100"><span class="text-5xl">${ico('key', 'w-12 h-12')}</span></div></div>
                 <h2 class="text-xl font-black text-center text-slate-800 mb-2 uppercase tracking-widest">Crie sua Senha</h2>
                 <p class="text-center text-xs text-slate-500 mb-6">Como você ainda não tem uma conta no sistema principal, crie uma senha segura para acessar sua mesa nas próximas vezes.</p>
                 <form id="form-criar-senha" class="space-y-4">
@@ -997,7 +998,7 @@ export const AtendimentoExternoService = {
                     <h1 class="text-white font-black text-3xl uppercase tracking-widest">ACESSO NEGADO</h1>
                 </div>
                 <div class="p-10 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
-                    <span class="text-6xl block mb-6">🔒</span>
+                    <span class="text-6xl block mb-6">${ico('lock', 'w-14 h-14')}</span>
                     <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
                     <p class="text-gray-500 font-semibold">${message}</p>
                 </div>
@@ -1045,7 +1046,7 @@ export const AtendimentoExternoService = {
             const bannerHtml = `
                 <div id="banner-transferencia" class="w-full bg-amber-50 border border-amber-200 text-amber-800 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-3 relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1 bg-amber-500"></div>
-                    <span class="text-xl pl-1">🔄</span>
+                    <span class="text-xl pl-1">${ico('refresh', 'w-6 h-6')}</span>
                     <div>
                         <p class="text-[10px] font-black uppercase tracking-widest text-amber-500 mb-0.5">Última Movimentação</p>
                         <p class="text-xs font-semibold leading-relaxed">${escapeHTML(assistido.historicoTransferencia)}</p>
@@ -1062,12 +1063,12 @@ export const AtendimentoExternoService = {
             if (abaEncerramento) {
                 abaEncerramento.innerHTML = `
                     <div id="banner-atendido-trava" class="text-center p-8 bg-emerald-50 rounded-2xl border-2 border-emerald-200 shadow-sm animate-fade-in mt-2 mb-6">
-                        <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">✓</div>
+                        <div class="w-16 h-16 bg-emerald-500 rounded-full flex items-center justify-center text-3xl text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
                         <h2 class="text-xl font-black text-emerald-800 uppercase tracking-wider">Protocolo Encerrado</h2>
                     </div>
 
                     <button id="btn-marcar-livre" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-lg hover:shadow-xl transition-all text-sm uppercase tracking-widest flex items-center justify-center gap-2 active:scale-95">
-                        <span>👋</span> IR PARA MESA
+                        <span>${ico('user')}</span> IR PARA MESA
                     </button>
                 `;
 
@@ -1108,10 +1109,10 @@ export const AtendimentoExternoService = {
                     <div class="flex gap-2 w-full sm:w-auto shrink-0">
                         ${cnpManual ? `
                         <button type="button" onclick="navigator.clipboard.writeText('${cnpManual}'); alert('Nº CNP copiado com sucesso!');" class="flex-1 sm:flex-none bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 px-4 rounded-lg text-xs uppercase tracking-wider transition border border-slate-700 active:scale-95">
-                            📋 Copiar CNP
+                            ${ico('clipboard', 'w-3.5 h-3.5')} Copiar CNP
                         </button>` : ''}
                         <a href="${linkManualVerde}" target="_blank" class="text-center flex-1 sm:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 px-5 rounded-lg text-xs uppercase tracking-widest transition shadow-md active:scale-95 flex items-center justify-center gap-1.5">
-                            <span>⚖️</span> Abrir Link do Verde
+                            <span>${ico('scale', 'w-3.5 h-3.5')}</span> Abrir Link do Verde
                         </a>
                     </div>
                 </div>
@@ -1123,7 +1124,7 @@ export const AtendimentoExternoService = {
 
         optionsHtml += `
             <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border-2 border-emerald-400 ring-2 ring-emerald-100 p-4 rounded-xl text-left transition-all hover:shadow-md group">
-                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">✅</span>
+                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('checkCircle', 'w-6 h-6')}</span>
                 <span class="block font-bold text-slate-800">${textoConcluir}</span>
                 <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Encerrar atendimento definitivo</span>
             </button>
@@ -1132,12 +1133,12 @@ export const AtendimentoExternoService = {
         if (showDistribuicao) {
             optionsHtml += `
                 <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-cyan-300 group">
-                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">⚖️</span>
+                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('scale', 'w-6 h-6')}</span>
                     <span class="block font-bold text-slate-800">Enviar para Assinatura</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Encaminhar para Defensor(a)</span>
                 </button>
                 <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-amber-300 group">
-                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">📝</span>
+                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('fileText', 'w-6 h-6')}</span>
                     <span class="block font-bold text-slate-800">Pedir Avaliação</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Dúvidas ou revisão da petição</span>
                 </button>
@@ -1147,7 +1148,7 @@ export const AtendimentoExternoService = {
         if (isDefensor) {
             optionsHtml += `
                 <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-orange-300 group">
-                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔙</span>
+                    <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('arrowLeft', 'w-6 h-6')}</span>
                     <span class="block font-bold text-slate-800">Devolver p/ Correção</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Retornar à mesa de Origem</span>
                 </button>
@@ -1156,12 +1157,12 @@ export const AtendimentoExternoService = {
 
         optionsHtml += `
             <button id="btn-opt-transferir" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-indigo-300 group">
-                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">🔄</span>
+                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('refresh', 'w-6 h-6')}</span>
                 <span class="block font-bold text-slate-800">Transferir Caso</span>
                 <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Passar a vez para colega</span>
             </button>
             <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-xl text-left transition-all hover:bg-slate-50 hover:border-slate-300 group">
-                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">⏸️</span>
+                <span class="block text-xl mb-1 group-hover:scale-110 transition-transform origin-left">${ico('pause', 'w-6 h-6')}</span>
                 <span class="block font-bold text-slate-800">Pausar Atendimento</span>
                 <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider">Voltar para Fila de Aguardando</span>
             </button>
@@ -1169,7 +1170,7 @@ export const AtendimentoExternoService = {
 
         optionsHtml += `
             <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-xl border border-indigo-200 mb-6 shadow-inner">
-                <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>📋</span> Acumular Demandas Resolvidas</label>
+                <label class="block text-[10px] font-black text-indigo-700 uppercase tracking-widest mb-2 flex items-center gap-1"><span>${ico('clipboard', 'w-3 h-3')}</span> Acumular Demandas Resolvidas</label>
                 <div class="flex gap-2 mb-3">
                     <input type="text" id="input-nova-demanda-externo" class="flex-grow p-2.5 border border-indigo-300 rounded-lg text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500" placeholder="Ex: Regulamentação de Guarda...">
                     <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-2 rounded-lg text-xs hover:bg-indigo-700 transition shadow-sm uppercase tracking-wider">Somar</button>
@@ -1179,11 +1180,11 @@ export const AtendimentoExternoService = {
 
             <div id="config-numero-processo" class="bg-slate-50 p-5 rounded-xl border border-slate-200 mb-6 transition-all shadow-inner space-y-4">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>📄</span> Nº Processo / Protocolo CNP (Opcional)</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>${ico('fileText', 'w-3 h-3')}</span> Nº Processo / Protocolo CNP (Opcional)</label>
                     <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans" placeholder="Ex: 1045239">
                 </div>
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>🔗</span> Link Direto do Procedimento no Verde (Manual)</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1"><span>${ico('link', 'w-3 h-3')}</span> Link Direto do Procedimento no Verde (Manual)</label>
                     <input type="url" id="input-link-verde-manual" value="${assistido.linkVerdeManualmente || ''}" class="w-full p-3.5 border border-slate-300 rounded-lg text-sm bg-white focus:ring-2 focus:ring-emerald-500 outline-none transition-all font-mono placeholder:font-sans text-blue-600 underline" placeholder="https://verde.defensoria.rj.def.br/#/atendimento/...">
                 </div>
             </div>
@@ -1295,7 +1296,7 @@ export const AtendimentoExternoService = {
             const div = document.createElement('div');
             div.className = "flex justify-between items-center bg-white border border-indigo-100 p-2 rounded-lg shadow-sm text-xs";
             div.innerHTML = `
-                <span class="font-bold text-slate-700">⚖️ ${escapeHTML(dem)}</span>
+                <span class="font-bold text-slate-700">${ico('scale')} ${escapeHTML(dem)}</span>
                 <button type="button" class="text-[10px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-0.5 rounded transition" data-index="${index}">Remover</button>
             `;
             div.querySelector('button').onclick = () => this.removerDemandaFluxoExterno(index);
@@ -1561,7 +1562,7 @@ export const AtendimentoExternoService = {
             }
 
             if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
-                console.log(`✉️ Disparando e-mail para: ${colaboradorDestinoObj.email}`);
+                console.log(`Disparando e-mail para: ${colaboradorDestinoObj.email}`);
                 if (typeof EmailService !== 'undefined' && EmailService.sendDelegationEmail) {
                     await EmailService.sendDelegationEmail(
                         colaboradorDestinoObj.email,
@@ -1602,7 +1603,7 @@ export const AtendimentoExternoService = {
         const temChecklist = assistido.documentChecklist && assistido.documentChecklist.action;
         
         if (!temChecklist) {
-            lista.innerHTML = `<div class="text-center py-10 opacity-50"><span class="text-4xl block mb-2">📭</span><p class="text-sm font-bold text-slate-500">Nenhum checklist de documentos registrado na recepção.</p></div>`;
+            lista.innerHTML = `<div class="text-center py-10 opacity-50"><span class="text-4xl block mb-2">${ico('inbox', 'w-10 h-10')}</span><p class="text-sm font-bold text-slate-500">Nenhum checklist de documentos registrado na recepção.</p></div>`;
             return;
         }
 
@@ -1650,7 +1651,7 @@ export const AtendimentoExternoService = {
                     <div class="bg-gray-50 p-4 rounded-xl mb-6 border border-gray-200 shadow-sm relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-1 h-full bg-gray-500"></div>
                         <h4 class="text-[10px] font-black text-gray-600 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                            <span>📋</span> PERFIL SOCIOECONÔMICO
+                            <span>${ico('clipboard', 'w-3 h-3')}</span> PERFIL SOCIOECONÔMICO
                         </h4>
                         <div class="space-y-1">
                             ${socioHtml}
@@ -1661,7 +1662,7 @@ export const AtendimentoExternoService = {
         }
 
         if (chk.checkedIds && chk.checkedIds.length > 0) {
-            html += `<h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">📄 DOCUMENTOS EM POSSE</h4><ul class="space-y-2 mb-8">`;
+            html += `<h4 class="text-[10px] font-black text-slate-400 uppercase tracking-widest mb-3 pl-1">${ico('fileText', 'w-3 h-3')} DOCUMENTOS EM POSSE</h4><ul class="space-y-2 mb-8">`;
             
             chk.checkedIds.forEach(id => {
                 if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
@@ -1678,7 +1679,7 @@ export const AtendimentoExternoService = {
                 const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
                 html += `
                     <li class="text-xs bg-white border border-slate-200 p-3 rounded-lg flex justify-between items-center shadow-sm">
-                        <span class="font-bold text-slate-700 pr-2">📄 ${docName}</span> 
+                        <span class="font-bold text-slate-700 pr-2">${ico('fileText', 'w-3.5 h-3.5')} ${docName}</span> 
                         <span class="font-black text-[9px] uppercase tracking-widest ${tipo === 'Físico' ? 'text-amber-600 bg-amber-50 border-amber-200' : 'text-emerald-600 bg-emerald-50 border-emerald-200'} px-2 py-1 rounded shadow-sm border">${tipo}</span>
                     </li>
                 `;
@@ -1691,7 +1692,7 @@ export const AtendimentoExternoService = {
                 <div class="bg-violet-50 p-4 rounded-xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
                     <h4 class="text-[10px] font-black text-violet-700 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                        <span>⚖️</span> DEMANDAS ACUMULADAS
+                        <span>${ico('scale', 'w-3 h-3')}</span> DEMANDAS ACUMULADAS
                     </h4>
                     <ul class="space-y-2">
                         ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-2 rounded-lg border border-violet-100 shadow-sm flex items-center gap-2"><span class="text-violet-600">•</span> ${escapeHTML(dem)}</li>`).join('')}
@@ -1727,7 +1728,7 @@ export const AtendimentoExternoService = {
                     <div class="bg-emerald-50 p-5 rounded-xl mb-6 border border-emerald-200 shadow-sm relative overflow-hidden">
                         <div class="absolute top-0 left-0 w-1 h-full bg-emerald-500"></div>
                         <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 pl-1 flex items-center gap-1">
-                            <span>💰</span> PLANILHA DE GASTOS
+                            <span>${ico('coins', 'w-3 h-3')}</span> PLANILHA DE GASTOS
                         </h4>
                         <div class="pl-1 space-y-1 mb-4">
                             ${gastosHtml}
@@ -1738,7 +1739,7 @@ export const AtendimentoExternoService = {
                         </div>
                         
                         <button id="btn-baixar-planilha" class="mt-5 w-full bg-white border-2 border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
-                            <span>📄</span> Baixar Planilha PDF
+                            <span>${ico('fileText', 'w-3.5 h-3.5')}</span> Baixar Planilha PDF
                         </button>
                     </div>
                 `;
@@ -1750,7 +1751,7 @@ export const AtendimentoExternoService = {
             html += `
                 <div class="bg-rose-50 p-4 rounded-xl mb-6 border border-rose-200 shadow-sm relative overflow-hidden">
                     <div class="absolute top-0 left-0 w-1 h-full bg-rose-500"></div>
-                    <h4 class="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1"><span>👤</span> DADOS DO PÓLO PASSIVO (RÉU)</h4>
+                    <h4 class="text-[10px] font-black text-rose-700 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1"><span>${ico('user', 'w-3 h-3')}</span> DADOS DO PÓLO PASSIVO (RÉU)</h4>
                     <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-xs text-slate-700 pl-1">
                         ${reu.nome ? `<p><b class="text-rose-900 font-black">Nome:</b> ${reu.nome}</p>` : ''}
                         ${reu.cpf ? `<p><b class="text-rose-900 font-black">CPF:</b> ${reu.cpf}</p>` : ''}
