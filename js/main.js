@@ -167,25 +167,9 @@ class SIGEPApp {
     }
 
     // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
-   _modalOpeners() {
+    _modalOpeners() {
         return {
             [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
-            [ROUTES.TOTEM]: () => {
-                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
-                window.open(totemUrl, '_blank');
-            },
-            [ROUTES.ESTATISTICAS]: () => {
-                if (typeof StatisticsService?.showModal === 'function') {
-                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
-                }
-            },
-            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
-            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal(),
-            
-            // CONVIDAR PESSOAS
-            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
-            
-            // LINK PÚBLICO
             [ROUTES.COMPARTILHAMENTO]: () => {
                 const modal = document.getElementById('share-modal');
                 if (!modal || !this.currentPautaData) return;
@@ -203,26 +187,52 @@ class SIGEPApp {
                 }
                 modal.classList.remove('hidden');
             },
-
-            // RENOMEAR PAUTA
+            [ROUTES.TOTEM]: () => {
+                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+            },
+            [ROUTES.ESTATISTICAS]: () => {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
+                }
+            },
             [ROUTES.EDITAR_NOME_PAUTA]: () => {
                 document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
                 document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
             
-            // CONFIGURAÇÕES DA PAUTA (AQUI ESTÁ A CORREÇÃO PRINCIPAL)
+            // 🔥 CORREÇÃO: DIRECIONA O ROUTER PARA O SEU pautaConfig.js 🔥
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
-                const modalConfig = document.getElementById('config-pauta-modal');
-                if (!modalConfig || !this.currentPauta) return;
+                // Tenta usar a função nativa do seu pautaConfig.js
+                if (window.PautaConfigService && typeof window.PautaConfigService.openModal === 'function') {
+                    window.PautaConfigService.openModal(this);
+                } else if (window.PautaConfigService && typeof window.PautaConfigService.abrirModal === 'function') {
+                    window.PautaConfigService.abrirModal(this);
+                } else {
+                    // Fallback de segurança caso a função chame-se de outra forma
+                    const modalIds = ['edit-pauta-config-modal', 'config-pauta-modal'];
+                    let modalEncontrado = null;
+                    
+                    for (let id of modalIds) {
+                        const m = document.getElementById(id);
+                        if (m) { modalEncontrado = m; break; }
+                    }
 
-                const tipoAtual = this.currentPautaData?.type || 'agendamento';
-                const ordemAtual = this.currentPautaData?.ordemAtendimento || 'flexivel';
+                    if (modalEncontrado) {
+                        const tipoAtual = this.currentPautaData?.type || 'agendamento';
+                        const ordemAtual = this.currentPautaData?.ordemAtendimento || 'flexivel';
+                        document.querySelectorAll('input[name="config-tipo-pauta"]').forEach(r => r.checked = (r.value === tipoAtual));
+                        document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === ordemAtual));
+                        modalEncontrado.classList.remove('hidden');
+                    } else {
+                        console.error("Janela de configurações não encontrada no HTML!");
+                    }
+                }
+            },
 
-                document.querySelectorAll('input[name="config-tipo-pauta"]').forEach(r => r.checked = (r.value === tipoAtual));
-                document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === ordemAtual));
-
-                modalConfig.classList.remove('hidden');
-            }
+            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
+            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
+            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal()
         };
     }
 
