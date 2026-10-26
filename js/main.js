@@ -88,7 +88,7 @@ class SIGEPApp {
                 window.app = this;
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(this);
-                return; // não cria router nem listener de login
+                return; 
             }
     
             this.router = new SIGEPRouter(this, {
@@ -158,7 +158,6 @@ class SIGEPApp {
         if (this.router) this.router.navigate(ROUTES.COLETAS, {}, false);
     }
 
-    // Chamado pelo router ao sair da tela de Coletas: para o BI e limpa o que ficou aberto
     fecharColetas() {
         try { window.ColetasBiService?.fechar?.(); } catch (e) { console.warn(e); }
         const construtor = document.getElementById('container-construtor-coleta');
@@ -166,26 +165,12 @@ class SIGEPApp {
         document.getElementById('coletas-container')?.classList.add('hidden');
     }
 
-    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
-   _modalOpeners() {
+    // =========================================================================================
+    // 🔥 CORREÇÃO: ABRE A JANELA NOVA DE CONFIGURAÇÕES EM VEZ DA JANELA ANTIGA DO BI 🔥
+    // =========================================================================================
+    _modalOpeners() {
         return {
             [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
-            [ROUTES.TOTEM]: () => {
-                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
-                window.open(totemUrl, '_blank');
-            },
-            [ROUTES.ESTATISTICAS]: () => {
-                if (typeof StatisticsService?.showModal === 'function') {
-                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
-                }
-            },
-            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
-            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal(),
-            
-            // CONVIDAR PESSOAS
-            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
-            
-            // LINK PÚBLICO
             [ROUTES.COMPARTILHAMENTO]: () => {
                 const modal = document.getElementById('share-modal');
                 if (!modal || !this.currentPautaData) return;
@@ -203,14 +188,19 @@ class SIGEPApp {
                 }
                 modal.classList.remove('hidden');
             },
-
-            // RENOMEAR PAUTA
+            [ROUTES.TOTEM]: () => {
+                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+            },
+            [ROUTES.ESTATISTICAS]: () => {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
+                }
+            },
             [ROUTES.EDITAR_NOME_PAUTA]: () => {
                 document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
                 document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
-            
-            // CONFIGURAÇÕES DA PAUTA (AQUI ESTÁ A CORREÇÃO PRINCIPAL)
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
                 const modalConfig = document.getElementById('config-pauta-modal');
                 if (!modalConfig || !this.currentPauta) return;
@@ -222,7 +212,10 @@ class SIGEPApp {
                 document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === ordemAtual));
 
                 modalConfig.classList.remove('hidden');
-            }
+            },
+            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
+            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
+            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal()
         };
     }
 
@@ -231,7 +224,6 @@ class SIGEPApp {
         if (abrir) await abrir();
     }
 
-    // Fecha os modais do menu de Ações (usado ao sair de uma rota de modal)
     closePautaModals() {
         ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal', 'config-pauta-modal']
             .forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -650,7 +642,6 @@ class SIGEPApp {
     setupPautaMenuEvents() {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        // Botões do menu de Ações usam a rota do router (que abre o modal mapeado)
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
                 if (!this.currentPauta) return;
@@ -737,9 +728,7 @@ class SIGEPApp {
             }
         });
 
-        // =========================================================================================
-        // 🔥 LÓGICA DE SALVAR DO NOVO MODAL DE CONFIGURAÇÃO PADRONIZADA 🔥
-        // =========================================================================================
+        // 🔥 SALVAR CONFIGURAÇÕES DA NOVA JANELA 🔥
         document.getElementById('cancel-config-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('config-pauta-modal')?.classList.add('hidden');
         });
@@ -782,116 +771,7 @@ class SIGEPApp {
                 btn.disabled = false;
             }
         });
-    }
-
-    setupPautaSettingsEvents() {
-        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
-        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
-        if (pautaSettingsToggle && pautaSettingsPanel) {
-            pautaSettingsToggle.addEventListener('click', (e) => {
-                e.stopPropagation();
-                pautaSettingsPanel.classList.toggle('hidden');
-                if (!pautaSettingsPanel.classList.contains('hidden')) this.loadColumnPreferences();
-            });
-        }
-
-        document.getElementById('toggle-em-atendimento')?.addEventListener('change', () => this.saveColumnPreferences());
-        document.getElementById('toggle-distribuicao')?.addEventListener('change', () => this.saveColumnPreferences());
-        document.getElementById('toggle-faltosos')?.addEventListener('change', () => this.saveColumnPreferences());
-
-        document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
-            const listContainer = document.getElementById('manage-rooms-list');
-            if (!listContainer) return;
-            listContainer.innerHTML = '';
-            
-            if (this.currentPautaData?.type === 'multisala' && this.customRoomsList?.length > 0) {
-                this.customRoomsList.forEach((room) => {
-                    const div = document.createElement('div');
-                    div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
-                    div.innerHTML = `<input type="text" class="room-edit-input flex-1 p-2 border rounded" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">`;
-                    listContainer.appendChild(div);
-                });
-            }
-            document.getElementById('manage-rooms-modal')?.classList.remove('hidden');
-        });
         
-        document.getElementById('save-manage-rooms-btn')?.addEventListener('click', async () => {
-            const inputs = document.querySelectorAll('.room-edit-input');
-            const newRoomsList = [];
-            const roomChanges = []; 
-            inputs.forEach(input => {
-                const newName = input.value.trim();
-                if (newName) {
-                    newRoomsList.push(newName);
-                    if (newName !== input.dataset.original) roomChanges.push({ oldName: input.dataset.original, newName });
-                }
-            });
-
-            try {
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { customRooms: newRoomsList, rooms: newRoomsList });
-                this.customRoomsList = newRoomsList;
-                if (this.currentPautaData) this.currentPautaData.customRooms = newRoomsList;
-
-                if (roomChanges.length > 0) {
-                    const batch = writeBatch(this.db);
-                    let hasChanges = false;
-                    this.allAssisted.forEach(assisted => {
-                        const change = roomChanges.find(c => c.oldName === assisted.room);
-                        if (change) {
-                            batch.update(doc(this.db, "pautas", this.currentPauta.id, "attendances", assisted.id), { room: change.newName });
-                            hasChanges = true;
-                        }
-                    });
-                    if (hasChanges) await batch.commit();
-                }
-                document.getElementById('manage-rooms-modal')?.classList.add('hidden');
-                if (typeof UIService.renderAssistedLists === 'function') UIService.renderAssistedLists(this);
-            } catch (error) {
-                showNotification("Erro ao atualizar salas.", "error");
-            }
-        });
-
-        const openCloseModal = (isReopen) => {
-            document.getElementById('close-modal-title').textContent = isReopen ? 'Reabrir Pauta' : 'Fechar Pauta';
-            document.getElementById('close-pauta-password').value = '';
-            document.getElementById('confirm-close-pauta-btn').textContent = isReopen ? 'Reabrir' : 'Confirmar';
-            document.getElementById('close-pauta-modal').classList.remove('hidden');
-        };
-        document.getElementById('close-pauta-btn')?.addEventListener('click', () => openCloseModal(false));
-        document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => openCloseModal(true));
-        
-        document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
-            const password = document.getElementById('close-pauta-password')?.value;
-            const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
-            const user = this.auth.currentUser;
-            
-            if (!user || user.uid !== this.currentPautaOwnerId) return showNotification("Sem permissão.", "error");
-
-            try {
-                await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
-                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isClosed: !isReopen });
-                this.isPautaClosed = !isReopen;
-                UIService.togglePautaLock(this);
-                document.getElementById('close-pauta-modal')?.classList.add('hidden');
-                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'}.`, 'success');
-            } catch (error) {
-                showNotification("Senha incorreta.", "error");
-            }
-        });
-        
-        document.getElementById('reset-all-btn')?.addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
-        document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
-            const snapshot = await getDocs(collection(this.db, "pautas", this.currentPauta.id, "attendances"));
-            const batch = writeBatch(this.db);
-            snapshot.docs.forEach(doc => batch.delete(doc.ref));
-            await batch.commit();
-            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
-            showNotification("Pauta zerada com sucesso.", "success");
-        });
-
-        // ------------------------------------------------------------------------------------------
-        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!)
-        // ------------------------------------------------------------------------------------------
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
@@ -967,6 +847,56 @@ class SIGEPApp {
         if (actionsPanelEl) {
             observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
         }
+
+        // 🔥 CORREÇÃO DO OBSERVER PARA USAR O ID CORRETO DA NOVA JANELA 🔥
+        const observerEdicao = new MutationObserver(() => {
+            const modalEdicao = document.getElementById('config-pauta-modal'); 
+            if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
+                let divConfigTV = document.getElementById('edit-use-tv-panel-container');
+                if (!divConfigTV) {
+                    const btnCancelarSalvar = document.getElementById('cancel-config-pauta-btn')?.parentNode;
+                    if (btnCancelarSalvar) {
+                        divConfigTV = document.createElement('div');
+                        divConfigTV.id = 'edit-use-tv-panel-container';
+                        divConfigTV.className = 'mb-4 p-4 bg-indigo-50/50 rounded-xl border border-indigo-100 mx-6';
+                        divConfigTV.innerHTML = `
+                            <label class="flex items-center cursor-pointer gap-3">
+                                <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
+                                    <span class="block text-xs text-slate-500 mt-0.5">Se ativado, exibe o configurador do Painel TV no menu Ações e envia chamadas.</span>
+                                </div>
+                            </label>
+                        `;
+                        btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
+
+                        const btnSalvar = document.getElementById('save-config-pauta-btn');
+                        if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
+                            btnSalvar.setAttribute('data-tv-hooked', 'true');
+                            btnSalvar.addEventListener('click', async () => {
+                                if (!this.currentPauta?.id) return;
+                                const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
+                                try {
+                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
+                                    if (this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
+                                    const tvGroupMenu = document.getElementById('tv-panel-actions-group');
+                                    if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !tvVal);
+                                } catch (e) {
+                                    console.error("Erro ao salvar useTvPanel:", e);
+                                }
+                            });
+                        }
+                    }
+                }
+                const tvCheck = document.getElementById('edit-use-tv-panel');
+                if (tvCheck && this.currentPautaData) {
+                    tvCheck.checked = this.currentPautaData.useTvPanel !== false;
+                }
+            }
+        });
+        
+        const modalEdicaoEl = document.getElementById('config-pauta-modal');
+        if (modalEdicaoEl) observerEdicao.observe(modalEdicaoEl, { attributes: true, attributeFilter: ['class'] });
     }
 
     setupAttendanceEvents() {
@@ -1437,728 +1367,7 @@ class SIGEPApp {
             if (pautasList) pautasList.innerHTML = `<p class="col-span-full text-center text-red-500">Erro: ${error.message}</p>`;
         }
     }
-
-    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL (IGUAL À RECEPÇÃO CENTRAL)
-    async abrirModalConfigTVPauta() {
-        if (!this.currentPauta) return;
-        const pautaId = this.currentPauta.id;
-        const pautaName = this.currentPauta.name;
-        
-        let logoAtual = '';
-        try {
-            const configSnap = await getDoc(doc(this.db, "pautas", pautaId, "painel", "config"));
-            if (configSnap.exists()) logoAtual = configSnap.data().logoUrl || '';
-        } catch(e) {}
-
-        const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${pautaId}`) || '{}');
-        const modoAtual = cacheConfig.modo || 'tv';
-        const videoAtual = cacheConfig.video || '';
-        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
-
-        const modalId = 'modal-config-tv-individual';
-        let modal = document.getElementById(modalId);
-        if (modal) modal.remove();
-
-        modal = document.createElement('div');
-        modal.id = modalId;
-        modal.className = 'fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
-        
-        modal.innerHTML = `
-        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
-            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
-                <div>
-                    <h3 class="font-bold text-xl text-slate-800">Configurar Painel da TV</h3>
-                    <p class="text-sm font-semibold text-slate-500 mt-0.5">${escapeHTML(pautaName)}</p>
-                </div>
-                <button class="text-slate-400 hover:text-slate-600 transition-colors fechar-modal-tv bg-white p-2 rounded-full shadow-sm">
-                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
-                </button>
-            </div>
-            
-            <div class="p-6 overflow-y-auto space-y-7 bg-white flex-1 custom-scrollbar">
-                <!-- Modos de Visualização -->
-                <div>
-                    <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">1. Modo de visualização</span>
-                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'fila' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">${ico('clipboard', 'w-8 h-8')}</div>
-                            <div class="font-bold text-slate-800 text-sm">Lista (Fila)</div>
-                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Visão em grade mostrando quem está nas mesas e os próximos da fila.</div>
-                        </label>
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'tv' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">${ico('tv', 'w-8 h-8')}</div>
-                            <div class="font-bold text-slate-800 text-sm">TV Padrão</div>
-                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Painel de chamada limpo (fundo azul) com aviso sonoro e histórico.</div>
-                        </label>
-                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'video' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                            <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">▶️</div>
-                            <div class="font-bold text-slate-800 text-sm">TV + Vídeo</div>
-                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Exibe vídeos institucionais dividindo a tela com os últimos chamados.</div>
-                        </label>
-                    </div>
-                </div>
-                
-                <!-- YouTube (Só aparece se Vídeo selecionado) -->
-                <div id="tv-video-container" class="transition-opacity duration-300 ${modoAtual === 'video' ? 'opacity-100' : 'opacity-50 pointer-events-none'}">
-                    <label class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">2. Link do YouTube (Obrigatório para Modo Vídeo)</label>
-                    <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ex: https://www.youtube.com/watch?v=XyZ123...">
-                </div>
-
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <!-- Som -->
-                    <div>
-                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Aviso Sonoro</span>
-                        <div class="grid grid-cols-2 gap-3">
-                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === true ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                                <input type="radio" name="tv_som" value="1" class="hidden" ${somAtual === true ? 'checked' : ''}>
-                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bell')} Ativado</span>
-                            </label>
-                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === false ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
-                                <input type="radio" name="tv_som" value="0" class="hidden" ${somAtual === false ? 'checked' : ''}>
-                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bellOff')} Silencioso</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- Logo -->
-                    <div>
-                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Logo do Painel Público</span>
-                        <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
-                            <div id="tv-logo-preview" class="w-24 h-24 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 overflow-hidden relative">
-                            </div>
-                            <div class="flex-1">
-                                <div class="flex flex-col gap-2">
-                                    <button type="button" id="tv-logo-enviar" class="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors w-full text-center shadow-sm">Subir Imagem</button>
-                                    <button type="button" id="tv-logo-remover" class="px-3 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors w-full text-center">Usar Padrão</button>
-                                    <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
-                                </div>
-                                <p class="text-[9px] font-semibold text-slate-500 mt-2 leading-tight">Aceito: PNG, JPG, WebP ou SVG (máx. 5MB).</p>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Link Gerado -->
-                 <div>
-                    <span class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">PIN de acesso (opcional)</span>
-                    <input type="password" id="tv_pin_novo" maxlength="12" autocomplete="new-password" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Digite um PIN para proteger o painel (vazio = manter)">
-                    <label class="flex items-center gap-2 mt-2 text-xs font-semibold text-slate-600"><input type="checkbox" id="tv_pin_remover"> Remover PIN (deixar o painel aberto)</label>
-                </div>
-                
-                <div class="bg-blue-50/50 border border-blue-100 p-5 rounded-xl">
-                    <div class="flex justify-between items-center mb-2">
-                        <span class="block text-xs font-extrabold text-blue-900 uppercase tracking-wider">Link gerado para a Smart TV</span>
-                        <span class="bg-blue-200 text-blue-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Copia e cola no navegador da TV</span>
-                    </div>
-                    <textarea id="tv_preview_link" readonly class="w-full bg-white border border-blue-200 rounded-lg p-3 text-xs font-mono text-blue-700 outline-none resize-none h-16 shadow-inner"></textarea>
-                </div>
-            </div>
-            
-            <div class="px-6 py-5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end items-center">
-                <button class="w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors fechar-modal-tv text-sm">Cancelar</button>
-                <button id="tv-btn-copiar" class="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors text-sm shadow-md flex items-center justify-center gap-2">${ico('clipboard')} Copiar Link</button>
-                <button id="tv-btn-salvar-abrir" class="w-full sm:w-auto px-6 py-3 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg flex items-center justify-center gap-2">${ico('monitor')} Salvar e Abrir TV</button>
-            </div>
-        </div>
-        `;
-        
-        modal.addEventListener('click', () => modal.remove());
-        document.body.appendChild(modal);
-
-        const desenharPreview = () => {
-            const box = document.getElementById('tv-logo-preview');
-            box.replaceChildren();
-            if (logoAtual) {
-                const img = document.createElement('img');
-                img.src = logoAtual; img.alt = 'Logo do órgão';
-                img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;padding:4px;';
-                box.appendChild(img);
-            } else {
-                const t = document.createElement('span');
-                t.className = 'text-[10px] font-bold text-center leading-tight'; t.style.color = '#94a3b8'; t.innerHTML = 'Logo<br>SIGEP<br>(Padrão)';
-                box.appendChild(t);
-            }
-        };
-        desenharPreview();
-
-        const updatePreview = () => {
-            const modo  = modal.querySelector('input[name="tv_modo"]:checked').value;
-            const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
-            const som   = modal.querySelector('input[name="tv_som"]:checked').value;
-            
-            const containerVideo = document.getElementById('tv-video-container');
-            if (modo === 'video') {
-                containerVideo.classList.remove('opacity-50', 'pointer-events-none');
-                containerVideo.classList.add('opacity-100');
-            } else {
-                containerVideo.classList.add('opacity-50', 'pointer-events-none');
-                containerVideo.classList.remove('opacity-100');
-            }
-
-            const nome = encodeURIComponent(pautaName);
-            const baseUrl = window.location.origin + window.location.pathname;
-            const link = `${baseUrl}?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
-
-            document.getElementById('tv_preview_link').value = link;
-            return { link, modo, video, som };
-        };
-
-        const ligarGrupo = (name, cardClass, extraClassesAtivo) => {
-            modal.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
-                radio.addEventListener('change', () => {
-                    modal.querySelectorAll(`.${cardClass}`).forEach(c => {
-                        c.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-1', 'ring-blue-200');
-                        c.classList.add('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
-                    });
-                    const pai = radio.closest(`.${cardClass}`);
-                    pai.classList.remove('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
-                    pai.classList.add(...extraClassesAtivo.split(' '));
-                    updatePreview();
-                });
-            });
-        };
-        ligarGrupo('tv_modo', 'tv-modo-card', 'border-blue-500 bg-blue-50 ring-2 ring-blue-200');
-        ligarGrupo('tv_som', 'tv-som-card', 'border-blue-500 bg-blue-50 ring-1 ring-blue-200');
-
-        document.getElementById('tv_video_url').addEventListener('input', updatePreview);
-        updatePreview();
-
-        const reduzirImagem = (file) => new Promise((resolve, reject) => {
-            if (!/^image\//.test(file.type)) return reject(new Error('Arquivo não é uma imagem.'));
-            if (file.size > 5 * 1024 * 1024) return reject(new Error('Imagem maior que 5 MB.'));
-            const reader = new FileReader();
-            reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
-            reader.onload = () => {
-                if (file.type === 'image/svg+xml') {
-                    return reader.result.length > 400000 ? reject(new Error('SVG muito grande.')) : resolve(reader.result);
-                }
-                const img = new Image();
-                img.onerror = () => reject(new Error('Imagem inválida.'));
-                img.onload = () => {
-                    const escala = Math.min(1, 160 / img.height, 480 / img.width);
-                    const c = document.createElement('canvas');
-                    c.width = Math.max(1, Math.round(img.width * escala));
-                    c.height = Math.max(1, Math.round(img.height * escala));
-                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
-                    const out = c.toDataURL('image/png');
-                    out.length > 500000 ? reject(new Error('Imagem complexa demais.')) : resolve(out);
-                };
-                img.src = reader.result;
-            };
-            reader.readAsDataURL(file);
-        });
-
-        document.getElementById('tv-logo-enviar').addEventListener('click', () => document.getElementById('tv-logo-file').click());
-        document.getElementById('tv-logo-file').addEventListener('change', async (e) => {
-            const file = e.target.files?.[0];
-            if (!file) return;
-            try { logoAtual = await reduzirImagem(file); desenharPreview(); updatePreview(); }
-            catch (err) { showNotification(err.message, 'error'); }
-            e.target.value = '';
-        });
-        document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); updatePreview(); });
-
-        modal.querySelectorAll('.fechar-modal-tv').forEach(b => b.addEventListener('click', () => modal.remove()));
-
-        const saveConfig = async () => {
-            const data = updatePreview();
-            const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
-
-            localStorage.setItem(`sigep_tv_config_${pautaId}`, JSON.stringify(configToSave));
-
-            const orgaoId = this.currentUser?.orgaoId || null;
-            try {
-                const payload = { logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() };
-                const pinNovo = document.getElementById('tv_pin_novo')?.value.trim();
-                if (document.getElementById('tv_pin_remover')?.checked) {
-                    payload.tvPinHash = '';
-                } else if (pinNovo) {
-                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sigep-tv:' + pinNovo));
-                    payload.tvPinHash = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
-                }
-                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), payload, { merge: true });
-            } catch (err) {
-                console.warn('Falha ao salvar logo do painel no banco:', err);
-            }
-
-            return data.link;
-        };
-
-        document.getElementById('tv-btn-copiar').addEventListener('click', async () => {
-            const link = await saveConfig();
-            navigator.clipboard.writeText(link).then(() => {
-                showNotification("Configuração salva e link copiado!", "success");
-                modal.remove();
-            }).catch(() => showNotification("Erro ao copiar o link.", "error"));
-        });
-
-        document.getElementById('tv-btn-salvar-abrir').addEventListener('click', async () => {
-            const link = await saveConfig();
-            window.open(link, '_blank');
-            modal.remove();
-        });
-    }
-
-    async loadPauta(pautaId, pautaName, pautaType) {
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                const pautaData = pautaDoc.data();
-                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
-                const expirationDate = new Date(dataBase);
-                expirationDate.setDate(dataBase.getDate() + 7);
-                if (new Date() > expirationDate) {
-                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
-                    return;
-                }
-            }
-        } catch (error) {
-            console.error("Erro ao verificar expiração:", error);
-        }
-
-        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
-        document.getElementById('pauta-title').textContent = pautaName;
-
-        try {
-            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
-            if (pautaDoc.exists()) {
-                this.currentPautaData = pautaDoc.data();
-
-                const tvAtivada = this.currentPautaData.useTvPanel !== false;
-                const tvGroupMenu = document.getElementById('tv-panel-actions-group');
-                if (tvGroupMenu) {
-                    tvGroupMenu.classList.toggle('hidden', !tvAtivada);
-                }
-                
-                const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
-                
-                const descPontuais = document.getElementById('desc-pontuais');
-                if (descPontuais) descPontuais.innerHTML = `Agendados que chegam no horário (ou com até <b>${tolerancia} min</b> de tolerância). O desempate é por quem fez o check-in na recepção primeiro.`;
-                
-                const descAtrasados = document.getElementById('desc-atrasados');
-                if (descAtrasados) descAtrasados.innerHTML = `Atrasos superiores a <b>${tolerancia} min</b>. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.`;
-                
-                const descExemplo2 = document.getElementById('desc-exemplo2');
-                if (descExemplo2) descExemplo2.innerHTML = `* Pedro atrasou mais de <b>${tolerancia} min</b>. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).`;
-
-                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
-                this.currentPautaOwnerId = this.currentPautaData.owner;
-                this.isPautaClosed = this.currentPautaData.isClosed || false;
-
-                if (this.currentPautaData.isPublic === undefined) {
-                    this.currentPautaData.isPublic = true;
-                    updateDoc(doc(this.db, "pautas", pautaId), { isPublic: true }).catch(err => console.error(err));
-                }
-                
-                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
-                    this.customRoomsList = this.currentPautaData.customRooms;
-                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
-                    this.customRoomsList = this.currentPautaData.rooms;
-                } else {
-                    this.customRoomsList = [];
-                }
-
-                setTimeout(() => { UIService.togglePautaLock(this); }, 100);
-                this.loadColumnPreferences();
-                this.applyRoleBasedUI();
-                
-                const btnManageRooms = document.getElementById('btn-manage-rooms');
-                if (btnManageRooms) {
-                    btnManageRooms.classList.toggle('hidden', this.currentPautaData.type !== 'multisala');
-                }
-
-                if (typeof PautaService.populateRoomSelects === 'function') {
-                    PautaService.populateRoomSelects(this);
-                }
-
-                const tipoConfig = String(this.currentPautaData.type || this.currentPautaData.tipo || 'hibrido').toLowerCase();
-                const tabAgendamento = document.getElementById('tab-agendamento');
-                const tabAvulso = document.getElementById('tab-avulso');
-                const navTabs = document.getElementById('nav-tabs-atendimento');
-
-                if (tabAgendamento && tabAvulso) {
-                    tabAgendamento.classList.remove('hidden');
-                    tabAvulso.classList.remove('hidden');
-                    if (navTabs) navTabs.classList.remove('hidden');
-
-                    if (tipoConfig === 'agendamento' && this.currentPautaData.permiteAvulso !== true) {
-                        tabAvulso.classList.add('hidden');
-                        UIService.switchTab('agendamento', this);
-                    } 
-                    else if (tipoConfig === 'avulso' && this.currentPautaData.permiteAgendamento !== true) {
-                        tabAgendamento.classList.add('hidden');
-                        UIService.switchTab('avulso', this);
-                    } 
-                    else {
-                        UIService.switchTab('agendamento', this);
-                    }
-                }
-            }
-
-            this.setupRealtimeListener(pautaId);
-            
-            if (typeof CollaboratorService?.setupListener === 'function') {
-                CollaboratorService.setupListener(this, pautaId);
-            } else if (typeof window.CollaboratorService?.setupListener === 'function') {
-                window.CollaboratorService.setupListener(this, pautaId);
-            }
-            
-            const appContainer = document.getElementById('app-container');
-            if (appContainer && appContainer.classList.contains('hidden')) {
-                document.getElementById('pauta-selection-container')?.classList.add('hidden');
-                document.getElementById('dashboard-container')?.classList.add('hidden');
-                document.getElementById('admin-container')?.classList.add('hidden');
-                document.getElementById('modo-selection-screen')?.classList.add('hidden');
-                appContainer.classList.remove('hidden');
-            }
-
-        } catch (error) {
-            console.error("Erro ao carregar pauta:", error);
-            showNotification("Erro ao carregar pauta", "error");
-        }
-    }
-
-    _teardownPauta() {
-        if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
-        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
-
-        this.currentPauta = null;
-        this.allAssisted  = [];
-        this.colaboradores = [];
-
-        localStorage.removeItem('lastPautaId');
-        localStorage.removeItem('lastPautaName');
-        localStorage.removeItem('lastPautaType');
-    }
-
-    setupRealtimeListener(pautaId) {
-        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
-        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
-        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
-            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            UIService.renderAssistedLists(this);
-            this.atualizarMonitorEnvelopes();
-
-            setTimeout(() => { 
-                if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); 
-            }, 150);
-        }, (error) => {
-            console.error("Erro no snapshot:", error);
-            showNotification("Erro ao carregar dados em tempo real", "error");
-        });
-    }
-
-    async deletePauta(pautaId, pautaName) {
-        const pautaRef = doc(this.db, "pautas", pautaId);
-        const pautaSnap = await getDoc(pautaRef);
-        
-        if (!pautaSnap.exists()) return showNotification("Pauta não encontrada!", "error");
-        
-        const pautaData = pautaSnap.data();
-        const currentUserId = this.auth.currentUser?.uid;
-        
-        if (pautaData.owner !== currentUserId && this.currentUser?.role !== 'admin' && this.currentUser?.role !== 'superadmin') {
-            return showNotification("Você não tem permissão para excluir esta pauta!", "error");
-        }
-        
-        if (!confirm(`ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
-        
-        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
-        
-        try {
-            const attendancesSnap = await getDocs(collection(this.db, "pautas", pautaId, "attendances"));
-            const batch = writeBatch(this.db);
-            let operationCount = 0;
-            
-            for (const doc of attendancesSnap.docs) {
-                batch.delete(doc.ref);
-                operationCount++;
-                if (operationCount >= 490) { await batch.commit(); operationCount = 0; }
-            }
-            if (operationCount > 0) await batch.commit();
-            await deleteDoc(pautaRef);
-            
-            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
-            await this.loadPautasWithFilter();
-            
-        } catch (error) {
-            console.error("Erro ao excluir pauta:", error);
-            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
-        }
-    }
-    
-    atualizarMonitorEnvelopes() {
-        if (!this.colaboradores || this.colaboradores.length === 0) return;
-
-        const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
-        const colabsLivres = colabsAtivos.filter(c => {
-            const casosOcupando = this.allAssisted.filter(a => {
-                const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
-                const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
-                return emAtendimentoNormal || pendenteAssinatura;
-            });
-            return casosOcupando.length === 0;
-        });
-
-        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
-        if (!headerActions) return;
-
-        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
-        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnId) btn.remove(); });
-
-        let btnEnvelope = document.getElementById(btnId);
-
-        if (colabsLivres.length > 0) {
-            if (!btnEnvelope) {
-                btnEnvelope = document.createElement('button');
-                btnEnvelope.id = btnId;
-                btnEnvelope.onclick = () => {
-                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
-                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
-                };
-                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
-            }
-            
-            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
-            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-            btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
-        } else {
-            if (btnEnvelope) btnEnvelope.remove();
-        }
-    }
-
-    setupColetas() {
-        document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.COLETAS, {}, false);
-        });
-
-        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
-            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
-        });
-
-        document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
-            const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
-            if (!nome) return;
-
-            try {
-                const novaColeta = {
-                    nomeDaColeta: nome, dicionarioDeCampos: [], linksExternos: [],
-                    criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
-                    criadoEm: new Date().toISOString()
-                };
-                
-                const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-                await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
-                
-                showNotification("Nova coleta criada com sucesso!", "success");
-                this.listarColetas();
-            } catch (error) {
-                showNotification("Erro ao criar coleta no banco de dados.", "error");
-            }
-        });
-    }
-
-    async listarColetas() {
-        const container = document.getElementById('lista-de-coletas');
-        if (!container) return;
-        
-        container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
-
-        try {
-            const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-            const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
-            if (querySnapshot.empty) {
-                container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
-                return;
-            }
-
-            let html = '';
-            querySnapshot.forEach(docSnap => {
-                const data = docSnap.data();
-                html += `
-                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
-                        <div>
-                            <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
-                            <p class="text-[11px] font-bold text-slate-500 mt-1">${ico('bookOpen', 'w-3.5 h-3.5')} ${data.dicionarioDeCampos?.length || 0} campos cadastrados | ${ico('link', 'w-3.5 h-3.5')} ${data.linksExternos?.length || 0} links gerados</p>
-                        </div>
-                        <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">${ico('settings', 'w-3.5 h-3.5')} Configurar</button>
-                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">${ico('trendingUp', 'w-3.5 h-3.5')} Resultados</button>
-                        </div>
-                    </div>
-                `;
-            });
-            container.innerHTML = html;
-        } catch (error) {
-            container.innerHTML = '<p class="text-center text-red-500 py-4 font-bold">Erro ao carregar do servidor.</p>';
-        }
-    }
-
-    setupSubjectsAutocomplete() {
-        const datalist = document.getElementById('subjects-list');
-        if (!datalist) return;
-        flatSubjects.forEach(subject => {
-            const option = document.createElement('option');
-            option.value = subject.value;
-            datalist.appendChild(option);
-        });
-
-        const subjectInput = document.getElementById('assisted-subject');
-        const descriptionBox = document.getElementById('subject-description');
-        
-        if (subjectInput) {
-            subjectInput.addEventListener('input', (e) => {
-                const query = e.target.value.toLowerCase();
-                const filtered = flatSubjects.filter(item => item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
-                datalist.innerHTML = '';
-                filtered.forEach(subject => {
-                    const option = document.createElement('option');
-                    option.value = subject.value;
-                    datalist.appendChild(option);
-                });
-            });
-
-            subjectInput.addEventListener('change', () => {
-                const value = subjectInput.value;
-                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
-                subjectInput.value = selectedText;
-
-                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
-                if (found?.description && descriptionBox) {
-                    descriptionBox.textContent = found.description;
-                    descriptionBox.classList.remove('hidden');
-                } else if (descriptionBox) {
-                    descriptionBox.classList.add('hidden');
-                }
-            });
-        }
-
-        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
-            const value = subjectInput?.value || '';
-            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
-            if (found?.description && descriptionBox) {
-                descriptionBox.textContent = found.description;
-                descriptionBox.classList.toggle('hidden');
-            } else if (descriptionBox) {
-                descriptionBox.textContent = 'Selecione um assunto válido.';
-                descriptionBox.classList.remove('hidden');
-            }
-        });
-    }
-
-    async loadUserPreferences() {
-        if (!this.auth?.currentUser || !this.db) return;
-        try {
-            const docSnap = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
-            if (docSnap.exists()) {
-                const userData = docSnap.data();
-                this.currentUser = { ...this.currentUser, ...userData }; 
-                
-                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
-                
-                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
-                this.applyRoleBasedUI(); 
-            }
-        } catch (error) { 
-            console.error("Erro ao carregar perfil:", error); 
-        }
-    }
-
-    applyRoleBasedUI() {
-        if (!this.currentUser) return;
-        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
-        document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
-        PermissoesService.aplicarUI(this.currentUser);
-    }
-
-    async openUserPreferencesModal() {
-        if (!this.auth?.currentUser) return showNotification("Você precisa estar logado.", "error");
-
-        const nameInput = document.getElementById('pref-user-name');
-        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
-        
-        const emailInput = document.getElementById('pref-user-email');
-        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
-
-        await this.loadUserPreferences(); 
-
-        const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
-        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
-        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
-        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
-        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
-        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
-        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
-        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
-        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
-
-        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
-    }
-
-    applyUserPreferences() {
-        console.log("Aplicando preferências:", this.userPreferences);
-    }
-
-    getDefaultNotificationPreferences() {
-        return {
-            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
-            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
-        };
-    }
-
-    saveColumnPreferences() {
-        const preferences = {
-            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
-            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
-            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
-        };
-        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
-        this.applyColumnPreferences(preferences);
-    }
-
-    loadColumnPreferences() {
-        const savedPreferences = localStorage.getItem('sigap_column_preferences');
-        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
-
-        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
-        const chkDistribuicao = document.getElementById('toggle-distribuicao');
-        const chkFaltosos = document.getElementById('toggle-faltosos');
-        
-        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
-        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
-        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
-        
-        this.applyColumnPreferences(preferences);
-    }
-
-    applyColumnPreferences(preferences) {
-        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
-        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
-
-        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
-        const distribuicaoColumn = document.getElementById('distribuicao-column');
-        const faltososColumn = document.getElementById('faltosos-column');
-
-        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
-        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
-        
-        if (faltososColumn) {
-            const pautaColumn = document.getElementById('pauta-column');
-            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
-                 faltososColumn.classList.remove('hidden');
-            }
-        }
-    }
 }
-
-// ============================================================
-// INICIALIZAÇÃO GLOBAL E COMPATIBILIDADE LEGADA
-// ============================================================
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
