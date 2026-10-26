@@ -3,6 +3,7 @@
 import { collection, addDoc, doc, getDoc, updateDoc, arrayUnion, arrayRemove, query, where, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { escapeHTML, showNotification } from './utils.js';
 
+import { ico } from './icons.js';
 export const ModalService = {
     /**
      * Abre o modal de seleção de tipo de pauta
@@ -58,7 +59,7 @@ export const ModalService = {
                 // Estilo moderno
                 li.className = "flex justify-between items-center bg-white border border-slate-200 p-2.5 rounded-lg shadow-sm mb-2";
                 li.innerHTML = `
-                    <span class="font-semibold text-slate-700">🏢 ${escapeHTML(room)}</span>
+                    <span class="font-semibold text-slate-700">${ico('building')} ${escapeHTML(room)}</span>
                     <button class="remove-room-btn text-red-500 hover:text-red-700 bg-red-50 px-2 py-1 rounded text-xs font-bold transition-colors" data-index="${index}">Remover</button>
                 `;
                 list.appendChild(li);
@@ -192,7 +193,7 @@ export const ModalService = {
         noAssign.className = 'flex items-center p-3 border border-slate-200 rounded-lg cursor-pointer hover:bg-slate-50 transition-colors shadow-sm mb-2';
         noAssign.innerHTML = `
             <input type="radio" name="selectedCollaborator" value="null" data-name="Não atribuído" class="h-5 w-5 text-blue-600 focus:ring-blue-500" checked>
-            <span class="ml-3 font-semibold text-slate-700">🚫 Manter na Fila Geral (Não Atribuir)</span>
+            <span class="ml-3 font-semibold text-slate-700">${ico('ban')} Manter na Fila Geral (Não Atribuir)</span>
         `;
         list.appendChild(noAssign);
 
@@ -242,7 +243,7 @@ export const ModalService = {
                 li.className = 'flex justify-between items-center p-3 bg-white border border-slate-200 rounded-lg shadow-sm mb-2';
                 li.innerHTML = `
                     <span class="text-sm font-medium text-slate-700">${escapeHTML(demand)}</span>
-                    <button class="remove-demand-item-btn text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition">🗑️</button>
+                    <button class="remove-demand-item-btn text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 p-1.5 rounded transition">${ico('trash')}</button>
                 `;
                 container.appendChild(li);
             });
@@ -295,7 +296,7 @@ export const ModalService = {
                         memberEl.className = 'flex justify-between items-center bg-slate-50 border border-slate-200 p-3 rounded-lg shadow-sm mb-2';
                         memberEl.innerHTML = `
                             <div class="flex items-center gap-2">
-                                <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full text-xs">👤</span>
+                                <span class="bg-indigo-100 text-indigo-600 p-1.5 rounded-full text-xs">${ico('user', 'w-3.5 h-3.5')}</span>
                                 <span class="font-medium text-slate-700">${email} ${isOwner ? '<span class="text-[10px] text-amber-600 font-black uppercase ml-1 bg-amber-50 px-1 rounded border border-amber-200">Dono</span>' : ''}</span>
                             </div>
                             ${!isOwner ? `<button data-email="${email}" class="remove-member-btn text-red-500 hover:text-white hover:bg-red-500 px-2 py-1 text-xs rounded transition-colors font-bold border border-red-200">Remover</button>` : ''}
@@ -339,7 +340,7 @@ export const ModalService = {
                         memberEmails: arrayUnion(email)
                     });
                     
-                    if (statusDiv) statusDiv.innerHTML = `<span class="text-green-600 text-xs font-bold">✅ Usuário adicionado!</span>`;
+                    if (statusDiv) statusDiv.innerHTML = `<span class="text-green-600 text-xs font-bold">${ico('checkCircle', 'w-3.5 h-3.5')} Usuário adicionado!</span>`;
                     if (inviteInput) inviteInput.value = '';
                     
                     this.openMembersModal(app);
