@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
@@ -251,7 +249,7 @@
 </head>
 <body class="p-0 sm:p-0 md:p-0">
     <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
-        ⚠️ Sem conexão. Trabalhando em Modo Offline no SIGEP.
+        <svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/></svg> Sem conexão. Trabalhando em Modo Offline no SIGEP.
     </div>
 
     <div id="loading-container" class="loading-container">
@@ -278,13 +276,6 @@
                         <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-green-600 hover:underline">Esqueci minha senha</a>
                     </div>
                     <button type="submit" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-green-600 hover:bg-green-700 transition">Entrar</button>
-                    
-                    <!-- NOVO LINK: Autenticação em dois fatores -->
-                    <div class="mt-4 text-center">
-                        <a href="#" id="info-2fa-login-link" class="text-sm text-sky-600 hover:text-sky-800 font-medium transition-colors">
-                            Autenticação em dois fatores
-                        </a>
-                    </div>
                 </form>
                 <form id="register-form" class="hidden space-y-4">
                     <div><label for="register-name" class="block text-sm font-medium text-slate-700">Nome Completo</label><input type="text" id="register-name" required class="mt-1 block w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-green-500 focus:border-green-500 text-sm sm:text-base"></div>
@@ -446,7 +437,7 @@
             
             <div id="filters-container" class="mb-4"></div>
             
-            <!-- 🌟 BARRA DE PESQUISA DE PAUTAS 🌟 -->
+            <!-- BARRA DE PESQUISA DE PAUTAS -->
             <div class="mb-6 flex justify-end w-full">
                 <div class="relative w-full sm:w-96">
                     <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -492,7 +483,7 @@
                 <button id="perfil-back-btn" class="absolute top-4 right-4 sm:top-6 sm:right-6 w-auto bg-slate-200 text-slate-800 font-bold py-2 px-4 rounded-lg hover:bg-slate-300 transition text-sm sm:text-base">
                     &larr; Voltar
                 </button>
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl">👤</div>
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mb-4 shadow-sm text-3xl"><svg class="w-8 h-8 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></div>
                 <h2 class="text-2xl sm:text-3xl md:text-4xl font-black text-slate-800 text-center">
                     Meu Perfil e Preferências
                 </h2>
@@ -502,7 +493,7 @@
             <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
                 <!-- COLUNA 1: DADOS DE ACESSO -->
                 <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200 space-y-5">
-                    <h3 class="text-lg font-bold text-slate-800 border-b pb-2">🔐 Dados de Acesso</h3>
+                    <h3 class="text-lg font-bold text-slate-800 border-b pb-2"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> Dados de Acesso</h3>
                     
                     <div>
                         <label class="block text-sm font-medium text-slate-700">Nome Completo</label>
@@ -521,20 +512,6 @@
                             <input type="password" id="perfil-nova-senha" placeholder="Deixe em branco para não alterar" class="mt-1 w-full p-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500">
                         </div>
                     </div>
-                    
-                    <!-- ADICIONADO: Seção de Segurança 2FA -->
-                    <div class="pt-4 border-t border-slate-100">
-                        <h4 class="text-sm font-bold text-slate-600 mb-3">Segurança Extra</h4>
-                        <div class="bg-indigo-50 p-4 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-center justify-between gap-3">
-                            <div>
-                                <p class="text-sm font-bold text-indigo-900">Autenticação em 2 Fatores</p>
-                                <p class="text-xs text-indigo-700 mt-1">Proteja sua conta usando o celular.</p>
-                            </div>
-                            <button type="button" id="btn-ativar-2fa-perfil" class="w-full sm:w-auto bg-indigo-600 hover:bg-indigo-700 text-white font-bold py-2 px-4 rounded-lg shadow-sm transition text-xs">
-                                Configurar 2FA
-                            </button>
-                        </div>
-                    </div>
 
                     <div class="bg-amber-50 p-4 rounded-xl border border-amber-200 mt-4">
                         <label class="block text-sm font-bold text-amber-800">Senha Atual (Obrigatória para salvar)</label>
@@ -547,7 +524,7 @@
                 <div class="space-y-6">
                     <!-- Vínculos -->
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🏛️ Vínculo Institucional</h3>
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 22h18M6 18v-7M10 18v-7M14 18v-7M18 18v-7"/><path d="M12 2 3 7h18z"/></svg> Vínculo Institucional</h3>
                         
                         <div class="mb-4">
                             <label class="block text-sm font-medium text-slate-700 mb-1">Seu Perfil no Sistema</label>
@@ -565,7 +542,7 @@
 
                     <!-- Notificações -->
                     <div class="bg-white p-6 rounded-2xl shadow-sm border border-slate-200">
-                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4">🔔 Preferências de Notificação</h3>
+                        <h3 class="text-lg font-bold text-slate-800 border-b pb-2 mb-4"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg> Preferências de Notificação</h3>
                         
                         <div class="grid grid-cols-2 gap-4">
                             <div class="space-y-3">
@@ -690,7 +667,7 @@
                                     <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Acompanhar</p>
 
                                     <button id="btn-painel-geral-externo" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">📊</span>
+                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M18 17V9M13 17V5M8 17v-3"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Monitor da Equipe</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Veja o que cada pessoa está fazendo</span>
@@ -708,7 +685,7 @@
                                     </button>
 
                                     <button id="view-stats-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm shrink-0">📈</span>
+                                        <span class="w-7 h-7 rounded-lg bg-blue-100 text-blue-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m22 7-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Ver Estatísticas</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Números e desempenho</span>
@@ -716,7 +693,7 @@
                                     </button>
 
                                     <button id="notes-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📋</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Anotações</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Notas internas da pauta</span>
@@ -729,7 +706,7 @@
                                     <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Compartilhar e dar acesso</p>
 
                                     <button id="manage-members-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🤝</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6M22 11h-6"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Convidar pessoas</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Dê acesso a esta pauta</span>
@@ -737,7 +714,7 @@
                                     </button>
 
                                     <button id="manage-collaborators-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🧑‍💼</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Colaboradores</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Cadastro da equipe e e-mails</span>
@@ -745,7 +722,7 @@
                                     </button>
 
                                     <button id="share-pauta-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔗</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Link público</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Compartilhe fora da equipe</span>
@@ -753,7 +730,7 @@
                                     </button>
 
                                     <button id="open-totem-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">📱</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Totem</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Autoatendimento para assistidos</span>
@@ -766,7 +743,7 @@
                                     <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Configurar</p>
 
                                     <button id="edit-pauta-name-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">✏️</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Renomear</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Mudar o nome da pauta</span>
@@ -774,7 +751,7 @@
                                     </button>
 
                                     <button id="edit-pauta-config-btn" class="w-full text-left px-4 py-2 hover:bg-slate-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0">⚙️</span>
+                                        <span class="w-7 h-7 rounded-lg bg-slate-100 text-slate-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Configurações</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Preferências da pauta</span>
@@ -783,7 +760,7 @@
 
                                     <div class="px-4 py-2 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer" onclick="document.getElementById('toggle-silent-mode').click()">
                                         <div class="flex items-center gap-3 pointer-events-none">
-                                            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shadow-sm shrink-0">🔕</div>
+                                            <div class="w-7 h-7 rounded-lg bg-slate-100 flex items-center justify-center text-slate-600 shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8.7 3A6 6 0 0 1 18 8a21.3 21.3 0 0 0 .6 5"/><path d="M17 17H3s3-2 3-9a4.67 4.67 0 0 1 .3-1.7"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/><path d="m2 2 20 20"/></svg></div>
                                             <div>
                                                 <span class="text-sm font-semibold text-slate-700 block leading-tight">Pausar e-mails</span>
                                                 <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Sem aviso ao delegar</span>
@@ -801,7 +778,7 @@
                                     <p class="px-4 pt-1 pb-0.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Zona de risco</p>
 
                                     <button id="close-pauta-btn" class="w-full text-left px-4 py-2 hover:bg-amber-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔒</span>
+                                        <span class="w-7 h-7 rounded-lg bg-amber-100 text-amber-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Fechar Pauta</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Bloqueia novas edições</span>
@@ -809,7 +786,7 @@
                                     </button>
 
                                     <button id="reopen-pauta-btn" class="hidden w-full text-left px-4 py-2 hover:bg-emerald-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0">🔓</span>
+                                        <span class="w-7 h-7 rounded-lg bg-emerald-100 text-emerald-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 9.9-1"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Reabrir Pauta</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Libera as edições de novo</span>
@@ -817,7 +794,7 @@
                                     </button>
 
                                     <button id="reset-all-btn" class="w-full text-left px-4 py-2 hover:bg-red-50 flex items-center gap-3 transition-colors">
-                                        <span class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm shrink-0">🗑️</span>
+                                        <span class="w-7 h-7 rounded-lg bg-red-100 text-red-600 flex items-center justify-center text-sm shadow-sm shrink-0"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 6h18"/><path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6"/><path d="M8 6V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/></svg></span>
                                         <span>
                                             <span class="text-sm font-semibold text-slate-700 block leading-tight">Zerar Pauta</span>
                                             <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Não dá para desfazer</span>
@@ -964,7 +941,7 @@
                     <div id="pauta-column" class="bg-white rounded-lg shadow-md flex flex-col h-[55vh] md:h-[65vh]">
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
-                                <span>📋 Pauta</span>
+                                <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M12 11h4M12 16h4M8 11h.01M8 16h.01"/></svg> Pauta</span>
                                 <span id="pauta-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                             </h3>
                             <input type="search" id="pauta-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
@@ -976,7 +953,7 @@
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center w-full mb-1">
                                 <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex items-center gap-2">
-                                   <span>⏳ Aguardando</span>
+                                   <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg> Aguardando</span>
                                    <button id="btn-manage-rooms" class="hidden text-blue-500 hover:text-blue-700 bg-blue-100 hover:bg-blue-200 p-1.5 rounded-lg transition-colors" title="Gerenciar Salas/Varas">
                                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
                                            <path stroke-linecap="round" stroke-linejoin="round" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" />
@@ -996,7 +973,7 @@
                     <div id="em-atendimento-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
-                                <span>👩‍💻 Em Atendimento </span>
+                                <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Em Atendimento </span>
                                 <span id="em-atendimento-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                             </h3>
                             <input type="search" id="em-atendimento-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-green-500">
@@ -1007,7 +984,7 @@
                     <div id="distribuicao-column" class="bg-white rounded-lg shadow-md flex flex-col hidden h-[55vh] md:h-[65vh]">
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-cyan-50 rounded-t-lg shrink-0">
                             <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center">
-                                <span>⚖️ Distribuição</span>
+                                <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m16 16 3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM2 16l3-8 3 8c-.87.65-1.92 1-3 1s-2.13-.35-3-1zM7 21h10M12 3v18M3 7h2c2 0 5-1 7-2 2 1 5 2 7 2h2"/></svg> Distribuição</span>
                                 <span id="distribuicao-count" class="text-sm font-normal bg-white text-slate-700 px-2 rounded-full border border-slate-200">0</span>
                             </h3>
                             <input type="search" id="distribuicao-search" placeholder="Pesquisar..." class="w-full mt-2 p-2 border border-slate-300 rounded-lg text-sm focus:ring-2 focus:ring-cyan-500">
@@ -1019,7 +996,7 @@
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center mb-2">
                                  <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex justify-between items-center w-full">
-                                     <span>✅ Atendidos</span>
+                                     <span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg> Atendidos</span>
                                      <span id="atendidos-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                                  </h3>
                                 <button id="download-pdf-btn" class="ml-2 flex-shrink-0 bg-blue-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-blue-700 text-xs sm:text-sm">PDF</button>
@@ -1033,7 +1010,7 @@
                         <div class="p-3 sm:p-4 border-b border-slate-200 bg-slate-50 rounded-t-lg shrink-0">
                             <div class="flex justify-between items-center mb-2">
                                 <h3 class="text-lg sm:text-xl font-semibold text-slate-800 flex items-center gap-2">
-                                    🚫 Faltosos
+                                    <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></svg> Faltosos
                                     <span id="faltosos-count" class="text-sm font-normal bg-slate-200 text-slate-700 px-2 rounded-full"></span>
                                 </h3>
                                 <button id="download-faltosos-pdf-btn" class="bg-red-600 text-white font-bold py-1.5 px-3 rounded-lg hover:bg-red-700 text-xs sm:text-sm">PDF</button>
@@ -1058,19 +1035,19 @@
                     <!-- CAIXAS COLORIDAS (VISÍVEIS) -->
                     <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4 text-center mt-4 sm:mt-6">
                         <div class="bg-red-50 p-3 sm:p-4 rounded-xl border-l-4 border-red-500 shadow-sm hover:shadow-md transition-shadow">
-                            <p class="font-bold text-red-700 text-[10px] sm:text-xs uppercase tracking-wider">Urgência 🚨</p>
+                            <p class="font-bold text-red-700 text-[10px] sm:text-xs uppercase tracking-wider">Urgência <svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><path d="M12 8v4M12 16h.01"/></svg></p>
                             <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Casos marcados como URGENTE no sistema (Idosos 80+, PCD grave, risco de vida) furam a fila imediatamente.</p>
                         </div>
                         <div class="bg-green-50 p-3 sm:p-4 rounded-xl border-l-4 border-green-500 shadow-sm hover:shadow-md transition-shadow">
-                            <p class="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider">Pontuais ✅</p>
+                            <p class="font-bold text-green-700 text-[10px] sm:text-xs uppercase tracking-wider">Pontuais <svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><path d="m9 11 3 3L22 4"/></svg></p>
                             <p id="desc-pontuais" class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Agendados que chegam no horário (ou com até 15 min de tolerância). O desempate é por quem fez o check-in na recepção primeiro.</p>
                         </div>
                         <div class="bg-blue-50 p-3 sm:p-4 rounded-xl border-l-4 border-blue-500 shadow-sm hover:shadow-md transition-shadow">
-                            <p class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase tracking-wider">Avulsos 🚶</p>
+                            <p class="font-bold text-blue-700 text-[10px] sm:text-xs uppercase tracking-wider">Avulsos <svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg></p>
                             <p class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Não possuem horário marcado. Entram na fila disputando a posição de acordo com o horário exato em que chegaram na Defensoria.</p>
                         </div>
                         <div class="bg-orange-50 p-3 sm:p-4 rounded-xl border-l-4 border-orange-500 shadow-sm hover:shadow-md transition-shadow">
-                            <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados ⚠️</p>
+                            <p class="font-bold text-orange-700 text-[10px] sm:text-xs uppercase tracking-wider">Atrasados <svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/></svg></p>
                             <p id="desc-atrasados" class="text-[8px] sm:text-[9px] text-slate-600 mt-2">Atrasos superiores a 15 min. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.</p>
                         </div>
                     </div>
@@ -1080,7 +1057,7 @@
                         <div id="logic-explanation-padrao">
                             <div id="logic-explanation-padrao-content" class="hidden mt-6 text-left p-4 sm:p-5 bg-slate-50 rounded-xl border border-slate-200 shadow-inner space-y-5">
                                 <div class="border-l-4 border-blue-500 pl-3 sm:pl-4">
-                                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase">💡 A Regra de Ouro (Dinâmica)</h4>
+                                    <h4 class="font-bold text-slate-800 text-xs sm:text-sm uppercase"><svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></svg> A Regra de Ouro (Dinâmica)</h4>
                                     <p class="text-[10px] sm:text-xs text-slate-600">A pauta do SIGEP é dinâmica e prioriza a <b>Pontualidade</b>. A fila é organizada inicialmente pelo <b>Horário Agendado</b>, mas atrasos e encaixes avulsos reajustam as posições automaticamente com base na <b>hora exata da chegada na recepção</b>.</p>
                                 </div>
                                 
@@ -1219,7 +1196,7 @@
         <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col">
             <div class="bg-blue-600 px-6 py-5 flex justify-between items-center shrink-0">
                 <div>
-                    <h3 class="text-white font-black text-xl flex items-center gap-2">📢 Ouvidoria / Suporte</h3>
+                    <h3 class="text-white font-black text-xl flex items-center gap-2"><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m3 11 18-5v12L3 14v-3z"/><path d="M11.6 16.8a3 3 0 1 1-5.8-1.6"/></svg> Ouvidoria / Suporte</h3>
                     <p class="text-blue-100 text-xs mt-0.5 opacity-90">Envie sugestões ou reporte erros do sistema</p>
                 </div>
                 <button id="close-feedback-global-btn" type="button" class="text-blue-200 hover:text-white text-3xl font-bold leading-none transition-colors">&times;</button>
@@ -1231,11 +1208,11 @@
                     <div class="grid grid-cols-2 gap-3">
                         <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:border-blue-400 transition">
                             <input type="radio" name="fbg_tipo" value="Sugestão / Melhoria" required class="w-4 h-4 text-blue-600 focus:ring-blue-500">
-                            <span class="text-sm font-bold text-slate-700">💡 Sugestão</span>
+                            <span class="text-sm font-bold text-slate-700"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6M10 22h4"/></svg> Sugestão</span>
                         </label>
                         <label class="cursor-pointer bg-white border border-slate-200 rounded-xl p-3 flex items-center gap-2 hover:border-red-400 transition">
                             <input type="radio" name="fbg_tipo" value="Reportar Erro / Bug" required class="w-4 h-4 text-red-600 focus:ring-red-500">
-                            <span class="text-sm font-bold text-slate-700">🐞 Erro / Bug</span>
+                            <span class="text-sm font-bold text-slate-700"><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m8 2 1.88 1.88M14.12 3.88 16 2M9 7.13v-1a3.003 3.003 0 1 1 6 0v1"/><path d="M12 20c-3.3 0-6-2.7-6-6v-3a4 4 0 0 1 4-4h4a4 4 0 0 1 4 4v3c0 3.3-2.7 6-6 6"/><path d="M12 20v-9M6.53 9C4.6 8.8 3 7.1 3 5M6 13H2M3 21c0-2.1 1.7-3.9 3.8-4M20.97 5c0 2.1-1.6 3.8-3.5 4M22 13h-4M17.2 17c2.1.1 3.8 1.9 3.8 4"/></svg> Erro / Bug</span>
                         </label>
                     </div>
                 </div>
@@ -1258,14 +1235,14 @@
     <div id="select-unidade-modal" class="hidden fixed inset-0 bg-slate-900 bg-opacity-80 flex items-center justify-center z-[100] p-4 backdrop-blur-sm" onclick="this.classList.add('hidden')">
         <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md flex flex-col" onclick="event.stopPropagation()">
             <div class="text-center mb-6">
-                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl">🏢</div>
+                <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4 text-3xl"><svg class="w-8 h-8 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="4" y="2" width="16" height="20" rx="2"/><path d="M9 22v-4h6v4M8 6h.01M12 6h.01M16 6h.01M8 10h.01M12 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg></div>
                 <h2 class="text-xl font-bold text-slate-800 mb-2">Selecione a Unidade</h2>
                 <p class="text-sm text-slate-500">Escolha o local de atuação para visualizar as pautas desta unidade.</p>
             </div>
             
             <div class="space-y-4 mb-8">
                 <select id="modal-unidade-select" class="w-full p-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm sm:text-base bg-slate-50 font-semibold text-slate-700">
-                    <option value="todas">🌍 Todas as minhas unidades</option>
+                    <option value="todas">Todas as minhas unidades</option>
                 </select>
             </div>
             
@@ -1281,7 +1258,7 @@
         <div class="bg-white rounded-2xl max-w-md w-full max-h-[90vh] overflow-hidden shadow-2xl flex flex-col">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center">
                 <div>
-                    <h3 class="text-lg font-black text-slate-800 tracking-tight">👤 Selecionar Profissional</h3>
+                    <h3 class="text-lg font-black text-slate-800 tracking-tight"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg> Selecionar Profissional</h3>
                     <p id="assisted-to-attend-name" class="text-xs text-slate-500 font-medium mt-0.5 truncate">Para: Carregando...</p>
                 </div>
                 <button id="cancel-select-collaborator-btn" class="text-slate-400 hover:text-slate-700 text-2xl leading-none font-bold transition-colors">&times;</button>
@@ -1311,7 +1288,7 @@
     <div id="doc-status-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[70] flex items-center justify-center p-4 backdrop-blur-sm">
         <div class="bg-white rounded-2xl max-w-sm w-full shadow-2xl overflow-hidden transform transition-all flex flex-col max-h-[90vh]">
             <div class="p-5 border-b border-slate-100 bg-slate-50 flex justify-between items-center shrink-0">
-                <h3 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2">📑 Status da Triagem</h3>
+                <h3 class="text-lg font-black text-slate-800 tracking-tight flex items-center gap-2"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M16 13H8M16 17H8M10 9H8"/></svg> Status da Triagem</h3>
                 <button onclick="document.getElementById('doc-status-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-700 text-2xl font-bold leading-none transition-colors">&times;</button>
             </div>
             
@@ -1388,7 +1365,7 @@
         <div class="bg-white rounded-xl max-w-2xl w-full shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="p-4 border-b bg-gradient-to-r from-indigo-600 to-indigo-700 flex justify-between items-center">
                 <div>
-                    <h3 class="text-lg font-bold text-white">🔗 Módulo Estatístico e Multi-eventos</h3>
+                    <h3 class="text-lg font-bold text-white"><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/></svg> Módulo Estatístico e Multi-eventos</h3>
                     <p class="text-xs text-indigo-100 mt-1">Gerencie os links externos para coleta de dados na pauta atual</p>
                 </div>
                 <button onclick="document.getElementById('bi-links-modal').classList.add('hidden')" class="text-indigo-200 hover:text-white text-2xl font-bold leading-none">&times;</button>
@@ -1409,7 +1386,7 @@
         <div class="bg-white w-full max-w-4xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]">
             <div class="bg-slate-800 p-5 text-white flex justify-between items-center shrink-0">
                 <div>
-                    <h3 class="font-bold uppercase tracking-wider text-sm flex items-center gap-2">
+                    <h3 class="font-black uppercase tracking-wider text-sm flex items-center gap-2">
                         <svg class="w-5 h-5 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                         Monitoramento e Auditoria do Caso
                     </h3>
@@ -1442,7 +1419,7 @@
                         <div id="monitor-box-upload" class="block space-y-3">
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Título / Descrição do Documento</label>
-                                <input type="text" id="monitor-upload-titulo" placeholder="Ex: RG, CNH, Comprovante..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-50 font-medium mt-1">
+                                <input type="text" id="monitor-upload-titulo" placeholder="Ex: RG, CNH, Comprovante..." class="w-full p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium mt-1">
                             </div>
                             <div>
                                 <label class="text-[10px] font-black text-slate-400 uppercase">Selecionar Arquivo PDF ou Imagem</label>
@@ -1469,7 +1446,7 @@
                                 <div class="flex gap-2 mt-1">
                                     <input type="text" id="monitor-pdf-link" placeholder="Cole a URL do documento..." class="flex-1 p-2.5 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:outline-none focus:border-blue-500 font-medium">
                                     <button id="monitor-btn-salvar-link" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm shrink-0">Salvar</button>
-                                    <button id="monitor-btn-ver-pdf" class="hidden bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs shadow-sm shrink-0" title="Ver PDF">👁️ Abrir</button>
+                                    <button id="monitor-btn-ver-pdf" class="hidden bg-slate-700 hover:bg-slate-800 text-white font-bold px-3.5 py-2.5 rounded-xl text-xs shadow-sm shrink-0" title="Ver PDF"><svg class="w-3.5 h-3.5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg> Abrir</button>
                                 </div>
                             </div>
                         </div>
@@ -1516,7 +1493,7 @@
             
             <!-- Barra de Busca -->
             <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
-                <input type="text" id="monitor-global-search" placeholder="🔍 Buscar assistido no monitor..." class="w-full p-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm transition-all">
+                <input type="text" id="monitor-global-search" placeholder="Buscar assistido no monitor..." class="w-full p-3 border border-slate-200 rounded-xl text-sm outline-none focus:border-indigo-500 focus:ring-1 focus:ring-indigo-500 shadow-sm transition-all">
             </div>
 
             <!-- Lista de Assistidos e Timeline (Corpo) -->
@@ -1832,4 +1809,3 @@
     </script>
 </body>
 </html>
-
