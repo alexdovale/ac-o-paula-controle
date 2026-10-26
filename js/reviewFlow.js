@@ -36,7 +36,7 @@ export const ReviewFlowService = {
                 })
             });
             
-            showNotification("Enviado para a mesa do Defensor com sucesso! ⚖️", "success");
+            showNotification("Enviado para a mesa do Defensor com sucesso!", "success");
             return true;
         } catch (error) {
             console.error("Erro ao enviar para revisão:", error);
@@ -69,7 +69,7 @@ export const ReviewFlowService = {
                 })
             });
             
-            showNotification("Processo devolvido para correção! ⚠️", "warning");
+            showNotification("Processo devolvido para correção!", "warning");
             return true;
         } catch (error) {
             console.error("Erro ao devolver para correção:", error);
@@ -113,7 +113,7 @@ export const ReviewFlowService = {
             await updateDoc(ref, updates);
             
             if (processNumber) {
-                showNotification("Distribuído e Finalizado com sucesso! ✅", "success");
+                showNotification("Distribuído e Finalizado com sucesso!", "success");
             } else {
                 showNotification("Aprovado! Aguardando inserir o número do processo.", "info");
             }
