@@ -497,8 +497,11 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
-            doc.save(`Ata_Social_${(dadosExtras.acao || pautaName).replace(/\s+/g, '_')}.pdf`);
+            
+            const nomeDaPauta = pautaName || window.app?.currentPauta?.name || 'Ação Social';
+            
+            await buildAtaAcaoSocialPDF(doc, nomeDaPauta, colaboradores, atendidos, dadosExtras);
+            doc.save(`Ata_Social_${(dadosExtras.acao || nomeDaPauta).replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Ata gerada com sucesso!", "success");
             return true;
         } catch (error) {
@@ -514,7 +517,10 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            
+            const nomeDaPauta = pautaName || window.app?.currentPauta?.name || 'Ação Social';
+            
+            await buildAtaAcaoSocialPDF(doc, nomeDaPauta, colaboradores, atendidos, dadosExtras);
             window.open(URL.createObjectURL(doc.output('blob')), '_blank');
             return true;
         } catch (error) {
@@ -579,7 +585,10 @@ export const PDFService = {
 
                 const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
                 const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
-                const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
+                
+                // Fallback seguro do nome da pauta
+                let pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : null);
+                if (!pautaNome) pautaNome = window.app?.currentPauta?.name || 'Geral';
 
                 const success = await PDFService._buildAtendidosPDF(atendidosList, pautaNome, selectedColumns);
                 modal.remove();
@@ -691,7 +700,11 @@ export const PDFService = {
             const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
-            const pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : 'Geral');
+            
+            // 🔥 CORREÇÃO DE SEGURANÇA: Fallback do nome da pauta para não quebrar a geração
+            let pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : null);
+            if (!pautaNome) pautaNome = window.app?.currentPauta?.name || 'Geral';
+            
             faltososList = [...faltososList].sort(sortByScheduledTime);
 
             let y = drawHeader(doc, logo, { title: 'Relatório de Faltosos', lines: [`Pauta: ${pautaNome}`] });
@@ -745,16 +758,17 @@ export const PDFService = {
             const { jsPDF } = window.jspdf;
 
             let colaboradores = [];
-            let pautaNome = 'Geral';
+            // 🔥 CORREÇÃO DE SEGURANÇA: Fallback do nome da pauta inicializado e protegido
+            let pautaNome = window.app?.currentPauta?.name || 'Geral';
             let colunas = ['nome', 'cargo', 'equipe', 'transporte'];
 
             if (arg1 && !Array.isArray(arg1) && arg1.colaboradores) {
                 colaboradores = arg1.colaboradores || [];
-                pautaNome = arg1.pautaNome || 'Geral';
+                pautaNome = arg1.pautaNome || pautaNome;
                 colunas = arg1.colunas || colunas;
             } else if (Array.isArray(arg1)) {
                 colaboradores = arg1;
-                if (typeof arg2 === 'string') pautaNome = arg2;
+                if (typeof arg2 === 'string' && arg2) pautaNome = arg2;
                 if (Array.isArray(arg3)) colunas = arg3;
             }
 
@@ -845,7 +859,7 @@ export const PDFService = {
             }));
 
             applyFooters(doc, pautaNome);
-            doc.save(`equipe_${pautaName.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
