@@ -83,12 +83,11 @@ class SIGEPApp {
             this.db   = getFirestore(app);
             this.auth = getAuth(app);
 
-            // PAINEL PÚBLICO: link ?painel=true abre direto, sem login
             if (new URLSearchParams(window.location.search).get('painel') === 'true') {
                 window.app = this;
                 const { PainelPublicoService } = await import('./painelPublico.js');
                 await PainelPublicoService.init(this);
-                return; // não cria router nem listener de login
+                return;
             }
     
             this.router = new SIGEPRouter(this, {
@@ -158,7 +157,6 @@ class SIGEPApp {
         if (this.router) this.router.navigate(ROUTES.COLETAS, {}, false);
     }
 
-    // Chamado pelo router ao sair da tela de Coletas: para o BI e limpa o que ficou aberto
     fecharColetas() {
         try { window.ColetasBiService?.fechar?.(); } catch (e) { console.warn(e); }
         const construtor = document.getElementById('container-construtor-coleta');
@@ -166,8 +164,6 @@ class SIGEPApp {
         document.getElementById('coletas-container')?.classList.add('hidden');
     }
 
-    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
-    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
     _modalOpeners() {
         return {
             [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
@@ -201,27 +197,21 @@ class SIGEPApp {
                 document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
                 document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
-            
-            // 🔥 AQUI ESTÁ A CORREÇÃO: CARREGA OS DADOS E ABRE O NOVO MODAL 🔥
             [ROUTES.CONFIGURACAO_PAUTA]: () => {
                 const modalConfig = document.getElementById('config-pauta-modal');
                 if (!modalConfig || !this.currentPauta) return;
 
                 const pData = this.currentPautaData || {};
 
-                // Tipo e Ordem
                 document.querySelectorAll('input[name="config-tipo-pauta"]').forEach(r => r.checked = (r.value === (pData.type || 'agendamento')));
                 document.querySelectorAll('input[name="config-ordem-atendimento"]').forEach(r => r.checked = (r.value === (pData.ordemAtendimento || 'flexivel')));
 
-                // Tolerância
                 const tolInput = document.getElementById('config-tolerancia');
                 if (tolInput) tolInput.value = pData.toleranciaAtraso || pData.tolerancia || 15;
 
-                // Fluxo (Delegação vs Direto)
                 const isDelegation = pData.useDelegationFlow !== false; 
                 document.querySelectorAll('input[name="config-fluxo"]').forEach(r => r.checked = isDelegation ? r.value === 'delegacao' : r.value === 'direto');
                 
-                // Distribuição
                 const distCheck = document.getElementById('config-distribuicao');
                 const distContainer = document.getElementById('config-distribuicao-container');
                 if (distCheck) distCheck.checked = pData.useDistributionFlow === true;
@@ -232,13 +222,11 @@ class SIGEPApp {
                     distContainer.classList.remove('opacity-50', 'pointer-events-none');
                 }
 
-                // Painel TV
                 const tvCheck = document.getElementById('config-use-tv');
                 if (tvCheck) tvCheck.checked = pData.useTvPanel !== false;
 
                 modalConfig.classList.remove('hidden');
             },
-
             [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
             [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
             [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal()
@@ -250,7 +238,6 @@ class SIGEPApp {
         if (abrir) await abrir();
     }
 
-    // Fecha os modais do menu de Ações (usado ao sair de uma rota de modal)
     closePautaModals() {
         ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal', 'config-pauta-modal']
             .forEach(id => document.getElementById(id)?.classList.add('hidden'));
@@ -669,7 +656,6 @@ class SIGEPApp {
     setupPautaMenuEvents() {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        // Botões do menu de Ações usam a rota do router (que abre o modal mapeado)
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
                 if (!this.currentPauta) return;
@@ -756,14 +742,11 @@ class SIGEPApp {
             }
         });
 
-        // =========================================================================================
-        // 🔥 LÓGICA DE SALVAR DO NOVO MODAL DE CONFIGURAÇÃO PADRONIZADA 🔥
-        // =========================================================================================
         document.getElementById('cancel-config-pauta-btn')?.addEventListener('click', () => {
             document.getElementById('config-pauta-modal')?.classList.add('hidden');
         });
 
-       document.getElementById('save-config-pauta-btn')?.addEventListener('click', async () => {
+        document.getElementById('save-config-pauta-btn')?.addEventListener('click', async () => {
             if (!this.currentPauta) return;
 
             const tipoSelecionado = document.querySelector('input[name="config-tipo-pauta"]:checked')?.value;
@@ -788,7 +771,7 @@ class SIGEPApp {
                     type: tipoSelecionado,
                     ordemAtendimento: ordemSelecionada,
                     toleranciaAtraso: tolerancia,
-                    tolerancia: tolerancia, // salvamos os dois por compatibilidade legada
+                    tolerancia: tolerancia,
                     useDelegationFlow,
                     useDistributionFlow: useDelegationFlow ? useDistributionFlow : false,
                     useTvPanel
@@ -800,14 +783,12 @@ class SIGEPApp {
                     Object.assign(this.currentPautaData, payload);
                 }
 
-                // Atualiza a visibilidade do botão da TV no menu automaticamente!
                 const tvGroupMenu = document.getElementById('tv-panel-actions-group');
                 if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !useTvPanel);
 
                 showNotification("Configurações atualizadas com sucesso!", "success");
                 document.getElementById('config-pauta-modal')?.classList.add('hidden');
                 
-                // Força a recarga das colunas ativas (Aguardando Distribuição, Em Atendimento, etc.)
                 this.loadColumnPreferences();
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
@@ -821,6 +802,7 @@ class SIGEPApp {
                 btn.disabled = false;
             }
         });
+    }
 
     setupPautaSettingsEvents() {
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
@@ -927,9 +909,6 @@ class SIGEPApp {
             showNotification("Pauta zerada com sucesso.", "success");
         });
 
-        // ------------------------------------------------------------------------------------------
-        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!)
-        // ------------------------------------------------------------------------------------------
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
             if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
@@ -1227,7 +1206,6 @@ class SIGEPApp {
                 if (f.length === 0) return showNotification("Nenhum assistido faltoso.", "info");
                 PDFService.generateFaltososPDF(f, nomePauta);
             }
-            // Chama a mesma função que vinculámos ao menu Ações!
             if (type === 'colaboradores') {
                 if (window.PDFService && typeof window.PDFService.generateCollaboratorsPDF === 'function') {
                     window.PDFService.generateCollaboratorsPDF({
