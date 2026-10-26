@@ -762,11 +762,18 @@ class SIGEPApp {
             document.getElementById('config-pauta-modal')?.classList.add('hidden');
         });
 
-        document.getElementById('save-config-pauta-btn')?.addEventListener('click', async () => {
+       document.getElementById('save-config-pauta-btn')?.addEventListener('click', async () => {
             if (!this.currentPauta) return;
 
             const tipoSelecionado = document.querySelector('input[name="config-tipo-pauta"]:checked')?.value;
             const ordemSelecionada = document.querySelector('input[name="config-ordem-atendimento"]:checked')?.value;
+            const tolerancia = parseInt(document.getElementById('config-tolerancia')?.value, 10) || 15;
+            
+            const fluxoSelecionado = document.querySelector('input[name="config-fluxo"]:checked')?.value;
+            const useDelegationFlow = fluxoSelecionado === 'delegacao';
+            const useDistributionFlow = document.getElementById('config-distribuicao')?.checked || false;
+            
+            const useTvPanel = document.getElementById('config-use-tv')?.checked ?? true;
 
             const btn = document.getElementById('save-config-pauta-btn');
             const originalText = btn.innerHTML;
@@ -776,18 +783,31 @@ class SIGEPApp {
             try {
                 const docRef = doc(this.db, "pautas", this.currentPauta.id);
                 
-                await updateDoc(docRef, {
+                const payload = {
                     type: tipoSelecionado,
-                    ordemAtendimento: ordemSelecionada
-                });
+                    ordemAtendimento: ordemSelecionada,
+                    toleranciaAtraso: tolerancia,
+                    tolerancia: tolerancia, // salvamos os dois por compatibilidade legada
+                    useDelegationFlow,
+                    useDistributionFlow: useDelegationFlow ? useDistributionFlow : false,
+                    useTvPanel
+                };
+
+                await updateDoc(docRef, payload);
 
                 if (this.currentPautaData) {
-                    this.currentPautaData.type = tipoSelecionado;
-                    this.currentPautaData.ordemAtendimento = ordemSelecionada;
+                    Object.assign(this.currentPautaData, payload);
                 }
+
+                // Atualiza a visibilidade do botão da TV no menu automaticamente!
+                const tvGroupMenu = document.getElementById('tv-panel-actions-group');
+                if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !useTvPanel);
 
                 showNotification("Configurações atualizadas com sucesso!", "success");
                 document.getElementById('config-pauta-modal')?.classList.add('hidden');
+                
+                // Força a recarga das colunas ativas (Aguardando Distribuição, Em Atendimento, etc.)
+                this.loadColumnPreferences();
                 
                 if (typeof UIService.renderAssistedLists === 'function') {
                     UIService.renderAssistedLists(this);
@@ -800,7 +820,6 @@ class SIGEPApp {
                 btn.disabled = false;
             }
         });
-    }
 
     setupPautaSettingsEvents() {
         const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
