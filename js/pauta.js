@@ -1,23 +1,46 @@
 
-// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO, RETORNO DE ATENDIDOS E PERMISSÕES GRANULARES
+// js/pauta.js - VERSÃO COM CORREÇÃO DO MENU RÁPIDO E RETORNO DE ATENDIDOS
 import { collection, onSnapshot, addDoc, updateDoc, deleteDoc, doc, query, where, getDocs, getDoc, writeBatch, increment, setDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { showNotification, normalizeText, escapeHTML, playSound } from './utils.js';
 import { UIService } from './ui.js';
 import { logAction } from './admin.js';
 import { EmailService } from './emailService.js';
 
+import { ico, icoFrom } from './icons.js';
 export const PautaService = {
     currentListeners: new Map(),
     actionCooldown: new Map(),
 
-    getDestinoRetorno(app) {
-        if (app.currentPautaData?.useDelegationFlow === true) {
-            return 'emAtendimento';
+    // Etapas (colunas) que existem de fato nesta pauta, da mais avançada para a mais inicial.
+    getEtapasAtivas(appOuPauta) {
+        const pauta = appOuPauta?.currentPautaData || appOuPauta || {};
+        return {
+            aguardandoDistribuicao: pauta.useDistributionFlow === true,
+            emAtendimento: pauta.useDelegationFlow === true,
+            aguardando: true
+        };
+    },
+
+    rotuloEtapa(etapa) {
+        return { aguardando: 'Aguardando', emAtendimento: 'Em Atendimento', aguardandoDistribuicao: 'Distribuição' }[etapa] || 'Aguardando';
+    },
+
+    // Para onde o assistido volta: a etapa anterior dele, desde que a coluna esteja ativa na pauta.
+    getDestinoRetorno(appOuPauta, assisted = null) {
+        const ativas = this.getEtapasAtivas(appOuPauta);
+        const normaliza = (s) => (s === 'aguardandoCorrecao' ? 'aguardandoDistribuicao' : s);
+
+        const trilha = [...(assisted?.statusTrail || [])];
+        if (assisted?.previousStatus) trilha.push(assisted.previousStatus);
+        for (let i = trilha.length - 1; i >= 0; i--) {
+            const etapa = normaliza(trilha[i]);
+            if (etapa !== 'atendido' && ativas[etapa]) return etapa;
         }
-        if (app.currentPautaData?.useDistributionFlow === true) {
-            return 'aguardandoDistribuicao';
-        }
-        return 'atendido';
+
+        // Sem histórico: usa a coluna ativa mais próxima do "atendido"
+        if (ativas.emAtendimento) return 'emAtendimento';
+        if (ativas.aguardandoDistribuicao) return 'aguardandoDistribuicao';
+        return 'aguardando';
     },
 
     closeAllQuickMenus(excludeMenuId = null) {
@@ -40,7 +63,7 @@ export const PautaService = {
             this.updateStatus(app.db, app.currentPauta.id, id, {
                 status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
             }, app.currentUserName);
-            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição! ⚖️`, "success");
+            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição!`, "success");
         } else if (!useDelegation) {
             this.finishAttendance(app, id, app.currentUserName, []);
         } else {
@@ -275,6 +298,14 @@ export const PautaService = {
                 lastActionTimestamp: new Date().toISOString()
             };
 
+            // Guarda por onde o assistido já passou (usado pelo botão "Voltar" dos atendidos)
+            if (updates.status && currentData.status && updates.status !== currentData.status) {
+                const trilha = Array.isArray(currentData.statusTrail) ? currentData.statusTrail.slice(-7) : [];
+                trilha.push(currentData.status);
+                finalUpdates.previousStatus = currentData.status;
+                finalUpdates.statusTrail = trilha;
+            }
+
             let novoNomeAtendente = undefined;
             if (updates.attendedBy !== undefined) {
                 novoNomeAtendente = updates.attendedBy;
@@ -437,13 +468,13 @@ export const PautaService = {
                     tokenSeguro            
                 );
             } else {
-                console.warn("⚠️ Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
+                console.warn("Colaborador sem e-mail cadastrado. Status atualizado apenas no painel.");
                 showNotification("Colaborador sem e-mail. Notificação digital não enviada.", "warning");
             }
 
             return true;
         } catch (error) {
-            console.error("❌ Erro crítico na delegação:", error);
+            console.error("Erro crítico na delegação:", error);
             showNotification("Falha ao delegar atendimento.", "error");
             return false;
         }
@@ -600,7 +631,7 @@ export const PautaService = {
                         <h3 class="font-extrabold text-lg text-slate-800">Definir Local e Delegar</h3>
                         <p class="text-sm font-semibold text-blue-600 mt-0.5">${escapeHTML(assisted.name)}</p>
                     </div>
-                    <button id="btn-fechar-chamada-tv" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">✕</button>
+                    <button id="btn-fechar-chamada-tv" class="text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 w-8 h-8 rounded-full flex items-center justify-center transition-colors">${ico('x')}</button>
                 </div>
                 
                 <div class="p-6 overflow-y-auto space-y-5 flex-1">
@@ -720,6 +751,7 @@ export const PautaService = {
         };
     },
 
+    // Abertura Condicional do Modal Clássico
     _abrirModalClassico(app, assisted, tipoAcao) {
         if (typeof PainelGeralService !== 'undefined' && typeof PainelGeralService.chamarAssistido === 'function') {
             PainelGeralService.chamarAssistido(assisted, app.currentPauta?.name || 'Recepção');
@@ -788,6 +820,27 @@ export const PautaService = {
             this.abrirModalChamadaTV(app, nextAssisted, app.currentPautaData || app.currentPauta, tipoAcao);
         } else {
             this._abrirModalClassico(app, nextAssisted, tipoAcao);
+        }
+    },
+
+    actionAttendDirectly(app, id, assisted) {
+        const useDist = app.currentPautaData?.useDistributionFlow === true;
+        const useDelegation = app.currentPautaData?.useDelegationFlow === true;
+        const timestampIso = new Date().toISOString();
+
+        if (useDist) {
+            this.updateStatus(app.db, app.currentPauta.id, id, {
+                status: 'aguardandoDistribuicao', distributionStatus: 'pending', inAttendanceTime: timestampIso
+            }, app.currentUserName);
+            showNotification(`Caso de ${assisted.name} encaminhado para Fila de Distribuição!`, "success");
+        } else {
+            const tipoAcao = useDelegation ? 'delegar' : 'atender_direto';
+            
+            if (app.currentPautaData?.useTvPanel !== false) {
+                this.abrirModalChamadaTV(app, assisted, app.currentPautaData || app.currentPauta, tipoAcao);
+            } else {
+                this._abrirModalClassico(app, assisted, tipoAcao);
+            }
         }
     },
 
@@ -873,14 +926,11 @@ export const PautaService = {
             
             const userDoc = await getDoc(doc(db, "users", user.uid));
             const userData = userDoc.data();
-            const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(userData?.role);
-            const perms = userData?.permissoesDetalhadas || {};
-            
-            const isOwner = pautaData.owner === user.uid;
-            
-            // 🛡️ PERMISSÃO GRANULAR: Controle de Exclusão da Pauta
-            if (!isSuper && !isOwner && perms.pauta_zerar_pauta !== true) {
-                showNotification("Acesso restrito: Você não tem permissão para apagar pautas.", "error");
+            const isSuperAdminGlobal = userData?.role === 'superadmin';
+            const isAdminDoOrgao = userData?.role === 'admin' && userData?.orgaoId === pautaData.orgaoId;
+                        
+            if (pautaData.owner !== user.uid && !isSuperAdminGlobal && !isAdminDoOrgao) {
+                showNotification("Acesso restrito: Você não tem permissão para apagar pautas deste órgão.", "error");
                 return false;
             }
 
@@ -989,16 +1039,6 @@ export const PautaService = {
         if (!file) return;
 
         try {
-            // 🛡️ PERMISSÃO GRANULAR: Controle de Importação CSV
-            const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(app.currentUser?.role);
-            const perms = app.currentUser?.permissoesDetalhadas || {};
-            
-            if (!isSuper && perms.pauta_importar_csv === false) {
-                showNotification("Acesso restrito: Você não tem permissão para importar CSV.", "error");
-                event.target.value = '';
-                return;
-            }
-
             const { parsePautaCSV } = await import('./csvHandler.js');
             const assistidos = await parsePautaCSV(file);
 
@@ -1266,7 +1306,7 @@ export const PautaService = {
         
         const optNaoAtribuir = document.createElement('option');
         optNaoAtribuir.value = "null";
-        optNaoAtribuir.textContent = "🚫 Não Atribuir a ninguém";
+        optNaoAtribuir.textContent = "Não Atribuir a ninguém";
         select.appendChild(optNaoAtribuir);
         
         const colaboradores = app.colaboradores || [];
@@ -1283,7 +1323,7 @@ export const PautaService = {
     },
 
     // ============================================================
-    // 🛠️ MÓDULO DE AÇÕES DO CARD (REFATORADO E PROTEGIDO POR PERMISSÕES)
+    // MÓDULO DE AÇÕES DO CARD (REFATORADO COM ACTION MAP)
     // ============================================================
 
     handleCardActions(e, app) {
@@ -1293,13 +1333,9 @@ export const PautaService = {
         const id = button.dataset.id;
         if (!id) return;
 
-        // 🛡️ PERMISSÃO GRANULAR: Controle de ações dentro dos Cards
         const currentUserRole = app.currentUser?.role;
-        const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(currentUserRole);
         const isApoio = currentUserRole === 'apoio';
-        const perms = app.currentUser?.permissoesDetalhadas || {};
 
-        // Bloqueia ações sensíveis para perfis de Apoio que não receberam exceção explícita
         const acoesProibidasApoio = [
             'return-to-pauta-btn', 'return-to-pauta-from-faltoso-btn', 'return-to-aguardando-btn', 
             'return-to-aguardando-from-emAtendimento-btn', 'return-to-aguardando-from-dist-btn', 
@@ -1310,8 +1346,8 @@ export const PautaService = {
         ];
 
         const acaoAtual = acoesProibidasApoio.find(classe => button.classList.contains(classe));
-        if (isApoio && acaoAtual && !isSuper) {
-            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação.", "warning");
+        if (isApoio && acaoAtual) {
+            showNotification("Acesso restrito: Seu perfil de Apoio não tem permissão para esta ação administrativa.", "warning");
             playSound('warning');
             return;
         }
@@ -1376,30 +1412,20 @@ export const PautaService = {
                     const painelRef = doc(app.db, "pautas", app.currentPauta.id, "painel", "ultimoChamado");
                     await setDoc(painelRef, { atual: chamado }, { merge: true });
                     if (typeof playSound === 'function') playSound('chime');
-                    showNotification(`📢 Alerta emitido na TV para ${assisted.name}!`, "success");
+                    showNotification(`Alerta emitido na TV para ${assisted.name}!`, "success");
                 } catch (error) {
                     console.error("Erro ao emitir alerta na TV:", error);
                     showNotification("Erro ao acionar a TV.", "error");
                 }
             },
 
-            // --- AÇÕES EXTRA E ZONA DE RISCO ---
+            // --- AÇÕES EXTRA ---
             'cancel-pauta-btn': () => {
-                // 🛡️ PERMISSÃO GRANULAR: Controle do Cancelamento / Retirada da Pauta
-                if (!isSuper && perms.pauta_zerar_pauta !== true) {
-                    showNotification("Acesso restrito: Só um coordenador pode retirar assistidos da pauta sem lançar falta.", "warning");
-                    return;
-                }
                 if (confirm("Tem certeza que deseja retirar este assistido da pauta?\n\nEle sairá da fila e NÃO constará como faltoso. Use isso para desistências ou erros.")) {
                     this.updateStatus(app.db, app.currentPauta.id, id, { status: 'cancelado' }, app.currentUserName);
                 }
             },
             'toggle-extrapauta-btn': () => {
-                // 🛡️ PERMISSÃO GRANULAR: Controle de Inserção de Extra-Pauta (Zona de Risco Menor)
-                if (!isSuper && perms.pauta_zerar_pauta !== true && perms.pauta_configuracoes !== true) {
-                    showNotification("Acesso restrito: Você não tem permissão para manipular o status extra-pauta.", "warning");
-                    return;
-                }
                 const novoEstado = !assisted.isExtraPauta;
                 this.updateStatus(app.db, app.currentPauta.id, id, { isExtraPauta: novoEstado }, app.currentUserName);
                 showNotification(novoEstado ? "Selo Extra-Pauta adicionado!" : "Selo Extra-Pauta removido.", "info");
@@ -1486,17 +1512,17 @@ export const PautaService = {
         
         if (containerButtons && modalStatus) {
             const etapas = [
-                { val: 'Pendente', icon: '⚪' }, { val: 'Assistido Orientado', icon: '🗣️' },
-                { val: 'Preenchendo Dados', icon: '✍️' }, { val: 'Documentação Recebida', icon: '📂' },
-                { val: 'Falta Digitalizar', icon: '🖨️' }, { val: 'Digitalizado', icon: '💻' },
-                { val: 'Inserido no Verde/CNP', icon: '✅' }
+                { val: 'Pendente', icon: 'dot' }, { val: 'Assistido Orientado', icon: 'messageCircle' },
+                { val: 'Preenchendo Dados', icon: 'pencil' }, { val: 'Documentação Recebida', icon: 'folder' },
+                { val: 'Falta Digitalizar', icon: 'printer' }, { val: 'Digitalizado', icon: 'monitor' },
+                { val: 'Inserido no Verde/CNP', icon: 'checkCircle' }
             ];
 
             let botoesHtml = '';
             etapas.forEach(etapa => {
                 const isSelected = (statusAtual === etapa.val) || (!assisted.docWorkflowStatus && etapa.val === 'Pendente');
                 const cssClass = isSelected ? 'bg-blue-600 text-white border-blue-700 shadow-md transform scale-[1.02]' : 'bg-white text-slate-700 border-slate-200 hover:bg-slate-50';
-                botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${etapa.icon} ${etapa.val}</button>`;
+                botoesHtml += `<button class="doc-etapa-btn w-full text-left px-4 py-3 rounded-xl border transition-all text-sm font-bold ${cssClass}" data-etapa="${etapa.val}">${icoFrom(etapa.icon, 'w-4 h-4')} ${etapa.val}</button>`;
             });
 
             containerButtons.innerHTML = botoesHtml;
@@ -1643,7 +1669,7 @@ export const PautaService = {
                 });
                 
                 modal.classList.add('hidden');
-                showNotification("Distribuição concluída e faturamento do BI gravado! ✅", "success");
+                showNotification("Distribuição concluída e faturamento do BI gravado!", "success");
             };
         }
     },
@@ -1738,20 +1764,43 @@ export const PautaService = {
     },
 
     actionReturnFromAtendido(app, id, assisted) {
-        const useDist = app.currentPautaData?.useDistributionFlow === true;
-        const statusDestino = this.getDestinoRetorno(app);
-        
-        let updateData = {
-            status: statusDestino, 
-            attendedBy: null, 
+        const destino = this.getDestinoRetorno(app, assisted);
+
+        // Limpa o que só faz sentido para quem já foi atendido
+        const base = {
+            status: destino,
+            attendedTime: null,
             attendedAt: null,
-            finalizadoPeloColaborador: false, 
-            distributionStatus: useDist ? (statusDestino === 'emAtendimento' ? 'distributed' : 'pending') : null
+            tipoAcaoRapida: null,
+            finalizadoPeloColaborador: false,
+            trabalhosPorUsuario: null
         };
 
+        let updateData;
+        if (destino === 'aguardando') {
+            // Volta para a fila preservando a posição original (chegada e ordem de check-in)
+            updateData = {
+                ...base,
+                attendedBy: null,
+                inAttendanceTime: null,
+                distributionStatus: null,
+                checkInOrder: assisted?.checkInOrder || Date.now(),
+                arrivalTime: assisted?.arrivalTime || null
+            };
+        } else if (destino === 'aguardandoDistribuicao') {
+            updateData = { ...base, distributionStatus: 'pending' };
+        } else {
+            // emAtendimento: mantém o colaborador responsável
+            updateData = {
+                ...base,
+                assignedCollaborator: assisted?.assignedCollaborator || null,
+                distributionStatus: app.currentPautaData?.useDistributionFlow === true ? 'distributed' : null
+            };
+        }
+
         this.updateStatus(app.db, app.currentPauta.id, id, updateData, app.currentUserName);
-        
-        if (assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
+
+        if (destino !== 'emAtendimento' && assisted?.assignedCollaborator?.id && assisted.assignedCollaborator.id !== 'manual') {
             try {
                 const colabDocRef = doc(app.db, "pautas", app.currentPauta.id, "collaborators", assisted.assignedCollaborator.id);
                 updateDoc(colabDocRef, { status: 'disponivel', currentAttendance: null });
@@ -1759,7 +1808,7 @@ export const PautaService = {
                 console.warn("Aviso: Falha ao resetar status do colaborador.", e);
             }
         }
-        showNotification(`Atendimento retornado para: ${statusDestino === 'emAtendimento' ? 'Em Atendimento' : 'Aguardando'}`, "info");
+        showNotification(`Atendimento retornado para: ${this.rotuloEtapa(destino)}`, "info");
     }
 };
 
@@ -1835,3 +1884,4 @@ function abrirModalSenhaPainel(pautaId, tokenCorreto) {
 }
 
 export default PautaService;
+
