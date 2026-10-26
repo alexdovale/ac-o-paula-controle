@@ -1,12 +1,11 @@
-
-
-// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT, LAYOUT BLINDADO E PERMISSÕES)
+// js/ui.js - CORE VISUAL E MOTOR DE RENDERIZAÇÃO (OTIMIZADO COM DOCUMENT FRAGMENT E LAYOUT BLINDADO)
 
 import { escapeHTML, normalizeText, showNotification } from './utils.js';
 import { PautaService } from './pauta.js';
 import { PainelGeralService } from './painelGeralService.js';
 import { collection, getDocs } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
+import { ico, icoFrom } from './icons.js';
 // INJEÇÃO DE CORREÇÕES GLOBAIS E CSS DA LOGO NO MODAL DA TV
 if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes')) {
     const style = document.createElement('style');
@@ -17,7 +16,7 @@ if (typeof document !== 'undefined' && !document.getElementById('sigep-ui-fixes'
         #arrival-modal .bg-white { width: 92% !important; max-width: 400px !important; padding: 1.5rem !important; box-sizing: border-box; overflow: hidden; }
         #arrival-time-input, #arrival-room-select, #arrival-time { width: 100% !important; box-sizing: border-box !important; }
         
-        /* 🔥 LOGO GRANDE E SEM FUNDO NO MODAL DE CONFIGURAÇÃO DA TV 🔥 */
+        /* LOGO GRANDE E SEM FUNDO NO MODAL DE CONFIGURAÇÃO DA TV */
         #tv-logo-preview img {
             background: transparent !important;
             border: none !important;
@@ -80,52 +79,6 @@ export const UIService = {
 
         if (screenName !== 'loading' && screenName !== 'login') {
             localStorage.setItem('lastScreen', screenName);
-        }
-        
-        // Sempre que mudar de tela que não seja o login, reaplica o bloqueio de botões
-        if (window.app && screenName !== 'loading' && screenName !== 'login') {
-            this.aplicarPermissoesDeMenu(window.app);
-        }
-    },
-
-    // ==========================================
-    // 🔥 NOVA FUNÇÃO: Oculta botões baseado em permissões
-    // ==========================================
-    aplicarPermissoesDeMenu(app) {
-        if (!app || !app.currentUser) return;
-
-        const role = app.currentUser.role;
-        const isSuper = ['admin', 'superadmin', 'superadmin_global'].includes(role);
-        const perms = app.currentUser.permissoesDetalhadas || {};
-
-        const btnDashboard = document.getElementById('view-dashboard-btn');
-        const btnRecepcao = document.getElementById('btn-recepcao-central');
-        const btnColetor = document.getElementById('btn-modulo-coletas');
-        const btnAdmin = document.getElementById('admin-panel-btn');
-        
-        // Dashboard
-        if (btnDashboard) {
-            if (!isSuper && perms.menu_dashboard === false) btnDashboard.classList.add('hidden');
-            else btnDashboard.classList.remove('hidden');
-        }
-
-        // Recepção Central
-        if (btnRecepcao) {
-            if (!isSuper && perms.menu_recepcao_central === false) btnRecepcao.classList.add('hidden');
-            else btnRecepcao.classList.remove('hidden');
-        }
-
-        // Coletor BI
-        if (btnColetor) {
-            // Nota: Conforme o admin.js, o coletor padrão é false (só mostra se true explícito)
-            if (!isSuper && perms.menu_coletor_bi !== true) btnColetor.classList.add('hidden');
-            else btnColetor.classList.remove('hidden');
-        }
-        
-        // Painel Admin (Se tem permissão forçada de admin mas perfil user/apoio)
-        if (btnAdmin) {
-            if (isSuper || perms.menu_admin === true) btnAdmin.classList.remove('hidden');
-            else btnAdmin.classList.add('hidden');
         }
     },
 
@@ -426,9 +379,9 @@ export const UIService = {
                 } else {
                     const opcoesUser = userUnidades.map(u => {
                         const nome = u.unidadeNome || u.nome || u.name || (typeof u === 'string' ? u : '');
-                        return `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                        return `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
                     }).join('');
-                    selectUnidade.innerHTML = `<option value="todas">🌍 Todas as origens</option>` + opcoesUser;
+                    selectUnidade.innerHTML = `<option value="todas">Todas as origens</option>` + opcoesUser;
                 }
             }
         }
@@ -892,20 +845,20 @@ export const UIService = {
         if (!status || status === 'Pendente') return '';
         
         const cfg = {
-            'Assistido Orientado': { icon: '🗣️', color: 'bg-sky-50 text-sky-700 border-sky-200' },
-            'Preenchendo Dados': { icon: '✍️', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
-            'Documentação Recebida': { icon: '📂', color: 'bg-teal-50 text-teal-700 border-teal-200' },
-            'Falta Digitalizar': { icon: '🖨️', color: 'bg-amber-50 text-amber-700 border-amber-200' },
-            'Digitalizado': { icon: '💻', color: 'bg-purple-50 text-purple-700 border-purple-200' },
-            'Inserido no Verde/CNP': { icon: '✅', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
+            'Assistido Orientado': { icon: 'messageCircle', color: 'bg-sky-50 text-sky-700 border-sky-200' },
+            'Preenchendo Dados': { icon: 'pencil', color: 'bg-indigo-50 text-indigo-700 border-indigo-200' },
+            'Documentação Recebida': { icon: 'folder', color: 'bg-teal-50 text-teal-700 border-teal-200' },
+            'Falta Digitalizar': { icon: 'printer', color: 'bg-amber-50 text-amber-700 border-amber-200' },
+            'Digitalizado': { icon: 'monitor', color: 'bg-purple-50 text-purple-700 border-purple-200' },
+            'Inserido no Verde/CNP': { icon: 'checkCircle', color: 'bg-emerald-50 text-emerald-700 border-emerald-200' }
         };
 
-        const style = cfg[status] || { icon: '📌', color: 'bg-slate-50 text-slate-700 border-slate-200' };
+        const style = cfg[status] || { icon: 'mapPin', color: 'bg-slate-50 text-slate-700 border-slate-200' };
 
         return `
             <div class="flex justify-center mt-2 w-full">
                 <span class="inline-flex items-center gap-1.5 ${style.color} px-2.5 py-1 rounded-md text-[10px] font-bold tracking-wide border shadow-sm uppercase cursor-default">
-                    ${style.icon} ${escapeHTML(status)}
+                    ${icoFrom(style.icon, 'w-3 h-3')} ${escapeHTML(status)}
                 </span>
             </div>
         `;
@@ -1106,7 +1059,7 @@ export const UIService = {
             ${this._getActionButtonsHtml(item)}
 
             <div class="pt-8 text-center">
-                ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                 <p class="font-bold text-lg text-slate-800 leading-tight uppercase mb-2 px-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                 <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                 
@@ -1165,7 +1118,7 @@ export const UIService = {
                         <div class="flex items-center gap-2">
                             <svg class="chevron-icon w-4 h-4 text-blue-700 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                             <h4 class="font-bold text-blue-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                <span>🏢</span> ${escapeHTML(roomName)}
+                                <span>${ico('building', 'w-3.5 h-3.5')}</span> ${escapeHTML(roomName)}
                             </h4>
                         </div>
                         <span class="bg-blue-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">${peopleInRoom.length}</span>
@@ -1234,7 +1187,7 @@ export const UIService = {
                         <div class="flex items-center gap-2">
                             <svg class="chevron-icon w-4 h-4 text-red-700 transition-transform ${isCollapsed ? '-rotate-90' : 'rotate-0'}" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M19 9l-7 7-7-7"/></svg>
                             <h4 class="font-bold text-red-900 text-xs uppercase tracking-wider flex items-center gap-1.5">
-                                <span>⚠️</span> Sem Sala Definida
+                                <span>${ico('alert', 'w-3.5 h-3.5')}</span> Sem Sala Definida
                             </h4>
                         </div>
                         <span class="bg-red-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full shadow-sm">${peopleNoRoom.length}</span>
@@ -1321,31 +1274,31 @@ export const UIService = {
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-slate-100 text-slate-600';
-                let statusText = '📋 Selecionado';
-                let statusIcon = '📋';
+                let statusText = 'Selecionado';
+                let statusIcon = 'clipboard';
 
                 if (item.documentState === 'filling') {
                     statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
-                    statusText = '✏️ Preenchendo';
-                    statusIcon = '✏️';
+                    statusText = 'Preenchendo';
+                    statusIcon = 'pencil';
                 } else if (item.documentState === 'saved') {
                     statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
-                    statusText = '✅ Salvo';
-                    statusIcon = '✅';
+                    statusText = 'Salvo';
+                    statusIcon = 'checkCircle';
                 } else if (item.documentState === 'pdf') {
                     statusColor = 'bg-purple-100 text-purple-700 font-bold';
-                    statusText = '📄 PDF Emitido';
-                    statusIcon = '📄';
+                    statusText = 'PDF Emitido';
+                    statusIcon = 'fileText';
                 }
 
                 docStatusHtml = `
                     <div class="mt-2 flex flex-col gap-1 items-center justify-center w-full">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span>
+                            <span>${ico('folder', 'w-3 h-3')}</span>
                             <span>${escapeHTML(item.selectedAction)}</span>
                         </span>
                         <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                            <span>${statusIcon}</span>
+                            <span>${icoFrom(statusIcon)}</span>
                             <span>${statusText}</span>
                         </span>
                     </div>`;
@@ -1455,9 +1408,9 @@ export const UIService = {
 
             let priorityTagHtml = '';
             if (item.priority === 'URGENTE') {
-                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(priorityReasonSeguro || 'URGÊNCIA')}</div>`;
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">${ico('alertCircle', 'w-3 h-3')} ${escapeHTML(priorityReasonSeguro || 'URGÊNCIA')}</div>`;
             } else if (item.priority === 'RETORNO_RAPIDO') {
-                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(priorityReasonSeguro || 'Aguardando')}</div>`;
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">${ico('clock', 'w-3 h-3')} ${escapeHTML(priorityReasonSeguro || 'Aguardando')}</div>`;
             }
             
             const priorityButtonHtml = this._getPriorityButtonHtml(item, canEditPriority);
@@ -1475,7 +1428,7 @@ export const UIService = {
                 
                 <div class="text-center pt-8">
                     ${priorityTagHtml}
-                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
 
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(assuntoSeguro)}</strong></p>
@@ -1551,7 +1504,7 @@ export const UIService = {
 
             const historicoTransferenciaHtml = item.historicoTransferencia
                 ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg flex items-center justify-center gap-1 font-medium shadow-sm mb-2 text-center w-full">
-                       <span class="text-xs">🔄</span>
+                       <span class="text-xs">${ico('refresh', 'w-3.5 h-3.5')}</span>
                        <span>${escapeHTML(item.historicoTransferencia)}</span>
                    </div>`
                 : '';
@@ -1559,31 +1512,31 @@ export const UIService = {
             let docStatusHtml = '';
             if (item.selectedAction) {
                 let statusColor = 'bg-slate-100 text-slate-600';
-                let statusText = '📋 Selecionado';
-                let statusIcon = '📋';
+                let statusText = 'Selecionado';
+                let statusIcon = 'clipboard';
 
                 if (item.documentState === 'filling') {
                     statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
-                    statusText = '✏️ Preenchendo';
-                    statusIcon = '✏️';
+                    statusText = 'Preenchendo';
+                    statusIcon = 'pencil';
                 } else if (item.documentState === 'saved') {
                     statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
-                    statusText = '✅ Salvo';
-                    statusIcon = '✅';
+                    statusText = 'Salvo';
+                    statusIcon = 'checkCircle';
                 } else if (item.documentState === 'pdf') {
                     statusColor = 'bg-purple-100 text-purple-700 font-bold';
-                    statusText = '📄 PDF Emitido';
-                    statusIcon = '📄';
+                    statusText = 'PDF Emitido';
+                    statusIcon = 'fileText';
                 }
 
                 docStatusHtml = `
                     <div class="mt-3 mb-2 flex flex-col gap-1 items-center justify-center w-full">
                         <span class="text-[10px] font-bold text-blue-800 bg-blue-50 px-2 py-0.5 rounded border border-blue-100 truncate flex items-center gap-1">
-                            <span>📂</span>
+                            <span>${ico('folder', 'w-3 h-3')}</span>
                             <span>${escapeHTML(item.selectedAction)}</span>
                         </span>
                         <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                            <span>${statusIcon}</span>
+                            <span>${icoFrom(statusIcon)}</span>
                             <span>${statusText}</span>
                         </span>
                     </div>`;
@@ -1601,7 +1554,7 @@ export const UIService = {
             const badgeAgendamentoHtml = numAgendamento ? `
                 <div class="flex justify-center mt-2 mb-2 w-full">
                     <span class="text-xs text-blue-700 font-bold bg-blue-50 px-2.5 py-0.5 rounded border border-blue-100 w-max tracking-wide shadow-sm mx-auto">
-                        📅 Nº do Agend.: ${escapeHTML(numAgendamento)}
+                        ${ico('calendar', 'w-3.5 h-3.5')} Nº do Agend.: ${escapeHTML(numAgendamento)}
                     </span>
                 </div>
             ` : '';
@@ -1627,15 +1580,15 @@ export const UIService = {
                    </div>`
                 : `<div class="mt-4 flex flex-col gap-2">
                         <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold mt-1 text-center border p-2 rounded-lg bg-slate-50 hover:bg-slate-100">
-                            👁️ Ver Detalhes / Checklist
+                            ${ico('eye', 'w-3.5 h-3.5')} Ver Detalhes / Checklist
                         </button>
                    </div>`;
 
             let priorityTagHtml = '';
             if (item.priority === 'URGENTE') {
-                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">🚨 ${escapeHTML(item.priorityReason || 'URGÊNCIA')}</div>`;
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-red-600 uppercase flex items-center justify-center gap-1">${ico('alertCircle', 'w-3 h-3')} ${escapeHTML(item.priorityReason || 'URGÊNCIA')}</div>`;
             } else if (item.priority === 'RETORNO_RAPIDO') {
-                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">⏳ ${escapeHTML(item.priorityReason || 'Aguardando')}</div>`;
+                priorityTagHtml = `<div class="mb-2 text-[10px] font-black text-purple-700 bg-purple-100 px-2 py-1 rounded-md border border-purple-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm text-center">${ico('clock', 'w-3 h-3')} ${escapeHTML(item.priorityReason || 'Aguardando')}</div>`;
             }
 
             const numeroOrdem = item.absoluteOrder || (index + 1);
@@ -1657,7 +1610,7 @@ export const UIService = {
 
                 <div class="text-center pt-8">
                     ${priorityTagHtml}
-                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-1">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
                     <p class="text-xs text-slate-600 mb-3">Colaborador: <strong class="text-slate-800">${escapeHTML(atendenteNome)}</strong></p>
@@ -1712,7 +1665,7 @@ export const UIService = {
             const currentUserRole = window.app?.currentUser?.role;
             const canManageDemandsOrEditAttendant = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canDelete = currentUserRole === 'admin' || currentUserRole === 'superadmin';
-            const canRevert = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
+            const canRevert = (currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin' || currentUserRole === 'superadmin_global' || currentUserRole === 'apoio') && window.PermissoesService?.can(window.app?.currentUser, 'voltarAtendido') !== false;
             const canToggleConfirmed = currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const canEditPriority = currentUserRole === 'apoio' || currentUserRole === 'user' || currentUserRole === 'admin' || currentUserRole === 'superadmin';
             const docWorkflowBadge = this._getDocWorkflowBadgeHtml(item.docWorkflowStatus);
@@ -1774,20 +1727,20 @@ export const UIService = {
                 ${this._getActionButtonsHtml(item)}
 
                 <div class="text-center pt-8">
-                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(nomeSeguro)}">${escapeHTML(nomeSeguro)}</p>
                     <p class="text-xs text-slate-600 mb-3">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
                     ${item.tipoAcaoRapida ? (() => {
                         const acaoCfg = {
-                            'Reagendamento':       { icon: '🔄', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
-                            'Agendamento':         { icon: '📅', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
-                            'Consulta Processual': { icon: '🔍', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
-                            'Outros Assuntos':     { icon: '⚙️', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
-                        }[item.tipoAcaoRapida] || { icon: '⚡', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
+                            'Reagendamento':       { icon: 'refresh', bg: '#fffbeb', border: '#f59e0b', text: '#92400e', label: 'REAGENDADO' },
+                            'Agendamento':         { icon: 'calendar', bg: '#ecfdf5', border: '#10b981', text: '#065f46', label: 'AGENDADO' },
+                            'Consulta Processual': { icon: 'search', bg: '#f5f3ff', border: '#8b5cf6', text: '#4c1d95', label: 'CONSULTA' },
+                            'Outros Assuntos':     { icon: 'settings', bg: '#f0f9ff', border: '#0ea5e9', text: '#0c4a6e', label: 'OUTROS' }
+                        }[item.tipoAcaoRapida] || { icon: 'zap', bg: '#f0fdf4', border: '#22c55e', text: '#14532d', label: item.tipoAcaoRapida };
                         return `<div class="mt-2 mb-3 flex justify-center w-full">
                             <span style="background:${acaoCfg.bg};border:1px solid ${acaoCfg.border};color:${acaoCfg.text}" class="inline-flex items-center gap-1 text-[10px] font-black px-2.5 py-1 rounded-md shadow-sm">
-                                ${acaoCfg.icon} ${acaoCfg.label}
+                                ${icoFrom(acaoCfg.icon, 'w-3.5 h-3.5')} ${acaoCfg.label}
                             </span>
                         </div>`;
                     })() : ''}
@@ -1813,13 +1766,13 @@ export const UIService = {
 
                 ${item.arquivoPdfConteudo ? `
                     <a href="${item.arquivoPdfConteudo}" download="${item.nomeArquivoPdf || 'protocolo.pdf'}" class="mb-4 flex items-center justify-center gap-2 w-full bg-blue-50 text-blue-700 font-bold py-2.5 rounded-lg text-[10px] uppercase border border-blue-200 hover:bg-blue-100 transition shadow-sm">
-                        📄 Baixar Protocolo
+                        ${ico('fileText', 'w-3 h-3')} Baixar Protocolo
                     </a>
                 ` : ''}
 
                 <div class="pt-3 border-t border-slate-100">
-                    <button data-id="${item.id}" class="return-from-atendido-btn w-full bg-orange-500 hover:bg-orange-600 text-white font-black py-2.5 rounded-lg text-[10px] uppercase shadow-md active:scale-95 transition-all" ${canRevert ? '' : 'disabled'}>
-                        Mover de Volta para Fila
+                    <button data-id="${item.id}" class="return-from-atendido-btn w-full inline-flex items-center justify-center gap-1.5 bg-orange-500 hover:bg-orange-600 text-white font-black py-2.5 rounded-lg text-[10px] uppercase shadow-md active:scale-95 transition-all disabled:opacity-50 disabled:cursor-not-allowed" ${canRevert ? '' : 'disabled'}>
+                        ${ico('arrowLeft', 'w-3.5 h-3.5')} Voltar para ${PautaService.rotuloEtapa(PautaService.getDestinoRetorno(currentPautaData, item))}
                     </button>
                 </div>
                 ${this._getStandardizedFooterHtml(item)}
@@ -1893,9 +1846,9 @@ export const UIService = {
                 </div>
 
                 <div class="text-center pt-8">
-                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                    ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                     <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
-                    <span class="text-[9px] font-black text-red-700 bg-red-100 px-2 py-1 rounded-md border border-red-200 inline-block uppercase tracking-wider shadow-sm mb-1">🚫 Faltoso</span>
+                    <span class="text-[9px] font-black text-red-700 bg-red-100 px-2 py-1 rounded-md border border-red-200 inline-block uppercase tracking-wider shadow-sm mb-1">${ico('ban', 'w-3 h-3')} Faltoso</span>
                     
                     <p class="text-xs text-slate-700 mt-2 mb-2">Assunto: <strong class="uppercase text-slate-800">${escapeHTML(item.subject || 'Não informado')}</strong></p>
 
@@ -1965,12 +1918,12 @@ export const UIService = {
                 <div class="bg-cyan-100 p-3 border-b border-cyan-200 flex flex-col gap-2">
                     <div class="flex justify-between items-center px-1">
                         <h4 class="font-black text-cyan-800 text-sm uppercase tracking-wider flex items-center gap-1">
-                            <span>👨‍⚖️</span> ${escapeHTML(defensor)}
+                            <span>${ico('user')}</span> ${escapeHTML(defensor)}
                         </h4>
                         <span class="bg-cyan-200 text-cyan-800 text-xs font-bold px-2.5 py-0.5 rounded-full shadow-sm">${groups[defensor].length}</span>
                     </div>
                     <button onclick="navigator.clipboard.writeText('${linkPainel}'); window.showNotification('Link do painel copiado!', 'success');" class="w-full bg-cyan-600 text-white text-[11px] font-bold py-2 rounded-lg hover:bg-cyan-700 uppercase shadow-sm flex items-center justify-center gap-1 transition-colors">
-                        <span>📋</span> Copiar Link do Painel
+                        <span>${ico('clipboard', 'w-3.5 h-3.5')}</span> Copiar Link do Painel
                     </button>
                 </div>
                 <div class="p-3 space-y-3 room-cards-wrapper"></div>
@@ -2023,7 +1976,7 @@ export const UIService = {
 
                 const historicoTransferenciaHtml = item.historicoTransferencia
                     ? `<div class="mt-2 bg-orange-50 border border-orange-200 text-orange-800 text-[10px] p-2 rounded-lg flex items-center justify-center gap-1 font-medium shadow-sm mb-2 text-center w-full">
-                           <span class="text-xs">🔄</span>
+                           <span class="text-xs">${ico('refresh', 'w-3.5 h-3.5')}</span>
                            <span>${escapeHTML(item.historicoTransferencia)}</span>
                        </div>`
                     : '';
@@ -2031,31 +1984,31 @@ export const UIService = {
                 let docStatusHtml = '';
                 if (item.selectedAction) {
                     let statusColor = 'bg-slate-100 text-slate-600';
-                    let statusText = '📋 Selecionado';
-                    let statusIcon = '📋';
+                    let statusText = 'Selecionado';
+                    let statusIcon = 'clipboard';
 
                     if (item.documentState === 'filling') {
                         statusColor = 'bg-amber-100 text-amber-700 animate-pulse';
-                        statusText = '✏️ Preenchendo';
-                        statusIcon = '✏️';
+                        statusText = 'Preenchendo';
+                        statusIcon = 'pencil';
                     } else if (item.documentState === 'saved') {
                         statusColor = 'bg-emerald-100 text-emerald-700 font-bold';
-                        statusText = '✅ Salvo';
-                        statusIcon = '✅';
+                        statusText = 'Salvo';
+                        statusIcon = 'checkCircle';
                     } else if (item.documentState === 'pdf') {
                         statusColor = 'bg-purple-100 text-purple-700 font-bold';
-                        statusText = '📄 PDF Emitido';
-                        statusIcon = '📄';
+                        statusText = 'PDF Emitido';
+                        statusIcon = 'fileText';
                     }
 
                     docStatusHtml = `
                         <div class="mt-3 mb-2 flex flex-col gap-1 items-center justify-center w-full">
                             <span class="text-[10px] font-bold text-cyan-800 bg-cyan-50 px-2 py-0.5 rounded border border-cyan-100 truncate flex items-center gap-1">
-                                <span>📂</span>
+                                <span>${ico('folder', 'w-3 h-3')}</span>
                                 <span>${escapeHTML(item.selectedAction)}</span>
                             </span>
                             <span class="${statusColor} text-[9px] px-2 py-0.5 rounded-full w-max border border-current opacity-80 flex items-center gap-1">
-                                <span>${statusIcon}</span>
+                                <span>${icoFrom(statusIcon)}</span>
                                 <span>${statusText}</span>
                             </span>
                         </div>`;
@@ -2082,7 +2035,7 @@ export const UIService = {
                                 </button>
                             </div>
                             <button data-id="${item.id}" class="chamar-distribuicao-tv-btn w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide flex items-center justify-center gap-1.5">
-                                📺 Chamar na TV (Assinatura/Retirada)
+                                ${ico('tv', 'w-3.5 h-3.5')} Chamar na TV (Assinatura/Retirada)
                             </button>
                             ${priorityButtonHtml}
                             <button data-id="${item.id}" class="return-to-aguardando-from-dist-btn w-full bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold py-2.5 rounded-lg text-xs shadow-sm transition active:scale-95 uppercase tracking-wide border border-slate-200 mt-1">
@@ -2092,7 +2045,7 @@ export const UIService = {
                     : `<div class="mt-4">
                             ${priorityButtonHtml}
                             <button data-id="${item.id}" class="view-details-btn text-indigo-600 hover:text-indigo-800 text-xs font-bold w-full border border-slate-200 p-2.5 rounded-lg bg-slate-50 hover:bg-slate-100 transition-colors uppercase tracking-wide mt-2">
-                                👁️ Ver Detalhes / Checklist
+                                ${ico('eye', 'w-3.5 h-3.5')} Ver Detalhes / Checklist
                             </button>
                        </div>`;
 
@@ -2102,7 +2055,7 @@ export const UIService = {
                     ${deleteBtnHtml}
 
                     <div class="text-center pt-8">
-                        ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">🏷️ Extra-Pauta</div>` : ''}
+                        ${item.isExtraPauta ? `<div class="mb-2 text-[9px] font-black text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-200 inline-flex items-center justify-center gap-1 w-max mx-auto uppercase shadow-sm tracking-wider">${ico('tag', 'w-3 h-3')} Extra-Pauta</div>` : ''}
                         <p class="font-bold text-[17px] sm:text-lg text-slate-800 leading-tight uppercase px-2 mb-2 break-words line-clamp-2" title="${escapeHTML(item.name || '')}">${escapeHTML(item.name || '')}</p>
 
                         <div class="text-xs text-slate-600 space-y-1 mb-2">
@@ -2123,7 +2076,7 @@ export const UIService = {
 
                     ${item.notasRevisao ? `
                         <div class="mt-3 bg-yellow-50 text-yellow-800 text-[11px] p-3 rounded-lg border border-yellow-200 shadow-sm leading-snug">
-                            <span class="font-black text-yellow-900 block mb-1">⚠️ NOTA PARA O DEFENSOR:</span>
+                            <span class="font-black text-yellow-900 block mb-1">${ico('alert', 'w-3.5 h-3.5')} NOTA PARA O DEFENSOR:</span>
                             ${escapeHTML(item.notasRevisao)}
                         </div>`
                     : ''}
@@ -2231,7 +2184,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
                 btn.addEventListener('click', () => {
                     navigator.clipboard.writeText(codeEl.textContent);
                     const originalHtml = btn.innerHTML;
-                    btn.innerHTML = `✅ Copiado!`;
+                    btn.innerHTML = `Copiado!`;
 
                     btn.classList.remove('bg-gray-200', 'text-gray-800');
                     btn.classList.add('bg-green-500', 'text-white');
@@ -2289,7 +2242,7 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
 
         document.getElementById('expired-stats-btn').onclick = async () => {
             const btn = document.getElementById('expired-stats-btn');
-            btn.innerHTML = '<span class="animate-spin text-lg">⏳</span> Buscando Arquivo...';
+            btn.innerHTML = '<span class="animate-spin text-lg">' + ico('loader', 'w-5 h-5 animate-spin') + '</span> Buscando Arquivo...';
             btn.disabled = true;
 
             try {
@@ -2570,4 +2523,3 @@ Por favor, me entregue o texto pronto para que eu possa salvar em um arquivo .cs
     }
 
 }; // Fim do objeto UIService
-
