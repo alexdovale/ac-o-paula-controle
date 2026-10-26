@@ -23,16 +23,16 @@ export const ROUTES = {
     DETALHES_CASO:          'detalhes-caso',
     CAPTACAO_EXTERNA:       'captacao-externa',
     RELATORIO_PDF:          'relatorio-pdf',
-    CONFIGURACAO_PAUTA:     'configuracao-pauta',
     FILTRO_PAUTA:           'filtro-pauta',
 
     // --- ROTAS DO MENU DE AÇÕES (abrem modais dentro da pauta) ---
     MONITOR_EQUIPE:         'monitor-equipe',
-    COMPARTILHAMENTO:       'compartilhamento',     // link público da pauta
+    COMPARTILHAMENTO:       'compartilhamento',     
     TOTEM:                  'totem',
     ESTATISTICAS:           'estatisticas',
     EDITAR_NOME_PAUTA:      'editar-nome-pauta',
-    COMPARTILHAR_PAUTA:     'compartilhar-pauta',   // convidar membros
+    CONFIGURACAO_PAUTA:     'configuracao-pauta',
+    COMPARTILHAR_PAUTA:     'compartilhar-pauta',   
     COLABORADORES_PAUTA:    'colaboradores-pauta',
     ANOTACOES_PAUTA:        'anotacoes-pauta'
 };
@@ -54,13 +54,15 @@ const ROUTE_GUARDS = {
     [ROUTES.DETALHES_CASO]:       { requiresAuth: true },
     [ROUTES.CAPTACAO_EXTERNA]:    { requiresAuth: false },
     [ROUTES.RELATORIO_PDF]:       { requiresAuth: true },
-    [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true, perm: 'configPauta' },
     [ROUTES.FILTRO_PAUTA]:        { requiresAuth: true },
+    
+    // Guardas para as rotas do Menu de Ações
     [ROUTES.MONITOR_EQUIPE]:      { requiresAuth: true, perm: 'monitorEquipe' },
     [ROUTES.COMPARTILHAMENTO]:    { requiresAuth: true, perm: 'linkPublico' },
     [ROUTES.TOTEM]:               { requiresAuth: true, perm: 'totem' },
     [ROUTES.ESTATISTICAS]:        { requiresAuth: true, perm: 'estatisticas' },
     [ROUTES.EDITAR_NOME_PAUTA]:   { requiresAuth: true, perm: 'renomearPauta' },
+    [ROUTES.CONFIGURACAO_PAUTA]:  { requiresAuth: true, perm: 'configPauta' },
     [ROUTES.COMPARTILHAR_PAUTA]:  { requiresAuth: true, perm: 'membros' },
     [ROUTES.COLABORADORES_PAUTA]: { requiresAuth: true, perm: 'colaboradores' },
     [ROUTES.ANOTACOES_PAUTA]:     { requiresAuth: true, perm: 'anotacoes' }
@@ -75,11 +77,10 @@ const MODAL_ROUTES = {
     [ROUTES.TOTEM]:               { modalIds: [] },
     [ROUTES.ESTATISTICAS]:        { modalIds: ['statistics-modal'] },
     [ROUTES.EDITAR_NOME_PAUTA]:   { modalIds: ['edit-pauta-modal'] },
+    [ROUTES.CONFIGURACAO_PAUTA]:  { modalIds: ['config-pauta-modal', 'bi-links-modal'] }, 
     [ROUTES.COMPARTILHAR_PAUTA]:  { modalIds: ['members-modal'] },
     [ROUTES.COLABORADORES_PAUTA]: { modalIds: ['collaborators-modal'] },
-    [ROUTES.ANOTACOES_PAUTA]:     { modalIds: ['notes-modal'] },
-    // 🔥 AQUI ESTAVA O ERRO ANTES! AGORA APONTA PARA A JANELA CORRETA 🔥
-    [ROUTES.CONFIGURACAO_PAUTA]:  { modalIds: ['config-pauta-modal'] } 
+    [ROUTES.ANOTACOES_PAUTA]:     { modalIds: ['notes-modal'] }
 };
 
 const ALL_SCREEN_IDS = [
@@ -510,10 +511,10 @@ export class SIGEPRouter {
             [ROUTES.TOTEM]:               rotaModal(ROUTES.TOTEM),
             [ROUTES.ESTATISTICAS]:        rotaModal(ROUTES.ESTATISTICAS),
             [ROUTES.EDITAR_NOME_PAUTA]:   rotaModal(ROUTES.EDITAR_NOME_PAUTA),
+            [ROUTES.CONFIGURACAO_PAUTA]:  rotaModal(ROUTES.CONFIGURACAO_PAUTA),
             [ROUTES.COMPARTILHAR_PAUTA]:  rotaModal(ROUTES.COMPARTILHAR_PAUTA),
             [ROUTES.COLABORADORES_PAUTA]: rotaModal(ROUTES.COLABORADORES_PAUTA),
-            [ROUTES.ANOTACOES_PAUTA]:     rotaModal(ROUTES.ANOTACOES_PAUTA),
-            [ROUTES.CONFIGURACAO_PAUTA]:  rotaModal(ROUTES.CONFIGURACAO_PAUTA)
+            [ROUTES.ANOTACOES_PAUTA]:     rotaModal(ROUTES.ANOTACOES_PAUTA)
         };
     }
 }
