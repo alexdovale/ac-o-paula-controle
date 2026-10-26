@@ -304,9 +304,9 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     const ano = dataInput.getFullYear();
 
     const endereco = dadosExtras.endereco || "Não informado";
-    const nomeDaAcao = dadosExtras.acao || pautaName;
+    const nomeDaAcao = dadosExtras.acao || pautaName || "Ação Social";
     const orgaoAtendimentoConteudo = dadosExtras.orgao || "NÃO INFORMADO";
-    const totalAtendidos = dadosExtras.totalAtendimentos !== undefined ? dadosExtras.totalAtendimentos : atendidos.length;
+    const totalAtendidos = dadosExtras.totalAtendimentos !== undefined ? dadosExtras.totalAtendimentos : (atendidos || []).length;
 
     try {
         const img = await loadImage(LOGO_ATA_RAW);
@@ -329,10 +329,10 @@ const buildAtaAcaoSocialPDF = async (doc, pautaName, colaboradores, atendidos, d
     doc.text(splitIntro, 20, 62);
     let currentY = 62 + (splitIntro.length * 4.5);
 
-    const defensores = colaboradores
+    const defensores = (colaboradores || [])
         .filter(c => c.cargo && c.cargo.toLowerCase().includes('defensor'))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
-    const servidores = colaboradores
+    const servidores = (colaboradores || [])
         .filter(c => c.cargo && !c.cargo.toLowerCase().includes('defensor'))
         .sort((a, b) => (a.nome || '').localeCompare(b.nome || ''));
 
@@ -399,7 +399,7 @@ export const PDFService = {
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text(`Representante Legal: ${assistedName.toUpperCase()}`, 40, y);
+            doc.text(`Representante Legal: ${(assistedName || 'REQUERENTE').toUpperCase()}`, 40, y);
             y += 18;
 
             const moradores = expenseData?.quantidadeMoradores || '1';
@@ -497,11 +497,8 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
-            const nomeDaPauta = pautaName || window.app?.currentPauta?.name || 'Ação Social';
-            
-            await buildAtaAcaoSocialPDF(doc, nomeDaPauta, colaboradores, atendidos, dadosExtras);
-            doc.save(`Ata_Social_${(dadosExtras.acao || nomeDaPauta).replace(/\s+/g, '_')}.pdf`);
+            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
+            doc.save(`Ata_Social_${(dadosExtras.acao || pautaName || 'Evento').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Ata gerada com sucesso!", "success");
             return true;
         } catch (error) {
@@ -517,10 +514,7 @@ export const PDFService = {
             await ensureJsPDF();
             const { jsPDF } = window.jspdf;
             const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
-            
-            const nomeDaPauta = pautaName || window.app?.currentPauta?.name || 'Ação Social';
-            
-            await buildAtaAcaoSocialPDF(doc, nomeDaPauta, colaboradores, atendidos, dadosExtras);
+            await buildAtaAcaoSocialPDF(doc, pautaName, colaboradores, atendidos, dadosExtras);
             window.open(URL.createObjectURL(doc.output('blob')), '_blank');
             return true;
         } catch (error) {
@@ -586,9 +580,10 @@ export const PDFService = {
                 const selectedColumns = Array.from(document.querySelectorAll('#pdf-columns-checkboxes input:checked:not([disabled])')).map(cb => cb.value);
                 const atendidosList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
                 
-                // Fallback seguro do nome da pauta
-                let pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : null);
-                if (!pautaNome) pautaNome = window.app?.currentPauta?.name || 'Geral';
+                let pautaNome = 'Geral';
+                if (typeof arg1 === 'string') pautaNome = arg1;
+                else if (typeof arg2 === 'string') pautaNome = arg2;
+                else if (window.app && window.app.currentPauta && window.app.currentPauta.name) pautaNome = window.app.currentPauta.name;
 
                 const success = await PDFService._buildAtendidosPDF(atendidosList, pautaNome, selectedColumns);
                 modal.remove();
@@ -604,7 +599,7 @@ export const PDFService = {
             const doc = new jsPDF({ orientation: 'l', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
-            atendidosList = [...atendidosList].sort(sortByScheduledTime);
+            atendidosList = [...(atendidosList || [])].sort(sortByScheduledTime);
 
             let somaMin = 0, nMin = 0;
             const totalDemandas = atendidosList.reduce((acc, a) => acc + 1 + (a.demandas?.quantidade || 0), 0);
@@ -681,7 +676,7 @@ export const PDFService = {
             doc.autoTable(tableBase({ head, body, startY: y, columnStyles }));
             applyFooters(doc, pautaNome);
 
-            doc.save(`Relatorio_Atendidos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`Relatorio_Atendidos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             if (window.showNotification) window.showNotification("Relatório gerado com sucesso!", "success");
             return true;
         } catch (error) {
@@ -701,11 +696,12 @@ export const PDFService = {
 
             let faltososList = Array.isArray(arg1) ? arg1 : (Array.isArray(arg2) ? arg2 : []);
             
-            // 🔥 CORREÇÃO DE SEGURANÇA: Fallback do nome da pauta para não quebrar a geração
-            let pautaNome = typeof arg1 === 'string' ? arg1 : (typeof arg2 === 'string' ? arg2 : null);
-            if (!pautaNome) pautaNome = window.app?.currentPauta?.name || 'Geral';
+            let pautaNome = 'Geral';
+            if (typeof arg1 === 'string') pautaNome = arg1;
+            else if (typeof arg2 === 'string') pautaNome = arg2;
+            else if (window.app && window.app.currentPauta && window.app.currentPauta.name) pautaNome = window.app.currentPauta.name;
             
-            faltososList = [...faltososList].sort(sortByScheduledTime);
+            faltososList = [...(faltososList || [])].sort(sortByScheduledTime);
 
             let y = drawHeader(doc, logo, { title: 'Relatório de Faltosos', lines: [`Pauta: ${pautaNome}`] });
             y = drawKpis(doc, y, [{ label: 'Total de ausências', valor: faltososList.length, cor: C.vermelho }]);
@@ -742,7 +738,7 @@ export const PDFService = {
             }));
 
             applyFooters(doc, pautaNome);
-            doc.save(`faltosos_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`faltosos_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
             return true;
         } catch (error) {
             console.error("Erro PDF Faltosos:", error);
@@ -751,32 +747,94 @@ export const PDFService = {
         }
     },
 
+    // 🔥 MODAL INTERATIVO IMPLEMENTADO PARA A EXPORTAÇÃO DE COLABORADORES 🔥
     async generateCollaboratorsPDF(arg1, arg2, arg3) {
-        if (window.showNotification) window.showNotification("Gerando lista de equipe, aguarde...", "info");
-        try {
-            await ensureJsPDF();
-            const { jsPDF } = window.jspdf;
-
+        return new Promise((resolve) => {
             let colaboradores = [];
-            // 🔥 CORREÇÃO DE SEGURANÇA: Fallback do nome da pauta inicializado e protegido
-            let pautaNome = window.app?.currentPauta?.name || 'Geral';
-            let colunas = ['nome', 'cargo', 'equipe', 'transporte'];
+            let pautaNome = 'Geral';
 
             if (arg1 && !Array.isArray(arg1) && arg1.colaboradores) {
                 colaboradores = arg1.colaboradores || [];
-                pautaNome = arg1.pautaNome || pautaNome;
-                colunas = arg1.colunas || colunas;
+                pautaNome = arg1.pautaNome || 'Geral';
             } else if (Array.isArray(arg1)) {
                 colaboradores = arg1;
-                if (typeof arg2 === 'string' && arg2) pautaNome = arg2;
-                if (Array.isArray(arg3)) colunas = arg3;
+                if (typeof arg2 === 'string') pautaNome = arg2;
+            }
+            
+            if (pautaNome === 'Geral' && window.app && window.app.currentPauta && window.app.currentPauta.name) {
+                pautaNome = window.app.currentPauta.name;
             }
 
             if (!colaboradores || colaboradores.length === 0) {
                 if (window.showNotification) window.showNotification("Nenhum colaborador encontrado.", "warning");
-                return false;
+                resolve(false);
+                return;
             }
 
+            const modalId = 'pdf-colab-selector-modal';
+            document.getElementById(modalId)?.remove();
+
+            // Opções disponíveis para a equipe (A coluna presença foi removida a seu pedido)
+            const opcoes = [
+                { v: 'cargo', l: 'Cargo', on: true },
+                { v: 'equipe', l: 'Equipe', on: true },
+                { v: 'identificador', l: 'Matrícula/ID', on: false },
+                { v: 'telefone', l: 'Telefone', on: false },
+                { v: 'email', l: 'E-mail', on: false },
+                { v: 'horario', l: 'Chegada', on: false },
+                { v: 'transporte', l: 'Deslocamento', on: true }
+            ];
+
+            const modal = document.createElement('div');
+            modal.id = modalId;
+            modal.className = 'fixed inset-0 bg-black/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity';
+            modal.innerHTML = `
+                <div class="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh]">
+                    <div class="p-5 border-b border-slate-100 bg-slate-50">
+                        <h3 class="text-lg font-black text-slate-800 flex items-center gap-2">📄 Configurar relatório de Equipe</h3>
+                    </div>
+                    <div class="p-5 overflow-y-auto">
+                        <p class="text-xs text-slate-500 mb-4 font-medium">Selecione quais colunas deseja exibir no PDF:</p>
+                        <div class="space-y-2 mb-2" id="pdf-colab-checkboxes">
+                            <label class="flex items-center gap-3 p-3 border rounded-xl bg-slate-50 opacity-70 cursor-not-allowed border-slate-200">
+                                <input type="checkbox" checked disabled class="w-5 h-5 text-emerald-600 rounded">
+                                <span class="font-bold text-slate-700 text-sm">Nome do Colaborador (obrigatório)</span>
+                            </label>
+                            ${opcoes.map(o => `
+                            <label class="flex items-center gap-3 p-3 border rounded-xl cursor-pointer hover:bg-emerald-50 hover:border-emerald-300 transition border-slate-200">
+                                <input type="checkbox" value="${o.v}" ${o.on ? 'checked' : ''} class="w-5 h-5 text-emerald-600 rounded focus:ring-emerald-500">
+                                <span class="font-bold text-slate-700 text-sm">${o.l}</span>
+                            </label>`).join('')}
+                        </div>
+                    </div>
+                    <div class="p-5 bg-slate-50 border-t border-slate-100 flex gap-3">
+                        <button id="cancel-colab-pdf-btn" class="flex-1 bg-white border border-slate-300 hover:bg-slate-100 text-slate-700 font-bold py-3 rounded-xl transition-colors text-xs uppercase shadow-sm">Cancelar</button>
+                        <button id="confirm-colab-pdf-btn" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold py-3 rounded-xl transition-colors shadow-md text-xs uppercase flex items-center justify-center gap-2"><span>Gerar PDF</span></button>
+                    </div>
+                </div>`;
+            document.body.appendChild(modal);
+
+            document.getElementById('cancel-colab-pdf-btn').onclick = () => { modal.remove(); resolve(false); };
+            document.getElementById('confirm-colab-pdf-btn').onclick = async () => {
+                const btn = document.getElementById('confirm-colab-pdf-btn');
+                btn.innerHTML = 'Gerando...';
+                btn.disabled = true;
+
+                // Captura as colunas marcadas no modal interativo
+                const selectedColumns = ['nome', ...Array.from(document.querySelectorAll('#pdf-colab-checkboxes input:checked:not([disabled])')).map(cb => cb.value)];
+                
+                const success = await PDFService._buildCollaboratorsPDF(colaboradores, pautaNome, selectedColumns);
+                modal.remove();
+                resolve(success);
+            };
+        });
+    },
+
+    async _buildCollaboratorsPDF(colaboradores, pautaNome, colunas) {
+        try {
+            await ensureJsPDF();
+            const { jsPDF } = window.jspdf;
+            
             const doc = new jsPDF({ orientation: colunas.length > 5 ? 'l' : 'p', unit: 'pt', format: 'a4' });
             const logo = await loadImageSafe(LOGO_DEMAIS_PDF_RAW);
 
@@ -784,7 +842,6 @@ export const PDFService = {
                 nome: { label: 'Membro da equipe', get: (c) => c.nome || '' },
                 cargo: { label: 'Cargo', get: (c) => c.cargo || 'N/A' },
                 equipe: { label: 'Equipe', get: (c) => c.equipe ? (/^\d+$/.test(c.equipe) ? `Equipe ${c.equipe}` : c.equipe) : 'N/A' },
-                presenca: { label: 'Status / horário', get: (c) => c.presente ? `Presente (${c.horario})` : 'Ausente' },
                 identificador: { label: 'Matrícula/ID', get: (c) => c.identificador || 'N/A' },
                 telefone: { label: 'Telefone', get: (c) => c.telefone || 'N/A' },
                 email: { label: 'E-mail', get: (c) => c.email || 'N/A' },
@@ -826,19 +883,18 @@ export const PDFService = {
                 tableData.push(colunas.map(key => colMap[key] ? colMap[key].get(c) : 'N/A'));
             });
 
-            const presentes = colaboradores.filter(c => c.presente).length;
             const defensores = colaboradores.filter(c => pesoCargo(c.cargo) === 1).length;
             const servidores = colaboradores.filter(c => pesoCargo(c.cargo) === 2).length;
 
             let y = drawHeader(doc, logo, { title: 'Lista das Equipes', lines: [`Pauta: ${pautaNome}`] });
+            
+            // 🔥 REMOVIDO O CARTÃO (KPI) REFERENTE AOS PRESENTES 🔥
             y = drawKpis(doc, y, [
                 { label: 'Total de membros', valor: colaboradores.length },
-                { label: 'Presentes', valor: presentes, cor: [59, 130, 246] },
                 { label: 'Defensores(as)', valor: defensores, cor: [139, 92, 246] },
                 { label: 'Servidores(as)', valor: servidores, cor: [245, 158, 11] }
             ]);
 
-            const idxPresenca = colunas.indexOf('presenca');
             const idxNome = colunas.indexOf('nome');
             const columnStyles = {};
             if (idxNome >= 0) columnStyles[idxNome] = { halign: 'left', fontStyle: 'bold' };
@@ -848,18 +904,12 @@ export const PDFService = {
                 body: tableData,
                 startY: y,
                 columnStyles,
-                styles: { ...tableBase().styles, halign: 'center' },
-                didParseCell: (data) => {
-                    if (data.section === 'body' && idxPresenca >= 0 && data.column.index === idxPresenca && data.cell.colSpan === 1) {
-                        const t = String(data.cell.raw);
-                        data.cell.styles.fontStyle = 'bold';
-                        data.cell.styles.textColor = t.startsWith('Presente') ? C.verdeEscuro : [148, 163, 184];
-                    }
-                }
+                styles: { ...tableBase().styles, halign: 'center' }
             }));
 
             applyFooters(doc, pautaNome);
-            doc.save(`equipe_${pautaNome.replace(/\s+/g, '_')}.pdf`);
+            doc.save(`equipe_${(pautaNome || 'Pauta').replace(/\s+/g, '_')}.pdf`);
+            if (window.showNotification) window.showNotification("PDF da equipe gerado com sucesso!", "success");
             return true;
         } catch (e) {
             console.error("Erro PDF Equipe:", e);
