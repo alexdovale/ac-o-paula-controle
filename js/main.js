@@ -37,6 +37,7 @@ import { renderEstruturaAtual } from './estruturaAtual.js';
 import { abrirModalNovaRecepcao } from './novaRecepcao.js';
 import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
 import { SIGEPRouter, ROUTES } from './router.js';
+import { PermissoesService } from './permissoes.js';
 import { PerfilService } from './perfilService.js';
 
 // Módulos de Coletas & BI
@@ -50,6 +51,7 @@ import { BiEventosService } from './biEventosService.js';
 window.BiEventosService = BiEventosService;
 
 import { injetarModais } from './modais.js';
+import { ico } from './icons.js';
 injetarModais();
 
 class SIGEPApp { 
@@ -94,6 +96,7 @@ class SIGEPApp {
                 DashboardService,
                 RecepçãoCentralService,
                 PerfilService,
+                Permissoes: PermissoesService,
                 showNotification,
             });
             this.router.init();
@@ -148,25 +151,82 @@ class SIGEPApp {
     }
 
     showAdminScreen() {
-        document.getElementById('pauta-selection-container')?.classList.add('hidden');
-        document.getElementById('dashboard-container')?.classList.add('hidden');
-        document.getElementById('app-container')?.classList.add('hidden');
-        document.getElementById('modo-selection-screen')?.classList.add('hidden');
-        document.getElementById('coletas-container')?.classList.add('hidden');
-        document.getElementById('meu-perfil-container')?.classList.add('hidden');
-        document.getElementById('admin-container')?.classList.remove('hidden');
-        this.renderAdminContent();
+        if (this.router) this.router.navigate(ROUTES.ADMIN, {}, false);
     }
 
     showColetasScreen() {
-        document.getElementById('pauta-selection-container')?.classList.add('hidden');
-        document.getElementById('dashboard-container')?.classList.add('hidden');
-        document.getElementById('app-container')?.classList.add('hidden');
-        document.getElementById('modo-selection-screen')?.classList.add('hidden');
-        document.getElementById('admin-container')?.classList.add('hidden');
-        document.getElementById('meu-perfil-container')?.classList.add('hidden');
-        document.getElementById('coletas-container')?.classList.remove('hidden');
-        this.listarColetas();
+        if (this.router) this.router.navigate(ROUTES.COLETAS, {}, false);
+    }
+
+    // Chamado pelo router ao sair da tela de Coletas: para o BI e limpa o que ficou aberto
+    fecharColetas() {
+        try { window.ColetasBiService?.fechar?.(); } catch (e) { console.warn(e); }
+        const construtor = document.getElementById('container-construtor-coleta');
+        if (construtor) { construtor.classList.add('hidden'); construtor.innerHTML = ''; }
+        document.getElementById('coletas-container')?.classList.add('hidden');
+    }
+
+    // ----- Modais do menu de Ações (abertos pelas rotas do router) -----
+    _modalOpeners() {
+        return {
+            [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
+            [ROUTES.COMPARTILHAMENTO]: () => {
+                const modal = document.getElementById('share-modal');
+                if (!modal || !this.currentPautaData) return;
+                document.getElementById('share-toggle').checked = this.currentPautaData.isPublic || false;
+                document.getElementById('mask-names-check').checked = this.currentPautaData.maskNames || false;
+                const isPublic = this.currentPautaData.isPublic;
+                document.getElementById('share-status-text').textContent = isPublic ? 'Público' : 'Privado';
+                if (isPublic) {
+                    document.getElementById('share-link-container').classList.remove('hidden');
+                    const link = `${window.location.origin}${window.location.pathname.replace('index.html', '')}acompanhamento.html?id=${this.currentPauta.id}`;
+                    document.getElementById('share-link-input').value = link;
+                    document.getElementById('open-external-btn').href = link;
+                } else {
+                    document.getElementById('share-link-container').classList.add('hidden');
+                }
+                modal.classList.remove('hidden');
+            },
+            [ROUTES.TOTEM]: () => {
+                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+            },
+            [ROUTES.ESTATISTICAS]: () => {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
+                }
+            },
+            [ROUTES.EDITAR_NOME_PAUTA]: () => {
+                document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+                document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
+            },
+            [ROUTES.CONFIGURACAO_PAUTA]: () => {
+                const modal = document.getElementById('bi-links-modal');
+                if (!modal) return;
+                modal.classList.remove('hidden');
+                if (window.BiEventosService && this.currentPautaData) {
+                    document.getElementById('container-bi-links-pauta').innerHTML = window.BiEventosService.renderConfiguradorLinksHTML(this.currentPautaData);
+                    document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
+                        window.BiEventosService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
+                    });
+                }
+            },
+            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
+            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
+            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal()
+        };
+    }
+
+    async openPautaModal(route) {
+        const abrir = this._modalOpeners()[route];
+        if (abrir) await abrir();
+    }
+
+    // Fecha os modais do menu de Ações (usado ao sair de uma rota de modal)
+    closePautaModals() {
+        ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal']
+            .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.getElementById('painel-geral-externo-modal')?.remove();
     }
 
     async renderAdminContent() {
@@ -180,10 +240,10 @@ class SIGEPApp {
             
             <div class="mb-6 flex flex-wrap gap-3">
                 <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                    <span>🏢</span> Gerenciar Unidades / Órgãos
+                    <span>${ico('building')}</span> Gerenciar Unidades / Órgãos
                 </button>
                 <button id="btn-recepcoes-master" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
-                    <span>🏛️</span> Gerenciar Recepções (Unidades de Apoio)
+                    <span>${ico('landmark')}</span> Gerenciar Recepções (Unidades de Apoio)
                 </button>
             </div>
             
@@ -191,7 +251,7 @@ class SIGEPApp {
                 <div class="mb-4">
                     <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
                 </div>
-                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">⏳ Usuários Pendentes</h3>
+                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">${ico('clock', 'w-5 h-5')} Usuários Pendentes</h3>
                 <div id="pending-users-list" class="space-y-2"></div>
                 <div id="pagination-pendentes" class="mt-4"></div>
             </div>
@@ -200,7 +260,7 @@ class SIGEPApp {
                 <div class="mb-4">
                     <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
                 </div>
-                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">👥 Usuários do Sistema</h3>
+                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">${ico('users', 'w-5 h-5')} Usuários do Sistema</h3>
                 <div class="overflow-x-auto">
                     <table class="w-full text-sm border-collapse">
                         <thead class="bg-slate-100">
@@ -219,10 +279,10 @@ class SIGEPApp {
             
             <div class="mt-8 pt-4 border-t">
                 <div class="flex flex-wrap gap-3 mb-4">
-                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">🔍 Carregar Logs</button>
-                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">📄 Exportar PDF</button>
-                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">🗑️ Limpar Dados</button>
-                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">📊 BI Dashboard</button>
+                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">${ico('search')} Carregar Logs</button>
+                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">${ico('fileText')} Exportar PDF</button>
+                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">${ico('trash')} Limpar Dados</button>
+                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">${ico('chart')} BI Dashboard</button>
                 </div>
                 
                 <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
@@ -254,11 +314,14 @@ class SIGEPApp {
                 <div id="pagination-logs" class="mt-4"></div>
                 <div id="dashboard-results" class="hidden mt-6"></div>
             </div>
+
+            <div id="permissoes-container" class="mt-10 pt-6 border-t"></div>
         `;
         
         if (AdminService?.setupAdminEvents) {
             AdminService.setupAdminEvents(this);
         }
+        PermissoesService.renderAdmin(document.getElementById('permissoes-container'), this);
     }
 
     setupModoListeners() {
@@ -295,28 +358,28 @@ class SIGEPApp {
                 const snap = await getDocs(collection(this.db, "unidades"));
                 const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
                 
-                let html = `<option value="todas">🌍 Todas as Unidades (Visão Admin)</option>`;
+                let html = `<option value="todas">Todas as Unidades (Visão Admin)</option>`;
                 if (userUnidades.length > 0) {
                     html += `<optgroup label="Minhas Unidades Vinculadas">`;
                     userUnidades.forEach(u => {
                         const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
-                        if (nome) html += `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                        if (nome) html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
                     });
                     html += `</optgroup><optgroup label="Todas as Unidades do Sistema">`;
                 }
                 allUnidades.forEach(nome => {
-                    html += `<option value="${escapeHTML(nome)}">🏢 ${escapeHTML(nome)}</option>`;
+                    html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
                 });
                 if (userUnidades.length > 0) html += `</optgroup>`;
                 select.innerHTML = html;
             } catch (err) {
-                select.innerHTML = `<option value="todas">🌍 Erro ao carregar unidades</option>`;
+                select.innerHTML = `<option value="todas">Erro ao carregar unidades</option>`;
             }
         } else {
-            let html = `<option value="todas">🌍 Todas as minhas unidades</option>`;
+            let html = `<option value="todas">Todas as minhas unidades</option>`;
             userUnidades.forEach(u => {
                 const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
-                if (nome) html += `<option value="${escapeHTML(nome)}">📍 ${escapeHTML(nome)}</option>`;
+                if (nome) html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
             });
             select.innerHTML = html;
         }
@@ -426,10 +489,12 @@ class SIGEPApp {
                 if (user) {
                     await AuthService.handleAuthState(this, user);
                     await this.loadUserPreferences();
+                    await PermissoesService.carregar(this);
                     this.applyRoleBasedUI();
                     await this.router.resolveInitialRoute();
                 } else {
                     this.currentUser = null;
+                    PermissoesService.limpar();
                     await this.router.navigate(ROUTES.LOGIN, {}, true);
                 }
             } catch (error) {
@@ -459,7 +524,7 @@ class SIGEPApp {
         try {
             await enableMultiTabIndexedDbPersistence(this.db);
         } catch (err) {
-            console.warn('⚠️ Cache/Offline warning:', err.code);
+            console.warn('Cache/Offline warning:', err.code);
         }
         window.addEventListener('offline', () => document.getElementById('offline-indicator')?.classList.remove('hidden'));
         window.addEventListener('online', () => {
@@ -567,7 +632,7 @@ class SIGEPApp {
             localStorage.removeItem('sigep_app_state');
             document.getElementById('modo-selection-screen')?.classList.add('hidden');
             document.getElementById('login-container')?.classList.remove('hidden');
-            if(window.app && window.app.logout) window.app.logout();
+            AuthService.logout(this.auth);
             const cleanUrl = window.location.origin + window.location.pathname;
             window.history.pushState({}, '', cleanUrl);
         });
@@ -576,49 +641,32 @@ class SIGEPApp {
     setupPautaMenuEvents() {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
-        document.getElementById('btn-painel-geral-externo')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.MONITOR_EQUIPE, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            if (typeof PainelGeralService !== 'undefined') {
-                PainelGeralService.abrirPainel(this);
-            }
-        });
-
-        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
+        // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
+        // (não há mais "clique falso" nem checagem de isTrusted)
+        const irParaRota = (btnId, rota) => {
+            document.getElementById(btnId)?.addEventListener('click', (e) => {
+                if (!this.currentPauta) return;
+                e.stopImmediatePropagation();
                 document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
                 document.getElementById('actions-arrow')?.classList.remove('rotate-180');
-                if (window.abrirMonitoramentoGlobal) {
-                    window.abrirMonitoramentoGlobal();
-                }
-            }
-        });
+                this.router.navigate(rota, { pautaId: this.currentPauta.id }, false);
+            });
+        };
+        irParaRota('btn-painel-geral-externo', ROUTES.MONITOR_EQUIPE);
+        irParaRota('share-pauta-btn', ROUTES.COMPARTILHAMENTO);
+        irParaRota('open-totem-btn', ROUTES.TOTEM);
+        irParaRota('view-stats-btn', ROUTES.ESTATISTICAS);
+        irParaRota('edit-pauta-name-btn', ROUTES.EDITAR_NOME_PAUTA);
+        irParaRota('edit-pauta-config-btn', ROUTES.CONFIGURACAO_PAUTA);
+        irParaRota('manage-members-btn', ROUTES.COMPARTILHAR_PAUTA);
+        irParaRota('manage-collaborators-btn', ROUTES.COLABORADORES_PAUTA);
+        irParaRota('notes-btn', ROUTES.ANOTACOES_PAUTA);
 
-        document.getElementById('share-pauta-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.COMPARTILHAMENTO, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            const modal = document.getElementById('share-modal');
-            if (modal && this.currentPautaData) {
-                document.getElementById('share-toggle').checked = this.currentPautaData.isPublic || false;
-                document.getElementById('mask-names-check').checked = this.currentPautaData.maskNames || false;
-                
-                const isPublic = this.currentPautaData.isPublic;
-                document.getElementById('share-status-text').textContent = isPublic ? "Público" : "Privado";
-                
-                if (isPublic) {
-                    document.getElementById('share-link-container').classList.remove('hidden');
-                    const link = `${window.location.origin}${window.location.pathname.replace('index.html', '')}acompanhamento.html?id=${this.currentPauta.id}`;
-                    document.getElementById('share-link-input').value = link;
-                    document.getElementById('open-external-btn').href = link;
-                } else {
-                    document.getElementById('share-link-container').classList.add('hidden');
-                }
-                modal.classList.remove('hidden');
-            }
+        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', () => {
+            if (!this.currentPauta) return;
+            document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            if (window.abrirMonitoramentoGlobal) window.abrirMonitoramentoGlobal();
         });
 
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
@@ -681,77 +729,7 @@ class SIGEPApp {
             }
         });
 
-        // 📱 BOTÃO EXCLUSIVO DO TOTEM (AUTOATENDIMENTO DE CHEGADA - INTACTO)
-        document.getElementById('open-totem-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.TOTEM, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            if (this.currentPauta) {
-                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
-                window.open(totemUrl, '_blank');
-            }
-        });
-
-        document.getElementById('view-stats-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.ESTATISTICAS, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            if (this.allAssisted && typeof StatisticsService?.showModal === 'function') {
-                StatisticsService.showModal(this.allAssisted, this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
-            }
-        });
-
-        document.getElementById('edit-pauta-name-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.EDITAR_NOME_PAUTA, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
-            document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
-        });
-
-        document.getElementById('edit-pauta-config-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.CONFIGURACAO_PAUTA, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            const modal = document.getElementById('bi-links-modal');
-            if (modal) {
-                modal.classList.remove('hidden');
-                if (window.BiEventosService && this.currentPautaData) {
-                    document.getElementById('container-bi-links-pauta').innerHTML = window.BiEventosService.renderConfiguradorLinksHTML(this.currentPautaData);
-                    document.getElementById('bi-btn-adicionar-parceiro')?.addEventListener('click', () => {
-                        window.BiEventosService.adicionarParceiro(this.db, this.currentPauta.id, this.currentPautaData);
-                    });
-                }
-            }
-        });
-
-        document.getElementById('manage-members-btn')?.addEventListener('click', async (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.COMPARTILHAR_PAUTA, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            if (typeof ModalService?.openMembersModal === 'function') await ModalService.openMembersModal(this);
-        });
-
-        document.getElementById('manage-collaborators-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                this.router.navigate(ROUTES.COLABORADORES_PAUTA, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-            CollaboratorService.openModal(this);
-        });
-
-        document.getElementById('notes-btn')?.addEventListener('click', (e) => {
-            if (e.isTrusted && this.currentPauta) {
-                e.stopImmediatePropagation();
-                this.router.navigate(ROUTES.ANOTACOES_PAUTA, { pautaId: this.currentPauta.id }, false);
-                return;
-            }
-        });
+        // BOTÃO EXCLUSIVO DO TOTEM (AUTOATENDIMENTO DE CHEGADA - INTACTO)
     }
 
     setupPautaSettingsEvents() {
@@ -860,7 +838,7 @@ class SIGEPApp {
         });
 
         // ------------------------------------------------------------------------------------------
-        // 🔥 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!) 🔥
+        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES (SEPARADO DO TOTEM!)
         // ------------------------------------------------------------------------------------------
         const observerMenuAcoes = new MutationObserver(() => {
             const actionsPanel = document.getElementById('actions-panel');
@@ -876,7 +854,7 @@ class SIGEPApp {
                         <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Painel da TV / Fila</p>
                         
                         <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">📍</span>
+                            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">${ico('mapPin')}</span>
                             <span>
                                 <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
                                 <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Definir de onde estou chamando</span>
@@ -884,7 +862,7 @@ class SIGEPApp {
                         </button>
 
                         <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
-                            <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">📺</span>
+                            <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">${ico('tv')}</span>
                             <span>
                                 <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
                                 <span class="text-[11px] font-normal text-purple-500 block leading-tight mt-0.5">Logo, Som, Vídeo e Modo Visual</span>
@@ -932,6 +910,7 @@ class SIGEPApp {
                 } else {
                     tvGroup.classList.add('hidden');
                 }
+                PermissoesService.aplicarUI(this.currentUser);
             }
         });
         
@@ -941,7 +920,7 @@ class SIGEPApp {
         }
 
         // ------------------------------------------------------------------------------------------
-        // 🔥 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES 🔥
+        // 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES
         // ------------------------------------------------------------------------------------------
         const observerEdicao = new MutationObserver(() => {
             const modalEdicao = document.getElementById('edit-pauta-config-modal');
@@ -957,7 +936,7 @@ class SIGEPApp {
                             <label class="flex items-center cursor-pointer gap-3">
                                 <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
                                 <div>
-                                    <span class="block text-sm font-bold text-slate-800">📺 Utilizar Painel da TV</span>
+                                    <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
                                     <span class="block text-[10px] text-slate-500">Se ativado, exibe o configurador do Painel TV no menu Ações e envia chamadas para a TV.</span>
                                 </div>
                             </label>
@@ -990,7 +969,8 @@ class SIGEPApp {
             }
         });
         
-        observerEdicao.observe(document.body, { childList: true, subtree: true, attributes: true, attributeFilter: ['class'] });
+        const modalEdicaoEl = document.getElementById('edit-pauta-config-modal');
+        if (modalEdicaoEl) observerEdicao.observe(modalEdicaoEl, { attributes: true, attributeFilter: ['class'] });
         // ------------------------------------------------------------------------------------------
     }
 
@@ -1040,7 +1020,7 @@ class SIGEPApp {
             
             await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
             
-            // 🌟 AUDITORIA AUTOMÁTICA DE EDIÇÃO 🌟
+            // AUDITORIA AUTOMÁTICA DE EDIÇÃO
             if (window.MonitoramentoService) {
                 await window.MonitoramentoService.registrarAcaoHistorico(this.currentPauta.id, window.assistedIdToHandle, "Dados do assistido editados manualmente", this);
             }
@@ -1262,7 +1242,7 @@ class SIGEPApp {
         document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
         document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
 
-        // 🔥 CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
+        // CORREÇÃO: Abre e fecha a explicação da ordem de atendimento
         const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
         const logicContent = document.getElementById('logic-explanation-padrao-content');
         if (toggleLogicBtn && logicContent) {
@@ -1457,7 +1437,7 @@ class SIGEPApp {
         }
     }
 
-    // 🔥 FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL (IGUAL À RECEPÇÃO CENTRAL) 🔥
+    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL (IGUAL À RECEPÇÃO CENTRAL)
     async abrirModalConfigTVPauta() {
         if (!this.currentPauta) return;
         const pautaId = this.currentPauta.id;
@@ -1501,13 +1481,13 @@ class SIGEPApp {
                     <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
                         <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'fila' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
                             <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">📋</div>
+                            <div class="text-3xl mb-2">${ico('clipboard', 'w-8 h-8')}</div>
                             <div class="font-bold text-slate-800 text-sm">Lista (Fila)</div>
                             <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Visão em grade mostrando quem está nas mesas e os próximos da fila.</div>
                         </label>
                         <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'tv' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
                             <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
-                            <div class="text-3xl mb-2">📺</div>
+                            <div class="text-3xl mb-2">${ico('tv', 'w-8 h-8')}</div>
                             <div class="font-bold text-slate-800 text-sm">TV Padrão</div>
                             <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Painel de chamada limpo (fundo azul) com aviso sonoro e histórico.</div>
                         </label>
@@ -1533,11 +1513,11 @@ class SIGEPApp {
                         <div class="grid grid-cols-2 gap-3">
                             <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === true ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
                                 <input type="radio" name="tv_som" value="1" class="hidden" ${somAtual === true ? 'checked' : ''}>
-                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">🔔 Ativado</span>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bell')} Ativado</span>
                             </label>
                             <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === false ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
                                 <input type="radio" name="tv_som" value="0" class="hidden" ${somAtual === false ? 'checked' : ''}>
-                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">🔕 Silencioso</span>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bellOff')} Silencioso</span>
                             </label>
                         </div>
                     </div>
@@ -1578,8 +1558,8 @@ class SIGEPApp {
             
             <div class="px-6 py-5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end items-center">
                 <button class="w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors fechar-modal-tv text-sm">Cancelar</button>
-                <button id="tv-btn-copiar" class="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors text-sm shadow-md flex items-center justify-center gap-2">📋 Copiar Link</button>
-                <button id="tv-btn-salvar-abrir" class="w-full sm:w-auto px-6 py-3 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg flex items-center justify-center gap-2">🖥️ Salvar e Abrir TV</button>
+                <button id="tv-btn-copiar" class="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors text-sm shadow-md flex items-center justify-center gap-2">${ico('clipboard')} Copiar Link</button>
+                <button id="tv-btn-salvar-abrir" class="w-full sm:w-auto px-6 py-3 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg flex items-center justify-center gap-2">${ico('monitor')} Salvar e Abrir TV</button>
             </div>
         </div>
         `;
@@ -1886,7 +1866,7 @@ class SIGEPApp {
             return showNotification("Você não tem permissão para excluir esta pauta!", "error");
         }
         
-        if (!confirm(`⚠️ ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
+        if (!confirm(`ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
         
         showNotification(`Excluindo pauta "${pautaName}"...`, "info");
         
@@ -1946,7 +1926,7 @@ class SIGEPApp {
             
             btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
             btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
-            btnEnvelope.innerHTML = `<span class="text-sm">✉️</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+            btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
         } else {
             if (btnEnvelope) btnEnvelope.remove();
         }
@@ -1954,14 +1934,10 @@ class SIGEPApp {
 
     setupColetas() {
         document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
-            document.getElementById('container-construtor-coleta')?.classList.add('hidden');
-            this.showColetasScreen();
+            this.router.navigate(ROUTES.COLETAS, {}, false);
         });
 
         document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
-            document.getElementById('container-construtor-coleta')?.classList.add('hidden');
-            document.getElementById('coletas-container')?.classList.add('hidden'); 
-            this.showPautaSelectionScreen(); 
             this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
         });
 
@@ -2008,11 +1984,11 @@ class SIGEPApp {
                     <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
                         <div>
                             <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
-                            <p class="text-[11px] font-bold text-slate-500 mt-1">📚 ${data.dicionarioDeCampos?.length || 0} campos cadastrados | 🔗 ${data.linksExternos?.length || 0} links gerados</p>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1">${ico('bookOpen', 'w-3.5 h-3.5')} ${data.dicionarioDeCampos?.length || 0} campos cadastrados | ${ico('link', 'w-3.5 h-3.5')} ${data.linksExternos?.length || 0} links gerados</p>
                         </div>
                         <div class="flex gap-2 w-full sm:w-auto">
-                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">⚙️ Configurar</button>
-                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">📈 Resultados</button>
+                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">${ico('settings', 'w-3.5 h-3.5')} Configurar</button>
+                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">${ico('trendingUp', 'w-3.5 h-3.5')} Resultados</button>
                         </div>
                     </div>
                 `;
@@ -2097,6 +2073,7 @@ class SIGEPApp {
         if (!this.currentUser) return;
         const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
         document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
+        PermissoesService.aplicarUI(this.currentUser);
     }
 
     async openUserPreferencesModal() {
@@ -2124,7 +2101,7 @@ class SIGEPApp {
     }
 
     applyUserPreferences() {
-        console.log("⚙️ Aplicando preferências:", this.userPreferences);
+        console.log("Aplicando preferências:", this.userPreferences);
     }
 
     getDefaultNotificationPreferences() {
@@ -2297,8 +2274,6 @@ window.abrirConstrutor = async (coletaId) => {
             container.classList.remove('hidden');
             
             window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
-            
-            document.getElementById('coletas-container').querySelector('.overflow-y-auto, div.bg-white')?.scrollBy({ top: 300, behavior: 'smooth' });
         } else {
             showNotification("Erro: Serviço construtor não carregado.", "error");
         }
