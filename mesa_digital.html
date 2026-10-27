@@ -30,33 +30,42 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen pt-10">
+<!-- pt-14 garante espaço para a barra fixa no topo, tanto no mobile quanto no desktop -->
+<body class="flex flex-col min-h-screen pt-14">
 
-    <!-- MENU SUPERIOR FIXO (TOP BAR) - OCULTO ATÉ O LOGIN -->
-    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[50] flex justify-between items-center px-4 py-1 shadow-sm h-10">
+    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL E RESPONSIVA) -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[999] flex justify-between items-center px-3 sm:px-6 py-2 shadow-md h-12">
+        
+        <!-- Esquerda: Logo e Links (Links ocultos no mobile para poupar espaço) -->
         <div class="flex items-center gap-4 w-1/3">
-            <span class="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2">
-                <svg class="w-3.5 h-3.5 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
-                SIGEP
+            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-500 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                <span class="hidden sm:inline">SIGEP</span>
             </span>
-            <div class="hidden md:flex items-center gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-4">
+            <div class="hidden lg:flex items-center gap-4 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-2">
                 <a href="manual.html" target="_blank" class="hover:text-blue-400 transition-colors">Wiki</a>
                 <a href="termos.html" target="_blank" class="hover:text-blue-400 transition-colors">Termos</a>
                 <a href="politica.html" target="_blank" class="hover:text-blue-400 transition-colors">Privacidade</a>
             </div>
         </div>
 
+        <!-- Centro: Título do App -->
         <div class="flex items-center justify-center gap-2 w-1/3 absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
-            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-5 w-auto drop-shadow-sm">
-            <span class="text-white font-black text-[10px] uppercase tracking-widest hidden sm:block whitespace-nowrap">
-                Mesa de Trabalho Externa
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-6 w-auto drop-shadow-sm hidden sm:block">
+            <span class="text-white font-black text-[10px] sm:text-xs uppercase tracking-widest whitespace-nowrap">
+                Mesa Digital
             </span>
         </div>
 
-        <div class="flex items-center justify-end w-1/3">
-            <button id="logout-btn-nav" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-2.5 py-1 rounded-lg border border-red-500/20 transition-colors text-[9px] sm:text-[10px] uppercase tracking-wider">
+        <!-- Direita: Ouvidoria (Oculto no Mobile Extremo) e Sair -->
+        <div class="flex items-center justify-end w-1/3 gap-3">
+            <button onclick="document.getElementById('feedback-global-modal').classList.remove('hidden')" class="hidden md:flex hover:text-blue-400 transition-colors items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700 text-[10px] text-slate-300 font-bold uppercase tracking-wider">
+                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                Ouvidoria
+            </button>
+            <button id="logout-btn-nav" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 py-1.5 rounded-lg border border-red-500/20 transition-colors text-[10px] uppercase tracking-wider">
                 <span class="hidden sm:inline">Sair</span>
-                <svg xmlns="http://www.w3.org/2000/svg" class="w-3 h-3" fill="currentColor" viewBox="0 0 16 16">
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
                     <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
                     <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
                 </svg>
@@ -69,15 +78,14 @@
         <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
     </div>
 
-    <!-- WRAPPER PRINCIPAL -->
-    <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
+    <!-- WRAPPER PRINCIPAL - GARANTE CENTRALIZAÇÃO E RESPONSIVIDADE -->
+    <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-start sm:justify-center w-full px-2 sm:px-6">
         
         <!-- TELA DE LOGIN -->
         <div id="login-container" class="w-full max-w-md hidden animate-fade-in my-auto min-h-[70vh]">
-            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 relative overflow-hidden w-full">
-                <!-- IDENTIFICADOR VISUAL -->
-                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">
-                    Mesa de Trabalho
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-xl border border-slate-200 relative overflow-hidden w-full mt-10 sm:mt-0">
+                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-2xl uppercase tracking-widest shadow-sm">
+                    Mesa Digital
                 </div>
                 
                 <div class="flex justify-center mb-4 mt-2">
@@ -85,181 +93,226 @@
                 </div>
                 <h2 class="text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
                 
-                <!-- ABAS DE NAVEGAÇÃO -->
                 <div class="flex border-b border-slate-200 mb-6">
                     <button class="flex-1 py-2 text-center font-semibold text-blue-600 border-b-2 border-blue-600 text-sm sm:text-base pointer-events-none">Acesso Externo</button>
                     <a href="index.html" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Acesso Interno</a>
                 </div>
                 
-                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 hidden text-xs font-bold text-center"></div>
                 
-                <form id="login-form" class="space-y-4">
+                <form id="login-form" class="space-y-5">
                     <div>
-                        <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1">E-mail Cadastrado</label>
-                        <input type="email" id="login-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                        <label for="login-email" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">E-mail Cadastrado</label>
+                        <input type="email" id="login-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
                     </div>
                     <div>
-                        <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
-                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                        <label for="login-password" class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Senha</label>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-4 py-3 border border-slate-300 rounded-xl shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
                     </div>
-                    <div class="text-right mt-1">
-                        <!-- LINK RECUPERAR CORRIGIDO -->
-                        <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-blue-600 hover:underline font-semibold">Esqueci minha senha</a>
+                    <div class="text-right mt-2">
+                        <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-blue-600 hover:underline font-bold">Esqueci minha senha</a>
                     </div>
-                    <button type="submit" id="btn-entrar" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
-                        Entrar
+                    <button type="submit" id="btn-entrar" class="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-md text-sm font-black text-white bg-blue-600 hover:bg-blue-700 transition-colors uppercase tracking-widest mt-2 active:scale-95">
+                        Acessar Portal
                     </button>
                 </form>
                 
-                <div class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
-                    Apenas colaboradores logados podem aceder a esta área. Ao entrar, você concorda com nossos <br>
-                    <a href="termos.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Termos de Uso</a> e <a href="politica.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>.
+                <div class="mt-8 text-center text-xs text-slate-400 font-medium leading-relaxed">
+                    Ao entrar, você concorda com nossos <br>
+                    <a href="termos.html" target="_blank" class="text-blue-500 font-bold hover:underline">Termos de Uso</a> e <a href="politica.html" target="_blank" class="text-blue-500 font-bold hover:underline">Política de Privacidade</a>.
                 </div>
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS -->
+        <!-- TELA DE SELEÇÃO DE PAUTAS (PORTAL EXTERNO) -->
         <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto py-6 sm:py-10 hidden animate-fade-in my-auto">
-            <!-- Barra de Filtro e Pesquisa -->
-            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 w-full">
+            <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 w-full px-2 sm:px-0">
                 <div class="w-full md:w-1/2">
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Vinculadas</h2>
-                    <p class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Painel de Acesso à Mesa de Trabalho</p>
+                    <h2 class="text-2xl sm:text-3xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Vinculadas</h2>
+                    <p class="text-xs sm:text-sm font-bold text-slate-400 mt-1 uppercase tracking-widest">Painel de Acesso à Mesa de Trabalho</p>
                 </div>
                 
                 <div class="w-full md:w-1/2 relative">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    <div class="absolute inset-y-0 left-0 pl-4 flex items-center pointer-events-none">
+                        <svg class="w-5 h-5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
                     </div>
-                    <input type="search" id="search-pautas-input" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm transition-all font-medium text-slate-700">
+                    <input type="search" id="search-pautas-input" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-12 pr-4 py-3.5 border border-slate-300 rounded-2xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm sm:text-base transition-all font-semibold text-slate-700">
                 </div>
             </div>
             
-            <div id="lista-pautas-vinculadas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 w-full pb-10">
+            <div id="lista-pautas-vinculadas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full pb-10 px-2 sm:px-0">
                 <!-- Pautas carregadas dinamicamente aqui -->
             </div>
         </div>
 
         <!-- MODAL DE TROCA DE SENHA OBRIGATÓRIA -->
         <div id="modal-troca-senha" class="fixed inset-0 bg-slate-900/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
-            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+            <div class="bg-white p-6 sm:p-8 rounded-3xl shadow-2xl w-full max-w-md animate-fade-in">
                 <div class="text-center mb-6">
-                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <div class="w-16 h-16 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                        <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
                     </div>
-                    <h3 class="text-xl font-bold text-slate-800 mb-1">Defina sua Senha</h3>
-                    <p class="text-sm text-slate-500">Este é seu primeiro acesso seguro. Por favor, defina uma senha definitiva para continuar.</p>
+                    <h3 class="text-2xl font-black text-slate-800 mb-2 uppercase tracking-wide">Defina sua Senha</h3>
+                    <p class="text-sm font-medium text-slate-500">Este é seu primeiro acesso seguro. Por favor, defina uma senha definitiva para continuar.</p>
                 </div>
                 
-                <div id="troca-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                <div id="troca-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-xl mb-4 hidden text-xs font-bold text-center"></div>
                 
                 <form id="troca-senha-form" class="space-y-4">
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
-                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Nova Senha</label>
+                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-colors">
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                        <label class="block text-xs font-black text-slate-500 uppercase tracking-widest mb-1.5">Confirmar Senha</label>
+                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-3 border border-slate-300 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-colors">
                     </div>
-                    <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
+                    <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-black uppercase tracking-widest py-3.5 rounded-xl shadow-md transition-all text-sm mt-4 active:scale-95">
                         Salvar e Acessar
                     </button>
                 </form>
             </div>
         </div>
 
-        <!-- SHELL PRINCIPAL DA MESA -->
-        <div id="shell-atendimento" class="hidden w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[85vh] mt-2 mb-6">
-            <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
-                <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+        <!-- SHELL PRINCIPAL DA MESA (REFATORADO KANBAN E SPLIT-SCREEN) -->
+        <div id="shell-atendimento" class="hidden w-full max-w-7xl mx-auto bg-white rounded-3xl shadow-2xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[90vh] mt-2 mb-6">
+            
+            <!-- HEADER DA MESA -->
+            <div id="header-bg" class="bg-slate-900 p-5 sm:p-6 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0 shadow-md z-10">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl -mr-10 -mt-10 pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 relative z-10 min-w-0">
-                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl transition-colors border border-white/20 shadow-inner" title="Voltar para Minhas Pautas">
-                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    <!-- BOTÃO VOLTAR CLARO E RESPONSIVO -->
+                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white px-4 py-3 rounded-xl transition-colors border border-white/20 shadow-inner flex items-center gap-2 font-bold text-xs uppercase tracking-widest active:scale-95" title="Voltar ao Portal de Pautas">
+                        <svg class="w-4 h-4 shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                        <span class="hidden sm:inline">Voltar às Pautas</span>
+                        <span class="sm:hidden">Voltar</span>
                     </button>
-                    <div class="flex flex-col overflow-hidden min-w-0">
-                        <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
-                        <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                    <div class="flex flex-col overflow-hidden min-w-0 border-l border-white/20 pl-4" id="textos-container-header">
+                        <h1 id="assistido-nome" class="font-black text-lg sm:text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                        <p id="assistido-assunto" class="text-[10px] sm:text-xs text-blue-200 opacity-90 truncate mt-0.5 font-bold uppercase tracking-widest">Carregando dados da sua sessão...</p>
                     </div>
                 </div>
 
                 <div class="flex gap-3 relative z-10 shrink-0 items-center">
-                    <div id="status-indicator" class="hidden bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-widest animate-pulse flex items-center gap-1.5">
-                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ONLINE
+                    <div id="status-indicator" class="hidden bg-emerald-500 text-white border border-emerald-400 text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest animate-pulse flex items-center gap-2">
+                        <span class="w-2 h-2 rounded-full bg-white shrink-0"></span> <span class="hidden sm:inline">ONLINE</span>
                     </div>
                 </div>
             </div>
 
-            <!-- VIEW DASHBOARD -->
-            <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden">
-                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
-                    <button id="btn-tab-minha-mesa" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-blue-600 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
-                        💻 Minha Mesa
-                    </button>
-                    <button id="btn-tab-aguardando" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
-                        📥 Fila de Espera
-                    </button>
-                    <button id="btn-tab-pauta-atual" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
-                        📋 Auditoria Global
-                    </button>
+            <!-- VIEW DASHBOARD (MODELO KANBAN - OPÇÃO 1) -->
+            <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden bg-slate-50/80 p-3 sm:p-5">
+                <!-- Filtro Global do Kanban -->
+                <div class="mb-4 flex flex-col sm:flex-row items-center justify-between bg-white p-3 rounded-2xl border border-slate-200 shadow-sm shrink-0 gap-3">
+                    <div class="font-black text-slate-800 uppercase tracking-widest text-xs flex items-center gap-2 w-full sm:w-auto pl-2">
+                        <svg class="w-4 h-4 text-blue-600" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                        Visão Geral do Fluxo
+                    </div>
+                    <div class="w-full sm:w-72 relative">
+                        <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                            <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                        </div>
+                        <input type="search" id="kanban-search" placeholder="Pesquisar na mesa..." class="w-full pl-10 pr-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:ring-2 focus:ring-blue-500 transition-shadow">
+                    </div>
                 </div>
 
-                <div class="p-4 sm:p-6 bg-slate-50/50 flex-1 overflow-y-auto custom-scrollbar">
-                    <div id="painel-atendimento-container" class="w-full min-h-[300px]">
-                        <div class="flex flex-col justify-center items-center py-20 gap-3">
-                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
-                            <p class="text-[10px] font-black text-blue-600 tracking-widest uppercase">Sincronizando pauta...</p>
+                <!-- 3 Colunas Side-by-Side (Empilha no Mobile) -->
+                <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1 min-h-0 pb-2">
+                    
+                    <!-- COLUNA 1: FILA DE ESPERA -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📥 Fila de Espera</h3>
+                            <span id="count-espera" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
+                        </div>
+                        <div id="kanban-espera" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50">
+                            <!-- Cards aguardando injetados aqui -->
                         </div>
                     </div>
-                </div>
-            </div>
 
-            <!-- VIEW ATENDIMENTO -->
-            <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden">
-                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
-                    <button id="tab-btn-encerramento" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-slate-800 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
-                        Encerramento / Fluxo
-                    </button>
-                    <button id="tab-btn-historico" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
-                        Histórico Recepção
-                    </button>
-                </div>
-                <div class="p-4 sm:p-6 bg-white flex-1 overflow-y-auto custom-scrollbar">
-                    <div id="aba-encerramento" class="space-y-6">
-                        <div id="area-colaborador" class="hidden">
-                            <div class="flex flex-col justify-center items-center py-20 gap-3">
-                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-                                <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa...</p>
+                    <!-- COLUNA 2: MINHA MESA (EM ATENDIMENTO) -->
+                    <div class="bg-white rounded-2xl shadow-sm border-2 border-blue-400 flex flex-col overflow-hidden ring-4 ring-blue-50 h-full max-h-[60vh] lg:max-h-full">
+                        <div class="p-4 bg-blue-50 border-b border-blue-200 flex justify-between items-center shrink-0">
+                            <h3 class="font-black text-blue-800 uppercase tracking-widest text-[11px] flex items-center gap-2">💻 Minha Mesa</h3>
+                            <span id="count-mesa" class="bg-blue-200 text-blue-800 px-2.5 py-1 rounded-lg text-[10px] font-black shadow-sm">0</span>
+                        </div>
+                        <div id="kanban-mesa" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-white">
+                            <div id="loading-mesa" class="flex flex-col justify-center items-center py-20 gap-3">
+                                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+                                <p class="text-[10px] font-black text-blue-600 tracking-widest uppercase">Sincronizando...</p>
                             </div>
                         </div>
                     </div>
-                    <div id="aba-historico" class="hidden animate-fade-in">
-                        <div id="lista-historico" class="space-y-4"></div>
+
+                    <!-- COLUNA 3: AUDITORIA / CONCLUÍDOS -->
+                    <div class="bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Concluídos</h3>
+                            <span id="count-auditoria" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
+                        </div>
+                        <div id="kanban-auditoria" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50">
+                            <!-- Cards concluídos/distribuição injetados aqui -->
+                        </div>
                     </div>
+
+                </div>
+            </div>
+
+            <!-- VIEW ATENDIMENTO INDIVIDUAL (SPLIT-SCREEN - OPÇÃO A) -->
+            <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden bg-slate-100 p-3 sm:p-5">
+                <div class="flex flex-col lg:flex-row gap-4 h-full min-h-0 pb-2">
+                    
+                    <!-- METADE ESQUERDA: DADOS E HISTÓRICO -->
+                    <div class="w-full lg:w-2/3 flex flex-col bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden h-full max-h-[50vh] lg:max-h-full">
+                        <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                            <h3 class="font-black text-slate-700 uppercase tracking-widest text-xs flex items-center gap-2">
+                                <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+                                Dossiê e Documentação
+                            </h3>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 sm:p-6 custom-scrollbar" id="aba-historico">
+                            <!-- Histórico, Perfil e Documentos injetados aqui via JS -->
+                        </div>
+                    </div>
+
+                    <!-- METADE DIREITA: PAINEL DE AÇÕES FIXO -->
+                    <div class="w-full lg:w-1/3 flex flex-col bg-slate-900 rounded-2xl shadow-xl border border-slate-800 overflow-hidden h-full max-h-[60vh] lg:max-h-full">
+                        <div class="p-4 border-b border-slate-700 flex justify-between items-center shrink-0">
+                            <h3 class="font-black text-white uppercase tracking-widest text-xs flex items-center gap-2">
+                                ⚡ Painel de Ações
+                            </h3>
+                        </div>
+                        <div class="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar bg-slate-50 relative" id="aba-encerramento">
+                            <!-- Botões de Concluir, Transferir, Devolver injetados aqui via JS -->
+                        </div>
+                    </div>
+
                 </div>
             </div>
             
-            <div class="bg-white px-6 py-3 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
+            <!-- RODAPÉ DA MESA -->
+            <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
                 <span>SIGEP • Mesa Unificada de Trabalho</span>
-                <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded">v2.0-2026</span>
+                <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded-lg border border-slate-200 shadow-sm text-slate-500">v3.0-2026</span>
             </div>
         </div>
-    </div>
 
-    <!-- SCRIPT DE LOGIN E PORTAL -->
+    </div><!-- Fim do Main Wrapper -->
+
+    <!-- SCRIPT DE LOGIN E ROTAS -->
     <script type="module">
         import { getAuth, signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-        import { PDFService } from './js/pdfService.js'; // INJETA A LOGICA NATIVA DOS PDFS
+        import { PDFService } from './js/pdfService.js'; 
 
         const appFirebase = initializeApp(firebaseConfig);
         const db = getFirestore(appFirebase);
         const auth = getAuth(appFirebase);
         
-        window.PDFService = PDFService; // Torna o PDFService global para o botão
+        window.PDFService = PDFService; 
 
         const UI = {
             loading: document.getElementById('loading-container'),
@@ -300,12 +353,12 @@
         async function validarPermissaoPauta() {
             if (!STATE.pautaId || !STATE.usuarioAuth) return false;
             try {
-                // Checa se está fechada em tempo real (Fase 3)
                 onSnapshot(doc(db, "pautas", STATE.pautaId), (snap) => {
                     if (snap.exists()) {
                         STATE.pautaFechada = snap.data().fechada === true;
                         if (STATE.pautaFechada) {
-                            document.querySelectorAll('.btn-chamar-proximo').forEach(b => b.classList.add('hidden'));
+                            // Removido o seletor antigo .btn-chamar-proximo pois a UI agora é Kanban.
+                            // A segurança visual será tratada no JS do Kanban.
                         }
                     }
                 });
@@ -327,9 +380,6 @@
                     const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
                     if (userGeralSnap.exists()) {
                         const dadosUser = userGeralSnap.data();
-                        
-                        // CORREÇÃO:
-                        // Só obriga a trocar se for explicitamente false (Primeiro Acesso)
                         if (dadosUser.cadastroAtivo === false) {
                             showUI(UI.modalSenha);
                             return false; 
@@ -352,22 +402,19 @@
                 const pautasSnap = await getDocs(pautasRef);
                 let pautasVinculadas = [];
                 
-                // REGRA DOS 7 DIAS (PAUTAS INATIVAS) - APLICADA EXATAMENTE COMO NO MAIN.JS
                 const dataLimite = new Date();
                 dataLimite.setDate(dataLimite.getDate() - 7);
 
                 for (let docSnap of pautasSnap.docs) {
                     const pautaData = docSnap.data();
                     
-                    // Bloqueia pautas inativas, apagadas, ou antigas (Regra do Sistema Principal)
                     if (pautaData.isDeleted || pautaData.status === 'inativa') continue;
                     
-                    // APLICAÇÃO DA LÓGICA DE VALIDADE DOS 7 DIAS
                     if (pautaData.createdAt) {
                         const dataCriacao = new Date(pautaData.createdAt);
                         const dataExpiracao = new Date(dataCriacao);
                         dataExpiracao.setDate(dataCriacao.getDate() + 7);
-                        if (new Date() > dataExpiracao) continue; // Ignora pautas vencidas
+                        if (new Date() > dataExpiracao) continue; 
                     }
 
                     const colabRef = collection(db, "pautas", docSnap.id, "collaborators");
@@ -383,10 +430,10 @@
                 
                 if (pautasVinculadas.length === 0) {
                     container.innerHTML = `
-                        <div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                        <div class="col-span-full text-center py-20 bg-white rounded-3xl border border-slate-200 shadow-sm">
                             <span class="text-6xl block mb-4 text-slate-300">📭</span>
                             <p class="text-slate-700 font-bold text-lg uppercase tracking-wider">Nenhuma pauta encontrada</p>
-                            <p class="text-sm text-slate-500 mt-2">Você não foi adicionado a nenhuma mesa de trabalho ativa nos últimos 7 dias.</p>
+                            <p class="text-sm text-slate-500 mt-2 font-medium">Você não foi adicionado a nenhuma mesa de trabalho ativa nos últimos 7 dias.</p>
                         </div>`;
                 } else {
                     pautasVinculadas.sort((a, b) => {
@@ -402,7 +449,7 @@
                         const isMutirao = p.type === 'mutirao' || p.type === 'acao_social';
                         const isAcaoLivre = p.type === 'acao_livre';
                         const modoTexto = isMutirao ? 'MUTIRÃO' : isAcaoLivre ? 'AÇÃO SOCIAL' : 'AGENDAMENTO';
-                        const corTextoTipo = (isMutirao || isAcaoLivre) ? 'text-amber-500' : 'text-blue-500';
+                        const corTextoTipo = (isMutirao || isAcaoLivre) ? 'text-amber-600 bg-amber-50' : 'text-blue-600 bg-blue-50';
                         
                         const dataCriacao = p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '--/--/----';
                         
@@ -415,13 +462,13 @@
 
                         const isDefensor = p.meuPapel && p.meuPapel.toLowerCase().includes('defensor');
                         const badgeBadge = isDefensor 
-                            ? `<span class="bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border border-green-200 shadow-sm">Defensor(a)</span>` 
-                            : `<span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider border border-blue-200 shadow-sm">Vinculada</span>`;
+                            ? `<span class="bg-emerald-100 text-emerald-800 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-emerald-200 shadow-sm inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg> Defensor(a)</span>` 
+                            : `<span class="bg-blue-100 text-blue-800 text-[9px] font-black px-3 py-1.5 rounded-lg uppercase tracking-widest border border-blue-200 shadow-sm inline-flex items-center gap-1.5"><svg class="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg> Vinculado</span>`;
 
                         const overlayFechada = p.fechada ? `
-                            <div class="absolute inset-0 bg-white/70 backdrop-blur-[1.5px] z-10 rounded-2xl flex flex-col items-center justify-center border border-red-200 transition-opacity">
-                                <span class="bg-red-600 text-white font-black px-4 py-2 rounded-xl shadow-lg uppercase tracking-widest text-xs mb-3 flex items-center gap-1.5"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Pauta Encerrada</span>
-                                <button onclick="window.location.href='?pautaId=${p.id}'" class="bg-white border border-slate-300 text-slate-700 font-bold px-4 py-2.5 rounded-xl text-xs hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-wider active:scale-95">Consultar Auditoria</button>
+                            <div class="absolute inset-0 bg-white/70 backdrop-blur-[2px] z-10 rounded-3xl flex flex-col items-center justify-center border-2 border-red-500/20 transition-opacity">
+                                <span class="bg-red-600 text-white font-black px-5 py-2.5 rounded-xl shadow-lg uppercase tracking-widest text-xs mb-4 flex items-center gap-2"><svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg> Pauta Encerrada</span>
+                                <button onclick="window.location.href='?pautaId=${p.id}'" class="bg-white border-2 border-slate-300 text-slate-700 font-bold px-5 py-3 rounded-xl text-xs hover:bg-slate-50 transition-colors shadow-sm uppercase tracking-wider active:scale-95 flex items-center gap-2">Consultar Auditoria</button>
                             </div>
                         ` : '';
 
@@ -429,27 +476,24 @@
                         const onClickAtivo = p.fechada ? '' : `onclick="window.location.href='${linkAtivo}'"`;
 
                         return `
-                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer min-h-[220px]" ${onClickAtivo}>
+                        <div class="bg-white rounded-3xl p-6 sm:p-7 shadow-sm border border-slate-200 relative flex flex-col justify-between hover:shadow-md hover:border-blue-300 transition-all cursor-pointer min-h-[240px] group" ${onClickAtivo}>
                             ${overlayFechada}
                             <div>
-                                <div class="flex justify-between items-start mb-3">
-                                    <span class="text-[11px] font-black uppercase tracking-widest ${corTextoTipo}">${modoTexto}</span>
+                                <div class="flex justify-between items-start mb-4">
+                                    <span class="text-[9px] font-black uppercase tracking-widest px-3 py-1.5 rounded-lg border ${corTextoTipo}">${modoTexto}</span>
+                                    <span class="text-blue-500 opacity-0 group-hover:opacity-100 transition-opacity"><svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M14 5l7 7m0 0l-7 7m7-7H3"></path></svg></span>
                                 </div>
-                                <h3 class="text-base font-bold text-slate-800 mb-2 leading-snug line-clamp-2 min-h-[40px] uppercase pr-2">${escapeHTML(p.name || 'Pauta Sem Nome')}</h3>
-                                <p class="text-[11px] text-slate-500 mb-4 font-medium flex items-center gap-1.5">
-                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> 
-                                    Membros da equipe
-                                </p>
-                                <div class="mb-4">${badgeBadge}</div>
+                                <h3 class="text-lg font-black text-slate-800 mb-3 leading-snug line-clamp-2 min-h-[50px] uppercase pr-2 group-hover:text-blue-700 transition-colors">${escapeHTML(p.name || 'Pauta Sem Nome')}</h3>
+                                <div class="mb-5">${badgeBadge}</div>
                             </div>
                             
-                            <div class="pt-4 border-t border-slate-100 flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400 mt-auto">
+                            <div class="pt-5 border-t border-slate-100 flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400 mt-auto">
                                 <div>
-                                    <span class="block mb-1">CRIADA EM</span>
+                                    <span class="block mb-1 opacity-70">CRIADA EM</span>
                                     <span class="text-slate-600">${dataCriacao}</span>
                                 </div>
                                 <div class="text-right">
-                                    <span class="block mb-1 text-orange-500">ELIMINAÇÃO (7 DIAS)</span>
+                                    <span class="block mb-1 text-orange-500 opacity-90">ELIMINAÇÃO (7 DIAS)</span>
                                     <span class="text-slate-600">${dataEliminacao}</span>
                                 </div>
                             </div>
@@ -596,12 +640,6 @@
                 module.AtendimentoExternoService.init();
             });
         }
-
-        window.solicitarSenhaEAbriDoc = (url, senhaCorreta) => {
-            const digitada = prompt("🔒 Documento Protegido. Digite a senha gerada na Recepção:");
-            if (digitada === senhaCorreta) window.open(url, '_blank');
-            else if (digitada !== null) alert("❌ Senha incorreta!");
-        };
 
         boot();
     </script>
