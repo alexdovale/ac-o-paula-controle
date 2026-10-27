@@ -156,6 +156,7 @@ export const AtendimentoExternoService = {
         );
 
         this.prepararFiltroKanban();
+        this._ligarCliqueNosCards();
     },
 
     async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
@@ -187,6 +188,7 @@ export const AtendimentoExternoService = {
         this.atualizarBadgeHeader();
         this._assinaturaAssistido = this._assinaturaDados(assistido);
         this._escutarAssistido(pautaData);
+        this.setupListeners();
     },
 
     // Mantém nome, assunto, checklist e histórico sincronizados enquanto o atendimento está aberto.
@@ -365,6 +367,42 @@ export const AtendimentoExternoService = {
         this._aplicarFiltroKanban();
     },
 
+    // Clicar em qualquer ponto do card (fora de botões/links) abre o histórico do checklist
+    _ligarCliqueNosCards() {
+        if (this._cliqueCardsPronto) return;
+        this._cliqueCardsPronto = true;
+        document.addEventListener('click', (e) => {
+            if (e.target.closest('a, button, input, select, textarea')) return;
+            const card = e.target.closest('.kanban-card[data-assistido-id]');
+            if (card) this.abrirHistoricoRapido(card.dataset.assistidoId);
+        });
+    },
+
+    // Abas Encerramento / Histórico da tela individual (se existirem no HTML)
+    setupListeners() {
+        document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
+        document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
+    },
+
+    switchTab(tab) {
+        const btnEnc = document.getElementById('tab-btn-encerramento');
+        const btnHis = document.getElementById('tab-btn-historico');
+        const abaEnc = document.getElementById('aba-encerramento');
+        const abaHis = document.getElementById('aba-historico');
+        if (!abaEnc || !abaHis) return;
+        const ativo = 'flex-1 py-3.5 text-center font-black text-[11px] uppercase tracking-widest border-b-2 transition-colors';
+        const inativo = 'flex-1 py-3.5 text-center font-bold text-[11px] uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors';
+        if (tab === 'encerramento') {
+            if (btnEnc) btnEnc.className = `${ativo} text-slate-800 border-slate-800`;
+            if (btnHis) btnHis.className = inativo;
+            abaEnc.classList.remove('hidden'); abaHis.classList.add('hidden');
+        } else {
+            if (btnHis) btnHis.className = `${ativo} text-indigo-600 border-indigo-600`;
+            if (btnEnc) btnEnc.className = inativo;
+            abaHis.classList.remove('hidden'); abaEnc.classList.add('hidden');
+        }
+    },
+
     _aplicarFiltroKanban() {
         const searchInput = document.getElementById('kanban-search');
         const termo = (searchInput?.value || '').toLowerCase().trim();
@@ -431,7 +469,7 @@ export const AtendimentoExternoService = {
         }
 
         return `
-            <div class="kanban-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow ${urgencia}">
+            <div class="kanban-card cursor-pointer bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow ${urgencia}" data-assistido-id="${assistido.id}" title="Ver histórico do checklist">
                 <div class="flex justify-between items-start mb-2 gap-2">
                     <h4 class="font-black text-slate-800 text-sm leading-tight line-clamp-2">${escapeHTML(assistido.name)}</h4>
                     ${badgeUrgencia}
