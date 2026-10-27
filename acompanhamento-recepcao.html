@@ -1,594 +1,606 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<title>Painel da Recepção — SIGEP</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
-<style>
-:root{
-  --bg:#f8fafc; --surface:#ffffff; --line:#e2e8f0; --soft:#f1f5f9; --text:#0f172a; --muted:#475569; --faint:#94a3b8;
-  --navy:#0f172a; --navy2:#1e293b; --amber:#d97706; --ok:#059669; --ok2:#047857; --info:#2563eb; --danger:#dc2626;
-  --fs-xs:clamp(10px,1vw,12px); --fs-sm:clamp(12px,1.2vw,14px); --fs-md:clamp(14px,1.5vw,16px);
-  --fs-lg:clamp(16px,2vw,20px); --fs-xl:clamp(20px,2.8vw,28px); --fs-hero:clamp(32px,5.5vw,64px);
-}
-*{box-sizing:border-box;margin:0;font-family:'Inter',system-ui,sans-serif}
-html,body{height:100%}
-body{background:var(--bg);color:var(--text);font-feature-settings:"tnum" 1,"cv11" 1;-webkit-font-smoothing:antialiased}
-.hidden{display:none!important}
-::-webkit-scrollbar{width:6px}::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:4px}
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Mesa de Trabalho - SIGEP</title>
+    
+    <link class="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
+    <meta name="theme-color" content="#2563eb"/> 
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
+    
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
+    
+    <style>
+        body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; }
+        
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-/* ---------- Carregamento e Bloqueio PIN ---------- */
-#loading{position:fixed;inset:0;z-index:50;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:14px}
-.spinner{width:36px;height:36px;border-radius:50%;border:3px solid var(--line);border-top-color:var(--navy);animation:spin .8s linear infinite}
-@keyframes spin{to{transform:rotate(360deg)}}
-.eyebrow{font-size:var(--fs-xs);font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--faint)}
-
-/* ---------- Controles flutuantes ---------- */
-.float{position:fixed;z-index:100;background:rgba(255,255,255,.95);border:1px solid var(--line);border-radius:8px;box-shadow:0 4px 12px -4px rgba(15,23,42,.15);backdrop-filter:blur(6px)}
-#btn-modo{left:16px;bottom:16px;width:40px;height:40px;display:flex;align-items:center;justify-content:center;color:var(--muted);cursor:pointer;opacity:.4;transition:opacity .2s}
-#btn-modo:hover{opacity:1}
-#zoom-controls{right:16px;bottom:16px;display:flex;align-items:center;gap:6px;padding:4px;opacity:0;transition:opacity .2s}
-#zoom-controls:hover{opacity:1}
-#zoom-controls button{width:28px;height:28px;border:0;border-radius:6px;background:var(--soft);font-weight:700;font-size:14px;cursor:pointer}
-#zoom-level{min-width:44px;text-align:center;font-size:var(--fs-xs);font-weight:700;color:var(--muted)}
-
-/* ---------- MODO FILA ---------- */
-#modo-fila{min-height:100%;flex-direction:column}
-.topbar{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;background:var(--surface);border-bottom:1px solid var(--line);padding:14px clamp(16px,2.4vw,32px);box-shadow:0 1px 2px rgba(0,0,0,0.02)}
-.brand{display:flex;align-items:center;gap:14px;min-width:0}
-
-/* LOGO SEM BORDA E MAIOR */
-.logo{background:transparent !important;border:none !important;border-radius:0 !important;padding:0 !important;display:flex;align-items:center}
-.logo img{height:clamp(48px,6.5vw,88px);width:auto;max-height:none !important}
-
-.brand-txt{padding-left:14px;border-left:1px solid var(--line)}
-.brand-txt h1{font-size:var(--fs-md);font-weight:700;letter-spacing:-.02em;line-height:1.2}
-.brand-txt h2{font-size:var(--fs-sm);font-weight:500;color:var(--muted);margin-top:2px}
-.metrics{display:flex;align-items:stretch;gap:0;flex-wrap:wrap}
-.metric{padding:2px clamp(12px,2vw,24px);border-left:1px solid var(--line)}
-.metric small{display:block;font-size:var(--fs-xs);font-weight:600;letter-spacing:.08em;text-transform:uppercase;color:var(--faint)}
-.metric b{display:block;margin-top:3px;font-size:var(--fs-xl);font-weight:700;line-height:1;font-variant-numeric:tabular-nums;letter-spacing:-.02em}
-.tools{display:flex;align-items:center;gap:12px;padding-left:clamp(12px,2vw,24px);border-left:1px solid var(--line)}
-.live{display:flex;align-items:center;gap:6px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
-.dot{width:6px;height:6px;border-radius:50%;background:#059669}
-.chip-btn{display:flex;align-items:center;gap:6px;border:1px solid var(--line);background:#fff;border-radius:6px;padding:6px 10px;font-size:var(--fs-xs);font-weight:600;color:var(--muted);cursor:pointer;transition:all .15s}
-.chip-btn:hover{border-color:#cbd5e1;color:var(--text);background:var(--soft)}
-.chip-btn.on{color:var(--text)}
-.chip-btn.on svg{color:#059669}
-.chip-btn svg{width:14px;height:14px}
-.clock{font-variant-numeric:tabular-nums;font-size:var(--fs-sm);font-weight:600;color:var(--text);text-align:right;line-height:1.25}
-
-.page{flex:1;display:flex;flex-direction:column;gap:clamp(12px,1.4vw,20px);padding:clamp(12px,1.8vw,24px) clamp(16px,2.4vw,32px);width:100%;max-width:1600px;margin:0 auto}
-
-.call{display:grid;grid-template-columns:minmax(0,1fr) auto;background:var(--navy);color:#fff;border-radius:8px;overflow:hidden;border:1px solid var(--navy2);box-shadow:0 4px 6px -1px rgba(0,0,0,0.1)}
-.call-main{padding:clamp(16px,2vw,28px) clamp(20px,2.5vw,40px);min-width:0}
-.call-label{display:flex;align-items:center;gap:10px;font-size:var(--fs-xs);font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
-.call-label::before{content:"";width:20px;height:2px;background:var(--amber)}
-.call-name{margin-top:8px;font-size:clamp(40px,7vw,96px);font-weight:900;letter-spacing:-.02em;line-height:1.05;text-transform:uppercase;overflow-wrap:anywhere}
-.call-info{display:flex;border-left:1px solid rgba(255,255,255,.05)}
-.call-field{padding:clamp(16px,2vw,28px) clamp(16px,2vw,32px);display:flex;flex-direction:column;justify-content:center;min-width:clamp(100px,12vw,180px)}
-.call-field+.call-field{border-left:1px solid rgba(255,255,255,.05)}
-.call-field small{font-size:var(--fs-xs);font-weight:600;letter-spacing:.1em;text-transform:uppercase;color:#64748b}
-.call-field b{margin-top:6px;font-size:var(--fs-xl);font-weight:800;line-height:1.2;overflow-wrap:anywhere}
-.anim-in{animation:enter .4s cubic-bezier(.22,1,.36,1)}
-@keyframes enter{from{opacity:.2;transform:translateY(-4px)}to{opacity:1;transform:none}}
-
-.cols{display:grid;grid-template-columns:minmax(320px,1fr) minmax(0,1.7fr);gap:clamp(12px,1.4vw,20px);flex:1;min-height:380px}
-.panel{display:flex;flex-direction:column;min-height:0;background:var(--surface);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,0.04);overflow:hidden}
-.panel-head{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:12px 20px;border-bottom:1px solid var(--line);background:#fafbfc}
-.panel-head h3{font-size:var(--fs-sm);font-weight:700;letter-spacing:.05em;text-transform:uppercase}
-.panel-head span{font-size:var(--fs-xs);font-weight:600;color:var(--muted);background:var(--line);padding:2px 8px;border-radius:4px;font-variant-numeric:tabular-nums}
-.th,.row{display:grid;align-items:center;gap:14px;padding:0 20px}
-.th{padding-top:8px;padding-bottom:8px;background:var(--surface);border-bottom:2px solid var(--line);font-size:var(--fs-xs);font-weight:700;letter-spacing:.05em;text-transform:uppercase;color:var(--muted)}
-.g-fila{grid-template-columns:clamp(44px,4vw,64px) minmax(0,1fr) clamp(80px,8vw,120px) clamp(90px,9vw,130px)}
-.g-atend{grid-template-columns:minmax(0,1fr) clamp(70px,7vw,110px) clamp(70px,7vw,100px)}
-.panel-body{flex:1;overflow-y:auto}
-.group-head{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:8px 20px;background:var(--soft);border-bottom:1px solid var(--line)}
-.group-head b{display:flex;align-items:center;gap:8px;min-width:0;font-size:var(--fs-sm);font-weight:700;letter-spacing:.02em;text-transform:uppercase;color:var(--text)}
-.group-head b::before{content:"";width:6px;height:6px;border-radius:1px;background:var(--u);flex-shrink:0}
-.group-head b span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.group-head small{font-size:var(--fs-xs);font-weight:600;color:var(--muted);white-space:nowrap}
-.row{min-height:clamp(60px,6vw,88px);border-bottom:1px solid var(--line);animation:fade .3s ease-out both}
-@keyframes fade{from{opacity:0}to{opacity:1}}
-.row.next{background:#fafbfc; border-left: 3px solid var(--amber);}
-.row.prio .pos{color:var(--danger)}
-.pos{font-size:clamp(16px,1.8vw,24px);font-weight:800;color:var(--muted);font-variant-numeric:tabular-nums}
-.row.next .pos{color:var(--amber)}
-.nome{min-width:0;font-weight:800;text-transform:uppercase;letter-spacing:.01em;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:clamp(20px,2.4vw,34px);color:var(--navy)}
-.g-atend .nome{font-size:clamp(20px,2.4vw,34px)}
-.sub{font-size:clamp(12px,1.2vw,15px);font-weight:600;letter-spacing:.04em;text-transform:uppercase;color:var(--muted);margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.num{font-size:clamp(14px,1.5vw,20px);font-weight:600;color:var(--muted);font-variant-numeric:tabular-nums;white-space:nowrap}
-.tag{justify-self:end;font-size:10px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:4px;white-space:nowrap}
-.tag.prio{color:#9f1239;background:#fff1f2;border:1px solid #fecdd3}
-.tag.sala{color:#334155;background:var(--soft);border:1px solid var(--line)}
-.next-flag{font-size:10px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--amber)}
-.empty{margin:auto;padding:40px 16px;text-align:center;color:var(--faint);font-size:var(--fs-sm);font-weight:500}
-footer{text-align:center;font-size:11px;font-weight:500;letter-spacing:.08em;text-transform:uppercase;color:var(--faint);padding:4px 0}
-
-/* ---------- MODO TV ---------- */
-#modo-tv{position:fixed;inset:0;height:100dvh;display:grid;grid-template-columns:3fr 2fr;background:var(--navy);overflow:hidden}
-#destaque{
-    position:relative;
-    display:flex;
-    flex-direction:column;
-    align-items:center;
-    justify-content:center;
-    text-align:center;
-    color:#fff;
-    padding:4vh 4vw;
-    background:linear-gradient(160deg,#16a34a,#14532d);
-    overflow:hidden;
-}
-#destaque::before{content:"";position:absolute;inset:0;background:radial-gradient(ellipse at 30% 10%,rgba(255,255,255,.12),transparent 55%);pointer-events:none}
-#destaque > * { position:relative; z-index: 2; }
-.tv-label{font-size:clamp(16px,2vw,32px);font-weight:600;letter-spacing:.25em;text-transform:uppercase;opacity:.85;margin: 1vh 0;flex-shrink: 0;}
-#uc-nome-tv{font-size:9rem;font-weight:900;line-height:1.05;letter-spacing:-.02em;text-transform:uppercase;text-shadow:0 4px 16px rgba(0,0,0,.25);margin:2vh 0 4vh 0;width:100%;display:flex;align-items:center;justify-content:center;overflow:hidden;text-wrap:balance;word-break:break-word;flex:1 1 auto}
-#uc-local-tv{font-size:5rem;font-weight:900;line-height:1;letter-spacing:-.02em;background:rgba(255,255,255,.1);border:2px solid rgba(255,255,255,.2);border-radius:16px;padding:.3em .8em;flex-shrink: 0;}
-#destaque.flash{animation:flash .7s ease 3}
-@keyframes flash{50%{filter:brightness(1.25)}}
-
-#lateral{display:flex;flex-direction:column;background:#fff;min-width:0;border-left:1px solid rgba(0,0,0,0.1)}
-#lateral h3{padding:clamp(16px,2vw,32px) 24px 12px;text-align:center;font-size:clamp(14px,1.5vw,22px);font-weight:800;letter-spacing:.15em;text-transform:uppercase;color:var(--ok2)}
-.hist-head{display:flex;justify-content:space-between;margin:0 24px 6px;padding-bottom:6px;border-bottom:2px solid var(--line);font-size:clamp(12px,1.2vw,16px);font-weight:700;letter-spacing:.1em;text-transform:uppercase;color:var(--faint)}
-#lista-historico-tv{flex:1;overflow:hidden;padding:8px 20px;display:flex;flex-direction:column;gap:10px}
-.item-hist{display:flex;justify-content:space-between;align-items:center;gap:12px;padding:clamp(14px,1.8vw,24px);border-radius:10px;background:var(--bg);border:1px solid var(--line);animation:inleft .4s ease-out both}
-@keyframes inleft{from{opacity:0;transform:translateX(20px)}to{opacity:1;transform:none}}
-.item-hist span:first-child{flex:1;min-width:0;overflow:hidden;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;white-space:normal;line-height:1.15;font-size:clamp(20px,2.6vw,38px);font-weight:800;text-transform:uppercase;color:#1e293b}
-.item-hist span:last-child{white-space:nowrap;font-size:clamp(18px,2.2vw,32px);font-weight:900;color:var(--ok2)}
-.tv-foot{display:flex;flex-direction:column;align-items:center;gap:6px;padding:clamp(14px,2vw,24px);background:var(--navy);color:#fff}
-
-/* LOGO DO RODAPÉ TAMBÉM SEM BORDA */
-.tv-foot img{height:clamp(56px,8vw,110px);width:auto;opacity:.95;background:transparent !important;border:none !important}
-
-#data-hora-tv{font-size:clamp(16px,2vw,30px);font-weight:700;font-variant-numeric:tabular-nums;letter-spacing:.05em}
-#recepcao-nome-tv{font-size:10px;font-weight:600;letter-spacing:.15em;text-transform:uppercase;color:#94a3b8}
-
-#qrcode, .qr-container, [id*="qr"], [class*="qr-"], 
-.acompanhar-celular, [class*="mobile-track"], div:has(canvas) { 
-    display: none !important; opacity: 0 !important; visibility: hidden !important; height: 0 !important; width: 0 !important;
-}
-
-@media (max-width:900px){.call{grid-template-columns:1fr}.call-info{border-left:0;border-top:1px solid rgba(255,255,255,.05)}.call-field{flex:1}.cols{grid-template-columns:1fr}.tools,.metric{border-left:0}}
-@media (max-width:760px){#modo-tv{grid-template-columns:1fr;grid-template-rows:3fr 2fr}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}
-</style>
+        .loading-container { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+    </style>
 </head>
-<body>
+<body class="p-0">
 
-<div id="loading"><div class="spinner"></div><p class="eyebrow">Conectando ao SIGEP</p></div>
-
-<button id="btn-modo" class="float" onclick="alternarModo()" title="Alternar modo de tela" aria-label="Alternar modo de tela">
-  <svg width="18" height="18" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/></svg>
-</button>
-
-<div id="modo-fila" class="hidden">
-  <header class="topbar">
-    <div class="brand">
-      <div class="logo"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="SIGEP"></div>
-      <div class="brand-txt"><h1>Painel de Atendimento</h1><h2 id="recepcao-nome-fila">—</h2></div>
-    </div>
-    <div class="metrics">
-      <div class="metric"><small>Aguardando</small><b id="g-aguardando">0</b></div>
-      <div class="metric"><small>Em atendimento</small><b id="g-atendendo">0</b></div>
-      <div class="tools">
-        <button id="btn-som-header" class="chip-btn" onclick="toggleSom()" aria-label="Ativar ou desativar som"><span id="icone-som-header" style="display:flex"></span><span id="texto-som-header">Som desativado</span></button>
-        <div>
-          <div class="live"><span class="dot"></span>Tempo real</div>
-          <div id="data-hora-fila" class="clock"></div>
+    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) - OCULTO ATÉ O LOGIN -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-1.5 shadow-sm">
+        <div class="flex items-center gap-4 w-1/3">
+            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                SIGEP
+            </span>
+            <div class="hidden md:flex items-center gap-3 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-4">
+                <a href="manual.html" target="_blank" class="hover:text-blue-400 transition-colors">Wiki</a>
+                <a href="termos.html" target="_blank" class="hover:text-blue-400 transition-colors">Termos</a>
+                <a href="politica.html" target="_blank" class="hover:text-blue-400 transition-colors">Privacidade</a>
+            </div>
         </div>
-      </div>
-    </div>
-  </header>
 
-  <main class="page">
-    <div id="ultimo-chamado-wrap" class="hidden">
-      <div id="ultimo-chamado-card" class="call">
-        <div class="call-main">
-          <div class="call-label">Chamada atual</div>
-          <h2 id="uc-nome-fila" class="call-name">—</h2>
+        <div class="flex items-center justify-center gap-2 w-1/3 absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-5 sm:h-6 w-auto drop-shadow-sm">
+            <span class="text-white font-black text-[10px] sm:text-xs uppercase tracking-widest hidden sm:block whitespace-nowrap">
+                Mesa de Trabalho Externa
+            </span>
         </div>
-        <div class="call-info">
-          <div class="call-field"><small>Pauta</small><b id="uc-pauta-fila">—</b></div>
-          <div class="call-field"><small>Local</small><b id="uc-local-fila">—</b></div>
-          <div class="call-field"><small>Horário</small><b id="uc-hora-fila" style="font-variant-numeric:tabular-nums">—</b></div>
+
+        <div class="flex items-center justify-end w-1/3">
+            <button id="logout-btn-nav" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg border border-red-500/20 transition-colors text-[10px] sm:text-[11px] uppercase tracking-wider">
+                <span class="hidden sm:inline">Sair</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                </svg>
+            </button>
         </div>
-      </div>
+    </nav>
+
+    <div id="loading-container" class="loading-container hidden">
+        <div class="loader"></div>
+        <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
     </div>
 
-    <div class="cols">
-      <section class="panel">
-        <div class="panel-head"><h3>Em atendimento</h3><span id="n-atend">0</span></div>
-        <div class="th g-atend"><span>Assistido</span><span>Sala</span><span style="text-align:right">Tempo</span></div>
-        <div id="lista-atendimento" class="panel-body"></div>
-      </section>
-      <section class="panel">
-        <div class="panel-head"><h3>Fila de espera</h3><span id="n-espera">0</span></div>
-        <div class="th g-fila"><span>Nº</span><span>Assistido</span><span>Espera</span><span></span></div>
-        <div id="lista-espera" class="panel-body"></div>
-      </section>
-    </div>
-    <footer>SIGEP · Painel público da recepção</footer>
-  </main>
-</div>
-
-<div id="zoom-controls" class="float">
-  <button onclick="mudarZoom(-0.1)" aria-label="Diminuir">−</button><span id="zoom-level">100%</span><button onclick="mudarZoom(0.1)" aria-label="Aumentar">+</button>
-</div>
-
-<div id="modo-tv" class="hidden">
-  <div id="destaque">
-    <div class="tv-label" id="label-local-tv-top">Chamando</div>
-    <div id="uc-nome-tv">AGUARDANDO…</div>
-    <div class="tv-label" id="label-local-tv">Dirija-se a</div>
-    <div id="uc-local-tv">—</div>
-  </div>
-  <aside id="lateral">
-    <h3>Últimos chamados</h3>
-    <div class="hist-head"><span>Nome</span><span>Local</span></div>
-    <div id="lista-historico-tv"></div>
-    <div class="tv-foot">
-      <img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="SIGEP">
-      <div id="data-hora-tv"></div>
-      <div id="recepcao-nome-tv">Recepção</div>
-    </div>
-  </aside>
-</div>
-
-<script type="module">
-import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getFirestore, doc, onSnapshot, collection, getDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-const $ = (id) => document.getElementById(id);
-const params = new URLSearchParams(location.search);
-const somPermitido = params.get('som') !== '0';
-
-// ── Firebase ───────────────────────────────────────────
-const db = getFirestore(initializeApp({
-  apiKey: "AIzaSyCrLwXmkxgeVoB8TwRI7pplCVQETGK0zkE",
-  authDomain: "pauta-ce162.firebaseapp.com",
-  projectId: "pauta-ce162",
-  storageBucket: "pauta-ce162.appspot.com",
-  messagingSenderId: "87113750208",
-  appId: "1:87113750208:web:4abba0024f4d4af699bf25"
-}));
-
-const pautasParam = params.get('pautas');
-const recepcaoNome = params.get('nome') || 'Recepção Geral';
-
-// ── Verificação de Segurança por Token/PIN ──────────────
-async function verificarSegurancaTV() {
-  if (!pautasParam) return true;
-  const ids = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
-  if (!ids.length) return true;
-
-  const pautaIdPrincipal = ids[0];
-  const chaveAuth = `sigep_tv_auth_${pautaIdPrincipal}`;
-
-  try {
-    const pautaDoc = await getDoc(doc(db, 'pautas', pautaIdPrincipal));
-    if (!pautaDoc.exists()) return true;
-
-    const data = pautaDoc.data();
-    const tokenExigido = data.tvToken;
-
-    if (!tokenExigido) return true; // Sem senha cadastrada, acesso liberado
-
-    if (localStorage.getItem(chaveAuth) === tokenExigido) {
-      return true; // Já autenticado neste navegador/Smart TV
-    }
-
-    return solicitarSenhaTV(tokenExigido, chaveAuth);
-  } catch (e) {
-    console.warn("Erro ao verificar token de segurança:", e);
-    return true; // Falha de rede não bloqueia o painel
-  }
-}
-
-function solicitarSenhaTV(tokenCorreto, chaveAuth) {
-  return new Promise((resolve) => {
-    $('loading').innerHTML = `
-      <div style="background:#0f172a;border:1px solid #1e293b;padding:36px 32px;max-width:400px;width:90%;text-align:center;box-shadow:0 20px 25px -5px rgba(0,0,0,0.5);border-radius:16px;color:#fff">
-        <div style="width:56px;height:56px;background:rgba(37,99,235,0.2);color:#60a5fa;border-radius:12px;display:flex;align-items:center;justify-content:center;margin:0 auto 16px;border:1px solid rgba(59,130,246,0.3)">
-          <svg width="28" height="28" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"/></svg>
-        </div>
-        <h2 style="font-size:18px;font-weight:800;margin-bottom:6px">Painel Protegido</h2>
-        <p style="color:#94a3b8;font-size:13px;margin-bottom:20px">Insira o PIN de acesso da TV para visualizar o painel.</p>
+    <!-- WRAPPER PRINCIPAL -->
+    <div id="main-wrapper" class="flex-1 flex w-full flex-col mt-10">
         
-        <input type="password" id="tv-pin-input" maxlength="10" style="width:100%;background:#1e293b;border:1px solid #334155;border-radius:12px;padding:12px;text-align:center;font-size:24px;font-family:monospace;color:#fff;letter-spacing:0.2em;outline:none;margin-bottom:14px" placeholder="••••">
-        
-        <button id="tv-pin-submit" style="width:100%;background:#2563eb;color:#fff;font-weight:700;padding:12px;border-radius:12px;border:none;cursor:pointer;font-size:14px;box-shadow:0 4px 6px -1px rgba(37,99,235,0.4)">
-          Desbloquear Painel
-        </button>
-        <p id="tv-pin-erro" style="color:#f87171;font-size:12px;font-weight:600;margin-top:12px" class="hidden">Senha incorreta. Tente novamente.</p>
-      </div>
-    `;
+        <!-- TELA DE LOGIN -->
+        <div id="login-container" class="w-full flex-1 flex items-center justify-center p-4 animate-fade-in my-auto min-h-[80vh]">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 relative overflow-hidden w-full max-w-md">
+                <!-- IDENTIFICADOR VISUAL DE ACESSO EXTERNO -->
+                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">
+                    Mesa de Trabalho
+                </div>
+                
+                <div class="flex justify-center mb-4 mt-2">
+                    <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
+                </div>
+                <h2 class="text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
+                
+                <!-- ABAS DE NAVEGAÇÃO IGUAIS AO INDEX -->
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button class="flex-1 py-2 text-center font-semibold text-blue-600 border-b-2 border-blue-600 text-sm sm:text-base pointer-events-none">Acesso Externo</button>
+                    <a href="index.html" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Acesso Interno</a>
+                </div>
+                
+                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1">E-mail Cadastrado</label>
+                        <input type="email" id="login-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div class="text-right mt-1">
+                        <a href="#" class="text-xs sm:text-sm text-blue-600 hover:underline">Esqueci minha senha</a>
+                    </div>
+                    <button type="submit" id="btn-entrar" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition">
+                        Entrar
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
+                    Apenas colaboradores logados podem aceder a esta área. Ao entrar, você concorda com nossos <br>
+                    <a href="termos.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Termos de Uso</a> e <a href="politica.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>.
+                </div>
+            </div>
+        </div>
 
-    const input = document.getElementById('tv-pin-input');
-    const btn = document.getElementById('tv-pin-submit');
-    const erro = document.getElementById('tv-pin-erro');
+        <!-- TELA DE SELEÇÃO DE PAUTAS (IDÊNTICO AO INDEX DO SISTEMA PRINCIPAL) -->
+        <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 hidden animate-fade-in">
+            <!-- Barra de Filtro e Pesquisa -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 w-full">
+                <div class="w-full md:w-1/3">
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Vinculadas</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Painel de Acesso à Mesa de Trabalho</p>
+                </div>
+                
+                <div class="w-full md:w-1/3 flex justify-center">
+                    <!-- Pode adicionar filtros futuros aqui -->
+                </div>
 
-    setTimeout(() => input.focus(), 100);
+                <div class="w-full md:w-1/3 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="search" id="search-pautas-input" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm transition-all font-medium text-slate-700">
+                </div>
+            </div>
+            
+            <!-- Grid de Cartões Estilo Sistema Principal -->
+            <div id="lista-pautas-vinculadas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Pautas carregadas dinamicamente aqui -->
+            </div>
+        </div>
 
-    const tentar = () => {
-      if (input.value.trim() === tokenCorreto) {
-        localStorage.setItem(chaveAuth, tokenCorreto);
-        resolve(true);
-      } else {
-        erro.classList.remove('hidden');
-        input.value = '';
-        input.focus();
-      }
-    };
+        <!-- MODAL DE TROCA DE SENHA OBRIGATÓRIA -->
+        <div id="modal-troca-senha" class="fixed inset-0 bg-slate-900/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-1">Defina sua Senha</h3>
+                    <p class="text-sm text-slate-500">Este é seu primeiro acesso seguro. Por favor, defina uma senha definitiva para continuar.</p>
+                </div>
+                
+                <div id="troca-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                
+                <form id="troca-senha-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
+                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
+                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
+                        Salvar e Acessar
+                    </button>
+                </form>
+            </div>
+        </div>
 
-    btn.onclick = tentar;
-    input.onkeypress = (e) => { if (e.key === 'Enter') tentar(); };
-  });
-}
+        <!-- SHELL PRINCIPAL DA MESA -->
+        <div id="shell-atendimento" class="hidden w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[88vh] mt-4 mb-4">
+            <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
+                <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 relative z-10 min-w-0">
+                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl transition-colors border border-white/20 shadow-inner" title="Voltar para Minhas Pautas">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+                    <div class="flex flex-col overflow-hidden min-w-0">
+                        <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                        <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                    </div>
+                </div>
 
-// ── Som ────────────────────────────────────────────────
-let audioCtx = null, somAtivo = false;
-const garantirAudio = () => {
-  audioCtx ||= new (window.AudioContext || window.webkitAudioContext)();
-  if (audioCtx.state === 'suspended') audioCtx.resume();
-  return audioCtx;
-};
-const ICO_ON='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M15.5 8.5a5 5 0 010 7M18.5 5.5a9 9 0 010 13"/></svg>';
-const ICO_OFF='<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 5L6 9H2v6h4l5 4V5z"/><path d="M22 9l-6 6M16 9l6 6"/></svg>';
-function atualizarSom() {
-  $('icone-som-header').innerHTML = somAtivo ? ICO_ON : ICO_OFF;
-  $('texto-som-header').textContent = somAtivo ? 'Som ativado' : 'Som desativado';
-  $('btn-som-header').classList.toggle('on', somAtivo);
-}
-atualizarSom();
-window.ativarSom = () => { try { garantirAudio(); somAtivo = true; atualizarSom(); tocarSom(true); } catch (e) { console.warn(e); } };
-window.toggleSom = () => { if (!somAtivo) window.ativarSom(); else { somAtivo = false; atualizarSom(); } };
-const primeira = () => { if (somPermitido && !somAtivo) { try { garantirAudio(); somAtivo = true; atualizarSom(); } catch (e) {} } };
-['click', 'keydown', 'touchstart'].forEach(ev => document.addEventListener(ev, primeira, { once: true }));
+                <div class="flex gap-3 relative z-10 shrink-0 items-center">
+                    <div id="status-indicator" class="hidden bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-widest animate-pulse flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ONLINE
+                    </div>
+                    <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-lg shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1.5" title="Encerrar Sessão">
+                        SAIR
+                    </button>
+                </div>
+            </div>
 
-function tocarSom(forcar) {
-  if (!somAtivo || (!somPermitido && !forcar)) return;
-  try {
-    const ctx = garantirAudio();
-    [[659, 0, .4], [523, .4, .6]].forEach(([f, ini, dur]) => {
-      const o = ctx.createOscillator(), g = ctx.createGain(), t = ctx.currentTime + ini;
-      o.type = 'sine'; o.frequency.setValueAtTime(f, t);
-      g.gain.setValueAtTime(.5, t); g.gain.exponentialRampToValueAtTime(.001, t + dur);
-      o.connect(g); g.connect(ctx.destination); o.start(t); o.stop(t + dur);
-    });
-  } catch (e) { console.warn(e); }
-}
+            <!-- VIEW DASHBOARD -->
+            <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
+                    <button id="btn-tab-minha-mesa" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-blue-600 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
+                        💻 Minha Mesa
+                    </button>
+                    <button id="btn-tab-aguardando" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
+                        📥 Fila de Espera
+                    </button>
+                    <button id="btn-tab-pauta-atual" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
+                        📋 Auditoria Global
+                    </button>
+                </div>
 
-// ── Modos e zoom ───────────────────────────────────────
-window.zoomAtual = 1;
-window.alternarModo = () => {
-  const url = new URL(location);
-  url.searchParams.get('modo') === 'tv' ? url.searchParams.delete('modo') : url.searchParams.set('modo', 'tv');
-  history.pushState({}, '', url);
-  aplicarModo();
-};
-function aplicarModo() {
-  const tv = new URLSearchParams(location.search).get('modo') === 'tv';
-  $('modo-tv').classList.toggle('hidden', !tv);
-  $('modo-fila').classList.toggle('hidden', tv);
-  $('zoom-controls').classList.toggle('hidden', tv);
-  $('modo-fila').style.display = tv ? 'none' : 'flex';
-  document.body.style.zoom = tv ? 1 : window.zoomAtual;
-}
-window.mudarZoom = (d) => {
-  window.zoomAtual = Math.max(.4, Math.min(2.5, window.zoomAtual + d));
-  document.body.style.zoom = window.zoomAtual;
-  $('zoom-level').textContent = Math.round(window.zoomAtual * 100) + '%';
-};
+                <div class="p-4 sm:p-6 bg-slate-50/50 flex-1 overflow-y-auto custom-scrollbar">
+                    <div id="painel-atendimento-container" class="w-full min-h-[300px]">
+                        <div class="flex flex-col justify-center items-center py-20 gap-3">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                            <p class="text-[10px] font-black text-blue-600 tracking-widest uppercase">Sincronizando pauta...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-const estado = { pautas: {}, assistidos: {}, ultimoChamado: null, historico: [] };
+            <!-- VIEW ATENDIMENTO -->
+            <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
+                    <button id="tab-btn-encerramento" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-slate-800 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
+                        Encerramento / Fluxo
+                    </button>
+                    <button id="tab-btn-historico" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
+                        Histórico Recepção
+                    </button>
+                </div>
+                <div class="p-4 sm:p-6 bg-white flex-1 overflow-y-auto custom-scrollbar">
+                    <div id="aba-encerramento" class="space-y-6">
+                        <div id="area-colaborador" class="hidden">
+                            <div class="flex flex-col justify-center items-center py-20 gap-3">
+                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+                                <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="aba-historico" class="hidden animate-fade-in">
+                        <div id="lista-historico" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
+                <span>SIGEP • Mesa Unificada de Trabalho</span>
+                <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded">v2.0-2026</span>
+            </div>
+        </div>
 
-const PALETA = ['#1e3a8a', '#0f766e', '#6d28d9', '#9a3412', '#334155', '#155e75', '#854d0e', '#9d174d'];
-const corPor = {}; let proxima = 0;
-const corUnidade = (k) => (corPor[k] ??= PALETA[proxima++ % PALETA.length]);
+    </div><!-- Fim do Main Wrapper -->
 
-const esc = (s) => String(s ?? '').replace(/[&<>'"]/g, t => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[t]));
-const horaAgora = () => new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-const vazio = (txt) => `<div class="empty">${txt}</div>`;
+    <!-- SCRIPT DE LOGIN, AUTENTICAÇÃO E NOVO ROTEAMENTO -->
+    <script type="module">
+        import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { firebaseConfig } from './js/config.js';
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
-function relogio() {
-  const d = new Date();
-  $('data-hora-fila').textContent = d.toLocaleString('pt-BR', { weekday: 'short', day: '2-digit', month: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit' }).replace(',', ' ·');
-  $('data-hora-tv').textContent = d.toLocaleTimeString('pt-BR');
-}
-setInterval(relogio, 1000); relogio();
+        const appFirebase = initializeApp(firebaseConfig);
+        const db = getFirestore(appFirebase);
+        const auth = getAuth(appFirebase);
 
-function duracao(ini) {
-  const t = typeof ini === 'number' ? ini : Date.parse(ini);
-  if (!t) return '—';
-  const m = Math.max(0, Math.floor((Date.now() - t) / 60000));
-  return m < 60 ? `${m} min` : `${Math.floor(m / 60)}h${String(m % 60).padStart(2, '0')}`;
-}
+        const UI = {
+            loading: document.getElementById('loading-container'),
+            login: document.getElementById('login-container'),
+            selector: document.getElementById('pauta-selector-container'),
+            shell: document.getElementById('shell-atendimento'),
+            modalSenha: document.getElementById('modal-troca-senha'),
+            errLogin: document.getElementById('auth-error'),
+            errSenha: document.getElementById('troca-error'),
+            topNav: document.getElementById('top-nav-bar')
+        };
 
-function renderUltimoFila(c) {
-  if (!c) return;
-  $('ultimo-chamado-wrap').classList.remove('hidden');
-  $('uc-nome-fila').textContent = (c.nome || '').toUpperCase();
-  $('uc-pauta-fila').textContent = c.pautaNome || c.local || '—';
-  $('uc-local-fila').textContent = c.localTexto || c.sala || c.local || '—';
-  $('uc-hora-fila').textContent = c.hora || horaAgora();
-  const card = $('ultimo-chamado-card');
-  card.classList.remove('anim-in'); void card.offsetWidth; card.classList.add('anim-in');
-}
+        const STATE = { pautaId: null, colaboradorId: null, matricula: null, usuarioAuth: null, pautaFechada: false };
 
-function renderPainel() {
-  const atendendo = []; const grupos = {}; let total = 0;
+        function parseURL() {
+            const params = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
+            STATE.pautaId = params.get('pautaId') || params.get('pid');
+            return STATE.pautaId;
+        }
 
-  for (const pautaId in estado.assistidos) {
-    const pauta = estado.pautas[pautaId];
-    const nomePauta = pauta?.name || 'Geral', salaPauta = pauta?.sala || '';
-    const fila = [];
-    (estado.assistidos[pautaId] || []).forEach(a => {
-      const p = { ...a, nomePauta, salaPauta, pautaId };
-      if (a.status === 'aguardando') fila.push(p);
-      else if (a.status === 'emAtendimento') atendendo.push(p);
-    });
-    if (fila.length) {
-      fila.sort((a, b) => (b.priority === 'URGENTE') - (a.priority === 'URGENTE') || (a.checkInOrder || 0) - (b.checkInOrder || 0));
-      fila.forEach((p, i) => p.ordemLocal = i + 1);
-      grupos[pautaId] = { nomePauta, salaPauta, pessoas: fila };
-      total += fila.length;
-    }
-  }
+        function showUI(element) {
+            Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
+            
+            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); // Mostra TopBar logado
+            
+            if (element && element.classList) {
+                element.classList.remove('hidden');
+                if (element.id === 'shell-atendimento') {
+                    element.style.display = 'flex';
+                }
+            }
+        }
 
-  $('g-aguardando').textContent = total; $('n-espera').textContent = total;
-  $('g-atendendo').textContent = atendendo.length; $('n-atend').textContent = atendendo.length;
-  atendendo.sort((a, b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
+        async function validarPermissaoPauta() {
+            if (!STATE.pautaId || !STATE.usuarioAuth) return false;
+            try {
+                onSnapshot(doc(db, "pautas", STATE.pautaId), (snap) => {
+                    if (snap.exists()) {
+                        STATE.pautaFechada = snap.data().fechada === true;
+                        if (STATE.pautaFechada) {
+                            document.querySelectorAll('.btn-chamar-proximo').forEach(b => b.classList.add('hidden'));
+                        }
+                    }
+                });
 
-  $('lista-atendimento').innerHTML = atendendo.length ? atendendo.map(a => `
-    <div class="row g-atend">
-      <div style="min-width:0"><p class="nome">${esc(a.name)}</p><p class="sub">${esc(a.nomePauta)}</p></div>
-      <span>${a.salaPauta ? `<span class="tag sala">${esc(a.salaPauta)}</span>` : '<span class="num">—</span>'}</span>
-      <span class="num" style="text-align:right">${duracao(a.inAttendanceTime)}</span>
-    </div>`).join('') : vazio('Nenhum atendimento em andamento');
+                const colabRef = collection(db, "pautas", STATE.pautaId, "collaborators");
+                const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    alert("Acesso Negado: Você não está vinculado a esta pauta. Redirecionando para o Portal.");
+                    window.location.href = window.location.pathname;
+                    return false;
+                }
+                
+                STATE.colaboradorId = snap.docs[0].id;
+                STATE.matricula = snap.docs[0].data().identificador;
 
-  if (!total) { $('lista-espera').innerHTML = vazio('Fila vazia'); return; }
+                if (STATE.matricula) {
+                    const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
+                    if (userGeralSnap.exists() && userGeralSnap.data().cadastroAtivo !== true) {
+                        showUI(UI.modalSenha);
+                        return false; 
+                    }
+                }
 
-  const ordem = Object.keys(grupos).sort((a, b) => grupos[a].nomePauta.localeCompare(grupos[b].nomePauta));
-  $('lista-espera').innerHTML = ordem.map(k => {
-    const g = grupos[k];
-    return `<div class="group-head" style="--u:${corUnidade(k)}">
-        <b><span>${esc(g.nomePauta)}</span></b>
-        <small>${g.salaPauta ? `Sala ${esc(g.salaPauta)} · ` : ''}${g.pessoas.length} aguardando</small>
-      </div>` + g.pessoas.map((a, i) => {
-        const prio = a.priority === 'URGENTE';
-        return `<div class="row g-fila ${i === 0 ? 'next' : ''} ${prio ? 'prio' : ''}">
-          <span class="pos">${String(a.ordemLocal).padStart(2, '0')}</span>
-          <div style="min-width:0"><p class="nome">${esc(a.name)}</p>${i === 0 ? '<p class="next-flag" style="margin-top:3px">Próximo</p>' : ''}</div>
-          <span class="num">${duracao(a.arrivalTime || a.checkInOrder)}</span>
-          ${prio ? '<span class="tag prio">Prioridade</span>' : '<span></span>'}
-        </div>`;
-      }).join('');
-  }).join('');
-}
-setInterval(renderPainel, 30000);
+                return true;
+            } catch (err) {
+                console.error("Erro validando permissão:", err);
+                return false;
+            }
+        }
 
-function renderHistorico() {
-  $('lista-historico-tv').innerHTML = estado.historico.length
-    ? estado.historico.slice(0, 5).map(h => `<div class="item-hist"><span>${esc(h.nome)}</span><span>${esc(h.sala || h.local || '—')}</span></div>`).join('')
-    : vazio('Nenhum chamado recente');
-}
+        // ==========================================
+        // CARREGAMENTO DOS CARDS IGUAIS AO SISTEMA
+        // ==========================================
+        async function carregarMinhasPautas() {
+            showUI(UI.loading);
+            document.getElementById('loading-text').textContent = "Buscando suas pautas vinculadas...";
+            
+            try {
+                const pautasRef = collection(db, "pautas");
+                const pautasSnap = await getDocs(pautasRef);
+                let pautasVinculadas = [];
 
-function ajustar(el, max, min) {
-  let size = max; el.style.fontSize = size + 'px';
-  while ((el.scrollHeight > el.clientHeight + 1 || el.scrollWidth > el.clientWidth + 1) && size > min) { size -= 4; el.style.fontSize = size + 'px'; }
-}
+                for (let docSnap of pautasSnap.docs) {
+                    const pautaData = docSnap.data();
+                    const colabRef = collection(db, "pautas", docSnap.id, "collaborators");
+                    const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
+                    const colabSnap = await getDocs(q);
+                    
+                    if (!colabSnap.empty) {
+                        pautasVinculadas.push({ id: docSnap.id, ...pautaData, meuPapel: colabSnap.docs[0].data().cargo });
+                    }
+                }
 
-function ajustarTV() {
-  const vh = window.innerHeight, vw = window.innerWidth;
-  ajustar($('uc-nome-tv'), Math.min(vh * 0.28, vw * 0.12), 40);
-  const l = $('uc-local-tv'); 
-  l.style.fontSize = Math.min(vh * 0.14, vw * 0.07) + 'px';
-  let sz = parseFloat(l.style.fontSize); 
-  while (l.scrollWidth > l.parentElement.clientWidth * 0.9 && sz > 24) { 
-      sz -= 4; l.style.fontSize = sz + 'px'; 
-  }
-}
-window.addEventListener('resize', ajustarTV);
+                const container = document.getElementById('lista-pautas-vinculadas');
+                
+                if (pautasVinculadas.length === 0) {
+                    container.innerHTML = `
+                        <div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                            <span class="text-6xl block mb-4 text-slate-300">📭</span>
+                            <p class="text-slate-700 font-bold text-lg uppercase tracking-wider">Nenhuma pauta encontrada</p>
+                            <p class="text-sm text-slate-500 mt-2">Você não foi adicionado a nenhuma mesa de trabalho. Fale com o coordenador.</p>
+                        </div>`;
+                } else {
+                    // Ordena: Abertas primeiro
+                    pautasVinculadas.sort((a, b) => {
+                        if (a.fechada === b.fechada) {
+                            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                            return dateB - dateA; // Mais recentes primeiro
+                        }
+                        return a.fechada ? 1 : -1;
+                    });
+                    
+                    // Renderiza os cards idênticos à imagem do sistema (image_e08fc4.png)
+                    container.innerHTML = pautasVinculadas.map(p => {
+                        const isMutirao = p.type === 'mutirao' || p.type === 'acao_social';
+                        const isAcaoLivre = p.type === 'acao_livre';
+                        const modoTexto = isMutirao ? 'MUTIRÃO' : isAcaoLivre ? 'AÇÃO SOCIAL' : 'AGENDAMENTO';
+                        const corTextoTipo = (isMutirao || isAcaoLivre) ? 'text-amber-500' : 'text-blue-500';
+                        
+                        const dataCriacao = p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '--/--/----';
+                        
+                        // Determina a data de eliminação (7 dias após)
+                        let dataEliminacao = '--/--/----';
+                        if (p.createdAt) {
+                            const d = new Date(p.createdAt);
+                            d.setDate(d.getDate() + 7);
+                            dataEliminacao = d.toLocaleDateString('pt-BR');
+                        }
 
-function renderUltimoTV(c) {
-  if (!c) return;
-  $('uc-nome-tv').textContent = (c.nome || '').toUpperCase();
-  
-  let rotulo = (c.rotuloLocal || '').trim();
-  let valor = (c.sala || '').trim();
-  
-  if (rotulo && valor) {
-      $('label-local-tv').textContent = rotulo;
-      $('uc-local-tv').textContent = valor;
-  } else if (rotulo && !valor) {
-      $('label-local-tv').textContent = "Dirija-se a";
-      $('uc-local-tv').textContent = rotulo;
-  } else if (!rotulo && valor) {
-      $('label-local-tv').textContent = "Local";
-      $('uc-local-tv').textContent = valor;
-  } else {
-      $('label-local-tv').textContent = "Local";
-      $('uc-local-tv').textContent = "—";
-  }
-  
-  ajustarTV();
-  const d = $('destaque');
-  d.classList.remove('flash'); void d.offsetWidth; d.classList.add('flash');
-}
+                        // Badge de Papel (Verde para Defensor/Criador, Azul para Resto)
+                        const isDefensor = p.meuPapel && p.meuPapel.toLowerCase().includes('defensor');
+                        const badgeBadge = isDefensor 
+                            ? `<span class="bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Defensor</span>` 
+                            : `<span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Vinculada</span>`;
 
-// ── Inicialização ──────────────────────────────────────
-async function init() {
-  aplicarModo();
-  ajustarTV();
+                        // Capa para Pautas Encerradas
+                        const overlayFechada = p.fechada ? `
+                            <div class="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 rounded-2xl flex flex-col items-center justify-center border-2 border-red-500/50">
+                                <span class="bg-red-600 text-white font-black px-4 py-2 rounded-xl shadow-lg uppercase tracking-widest text-sm mb-3">PAUTA ENCERRADA</span>
+                                <button onclick="window.location.href='?pautaId=${p.id}'" class="bg-white border-2 border-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors shadow-sm">VER AUDITORIA</button>
+                            </div>
+                        ` : '';
 
-  if (!pautasParam) {
-    $('loading').innerHTML = `<div style="background:#fff;border:1px solid var(--line);border-radius:12px;padding:36px 32px;max-width:420px;text-align:center;box-shadow:0 4px 12px rgba(0,0,0,0.1)">
-      <h2 style="font-size:var(--fs-lg);font-weight:700;margin-bottom:8px">Painel não configurado</h2>
-      <p style="color:var(--muted);font-size:var(--fs-sm);margin-bottom:16px">Faltam parâmetros na URL.</p>
-      <code style="background:var(--soft);color:var(--muted);font-size:var(--fs-xs);padding:8px 12px;border-radius:6px;display:block;word-break:break-all;font-weight:600">?pautas=ID_DA_PAUTA</code></div>`;
-    return;
-  }
+                        const linkAtivo = p.fechada ? '#' : `?pautaId=${p.id}`;
+                        const onClickAtivo = p.fechada ? '' : `onclick="window.location.href='${linkAtivo}'"`;
 
-  // Valida a segurança por PIN antes de carregar os dados
-  await verificarSegurancaTV();
+                        return `
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer min-h-[220px]" ${onClickAtivo}>
+                            ${overlayFechada}
+                            <div>
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[11px] font-black uppercase tracking-widest ${corTextoTipo}">${modoTexto}</span>
+                                </div>
+                                <h3 class="text-base font-bold text-slate-800 mb-2 leading-snug line-clamp-2 min-h-[40px] uppercase">${escapeHTML(p.name || 'Pauta Sem Nome')}</h3>
+                                <p class="text-[11px] text-slate-500 mb-4 font-medium flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> 
+                                    Membros da equipe vinculados
+                                </p>
+                                <div class="mb-4">${badgeBadge}</div>
+                            </div>
+                            
+                            <div class="pt-4 border-t border-slate-100 flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400 mt-auto">
+                                <div>
+                                    <span class="block mb-1">CRIADA EM</span>
+                                    <span class="text-slate-600">${dataCriacao}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block mb-1 text-orange-500">ELIMINAÇÃO (7 DIAS)</span>
+                                    <span class="text-slate-600">${dataEliminacao}</span>
+                                </div>
+                            </div>
+                        </div>
+                        `;
+                    }).join('');
+                }
+                
+                // Filtro Local
+                document.getElementById('search-pautas-input')?.addEventListener('input', (e) => {
+                    const text = e.target.value.toLowerCase();
+                    document.querySelectorAll('#lista-pautas-vinculadas > div').forEach(card => {
+                        const title = card.querySelector('h3').textContent.toLowerCase();
+                        card.style.display = title.includes(text) ? '' : 'none';
+                    });
+                });
 
-  const ids = pautasParam.split(',').map(s => s.trim()).filter(Boolean);
-  if (!ids.length) return;
+                showUI(UI.selector);
+            } catch (e) {
+                console.error("Erro ao carregar pautas:", e);
+                UI.errLogin.textContent = "Erro de conexão ao buscar pautas.";
+                auth.signOut();
+                showUI(UI.login);
+            }
+        }
 
-  const nomeRec = decodeURIComponent(recepcaoNome);
-  $('recepcao-nome-fila').textContent = nomeRec;
-  $('recepcao-nome-tv').textContent = nomeRec;
-  $('loading').classList.add('hidden');
-  renderHistorico();
+        async function tentarEntrar(email, password) {
+            UI.errLogin.classList.add('hidden');
+            const btn = document.getElementById('btn-entrar');
+            const htmlOriginal = btn.innerHTML;
+            btn.innerHTML = 'Autenticando...';
+            btn.disabled = true;
+            
+            try {
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                STATE.usuarioAuth = userCredential.user;
+                // A navegação ocorre pelo onAuthStateChanged do boot()
+            } catch (error) {
+                UI.errLogin.textContent = "Email ou senha incorretos.";
+                UI.errLogin.classList.remove('hidden');
+                btn.innerHTML = htmlOriginal;
+                btn.disabled = false;
+            }
+        }
 
-  ids.forEach(pautaId => {
-    onSnapshot(doc(db, 'pautas', pautaId), (snap) => {
-      if (!snap.exists()) return;
-      const d = snap.data();
-      estado.pautas[pautaId] = { id: pautaId, ...d };
-      if (d.unidade) { $('recepcao-nome-fila').textContent = d.unidade; $('recepcao-nome-tv').textContent = d.unidade; }
-      renderPainel();
-    });
+        // ESQUECI A SENHA
+        document.getElementById('forgot-password-link').addEventListener('click', async () => {
+            const emailInput = document.getElementById('login-email').value.trim();
+            UI.errLogin.classList.add('hidden');
 
-    onSnapshot(collection(db, 'pautas', pautaId, 'attendances'), (snap) => {
-      estado.assistidos[pautaId] = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-      renderPainel();
-    });
+            if (!emailInput) {
+                UI.errLogin.textContent = "Preencha o seu e-mail cadastrado acima para recuperar a senha.";
+                UI.errLogin.classList.remove('hidden');
+                return;
+            }
 
-    onSnapshot(doc(db, 'pautas', pautaId, 'painel', 'ultimoChamado'), (snap) => {
-      const data = snap.exists() ? snap.data() : null;
-      if (!data?.atual) return;
-      if ((data.atual.timestamp || 0) <= (estado.ultimoChamado?.timestamp || 0)) return;
+            try {
+                const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
+                await sendPasswordResetEmail(auth, emailInput);
+                alert("E-mail de recuperação enviado! Verifique a sua caixa de entrada e spam.");
+            } catch (error) {
+                UI.errLogin.textContent = "Erro ao enviar e-mail. Verifique se o endereço está correto e cadastrado.";
+                UI.errLogin.classList.remove('hidden');
+            }
+        });
 
-      const novo = {
-        ...data.atual,
-        pautaNome: estado.pautas[pautaId]?.name || data.atual.local || '',
-        sala: estado.pautas[pautaId]?.sala || data.atual.sala || '',
-      };
-      if (estado.ultimoChamado) {
-        estado.historico.unshift(estado.ultimoChamado);
-        estado.historico.length = Math.min(estado.historico.length, 5);
-        renderHistorico();
-      }
-      estado.ultimoChamado = novo;
-      renderUltimoFila(novo);
-      renderUltimoTV(novo);
-      tocarSom();
-    });
-  });
+        // TROCA DE SENHA OBRIGATÓRIA
+        document.getElementById('troca-senha-form').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nova = document.getElementById('nova-senha').value;
+            const confirma = document.getElementById('confirma-senha').value;
+            const btn = document.getElementById('btn-salvar-senha');
+            
+            UI.errSenha.classList.add('hidden');
+            if (nova !== confirma) {
+                UI.errSenha.textContent = "As senhas não coincidem!";
+                UI.errSenha.classList.remove('hidden');
+                return;
+            }
 
-  setInterval(() => {
-    document.querySelectorAll('p, div, span, label').forEach(el => {
-      if (el.textContent && el.textContent.toLowerCase().includes('acompanhar pelo celular')) {
-        el.style.display = 'none';
-      }
-    });
-  }, 2000);
-}
+            btn.disabled = true;
+            btn.textContent = "A salvar...";
 
-init();
-</script>
+            try {
+                await updatePassword(STATE.usuarioAuth, nova);
+                if (STATE.matricula) {
+                    await updateDoc(doc(db, "colaboradores_gerais", STATE.matricula), {
+                        cadastroAtivo: true,
+                        updatedAt: new Date().toISOString()
+                    });
+                }
+                
+                UI.modalSenha.classList.add('hidden');
+                
+                if (STATE.pautaId) iniciarMesaDeTrabalho();
+                else carregarMinhasPautas();
+                
+            } catch (error) {
+                console.error(error);
+                UI.errSenha.textContent = "Erro ao atualizar. Faça login novamente se a sessão expirou.";
+                UI.errSenha.classList.remove('hidden');
+                btn.disabled = false;
+                btn.textContent = "Salvar e Acessar";
+            }
+        });
+
+        async function boot() {
+            if (!parseURL()) {
+                // Remove query param validation here, let it load the selector naturally
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    STATE.usuarioAuth = user;
+                    showUI(UI.loading);
+
+                    if (STATE.pautaId) {
+                        if (await validarPermissaoPauta()) {
+                            iniciarMesaDeTrabalho();
+                        } else if (UI.modalSenha.classList.contains('hidden')) {
+                            // Erro de acesso, mas não é tela de senha
+                        }
+                    } else {
+                        // Se fez login, ou atualizou a pagina na raiz sem pautaId
+                        carregarMinhasPautas();
+                    }
+                } else {
+                    showUI(UI.login);
+                }
+            });
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            tentarEntrar(document.getElementById('login-email').value, document.getElementById('login-password').value);
+        });
+
+        function doLogout() {
+            auth.signOut().then(() => { window.location.href = window.location.pathname; });
+        }
+        document.getElementById('btn-logout-selector').addEventListener('click', doLogout);
+        document.getElementById('btn-logout-mesa').addEventListener('click', doLogout);
+        document.getElementById('logout-btn-nav')?.addEventListener('click', doLogout);
+
+        document.getElementById('btn-voltar-portal').addEventListener('click', () => {
+            window.location.href = window.location.pathname; 
+        });
+
+        function iniciarMesaDeTrabalho() {
+            showUI(UI.shell);
+            import('./js/atendimentoExternoService.js').then(module => {
+                window.app = window.app || {};
+                window.app.db = db;
+                module.AtendimentoExternoService.init();
+            });
+        }
+
+        window.solicitarSenhaEAbriDoc = (url, senhaCorreta) => {
+            const digitada = prompt("🔒 Documento Protegido. Digite a senha gerada na Recepção:");
+            if (digitada === senhaCorreta) window.open(url, '_blank');
+            else if (digitada !== null) alert("❌ Senha incorreta!");
+        };
+
+        boot();
+    </script>
 </body>
 </html>
