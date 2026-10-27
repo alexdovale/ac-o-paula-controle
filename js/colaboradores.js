@@ -1,9 +1,4 @@
-// js/colaboradores.js - EQUIPE E PRESENÇA (SIGEP)
-// Novidades:
-//  - Grupos sempre em sequência: 1, 2, 3 ... 10, depois CRC, Coordenadores, depois outros (A-Z)
-//  - Importar equipe de outra pauta colando apenas o ID (ou o link) da pauta de origem
-//  - Interface do modal reorganizada (barra de ferramentas, cartões por equipe, avatares, badges)
-//  - Ícones SVG (estilo Lucide) no lugar de emojis
+// js/colaboradores.js - EQUIPE E PRESENÇA (SIGEP - PADRÃO MINIMALISTA)
 
 import {
     collection,
@@ -54,14 +49,10 @@ const CollaboratorService = {
     LOGO_URL: 'https://firebasestorage.googleapis.com/v0/b/pauta-ce162.firebasestorage.app/o/logo_defensoria%20(1)%20(1).png?alt=media&token=7a4eeaf6-9a96-40b2-8b38-27651627bba7',
     ataAutoSaveTimer: null,
 
-    // ===================================================================
-    // ORDENAÇÃO DE GRUPOS (1,2,3,4,5... depois CRC, Coordenadores, outros)
-    // ===================================================================
     compararGrupos(a, b) {
         a = String(a ?? '').trim();
         b = String(b ?? '').trim();
 
-        // Sem grupo sempre por último
         if (!a && !b) return 0;
         if (!a) return 1;
         if (!b) return -1;
@@ -81,7 +72,6 @@ const CollaboratorService = {
         return a.localeCompare(b, 'pt-BR');
     },
 
-    // Registra um grupo na lista (se novo) e reordena. Retorna true se adicionou.
     registrarGrupo(grupo) {
         const g = String(grupo ?? '').trim();
         if (!g) return false;
@@ -96,9 +86,6 @@ const CollaboratorService = {
         return /^\d+$/.test(String(g)) ? `Equipe ${g}` : String(g);
     },
 
-    // ===================================================================
-    // PDF
-    // ===================================================================
     async exportarPDFCustomizado(app) {
         const checks = document.querySelectorAll('.pdf-col-selector:checked');
         const camposEscolhidos = Array.from(checks).map(el => el.value);
@@ -116,8 +103,6 @@ const CollaboratorService = {
     },
 
     abrirModalExportacaoPDF(app) {
-        // Usa a função do pdfService que já gera e gerencia esse modal, 
-        // em vez de criar um modal duplicado aqui.
         if (window.PDFService && typeof window.PDFService.generateCollaboratorsPDF === 'function') {
             window.PDFService.generateCollaboratorsPDF({
                 colaboradores: this.ordenarColaboradores(app.colaboradores || []),
@@ -129,28 +114,31 @@ const CollaboratorService = {
     },
 
     // ===================================================================
-    // BASE MASTER
+    // BASE MASTER (PADRÃO MINIMALISTA LIMPO)
     // ===================================================================
     async abrirModalListagemMaster(app) {
         let modal = document.getElementById('master-list-modal');
         if (!modal) {
             modal = document.createElement('div');
             modal.id = 'master-list-modal';
-            modal.className = 'fixed inset-0 bg-black/70 z-[9999] flex items-center justify-center hidden backdrop-blur-sm';
+            modal.className = 'hidden fixed inset-0 bg-slate-900/65 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm';
             modal.innerHTML = `
-                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl mx-4 overflow-hidden flex flex-col h-[85vh]">
-                    <div class="bg-gradient-to-r from-violet-600 to-indigo-600 px-6 py-5 flex justify-between items-center shrink-0">
-                        <h3 class="text-white font-black text-xl flex items-center gap-2">${ico('users', 'w-6 h-6')} Base geral de colaboradores</h3>
-                        <button data-close class="text-white/80 hover:text-white p-1 rounded-lg hover:bg-white/10 transition-colors" aria-label="Fechar">${ico('x', 'w-6 h-6')}</button>
-                    </div>
-                    <div class="p-5 bg-slate-50 border-b border-slate-200 shrink-0">
-                        <div class="relative">
-                            <span class="absolute left-4 top-1/2 -translate-y-1/2 text-violet-400 pointer-events-none">${ico('search', 'w-5 h-5')}</span>
-                            <input type="text" id="search-master-list" placeholder="Pesquisar por nome, matrícula, cargo ou equipe..." class="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-violet-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/20 text-slate-700 font-medium transition-all">
+                <div class="bg-white rounded-2xl shadow-2xl w-full max-w-2xl flex flex-col max-h-[85vh] overflow-hidden">
+                    <div class="p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white">
+                        <div>
+                            <h3 class="font-bold text-xl text-slate-800">Base Geral de Colaboradores</h3>
+                            <p class="text-sm text-slate-500 mt-0.5">Selecione um membro para preenchimento rápido</p>
                         </div>
-                        <p id="master-count" class="text-xs text-slate-500 mt-2 ml-1"></p>
+                        <button data-close class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm" aria-label="Fechar">${ico('x', 'w-5 h-5')}</button>
                     </div>
-                    <div class="overflow-y-auto p-3 sm:p-5 flex-1 bg-white" id="master-list-container"></div>
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 shrink-0">
+                        <div class="relative">
+                            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">${ico('search', 'w-4 h-4')}</span>
+                            <input type="text" id="search-master-list" placeholder="Pesquisar por nome, matrícula, cargo ou equipe..." class="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 text-sm text-slate-700 bg-white shadow-sm transition-all font-medium">
+                        </div>
+                        <p id="master-count" class="text-xs text-slate-500 mt-2 ml-1 font-medium"></p>
+                    </div>
+                    <div class="overflow-y-auto p-4 flex-1 bg-white space-y-2 custom-scrollbar" id="master-list-container"></div>
                 </div>`;
             document.body.appendChild(modal);
             modal.querySelectorAll('[data-close]').forEach(b => b.onclick = () => modal.classList.add('hidden'));
@@ -174,18 +162,18 @@ const CollaboratorService = {
         document.getElementById('search-master-list').value = '';
         const container = document.getElementById('master-list-container');
         container.innerHTML = `
-            <div class="flex flex-col items-center justify-center h-full text-slate-400">
-                <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-violet-600 mb-4"></div>
-                <p class="font-medium">Carregando colaboradores...</p>
+            <div class="flex flex-col items-center justify-center py-12 text-slate-400">
+                <div class="animate-spin rounded-full h-8 w-8 border-b-2 border-slate-600 mb-3"></div>
+                <p class="text-sm font-medium">Carregando colaboradores...</p>
             </div>`;
 
         try {
             const querySnapshot = await getDocs(collection(app.db, "colaboradores_gerais"));
             if (querySnapshot.empty) {
                 container.innerHTML = `
-                    <div class="flex flex-col items-center justify-center h-full text-slate-400 gap-3">
-                        <div class="w-14 h-14 rounded-full bg-slate-100 flex items-center justify-center">${ico('inbox', 'w-7 h-7')}</div>
-                        <p class="text-center font-medium">Nenhum colaborador cadastrado na base.</p>
+                    <div class="flex flex-col items-center justify-center py-12 text-slate-400 gap-2">
+                        <div class="w-12 h-12 rounded-full bg-slate-100 flex items-center justify-center">${ico('inbox', 'w-6 h-6')}</div>
+                        <p class="text-sm font-medium">Nenhum colaborador cadastrado na base.</p>
                     </div>`;
                 return;
             }
@@ -201,17 +189,17 @@ const CollaboratorService = {
                 const cargo = dados.cargo || 'Membro';
                 const searchString = `${dados.nome} ${dados.id} ${cargo} ${dados.equipe || ''}`;
                 return `
-                    <div class="master-item-row flex flex-col sm:flex-row justify-between items-start sm:items-center p-4 mb-3 border border-slate-200 hover:border-violet-300 hover:bg-violet-50 rounded-xl cursor-pointer transition-colors group"
+                    <div class="master-item-row flex flex-col sm:flex-row justify-between items-start sm:items-center p-3.5 border border-slate-200 hover:border-blue-300 hover:bg-slate-50 rounded-xl cursor-pointer transition-colors group"
                          data-id="${escapeHTML(dados.id)}" data-search="${escapeHTML(searchString)}">
-                        <div class="flex-1 mb-3 sm:mb-0">
-                            <div class="font-black text-slate-800 text-base group-hover:text-violet-700">${escapeHTML(dados.nome || 'Sem nome')}</div>
-                            <div class="text-xs font-semibold text-slate-500 mt-1 flex flex-wrap gap-2 items-center">
-                                <span class="px-2 py-0.5 rounded border ${this.badgeCargo(cargo)}">${escapeHTML(cargo)}</span>
+                        <div class="flex-1 mb-2 sm:mb-0">
+                            <div class="font-bold text-slate-800 text-sm">${escapeHTML(dados.nome || 'Sem nome')}</div>
+                            <div class="text-xs text-slate-500 mt-1 flex flex-wrap gap-2 items-center">
+                                <span class="px-2 py-0.5 rounded-md border text-[10px] font-bold ${this.badgeCargo(cargo)}">${escapeHTML(cargo)}</span>
                                 <span>${escapeHTML(tipoId)}: <strong class="text-slate-700">${escapeHTML(dados.id)}</strong></span>
-                                ${dados.equipe ? `<span class="bg-violet-100 text-violet-700 px-2 py-0.5 rounded">${escapeHTML(this.rotuloGrupo(dados.equipe))}</span>` : ''}
+                                ${dados.equipe ? `<span class="bg-slate-100 text-slate-600 px-2 py-0.5 rounded-md text-[10px] font-bold">${escapeHTML(this.rotuloGrupo(dados.equipe))}</span>` : ''}
                             </div>
                         </div>
-                        <button class="w-full sm:w-auto inline-flex items-center justify-center gap-2 bg-white border-2 border-violet-200 text-violet-700 group-hover:bg-violet-600 group-hover:border-violet-600 group-hover:text-white px-5 py-2 rounded-xl font-bold transition-all text-sm">${ico('check')} Preencher</button>
+                        <button class="w-full sm:w-auto inline-flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-blue-600 hover:text-white text-slate-700 px-4 py-2 rounded-xl font-bold transition-all text-xs shadow-sm">${ico('check')} Preencher</button>
                     </div>`;
             }).join('');
 
@@ -231,9 +219,8 @@ const CollaboratorService = {
         } catch (error) {
             console.error("Erro ao listar master:", error);
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center h-full text-red-500 gap-3">
-                    <div class="w-14 h-14 rounded-full bg-red-50 flex items-center justify-center">${ico('alert', 'w-7 h-7')}</div>
-                    <p class="text-center font-bold">Não foi possível carregar a base. Tente novamente.</p>
+                <div class="flex flex-col items-center justify-center py-12 text-red-500 gap-2">
+                    <p class="text-sm font-bold">Não foi possível carregar a base. Tente novamente.</p>
                 </div>`;
         }
     },
@@ -256,7 +243,6 @@ const CollaboratorService = {
             set('collaborator-phone-modal', dados.telefone || '');
             set('collaborator-email-modal', dados.email || '');
 
-            // Garante que o grupo existe no select (e na ordem correta)
             const equipe = dados.equipe || '1';
             this.registrarGrupo(equipe);
             this.updateTeamSelect(equipe);
@@ -271,9 +257,6 @@ const CollaboratorService = {
         }
     },
 
-    // ===================================================================
-    // IMPORTAR EQUIPE DE OUTRA PAUTA (só com o ID)
-    // ===================================================================
     extrairPautaId(texto) {
         const t = String(texto || '').trim();
         if (!t) return '';
@@ -355,7 +338,6 @@ const CollaboratorService = {
                 : `Importar ${novos.length} membro(s) de "${nomeOrigem}" para esta pauta?`;
             if (!confirm(msg)) return;
 
-            // Monta as operações (Firestore: máx. 500 por batch)
             const ops = [];
             if (substituir) atuais.forEach(c => ops.push({ tipo: 'del', ref: doc(destinoRef, c.id) }));
             novos.forEach(n => ops.push({ tipo: 'set', ref: doc(destinoRef), data: n }));
@@ -379,9 +361,6 @@ const CollaboratorService = {
         }
     },
 
-    // ===================================================================
-    // ORDENAÇÃO DOS COLABORADORES
-    // ===================================================================
     ordenarColaboradores(colaboradores) {
         if (this.ordemAtual === 'nome') {
             return [...colaboradores].sort((a, b) => (a.nome || '').localeCompare(b.nome || '', 'pt-BR'));
@@ -437,9 +416,6 @@ const CollaboratorService = {
         }
     },
 
-    // ===================================================================
-    // ATA SOCIAL E BARRA DE FERRAMENTAS
-    // ===================================================================
     lerCamposAta() {
         return {
             ataAcaoNome: document.getElementById('ata-acao-nome')?.value?.trim() || '',
@@ -559,9 +535,6 @@ const CollaboratorService = {
         }
     },
 
-    // ===================================================================
-    // MODAL DA EQUIPE - INITIALIZER
-    // ===================================================================
     openModal(app) {
         const modal = document.getElementById('collaborators-modal');
         if (!modal) return;
@@ -571,7 +544,6 @@ const CollaboratorService = {
         this.updateTeamSelect();
         this.configurarLogicaCargo();
         
-        // Remove botões duplicados fora da toolbar, se existirem
         document.querySelectorAll('.btn-exportar-pdf-antigo').forEach(el => el.remove());
         
         this.montarBarraFerramentas(app);
@@ -582,7 +554,6 @@ const CollaboratorService = {
         }
     },
 
-    // Barra de ferramentas: ordenação, PDF e importação por ID de pauta
     montarBarraFerramentas(app) {
         document.getElementById('collab-toolbar')?.remove();
         document.getElementById('toggle-order-btn')?.remove();
@@ -591,28 +562,28 @@ const CollaboratorService = {
         const tabela = document.querySelector('#collaborators-list-table-modal');
         if (!tabela) return;
 
-        const btnNeutro = 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-100 text-slate-700 font-bold px-3 py-2 rounded-lg text-xs border border-slate-200 shadow-sm transition-colors';
+        const btnNeutro = 'inline-flex items-center gap-1.5 bg-white hover:bg-slate-50 text-slate-700 font-bold px-3 py-2 rounded-xl text-xs border border-slate-200 shadow-sm transition-colors';
 
         const bar = document.createElement('div');
         bar.id = 'collab-toolbar';
         bar.className = 'mb-4 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden';
         bar.innerHTML = `
-            <div class="flex flex-wrap items-center gap-2 p-3 border-b border-slate-100 bg-slate-50/70">
-                <span class="text-sm font-black text-slate-700 mr-auto flex items-center gap-2"><span class="text-violet-600">${ico('users', 'w-[18px] h-[18px]')}</span> Organização da equipe</span>
+            <div class="flex flex-wrap items-center gap-2 p-3.5 border-b border-slate-100 bg-slate-50/50">
+                <span class="text-xs font-bold text-slate-700 uppercase tracking-wider mr-auto flex items-center gap-2">Organização da Equipe</span>
                 <button id="copy-pauta-id-btn" class="${btnNeutro}" title="Copie para colar em outra pauta">${ico('idCard', 'w-3.5 h-3.5')} Copiar ID desta pauta</button>
                 <button id="toggle-order-btn" class="${btnNeutro}"></button>
-                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold px-3 py-2 rounded-lg text-xs shadow-sm transition-colors">${ico('fileText', 'w-3.5 h-3.5')} Configurar Relatório</button>
+                <button id="export-pdf-custom-btn" class="inline-flex items-center gap-1.5 bg-slate-800 hover:bg-slate-900 text-white font-bold px-3.5 py-2 rounded-xl text-xs shadow-sm transition-colors">${ico('fileText', 'w-3.5 h-3.5')} Configurar Relatório</button>
             </div>
-            <div class="p-3">
-                <label for="import-pauta-id-input" class="block text-[11px] font-bold text-slate-500 mb-1.5">Copiar equipe de outra pauta <span class="font-normal text-slate-400">(na pauta antiga, use "Copiar ID desta pauta")</span></label>
+            <div class="p-3.5">
+                <label for="import-pauta-id-input" class="block text-xs font-bold text-slate-600 mb-1.5">Copiar equipe de outra pauta <span class="font-normal text-slate-400">(na pauta antiga, use "Copiar ID desta pauta")</span></label>
                 <div class="flex flex-col sm:flex-row gap-2">
                     <input id="import-pauta-id-input" type="text" autocomplete="off"
                         placeholder="Cole aqui o ID da pauta de origem"
-                        class="flex-1 min-w-0 px-3 py-2.5 rounded-lg border-2 border-slate-200 focus:outline-none focus:border-violet-500 focus:ring-4 focus:ring-violet-500/15 text-sm text-slate-700 transition-all">
-                    <button id="import-pauta-btn" class="inline-flex items-center justify-center gap-2 bg-violet-600 hover:bg-violet-700 text-white font-bold px-4 py-2.5 rounded-lg text-sm shadow-sm transition-colors whitespace-nowrap">${ico('download')} Importar equipe</button>
+                        class="flex-1 min-w-0 px-3.5 py-2.5 rounded-xl border border-slate-200 focus:outline-none focus:border-blue-500 text-sm text-slate-700 bg-slate-50 focus:bg-white transition-all font-medium">
+                    <button id="import-pauta-btn" class="inline-flex items-center justify-center gap-2 bg-blue-600 hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-xl text-xs shadow-sm transition-colors whitespace-nowrap">${ico('download')} Importar equipe</button>
                 </div>
-                <label class="mt-2 inline-flex items-center gap-2 text-[11px] text-slate-500 cursor-pointer">
-                    <input type="checkbox" id="import-replace-check" class="h-3.5 w-3.5 rounded border-slate-300 text-violet-600 focus:ring-violet-500">
+                <label class="mt-2.5 inline-flex items-center gap-2 text-xs text-slate-500 cursor-pointer font-medium">
+                    <input type="checkbox" id="import-replace-check" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500">
                     Substituir a equipe atual (apaga os membros desta pauta antes de importar)
                 </label>
             </div>`;
@@ -626,16 +597,14 @@ const CollaboratorService = {
             if (!id) return;
             if (navigator.clipboard && window.isSecureContext) {
                 navigator.clipboard.writeText(id)
-                    .then(() => showNotification("ID da pauta copiado! Cole na pauta nova para importar a equipe.", "success"))
+                    .then(() => showNotification("ID da pauta copiado!", "success"))
                     .catch(() => prompt("Copie o ID da pauta:", id));
             } else {
                 prompt("Copie o ID da pauta:", id);
             }
         };
         
-        // Aqui chamamos o modal do pdfService.js que ajustámos!
         document.getElementById('export-pdf-custom-btn').onclick = () => this.abrirModalExportacaoPDF(app);
-        
         document.getElementById('import-pauta-btn').onclick = () => this.importarEquipeDePauta(app);
         document.getElementById('import-pauta-id-input').onkeydown = (e) => {
             if (e.key === 'Enter') { e.preventDefault(); this.importarEquipeDePauta(app); }
@@ -712,7 +681,7 @@ const CollaboratorService = {
                     this.updateTeamSelect('1');
                 }
             } else if (e.target.value === 'REMOVE_GROUP') {
-                const remover = prompt("Digite o nome EXATO do grupo que deseja excluir da lista:\n\nGrupos atuais: " + this.gruposPermitidosAta.join(", "))?.trim();
+                const remover = prompt("Digite o nome EXATO do grupo que deseja excluir:\n\nGrupos atuais: " + this.gruposPermitidosAta.join(", "))?.trim();
 
                 if (remover) {
                     const index = this.gruposPermitidosAta.findIndex(g => g.toLowerCase() === remover.toLowerCase());
@@ -789,9 +758,6 @@ const CollaboratorService = {
         });
     },
 
-    // ===================================================================
-    // TABELA (cartões por equipe, avatares, badges)
-    // ===================================================================
     iniciais(nome) {
         const p = String(nome || '?').trim().split(/\s+/).filter(Boolean);
         if (p.length === 0) return '?';
@@ -829,9 +795,9 @@ const CollaboratorService = {
         if (ordenados.length === 0) {
             html.push(`
                 <tr><td colspan="5" class="p-10 text-center">
-                    <div class="w-14 h-14 mx-auto mb-3 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">${ico('users', 'w-7 h-7')}</div>
-                    <p class="font-bold text-slate-600">Nenhum membro na equipe ainda</p>
-                    <p class="text-xs text-slate-400 mt-1">Cadastre pelo formulário ou importe de outra pauta usando o ID dela.</p>
+                    <div class="w-12 h-12 mx-auto mb-3 rounded-full bg-slate-100 text-slate-400 flex items-center justify-center">${ico('users', 'w-6 h-6')}</div>
+                    <p class="font-bold text-slate-700 text-sm">Nenhum membro na equipe ainda</p>
+                    <p class="text-xs text-slate-400 mt-1">Cadastre pelo formulário ou importe de outra pauta.</p>
                 </td></tr>`);
         }
 
@@ -844,12 +810,12 @@ const CollaboratorService = {
                 const nomeGrupo = ultimoGrupo ? this.rotuloGrupo(ultimoGrupo) : 'Sem grupo';
                 html.push(`
                     <tr class="grupo-header">
-                        <td colspan="5" class="px-3 py-2.5 bg-gradient-to-r from-violet-50 to-white border-y border-violet-200">
+                        <td colspan="5" class="px-3.5 py-2.5 bg-slate-100 border-y border-slate-200">
                             <div class="flex items-center justify-between gap-2">
-                                <span class="font-black text-violet-900 text-xs sm:text-sm flex items-center gap-2"><span class="text-violet-500">${ico('folder')}</span> ${escapeHTML(nomeGrupo)}</span>
+                                <span class="font-bold text-slate-800 text-xs flex items-center gap-1.5 uppercase tracking-wide">${escapeHTML(nomeGrupo)}</span>
                                 <span class="flex gap-1.5">
-                                    <span class="bg-white text-violet-700 border border-violet-200 px-2 py-0.5 rounded-full text-[10px] font-bold">${r.total} membro${r.total === 1 ? '' : 's'}</span>
-                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full text-[10px] font-bold">${r.presentes} presente${r.presentes === 1 ? '' : 's'}</span>
+                                    <span class="bg-white text-slate-700 border border-slate-200 px-2 py-0.5 rounded-md text-[10px] font-bold">${r.total} membro${r.total === 1 ? '' : 's'}</span>
+                                    <span class="bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md text-[10px] font-bold">${r.presentes} presente${r.presentes === 1 ? '' : 's'}</span>
                                 </span>
                             </div>
                         </td>
@@ -860,10 +826,10 @@ const CollaboratorService = {
             const nomeSafe = escapeHTML(colab.nome);
 
             html.push(`
-                <tr class="border-b border-slate-100 hover:bg-slate-50/70 transition-colors" data-row-id="${colab.id}">
+                <tr class="border-b border-slate-100 hover:bg-slate-50 transition-colors" data-row-id="${colab.id}">
                     <td class="p-3">
                         <div class="flex items-center gap-3 min-w-0">
-                            <div class="shrink-0 w-9 h-9 rounded-full ${presente ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} flex items-center justify-center text-xs font-black">${escapeHTML(this.iniciais(colab.nome))}</div>
+                            <div class="shrink-0 w-8 h-8 rounded-full ${presente ? 'bg-emerald-100 text-emerald-700' : 'bg-slate-100 text-slate-500'} flex items-center justify-center text-xs font-black">${escapeHTML(this.iniciais(colab.nome))}</div>
                             <div class="min-w-0">
                                 <div class="font-bold text-sm text-slate-800 truncate max-w-[150px] sm:max-w-xs">${nomeSafe}</div>
                                 <div class="text-[10px] text-slate-400 mt-0.5">${escapeHTML(colab.tipo_id || 'ID')}: ${escapeHTML(colab.identificador || '-')}</div>
@@ -872,21 +838,21 @@ const CollaboratorService = {
                         </div>
                     </td>
                     <td class="p-3 text-center align-middle">
-                        <label class="relative inline-block w-12 h-6 cursor-pointer select-none" title="${presente ? 'Presente' : 'Ausente'}">
+                        <label class="relative inline-block w-11 h-6 cursor-pointer select-none" title="${presente ? 'Presente' : 'Ausente'}">
                             <input type="checkbox" class="checkin-checkbox sr-only peer" data-id="${colab.id}" ${presente ? 'checked' : ''}>
                             <span class="absolute inset-0 rounded-full bg-slate-300 peer-checked:bg-emerald-500 transition-colors"></span>
-                            <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-6"></span>
+                            <span class="absolute top-0.5 left-0.5 w-5 h-5 rounded-full bg-white shadow transition-transform peer-checked:translate-x-5"></span>
                         </label>
                     </td>
                     <td class="p-3 hidden md:table-cell">
                         <span class="px-2 py-1 rounded-md border text-[11px] font-bold ${this.badgeCargo(colab.cargo)}">${escapeHTML(colab.cargo)}</span>
                     </td>
-                    <td class="p-3 text-center text-xs font-black tabular-nums ${presente ? 'text-emerald-600' : 'text-slate-300'}">${escapeHTML(colab.horario || '--:--')}</td>
+                    <td class="p-3 text-center text-xs font-bold tabular-nums ${presente ? 'text-emerald-600' : 'text-slate-300'}">${escapeHTML(colab.horario || '--:--')}</td>
                     <td class="p-3">
                         <div class="flex justify-center gap-1.5">
-                            <button data-action="link" data-nome="${nomeSafe}" class="text-emerald-600 hover:text-white hover:bg-emerald-500 bg-emerald-50 p-2 rounded-lg transition-colors" title="Copiar link da mesa" aria-label="Copiar link da mesa">${ico('link')}</button>
-                            <button data-action="edit" data-id="${colab.id}" class="text-blue-600 hover:text-white hover:bg-blue-500 bg-blue-50 p-2 rounded-lg transition-colors" title="Editar" aria-label="Editar">${ico('pencil')}</button>
-                            <button data-action="delete" data-id="${colab.id}" class="text-red-500 hover:text-white hover:bg-red-500 bg-red-50 p-2 rounded-lg transition-colors" title="Excluir" aria-label="Excluir">${ico('trash')}</button>
+                            <button data-action="link" data-nome="${nomeSafe}" class="text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 bg-slate-100 p-2 rounded-lg transition-colors" title="Copiar link da mesa" aria-label="Copiar link da mesa">${ico('link')}</button>
+                            <button data-action="edit" data-id="${colab.id}" class="text-slate-600 hover:text-blue-600 hover:bg-blue-50 bg-slate-100 p-2 rounded-lg transition-colors" title="Editar" aria-label="Editar">${ico('pencil')}</button>
+                            <button data-action="delete" data-id="${colab.id}" class="text-slate-600 hover:text-red-600 hover:bg-red-50 bg-slate-100 p-2 rounded-lg transition-colors" title="Excluir" aria-label="Excluir">${ico('trash')}</button>
                         </div>
                     </td>
                 </tr>`);
@@ -927,7 +893,7 @@ const CollaboratorService = {
         const style = document.createElement('style');
         style.id = 'toggle-css-colaboradores';
         style.innerHTML = `
-            .checkin-checkbox:focus-visible + span { outline: 2px solid #10b981; outline-offset: 2px; }
+            .checkin-checkbox:focus-visible + span { outline: 2px solid #3b82f6; outline-offset: 2px; }
             #collaborators-list-table-modal tr.grupo-header td { position: sticky; top: 0; z-index: 1; }
         `;
         document.head.appendChild(style);
@@ -955,8 +921,8 @@ const CollaboratorService = {
 
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
-            btnSubmit.innerHTML = `${ico('save', 'w-5 h-5')} Atualizar cadastro`;
-            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-violet-600 text-white font-black py-4 rounded-xl hover:bg-violet-700 transition shadow-lg uppercase tracking-widest text-sm";
+            btnSubmit.innerHTML = `${ico('save', 'w-4 h-4')} Atualizar cadastro`;
+            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-slate-800 text-white font-bold py-3 rounded-xl hover:bg-slate-900 transition shadow-sm text-sm";
         }
         this.configurarLogicaCargo();
 
@@ -977,14 +943,14 @@ const CollaboratorService = {
 
         let html = `
             <div style="font-family: sans-serif; max-width: 100%;">
-                <div style="text-align: center; margin-bottom: 20px; padding: 10px; border-bottom: 3px solid #1a56db;">
+                <div style="text-align: center; margin-bottom: 20px; padding: 10px; border-bottom: 2px solid #334155;">
                     <img src="${this.LOGO_URL}" alt="Logo Defensoria" style="max-height: 80px; width: auto; margin: 0 auto; display: block;" onerror="this.style.display='none'">
-                    <h3 style="margin-top: 10px; color: #1a56db;">LISTA DE PRESENÇA - SIGEP</h3>
-                    <p style="font-size: 12px; color: #666;">Sistema Integrado de Gestão de Pautas</p>
+                    <h3 style="margin-top: 10px; color: #1e293b;">LISTA DE PRESENÇA - SIGEP</h3>
+                    <p style="font-size: 12px; color: #64748b;">Sistema Integrado de Gestão de Pautas</p>
                 </div>
                 <table border="1" style="width:100%; border-collapse: collapse; font-size: 12px;">
                     <thead>
-                        <tr style="background-color: #1a56db; color: white;">
+                        <tr style="background-color: #334155; color: white;">
                             <th style="padding: 8px;">Nome</th>
                             <th style="padding: 8px;">Cargo</th>
                             <th style="padding: 8px;">Equipe</th>
@@ -1005,7 +971,7 @@ const CollaboratorService = {
         html += `
                     </tbody>
                 </table>
-                <div style="margin-top: 15px; font-size: 10px; text-align: center; color: #888; border-top: 1px solid #ddd; padding-top: 10px;">
+                <div style="margin-top: 15px; font-size: 10px; text-align: center; color: #64748b; border-top: 1px solid #cbd5e1; padding-top: 10px;">
                     <p>Gerado automaticamente pelo SIGEP em ${new Date().toLocaleString('pt-BR')}</p>
                 </div>
             </div>`;
@@ -1019,8 +985,8 @@ const CollaboratorService = {
         this.editId = null;
         const btnSubmit = document.getElementById('add-collaborator-btn-modal');
         if (btnSubmit) {
-            btnSubmit.innerHTML = `${ico('plus', 'w-5 h-5')} Adicionar à equipe`;
-            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-emerald-600 text-white font-black py-4 rounded-xl hover:bg-emerald-700 transition shadow-lg uppercase tracking-widest text-sm";
+            btnSubmit.innerHTML = `${ico('plus', 'w-4 h-4')} Adicionar à equipe`;
+            btnSubmit.className = "w-full inline-flex items-center justify-center gap-2 bg-blue-600 text-white font-bold py-3 rounded-xl hover:bg-blue-700 transition shadow-sm text-sm";
         }
         this.configurarLogicaCargo();
     }
