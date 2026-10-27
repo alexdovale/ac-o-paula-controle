@@ -406,7 +406,47 @@
             </div>
 
             <!-- MENU PRINCIPAL PADRONIZADO COM TOOLTIPS -->
+
+             <button id="btn-mesa-digital" onclick="window.open('atendimento_externo.html', '_blank')" title="Acesse sua Mesa Digital para chamar os assistidos da sua pauta." class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md text-sm flex items-center gap-2 justify-center">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                    Mesa Digital
+                </button>
             <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-6">
+                <button id="btn-recepcao-central" title="Acesse a visão geral da recepção para gerenciar a chegada dos assistidos nas unidades." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Recepção Central
+                </button>
+                <button id="admin-panel-btn" title="Área restrita para gerenciamento de usuários, unidades e auditoria do sistema." class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Painel do Administrador
+                </button>
+                <button id="view-dashboard-btn" title="Visualize gráficos e métricas de desempenho das pautas e atendimentos da sua unidade." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Ver Dashboard
+                </button>
+                <button id="btn-modulo-coletas" title="Crie formulários e gerencie coletas estatísticas avançadas integradas com o PowerBI." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Módulo Coletas & BI
+                </button>
+                <button id="btn-trocar-unidade" title="Alterne a unidade de atuação para visualizar outras pautas." class="hidden w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Trocar Unidade
+                </button>
+                <button id="btn-trocar-modo" title="Alterne entre o Modo Normal (Rotina Diária) e o Modo Evento (Mutirões e Ações Sociais)." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Trocar Modo
+                </button>
+                <button id="open-user-preferences-btn" title="Gerencie seus dados pessoais, senha e preferências de notificação do sistema." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
+                    Meu Perfil
+                </button>
+            </div>
+
+            
+            
+            <div id="invitations-container" class="hidden mb-8">
+                <h2 class="text-xl sm:text-2xl font-bold text-slate-800 mb-4">Convites Pendentes</h2>
+                <div id="pending-invitations-list" class="space-y-4"></div>
+            </div>
+            
+            <div id="filters-container" class="mb-4"></div>
+
+            <!-- NOVO BOTÃO DA MESA DIGITAL -->
+               
+
                 <button id="btn-recepcao-central" title="Acesse a visão geral da recepção para gerenciar a chegada dos assistidos nas unidades." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
                     Recepção Central
                 </button>
@@ -436,22 +476,8 @@
             </div>
             
             <div id="filters-container" class="mb-4"></div>
-            
-            <!-- BARRA DE PESQUISA DE PAUTAS -->
-            <div class="mb-6 flex justify-end w-full">
-                <div class="relative w-full sm:w-96">
-                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
-                    </div>
-                    <input type="search" id="search-pautas-input" oninput="window.app && window.app.loadPautasWithFilter()" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-3 border border-slate-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-green-500 bg-white shadow-sm text-sm transition-all">
-                </div>
-            </div>
-            
-            <div id="pautas-list" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6 w-full"></div>
-            <div class="mt-6 w-full">
-                <button id="create-pauta-btn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3.5 px-4 rounded-lg shadow-lg transition">Criar Nova Pauta</button>
-            </div>
-        </div>
+
+        
 
         <!-- DASHBOARD -->
         <div id="dashboard-container" class="hidden w-full max-w-7xl mx-auto p-2 sm:p-4">
