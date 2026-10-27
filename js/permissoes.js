@@ -38,7 +38,8 @@ export const CATALOGO = [
             { key: 'adminPanel',      userKey: 'menu_admin',            icone: 'shield',    label: 'Painel Administrador', desc: 'Usuários, unidades, recepções e auditoria.', ids: ['admin-panel-btn', 'admin-btn-main'], padrao: { user: false, apoio: false, admin: true }, fixo: { user: false, apoio: false, admin: true } },
             { key: 'modColetas',      userKey: 'menu_coletor_bi',       icone: 'clipboard', label: 'Módulo Coletas / BI',  desc: 'Formulários e coletas estatísticas.',        ids: ['btn-modulo-coletas'] },
             { key: 'recepcaoCentral', userKey: 'menu_recepcao_central', icone: 'building',  label: 'Recepção Central',     desc: 'Visão geral da recepção e chegadas.',        ids: ['btn-recepcao-central'] },
-            { key: 'dashboard',       userKey: 'menu_dashboard',        icone: 'chart',     label: 'Dashboard',            desc: 'Indicadores gerais das pautas.',             ids: ['view-dashboard-btn'] }
+            { key: 'dashboard',       userKey: 'menu_dashboard',        icone: 'chart',     label: 'Dashboard',            desc: 'Indicadores gerais das pautas.',             ids: ['view-dashboard-btn'] },
+            { key: 'criarPauta',      userKey: 'pauta_criar',           icone: 'plus',      label: 'Criar pauta',          desc: 'Botão de nova pauta e criação em lote.',     ids: ['create-pauta-btn'] }
         ]
     },
     {
@@ -103,9 +104,10 @@ CATALOGO.forEach(g => g.itens.forEach(i => { INDICE[i.key] = i; }));
 // padrao: valor mostrado quando o campo ainda não existe no cadastro da pessoa.
 // ---------------------------------------------------------------------------
 const SECOES_USUARIO = [
-    { titulo: '1. Módulos do Menu Principal', colunas: 'md:grid-cols-4', itens: [
+    { titulo: '1. Módulos do Menu Principal', colunas: 'md:grid-cols-5', itens: [
         ['menu_dashboard', 'Ver Dashboard', true], ['menu_recepcao_central', 'Recepção Central', true],
-        ['menu_coletor_bi', 'Coletor BI / Coletas', false], ['menu_admin', 'Painel Admin', false] ] },
+        ['menu_coletor_bi', 'Coletor BI / Coletas', false], ['menu_admin', 'Painel Admin', false],
+        ['pauta_criar', 'Criar Pauta', true] ] },
     { titulo: '2. Módulo de Colaboradores (Equipe)', colunas: 'md:grid-cols-3', itens: [
         ['colaboradores_ver', 'Ver Colaboradores', true], ['colaboradores_adicionar', 'Adicionar Colaborador', true],
         ['colaboradores_excluir', 'Excluir Colaborador', false], ['colaboradores_marcar_presenca', 'Marcar Presença / Status', true],
@@ -344,7 +346,7 @@ export const PermissoesService = {
             return doPerfil !== undefined ? doPerfil : padrao;
         };
         // Gravados sempre (2FA e a regra do Firestore de zerar pauta leem esses campos)
-        const SEMPRE_SALVAR = ['exigir_2fa', 'pauta_zerar_pauta'];
+        const SEMPRE_SALVAR = ['exigir_2fa', 'pauta_zerar_pauta', 'pauta_criar'];
 
         const secoes = SECOES_USUARIO.map(s => `
             <div class="bg-slate-50 p-4 rounded-xl border border-slate-200">
@@ -431,7 +433,8 @@ export const PermissoesService = {
             // Mantém só o que não faz parte da matriz (2FA) e o campo lido pelas regras do Firestore
             const novas = {
                 exigir_2fa: p.exigir_2fa === true,
-                pauta_zerar_pauta: this._valorDoPerfil('pauta_zerar_pauta', userData.role) === true
+                pauta_zerar_pauta: this._valorDoPerfil('pauta_zerar_pauta', userData.role) === true,
+                pauta_criar: this._valorDoPerfil('pauta_criar', userData.role) !== false
             };
             try {
                 await updateDoc(doc(db, 'users', userId), { permissoesDetalhadas: novas, updatedAt: new Date().toISOString() });
