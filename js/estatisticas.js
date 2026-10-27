@@ -1,6 +1,7 @@
+
 /**
  * estatisticas.js - SIGEP
- * - Interface redesenhada (indicadores, barras, cartões por equipe)
+ * - Interface redesenhada (indicadores coloridos minimalistas, barras, cartões por equipe)
  * - Ícones SVG (estilo Lucide) no lugar de emojis
  * - Equipes em sequência: 1, 2, 3 ... 10, CRC, Coordenadores, outras, "Não definida" por último
  * - IDs estáveis (sem Math.random) e nomes protegidos contra HTML
@@ -483,20 +484,23 @@ export const StatisticsService = {
 
         const comparecimento = pct(atendidos.length, atendidos.length + faltosos.length);
 
-        const kpi = (icone, valor, rotulo, corBg, corTexto) => `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col items-center justify-center text-center">
-                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">${rotulo}</p>
+        // =========================================================
+        // KPI MINIMALISTAS COM CORES TAILWIND (SUAVE BG, FORTE TEXT)
+        // =========================================================
+        const kpi = (valor, rotulo, corBg, corTexto, corBorda) => `
+            <div class="${corBg} ${corBorda} border rounded-2xl shadow-sm p-4 flex flex-col items-center justify-center text-center transition-transform hover:scale-[1.02]">
+                <p class="text-[10px] font-bold ${corTexto} uppercase tracking-wider mb-1 opacity-80">${rotulo}</p>
                 <p class="text-3xl font-black ${corTexto}">${valor}</p>
             </div>`;
 
         const kpisHTML = `
             <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
-                ${kpi(null, atendidos.length, 'Atendidos', '', 'text-slate-800')}
-                ${kpi(null, atendidosComAgenda.length, 'Agend / Reag', '', 'text-slate-800')}
-                ${kpi(null, atendidosSemAgenda.length, 'Efetivados', '', 'text-slate-800')}
-                ${kpi(null, faltosos.length, 'Faltosos', '', 'text-slate-800')}
-                ${kpi(null, comparecimento + '%', 'Presença', '', 'text-slate-800')}
-                ${kpi(null, avgTimeDirect + ' min', 'Tempo Médio', '', 'text-slate-800')}
+                ${kpi(atendidos.length, 'Atendidos', 'bg-emerald-50', 'text-emerald-700', 'border-emerald-100')}
+                ${kpi(atendidosComAgenda.length, 'Agend / Reag', 'bg-blue-50', 'text-blue-700', 'border-blue-100')}
+                ${kpi(atendidosSemAgenda.length, 'Efetivados', 'bg-teal-50', 'text-teal-700', 'border-teal-100')}
+                ${kpi(faltosos.length, 'Faltosos', 'bg-red-50', 'text-red-700', 'border-red-100')}
+                ${kpi(comparecimento + '%', 'Presença', 'bg-indigo-50', 'text-indigo-700', 'border-indigo-100')}
+                ${kpi(avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50', 'text-amber-700', 'border-amber-100')}
             </div>`;
 
         const btnCls = 'inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-colors shadow-sm';
@@ -514,7 +518,7 @@ export const StatisticsService = {
                 </div>
                 <details class="mt-4">
                     <summary class="text-xs font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Personalizar Resumo Geral</summary>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-4 text-xs font-medium text-slate-600 bg-slate-50 p-4 rounded-xl">
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-4 text-xs font-medium text-slate-600 bg-slate-50 p-4 rounded-xl border border-slate-100">
                         ${[['export-general', 'Geral'], ['export-collaborators', 'Equipes'], ['export-subjects', 'Assuntos'], ['export-scheduled-time', 'Agenda'], ['export-times', 'Chegada'], ['export-absentees-time', 'Faltosos']]
                 .map(([id, l]) => `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="${id}" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> ${l}</label>`).join('')}
                     </div>
@@ -1224,3 +1228,4 @@ export const exportStatisticsToPDF = (pautaName, statsData) =>
     StatisticsService.exportStatisticsToPDF(pautaName, statsData);
 
 window.StatisticsService = StatisticsService;
+
