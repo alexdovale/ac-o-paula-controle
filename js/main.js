@@ -632,9 +632,9 @@ class SIGEPApp {
         document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
 
         // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
-        // (não há mais "clique falso" nem checagem de isTrusted)
         const irParaRota = (btnId, rota) => {
             document.getElementById(btnId)?.addEventListener('click', (e) => {
+                e.preventDefault(); // <--- ESTA É A MÁGICA: Impede o redirecionamento/reload da página!
                 if (!this.currentPauta) return;
                 e.stopImmediatePropagation();
                 document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
@@ -642,6 +642,7 @@ class SIGEPApp {
                 this.router.navigate(rota, { pautaId: this.currentPauta.id }, false);
             });
         };
+        
         irParaRota('btn-painel-geral-externo', ROUTES.MONITOR_EQUIPE);
         irParaRota('share-pauta-btn', ROUTES.COMPARTILHAMENTO);
         irParaRota('open-totem-btn', ROUTES.TOTEM);
@@ -652,13 +653,15 @@ class SIGEPApp {
         irParaRota('manage-collaborators-btn', ROUTES.COLABORADORES_PAUTA);
         irParaRota('notes-btn', ROUTES.ANOTACOES_PAUTA);
 
-        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', () => {
+        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
+            e.preventDefault(); // <--- Coloque aqui também por segurança
             if (!this.currentPauta) return;
             document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
             document.getElementById('actions-arrow')?.classList.remove('rotate-180');
             if (window.abrirMonitoramentoGlobal) window.abrirMonitoramentoGlobal();
         });
 
+        // ... O resto do código (share-toggle, mask-names-check, etc) continua igual
         document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
             const isPublic = e.target.checked;
             const statusText = document.getElementById('share-status-text');
