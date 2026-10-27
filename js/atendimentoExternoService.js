@@ -1,6 +1,6 @@
-Aqui está o ficheiro js/atendimentoExternoService.js absoluto, completo e estruturado do início ao fim, sem qualquer corte de código ou omissões.
-Este script implementa a identidade blindada por e-mail (resolvendo o problema do Alex ver dados trocados), o visual clássico por abas idêntico às suas capturas de ecrã (com as abas de Pauta Atual, contadores coloridos e listas expansíveis) e a Aba de Histórico da Recepção na tela individual do assistido (trazendo o checklist completo, perfil socioeconómico, planilha de gastos e dados do réu).
-Pode copiar todo o bloco abaixo e substituir no seu ficheiro:
+
+
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
