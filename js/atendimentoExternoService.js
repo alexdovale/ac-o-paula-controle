@@ -5,13 +5,12 @@ import {
     getDocs, arrayUnion, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
+import { documentsData } from './detalhes.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { ico } from './icons.js';
-import { openDetailsModal } from './detalhes.js';
-import { MonitoramentoService } from './monitoramento.js';
 
-// ─── HELPERS DE STATUS ────────────────────────────────────────────────────────
+// ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
 
 const statusMap = {
     pauta:                  { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
@@ -52,7 +51,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital Inicializada com Módulos Nativos");
+        console.log("Mesa Digital V4 Inicializada (4 Colunas + Histórico Rico)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -81,7 +80,6 @@ export const AtendimentoExternoService = {
             this.pautaTipo = pautaData.type || 'agendamento';
             this.pautaFechada = pautaData.fechada === true;
 
-            // CRUZAMENTO DE DADOS BLINDADO PELO E-MAIL LOGADO
             const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
             const q = query(colabRef, where("email", "==", user.email));
             const snap = await getDocs(q);
@@ -102,6 +100,7 @@ export const AtendimentoExternoService = {
                 return;
             }
 
+            this._ajustarGrelhaKanban();
             await this.iniciarDashboardKanban();
 
         } catch (error) {
@@ -109,6 +108,8 @@ export const AtendimentoExternoService = {
             this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
         }
     },
+
+    // ─── LÓGICA DE DADOS (DASHBOARD) ──────────────────────────────────────────
 
     async iniciarDashboardKanban() {
         this._cancelarListeners();
@@ -223,9 +224,35 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── RENDERIZAÇÃO: KANBAN (VISÃO GERAL) ───────────────────────────────────
+    // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
 
-       renderizarKanban() {
+    _ajustarGrelhaKanban() {
+        // Altera a grid do HTML para suportar 4 colunas em vez de 3
+        const grid = document.querySelector('#view-dashboard .grid');
+        if (grid) {
+            grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0 pb-2';
+            
+            // Injeta a 4ª coluna HTML se ela não existir
+            if (!document.getElementById('kanban-pauta-geral')) {
+                const col4 = document.createElement('div');
+                col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
+                col4.innerHTML = `
+                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
+                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
+                        <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
+                    </div>
+                    <div id="kanban-pauta-geral" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
+                `;
+                grid.appendChild(col4);
+            }
+
+            // Altera o título da 3ª coluna para "Meus Concluídos"
+            const titleCol3 = document.querySelector('#kanban-auditoria')?.previousElementSibling?.querySelector('h3');
+            if (titleCol3) titleCol3.innerHTML = '✅ Meus Concluídos';
+        }
+    },
+
+    renderizarKanban() {
         document.getElementById('view-dashboard').classList.remove('hidden');
         document.getElementById('view-dashboard').classList.add('flex');
         document.getElementById('view-atendimento').classList.add('hidden');
@@ -235,26 +262,35 @@ export const AtendimentoExternoService = {
         url.searchParams.delete('assistidoId');
         window.history.pushState({}, '', url);
 
-        // 1. FILA DE ESPERA: Todos veem quem está a aguardar atendimento
+        // 1. FILA DE ESPERA
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
         
-        // 2. MINHA MESA: Casos que estão ativamente na mesa do colaborador logado
+        // 2. MINHA MESA (Atendendo agora)
         const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
         
-        // 3. AUDITORIA / PAUTA INICIAL COMPLETA: 
-        // Mudança solicitada: Agora TODOS (servidores e defensores) podem ver a pauta inicial com agendados, horários e assuntos concluídos/em andamento!
-        const auditoria = this.todosAtendimentosPauta.filter(a => {
-            return ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
+        // 3. MEUS CONCLUÍDOS (O que eu fiz)
+        const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
+            const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
+            return isDone && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
         });
 
-        // Ordenação por ordem de check-in ou horário
+        // 4. PAUTA GERAL (Tudo o resto: atendendo por outros, concluído por outros, etc.)
+        const pautaGeral = this.todosAtendimentosPauta.filter(a => {
+            const isMine = (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || 
+                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
+            const isEspera = a.status === 'aguardando';
+            return !isMine && !isEspera && a.status !== 'faltoso';
+        });
+
         espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
-        auditoria.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
+        meusConcluidos.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
+        pautaGeral.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
 
         this._injetarCardsColuna('kanban-espera', 'count-espera', espera, 'puxar', 'Ninguém na fila.');
         this._injetarCardsColuna('kanban-mesa', 'count-mesa', mesa, 'mesa', 'Sua mesa está limpa.');
-        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', auditoria, 'auditoria', 'Nenhum processo concluído na pauta.');
+        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', meusConcluidos, 'auditoria', 'Nenhum concluído por você.');
+        this._injetarCardsColuna('kanban-pauta-geral', 'count-pauta-geral', pautaGeral, 'auditoria', 'Sem outros casos em andamento.');
 
         this._setupAcoesCards();
     },
@@ -282,29 +318,31 @@ export const AtendimentoExternoService = {
         if (lista.length === 0) {
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-60">
-                    <span class="text-4xl text-slate-300 mb-3">${ico('inbox')}</span>
+                    <span class="text-3xl text-slate-300 mb-2">${ico('inbox')}</span>
                     <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">${msgVazio}</p>
                 </div>
             `;
             return;
         }
-
         container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
     },
 
     _htmlCardKanban(assistido, modo) {
         const st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
-        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[5px] border-l-red-500' : '';
+        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
         const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
         
         const baseUrl = window.location.href.split('?')[0];
         const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
 
+        const donoLabel = assistido.assignedCollaborator?.name ? `Com ${escapeHTML(assistido.assignedCollaborator.name.split(' ')[0])}` : 
+                          (assistido.attendedBy ? `Por ${escapeHTML(assistido.attendedBy.split(' ')[0])}` : '');
+
         let botoesHtml = '';
         if (this.pautaFechada) {
             botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
             if (modo === 'auditoria') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center">Auditar Processo</a>`;
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
             }
         } else {
             if (modo === 'puxar') {
@@ -316,7 +354,7 @@ export const AtendimentoExternoService = {
                         <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
                     </div>`;
             } else {
-                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico / Timeline</button>`;
+                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
             }
         }
 
@@ -331,7 +369,7 @@ export const AtendimentoExternoService = {
                 </div>
                 <div class="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
                     <span class="text-[9px] font-black px-2 py-1 rounded-md border ${st.cor} uppercase tracking-widest">${st.txt}</span>
-                    ${assistido.numeroProcesso ? `<span class="font-mono text-[9px] font-bold text-slate-400">CNP: ${escapeHTML(assistido.numeroProcesso)}</span>` : ''}
+                    <span class="font-bold text-[9px] text-slate-400 uppercase truncate max-w-[80px] text-right">${donoLabel}</span>
                 </div>
                 ${botoesHtml}
             </div>
@@ -363,18 +401,16 @@ export const AtendimentoExternoService = {
         document.querySelectorAll('.btn-auditar-nativo').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.currentTarget;
-                if (MonitoramentoService && typeof MonitoramentoService.abrirMonitoramento === 'function') {
-                    MonitoramentoService.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome, window.app || { db });
-                } else if (window.abrirMonitoramento) {
+                if (window.abrirMonitoramento) {
                     window.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome);
                 } else {
-                    alert("Módulo de Monitoramento não encontrado.");
+                    alert("Módulo de Monitoramento Nativo não encontrado. Volte e use o botão 'Ver Dossiê' dentro do atendimento.");
                 }
             });
         });
     },
 
-    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL) ──────────────────
+    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL + HISTÓRICO ORIGINAL) 
 
     renderizarSplitScreen(assistido, pautaData) {
         document.getElementById('view-dashboard').classList.add('hidden');
@@ -409,6 +445,7 @@ export const AtendimentoExternoService = {
         const container = document.getElementById('aba-historico');
         let html = '';
 
+        // 1. AVISO DE TRANSFERÊNCIA (SE HOUVER)
         if (assistido.historicoTransferencia) {
             html += `
                 <div class="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
@@ -421,61 +458,182 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // BOTÕES INTEGRADOS AOS MÓDULOS NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
+        // 2. BOTÕES NATIVOS NO TOPO
         html += `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
-                    <span class="text-3xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-10 h-10')}</span>
-                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Abrir Dossiê / Checklist</span>
+                <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
+                    <span class="text-2xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-8 h-8')}</span>
+                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Editar Checklist (Original)</span>
                 </button>
-                <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
-                    <span class="text-3xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-10 h-10')}</span>
-                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Linha do Tempo (Auditoria)</span>
+                <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
+                    <span class="text-2xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-8 h-8')}</span>
+                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Linha do Tempo Completa</span>
                 </button>
             </div>
         `;
 
-        if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
+        // 3. INJEÇÃO DO HISTÓRICO ORIGINAL DA RECEPÇÃO
+        const chk = assistido.documentChecklist || {};
+        const baseDeDados = documentsData || window.documentsData || {};
+        
+        if (!chk.action) {
+            html += `<div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl"><span class="text-4xl block mb-2 text-slate-300">${ico('inbox')}</span><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhum checklist da recepção registado.</p></div>`;
+        } else {
+            const actionData = baseDeDados[chk.action];
+            const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
+            
             html += `
-                <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
-                    <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
-                    <h4 class="text-[10px] font-black text-violet-800 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                        <span>${ico('scale', 'w-3.5 h-3.5')}</span> DEMANDAS ACUMULADAS
-                    </h4>
-                    <ul class="space-y-2">
-                        ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-3 rounded-xl border border-violet-100 shadow-sm flex items-center gap-2 font-medium text-slate-700"><span class="text-violet-500 font-black">•</span> ${escapeHTML(dem)}</li>`).join('')}
-                    </ul>
-                </div>
-            `;
+                <div class="bg-slate-900 p-5 rounded-2xl mb-6 shadow-md relative overflow-hidden">
+                    <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5">Ação Selecionada na Recepção</p>
+                    <p class="text-base font-black text-white uppercase leading-tight">${actionTitle}</p>
+                </div>`;
+
+            // PERFIL SOCIOECONÔMICO
+            if (chk.socioData) {
+                const s = chk.socioData;
+                let socioHtml = '';
+                const addLinha = (label, val) => {
+                    if (val && val.trim() !== '' && val !== 'Selecione' && val !== 'R$ 0,00' && !val.includes('Selecione')) {
+                        socioHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${label}</span><span class="text-xs font-bold text-slate-700 text-right w-2/3 break-words">${escapeHTML(val)}</span></div>`;
+                    }
+                };
+                addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda', s.ganhos); addLinha('Fonte Renda', s.fonteRenda);
+                
+                if (socioHtml) {
+                    html += `
+                        <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} PERFIL SOCIOECONÔMICO</h4>
+                            <div class="space-y-1">${socioHtml}</div>
+                        </div>`;
+                }
+            }
+
+            // LISTA DE DOCUMENTOS
+            if (chk.checkedIds && chk.checkedIds.length > 0) {
+                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                         <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
+                         <ul class="space-y-2">`;
+                chk.checkedIds.forEach(id => {
+                    if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
+                    let docName = id.replace(/-/g, ' ').toUpperCase();
+                    if (actionData && id.startsWith('doc-')) {
+                        const parts = id.split('-');
+                        const dIdx = parseInt(parts.pop());
+                        const sIdx = parseInt(parts.pop());
+                        if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
+                            const docObj = actionData.sections[sIdx].docs[dIdx];
+                            if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
+                        }
+                    }
+                    const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
+                    const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
+                    html += `
+                        <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center">
+                            <span class="font-bold text-slate-700 pr-2 flex items-center gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} ${docName}</span> 
+                            <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
+                        </li>`;
+                });
+                html += `</ul></div>`;
+            }
+            
+            // DEMANDAS ACUMULADAS
+            if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
+                html += `
+                    <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
+                        <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
+                        <h4 class="text-[10px] font-black text-violet-800 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
+                            <span>${ico('scale', 'w-3.5 h-3.5')}</span> DEMANDAS ACUMULADAS
+                        </h4>
+                        <ul class="space-y-2">
+                            ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-3 rounded-xl border border-violet-100 shadow-sm flex items-center gap-2 font-medium text-slate-700"><span class="text-violet-500 font-black">•</span> ${escapeHTML(dem)}</li>`).join('')}
+                        </ul>
+                    </div>
+                `;
+            }
+
+            // PLANILHA DE GASTOS
+            if (chk.expenseData && chk.expenseData.checkExibirGastos) {
+                const g = chk.expenseData;
+                const categorias = [
+                    { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
+                    { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
+                    { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
+                    { id: 'outras', label: 'Outras' }
+                ];
+
+                let totalGastos = 0;
+                let gastosHtml = '';
+                
+                categorias.forEach(c => {
+                    if (g[c.id] && g[c.id] !== 'R$ 0,00') {
+                        gastosHtml += `<div class="flex justify-between items-center text-xs py-2 border-b border-emerald-100/50"><span class="text-emerald-800 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100">${g[c.id]}</span></div>`;
+                        const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                        totalGastos += num;
+                    }
+                });
+
+                if (totalGastos > 0) {
+                    const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                    html += `
+                        <div class="bg-emerald-50 p-5 rounded-2xl mb-6 border border-emerald-200 shadow-sm">
+                            <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                                <span>${ico('coins', 'w-3.5 h-3.5')}</span> PLANILHA DE GASTOS
+                            </h4>
+                            <div class="space-y-1 mb-4">
+                                ${gastosHtml}
+                            </div>
+                            <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-2 text-sm items-center">
+                                <span class="uppercase tracking-widest">TOTAL</span>
+                                <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${totalFormatado}</span>
+                            </div>
+                        </div>
+                    `;
+                }
+            }
+
+            // DADOS DO RÉU
+            if (chk.reuData && chk.reuData.checkReuUnico) {
+                const reu = chk.reuData;
+                html += `
+                    <div class="bg-rose-50 p-5 rounded-2xl mb-6 border border-rose-200 shadow-sm">
+                        <h4 class="text-[10px] font-black text-rose-800 uppercase tracking-widest mb-4 flex items-center gap-1.5"><span>${ico('user', 'w-3.5 h-3.5')}</span> POLO PASSIVO (RÉU)</h4>
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs text-slate-700 bg-white p-4 rounded-xl border border-rose-100 shadow-sm">
+                            ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${reu.nome}</p>` : ''}
+                            ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${reu.cpf}</p>` : ''}
+                            ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${reu.telefone}</p>` : ''}
+                            ${reu.cep ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
+                            ${reu.empresa ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
+                        </div>
+                    </div>
+                `;
+            }
         }
         
         container.innerHTML = html;
 
-        // VINCULAÇÃO DOS BOTÕES AOS MÓDULOS ORIGINAIS
+        // VINCULANDO AÇÕES AOS BOTÕES NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
         setTimeout(() => {
             const btnDocs = document.getElementById('btn-nativ-docs');
             const btnTime = document.getElementById('btn-nativ-time');
             
             if (btnDocs) {
                 btnDocs.addEventListener('click', () => {
-                    if (typeof openDetailsModal === 'function') {
-                        openDetailsModal({ assistedId: assistido.id, pautaId: this.pautaId, allAssisted: this.todosAtendimentosPauta, db: db });
+                    if (typeof window.openDetailsModal === 'function') {
+                        window.openDetailsModal({ assistedId: assistido.id, pautaId: this.pautaId, allAssisted: this.todosAtendimentosPauta, db: db });
                     } else if (window.openDetailsModal) {
                         window.openDetailsModal(assistido, this.pautaId);
                     } else {
-                        alert("Módulo de Detalhes não carregado.");
+                        alert("Módulo de Detalhes Original não carregado na página.");
                     }
                 });
             }
 
             if (btnTime) {
                 btnTime.addEventListener('click', () => {
-                    if (MonitoramentoService && typeof MonitoramentoService.abrirMonitoramento === 'function') {
-                        MonitoramentoService.abrirMonitoramento(this.pautaId, assistido.id, assistido.name, window.app || { db });
-                    } else if (window.abrirMonitoramento) {
+                    if (window.abrirMonitoramento) {
                         window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
                     } else {
-                        alert("Módulo de Monitoramento não carregado.");
+                        alert("Módulo de Monitoramento Nativo não carregado na página.");
                     }
                 });
             }
@@ -560,9 +718,18 @@ export const AtendimentoExternoService = {
         </div>`;
 
         html += `
+            <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 mb-6 shadow-sm">
+                <label class="block text-[10px] font-black text-indigo-800 uppercase tracking-widest mb-3 flex items-center gap-1.5"><span>${ico('clipboard', 'w-3.5 h-3.5')}</span> Demandas Adicionais (Estatística)</label>
+                <div class="flex gap-2 mb-3">
+                    <input type="text" id="input-nova-demanda-externo" class="flex-grow p-3 border border-indigo-200 rounded-xl text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Ex: Divórcio, Alimentos...">
+                    <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-3 rounded-xl text-[10px] hover:bg-indigo-700 transition-colors shadow-sm uppercase tracking-wider shrink-0">Adicionar</button>
+                </div>
+                <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
+            </div>
+
             <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
                 <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP (Opcional)</label>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
                     <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 1045239">
                 </div>
             </div>
@@ -607,13 +774,14 @@ export const AtendimentoExternoService = {
                 </div>
             </div>
 
-            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto">
+            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto mb-2">
                 EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4')}
             </button>
         `;
 
         aba.innerHTML = html;
         this.povoarSelectsDinamicos();
+        this.atualizarListaDemandasInterfaceExterna();
 
         this.fluxoSelecionado = 'direto';
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
@@ -653,7 +821,46 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
 
         document.getElementById('btn-opt-direto')?.click();
+
+        document.getElementById('btn-add-demanda-externo').onclick = () => this.adicionarNovaDemandaFluxoExterno();
         document.getElementById('btn-finalizar-dinamico').onclick = () => this.finalizarProcesso();
+    },
+
+    adicionarNovaDemandaFluxoExterno() {
+        const input = document.getElementById('input-nova-demanda-externo');
+        const text = input ? input.value.trim() : '';
+        if (text) {
+            this.demandasAdicionaisLocais.push(text);
+            input.value = '';
+            this.atualizarListaDemandasInterfaceExterna();
+        }
+    },
+
+    removerDemandaFluxoExterno(index) {
+        this.demandasAdicionaisLocais.splice(index, 1);
+        this.atualizarListaDemandasInterfaceExterna();
+    },
+
+    atualizarListaDemandasInterfaceExterna() {
+        const container = document.getElementById('container-lista-demandas-externo');
+        if (!container) return;
+        container.innerHTML = '';
+
+        if (this.demandasAdicionaisLocais.length === 0) {
+            container.innerHTML = `<p class="text-[10px] text-indigo-400 font-medium text-center py-3 bg-white/50 rounded-xl border border-dashed border-indigo-200">Nenhum caso extra somado.</p>`;
+            return;
+        }
+
+        this.demandasAdicionaisLocais.forEach((dem, index) => {
+            const div = document.createElement('div');
+            div.className = "flex justify-between items-center bg-white border border-indigo-100 p-2.5 rounded-xl shadow-sm text-xs";
+            div.innerHTML = `
+                <span class="font-bold text-slate-700 flex items-center gap-1.5">${ico('scale', 'w-3 h-3 text-indigo-400')} ${escapeHTML(dem)}</span>
+                <button type="button" class="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-colors" data-index="${index}">Remover</button>
+            `;
+            div.querySelector('button').onclick = () => this.removerDemandaFluxoExterno(index);
+            container.appendChild(div);
+        });
     },
 
     povoarSelectsDinamicos() {
@@ -936,7 +1143,7 @@ export const AtendimentoExternoService = {
         } finally {
             this.isProcessing = false; 
         }
-    },
+    }
 };
 
 export default AtendimentoExternoService;
