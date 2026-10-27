@@ -8,8 +8,10 @@ import { firebaseConfig } from './config.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { ico } from './icons.js';
+import { openDetailsModal } from './detalhes.js';
+import { MonitoramentoService } from './monitoramento.js';
 
-// ─── HELPERS DE STATUS (CORES SUAVES) ────────────────────────────────────────
+// ─── HELPERS DE STATUS ────────────────────────────────────────────────────────
 
 const statusMap = {
     pauta:                  { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
@@ -21,8 +23,6 @@ const statusMap = {
     aguardandoNumero:       { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',  txt: 'Aguard. CNP' },
     faltoso:                { cor: 'text-red-700 border-red-200 bg-red-50',           txt: 'Faltoso' },
 };
-
-// ─── FIREBASE ─────────────────────────────────────────────────────────────────
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
@@ -52,7 +52,7 @@ export const AtendimentoExternoService = {
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
     async init() {
-        console.log("Mesa Digital Inicializada (Integração Nativa com Módulos)");
+        console.log("Mesa Digital Inicializada com Módulos Nativos");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -67,13 +67,13 @@ export const AtendimentoExternoService = {
         try {
             const user = auth.currentUser;
             if (!user) {
-                this.showError("Acesso Negado", "Sessão expirada. Volte e faça login novamente.");
+                this.showError("Acesso Negado", "Sessão expirada. Volte e faça login novamente no painel principal.");
                 return;
             }
 
             const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
             if (!pautaDoc.exists()) {
-                this.showError("Pauta não localizada", "A pauta informada não existe mais.");
+                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
                 return;
             }
             const pautaData = pautaDoc.data();
@@ -81,13 +81,13 @@ export const AtendimentoExternoService = {
             this.pautaTipo = pautaData.type || 'agendamento';
             this.pautaFechada = pautaData.fechada === true;
 
-            // CRUZAMENTO COM A BASE (Identidade blindada pelo e-mail logado)
+            // CRUZAMENTO DE DADOS BLINDADO PELO E-MAIL LOGADO
             const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
             const q = query(colabRef, where("email", "==", user.email));
             const snap = await getDocs(q);
 
             if (snap.empty) {
-                this.showError("Acesso Negado", "Seu usuário não foi convidado para esta pauta.");
+                this.showError("Acesso Negado", "O seu usuário não está vinculado como colaborador desta pauta.");
                 return;
             }
 
@@ -237,13 +237,9 @@ export const AtendimentoExternoService = {
 
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
 
-        // FILA DE ESPERA (Todos veem)
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
-        
-        // MINHA MESA (Apenas os casos do usuário logado)
         const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
         
-        // AUDITORIA (Se Defensor vê tudo finalizado/transferido. Se Servidor vê só o que ele tocou)
         const auditoria = this.todosAtendimentosPauta.filter(a => {
             const finalizado = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
             if (!finalizado) return false;
@@ -251,7 +247,6 @@ export const AtendimentoExternoService = {
             return a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome;
         });
 
-        // Ordenação
         espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
         auditoria.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
@@ -320,8 +315,7 @@ export const AtendimentoExternoService = {
                         <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
                     </div>`;
             } else {
-                // Ao invés de abrir o SplitScreen para os concluídos, na Auditoria o ideal é chamar o Modal Nativo de Monitoramento!
-                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Auditar / Histórico</button>`;
+                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico / Timeline</button>`;
             }
         }
 
@@ -365,11 +359,12 @@ export const AtendimentoExternoService = {
             });
         });
 
-        // Botão para abrir o Modal de Monitoramento nativo no modo Kanban -> Auditoria
         document.querySelectorAll('.btn-auditar-nativo').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 const b = e.currentTarget;
-                if (window.abrirMonitoramento) {
+                if (MonitoramentoService && typeof MonitoramentoService.abrirMonitoramento === 'function') {
+                    MonitoramentoService.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome, window.app || { db });
+                } else if (window.abrirMonitoramento) {
                     window.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome);
                 } else {
                     alert("Módulo de Monitoramento não encontrado.");
@@ -425,16 +420,16 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // BOTÕES NATIVOS (CHAMANDO DETALHES E MONITORAMENTO DO SISTEMA PRINCIPAL)
+        // BOTÕES INTEGRADOS AOS MÓDULOS NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
         html += `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
                     <span class="text-3xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-10 h-10')}</span>
-                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Ver Dossiê e Documentos</span>
+                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Abrir Dossiê / Checklist</span>
                 </button>
                 <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
                     <span class="text-3xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-10 h-10')}</span>
-                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Linha do Tempo (Histórico)</span>
+                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Linha do Tempo (Auditoria)</span>
                 </button>
             </div>
         `;
@@ -455,24 +450,28 @@ export const AtendimentoExternoService = {
         
         container.innerHTML = html;
 
-        // VINCULANDO OS BOTÕES ÀS FUNÇÕES NATIVAS DO SISTEMA
+        // VINCULAÇÃO DOS BOTÕES AOS MÓDULOS ORIGINAIS
         setTimeout(() => {
             const btnDocs = document.getElementById('btn-nativ-docs');
             const btnTime = document.getElementById('btn-nativ-time');
             
             if (btnDocs) {
                 btnDocs.addEventListener('click', () => {
-                    if (window.openDetailsModal) {
+                    if (typeof openDetailsModal === 'function') {
+                        openDetailsModal({ assistedId: assistido.id, pautaId: this.pautaId, allAssisted: this.todosAtendimentosPauta, db: db });
+                    } else if (window.openDetailsModal) {
                         window.openDetailsModal(assistido, this.pautaId);
                     } else {
-                        alert("Módulo de Documentos não carregado.");
+                        alert("Módulo de Detalhes não carregado.");
                     }
                 });
             }
 
             if (btnTime) {
                 btnTime.addEventListener('click', () => {
-                    if (window.abrirMonitoramento) {
+                    if (MonitoramentoService && typeof MonitoramentoService.abrirMonitoramento === 'function') {
+                        MonitoramentoService.abrirMonitoramento(this.pautaId, assistido.id, assistido.name, window.app || { db });
+                    } else if (window.abrirMonitoramento) {
                         window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
                     } else {
                         alert("Módulo de Monitoramento não carregado.");
@@ -936,10 +935,6 @@ export const AtendimentoExternoService = {
         } finally {
             this.isProcessing = false; 
         }
-    },
-
-    setupListeners() {
-        // Removidos os listeners das abas antigas
     },
 };
 
