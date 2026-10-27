@@ -1141,6 +1141,29 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <span>Alto Contraste</span>
                 </button>
+                <!-- MODAL DO MANUAL / WIKI (PADRÃO MINIMALISTA SIGEP) -->
+                <div id="manual-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
+                        <div class="p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white">
+                            <div>
+                                <h2 class="font-bold text-xl text-slate-800">Manual / Wiki do Sistema</h2>
+                                <p class="text-sm text-slate-500 mt-0.5">Guia de procedimentos e documentação de ajuda</p>
+                            </div>
+                            <button onclick="document.getElementById('manual-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Conteúdo carregado externamente do manual.html -->
+                        <div class="scrollable-content p-6 overflow-y-auto flex-1 space-y-4 text-slate-700 text-sm bg-slate-50/50 custom-scrollbar">
+                            <!-- O script nativo injeta o manual.html aqui -->
+                        </div>
+            
+                        <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+                            <button onclick="document.getElementById('manual-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Fechar</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div title="Nossos servidores são monitorados 24/7 para garantir máxima disponibilidade e evitar quedas do sistema durante o seu trabalho." class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
