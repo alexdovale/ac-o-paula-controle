@@ -1,102 +1,234 @@
+
+
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mesa de Trabalho - SIGEP</title>
-    
+
     <link class="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <meta name="theme-color" content="#2563eb"/> 
     
     <script src="https://cdn.tailwindcss.com"></script>
     <script type="module" src="https://cdn.jsdelivr.net/npm/jwt-decode@4.0.0/build/esm/index.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@4/dist/email.min.js"></script>
-    <script type="text/javascript">
-        (function() { emailjs.init("aGL-Q2UJcD2tDpUKq"); })();
-    </script>
     
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&display=swap" rel="stylesheet">
     
     <style>
         body { font-family: 'Inter', sans-serif; background-color: #f8fafc; display: flex; flex-direction: column; min-height: 100vh; }
+        
         .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
         .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        
-        .loading-container { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #2563eb; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-        .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+        
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
+
+        /* MODO ALTO CONTRASTE */
+        html.alto-contraste { filter: invert(1) hue-rotate(180deg) contrast(120%); background-color: #111 !important; }
+        html.alto-contraste img, html.alto-contraste video, html.alto-contraste iframe, html.alto-contraste [vw] { filter: invert(1) hue-rotate(180deg); }
     </style>
 </head>
-<body class="p-2 md:p-6 min-h-screen flex items-center justify-center">
+<body class="p-0 sm:p-0 md:p-0">
 
     <div id="loading-container" class="loading-container hidden">
         <div class="loader"></div>
-        <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
+        <p id="loading-text" class="mt-4 text-slate-700 font-semibold text-center">Conectando à Pauta...</p>
     </div>
 
-    <!-- TELA DE LOGIN (IDÊNTICA AO INDEX PRINCIPAL) -->
-    <div id="login-container" class="w-full max-w-md hidden animate-fade-in">
-        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200">
-            <div class="flex justify-center mb-4">
-                <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
-            </div>
-            <h2 class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
-            
-            <!-- ABAS DE NAVEGAÇÃO IGUAIS AO INDEX -->
-            <div class="flex border-b border-slate-200 mb-6">
-                <!-- Aba azul para diferenciar que é o acesso da mesa de trabalho -->
-                <button class="flex-1 py-2 text-center font-semibold text-blue-600 border-b-2 border-blue-600 text-sm sm:text-base pointer-events-none">Acesso Externo</button>
-                <a href="index.html" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Acesso Interno</a>
-            </div>
-            
-            <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
-            
-            <form id="login-form" class="space-y-4">
-                <div>
-                    <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1">Email</label>
-                    <input type="email" id="login-email" required class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
-                </div>
-                <div>
-                    <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
-                    <input type="password" id="login-password" required class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base">
-                </div>
-                <div class="text-right mt-1">
-                    <a href="#" class="text-xs sm:text-sm text-blue-600 hover:underline">Esqueci minha senha</a>
-                </div>
-                <button type="submit" id="btn-entrar" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 px-4 rounded-md shadow-sm transition-colors text-sm mt-2">
-                    Entrar
-                </button>
-            </form>
-            
-            <div class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
-                Ao entrar ou se cadastrar, você concorda com nossos <br>
-                <a href="#" class="text-blue-600 font-semibold hover:underline">Termos de Uso</a> e <a href="#" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>.
-            </div>
-        </div>
-    </div>
+    <!-- WRAPPER PARA CENTRALIZAR O CONTEÚDO PRINCIPAL E MANTER O FOOTER NO FUNDO -->
+    <div id="main-wrapper" class="flex-1 flex items-center justify-center p-2 md:p-6 w-full">
 
-    <!-- TELA DE SELEÇÃO DE PAUTAS (O NOVO PORTAL EXTERNO) -->
-    <div id="pauta-selector-container" class="w-full max-w-4xl hidden animate-fade-in my-auto">
-        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200">
-            <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                <div>
-                    <h2 class="text-2xl font-black text-slate-800 tracking-tight">Suas Pautas Vinculadas</h2>
-                    <p class="text-sm text-slate-500 mt-1">Selecione uma mesa de trabalho para iniciar o atendimento.</p>
+        <!-- TELA DE LOGIN -->
+        <div id="login-container" class="w-full max-w-md hidden animate-fade-in">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200 relative overflow-hidden">
+                <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">
+                    Mesa de Trabalho
                 </div>
-                <button id="btn-logout-selector" class="bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold px-4 py-2 rounded-lg transition-colors text-sm">
-                    Sair
-                </button>
-            </div>
-            
-            <div id="lista-pautas-vinculadas" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2">
-                <!-- Pautas carregadas dinamicamente aqui -->
+                
+                <div class="flex justify-center mb-4">
+                    <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
+                </div>
+                <h2 class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
+                
+                <div class="flex border-b border-slate-200 mb-6">
+                    <button class="flex-1 py-2 text-center font-semibold text-blue-600 border-b-2 border-blue-600 text-sm sm:text-base pointer-events-none">Acesso Externo</button>
+                    <a href="index.html" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Acesso Interno</a>
+                </div>
+                
+                <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                <div id="auth-success" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                
+                <form id="login-form" class="space-y-4">
+                    <div>
+                        <label for="login-email" class="block text-sm font-medium text-slate-700 mb-1">E-mail Cadastrado</label>
+                        <input type="email" id="login-email" required placeholder="exemplo@defensoria.rj.def.br" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div>
+                        <label for="login-password" class="block text-sm font-medium text-slate-700 mb-1">Senha</label>
+                        <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
+                    </div>
+                    <div class="text-right mt-1">
+                        <button type="button" id="btn-esqueci-senha" class="text-xs sm:text-sm text-blue-600 font-semibold hover:underline">Esqueci minha senha</button>
+                    </div>
+                    <button type="submit" id="btn-entrar" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition">
+                        Entrar na Pauta
+                    </button>
+                </form>
+                
+                <div class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
+                    Apenas colaboradores convidados podem aceder a esta área.<br>Ao entrar, você concorda com nossos <br>
+                    <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-semibold hover:underline">Termos de Uso</button> e 
+                    <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</button>.
+                </div>
             </div>
         </div>
-    </div>
+
+        <!-- TELA DE SELEÇÃO DE PAUTAS (O NOVO PORTAL EXTERNO) -->
+        <div id="pauta-selector-container" class="w-full max-w-4xl hidden animate-fade-in my-auto">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200">
+                <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
+                    <div>
+                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Suas Pautas Vinculadas</h2>
+                        <p class="text-sm text-slate-500 mt-1">Selecione uma mesa de trabalho para iniciar o atendimento.</p>
+                    </div>
+                    <button id="btn-logout-selector" class="bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold px-4 py-2 rounded-lg transition-colors text-sm">
+                        Sair
+                    </button>
+                </div>
+                <div id="lista-pautas-vinculadas" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2"></div>
+            </div>
+        </div>
+
+        <!-- SHELL PRINCIPAL DA MESA -->
+        <div id="shell-atendimento" class="hidden w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex-col border border-slate-200 animate-fade-in my-auto h-[85vh]">
+            <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
+                <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                
+                <div class="flex items-center gap-4 relative z-10 min-w-0">
+                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20" title="Voltar para Minhas Pautas">
+                        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
+                    </button>
+                    <div class="flex flex-col overflow-hidden min-w-0">
+                        <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
+                        <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
+                    </div>
+                </div>
+
+                <div class="flex gap-2 relative z-10 shrink-0 items-center">
+                    <div id="status-indicator" class="hidden bg-emerald-500 text-white text-[9px] font-black px-2 py-1.5 rounded-full shadow-sm border border-emerald-400 uppercase tracking-widest animate-pulse flex items-center">
+                        ONLINE
+                    </div>
+                    <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1" title="Encerrar Sessão">
+                        SAIR
+                    </button>
+                </div>
+            </div>
+
+            <!-- VIEW DASHBOARD -->
+            <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
+                    <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
+                        💻 Minha Mesa
+                    </button>
+                    <button id="btn-tab-aguardando" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                        📥 Aguardando Atendimento
+                    </button>
+                    <button id="btn-tab-pauta-atual" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
+                        📋 Pauta Atual
+                    </button>
+                </div>
+
+                <div class="p-4 sm:p-6 bg-slate-50/50 flex-1 overflow-y-auto custom-scrollbar">
+                    <div id="painel-atendimento-container" class="w-full min-h-[300px]">
+                        <div class="flex flex-col justify-center items-center py-20 gap-3">
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
+                            <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Sincronizando pauta...</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- VIEW ATENDIMENTO -->
+            <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
+                    <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
+                        Encerramento / Fluxo
+                    </button>
+                    <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">
+                        Histórico Recepção
+                    </button>
+                </div>
+                <div class="p-4 sm:p-6 bg-white flex-1 overflow-y-auto custom-scrollbar">
+                    <div id="aba-encerramento" class="space-y-6">
+                        <div id="painel-fotos-servidor" class="hidden bg-slate-50 rounded-2xl p-4 shadow-sm border border-slate-200 animate-fade-in">
+                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                <span>📱</span> Documentos Anexados (Cidadão)
+                            </h4>
+                            <div id="grid-fotos-recebidas" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
+                        </div>
+                        <div id="painel-documentos-seguros" class="hidden bg-slate-50 rounded-2xl p-4 shadow-sm border border-slate-200 mt-4 animate-fade-in">
+                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-3">
+                                <span>📑</span> Documentos Digitalizados (Recepção)
+                            </h4>
+                            <div id="grid-documentos-seguros" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
+                        </div>
+                        <div id="area-colaborador" class="hidden">
+                            <div class="flex flex-col justify-center items-center py-20 gap-3">
+                                <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
+                                <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa...</p>
+                            </div>
+                        </div>
+                    </div>
+                    <div id="aba-historico" class="hidden animate-fade-in">
+                        <div id="lista-historico" class="space-y-4"></div>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
+                <span>SIGEP • Mesa Unificada de Trabalho</span>
+                <span class="font-mono text-[9px]">v2.0-2026</span>
+            </div>
+        </div>
+
+    </div><!-- Fim do Main Wrapper -->
+
+    <!-- RODAPÉ GLOBAL (IDÊNTICO AO INDEX) -->
+    <footer id="main-footer" class="w-full py-6 bg-white border-t border-slate-300 mt-auto shrink-0 z-10">
+        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+            <div id="footer-links" class="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-slate-600 font-semibold w-full md:w-auto">
+                <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="hover:text-blue-600 transition-colors">Termos de Uso</button>
+                <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="hover:text-blue-600 transition-colors">Política de Privacidade</button>
+            </div>
+
+            <div class="flex flex-wrap items-center justify-center gap-3">
+                <button id="btn-alto-contraste" title="Ativar/Desativar Modo de Alto Contraste para baixa visão" class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-700 font-bold bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm transition-all active:scale-95">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
+                    <span>Alto Contraste</span>
+                </button>
+                <div title="Servidores monitorados 24/7" class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
+                    <span>Ambiente Monitorado</span>
+                </div>
+                <div title="Criptografia de ponta a ponta (SSL/TLS)." class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    <span>Conexão Criptografada</span>
+                </div>
+                <div title="Adequado à Lei Geral de Proteção de Dados" class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
+                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
+                    <span>Conformidade LGPD</span>
+                </div>
+            </div>
+        </div>
+    </footer>
 
     <!-- MODAL DE TROCA DE SENHA OBRIGATÓRIA (FASE 2) -->
     <div id="modal-troca-senha" class="fixed inset-0 bg-slate-900/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
@@ -120,97 +252,55 @@
                     <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
                     <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
                 </div>
-                <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-sm transition-all text-sm mt-2">
+                <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
                     Salvar e Acessar
                 </button>
             </form>
         </div>
     </div>
 
-    <!-- SHELL PRINCIPAL DA MESA -->
-    <div id="shell-atendimento" class="hidden w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex-col border border-slate-200 animate-fade-in my-auto h-[90vh]">
-        <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
-            <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
-            
-            <div class="flex items-center gap-4 relative z-10 min-w-0">
-                <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20" title="Voltar para Minhas Pautas">
-                    <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
-                </button>
-                <div class="flex flex-col overflow-hidden min-w-0">
-                    <h1 id="assistido-nome" class="font-black text-xl uppercase truncate tracking-tight">PAINEL DE ATENDIMENTO</h1>
-                    <p id="assistido-assunto" class="text-xs text-blue-200 opacity-90 truncate mt-1 font-semibold uppercase tracking-wider">Carregando dados da sua sessão...</p>
-                </div>
+    <!-- MODAL TERMOS DE USO -->
+    <div id="terms-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h2 class="font-bold text-xl text-slate-800">Termos de Uso</h2>
+                <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
             </div>
-
-            <div class="flex gap-2 relative z-10 shrink-0 items-center">
-                <div id="status-indicator" class="hidden bg-emerald-500 text-white text-[9px] font-black px-2 py-1.5 rounded-full shadow-sm border border-emerald-400 uppercase tracking-widest animate-pulse flex items-center">
-                    ONLINE
-                </div>
-                <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1" title="Encerrar Sessão">
-                    SAIR
-                </button>
+            <div class="p-6 overflow-y-auto text-sm text-slate-600 space-y-4 custom-scrollbar">
+                <p>Bem-vindo ao SIGEP. Ao acessar e utilizar este sistema, você concorda em cumprir e estar vinculado aos seguintes termos de uso.</p>
+                <p><strong>1. Uso Responsável:</strong> O sistema destina-se exclusivamente ao gerenciamento de pautas e atendimento ao público. Qualquer uso indevido para outros fins é proibido.</p>
+                <p><strong>2. Sigilo e Confidencialidade:</strong> Os dados trafegados neste sistema possuem informações sensíveis de cidadãos. O usuário compromete-se a manter total sigilo sobre as informações visualizadas e tratadas.</p>
+                <p><strong>3. Responsabilidade do Usuário:</strong> As credenciais de acesso são pessoais e intransferíveis. O usuário é inteiramente responsável por todas as ações realizadas através de sua conta.</p>
             </div>
-        </div>
-
-        <!-- MANTÉM TODA A ESTRUTURA DO VIEW-DASHBOARD E VIEW-ATENDIMENTO EXATAMENTE COMO ESTAVA ANTES AQUI DENTRO DO SHELL -->
-        <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden">
-            <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
-                <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
-                    💻 Minha Mesa
-                </button>
-                <button id="btn-tab-aguardando" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
-                    📥 Aguardando Atendimento
-                </button>
-                <button id="btn-tab-pauta-atual" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
-                    📋 Pauta Atual
-                </button>
+            <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+                <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Fechar e Concordar</button>
             </div>
-
-            <div class="p-4 sm:p-6 bg-slate-50/50 flex-1 overflow-y-auto custom-scrollbar">
-                <div id="painel-atendimento-container" class="w-full min-h-[300px]">
-                    <div class="flex flex-col justify-center items-center py-20 gap-3">
-                        <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
-                        <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Sincronizando pauta...</p>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden">
-            <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
-                <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
-                    Encerramento / Fluxo
-                </button>
-                <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">
-                    Histórico Recepção
-                </button>
-            </div>
-            <!-- CONTEÚDO VIEW ATENDIMENTO AQUI (IGUAL AO ORIGINAL) -->
-            <div class="p-4 sm:p-6 bg-white flex-1 overflow-y-auto custom-scrollbar">
-                <div id="aba-encerramento" class="space-y-6">
-                    <div id="area-colaborador" class="hidden">
-                        <div class="flex flex-col justify-center items-center py-20 gap-3">
-                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
-                            <p class="text-[10px] font-black text-slate-400 tracking-widest uppercase">Construindo Mesa de Trabalho...</p>
-                        </div>
-                    </div>
-                </div>
-                <div id="aba-historico" class="hidden animate-fade-in">
-                    <div id="lista-historico" class="space-y-4"></div>
-                </div>
-            </div>
-        </div>
-        
-        <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
-            <span>SIGEP • Mesa Unificada de Trabalho</span>
-            <span class="font-mono text-[9px]">v2.0-2026</span>
         </div>
     </div>
 
-    <!-- SCRIPT DE LOGIN, AUTENTICAÇÃO E ROTEAMENTO -->
+    <!-- MODAL POLÍTICA DE PRIVACIDADE -->
+    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
+        <div class="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden">
+            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
+                <h2 class="font-bold text-xl text-slate-800">Política de Privacidade (LGPD)</h2>
+                <button onclick="document.getElementById('privacy-policy-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
+            </div>
+            <div class="p-6 overflow-y-auto text-sm text-slate-600 space-y-4 custom-scrollbar">
+                <p>Esta Política de Privacidade descreve como o SIGEP coleta, usa e protege as informações em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD).</p>
+                <p><strong>1. Coleta de Dados:</strong> Coletamos apenas os dados estritamente necessários para a prestação do serviço de atendimento (nome, contato, assunto, e documentos atrelados ao caso).</p>
+                <p><strong>2. Tratamento e Proteção:</strong> Os dados são armazenados em ambiente seguro e criptografado. O acesso é restrito apenas a colaboradores autorizados e diretamente envolvidos na pauta.</p>
+                <p><strong>3. Retenção e Descarte:</strong> Os dados são mantidos pelo tempo necessário para o cumprimento das obrigações legais e regulatórias, sendo anonimizados ou descartados de forma segura após esse período.</p>
+            </div>
+            <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+                <button onclick="document.getElementById('privacy-policy-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Estou Ciente</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- SCRIPTS -->
     <script type="module">
-        import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-        import { getFirestore, doc, getDoc, getDocs, collection, query, where, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+        import { getAuth, signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
 
@@ -225,38 +315,78 @@
             shell: document.getElementById('shell-atendimento'),
             modalSenha: document.getElementById('modal-troca-senha'),
             errLogin: document.getElementById('auth-error'),
+            succLogin: document.getElementById('auth-success'),
             errSenha: document.getElementById('troca-error')
         };
 
-        const STATE = { pautaId: null, colaboradorId: null, matricula: null, usuarioAuth: null };
+        const STATE = { pautaId: null, colaboradorId: null, matricula: null, usuarioAuth: null, pautaFechada: false };
+
+        function parseURL() {
+            const params = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
+            STATE.pautaId = params.get('pautaId') || params.get('pid');
+            return STATE.pautaId;
+        }
 
         function showUI(element) {
             Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
-            document.body.className = "p-2 md:p-6 min-h-screen flex items-center justify-center bg-slate-50"; // reset base
             
             if (element && element.classList) {
                 element.classList.remove('hidden');
                 if (element.id === 'shell-atendimento') {
                     element.style.display = 'flex';
-                    document.body.classList.remove('items-center'); // Permite que a mesa expanda bem
                 }
             }
         }
 
-        // ==========================================
-        // LÓGICA DE PORTAL EXTERNO (NOVO)
-        // ==========================================
+        async function validarPermissaoPauta() {
+            if (!STATE.pautaId || !STATE.usuarioAuth) return false;
+            try {
+                onSnapshot(doc(db, "pautas", STATE.pautaId), (snap) => {
+                    if (snap.exists()) {
+                        STATE.pautaFechada = snap.data().fechada === true;
+                        if (STATE.pautaFechada) {
+                            document.querySelectorAll('.btn-chamar-proximo').forEach(b => b.classList.add('hidden'));
+                        }
+                    }
+                });
+
+                const colabRef = collection(db, "pautas", STATE.pautaId, "collaborators");
+                const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
+                const snap = await getDocs(q);
+                
+                if (snap.empty) {
+                    UI.errLogin.textContent = "Acesso Negado: Você não está vinculado a esta pauta.";
+                    UI.errLogin.classList.remove('hidden');
+                    return false;
+                }
+                
+                STATE.colaboradorId = snap.docs[0].id;
+                STATE.matricula = snap.docs[0].data().identificador;
+
+                if (STATE.matricula) {
+                    const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
+                    if (userGeralSnap.exists() && userGeralSnap.data().cadastroAtivo !== true) {
+                        showUI(UI.modalSenha);
+                        return false; 
+                    }
+                }
+
+                return true;
+            } catch (err) {
+                console.error("Erro validando permissão:", err);
+                return false;
+            }
+        }
+
         async function carregarMinhasPautas() {
             showUI(UI.loading);
             document.getElementById('loading-text').textContent = "Buscando suas pautas vinculadas...";
             
             try {
-                // Passo 1: Busca todas as pautas (em produção, o ideal é ter uma listagem no doc do usuário)
                 const pautasRef = collection(db, "pautas");
                 const pautasSnap = await getDocs(pautasRef);
                 let pautasVinculadas = [];
 
-                // Passo 2: Verifica em quais o utilizador está na subcoleção "collaborators"
                 for (let docSnap of pautasSnap.docs) {
                     const pautaData = docSnap.data();
                     const colabRef = collection(db, "pautas", docSnap.id, "collaborators");
@@ -268,7 +398,6 @@
                     }
                 }
 
-                // Passo 3: Renderiza
                 const container = document.getElementById('lista-pautas-vinculadas');
                 if (pautasVinculadas.length === 0) {
                     container.innerHTML = `
@@ -277,9 +406,7 @@
                             <p class="text-xs text-slate-400 mt-2">Peça a um Coordenador para convidá-lo.</p>
                         </div>`;
                 } else {
-                    // Ordena: Abertas primeiro
                     pautasVinculadas.sort((a, b) => (a.fechada === b.fechada) ? 0 : a.fechada ? 1 : -1);
-                    
                     container.innerHTML = pautasVinculadas.map(p => `
                         <button onclick="window.location.href='?pautaId=${p.id}'" class="w-full text-left bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group flex flex-col justify-between h-full">
                             <div>
@@ -296,117 +423,67 @@
                         </button>
                     `).join('');
                 }
-                
                 showUI(UI.selector);
             } catch (e) {
-                console.error("Erro ao carregar pautas do portal:", e);
+                console.error("Erro ao carregar pautas:", e);
                 UI.errLogin.textContent = "Erro de conexão ao buscar pautas.";
                 auth.signOut();
                 showUI(UI.login);
             }
         }
 
-        // ==========================================
-        // FLUXO DE LOGIN DA MESA ESPECÍFICA
-        // ==========================================
-        async function validarAcessoMesaEspecifica() {
-            if (!STATE.pautaId || !STATE.usuarioAuth) return false;
-            try {
-                // Checa permissão na pauta atual da URL
-                const colabRef = collection(db, "pautas", STATE.pautaId, "collaborators");
-                const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
-                const snap = await getDocs(q);
-                
-                if (snap.empty) {
-                    // Usuário logado, mas não está NESTA pauta. Redireciona para o seletor.
-                    alert("Acesso Negado: Você não está vinculado a esta pauta. Redirecionando para suas pautas...");
-                    window.location.href = window.location.pathname; // Remove o ?pautaId da URL
-                    return false;
-                }
-                
-                STATE.colaboradorId = snap.docs[0].id;
-                STATE.matricula = snap.docs[0].data().identificador;
-
-                // Bloqueio visual para pautas fechadas (Fase 3)
-                onSnapshot(doc(db, "pautas", STATE.pautaId), (pautaSnap) => {
-                    if (pautaSnap.exists() && pautaSnap.data().fechada === true) {
-                        document.querySelectorAll('.btn-chamar-proximo').forEach(b => b.classList.add('hidden'));
-                    }
-                });
-
-                return true;
-            } catch (err) {
-                console.error("Erro validando permissão da mesa:", err);
-                return false;
-            }
-        }
-
-        // ==========================================
-        // VALIDAÇÃO DE PRIMEIRO ACESSO (TROCA SENHA)
-        // ==========================================
-        async function requerTrocaDeSenha() {
-            if (!STATE.matricula) return false;
-            try {
-                const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
-                if (userGeralSnap.exists() && userGeralSnap.data().cadastroAtivo !== true) {
-                    return true;
-                }
-            } catch(e) {}
-            return false;
-        }
-
-        // ==========================================
-        // BOOT E ROTEAMENTO
-        // ==========================================
-        async function boot() {
-            const params = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
-            STATE.pautaId = params.get('pautaId') || params.get('pid');
-
-            auth.onAuthStateChanged(async (user) => {
-                if (user) {
-                    STATE.usuarioAuth = user;
-                    showUI(UI.loading);
-
-                    // Se tem PautaId na URL, tenta entrar na mesa
-                    if (STATE.pautaId) {
-                        if (await validarAcessoMesaEspecifica()) {
-                            if (await requerTrocaDeSenha()) {
-                                showUI(UI.modalSenha);
-                            } else {
-                                iniciarMesaDeTrabalho();
-                            }
-                        }
-                    } else {
-                        // Se não tem PautaId na URL, abre o Portal (Seletor)
-                        carregarMinhasPautas();
-                    }
-                } else {
-                    showUI(UI.login);
-                }
-            });
-        }
-
-        // ==========================================
-        // ACTIONS
-        // ==========================================
-        document.getElementById('login-form').addEventListener('submit', async (e) => {
-            e.preventDefault();
+        async function tentarEntrar(email, password) {
             UI.errLogin.classList.add('hidden');
+            UI.succLogin.classList.add('hidden');
             const btn = document.getElementById('btn-entrar');
+            const htmlOriginal = btn.innerHTML;
             btn.innerHTML = 'Autenticando...';
             btn.disabled = true;
             
             try {
-                await signInWithEmailAndPassword(auth, document.getElementById('login-email').value, document.getElementById('login-password').value);
-                // O onAuthStateChanged do boot() assume o controlo aqui
+                const userCredential = await signInWithEmailAndPassword(auth, email, password);
+                STATE.usuarioAuth = userCredential.user;
+                // A navegação ocorre pelo onAuthStateChanged do boot()
             } catch (error) {
                 UI.errLogin.textContent = "Email ou senha incorretos.";
                 UI.errLogin.classList.remove('hidden');
-                btn.innerHTML = 'Entrar';
+                btn.innerHTML = htmlOriginal;
+                btn.disabled = false;
+            }
+        }
+
+        // ESQUECI A SENHA LÓGICA
+        document.getElementById('btn-esqueci-senha').addEventListener('click', async () => {
+            const emailInput = document.getElementById('login-email').value.trim();
+            UI.errLogin.classList.add('hidden');
+            UI.succLogin.classList.add('hidden');
+
+            if (!emailInput) {
+                UI.errLogin.textContent = "Preencha o seu e-mail cadastrado acima para recuperar a senha.";
+                UI.errLogin.classList.remove('hidden');
+                return;
+            }
+
+            const btn = document.getElementById('btn-esqueci-senha');
+            const textOrig = btn.textContent;
+            btn.textContent = "Aguarde...";
+            btn.disabled = true;
+
+            try {
+                await sendPasswordResetEmail(auth, emailInput);
+                UI.succLogin.textContent = "E-mail de recuperação enviado! Verifique a sua caixa de entrada e o lixo eletrônico.";
+                UI.succLogin.classList.remove('hidden');
+            } catch (error) {
+                console.error("Erro reset:", error);
+                UI.errLogin.textContent = "Erro ao enviar e-mail. Verifique se o endereço está correto e cadastrado.";
+                UI.errLogin.classList.remove('hidden');
+            } finally {
+                btn.textContent = textOrig;
                 btn.disabled = false;
             }
         });
 
+        // TROCA DE SENHA
         document.getElementById('troca-senha-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const nova = document.getElementById('nova-senha').value;
@@ -425,10 +502,7 @@
 
             try {
                 await updatePassword(STATE.usuarioAuth, nova);
-                
-                // Ativa na base para liberar no Admin
                 if (STATE.matricula) {
-                    const { updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                     await updateDoc(doc(db, "colaboradores_gerais", STATE.matricula), {
                         cadastroAtivo: true,
                         updatedAt: new Date().toISOString()
@@ -437,11 +511,8 @@
                 
                 UI.modalSenha.classList.add('hidden');
                 
-                if (STATE.pautaId) {
-                    iniciarMesaDeTrabalho();
-                } else {
-                    carregarMinhasPautas();
-                }
+                if (STATE.pautaId) iniciarMesaDeTrabalho();
+                else carregarMinhasPautas();
                 
             } catch (error) {
                 console.error(error);
@@ -452,6 +523,37 @@
             }
         });
 
+        async function boot() {
+            if (!parseURL()) {
+                // Remove erro de link inválido da tela principal. Deixa carregar o Portal.
+            }
+
+            auth.onAuthStateChanged(async (user) => {
+                if (user) {
+                    STATE.usuarioAuth = user;
+                    showUI(UI.loading);
+
+                    if (STATE.pautaId) {
+                        if (await validarPermissaoPauta()) {
+                            iniciarMesaDeTrabalho();
+                        } else if (UI.modalSenha.classList.contains('hidden')) {
+                            alert("Acesso Negado: Redirecionando para o Portal Geral.");
+                            window.location.href = window.location.pathname;
+                        }
+                    } else {
+                        carregarMinhasPautas();
+                    }
+                } else {
+                    showUI(UI.login);
+                }
+            });
+        }
+
+        document.getElementById('login-form').addEventListener('submit', (e) => {
+            e.preventDefault();
+            tentarEntrar(document.getElementById('login-email').value, document.getElementById('login-password').value);
+        });
+
         function doLogout() {
             auth.signOut().then(() => { window.location.href = window.location.pathname; });
         }
@@ -459,7 +561,7 @@
         document.getElementById('btn-logout-mesa').addEventListener('click', doLogout);
 
         document.getElementById('btn-voltar-portal').addEventListener('click', () => {
-            window.location.href = window.location.pathname; // Remove query params
+            window.location.href = window.location.pathname; 
         });
 
         function iniciarMesaDeTrabalho() {
@@ -468,6 +570,25 @@
                 window.app = window.app || {};
                 window.app.db = db;
                 module.AtendimentoExternoService.init();
+            });
+        }
+
+        window.solicitarSenhaEAbriDoc = (url, senhaCorreta) => {
+            const digitada = prompt("🔒 Documento Protegido. Digite a senha gerada na Recepção:");
+            if (digitada === senhaCorreta) window.open(url, '_blank');
+            else if (digitada !== null) alert("❌ Senha incorreta!");
+        };
+
+        // CONTROLO DE ALTO CONTRASTE (RODAPÉ)
+        const btnContraste = document.getElementById('btn-alto-contraste');
+        const htmlElement = document.documentElement;
+        if (localStorage.getItem('sigep_alto_contraste') === 'true') {
+            htmlElement.classList.add('alto-contraste');
+        }
+        if (btnContraste) {
+            btnContraste.addEventListener('click', () => {
+                htmlElement.classList.toggle('alto-contraste');
+                localStorage.setItem('sigep_alto_contraste', htmlElement.classList.contains('alto-contraste'));
             });
         }
 
