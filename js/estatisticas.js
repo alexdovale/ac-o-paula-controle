@@ -299,8 +299,8 @@ export const StatisticsService = {
         const max = Math.max(...itens.map(i => i.count), 1);
         return itens.map(i => `
             <div class="flex items-center gap-3 text-xs">
-                <span class="w-14 shrink-0 font-semibold text-slate-600 tabular-nums">${esc(i.label)}</span>
-                <div class="flex-1 h-2.5 bg-slate-100 rounded-full overflow-hidden">
+                <span class="w-14 shrink-0 font-medium text-slate-600 tabular-nums">${esc(i.label)}</span>
+                <div class="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
                     <div class="h-full rounded-full ${cor}" style="width:${pct(i.count, max)}%"></div>
                 </div>
                 <span class="w-8 text-right font-bold text-slate-700 tabular-nums">${i.count}</span>
@@ -310,8 +310,7 @@ export const StatisticsService = {
     cartao(titulo, icone, corpo, extra = '') {
         return `
             <section class="bg-white rounded-2xl border border-slate-200 shadow-sm ${extra}">
-                <header class="px-5 py-3.5 border-b border-slate-100 flex items-center gap-2">
-                    <span class="text-slate-500 inline-flex">${icone}</span>
+                <header class="px-5 py-4 border-b border-slate-100 flex items-center gap-2">
                     <h3 class="text-sm font-bold text-slate-800">${titulo}</h3>
                 </header>
                 <div class="p-5">${corpo}</div>
@@ -321,17 +320,34 @@ export const StatisticsService = {
     showModal(allAssisted, useDelegationFlow, pautaName) {
         const modal = document.getElementById('statistics-modal');
         if (!modal) return;
+        
+        const contentWrapper = modal.querySelector('.bg-white') || modal.firstElementChild;
+        if (contentWrapper) {
+            contentWrapper.className = "bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] overflow-hidden";
+            
+            const header = contentWrapper.querySelector('header') || contentWrapper.querySelector('.shrink-0');
+            if (header) {
+                header.className = "p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white";
+                header.innerHTML = `
+                    <div>
+                        <h2 class="font-bold text-xl text-slate-800">Estatísticas da Pauta</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Indicadores, relatórios e desempenho: <span class="font-medium text-slate-700">${esc(pautaName)}</span></p>
+                    </div>
+                    <button id="close-statistics-modal-btn" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                `;
+            }
+        }
+        
         modal.classList.remove('hidden');
 
         const closeBtn = document.getElementById('close-statistics-modal-btn');
         if (closeBtn) closeBtn.onclick = () => modal.classList.add('hidden');
 
-        const titleEl = modal.querySelector('h2');
-        if (titleEl) titleEl.innerHTML = `<span class="text-blue-600 mr-2 inline-flex align-middle">${ico('chart', 'w-5 h-5')}</span> Estatísticas - <span class="text-gray-700">${esc(pautaName)}</span>`;
-
         const content = document.getElementById('statistics-content');
         if (!content) return;
-        content.innerHTML = `<div class="flex items-center justify-center h-64"><p class="text-gray-500 font-medium animate-pulse">Calculando estatísticas...</p></div>`;
+        content.innerHTML = `<div class="flex items-center justify-center h-64"><p class="text-slate-400 font-medium animate-pulse">A calcular estatísticas...</p></div>`;
 
         const atendidos = allAssisted.filter(a => a.status === 'atendido');
         const faltosos = allAssisted.filter(a => a.status === 'faltoso');
@@ -343,12 +359,9 @@ export const StatisticsService = {
             return acao.includes('reagend') || acao.includes('agend');
         };
 
-        // Agend/Reagend = atendidos via ação de agendar/reagendar.
-        // Efetivados = os demais atendidos (atendimento efetivado).
         const atendidosComAgenda = atendidos.filter(a => isReagendadoOuAgendadoViaMenu(a));
         const atendidosSemAgenda = atendidos.filter(a => !isReagendadoOuAgendadoViaMenu(a));
 
-        // ---------- equipes e classificação ----------
         const todosColaboradores = this.coletarColaboradores(atendidos);
         const nomeParaEquipe = {};
         const statsByGroup = {};
@@ -411,7 +424,6 @@ export const StatisticsService = {
 
         const totalGeral = atendidos.length;
 
-        // ---------- assuntos com separação por tipo ----------
         const statsBySubject = allAssisted.reduce((acc, a) => {
             if (a.status === 'cancelado') return acc;
             const demandas = (a.subject ? [a.subject] : []).concat(a.demandas?.descricoes || []);
@@ -435,17 +447,14 @@ export const StatisticsService = {
 
         const somaSubj = (k) => Object.values(statsBySubject).reduce((s, d) => s + d[k], 0);
         const totalDemandasGeral = somaSubj('total');
-        const totalDemandasAtendidos = somaSubj('atendidos');
         const totalAgendaAtendidos = somaSubj('agendaAtendidos');
         const totalSemVincAtendidos = somaSubj('semVincAtendidos');
         const totalDemandasFaltosos = somaSubj('faltosos');
 
-        // ---------- ações rápidas ----------
         const statsByAcaoRapida = {};
         atendidos.forEach(a => { if (a.tipoAcaoRapida) statsByAcaoRapida[a.tipoAcaoRapida] = (statsByAcaoRapida[a.tipoAcaoRapida] || 0) + 1; });
         const totalAcoesRapidas = Object.values(statsByAcaoRapida).reduce((s, v) => s + v, 0);
 
-        // ---------- horários ----------
         const contarPorHorario = (lista) => lista.filter(a => a.scheduledTime).reduce((acc, a) => {
             acc[a.scheduledTime] = (acc[a.scheduledTime] || 0) + 1;
             return acc;
@@ -459,7 +468,6 @@ export const StatisticsService = {
         const sortedTimesFaltosos = Object.keys(statsByTimeFaltosos).sort();
         const sortedScheduledTimes = Object.keys(statsByScheduledTime).sort();
 
-        // ---------- tempos médios ----------
         let totMinutos = 0, nValidos = 0;
         atendidos.forEach(a => {
             const inicio = a.inAttendanceTime || a.arrivalTime || a.createdAt;
@@ -475,106 +483,98 @@ export const StatisticsService = {
 
         const comparecimento = pct(atendidos.length, atendidos.length + faltosos.length);
 
-        // =================== HTML ===================
-        const kpi = (icone, valor, rotulo, cor) => `
-            <div class="bg-white rounded-xl border border-slate-200 shadow-sm p-3 flex items-center gap-3">
-                <div class="w-9 h-9 rounded-lg ${cor} flex items-center justify-center shrink-0">${icone}</div>
-                <div class="min-w-0">
-                    <p class="text-xl font-black text-slate-800 leading-none tabular-nums">${valor}</p>
-                    <p class="text-[10px] text-slate-500 font-bold mt-1 truncate">${rotulo}</p>
-                </div>
+        const kpi = (icone, valor, rotulo, corBg, corTexto) => `
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4 flex flex-col items-center justify-center text-center">
+                <p class="text-xs font-bold text-slate-400 uppercase tracking-wide mb-1">${rotulo}</p>
+                <p class="text-3xl font-black ${corTexto}">${valor}</p>
             </div>`;
 
         const kpisHTML = `
-            <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-2.5">
-                ${kpi(ico('check', 'w-[18px] h-[18px]'), atendidos.length, 'Atendidos', 'bg-green-50 text-green-600')}
-                ${kpi(ico('calendar', 'w-[18px] h-[18px]'), atendidosComAgenda.length, 'Agend/Reagend', 'bg-emerald-50 text-emerald-600')}
-                ${kpi(ico('userCheck', 'w-[18px] h-[18px]'), atendidosSemAgenda.length, 'Efetivados', 'bg-teal-50 text-teal-600')}
-                ${kpi(ico('userX', 'w-[18px] h-[18px]'), faltosos.length, 'Faltosos', 'bg-red-50 text-red-600')}
-                ${kpi(ico('trend', 'w-[18px] h-[18px]'), comparecimento + '%', 'Presença', 'bg-blue-50 text-blue-600')}
-                ${kpi(ico('clock', 'w-[18px] h-[18px]'), avgTimeDirect + ' min', 'Tempo Médio', 'bg-amber-50 text-amber-600')}
+            <div class="grid grid-cols-2 lg:grid-cols-6 gap-4">
+                ${kpi(null, atendidos.length, 'Atendidos', '', 'text-slate-800')}
+                ${kpi(null, atendidosComAgenda.length, 'Agend / Reag', '', 'text-slate-800')}
+                ${kpi(null, atendidosSemAgenda.length, 'Efetivados', '', 'text-slate-800')}
+                ${kpi(null, faltosos.length, 'Faltosos', '', 'text-slate-800')}
+                ${kpi(null, comparecimento + '%', 'Presença', '', 'text-slate-800')}
+                ${kpi(null, avgTimeDirect + ' min', 'Tempo Médio', '', 'text-slate-800')}
             </div>`;
 
-        const btnCls = 'inline-flex items-center gap-1.5 px-3 py-2 rounded-lg text-xs font-bold text-white transition-colors';
+        const btnCls = 'inline-flex items-center justify-center gap-1.5 px-4 py-2.5 rounded-xl text-xs font-bold text-white transition-colors shadow-sm';
         const exportHTML = `
-            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
-                <div class="flex flex-wrap items-center gap-2">
-                    <span class="text-sm font-bold text-slate-800 mr-auto inline-flex items-center gap-2">${ico('printer')} Exportar relatórios</span>
-                    <button id="export-stats-pdf-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700">${ico('chart', 'w-3.5 h-3.5')} Resumo geral</button>
-                    <button id="export-equipes-pdf-btn" class="${btnCls} bg-purple-600 hover:bg-purple-700">${ico('users', 'w-3.5 h-3.5')} Por equipe</button>
-                    <button id="export-grupo-pdf-btn" class="${btnCls} bg-emerald-600 hover:bg-emerald-700">${ico('list', 'w-3.5 h-3.5')} Só grupos</button>
-                    <button id="export-stats-detalhado-btn" class="${btnCls} bg-orange-500 hover:bg-orange-600">${ico('fileText', 'w-3.5 h-3.5')} Detalhado</button>
-                    <button id="export-stats-graficos-btn" class="${btnCls} bg-slate-800 hover:bg-slate-900">${ico('trend', 'w-3.5 h-3.5')} Com gráficos</button>
+            <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+                <div class="flex flex-col sm:flex-row flex-wrap items-center gap-3">
+                    <span class="text-sm font-bold text-slate-800 mr-auto w-full sm:w-auto">Exportar Relatórios em PDF</span>
+                    <div class="flex flex-wrap gap-2 w-full sm:w-auto">
+                        <button id="export-stats-pdf-btn" class="${btnCls} bg-slate-800 hover:bg-slate-900 w-full sm:w-auto">Resumo geral</button>
+                        <button id="export-equipes-pdf-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">Por equipe</button>
+                        <button id="export-grupo-pdf-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">Só grupos</button>
+                        <button id="export-stats-detalhado-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">Detalhado</button>
+                        <button id="export-stats-graficos-btn" class="${btnCls} bg-blue-600 hover:bg-blue-700 w-full sm:w-auto">Com gráficos</button>
+                    </div>
                 </div>
-                <details class="mt-3">
-                    <summary class="text-[11px] font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Escolher o que entra no Resumo geral</summary>
-                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-3 text-[11px] font-medium text-slate-600">
+                <details class="mt-4">
+                    <summary class="text-xs font-semibold text-slate-500 cursor-pointer hover:text-slate-800">Personalizar Resumo Geral</summary>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mt-4 text-xs font-medium text-slate-600 bg-slate-50 p-4 rounded-xl">
                         ${[['export-general', 'Geral'], ['export-collaborators', 'Equipes'], ['export-subjects', 'Assuntos'], ['export-scheduled-time', 'Agenda'], ['export-times', 'Chegada'], ['export-absentees-time', 'Faltosos']]
-                .map(([id, l]) => `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="${id}" class="h-3.5 w-3.5 rounded border-slate-300 text-blue-600" checked> ${l}</label>`).join('')}
+                .map(([id, l]) => `<label class="flex items-center gap-2 cursor-pointer"><input type="checkbox" id="${id}" class="h-4 w-4 rounded border-slate-300 text-blue-600 focus:ring-blue-500" checked> ${l}</label>`).join('')}
                     </div>
                 </details>
             </div>`;
 
-        const acoesCores = {
-            'Reagendamento': { icon: ico('refresh', 'w-3.5 h-3.5'), bg: '#fffbeb', border: '#fcd34d', text: '#92400e' },
-            'Agendamento': { icon: ico('calendar', 'w-3.5 h-3.5'), bg: '#ecfdf5', border: '#6ee7b7', text: '#065f46' },
-            'Consulta Processual': { icon: ico('search', 'w-3.5 h-3.5'), bg: '#f5f3ff', border: '#c4b5fd', text: '#4c1d95' },
-            'Outros Assuntos': { icon: ico('settings', 'w-3.5 h-3.5'), bg: '#f9fafb', border: '#d1d5db', text: '#374151' }
-        };
-        const acoesHTML = totalAcoesRapidas > 0 ? this.cartao('Ações rápidas utilizadas', ico('zap'), `
+        const acoesHTML = totalAcoesRapidas > 0 ? this.cartao('Ações Rápidas Utilizadas', null, `
             <div class="grid grid-cols-2 gap-3">
                 ${Object.entries(statsByAcaoRapida).sort(([, a], [, b]) => b - a).map(([tipo, qtd]) => {
-            const c = acoesCores[tipo] || { icon: ico('zap', 'w-3.5 h-3.5'), bg: '#eff6ff', border: '#93c5fd', text: '#1e40af' };
-            return `<div style="background:${c.bg};border:1px solid ${c.border};color:${c.text}" class="rounded-xl px-3 py-2.5">
-                        <div class="text-[11px] font-bold opacity-80 inline-flex items-center gap-1.5">${c.icon}${esc(tipo)}</div>
-                        <div class="text-xl font-black tabular-nums">${qtd}</div></div>`;
+            return `<div class="bg-slate-50 border border-slate-200 rounded-xl px-4 py-3 text-slate-700">
+                        <div class="text-xs font-bold opacity-80">${esc(tipo)}</div>
+                        <div class="text-xl font-black tabular-nums mt-1">${qtd}</div>
+                    </div>`;
         }).join('')}
             </div>
-            <p class="mt-3 pt-3 border-t border-slate-100 text-xs text-slate-500 flex justify-between"><span>Total de ações ágeis</span><strong class="text-slate-700">${totalAcoesRapidas}</strong></p>`) : '';
+            <p class="mt-4 pt-4 border-t border-slate-100 text-xs text-slate-500 flex justify-between"><span>Total de ações ágeis</span><strong class="text-slate-700">${totalAcoesRapidas}</strong></p>`) : '';
 
         const horariosHTML = [
-            sortedScheduledTimes.length ? this.cartao('Agendados por horário', ico('calendar'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedScheduledTimes.map(t => ({ label: t, count: statsByScheduledTime[t] })), 'bg-slate-500')}</div>`) : '',
-            sortedTimes.length ? this.cartao('Atendidos por horário', ico('pin'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimes.map(t => ({ label: t, count: statsByTime[t] })), 'bg-green-500')}</div>`) : '',
-            sortedTimesFaltosos.length ? this.cartao('Faltosos por horário', ico('userX'), `<div class="space-y-2 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimesFaltosos.map(t => ({ label: t, count: statsByTimeFaltosos[t] })), 'bg-red-500')}</div>`) : ''
+            sortedScheduledTimes.length ? this.cartao('Agendados por horário', null, `<div class="space-y-3 max-h-56 overflow-y-auto pr-1">${this.barras(sortedScheduledTimes.map(t => ({ label: t, count: statsByScheduledTime[t] })), 'bg-slate-300')}</div>`) : '',
+            sortedTimes.length ? this.cartao('Atendidos por horário', null, `<div class="space-y-3 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimes.map(t => ({ label: t, count: statsByTime[t] })), 'bg-blue-500')}</div>`) : '',
+            sortedTimesFaltosos.length ? this.cartao('Faltosos por horário', null, `<div class="space-y-3 max-h-56 overflow-y-auto pr-1">${this.barras(sortedTimesFaltosos.map(t => ({ label: t, count: statsByTimeFaltosos[t] })), 'bg-red-400')}</div>`) : ''
         ].join('');
 
         const assuntosOrdenados = Object.entries(statsBySubject).sort(([, a], [, b]) => b.total - a.total);
-        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Efetivados)', ico('tag'), assuntosOrdenados.length === 0
+        const assuntosHTML = this.cartao('Demandas por Assunto (Agend/Reagend vs Efetivados)', null, assuntosOrdenados.length === 0
             ? `<p class="text-sm text-slate-400 text-center py-6">Nenhuma demanda registrada.</p>`
-            : `<div class="max-h-[380px] overflow-y-auto rounded-lg border border-slate-100">
+            : `<div class="max-h-[380px] overflow-y-auto rounded-xl border border-slate-100">
                 <table class="w-full text-xs md:text-sm text-left">
-                    <thead class="text-[10px] text-slate-500 uppercase bg-slate-50 sticky top-0 z-10">
+                    <thead class="text-[11px] text-slate-500 bg-slate-50 sticky top-0 z-10">
                         <tr>
-                            <th class="px-3 py-2.5 font-bold">Assunto</th>
-                            <th class="px-2 py-2.5 font-bold text-center">Total</th>
-                            <th class="px-2 py-2.5 font-bold text-center text-emerald-600">Agend/Reag</th>
-                            <th class="px-2 py-2.5 font-bold text-center text-teal-600">Efetivados</th>
-                            <th class="px-2 py-2.5 font-bold text-center text-red-600">Falt.</th>
+                            <th class="px-4 py-3 font-bold">Assunto</th>
+                            <th class="px-2 py-3 font-bold text-center">Total</th>
+                            <th class="px-2 py-3 font-bold text-center">Agend/Reag</th>
+                            <th class="px-2 py-3 font-bold text-center">Efetivados</th>
+                            <th class="px-2 py-3 font-bold text-center">Falt.</th>
                         </tr>
                     </thead>
                     <tbody class="divide-y divide-slate-100">
                         ${assuntosOrdenados.map(([subject, d]) => `
                             <tr class="hover:bg-slate-50/60">
-                                <td class="px-3 py-2.5 font-medium text-slate-700">${esc(subject)}</td>
-                                <td class="px-2 py-2.5 text-center font-bold text-slate-800">${d.total}</td>
-                                <td class="px-2 py-2.5 text-center font-semibold text-emerald-700 bg-emerald-50/40">${d.agendaAtendidos}</td>
-                                <td class="px-2 py-2.5 text-center font-semibold text-teal-700 bg-teal-50/40">${d.semVincAtendidos}</td>
-                                <td class="px-2 py-2.5 text-center font-semibold text-red-500">${d.faltosos}</td>
+                                <td class="px-4 py-3 font-medium text-slate-700">${esc(subject)}</td>
+                                <td class="px-2 py-3 text-center font-bold text-slate-800">${d.total}</td>
+                                <td class="px-2 py-3 text-center font-semibold text-slate-600">${d.agendaAtendidos}</td>
+                                <td class="px-2 py-3 text-center font-semibold text-slate-600">${d.semVincAtendidos}</td>
+                                <td class="px-2 py-3 text-center font-semibold text-red-500">${d.faltosos}</td>
                             </tr>`).join('')}
                     </tbody>
                     <tfoot class="bg-slate-100 font-bold sticky bottom-0">
                         <tr>
-                            <td class="px-3 py-2.5 text-slate-800">Total geral</td>
-                            <td class="px-2 py-2.5 text-center">${totalDemandasGeral}</td>
-                            <td class="px-2 py-2.5 text-center text-emerald-800 bg-emerald-100/50">${totalAgendaAtendidos}</td>
-                            <td class="px-2 py-2.5 text-center text-teal-800 bg-teal-100/50">${totalSemVincAtendidos}</td>
-                            <td class="px-2 py-2.5 text-center text-red-700">${totalDemandasFaltosos}</td>
+                            <td class="px-4 py-3 text-slate-800">Total geral</td>
+                            <td class="px-2 py-3 text-center">${totalDemandasGeral}</td>
+                            <td class="px-2 py-3 text-center">${totalAgendaAtendidos}</td>
+                            <td class="px-2 py-3 text-center">${totalSemVincAtendidos}</td>
+                            <td class="px-2 py-3 text-center text-red-600">${totalDemandasFaltosos}</td>
                         </tr>
                     </tfoot>
                 </table>
             </div>`);
 
-        const CORES_EQUIPE = ['bg-green-500', 'bg-blue-500', 'bg-purple-500', 'bg-orange-400', 'bg-teal-500', 'bg-pink-500', 'bg-indigo-500', 'bg-amber-500', 'bg-cyan-500', 'bg-rose-500'];
+        const CORES_EQUIPE = ['bg-blue-500', 'bg-emerald-500', 'bg-indigo-500', 'bg-teal-500', 'bg-sky-500', 'bg-violet-500', 'bg-cyan-500', 'bg-fuchsia-500'];
         const corEquipe = (nome) => CORES_EQUIPE[Math.max(0, sortedGroups.findIndex(g => g.groupName === nome)) % CORES_EQUIPE.length];
         const iniciaisDe = (nome) => (String(nome).split(/\s+/).map(p => p[0]).filter(Boolean).slice(0, 2).join('') || '?').toUpperCase();
 
@@ -592,17 +592,17 @@ export const StatisticsService = {
 
         const gruposComAtend = sortedGroups.filter(g => g.total > 0);
         const distribuicaoHTML = totalGeral > 0 ? `
-            <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100">
-                <div class="flex items-baseline justify-between mb-2">
-                    <p class="text-xs font-bold text-slate-700">Como os ${totalGeral} atendimentos se dividem entre as equipes</p>
-                    <p class="text-[11px] text-slate-400">100% = todos os atendidos</p>
+            <div class="mb-6 p-5 rounded-xl bg-slate-50 border border-slate-100">
+                <div class="flex items-baseline justify-between mb-3">
+                    <p class="text-sm font-bold text-slate-800">Distribuição de ${totalGeral} atendimentos</p>
+                    <p class="text-[11px] text-slate-500 font-medium">100% = todos atendidos</p>
                 </div>
-                <div class="flex h-4 rounded-full overflow-hidden bg-slate-200">
-                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}: ${pctF(g.total, totalGeral)}%"></div>`).join('')}
+                <div class="flex h-3 rounded-full overflow-hidden bg-slate-200">
+                    ${gruposComAtend.map(g => `<div class="${corEquipe(g.groupName)} h-full border-r border-white/20" style="width:${pctF(g.total, totalGeral)}%" title="${esc(g.groupName)}: ${pctF(g.total, totalGeral)}%"></div>`).join('')}
                 </div>
-                <div class="flex flex-wrap gap-x-4 gap-y-1.5 mt-3">
+                <div class="flex flex-wrap gap-x-5 gap-y-2 mt-4">
                     ${gruposComAtend.map(g => `
-                        <span class="inline-flex items-center gap-1.5 text-[11px] text-slate-600">
+                        <span class="inline-flex items-center gap-2 text-xs text-slate-600">
                             <span class="w-2.5 h-2.5 rounded-full ${corEquipe(g.groupName)}"></span>
                             <strong>${esc(g.groupName)}</strong> ${g.total} (${pctF(g.total, totalGeral)}%)
                         </span>`).join('')}
@@ -616,38 +616,34 @@ export const StatisticsService = {
             const mediaMembro = todosColaboradores.length > 0 ? (total / todosColaboradores.length).toFixed(1).replace('.', ',') : '-';
 
             const linhas = membros.map(({ nome, cargo, atendimentos }) => `
-                <div class="flex items-center gap-3 px-4 py-2 border-t border-slate-50 hover:bg-slate-50/60">
-                    <div class="w-8 h-8 rounded-full ${atendimentos > 0 ? 'bg-green-100 text-green-700' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(nome))}</div>
+                <div class="flex items-center gap-3 px-4 py-3 border-t border-slate-100 bg-white">
+                    <div class="w-8 h-8 rounded-full ${atendimentos > 0 ? 'bg-blue-50 text-blue-600' : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-xs font-bold shrink-0">${esc(iniciaisDe(nome))}</div>
                     <div class="min-w-0 flex-1">
-                        <p class="text-sm font-semibold text-slate-700 truncate">${esc(nome)}</p>
-                        <p class="text-[11px] text-slate-400">${esc(cargo || '-')}</p>
+                        <p class="text-sm font-semibold text-slate-800 truncate">${esc(nome)}</p>
+                        <p class="text-[11px] text-slate-500">${esc(cargo || '-')}</p>
                     </div>
-                    <div class="w-24 hidden sm:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)} rounded-full" style="width:${pctF(atendimentos, total)}%"></div></div>
-                    <div class="text-right leading-tight w-20 shrink-0">
-                        <p class="text-[11px] font-bold ${atendimentos > 0 ? 'text-slate-700' : 'text-slate-300'}">${pctF(atendimentos, total)}% da equipe</p>
-                        <p class="text-[10px] text-slate-400">${pctF(atendimentos, totalGeral)}% do total</p>
+                    <div class="w-24 hidden sm:block h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)} rounded-full" style="width:${pctF(atendimentos, total)}%"></div></div>
+                    <div class="text-right leading-tight w-20 shrink-0 hidden sm:block">
+                        <p class="text-xs font-bold ${atendimentos > 0 ? 'text-slate-700' : 'text-slate-400'}">${pctF(atendimentos, total)}%</p>
                     </div>
-                    <span class="w-8 text-right text-sm font-black tabular-nums ${atendimentos > 0 ? 'text-green-600' : 'text-slate-300'}">${atendimentos || '-'}</span>
+                    <span class="w-8 text-right text-sm font-black tabular-nums ${atendimentos > 0 ? 'text-slate-800' : 'text-slate-300'}">${atendimentos || '-'}</span>
                 </div>`).join('');
 
             return `
-                <div class="border border-slate-200 rounded-xl overflow-hidden bg-white" data-group="${gid}">
-                    <button type="button" class="group-toggle w-full text-left px-4 pt-3 pb-2.5 bg-slate-50 hover:bg-slate-100 transition-colors" data-target="${gid}" aria-expanded="true">
+                <div class="border border-slate-200 rounded-xl overflow-hidden bg-white mb-3" data-group="${gid}">
+                    <button type="button" class="group-toggle w-full text-left px-5 py-4 hover:bg-slate-50 transition-colors flex items-center justify-between" data-target="${gid}" aria-expanded="true">
                         <div class="flex items-center gap-3">
-                            <span class="chev text-slate-400 transition-transform inline-flex">${ico('chevron')}</span>
-                            <span class="w-2.5 h-2.5 rounded-full ${corEquipe(groupName)}"></span>
+                            <span class="w-3 h-3 rounded-full ${corEquipe(groupName)}"></span>
                             <span class="font-bold text-slate-800 text-sm">${esc(groupName)}</span>
-                            <span class="ml-auto flex flex-wrap justify-end items-center gap-1.5">
-                                <span class="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${total} atend.</span>
-                                <span class="bg-green-100 text-green-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${parteDoTotal}% do total</span>
-                                <span class="bg-purple-100 text-purple-700 px-2 py-0.5 rounded-full text-[10px] font-bold">${todosColaboradores.length} membro${todosColaboradores.length === 1 ? '' : 's'}</span>
-                                <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full text-[10px] font-bold">média ${mediaMembro}/membro</span>
-                            </span>
                         </div>
-                        <div class="mt-2 h-1.5 bg-slate-200 rounded-full overflow-hidden"><div class="h-full ${corEquipe(groupName)}" style="width:${parteDoTotal}%"></div></div>
+                        <div class="flex items-center gap-3 text-xs">
+                            <span class="font-bold text-slate-600">${total} atend.</span>
+                            <span class="text-slate-400 hidden sm:inline-block">${todosColaboradores.length} membros</span>
+                            <span class="chev text-slate-400 transition-transform">${ico('chevron')}</span>
+                        </div>
                     </button>
                     <div id="${gid}" class="group-body">
-                        ${membros.length ? linhas : '<p class="p-4 text-xs text-slate-400 italic text-center">Nenhum colaborador cadastrado nesta equipe.</p>'}
+                        ${membros.length ? linhas : '<p class="p-4 text-xs text-slate-400 italic text-center border-t border-slate-100">Nenhum colaborador nesta equipe.</p>'}
                     </div>
                 </div>`;
         }).join('');
@@ -657,27 +653,23 @@ export const StatisticsService = {
             const maxIndividual = Math.max(...ranking.map(r => r.atendimentos), 1);
             const totalAtendimentosLista = ranking.reduce((s, r) => s + r.atendimentos, 0);
 
-            if (ranking.length === 0) return `<p class="text-sm text-slate-400 text-center py-6">Nenhum colaborador classificado como ${titulo}.</p>`;
+            if (ranking.length === 0) return `<p class="text-sm text-slate-400 text-center py-6 border border-slate-100 rounded-xl">Nenhum colaborador nesta categoria.</p>`;
 
             return `
-            <div class="mb-4 p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-wrap gap-x-8 gap-y-2 text-xs text-slate-600">
-                <span><strong class="text-slate-800 text-base">${atuaram}</strong> de ${ranking.length} membros atenderam <strong>(${pctF(atuaram, ranking.length)}%)</strong></span>
-                <span>Total atendido por ${titulo}: <strong class="text-slate-800">${totalAtendimentosLista}</strong></span>
+            <div class="mb-5 p-4 rounded-xl bg-slate-50 border border-slate-100 flex flex-col sm:flex-row justify-between text-xs text-slate-600 gap-2">
+                <span><strong class="text-slate-800 text-sm">${atuaram}</strong> de ${ranking.length} membros atenderam <strong>(${pctF(atuaram, ranking.length)}%)</strong></span>
+                <span>Total atendido: <strong class="text-slate-800 text-sm">${totalAtendimentosLista}</strong></span>
             </div>
-            <div class="rounded-xl border border-slate-200 overflow-hidden">
+            <div class="rounded-xl border border-slate-200 overflow-hidden bg-white">
                 ${ranking.map((r, i) => `
-                    <div class="flex items-center gap-3 px-4 py-2.5 ${i > 0 ? 'border-t border-slate-100' : ''} hover:bg-slate-50/60">
-                        <span class="w-6 text-center text-[11px] font-black ${r.atendimentos > 0 ? 'text-slate-500' : 'text-slate-300'}">${i + 1}º</span>
-                        <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? corIcone : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-[11px] font-black shrink-0">${esc(iniciaisDe(r.nome))}</div>
+                    <div class="flex items-center gap-3 px-5 py-3 ${i > 0 ? 'border-t border-slate-100' : ''} hover:bg-slate-50">
+                        <span class="w-5 text-xs font-bold ${r.atendimentos > 0 ? 'text-slate-500' : 'text-slate-300'}">${i + 1}º</span>
+                        <div class="w-8 h-8 rounded-full ${r.atendimentos > 0 ? corIcone : 'bg-slate-100 text-slate-400'} flex items-center justify-center text-xs font-bold shrink-0">${esc(iniciaisDe(r.nome))}</div>
                         <div class="min-w-0 flex-1">
-                            <p class="text-sm font-semibold text-slate-700 truncate">${esc(r.nome)}</p>
-                            <p class="text-[11px] text-slate-400 flex items-center gap-1.5"><span class="w-2 h-2 rounded-full ${corEquipe(r.equipe)}"></span>${esc(r.equipe)} · ${esc(r.cargo || '-')}</p>
+                            <p class="text-sm font-semibold text-slate-800 truncate">${esc(r.nome)}</p>
+                            <p class="text-xs text-slate-500">${esc(r.equipe)} · ${esc(r.cargo || '-')}</p>
                         </div>
-                        <div class="w-28 hidden md:block h-2 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corBarra} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
-                        <div class="text-right leading-tight w-24 shrink-0 hidden sm:block">
-                            <p class="text-[11px] font-bold ${r.atendimentos > 0 ? 'text-slate-700' : 'text-slate-300'}">${pctF(r.atendimentos, r.equipeTotal)}% da equipe</p>
-                            <p class="text-[10px] text-slate-400">${pctF(r.atendimentos, totalGeral)}% do total</p>
-                        </div>
+                        <div class="w-24 hidden md:block h-1.5 bg-slate-100 rounded-full overflow-hidden"><div class="h-full ${corBarra} rounded-full" style="width:${pctF(r.atendimentos, maxIndividual)}%"></div></div>
                         <span class="w-8 text-right text-sm font-black tabular-nums ${r.atendimentos > 0 ? 'text-slate-800' : 'text-slate-300'}">${r.atendimentos || '-'}</span>
                     </div>`).join('')}
             </div>`;
@@ -693,40 +685,39 @@ export const StatisticsService = {
         const rankingDefensores = rankingTodos.filter(r => !isApoio(r.equipe) && isDefensor(r.cargo));
         const rankingServidores = rankingTodos.filter(r => !isApoio(r.equipe) && !isDefensor(r.cargo) && r.cargo !== '-');
 
-        const individualHTML = gerarHTMLRanking(rankingTodos, "todos na pauta", "bg-green-100 text-green-700", "bg-green-500");
-        const defensoresHTML = gerarHTMLRanking(rankingDefensores, "Defensores", "bg-purple-100 text-purple-700", "bg-purple-500");
-        const servidoresHTML = gerarHTMLRanking(rankingServidores, "Servidores", "bg-orange-100 text-orange-700", "bg-orange-500");
+        const individualHTML = gerarHTMLRanking(rankingTodos, "todos na pauta", "bg-blue-50 text-blue-700", "bg-blue-500");
+        const defensoresHTML = gerarHTMLRanking(rankingDefensores, "Defensores", "bg-blue-50 text-blue-700", "bg-blue-500");
+        const servidoresHTML = gerarHTMLRanking(rankingServidores, "Servidores", "bg-blue-50 text-blue-700", "bg-blue-500");
 
-        const tabCls = 'view-tab inline-flex items-center gap-1.5 px-3 py-1.5 rounded-md text-xs font-bold';
-        const equipesHTML = this.cartao('Atendimentos por equipe e Rankings', ico('building'), `
-            <div class="flex flex-wrap items-center justify-between gap-2 mb-4">
-                <div class="inline-flex rounded-lg bg-slate-100 p-1 flex-wrap" role="tablist">
-                    <button type="button" class="${tabCls} bg-white shadow text-slate-800" data-view="geral" role="tab">${ico('building', 'w-3.5 h-3.5')} Equipes</button>
-                    <button type="button" class="${tabCls} text-slate-500" data-view="individual" role="tab">${ico('users', 'w-3.5 h-3.5')} Todos</button>
-                    <button type="button" class="${tabCls} text-slate-500" data-view="defensores" role="tab">${ico('scale', 'w-3.5 h-3.5')} Defensores</button>
-                    <button type="button" class="${tabCls} text-slate-500" data-view="servidores" role="tab">${ico('monitor', 'w-3.5 h-3.5')} Servidores</button>
+        const tabCls = 'view-tab px-4 py-2 rounded-lg text-xs font-bold transition-colors';
+        const equipesHTML = this.cartao('Atendimentos por equipe e Rankings', null, `
+            <div class="flex flex-wrap items-center gap-2 mb-6">
+                <div class="inline-flex rounded-xl bg-slate-100 p-1 flex-wrap w-full sm:w-auto" role="tablist">
+                    <button type="button" class="${tabCls} bg-white shadow-sm text-slate-800 w-full sm:w-auto" data-view="geral" role="tab">Equipes</button>
+                    <button type="button" class="${tabCls} text-slate-500 hover:text-slate-700 w-full sm:w-auto" data-view="individual" role="tab">Todos</button>
+                    <button type="button" class="${tabCls} text-slate-500 hover:text-slate-700 w-full sm:w-auto" data-view="defensores" role="tab">Defensores</button>
+                    <button type="button" class="${tabCls} text-slate-500 hover:text-slate-700 w-full sm:w-auto" data-view="servidores" role="tab">Servidores</button>
                 </div>
-                <button id="toggle-all-groups-btn" class="text-[11px] font-semibold text-slate-600 bg-slate-100 px-3 py-1.5 rounded-lg hover:bg-slate-200 transition-colors">Recolher todas</button>
             </div>
             <div id="view-geral">
                 ${distribuicaoHTML}
-                <div class="space-y-3" id="groups-container">${groupsHTML || '<p class="text-sm text-slate-400 text-center py-6">Nenhuma equipe encontrada.</p>'}</div>
+                <div id="groups-container">${groupsHTML || '<p class="text-sm text-slate-400 text-center py-6 border border-slate-100 rounded-xl">Nenhuma equipe encontrada.</p>'}</div>
             </div>
             <div id="view-individual" style="display:none">${individualHTML}</div>
             <div id="view-defensores" style="display:none">${defensoresHTML}</div>
             <div id="view-servidores" style="display:none">${servidoresHTML}</div>`);
 
         content.innerHTML = `
-            <div id="statistics-content-wrapper" class="h-full overflow-y-auto p-3 md:p-5 bg-slate-50/40">
-                <div class="space-y-4 max-w-[1400px] mx-auto">
+            <div id="statistics-content-wrapper" class="h-full overflow-y-auto p-4 md:p-6 bg-slate-50/50 custom-scrollbar">
+                <div class="space-y-6 max-w-6xl mx-auto">
                     ${kpisHTML}
                     ${exportHTML}
-                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-4 items-start">
-                        <div class="xl:col-span-2 space-y-4">
+                    <div class="grid grid-cols-1 xl:grid-cols-5 gap-6 items-start">
+                        <div class="xl:col-span-2 space-y-6">
                             ${acoesHTML}
                             ${horariosHTML}
                         </div>
-                        <div class="xl:col-span-3 space-y-4">
+                        <div class="xl:col-span-3 space-y-6">
                             ${assuntosHTML}
                             ${equipesHTML}
                         </div>
@@ -744,26 +735,13 @@ export const StatisticsService = {
             };
         });
 
-        const toggleAll = document.getElementById('toggle-all-groups-btn');
-        if (toggleAll) {
-            toggleAll.onclick = () => {
-                const recolher = toggleAll.textContent.includes('Recolher');
-                content.querySelectorAll('.group-body').forEach(b => { b.style.display = recolher ? 'none' : ''; });
-                content.querySelectorAll('.group-toggle').forEach(b => {
-                    b.setAttribute('aria-expanded', String(!recolher));
-                    b.querySelector('.chev').style.transform = recolher ? 'rotate(-90deg)' : '';
-                });
-                toggleAll.textContent = recolher ? 'Expandir todas' : 'Recolher todas';
-            };
-        }
-
         content.querySelectorAll('.view-tab').forEach(tab => {
             tab.onclick = () => {
                 const v = tab.dataset.view;
                 content.querySelectorAll('.view-tab').forEach(t => {
                     const ativo = t === tab;
                     t.classList.toggle('bg-white', ativo);
-                    t.classList.toggle('shadow', ativo);
+                    t.classList.toggle('shadow-sm', ativo);
                     t.classList.toggle('text-slate-800', ativo);
                     t.classList.toggle('text-slate-500', !ativo);
                 });
@@ -772,9 +750,6 @@ export const StatisticsService = {
                     const el = document.getElementById('view-' + id);
                     if (el) el.style.display = (v === id) ? '' : 'none';
                 });
-
-                const t = document.getElementById('toggle-all-groups-btn');
-                if (t) t.style.display = v === 'geral' ? '' : 'none';
             };
         });
 
@@ -783,7 +758,7 @@ export const StatisticsService = {
             if (!btn) return;
             btn.onclick = () => {
                 const original = btn.innerHTML;
-                btn.innerHTML = `${ico('loader', 'w-3.5 h-3.5 animate-spin')} Aguarde...`;
+                btn.innerHTML = 'Aguarde...';
                 btn.disabled = true;
                 Promise.resolve(acao()).catch(e => { console.error(e); }).finally(() => {
                     btn.innerHTML = original;
@@ -1048,7 +1023,6 @@ export const StatisticsService = {
 
         const largura = pageWidth - margin * 2;
         const GAP = 18;
-        const metade = (largura - GAP) / 2;
         const VERDE = [22, 163, 74];
         const TXT = [30, 41, 59];
 
@@ -1056,7 +1030,6 @@ export const StatisticsService = {
             if (yPos + h > pageHeight - 50) { doc.addPage(); yPos = margin + 10; }
         };
 
-        // título de seção com barrinha verde (não altera yPos)
         const secao = (titulo, x = margin) => {
             doc.setFillColor(...VERDE);
             doc.roundedRect(x, yPos - 10, 3, 13, 1.5, 1.5, 'F');
@@ -1074,7 +1047,6 @@ export const StatisticsService = {
             footStyles: { fillColor: [226, 232, 240], textColor: TXT, fontStyle: 'bold' }
         };
 
-        // desenha a tabela e devolve o Y final
         const tabela = (config, margens) => {
             doc.autoTable({
                 startY: yPos,
@@ -1088,7 +1060,6 @@ export const StatisticsService = {
             return doc.lastAutoTable.finalY;
         };
 
-        // ---------- cores por coluna ----------
         const COR = {
             slate:   { head: [51, 65, 85],   tint: [226, 232, 240], texto: [30, 41, 59] },
             indigo:  { head: [79, 70, 229],  tint: [224, 231, 255], texto: [55, 48, 163] },
@@ -1100,7 +1071,6 @@ export const StatisticsService = {
             roxo:    { head: [147, 51, 234], tint: [243, 232, 255], texto: [107, 33, 168] }
         };
 
-        // aplica a cor de cada coluna no cabeçalho, no corpo e na linha de total
         const colorir = (cores) => (data) => {
             const c = cores[data.column.index];
             if (!c) return;
@@ -1122,7 +1092,6 @@ export const StatisticsService = {
             }
         };
 
-        // ---------- Resumo Geral (cartões) ----------
         if (exportGeneral) {
             secao("Resumo Geral");
             yPos += 14;
@@ -1151,7 +1120,6 @@ export const StatisticsService = {
             yPos += 54 + 28;
         }
 
-        // ---------- Atendimentos por equipe ----------
         const equipes = (exportCollaborators && s.statsByGroup)
             ? Object.entries(s.statsByGroup)
                 .sort((a, b) => compararGrupos(a[0], b[0]))
@@ -1178,7 +1146,6 @@ export const StatisticsService = {
             }) + 26;
         }
 
-        // ---------- Movimento por horário (tabela única) ----------
         const mapa = {};
         const juntar = (lista, chave) => (lista || []).forEach(i => {
             if (!mapa[i.time]) mapa[i.time] = { ag: 0, at: 0, fa: 0 };
@@ -1222,7 +1189,6 @@ export const StatisticsService = {
             }) + 26;
         }
 
-        // ---------- Demandas por assunto ----------
         if (exportSubjects && s.statsBySubject && Object.keys(s.statsBySubject).length > 0) {
             novaPaginaSe(100);
             secao("Demandas por Assunto");
