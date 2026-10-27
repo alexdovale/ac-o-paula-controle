@@ -5,10 +5,11 @@ import {
     getDocs, arrayUnion, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
-import { documentsData } from './detalhes.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { ico } from './icons.js';
+
+// ─── HELPERS DE STATUS (CORES SUAVES) ────────────────────────────────────────
 
 const statusMap = {
     pauta:                  { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
@@ -21,9 +22,13 @@ const statusMap = {
     faltoso:                { cor: 'text-red-700 border-red-200 bg-red-50',           txt: 'Faltoso' },
 };
 
+// ─── FIREBASE ─────────────────────────────────────────────────────────────────
+
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
+
+// ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
 
 export const AtendimentoExternoService = {
 
@@ -44,8 +49,10 @@ export const AtendimentoExternoService = {
     unsubscribeDashboard: null,
     unsubscribePauta: null,
 
+    // ─── INIT ─────────────────────────────────────────────────────────────────
+
     async init() {
-        console.log("Mesa Digital V3 Inicializada (Identidade Segura)");
+        console.log("Mesa Digital Inicializada (Integração Nativa com Módulos)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -74,7 +81,7 @@ export const AtendimentoExternoService = {
             this.pautaTipo = pautaData.type || 'agendamento';
             this.pautaFechada = pautaData.fechada === true;
 
-            // O CRUZAMENTO DE DADOS ACONTECE AQUI (Ignorando o que vem no link)
+            // CRUZAMENTO COM A BASE (Identidade blindada pelo e-mail logado)
             const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
             const q = query(colabRef, where("email", "==", user.email));
             const snap = await getDocs(q);
@@ -85,7 +92,7 @@ export const AtendimentoExternoService = {
             }
 
             this.colaboradorAtual = { id: snap.docs[0].id, ...snap.docs[0].data() };
-            this.colaboradorNome = this.colaboradorAtual.nome; // Nome real puxado do banco!
+            this.colaboradorNome = this.colaboradorAtual.nome;
             this.colaboradorId = this.colaboradorAtual.id;
 
             await this.carregarColaboradoresGerais();
@@ -177,7 +184,7 @@ export const AtendimentoExternoService = {
         
         const wrapper = document.getElementById('main-wrapper');
         wrapper.innerHTML = `
-            <div class="w-full max-w-lg mx-auto my-auto animate-fade-in">
+            <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
                 <div class="bg-red-600 p-6 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
                     <h1 class="text-white font-black text-2xl uppercase tracking-widest text-center">Acesso Negado</h1>
                 </div>
@@ -185,7 +192,7 @@ export const AtendimentoExternoService = {
                     <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
                     <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
                     <p class="text-gray-500 font-semibold text-sm">${message}</p>
-                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR</button>
+                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
                 </div>
             </div>`;
     },
@@ -233,10 +240,10 @@ export const AtendimentoExternoService = {
         // FILA DE ESPERA (Todos veem)
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
         
-        // MINHA MESA
+        // MINHA MESA (Apenas os casos do usuário logado)
         const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
         
-        // AUDITORIA (Se Defensor vê tudo finalizado/transferido. Se Servidor vê o que ele enviou/finalizou)
+        // AUDITORIA (Se Defensor vê tudo finalizado/transferido. Se Servidor vê só o que ele tocou)
         const auditoria = this.todosAtendimentosPauta.filter(a => {
             const finalizado = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
             if (!finalizado) return false;
@@ -244,7 +251,7 @@ export const AtendimentoExternoService = {
             return a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome;
         });
 
-        // Ordenação Básica
+        // Ordenação
         espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
         auditoria.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
@@ -279,8 +286,8 @@ export const AtendimentoExternoService = {
         if (lista.length === 0) {
             container.innerHTML = `
                 <div class="flex flex-col items-center justify-center py-10 opacity-60">
-                    <span class="text-3xl text-slate-300 mb-2">${ico('inbox')}</span>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400">${msgVazio}</p>
+                    <span class="text-4xl text-slate-300 mb-3">${ico('inbox')}</span>
+                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">${msgVazio}</p>
                 </div>
             `;
             return;
@@ -291,7 +298,7 @@ export const AtendimentoExternoService = {
 
     _htmlCardKanban(assistido, modo) {
         const st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
-        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-4 border-l-red-500' : '';
+        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[5px] border-l-red-500' : '';
         const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
         
         const baseUrl = window.location.href.split('?')[0];
@@ -300,17 +307,21 @@ export const AtendimentoExternoService = {
         let botoesHtml = '';
         if (this.pautaFechada) {
             botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
+            if (modo === 'auditoria') {
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center">Auditar Processo</a>`;
+            }
         } else {
             if (modo === 'puxar') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center">Atender</a>`;
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Atender</a>`;
             } else if (modo === 'mesa') {
                 botoesHtml = `
                     <div class="flex gap-2 mt-3">
-                        <a href="${linkIndividual}" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center">Abrir</a>
-                        <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
+                        <a href="${linkIndividual}" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Abrir</a>
+                        <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
                     </div>`;
             } else {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center">Ver Processo</a>`;
+                // Ao invés de abrir o SplitScreen para os concluídos, na Auditoria o ideal é chamar o Modal Nativo de Monitoramento!
+                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Auditar / Histórico</button>`;
             }
         }
 
@@ -320,7 +331,7 @@ export const AtendimentoExternoService = {
                     <h4 class="font-black text-slate-800 text-sm leading-tight line-clamp-2">${escapeHTML(assistido.name)}</h4>
                     ${badgeUrgencia}
                 </div>
-                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-2 truncate">
+                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-3 truncate">
                     <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span> ${escapeHTML(assistido.subject || 'Sem assunto')}
                 </div>
                 <div class="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
@@ -353,6 +364,18 @@ export const AtendimentoExternoService = {
                 }
             });
         });
+
+        // Botão para abrir o Modal de Monitoramento nativo no modo Kanban -> Auditoria
+        document.querySelectorAll('.btn-auditar-nativo').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                const b = e.currentTarget;
+                if (window.abrirMonitoramento) {
+                    window.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome);
+                } else {
+                    alert("Módulo de Monitoramento não encontrado.");
+                }
+            });
+        });
     },
 
     // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL) ──────────────────
@@ -378,7 +401,7 @@ export const AtendimentoExternoService = {
         this._renderizarLadoEsquerdo(assistido);
 
         if (this.pautaFechada) {
-            this._renderizarPainelFechado(assistido);
+            this._renderizarPainelFechado();
         } else if (['atendido', 'aguardandoNumero'].includes(assistido.status)) {
             this._renderizarPainelFinalizado(assistido);
         } else {
@@ -402,68 +425,61 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        const chk = assistido.documentChecklist || {};
-        const baseDeDados = documentsData || window.documentsData || {};
-        
-        if (!chk.action) {
-            html += `<div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl"><span class="text-4xl block mb-2 text-slate-300">${ico('inbox')}</span><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhum checklist da recepção.</p></div>`;
-        } else {
-            const actionData = baseDeDados[chk.action];
-            const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
-            
+        // BOTÕES NATIVOS (CHAMANDO DETALHES E MONITORAMENTO DO SISTEMA PRINCIPAL)
+        html += `
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-5 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
+                    <span class="text-3xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-10 h-10')}</span>
+                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Ver Dossiê e Documentos</span>
+                </button>
+                <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-5 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-3 transition-transform active:scale-95 group">
+                    <span class="text-3xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-10 h-10')}</span>
+                    <span class="font-black uppercase tracking-widest text-[11px] text-center">Linha do Tempo (Histórico)</span>
+                </button>
+            </div>
+        `;
+
+        if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
             html += `
-                <div class="bg-slate-900 p-5 rounded-2xl mb-6 shadow-md relative overflow-hidden">
-                    <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5">Ação / Pedido Principal</p>
-                    <p class="text-base font-black text-white uppercase leading-tight">${actionTitle}</p>
-                </div>`;
-
-            if (chk.socioData) {
-                const s = chk.socioData;
-                let socioHtml = '';
-                const addLinha = (label, val) => {
-                    if (val && val.trim() !== '' && val !== 'Selecione' && val !== 'R$ 0,00' && !val.includes('Selecione')) {
-                        socioHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${label}</span><span class="text-xs font-bold text-slate-700">${escapeHTML(val)}</span></div>`;
-                    }
-                };
-                addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda', s.ganhos); addLinha('Fonte Renda', s.fonteRenda);
-                
-                if (socioHtml) {
-                    html += `
-                        <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} PERFIL SOCIOECONÔMICO</h4>
-                            <div class="space-y-1">${socioHtml}</div>
-                        </div>`;
-                }
-            }
-
-            if (chk.checkedIds && chk.checkedIds.length > 0) {
-                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                         <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                         <ul class="space-y-2">`;
-                chk.checkedIds.forEach(id => {
-                    if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
-                    let docName = id.replace(/-/g, ' ').toUpperCase();
-                    if (actionData && id.startsWith('doc-')) {
-                        const parts = id.split('-');
-                        const dIdx = parseInt(parts.pop());
-                        const sIdx = parseInt(parts.pop());
-                        if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
-                            const docObj = actionData.sections[sIdx].docs[dIdx];
-                            if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
-                        }
-                    }
-                    const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-                    const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
-                    html += `
-                        <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center">
-                            <span class="font-bold text-slate-700 pr-2 flex items-center gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} ${docName}</span> 
-                            <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
-                        </li>`;
-                });
-                html += `</ul></div>`;
-            }
+                <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
+                    <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
+                    <h4 class="text-[10px] font-black text-violet-800 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
+                        <span>${ico('scale', 'w-3.5 h-3.5')}</span> DEMANDAS ACUMULADAS
+                    </h4>
+                    <ul class="space-y-2">
+                        ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-3 rounded-xl border border-violet-100 shadow-sm flex items-center gap-2 font-medium text-slate-700"><span class="text-violet-500 font-black">•</span> ${escapeHTML(dem)}</li>`).join('')}
+                    </ul>
+                </div>
+            `;
         }
+        
         container.innerHTML = html;
+
+        // VINCULANDO OS BOTÕES ÀS FUNÇÕES NATIVAS DO SISTEMA
+        setTimeout(() => {
+            const btnDocs = document.getElementById('btn-nativ-docs');
+            const btnTime = document.getElementById('btn-nativ-time');
+            
+            if (btnDocs) {
+                btnDocs.addEventListener('click', () => {
+                    if (window.openDetailsModal) {
+                        window.openDetailsModal(assistido, this.pautaId);
+                    } else {
+                        alert("Módulo de Documentos não carregado.");
+                    }
+                });
+            }
+
+            if (btnTime) {
+                btnTime.addEventListener('click', () => {
+                    if (window.abrirMonitoramento) {
+                        window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
+                    } else {
+                        alert("Módulo de Monitoramento não carregado.");
+                    }
+                });
+            }
+        }, 100);
     },
 
     _renderizarPainelFechado() {
@@ -472,7 +488,7 @@ export const AtendimentoExternoService = {
             <div class="text-center p-6 bg-red-50 rounded-2xl border border-red-200 shadow-sm mt-4 mb-6">
                 <div class="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('lock', 'w-6 h-6')}</div>
                 <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
-                <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura (Auditoria). Nenhuma ação pode ser executada neste assistido.</p>
+                <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
             </div>
             <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
         `;
@@ -923,7 +939,7 @@ export const AtendimentoExternoService = {
     },
 
     setupListeners() {
-        // Removidos os botões de tabulação, pois a interface agora é estática.
+        // Removidos os listeners das abas antigas
     },
 };
 
