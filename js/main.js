@@ -1180,7 +1180,14 @@ class SIGEPApp {
             document.getElementById(id)?.addEventListener('input', () => UIService.renderAssistedLists(this));
         });
 
-        const handlePDF = (type) => {
+        const handlePDF = (type, e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            
             const nomePauta = this.currentPauta?.name || 'Pauta';
             if (type === 'atendidos') PDFService.generateAtendidosPDF((this.allAssisted || []).filter(a => a.status === 'atendido'), nomePauta);
             if (type === 'faltosos') {
@@ -1190,17 +1197,25 @@ class SIGEPApp {
             }
             if (type === 'colaboradores') PDFService.generateCollaboratorsPDF(this.colaboradores, this.allAssisted || [], nomePauta);
         };
-        document.getElementById('download-pdf-btn')?.addEventListener('click', () => handlePDF('atendidos'));
-        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', () => handlePDF('atendidos'));
-        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', () => handlePDF('faltosos'));
+        
+        document.getElementById('download-pdf-btn')?.addEventListener('click', (e) => handlePDF('atendidos', e));
+        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', (e) => handlePDF('atendidos', e));
+        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', (e) => handlePDF('faltosos', e));
 
-        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', () => {
+        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            
             document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
             document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
             document.getElementById('ata-total').value = this.allAssisted.filter(a => a.status === 'atendido').length;
             document.getElementById('ata-social-modal').classList.remove('hidden');
         });
-        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', () => {
+        
+        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
             const data = { 
                 acao: document.getElementById('ata-acao-nome')?.value, 
                 endereco: document.getElementById('ata-endereco')?.value, 
