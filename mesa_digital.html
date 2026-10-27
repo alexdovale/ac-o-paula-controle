@@ -1,12 +1,10 @@
-
-
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
     <title>Mesa de Trabalho - SIGEP</title>
-
+    
     <link class="apple-touch-icon" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <link rel="icon" type="image/png" href="https://alexdovale.github.io/ponto.codoc/imagem.png">
     <meta name="theme-color" content="#2563eb"/> 
@@ -24,47 +22,76 @@
         .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
         .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
 
-        .loading-container { position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
-        .loader { border: 6px solid #f3f3f3; border-top: 6px solid #2563eb; border-radius: 50%; width: 50px; height: 50px; animation: spin 1.5s linear infinite; }
+        .loading-container { position: fixed; inset: 0; background: rgba(255, 255, 255, 0.9); display: flex; flex-direction: column; justify-content: center; align-items: center; z-index: 9999; }
+        .loader { border: 4px solid #f3f3f3; border-top: 4px solid #2563eb; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
-
-        /* MODO ALTO CONTRASTE */
-        html.alto-contraste { filter: invert(1) hue-rotate(180deg) contrast(120%); background-color: #111 !important; }
-        html.alto-contraste img, html.alto-contraste video, html.alto-contraste iframe, html.alto-contraste [vw] { filter: invert(1) hue-rotate(180deg); }
     </style>
 </head>
-<body class="p-0 sm:p-0 md:p-0">
+<body class="p-0">
+
+    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) - OCULTO ATÉ O LOGIN -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-1.5 shadow-sm">
+        <div class="flex items-center gap-4 w-1/3">
+            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
+                <svg class="w-4 h-4 text-blue-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
+                SIGEP
+            </span>
+            <div class="hidden md:flex items-center gap-3 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-4">
+                <a href="manual.html" target="_blank" class="hover:text-blue-400 transition-colors">Wiki</a>
+                <a href="termos.html" target="_blank" class="hover:text-blue-400 transition-colors">Termos</a>
+                <a href="politica.html" target="_blank" class="hover:text-blue-400 transition-colors">Privacidade</a>
+            </div>
+        </div>
+
+        <div class="flex items-center justify-center gap-2 w-1/3 absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-5 sm:h-6 w-auto drop-shadow-sm">
+            <span class="text-white font-black text-[10px] sm:text-xs uppercase tracking-widest hidden sm:block whitespace-nowrap">
+                Mesa de Trabalho Externa
+            </span>
+        </div>
+
+        <div class="flex items-center justify-end w-1/3">
+            <button id="logout-btn-nav" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-3 py-1 rounded-lg border border-red-500/20 transition-colors text-[10px] sm:text-[11px] uppercase tracking-wider">
+                <span class="hidden sm:inline">Sair</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                </svg>
+            </button>
+        </div>
+    </nav>
 
     <div id="loading-container" class="loading-container hidden">
         <div class="loader"></div>
-        <p id="loading-text" class="mt-4 text-slate-700 font-semibold text-center">Conectando à Pauta...</p>
+        <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
     </div>
 
-    <!-- WRAPPER PARA CENTRALIZAR O CONTEÚDO PRINCIPAL E MANTER O FOOTER NO FUNDO -->
-    <div id="main-wrapper" class="flex-1 flex items-center justify-center p-2 md:p-6 w-full">
-
+    <!-- WRAPPER PRINCIPAL -->
+    <div id="main-wrapper" class="flex-1 flex w-full flex-col mt-10">
+        
         <!-- TELA DE LOGIN -->
-        <div id="login-container" class="w-full max-w-md hidden animate-fade-in">
-            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-lg border border-slate-200 relative overflow-hidden">
+        <div id="login-container" class="w-full flex-1 flex items-center justify-center p-4 animate-fade-in my-auto min-h-[80vh]">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200 relative overflow-hidden w-full max-w-md">
+                <!-- IDENTIFICADOR VISUAL DE ACESSO EXTERNO -->
                 <div class="absolute top-0 right-0 bg-blue-600 text-white text-[10px] font-black px-4 py-1.5 rounded-bl-xl uppercase tracking-widest shadow-sm">
                     Mesa de Trabalho
                 </div>
                 
-                <div class="flex justify-center mb-4">
+                <div class="flex justify-center mb-4 mt-2">
                     <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-20 w-auto">
                 </div>
-                <h2 class="text-xl sm:text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
+                <h2 class="text-2xl font-bold text-center text-slate-800 mb-6 leading-tight">Sistema de Gerenciamento de<br>Pauta</h2>
                 
+                <!-- ABAS DE NAVEGAÇÃO IGUAIS AO INDEX -->
                 <div class="flex border-b border-slate-200 mb-6">
                     <button class="flex-1 py-2 text-center font-semibold text-blue-600 border-b-2 border-blue-600 text-sm sm:text-base pointer-events-none">Acesso Externo</button>
                     <a href="index.html" class="flex-1 py-2 text-center font-semibold text-slate-400 hover:text-green-600 hover:bg-slate-50 transition-colors text-sm sm:text-base">Acesso Interno</a>
                 </div>
                 
                 <div id="auth-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
-                <div id="auth-success" class="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
                 
                 <form id="login-form" class="space-y-4">
                     <div>
@@ -76,44 +103,83 @@
                         <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2 border border-slate-300 rounded-md shadow-sm focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
                     </div>
                     <div class="text-right mt-1">
-                        <button type="button" id="btn-esqueci-senha" class="text-xs sm:text-sm text-blue-600 font-semibold hover:underline">Esqueci minha senha</button>
+                        <a href="#" class="text-xs sm:text-sm text-blue-600 hover:underline">Esqueci minha senha</a>
                     </div>
                     <button type="submit" id="btn-entrar" class="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-md shadow-sm text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition">
-                        Entrar na Pauta
+                        Entrar
                     </button>
                 </form>
                 
                 <div class="mt-6 text-center text-xs text-slate-500 leading-relaxed">
-                    Apenas colaboradores convidados podem aceder a esta área.<br>Ao entrar, você concorda com nossos <br>
-                    <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="text-blue-600 font-semibold hover:underline">Termos de Uso</button> e 
-                    <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</button>.
+                    Apenas colaboradores logados podem aceder a esta área. Ao entrar, você concorda com nossos <br>
+                    <a href="termos.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Termos de Uso</a> e <a href="politica.html" target="_blank" class="text-blue-600 font-semibold hover:underline">Política de Privacidade</a>.
                 </div>
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS (O NOVO PORTAL EXTERNO) -->
-        <div id="pauta-selector-container" class="w-full max-w-4xl hidden animate-fade-in my-auto">
-            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-xl border border-slate-200">
-                <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-4">
-                    <div>
-                        <h2 class="text-2xl font-black text-slate-800 tracking-tight">Suas Pautas Vinculadas</h2>
-                        <p class="text-sm text-slate-500 mt-1">Selecione uma mesa de trabalho para iniciar o atendimento.</p>
-                    </div>
-                    <button id="btn-logout-selector" class="bg-slate-100 hover:bg-red-50 text-slate-600 hover:text-red-600 font-bold px-4 py-2 rounded-lg transition-colors text-sm">
-                        Sair
-                    </button>
+        <!-- TELA DE SELEÇÃO DE PAUTAS (IDÊNTICO AO INDEX DO SISTEMA PRINCIPAL) -->
+        <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-10 hidden animate-fade-in">
+            <!-- Barra de Filtro e Pesquisa -->
+            <div class="flex flex-col md:flex-row justify-between items-center mb-8 gap-4 w-full">
+                <div class="w-full md:w-1/3">
+                    <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Vinculadas</h2>
+                    <p class="text-xs font-bold text-slate-400 mt-1 uppercase tracking-widest">Painel de Acesso à Mesa de Trabalho</p>
                 </div>
-                <div id="lista-pautas-vinculadas" class="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-[60vh] overflow-y-auto custom-scrollbar pr-2"></div>
+                
+                <div class="w-full md:w-1/3 flex justify-center">
+                    <!-- Pode adicionar filtros futuros aqui -->
+                </div>
+
+                <div class="w-full md:w-1/3 relative">
+                    <div class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <svg class="w-4 h-4 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
+                    </div>
+                    <input type="search" id="search-pautas-input" placeholder="Pesquisar pauta pelo nome..." class="w-full pl-10 pr-4 py-2.5 border border-slate-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white shadow-sm text-sm transition-all font-medium text-slate-700">
+                </div>
+            </div>
+            
+            <!-- Grid de Cartões Estilo Sistema Principal -->
+            <div id="lista-pautas-vinculadas" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                <!-- Pautas carregadas dinamicamente aqui -->
+            </div>
+        </div>
+
+        <!-- MODAL DE TROCA DE SENHA OBRIGATÓRIA -->
+        <div id="modal-troca-senha" class="fixed inset-0 bg-slate-900/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
+            <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
+                <div class="text-center mb-6">
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
+                    </div>
+                    <h3 class="text-xl font-bold text-slate-800 mb-1">Defina sua Senha</h3>
+                    <p class="text-sm text-slate-500">Este é seu primeiro acesso seguro. Por favor, defina uma senha definitiva para continuar.</p>
+                </div>
+                
+                <div id="troca-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
+                
+                <form id="troca-senha-form" class="space-y-4">
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
+                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
+                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                    </div>
+                    <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
+                        Salvar e Acessar
+                    </button>
+                </form>
             </div>
         </div>
 
         <!-- SHELL PRINCIPAL DA MESA -->
-        <div id="shell-atendimento" class="hidden w-full max-w-5xl bg-white rounded-2xl shadow-2xl overflow-hidden flex-col border border-slate-200 animate-fade-in my-auto h-[85vh]">
+        <div id="shell-atendimento" class="hidden w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[88vh] mt-4 mb-4">
             <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
                 <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 
                 <div class="flex items-center gap-4 relative z-10 min-w-0">
-                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2 rounded-lg transition-colors border border-white/20" title="Voltar para Minhas Pautas">
+                    <button id="btn-voltar-portal" class="shrink-0 bg-white/10 hover:bg-white/20 text-white p-2.5 rounded-xl transition-colors border border-white/20 shadow-inner" title="Voltar para Minhas Pautas">
                         <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"></path></svg>
                     </button>
                     <div class="flex flex-col overflow-hidden min-w-0">
@@ -122,11 +188,11 @@
                     </div>
                 </div>
 
-                <div class="flex gap-2 relative z-10 shrink-0 items-center">
-                    <div id="status-indicator" class="hidden bg-emerald-500 text-white text-[9px] font-black px-2 py-1.5 rounded-full shadow-sm border border-emerald-400 uppercase tracking-widest animate-pulse flex items-center">
-                        ONLINE
+                <div class="flex gap-3 relative z-10 shrink-0 items-center">
+                    <div id="status-indicator" class="hidden bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-widest animate-pulse flex items-center gap-1.5">
+                        <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ONLINE
                     </div>
-                    <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1" title="Encerrar Sessão">
+                    <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-lg shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1.5" title="Encerrar Sessão">
                         SAIR
                     </button>
                 </div>
@@ -134,23 +200,23 @@
 
             <!-- VIEW DASHBOARD -->
             <div id="view-dashboard" class="flex flex-col flex-1 overflow-hidden">
-                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
-                    <button id="btn-tab-minha-mesa" class="flex-1 p-4 text-center font-black uppercase text-white bg-amber-600 border-b-2 border-amber-600 transition-colors focus:outline-none whitespace-nowrap">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
+                    <button id="btn-tab-minha-mesa" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-blue-600 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
                         💻 Minha Mesa
                     </button>
-                    <button id="btn-tab-aguardando" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
-                        📥 Aguardando Atendimento
+                    <button id="btn-tab-aguardando" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
+                        📥 Fila de Espera
                     </button>
-                    <button id="btn-tab-pauta-atual" class="flex-1 p-4 text-center font-bold uppercase text-slate-500 border-b-2 border-transparent hover:text-slate-700 hover:bg-slate-100 transition-colors focus:outline-none whitespace-nowrap">
-                        📋 Pauta Atual
+                    <button id="btn-tab-pauta-atual" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
+                        📋 Auditoria Global
                     </button>
                 </div>
 
                 <div class="p-4 sm:p-6 bg-slate-50/50 flex-1 overflow-y-auto custom-scrollbar">
                     <div id="painel-atendimento-container" class="w-full min-h-[300px]">
                         <div class="flex flex-col justify-center items-center py-20 gap-3">
-                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-amber-600"></div>
-                            <p class="text-[10px] font-black text-amber-600 tracking-widest uppercase">Sincronizando pauta...</p>
+                            <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-blue-600"></div>
+                            <p class="text-[10px] font-black text-blue-600 tracking-widest uppercase">Sincronizando pauta...</p>
                         </div>
                     </div>
                 </div>
@@ -158,28 +224,16 @@
 
             <!-- VIEW ATENDIMENTO -->
             <div id="view-atendimento" class="hidden flex-col flex-1 overflow-hidden">
-                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0">
-                    <button id="tab-btn-encerramento" class="flex-1 p-4 text-center font-black uppercase text-slate-800 border-b-2 border-slate-800 transition-colors focus:outline-none whitespace-nowrap">
+                <div class="flex border-b bg-slate-50 select-none border-slate-200 font-semibold text-xs tracking-wider overflow-x-auto custom-scrollbar shrink-0 px-2 pt-2">
+                    <button id="tab-btn-encerramento" class="flex-1 px-4 py-3.5 text-center font-black uppercase text-white bg-slate-800 rounded-t-xl transition-colors focus:outline-none whitespace-nowrap shadow-sm">
                         Encerramento / Fluxo
                     </button>
-                    <button id="tab-btn-historico" class="flex-1 p-4 text-center font-bold uppercase text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors focus:outline-none whitespace-nowrap">
+                    <button id="tab-btn-historico" class="flex-1 px-4 py-3.5 text-center font-bold uppercase text-slate-500 bg-white border border-b-0 border-slate-200 rounded-t-xl hover:text-slate-700 hover:bg-slate-50 transition-colors focus:outline-none whitespace-nowrap ml-1">
                         Histórico Recepção
                     </button>
                 </div>
                 <div class="p-4 sm:p-6 bg-white flex-1 overflow-y-auto custom-scrollbar">
                     <div id="aba-encerramento" class="space-y-6">
-                        <div id="painel-fotos-servidor" class="hidden bg-slate-50 rounded-2xl p-4 shadow-sm border border-slate-200 animate-fade-in">
-                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-3">
-                                <span>📱</span> Documentos Anexados (Cidadão)
-                            </h4>
-                            <div id="grid-fotos-recebidas" class="grid grid-cols-2 sm:grid-cols-4 gap-2"></div>
-                        </div>
-                        <div id="painel-documentos-seguros" class="hidden bg-slate-50 rounded-2xl p-4 shadow-sm border border-slate-200 mt-4 animate-fade-in">
-                            <h4 class="text-xs font-black text-slate-600 uppercase tracking-widest flex items-center gap-2 mb-3">
-                                <span>📑</span> Documentos Digitalizados (Recepção)
-                            </h4>
-                            <div id="grid-documentos-seguros" class="grid grid-cols-1 sm:grid-cols-2 gap-2"></div>
-                        </div>
                         <div id="area-colaborador" class="hidden">
                             <div class="flex flex-col justify-center items-center py-20 gap-3">
                                 <div class="animate-spin rounded-full h-10 w-10 border-b-2 border-slate-800"></div>
@@ -193,113 +247,17 @@
                 </div>
             </div>
             
-            <div class="bg-slate-50 px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-semibold text-slate-400 shrink-0 select-none">
+            <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
                 <span>SIGEP • Mesa Unificada de Trabalho</span>
-                <span class="font-mono text-[9px]">v2.0-2026</span>
+                <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded">v2.0-2026</span>
             </div>
         </div>
 
     </div><!-- Fim do Main Wrapper -->
 
-    <!-- RODAPÉ GLOBAL (IDÊNTICO AO INDEX) -->
-    <footer id="main-footer" class="w-full py-6 bg-white border-t border-slate-300 mt-auto shrink-0 z-10">
-        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
-            <div id="footer-links" class="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-slate-600 font-semibold w-full md:w-auto">
-                <button type="button" onclick="document.getElementById('terms-modal').classList.remove('hidden')" class="hover:text-blue-600 transition-colors">Termos de Uso</button>
-                <button type="button" onclick="document.getElementById('privacy-policy-modal').classList.remove('hidden')" class="hover:text-blue-600 transition-colors">Política de Privacidade</button>
-            </div>
-
-            <div class="flex flex-wrap items-center justify-center gap-3">
-                <button id="btn-alto-contraste" title="Ativar/Desativar Modo de Alto Contraste para baixa visão" class="cursor-pointer flex items-center gap-1.5 text-xs text-slate-700 font-bold bg-white hover:bg-slate-100 px-3 py-1.5 rounded-lg border border-slate-300 shadow-sm transition-all active:scale-95">
-                    <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
-                    <span>Alto Contraste</span>
-                </button>
-                <div title="Servidores monitorados 24/7" class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
-                    <span>Ambiente Monitorado</span>
-                </div>
-                <div title="Criptografia de ponta a ponta (SSL/TLS)." class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                    <span>Conexão Criptografada</span>
-                </div>
-                <div title="Adequado à Lei Geral de Proteção de Dados" class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
-                    <svg class="w-4 h-4 text-indigo-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"></path></svg>
-                    <span>Conformidade LGPD</span>
-                </div>
-            </div>
-        </div>
-    </footer>
-
-    <!-- MODAL DE TROCA DE SENHA OBRIGATÓRIA (FASE 2) -->
-    <div id="modal-troca-senha" class="fixed inset-0 bg-slate-900/80 z-[100] hidden items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white p-6 sm:p-8 rounded-2xl shadow-2xl w-full max-w-md animate-fade-in">
-            <div class="text-center mb-6">
-                <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center mx-auto mb-3">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"></path></svg>
-                </div>
-                <h3 class="text-xl font-bold text-slate-800 mb-1">Defina sua Senha</h3>
-                <p class="text-sm text-slate-500">Este é seu primeiro acesso seguro. Por favor, defina uma senha definitiva para continuar.</p>
-            </div>
-            
-            <div id="troca-error" class="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-lg mb-4 hidden text-xs font-bold text-center"></div>
-            
-            <form id="troca-senha-form" class="space-y-4">
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
-                    <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
-                </div>
-                <div>
-                    <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-                    <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
-                </div>
-                <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
-                    Salvar e Acessar
-                </button>
-            </form>
-        </div>
-    </div>
-
-    <!-- MODAL TERMOS DE USO -->
-    <div id="terms-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-                <h2 class="font-bold text-xl text-slate-800">Termos de Uso</h2>
-                <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto text-sm text-slate-600 space-y-4 custom-scrollbar">
-                <p>Bem-vindo ao SIGEP. Ao acessar e utilizar este sistema, você concorda em cumprir e estar vinculado aos seguintes termos de uso.</p>
-                <p><strong>1. Uso Responsável:</strong> O sistema destina-se exclusivamente ao gerenciamento de pautas e atendimento ao público. Qualquer uso indevido para outros fins é proibido.</p>
-                <p><strong>2. Sigilo e Confidencialidade:</strong> Os dados trafegados neste sistema possuem informações sensíveis de cidadãos. O usuário compromete-se a manter total sigilo sobre as informações visualizadas e tratadas.</p>
-                <p><strong>3. Responsabilidade do Usuário:</strong> As credenciais de acesso são pessoais e intransferíveis. O usuário é inteiramente responsável por todas as ações realizadas através de sua conta.</p>
-            </div>
-            <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-                <button onclick="document.getElementById('terms-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Fechar e Concordar</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- MODAL POLÍTICA DE PRIVACIDADE -->
-    <div id="privacy-policy-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm">
-        <div class="bg-white rounded-2xl w-full max-w-2xl flex flex-col max-h-[80vh] overflow-hidden">
-            <div class="p-6 border-b border-slate-100 flex justify-between items-center bg-slate-50 shrink-0">
-                <h2 class="font-bold text-xl text-slate-800">Política de Privacidade (LGPD)</h2>
-                <button onclick="document.getElementById('privacy-policy-modal').classList.add('hidden')" class="text-slate-400 hover:text-red-500 font-bold text-2xl transition">&times;</button>
-            </div>
-            <div class="p-6 overflow-y-auto text-sm text-slate-600 space-y-4 custom-scrollbar">
-                <p>Esta Política de Privacidade descreve como o SIGEP coleta, usa e protege as informações em conformidade com a Lei Geral de Proteção de Dados Pessoais (LGPD).</p>
-                <p><strong>1. Coleta de Dados:</strong> Coletamos apenas os dados estritamente necessários para a prestação do serviço de atendimento (nome, contato, assunto, e documentos atrelados ao caso).</p>
-                <p><strong>2. Tratamento e Proteção:</strong> Os dados são armazenados em ambiente seguro e criptografado. O acesso é restrito apenas a colaboradores autorizados e diretamente envolvidos na pauta.</p>
-                <p><strong>3. Retenção e Descarte:</strong> Os dados são mantidos pelo tempo necessário para o cumprimento das obrigações legais e regulatórias, sendo anonimizados ou descartados de forma segura após esse período.</p>
-            </div>
-            <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
-                <button onclick="document.getElementById('privacy-policy-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Estou Ciente</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- SCRIPTS -->
+    <!-- SCRIPT DE LOGIN, AUTENTICAÇÃO E NOVO ROTEAMENTO -->
     <script type="module">
-        import { getAuth, signInWithEmailAndPassword, updatePassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getAuth, signInWithEmailAndPassword, updatePassword } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
@@ -315,8 +273,8 @@
             shell: document.getElementById('shell-atendimento'),
             modalSenha: document.getElementById('modal-troca-senha'),
             errLogin: document.getElementById('auth-error'),
-            succLogin: document.getElementById('auth-success'),
-            errSenha: document.getElementById('troca-error')
+            errSenha: document.getElementById('troca-error'),
+            topNav: document.getElementById('top-nav-bar')
         };
 
         const STATE = { pautaId: null, colaboradorId: null, matricula: null, usuarioAuth: null, pautaFechada: false };
@@ -329,6 +287,8 @@
 
         function showUI(element) {
             Object.values(UI).forEach(e => { if (e && e.classList) e.classList.add('hidden'); });
+            
+            if (STATE.usuarioAuth) UI.topNav.classList.remove('hidden'); // Mostra TopBar logado
             
             if (element && element.classList) {
                 element.classList.remove('hidden');
@@ -355,8 +315,8 @@
                 const snap = await getDocs(q);
                 
                 if (snap.empty) {
-                    UI.errLogin.textContent = "Acesso Negado: Você não está vinculado a esta pauta.";
-                    UI.errLogin.classList.remove('hidden');
+                    alert("Acesso Negado: Você não está vinculado a esta pauta. Redirecionando para o Portal.");
+                    window.location.href = window.location.pathname;
                     return false;
                 }
                 
@@ -378,6 +338,9 @@
             }
         }
 
+        // ==========================================
+        // CARREGAMENTO DOS CARDS IGUAIS AO SISTEMA
+        // ==========================================
         async function carregarMinhasPautas() {
             showUI(UI.loading);
             document.getElementById('loading-text').textContent = "Buscando suas pautas vinculadas...";
@@ -394,35 +357,103 @@
                     const colabSnap = await getDocs(q);
                     
                     if (!colabSnap.empty) {
-                        pautasVinculadas.push({ id: docSnap.id, ...pautaData });
+                        pautasVinculadas.push({ id: docSnap.id, ...pautaData, meuPapel: colabSnap.docs[0].data().cargo });
                     }
                 }
 
                 const container = document.getElementById('lista-pautas-vinculadas');
+                
                 if (pautasVinculadas.length === 0) {
                     container.innerHTML = `
-                        <div class="col-span-full text-center py-10 bg-slate-50 rounded-xl border border-slate-100">
-                            <p class="text-slate-500 font-semibold">Você não está vinculado a nenhuma pauta no momento.</p>
-                            <p class="text-xs text-slate-400 mt-2">Peça a um Coordenador para convidá-lo.</p>
+                        <div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
+                            <span class="text-6xl block mb-4 text-slate-300">📭</span>
+                            <p class="text-slate-700 font-bold text-lg uppercase tracking-wider">Nenhuma pauta encontrada</p>
+                            <p class="text-sm text-slate-500 mt-2">Você não foi adicionado a nenhuma mesa de trabalho. Fale com o coordenador.</p>
                         </div>`;
                 } else {
-                    pautasVinculadas.sort((a, b) => (a.fechada === b.fechada) ? 0 : a.fechada ? 1 : -1);
-                    container.innerHTML = pautasVinculadas.map(p => `
-                        <button onclick="window.location.href='?pautaId=${p.id}'" class="w-full text-left bg-white p-5 rounded-xl border border-slate-200 shadow-sm hover:border-blue-500 hover:shadow-md transition-all group flex flex-col justify-between h-full">
+                    // Ordena: Abertas primeiro
+                    pautasVinculadas.sort((a, b) => {
+                        if (a.fechada === b.fechada) {
+                            const dateA = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+                            const dateB = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+                            return dateB - dateA; // Mais recentes primeiro
+                        }
+                        return a.fechada ? 1 : -1;
+                    });
+                    
+                    // Renderiza os cards idênticos à imagem do sistema (image_e08fc4.png)
+                    container.innerHTML = pautasVinculadas.map(p => {
+                        const isMutirao = p.type === 'mutirao' || p.type === 'acao_social';
+                        const isAcaoLivre = p.type === 'acao_livre';
+                        const modoTexto = isMutirao ? 'MUTIRÃO' : isAcaoLivre ? 'AÇÃO SOCIAL' : 'AGENDAMENTO';
+                        const corTextoTipo = (isMutirao || isAcaoLivre) ? 'text-amber-500' : 'text-blue-500';
+                        
+                        const dataCriacao = p.createdAt ? new Date(p.createdAt).toLocaleDateString('pt-BR') : '--/--/----';
+                        
+                        // Determina a data de eliminação (7 dias após)
+                        let dataEliminacao = '--/--/----';
+                        if (p.createdAt) {
+                            const d = new Date(p.createdAt);
+                            d.setDate(d.getDate() + 7);
+                            dataEliminacao = d.toLocaleDateString('pt-BR');
+                        }
+
+                        // Badge de Papel (Verde para Defensor/Criador, Azul para Resto)
+                        const isDefensor = p.meuPapel && p.meuPapel.toLowerCase().includes('defensor');
+                        const badgeBadge = isDefensor 
+                            ? `<span class="bg-green-100 text-green-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Defensor</span>` 
+                            : `<span class="bg-blue-100 text-blue-700 text-[10px] font-black px-2.5 py-1 rounded-full uppercase tracking-wider">Vinculada</span>`;
+
+                        // Capa para Pautas Encerradas
+                        const overlayFechada = p.fechada ? `
+                            <div class="absolute inset-0 bg-white/60 backdrop-blur-[1px] z-10 rounded-2xl flex flex-col items-center justify-center border-2 border-red-500/50">
+                                <span class="bg-red-600 text-white font-black px-4 py-2 rounded-xl shadow-lg uppercase tracking-widest text-sm mb-3">PAUTA ENCERRADA</span>
+                                <button onclick="window.location.href='?pautaId=${p.id}'" class="bg-white border-2 border-slate-300 text-slate-700 font-bold px-4 py-2 rounded-xl text-xs hover:bg-slate-50 transition-colors shadow-sm">VER AUDITORIA</button>
+                            </div>
+                        ` : '';
+
+                        const linkAtivo = p.fechada ? '#' : `?pautaId=${p.id}`;
+                        const onClickAtivo = p.fechada ? '' : `onclick="window.location.href='${linkAtivo}'"`;
+
+                        return `
+                        <div class="bg-white rounded-2xl p-6 shadow-sm border border-slate-200 relative flex flex-col justify-between hover:shadow-md transition-shadow cursor-pointer min-h-[220px]" ${onClickAtivo}>
+                            ${overlayFechada}
                             <div>
-                                <h3 class="font-bold text-slate-800 text-base group-hover:text-blue-700 transition-colors leading-tight">${p.name || 'Pauta Sem Nome'}</h3>
-                                <p class="text-[11px] font-mono text-slate-400 mt-2">ID: ${p.id}</p>
+                                <div class="flex justify-between items-start mb-2">
+                                    <span class="text-[11px] font-black uppercase tracking-widest ${corTextoTipo}">${modoTexto}</span>
+                                </div>
+                                <h3 class="text-base font-bold text-slate-800 mb-2 leading-snug line-clamp-2 min-h-[40px] uppercase">${escapeHTML(p.name || 'Pauta Sem Nome')}</h3>
+                                <p class="text-[11px] text-slate-500 mb-4 font-medium flex items-center gap-1.5">
+                                    <svg class="w-3.5 h-3.5 text-slate-400" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4.354a4 4 0 110 5.292M15 21H3v-1a6 6 0 0112 0v1zm0 0h6v-1a6 6 0 00-9-5.197M13 7a4 4 0 11-8 0 4 4 0 018 0z"></path></svg> 
+                                    Membros da equipe vinculados
+                                </p>
+                                <div class="mb-4">${badgeBadge}</div>
                             </div>
-                            <div class="mt-4 pt-3 border-t border-slate-100 flex items-center justify-between">
-                                <span class="text-xs font-bold ${p.fechada ? 'text-red-500' : 'text-emerald-600'} flex items-center gap-1.5">
-                                    <span class="w-2 h-2 rounded-full ${p.fechada ? 'bg-red-500' : 'bg-emerald-500'}"></span>
-                                    ${p.fechada ? 'Encerrada' : 'Em andamento'}
-                                </span>
-                                <span class="text-blue-600 text-xs font-bold uppercase tracking-wider group-hover:translate-x-1 transition-transform">Acessar &rarr;</span>
+                            
+                            <div class="pt-4 border-t border-slate-100 flex justify-between text-[9px] font-black uppercase tracking-widest text-slate-400 mt-auto">
+                                <div>
+                                    <span class="block mb-1">CRIADA EM</span>
+                                    <span class="text-slate-600">${dataCriacao}</span>
+                                </div>
+                                <div class="text-right">
+                                    <span class="block mb-1 text-orange-500">ELIMINAÇÃO (7 DIAS)</span>
+                                    <span class="text-slate-600">${dataEliminacao}</span>
+                                </div>
                             </div>
-                        </button>
-                    `).join('');
+                        </div>
+                        `;
+                    }).join('');
                 }
+                
+                // Filtro Local
+                document.getElementById('search-pautas-input')?.addEventListener('input', (e) => {
+                    const text = e.target.value.toLowerCase();
+                    document.querySelectorAll('#lista-pautas-vinculadas > div').forEach(card => {
+                        const title = card.querySelector('h3').textContent.toLowerCase();
+                        card.style.display = title.includes(text) ? '' : 'none';
+                    });
+                });
+
                 showUI(UI.selector);
             } catch (e) {
                 console.error("Erro ao carregar pautas:", e);
@@ -434,7 +465,6 @@
 
         async function tentarEntrar(email, password) {
             UI.errLogin.classList.add('hidden');
-            UI.succLogin.classList.add('hidden');
             const btn = document.getElementById('btn-entrar');
             const htmlOriginal = btn.innerHTML;
             btn.innerHTML = 'Autenticando...';
@@ -452,11 +482,10 @@
             }
         }
 
-        // ESQUECI A SENHA LÓGICA
-        document.getElementById('btn-esqueci-senha').addEventListener('click', async () => {
+        // ESQUECI A SENHA
+        document.getElementById('forgot-password-link').addEventListener('click', async () => {
             const emailInput = document.getElementById('login-email').value.trim();
             UI.errLogin.classList.add('hidden');
-            UI.succLogin.classList.add('hidden');
 
             if (!emailInput) {
                 UI.errLogin.textContent = "Preencha o seu e-mail cadastrado acima para recuperar a senha.";
@@ -464,26 +493,17 @@
                 return;
             }
 
-            const btn = document.getElementById('btn-esqueci-senha');
-            const textOrig = btn.textContent;
-            btn.textContent = "Aguarde...";
-            btn.disabled = true;
-
             try {
+                const { sendPasswordResetEmail } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js");
                 await sendPasswordResetEmail(auth, emailInput);
-                UI.succLogin.textContent = "E-mail de recuperação enviado! Verifique a sua caixa de entrada e o lixo eletrônico.";
-                UI.succLogin.classList.remove('hidden');
+                alert("E-mail de recuperação enviado! Verifique a sua caixa de entrada e spam.");
             } catch (error) {
-                console.error("Erro reset:", error);
                 UI.errLogin.textContent = "Erro ao enviar e-mail. Verifique se o endereço está correto e cadastrado.";
                 UI.errLogin.classList.remove('hidden');
-            } finally {
-                btn.textContent = textOrig;
-                btn.disabled = false;
             }
         });
 
-        // TROCA DE SENHA
+        // TROCA DE SENHA OBRIGATÓRIA
         document.getElementById('troca-senha-form').addEventListener('submit', async (e) => {
             e.preventDefault();
             const nova = document.getElementById('nova-senha').value;
@@ -525,7 +545,7 @@
 
         async function boot() {
             if (!parseURL()) {
-                // Remove erro de link inválido da tela principal. Deixa carregar o Portal.
+                // Remove query param validation here, let it load the selector naturally
             }
 
             auth.onAuthStateChanged(async (user) => {
@@ -537,10 +557,10 @@
                         if (await validarPermissaoPauta()) {
                             iniciarMesaDeTrabalho();
                         } else if (UI.modalSenha.classList.contains('hidden')) {
-                            alert("Acesso Negado: Redirecionando para o Portal Geral.");
-                            window.location.href = window.location.pathname;
+                            // Erro de acesso, mas não é tela de senha
                         }
                     } else {
+                        // Se fez login, ou atualizou a pagina na raiz sem pautaId
                         carregarMinhasPautas();
                     }
                 } else {
@@ -559,6 +579,7 @@
         }
         document.getElementById('btn-logout-selector').addEventListener('click', doLogout);
         document.getElementById('btn-logout-mesa').addEventListener('click', doLogout);
+        document.getElementById('logout-btn-nav')?.addEventListener('click', doLogout);
 
         document.getElementById('btn-voltar-portal').addEventListener('click', () => {
             window.location.href = window.location.pathname; 
@@ -578,19 +599,6 @@
             if (digitada === senhaCorreta) window.open(url, '_blank');
             else if (digitada !== null) alert("❌ Senha incorreta!");
         };
-
-        // CONTROLO DE ALTO CONTRASTE (RODAPÉ)
-        const btnContraste = document.getElementById('btn-alto-contraste');
-        const htmlElement = document.documentElement;
-        if (localStorage.getItem('sigep_alto_contraste') === 'true') {
-            htmlElement.classList.add('alto-contraste');
-        }
-        if (btnContraste) {
-            btnContraste.addEventListener('click', () => {
-                htmlElement.classList.toggle('alto-contraste');
-                localStorage.setItem('sigep_alto_contraste', htmlElement.classList.contains('alto-contraste'));
-            });
-        }
 
         boot();
     </script>
