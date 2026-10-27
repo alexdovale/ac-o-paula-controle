@@ -6,6 +6,7 @@ import {
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
+import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { ico } from './icons.js';
@@ -47,6 +48,10 @@ export const AtendimentoExternoService = {
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
     unsubscribePauta: null,
+    unsubscribeAssistido: null,
+    pautaCompletaAberta: false,
+    _gruposPautaEstado: {},
+    _assinaturaAssistido: '',
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
@@ -64,6 +69,8 @@ export const AtendimentoExternoService = {
         }
 
         try {
+            // Aguarda o Firebase restaurar a sessão (evita falso 'Sessão expirada' no reload)
+            if (typeof auth.authStateReady === 'function') await auth.authStateReady();
             const user = auth.currentUser;
             if (!user) {
                 this.showError("Acesso Negado", "Sessão expirada. Volte e faça login novamente no painel principal.");
@@ -124,11 +131,29 @@ export const AtendimentoExternoService = {
             }
         });
 
-        this.unsubscribeDashboard = onSnapshot(collection(db, "pautas", this.pautaId, "attendances"), (snap) => {
-            this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-            this.atualizarBadgeHeader();
-            this.renderizarKanban();
-        });
+        let primeiraCarga = true;
+        this.unsubscribeDashboard = onSnapshot(
+            collection(db, "pautas", this.pautaId, "attendances"),
+            (snap) => {
+                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+                // Avisa (som + toast) quando alguém novo entra na fila, exceto na carga inicial
+                if (!primeiraCarga) {
+                    snap.docChanges().forEach(change => {
+                        if (change.type === 'added' && change.doc.data().status === 'aguardando') {
+                            if (typeof showNotification === 'function') showNotification(`Novo assistido na fila: ${change.doc.data().name}`, "info");
+                            if (typeof playSound === 'function') playSound();
+                        }
+                    });
+                }
+                primeiraCarga = false;
+
+                this.atualizarBadgeHeader();
+                this.renderizarKanban();
+                if (this.pautaCompletaAberta) this._renderizarPautaCompleta();
+            },
+            (error) => console.error("Erro no realtime:", error)
+        );
 
         this.prepararFiltroKanban();
     },
@@ -149,7 +174,7 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        const assistido = docSnap.data();
+        const assistido = { id: docSnap.id, ...docSnap.data() };
         this.assistidoData = assistido;
         this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
 
@@ -160,11 +185,49 @@ export const AtendimentoExternoService = {
 
         this.renderizarSplitScreen(assistido, pautaData);
         this.atualizarBadgeHeader();
+        this._assinaturaAssistido = this._assinaturaDados(assistido);
+        this._escutarAssistido(pautaData);
+    },
+
+    // Mantém nome, assunto, checklist e histórico sincronizados enquanto o atendimento está aberto.
+    // Não redesenha o painel de ações (para não apagar o que o colaborador está digitando).
+    _assinaturaDados(a) {
+        return JSON.stringify([a.name, a.subject, a.status, a.documentChecklist || null, a.demandas?.descricoes || null, a.historicoTransferencia || null]);
+    },
+
+    _escutarAssistido(pautaData) {
+        if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
+        this.unsubscribeAssistido = onSnapshot(
+            doc(db, "pautas", this.pautaId, "attendances", this.assistidoId),
+            (snap) => {
+                if (!snap.exists() || !this.assistidoId) return;
+                const novo = snap.data();
+                const statusAnterior = this.assistidoData?.status;
+                const assinatura = this._assinaturaDados(novo);
+                if (assinatura === this._assinaturaAssistido) return;
+                this._assinaturaAssistido = assinatura;
+                this.assistidoData = { id: snap.id, ...novo };
+
+                const nomeEl = document.getElementById('assistido-nome');
+                const assuntoEl = document.getElementById('assistido-assunto');
+                if (nomeEl) nomeEl.textContent = novo.name || 'Assistido';
+                if (assuntoEl) assuntoEl.textContent = novo.subject || 'Sem assunto';
+
+                // Se o status mudou (ex.: outro colaborador concluiu), refaz a tela inteira
+                if (statusAnterior !== novo.status && !this.isProcessing) {
+                    this.renderizarSplitScreen(this.assistidoData, pautaData);
+                } else {
+                    this._renderizarLadoEsquerdo(this.assistidoData);
+                }
+            },
+            (error) => console.error("Erro no realtime do assistido:", error)
+        );
     },
 
     _cancelarListeners() {
         if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
         if (this.unsubscribePauta) { this.unsubscribePauta(); this.unsubscribePauta = null; }
+        if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
     },
 
     async carregarColaboradoresGerais() {
@@ -239,11 +302,15 @@ export const AtendimentoExternoService = {
                 col4.innerHTML = `
                     <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
                         <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
-                        <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
+                        <div class="flex items-center gap-2">
+                            <button id="btn-pauta-completa" class="bg-slate-800 hover:bg-slate-900 text-white font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition active:scale-95">Ver completa</button>
+                            <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
+                        </div>
                     </div>
                     <div id="kanban-pauta-geral" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
                 `;
                 grid.appendChild(col4);
+                col4.querySelector('#btn-pauta-completa').onclick = () => this.abrirPautaCompleta();
             }
 
             // Altera o título da 3ª coluna para "Meus Concluídos"
@@ -259,8 +326,10 @@ export const AtendimentoExternoService = {
         document.getElementById('view-atendimento').classList.remove('flex');
         
         const url = new URL(window.location.href);
-        url.searchParams.delete('assistidoId');
-        window.history.pushState({}, '', url);
+        if (url.searchParams.has('assistidoId')) {
+            url.searchParams.delete('assistidoId');
+            window.history.pushState({}, '', url);
+        }
 
         // 1. FILA DE ESPERA
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
@@ -293,19 +362,22 @@ export const AtendimentoExternoService = {
         this._injetarCardsColuna('kanban-pauta-geral', 'count-pauta-geral', pautaGeral, 'auditoria', 'Sem outros casos em andamento.');
 
         this._setupAcoesCards();
+        this._aplicarFiltroKanban();
+    },
+
+    _aplicarFiltroKanban() {
+        const searchInput = document.getElementById('kanban-search');
+        const termo = (searchInput?.value || '').toLowerCase().trim();
+        document.querySelectorAll('#view-dashboard .kanban-card').forEach(card => {
+            card.style.display = !termo || card.textContent.toLowerCase().includes(termo) ? '' : 'none';
+        });
     },
 
     prepararFiltroKanban() {
         const searchInput = document.getElementById('kanban-search');
-        if (!searchInput) return;
-
-        searchInput.addEventListener('input', (e) => {
-            const termo = e.target.value.toLowerCase().trim();
-            document.querySelectorAll('.kanban-card').forEach(card => {
-                const texto = card.textContent.toLowerCase();
-                card.style.display = texto.includes(termo) ? '' : 'none';
-            });
-        });
+        if (!searchInput || searchInput.dataset.filtroPronto) return;
+        searchInput.dataset.filtroPronto = '1';
+        searchInput.addEventListener('input', () => this._aplicarFiltroKanban());
     },
 
     _injetarCardsColuna(colunaId, countId, lista, modo, msgVazio) {
@@ -377,7 +449,8 @@ export const AtendimentoExternoService = {
     },
 
     _setupAcoesCards() {
-        document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
+        document.querySelectorAll('.btn-devolver-caso:not([data-bound])').forEach(btn => {
+            btn.dataset.bound = '1';
             btn.addEventListener('click', async (e) => {
                 const b = e.currentTarget;
                 if (!confirm("Devolver este caso para a Fila de Espera?")) return;
@@ -398,16 +471,140 @@ export const AtendimentoExternoService = {
             });
         });
 
-        document.querySelectorAll('.btn-auditar-nativo').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const b = e.currentTarget;
-                if (window.abrirMonitoramento) {
-                    window.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome);
-                } else {
-                    alert("Módulo de Monitoramento Nativo não encontrado. Volte e use o botão 'Ver Dossiê' dentro do atendimento.");
-                }
-            });
+        document.querySelectorAll('.btn-auditar-nativo:not([data-bound])').forEach(btn => {
+            btn.dataset.bound = '1';
+            btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
         });
+    },
+
+    // ─── OVERLAYS (histórico rápido e pauta completa) ─────────────────────────
+
+    _criarOverlay(id, titulo, larguraMax = 'max-w-3xl') {
+        document.getElementById(id)?.remove();
+        const el = document.createElement('div');
+        el.id = id;
+        el.className = 'fixed inset-0 z-[9999] bg-slate-900/60 flex items-stretch sm:items-center justify-center sm:p-6';
+        el.innerHTML = `
+            <div class="bg-slate-50 w-full ${larguraMax} sm:rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden">
+                <div class="flex items-center justify-between gap-3 px-5 py-4 bg-white border-b border-slate-200 shrink-0">
+                    <h3 class="font-black text-slate-800 text-sm sm:text-base leading-tight truncate">${titulo}</h3>
+                    <button data-fechar class="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg active:scale-95">Fechar</button>
+                </div>
+                <div data-corpo class="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar"></div>
+            </div>`;
+        document.body.appendChild(el);
+
+        const fechar = () => this._fecharOverlay(id);
+        el.querySelector('[data-fechar]').onclick = fechar;
+        el.addEventListener('click', (e) => { if (e.target === el) fechar(); });
+        if (!this._escOverlayPronto) {
+            this._escOverlayPronto = true;
+            document.addEventListener('keydown', (e) => {
+                if (e.key !== 'Escape') return;
+                ['overlay-historico-rapido', 'overlay-pauta-completa'].forEach(i => { if (document.getElementById(i)) this._fecharOverlay(i); });
+            });
+        }
+        return el.querySelector('[data-corpo]');
+    },
+
+    _fecharOverlay(id) {
+        document.getElementById(id)?.remove();
+        if (id === 'overlay-pauta-completa') this.pautaCompletaAberta = false;
+    },
+
+    // Histórico do assistido (checklist, documentos, perfil, gastos...) direto do card, sem depender de módulo externo
+    abrirHistoricoRapido(assistidoId) {
+        const assistido = this.todosAtendimentosPauta.find(a => a.id === assistidoId);
+        if (!assistido) { alert("Assistido não encontrado na pauta."); return; }
+
+        const corpo = this._criarOverlay('overlay-historico-rapido', `Histórico • ${escapeHTML(assistido.name || 'Assistido')}`);
+        this._renderizarLadoEsquerdo({ ...assistido, id: assistido.id }, corpo, { botoes: false });
+
+        if (typeof window.abrirMonitoramento === 'function') {
+            const btn = document.createElement('button');
+            btn.className = 'w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl active:scale-95';
+            btn.textContent = 'Linha do tempo completa';
+            btn.onclick = () => window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
+            corpo.appendChild(btn);
+        }
+    },
+
+    // ─── PAUTA COMPLETA (visível para todos os colaboradores) ─────────────────
+
+    abrirPautaCompleta() {
+        this.pautaCompletaAberta = true;
+        this._criarOverlay('overlay-pauta-completa', escapeHTML(this.pautaNome), 'max-w-6xl');
+        this._renderizarPautaCompleta();
+    },
+
+    _renderizarPautaCompleta() {
+        const corpo = document.querySelector('#overlay-pauta-completa [data-corpo]');
+        if (!corpo) { this.pautaCompletaAberta = false; return; }
+
+        // Guarda quais grupos o usuário abriu/fechou para não perder ao atualizar ao vivo
+        corpo.querySelectorAll('details[data-grupo]').forEach(d => { this._gruposPautaEstado[d.dataset.grupo] = d.open; });
+        const scrollTop = corpo.scrollTop;
+
+        const todos = this.todosAtendimentosPauta;
+        const por = (...status) => todos.filter(a => status.includes(a.status));
+        const espera = por('aguardando');
+        const atendendo = por('emAtendimento');
+        const revisao = por('aguardandoDistribuicao', 'aguardandoCorrecao');
+        const concluidos = por('atendido', 'aguardandoNumero');
+        const faltosos = por('faltoso');
+        const total = todos.length;
+        const pct = total > 0 ? Math.round((concluidos.length / total) * 100) : 0;
+
+        if (total === 0) {
+            corpo.innerHTML = `<div class="text-center py-20 bg-white rounded-2xl border border-slate-200"><p class="font-black text-slate-700 uppercase tracking-widest text-sm">Pauta vazia</p><p class="text-xs text-slate-500 mt-2">Ainda não há assistidos nesta pauta.</p></div>`;
+            return;
+        }
+
+        const kpi = (n, label, cor) => `
+            <div class="bg-${cor}-50 border border-${cor}-100 rounded-2xl p-4 text-center shadow-sm">
+                <div class="text-2xl font-black text-${cor}-600">${n}</div>
+                <div class="text-[9px] text-${cor}-600 font-bold uppercase tracking-wider mt-1">${label}</div>
+            </div>`;
+
+        const grupo = (titulo, lista, abertoPadrao) => {
+            if (lista.length === 0) return '';
+            const aberto = this._gruposPautaEstado[titulo] ?? (abertoPadrao ?? lista.length <= 8);
+            return `
+                <details data-grupo="${titulo}" ${aberto ? 'open' : ''} class="mb-4 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+                    <summary class="p-4 bg-slate-50 text-[11px] font-black text-slate-700 uppercase tracking-widest cursor-pointer select-none flex justify-between items-center hover:bg-slate-100">
+                        <span>${titulo} <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full ml-2">${lista.length}</span></span>
+                    </summary>
+                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
+                        ${lista.map(a => this._htmlCardKanban(a, 'auditoria')).join('')}
+                    </div>
+                </details>`;
+        };
+
+        corpo.innerHTML = `
+            <div class="flex items-center justify-between mb-3 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
+                <div>
+                    <p class="font-black text-slate-800 text-sm">${total} ${total === 1 ? 'assistido' : 'assistidos'} na pauta</p>
+                    <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1">${escapeHTML(this.pautaTipo)}${this.pautaFechada ? ' • encerrada' : ''}</p>
+                </div>
+                <span class="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">${pct}% concluído</span>
+            </div>
+            <div class="h-2 bg-slate-200 rounded-full mb-5 overflow-hidden"><div class="h-full bg-emerald-500" style="width:${pct}%"></div></div>
+            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
+                ${kpi(espera.length, 'Espera', 'amber')}
+                ${kpi(atendendo.length, 'Atendendo', 'blue')}
+                ${kpi(revisao.length, 'Com defensor / avaliação', 'cyan')}
+                ${kpi(concluidos.length, 'Concluídos', 'emerald')}
+                ${kpi(faltosos.length, 'Faltosos', 'red')}
+            </div>
+            ${grupo('Aguardando', espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0)))}
+            ${grupo('Em atendimento', atendendo)}
+            ${grupo('Com defensor / avaliação', revisao)}
+            ${grupo('Concluídos', concluidos, false)}
+            ${grupo('Faltosos', faltosos, false)}
+        `;
+
+        this._setupAcoesCards();
+        corpo.scrollTop = scrollTop;
     },
 
     // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL + HISTÓRICO ORIGINAL) 
@@ -425,6 +622,7 @@ export const AtendimentoExternoService = {
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Sem assunto';
         
         document.getElementById('btn-voltar-portal').onclick = () => {
+            if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
             this.assistidoId = null;
             this.assistidoData = null;
             this.renderizarKanban();
@@ -441,8 +639,9 @@ export const AtendimentoExternoService = {
         }
     },
 
-    _renderizarLadoEsquerdo(assistido) {
-        const container = document.getElementById('aba-historico');
+    _renderizarLadoEsquerdo(assistido, container = document.getElementById('aba-historico'), opcoes = {}) {
+        const mostrarBotoes = opcoes.botoes !== false;
+        if (!container) return;
         let html = '';
 
         // 1. AVISO DE TRANSFERÊNCIA (SE HOUVER)
@@ -459,7 +658,7 @@ export const AtendimentoExternoService = {
         }
 
         // 2. BOTÕES NATIVOS NO TOPO
-        html += `
+        if (mostrarBotoes) html += `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
                 <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
                     <span class="text-2xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-8 h-8')}</span>
@@ -586,6 +785,9 @@ export const AtendimentoExternoService = {
                                 <span class="uppercase tracking-widest">TOTAL</span>
                                 <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${totalFormatado}</span>
                             </div>
+                            <button data-baixar-planilha class="mt-5 w-full bg-white border border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
+                                ${ico('fileText', 'w-4 h-4')} Baixar planilha PDF
+                            </button>
                         </div>
                     `;
                 }
@@ -611,10 +813,22 @@ export const AtendimentoExternoService = {
         
         container.innerHTML = html;
 
+        const btnPlanilha = container.querySelector('[data-baixar-planilha]');
+        if (btnPlanilha) {
+            btnPlanilha.onclick = () => {
+                const gerar = PDFService?.generatePlanilhaGastosPDF || window.PDFService?.generatePlanilhaGastosPDF;
+                const dono = PDFService?.generatePlanilhaGastosPDF ? PDFService : window.PDFService;
+                if (typeof gerar === 'function') gerar.call(dono, assistido.name || 'Assistido', assistido.documentChecklist.expenseData);
+                else alert("Módulo de PDF não carregado.");
+            };
+        }
+
+        if (!mostrarBotoes) return;
+
         // VINCULANDO AÇÕES AOS BOTÕES NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
         setTimeout(() => {
-            const btnDocs = document.getElementById('btn-nativ-docs');
-            const btnTime = document.getElementById('btn-nativ-time');
+            const btnDocs = container.querySelector('#btn-nativ-docs');
+            const btnTime = container.querySelector('#btn-nativ-time');
             
             if (btnDocs) {
                 btnDocs.addEventListener('click', () => {
