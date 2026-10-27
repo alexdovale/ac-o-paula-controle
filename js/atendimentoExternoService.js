@@ -225,7 +225,7 @@ export const AtendimentoExternoService = {
 
     // ─── RENDERIZAÇÃO: KANBAN (VISÃO GERAL) ───────────────────────────────────
 
-    renderizarKanban() {
+       renderizarKanban() {
         document.getElementById('view-dashboard').classList.remove('hidden');
         document.getElementById('view-dashboard').classList.add('flex');
         document.getElementById('view-atendimento').classList.add('hidden');
@@ -235,25 +235,26 @@ export const AtendimentoExternoService = {
         url.searchParams.delete('assistidoId');
         window.history.pushState({}, '', url);
 
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
-
+        // 1. FILA DE ESPERA: Todos veem quem está a aguardar atendimento
         const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
+        
+        // 2. MINHA MESA: Casos que estão ativamente na mesa do colaborador logado
         const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
         
+        // 3. AUDITORIA / PAUTA INICIAL COMPLETA: 
+        // Mudança solicitada: Agora TODOS (servidores e defensores) podem ver a pauta inicial com agendados, horários e assuntos concluídos/em andamento!
         const auditoria = this.todosAtendimentosPauta.filter(a => {
-            const finalizado = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
-            if (!finalizado) return false;
-            if (isDefensor) return true;
-            return a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome;
+            return ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
         });
 
+        // Ordenação por ordem de check-in ou horário
         espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
         mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
         auditoria.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
 
         this._injetarCardsColuna('kanban-espera', 'count-espera', espera, 'puxar', 'Ninguém na fila.');
         this._injetarCardsColuna('kanban-mesa', 'count-mesa', mesa, 'mesa', 'Sua mesa está limpa.');
-        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', auditoria, 'auditoria', 'Nenhum processo concluído.');
+        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', auditoria, 'auditoria', 'Nenhum processo concluído na pauta.');
 
         this._setupAcoesCards();
     },
