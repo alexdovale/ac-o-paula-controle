@@ -321,7 +321,36 @@ export const AtendimentoExternoService = {
         }
     },
 
+    // O index.html liga no botão um listener que recarrega a lista de pautas. Recriamos o botão
+    // para que, dentro de um atendimento, "Voltar" leve à Mesa (kanban) e não à lista de pautas.
+    _configurarBotaoVoltar(modo) {
+        if (this._modoVoltar === modo) return;
+        const antigo = document.getElementById('btn-voltar-portal');
+        if (!antigo) return;
+        const btn = antigo.cloneNode(true);
+        antigo.replaceWith(btn);
+        const spans = btn.querySelectorAll('span');
+        if (modo === 'mesa') {
+            if (spans[0]) spans[0].textContent = 'Voltar à Mesa';
+            if (spans[1]) spans[1].textContent = 'Voltar';
+            btn.title = 'Voltar à Mesa de Trabalho';
+            btn.onclick = () => {
+                if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
+                this.assistidoId = null;
+                this.assistidoData = null;
+                this.renderizarKanban();
+            };
+        } else {
+            if (spans[0]) spans[0].textContent = 'Voltar às Pautas';
+            if (spans[1]) spans[1].textContent = 'Voltar';
+            btn.title = 'Voltar ao Portal de Pautas';
+            btn.onclick = () => { window.location.href = window.location.pathname; };
+        }
+        this._modoVoltar = modo;
+    },
+
     renderizarKanban() {
+        this._configurarBotaoVoltar('portal');
         document.getElementById('view-dashboard').classList.remove('hidden');
         document.getElementById('view-dashboard').classList.add('flex');
         document.getElementById('view-atendimento').classList.add('hidden');
@@ -539,7 +568,7 @@ export const AtendimentoExternoService = {
             this._escOverlayPronto = true;
             document.addEventListener('keydown', (e) => {
                 if (e.key !== 'Escape') return;
-                ['overlay-historico-rapido', 'overlay-pauta-completa'].forEach(i => { if (document.getElementById(i)) this._fecharOverlay(i); });
+                ['overlay-linha-tempo', 'overlay-historico-rapido', 'overlay-pauta-completa'].forEach(i => { if (document.getElementById(i)) this._fecharOverlay(i); });
             });
         }
         return el.querySelector('[data-corpo]');
@@ -558,13 +587,46 @@ export const AtendimentoExternoService = {
         const corpo = this._criarOverlay('overlay-historico-rapido', `Histórico • ${escapeHTML(assistido.name || 'Assistido')}`);
         this._renderizarLadoEsquerdo({ ...assistido, id: assistido.id }, corpo, { botoes: false });
 
-        if (typeof window.abrirMonitoramento === 'function') {
-            const btn = document.createElement('button');
-            btn.className = 'w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl active:scale-95';
-            btn.textContent = 'Linha do tempo completa';
-            btn.onclick = () => window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
-            corpo.appendChild(btn);
+        const btn = document.createElement('button');
+        btn.className = 'w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl active:scale-95';
+        btn.textContent = 'Linha do tempo completa';
+        btn.onclick = () => {
+            if (typeof window.abrirMonitoramento === 'function') window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
+            else this.abrirLinhaDoTempo(assistido);
+        };
+        corpo.appendChild(btn);
+    },
+
+    // Linha do tempo nativa, montada a partir de assistido.history
+    abrirLinhaDoTempo(assistido) {
+        const rotulos = {
+            APROVADO_E_CONCLUIDO: 'Concluído', APROVADO_AGUARDANDO_NUMERO: 'Aguardando CNP',
+            ENVIADO_PARA_REVISAO: 'Enviado ao defensor', ENVIADO_PARA_CORRECAO: 'Enviado para avaliação',
+            DEVOLVIDO_COM_ERRO: 'Devolvido para correção', TRANSFERENCIA_DE_CASO: 'Transferido',
+            ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila'
+        };
+        const eventos = (Array.isArray(assistido.history) ? [...assistido.history] : [])
+            .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+
+        const corpo = this._criarOverlay('overlay-linha-tempo', `Linha do tempo • ${escapeHTML(assistido.name || 'Assistido')}`, 'max-w-xl');
+        if (eventos.length === 0) {
+            corpo.innerHTML = `<div class="text-center py-16 bg-white rounded-2xl border border-slate-200"><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhuma movimentação registrada.</p></div>`;
+            return;
         }
+        corpo.innerHTML = `<ol class="relative border-l-2 border-slate-200 ml-3 space-y-5">${eventos.map(ev => {
+            const quando = ev.at ? new Date(ev.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
+            return `<li class="ml-5">
+                <span class="absolute -left-[7px] w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></span>
+                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
+                    <div class="flex justify-between items-start gap-3">
+                        <p class="text-xs font-black text-slate-800">${escapeHTML(rotulos[ev.action] || String(ev.action || 'Movimentação').replace(/_/g, ' '))}</p>
+                        <span class="text-[10px] font-bold text-slate-400 shrink-0">${quando}</span>
+                    </div>
+                    ${ev.msg ? `<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(ev.msg)}</p>` : ''}
+                    ${ev.by ? `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">por ${escapeHTML(ev.by)}</p>` : ''}
+                </div>
+            </li>`;
+        }).join('')}</ol>`;
     },
 
     // ─── PAUTA COMPLETA (visível para todos os colaboradores) ─────────────────
@@ -659,12 +721,7 @@ export const AtendimentoExternoService = {
         document.getElementById('assistido-nome').textContent = assistido.name || 'Assistido';
         document.getElementById('assistido-assunto').textContent = assistido.subject || 'Sem assunto';
         
-        document.getElementById('btn-voltar-portal').onclick = () => {
-            if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
-            this.assistidoId = null;
-            this.assistidoData = null;
-            this.renderizarKanban();
-        };
+        this._configurarBotaoVoltar('mesa');
 
         this._renderizarLadoEsquerdo(assistido);
 
@@ -695,13 +752,15 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // 2. BOTÕES NATIVOS NO TOPO
+        // 2. BOTÕES NO TOPO (Editar checklist só aparece se o módulo original estiver carregado)
+        const temDetalhes = typeof window.openDetailsModal === 'function';
         if (mostrarBotoes) html += `
-            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+            <div class="grid grid-cols-1 ${temDetalhes ? 'sm:grid-cols-2' : ''} gap-4 mb-6">
+                ${temDetalhes ? `
                 <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
                     <span class="text-2xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-8 h-8')}</span>
                     <span class="font-black uppercase tracking-widest text-[10px] text-center">Editar Checklist (Original)</span>
-                </button>
+                </button>` : ''}
                 <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
                     <span class="text-2xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-8 h-8')}</span>
                     <span class="font-black uppercase tracking-widest text-[10px] text-center">Linha do Tempo Completa</span>
@@ -882,11 +941,8 @@ export const AtendimentoExternoService = {
 
             if (btnTime) {
                 btnTime.addEventListener('click', () => {
-                    if (window.abrirMonitoramento) {
-                        window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
-                    } else {
-                        alert("Módulo de Monitoramento Nativo não carregado na página.");
-                    }
+                    if (window.abrirMonitoramento) window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
+                    else this.abrirLinhaDoTempo(assistido);
                 });
             }
         }, 100);
