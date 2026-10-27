@@ -1,4 +1,4 @@
-// js/monitoramento.js - Módulo de Auditoria, Linha do Tempo e Visualização Global (Padrão SIGEP)
+// js/monitoramento.js - Módulo de Auditoria, Linha do Tempo e Visualização Global (Padrão Minimalista SIGEP)
 
 import { doc, getDoc, updateDoc, arrayUnion } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { getStorage, ref, uploadBytes, getDownloadURL } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-storage.js";
@@ -269,14 +269,44 @@ export const MonitoramentoService = {
     },
 
     // ========================================================
-    // MONITORAMENTO GLOBAL (PADRÃO MINIMALISTA)
+    // MONITORAMENTO GLOBAL (PADRÃO MINIMALISTA SIGEP)
     // ========================================================
     abrirMonitoramentoGlobal(app) {
         let modal = document.getElementById('monitoramento-global-modal');
         if (!modal) return;
+
+        // Padroniza a moldura e o cabeçalho global com estilo limpo/minimalista
+        const contentWrapper = modal.querySelector('.bg-white');
+        if (contentWrapper) {
+            contentWrapper.className = "bg-white rounded-2xl shadow-2xl w-full max-w-6xl flex flex-col max-h-[90vh] overflow-hidden";
+            
+            const header = contentWrapper.querySelector('.bg-indigo-700') || contentWrapper.querySelector('.shrink-0');
+            if (header) {
+                header.className = "p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white";
+                header.innerHTML = `
+                    <div>
+                        <h2 class="font-bold text-xl text-slate-800">Monitor da Pauta / Auditoria</h2>
+                        <p class="text-sm text-slate-500 mt-0.5">Acompanhe a linha do tempo e documentos de todos os assistidos</p>
+                    </div>
+                    <button onclick="document.getElementById('monitoramento-global-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm">
+                        <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                    </button>
+                `;
+            }
+
+            const bodyContainer = contentWrapper.querySelector('.flex-1') || contentWrapper.querySelector('#monitor-global-list')?.parentElement;
+            if (bodyContainer) {
+                bodyContainer.className = "p-6 overflow-y-auto flex-1 space-y-6 bg-slate-50/55 custom-scrollbar";
+            }
+        }
+
         modal.classList.remove('hidden');
         const searchInput = document.getElementById('monitor-global-search');
-        if (searchInput) searchInput.value = '';
+        if (searchInput) {
+            searchInput.value = '';
+            searchInput.className = "w-full pl-9 pr-3 py-2 border border-slate-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50 focus:bg-white transition-all font-medium";
+        }
+        
         this.renderizarListaMonitorGlobal(app);
     },
 
@@ -315,10 +345,10 @@ export const MonitoramentoService = {
                 const timeDiff = Math.floor((agora - new Date(a.arrivalTime).getTime()) / 60000);
                 if (timeDiff >= 60) {
                     borderSlaClass = "border-red-400 shadow-red-100 ring-1 ring-red-400";
-                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-red-100 text-red-700 text-[9px] font-black px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
                 } else if (timeDiff >= 30) {
                     borderSlaClass = "border-amber-400 shadow-amber-100 ring-1 ring-amber-400";
-                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
+                    badgeSlaHtml = `<span class="bg-amber-100 text-amber-700 text-[9px] font-black px-2.5 py-1 rounded-lg shadow-sm flex items-center gap-1">ESPERA: ${timeDiff} MIN</span>`;
                 }
             }
 
@@ -355,8 +385,8 @@ export const MonitoramentoService = {
                             <p class="text-[10px] text-slate-500 font-bold mb-2 uppercase line-clamp-2">${assuntosRenderizados}</p>
                             
                             <div class="mt-2 space-y-1.5 flex flex-wrap gap-2">
-                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
-                                <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2 py-1 rounded-lg shadow-sm">Agendamento: #${agendamentoRenderizado}</span>
+                                <span class="bg-slate-100 text-slate-600 text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm">Status: ${escapeHTML(a.status || 'aguardando').toUpperCase()}</span>
+                                <span class="bg-slate-100 text-slate-700 text-[10px] font-bold px-2.5 py-1 rounded-lg shadow-sm">Agendamento: #${agendamentoRenderizado}</span>
                             </div>
                         </div>
                         <div class="mt-4 flex items-center justify-between bg-slate-50 p-2 rounded-xl border border-slate-200">
