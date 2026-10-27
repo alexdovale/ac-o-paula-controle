@@ -2,11 +2,10 @@ import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebas
 import { getAuth, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
 import {
     getFirestore, doc, getDoc, updateDoc, collection,
-    getDocs, arrayUnion, onSnapshot
+    getDocs, arrayUnion, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
 import { documentsData } from './detalhes.js';
-import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 
@@ -45,7 +44,7 @@ export const AtendimentoExternoService = {
     pautaId: null,
     pautaNome: 'Pauta Atual',
     pautaTipo: '',
-    pautaFechada: false, // FLAG DE SEGURANÇA FASE 3
+    pautaFechada: false, 
     assistidoId: null,
     colaboradorNome: null,
     colaboradorId: null,
@@ -58,8 +57,8 @@ export const AtendimentoExternoService = {
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
     unsubscribePauta: null,
-    abaAtual: 'minha-mesa',         // 'minha-mesa' | 'aguardando' | 'pauta-atual'
-    modoVisualizacao: 'dashboard',  // 'dashboard' | 'abas'
+    abaAtual: 'minha-mesa',         
+    modoVisualizacao: 'dashboard',  
 
     // ─── INIT ─────────────────────────────────────────────────────────────────
 
@@ -69,43 +68,69 @@ export const AtendimentoExternoService = {
         const searchLimpa = window.location.search.replace(/&amp;/g, '&');
         const urlParams = new URLSearchParams(searchLimpa);
 
-        this.pautaId         = urlParams.get('pautaId')    || urlParams.get('amp;pautaId');
-        this.assistidoId     = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
-        this.colaboradorNome = urlParams.get('colab')      || urlParams.get('amp;colab');
-        this.colaboradorId   = urlParams.get('colabId')    || urlParams.get('amp;colabId') || '';
-        const tokenRecebido  = urlParams.get('token')      || urlParams.get('amp;token');
-        const telaAtual      = urlParams.get('view')       || urlParams.get('amp;view');
-        const modo           = urlParams.get('modo')       || urlParams.get('amp;modo');
+        this.pautaId       = urlParams.get('pautaId')    || urlParams.get('amp;pautaId');
+        this.assistidoId   = urlParams.get('assistidoId') || urlParams.get('amp;assistidoId');
+        const tokenRecebido= urlParams.get('token')      || urlParams.get('amp;token');
+        const telaAtual    = urlParams.get('view')       || urlParams.get('amp;view');
+        const modo         = urlParams.get('modo')       || urlParams.get('amp;modo');
 
         this.modoVisualizacao = (modo === 'abas') ? 'abas' : 'dashboard';
 
-        if (!this.pautaId || !this.colaboradorNome) {
-            this.showError("Link Incompleto", "Faltam parâmetros de Pauta ou Colaborador na URL.");
+        if (!this.pautaId) {
+            this.showError("Link Incompleto", "Falta o identificador da pauta na URL.");
             return;
         }
 
         try {
-            if (!auth.currentUser) await signInAnonymously(auth);
-            
+            // Verifica o usuário logado para segurança e identificação automática
+            const user = auth.currentUser;
+            if (!user) {
+                this.showError("Acesso Negado", "Você não está logado no sistema.");
+                return;
+            }
+
             const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
             if (!pautaDoc.exists()) {
                 this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
                 return;
             }
-            this.pautaNome = pautaDoc.data().name || 'Pauta';
-            this.pautaTipo = pautaDoc.data().type || 'agendamento';
-            this.pautaFechada = pautaDoc.data().fechada === true;
+            const pautaData = pautaDoc.data();
+            
+            // VALIDAÇÃO: Regra dos 7 Dias (Igual ao main.js)
+            if (pautaData.createdAt) {
+                const dataCriacao = new Date(pautaData.createdAt);
+                const dataExpiracao = new Date(dataCriacao);
+                dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                if (new Date() > dataExpiracao) {
+                    this.showError("Pauta Expirada", "Esta pauta expirou (prazo de 7 dias) e foi arquivada pelo sistema.");
+                    return;
+                }
+            }
 
-            await this.carregarColaboradoresGerais();
+            this.pautaNome = pautaData.name || 'Pauta';
+            this.pautaTipo = pautaData.type || 'agendamento';
+            this.pautaFechada = pautaData.fechada === true;
 
-            if (!this.colaboradorAtual) {
-                this.showError("Acesso Negado", "Seu nome não foi encontrado na lista de colaboradores desta pauta.");
+            // Busca o Colaborador baseando-se no Email Autenticado (Adeus problema do colab= na URL)
+            const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
+            const q = query(colabRef, where("email", "==", user.email));
+            const snap = await getDocs(q);
+
+            if (snap.empty) {
+                this.showError("Acesso Negado", "O seu usuário não tem permissão para acessar esta pauta específica.");
                 return;
             }
 
-            // Atendimento individual (peça específica)
+            this.colaboradorAtual = { id: snap.docs[0].id, ...snap.docs[0].data() };
+            this.colaboradorNome = this.colaboradorAtual.nome;
+            this.colaboradorId = this.colaboradorAtual.id;
+
+            // Carrega toda a equipa para select de transferência
+            await this.carregarColaboradoresGerais();
+
+            // Roteamento de Tela
             if (this.assistidoId && !telaAtual) {
-                await this.iniciarAtendimentoIndividual(tokenRecebido, pautaDoc.data());
+                await this.iniciarAtendimentoIndividual(tokenRecebido, pautaData);
                 return;
             }
 
@@ -120,7 +145,6 @@ export const AtendimentoExternoService = {
     // ─── ATENDIMENTO INDIVIDUAL ───────────────────────────────────────────────
 
     async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
-        // Escuta o status da pauta em tempo real para travar botões se fechar
         if (!this.unsubscribePauta) {
             this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
                 if(snap.exists()) {
@@ -212,10 +236,41 @@ export const AtendimentoExternoService = {
         );
     },
 
-    // ─── CONTAINER PRINCIPAL ──────────────────────────────────────────────────
+    async carregarColaboradoresGerais() {
+        try {
+            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
+            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        } catch { this.todosColaboradores = []; }
+    },
+
+    _gerarTokenSeguro() {
+        if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+            return crypto.randomUUID().substring(0, 8);
+        }
+        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+    },
+
+    showError(titulo, message) {
+        const corpo = document.querySelector('.w-full.max-w-6xl') || document.querySelector('.w-full.max-w-2xl') || document.body;
+        corpo.innerHTML = `
+            <div class="w-full max-w-2xl mx-auto my-4 mt-10">
+                <div class="bg-red-600 p-8 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
+                    <div class="bg-white p-3 rounded-2xl mb-4"><img src="https://raw.githubusercontent.com/alexdovale/ac-o-paula-controle/main/imagem.png" alt="Logo" class="h-12 w-auto"></div>
+                    <h1 class="text-white font-black text-3xl uppercase tracking-widest text-center">ACESSO NEGADO</h1>
+                </div>
+                <div class="p-10 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
+                    <span class="text-6xl block mb-6 text-red-300">${ico('lock', 'w-14 h-14 inline-block')}</span>
+                    <h2 class="text-xl font-black text-gray-800 uppercase tracking-wide mb-3">${titulo}</h2>
+                    <p class="text-gray-500 font-semibold">${message}</p>
+                    <button onclick="window.location.href = window.location.pathname" class="mt-8 bg-slate-800 text-white font-bold px-6 py-3 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest text-sm shadow-sm">VOLTAR</button>
+                </div>
+            </div>`;
+    },
+
+    // ─── MÉTODOS DE TELA E RENDERIZAÇÃO (Mantidos da Fase 3) ──────────────────
 
     renderizarContainerDashboard() {
-        const corpo = document.querySelector('.w-full.max-w-2xl') || document.querySelector('.w-full.max-w-4xl') || document.body;
+        const corpo = document.querySelector('.w-full.max-w-6xl') || document.body;
 
         const url = new URL(window.location.href);
         url.searchParams.set('view', 'dashboard');
@@ -461,15 +516,13 @@ export const AtendimentoExternoService = {
     },
 
     _renderPautaAtual(container) {
-        // FASE 3: Filtro de Hierarquia na Auditoria
         const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
         
-        // Se for defensor vê TUDO. Se for servidor/estagiário, vê apenas os casos que tocou.
         const assistidos = isDefensor ? this.todosAtendimentosPauta : this.todosAtendimentosPauta.filter(a => 
             a.assignedCollaborator?.name === this.colaboradorNome || 
             a.enviadoPor === this.colaboradorNome || 
             a.attendedBy === this.colaboradorNome ||
-            a.status === 'aguardando' // Deixa ver a fila para ter contexto
+            a.status === 'aguardando' 
         );
 
         if (assistidos.length === 0) {
@@ -497,7 +550,8 @@ export const AtendimentoExternoService = {
                         <h3 class="font-black text-slate-800 text-sm sm:text-base">${escapeHTML(this.pautaNome)}</h3>
                         <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1">${this.pautaTipo} • ${isDefensor ? 'Visão Global (Defensor)' : 'Sua Visão (Servidor)'}</p>
                     </div>
-                    <div class="text-right">
+                    <div class="text-right flex items-center gap-2">
+                        <button id="btn-relatorio-pdf" class="bg-blue-600 hover:bg-blue-700 text-white font-bold px-3 py-1.5 rounded-lg text-[10px] uppercase tracking-widest shadow-sm transition-colors flex items-center gap-1">${ico('fileText', 'w-3 h-3')} PDF (Atendidos)</button>
                         <span class="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">${porcentagem}% Concluído</span>
                     </div>
                 </div>
@@ -533,6 +587,18 @@ export const AtendimentoExternoService = {
         `;
 
         container.innerHTML = html;
+
+        // INJEÇÃO DA GERAÇÃO DE PDFS NATIVOS
+        const btnPdfAtendidos = document.getElementById('btn-relatorio-pdf');
+        if (btnPdfAtendidos) {
+            btnPdfAtendidos.addEventListener('click', () => {
+                if (window.PDFService && window.PDFService.generateAtendidosPDF) {
+                    window.PDFService.generateAtendidosPDF(assistidos.filter(a => a.status === 'atendido'), this.pautaNome);
+                } else {
+                    alert("Módulo PDFService não encontrado.");
+                }
+            });
+        }
     },
 
     _htmlGrupoStatus(titulo, lista, modo, pautaId) {
@@ -562,7 +628,7 @@ export const AtendimentoExternoService = {
             ? `<span class="bg-red-500 text-white text-[9px] font-black px-1.5 py-0.5 rounded shadow-sm animate-pulse ml-2">${ico('alertCircle', 'w-3 h-3 inline-block')} Urgente</span>`
             : '';
         const baseUrl = window.location.href.split('?')[0];
-        const linkIndividual = `${baseUrl}?pautaId=${pid}&assistidoId=${assistido.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${assistido.delegationToken || ''}`;
+        const linkIndividual = `${baseUrl}?pautaId=${pid}&assistidoId=${assistido.id}`;
 
         let botoesHtml = '';
         
@@ -695,7 +761,7 @@ export const AtendimentoExternoService = {
             const notas = item.notasRevisao ? `<div class="mt-2 bg-orange-50 p-2.5 rounded-lg text-xs font-medium text-orange-800 border border-orange-200 flex items-start gap-2">${ico('alertCircle', 'w-4 h-4 shrink-0 mt-0.5')} <span>${escapeHTML(item.notasRevisao)}</span></div>` : '';
             const numCNP = item.numeroProcesso ? `<span class="font-mono font-bold text-[10px] bg-slate-100 border border-slate-200 px-2 py-1 rounded-lg text-slate-600 shadow-sm inline-block mt-2">Nº ${escapeHTML(item.numeroProcesso)}</span>` : '';
             const urgencia = item.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
-            const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}&colab=${encodeURIComponent(this.colaboradorNome)}&token=${item.delegationToken || ''}`;
+            const link = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${item.id}`;
 
             let botaoHtml = '';
             if (this.pautaFechada) {
@@ -748,10 +814,8 @@ export const AtendimentoExternoService = {
         };
 
         if (isDefensor) {
-            // DEFENSORES: Auditoria e Assinaturas
             const pendentes    = this.todosAtendimentosPauta.filter(a => ((a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === this.colaboradorNome) || (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome));
             const distribuidos = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.defensorResponsavel === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-            // Na busca, o defensor vê TODOS os casos da pauta para auditar
             const historico    = this.todosAtendimentosPauta;
 
             if (prefs.mode === 'list') {
@@ -781,11 +845,9 @@ export const AtendimentoExternoService = {
             }
 
         } else {
-            // SERVIDORES/ESTAGIÁRIOS: Produção Própria
             const emAndamento = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
             const enviados    = this.todosAtendimentosPauta.filter(a => (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.enviadoPor === this.colaboradorNome);
             const finalizados = this.todosAtendimentosPauta.filter(a => (a.status === 'atendido' || a.status === 'aguardandoNumero') && (a.attendedBy === this.colaboradorNome || a.enviadoPor === this.colaboradorNome));
-            // A busca do servidor mostra só o que ele tocou
             const historico   = this.todosAtendimentosPauta.filter(a => a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome || a.assignedCollaborator?.name === this.colaboradorNome || (Array.isArray(a.history) && a.history.some(h => h.by === this.colaboradorNome)));
 
             if (prefs.mode === 'list') {
@@ -834,7 +896,6 @@ export const AtendimentoExternoService = {
             const textosWrapper = document.createElement('div');
             textosWrapper.className = "flex flex-col overflow-hidden min-w-0";
             
-            // Pega nome e assunto antigos
             const nameEl = document.getElementById('assistido-nome');
             const assuntoEl = document.getElementById('assistido-assunto');
             if(nameEl) textosWrapper.appendChild(nameEl);
@@ -901,7 +962,7 @@ export const AtendimentoExternoService = {
                 `;
             }
             if (headerBg) headerBg.className = 'bg-amber-600 p-6 sm:p-8 rounded-t-2xl shadow-lg flex items-center gap-4 relative overflow-hidden transition-colors duration-500 shrink-0';
-            return; // Bloqueia a renderização das opções de conclusão abaixo
+            return;
         }
 
         if (assistido.status === 'atendido' || assistido.status === 'aguardandoNumero') {
