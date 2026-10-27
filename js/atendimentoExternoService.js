@@ -10,27 +10,22 @@ import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
 import { ico } from './icons.js';
 
-// ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
-
 const statusMap = {
-    pauta:                  { cor: 'text-slate-600 border-slate-200 bg-slate-50',    txt: 'Na Pauta' },
-    aguardando:             { cor: 'text-amber-700 border-amber-200 bg-amber-50',     txt: 'Espera' },
-    emAtendimento:          { cor: 'text-blue-700 border-blue-200 bg-blue-50',        txt: 'Atendendo' },
-    aguardandoDistribuicao: { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',        txt: 'No Defensor' },
-    aguardandoCorrecao:     { cor: 'text-orange-700 border-orange-200 bg-orange-50',  txt: 'Avaliação' },
-    atendido:               { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
-    aguardandoNumero:       { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',  txt: 'Aguard. CNP' },
-    faltoso:                { cor: 'text-red-700 border-red-200 bg-red-50',           txt: 'Faltoso' },
+    pauta:                  { cor: 'text-slate-600 bg-slate-100 border-slate-200',    txt: 'Na Pauta' },
+    aguardando:             { cor: 'text-amber-700 bg-amber-50 border-amber-200',     txt: 'Aguard.' },
+    emAtendimento:          { cor: 'text-blue-700 bg-blue-50 border-blue-200',        txt: 'Atend.' },
+    aguardandoDistribuicao: { cor: 'text-cyan-700 bg-cyan-50 border-cyan-200',        txt: 'Distrib.' },
+    aguardandoCorrecao:     { cor: 'text-orange-700 bg-orange-50 border-orange-200',  txt: 'Avaliação' },
+    atendido:               { cor: 'text-emerald-700 bg-emerald-50 border-emerald-200',txt: 'Atendido' },
+    aguardandoNumero:       { cor: 'text-indigo-700 bg-indigo-50 border-indigo-200',  txt: 'Ag. CNP' },
+    faltoso:                { cor: 'text-red-700 bg-red-50 border-red-200',           txt: 'Faltoso' },
 };
 
 const app = initializeApp(firebaseConfig);
 const auth = getAuth(app);
 const db = getFirestore(app);
 
-// ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
-
 export const AtendimentoExternoService = {
-
     pautaId: null,
     pautaNome: 'Pauta',
     pautaTipo: '',
@@ -47,11 +42,11 @@ export const AtendimentoExternoService = {
     demandasAdicionaisLocais: [],
     unsubscribeDashboard: null,
     unsubscribePauta: null,
-
-    // ─── INIT ─────────────────────────────────────────────────────────────────
+    abaDashboardAtiva: 'pauta-atual',
+    abaIndividualAtiva: 'fluxo',
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (4 Colunas + Histórico Rico)");
+        console.log("Mesa Digital Clássica Inicializada (Visual Abas Original)");
 
         const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
         this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
@@ -95,13 +90,14 @@ export const AtendimentoExternoService = {
 
             await this.carregarColaboradoresGerais();
 
+            // Prepara a carcaça visual do sistema
+            this._prepararShellHTML();
+
             if (this.assistidoId) {
                 await this.iniciarAtendimentoIndividual(tokenRecebido, pautaData);
-                return;
+            } else {
+                await this.iniciarDashboardOriginal();
             }
-
-            this._ajustarGrelhaKanban();
-            await this.iniciarDashboardKanban();
 
         } catch (error) {
             console.error("Erro na inicialização:", error);
@@ -109,17 +105,67 @@ export const AtendimentoExternoService = {
         }
     },
 
-    // ─── LÓGICA DE DADOS (DASHBOARD) ──────────────────────────────────────────
+    _prepararShellHTML() {
+        const shell = document.getElementById('shell-atendimento');
+        if (!shell) return;
+        
+        shell.className = "w-full max-w-6xl mx-auto bg-slate-50/50 rounded-2xl shadow-xl overflow-hidden flex flex-col border border-slate-200 animate-fade-in my-4 min-h-[85vh]";
+        shell.style.display = 'flex';
+        
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const subtituloPainel = `${escapeHTML(this.colaboradorNome)} • ${escapeHTML(this.colaboradorAtual?.cargo || 'Membro')}`;
 
-    async iniciarDashboardKanban() {
+        shell.innerHTML = `
+            <div id="header-bg" class="bg-slate-800 p-6 sm:px-8 sm:py-7 text-white flex items-center justify-between relative overflow-hidden shrink-0">
+                <div class="absolute top-0 right-0 w-64 h-64 bg-blue-500 opacity-10 rounded-full blur-3xl -mr-10 -mt-20 pointer-events-none"></div>
+                <div class="flex items-center gap-4 relative z-10 min-w-0">
+                    <div class="bg-white/10 p-2 rounded-xl border border-white/20 shadow-inner shrink-0 hidden sm:block">
+                        <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo" class="h-10 w-auto">
+                    </div>
+                    <div class="min-w-0">
+                        <h1 class="font-black text-xl sm:text-2xl uppercase tracking-widest truncate">PAINEL SIGEP</h1>
+                        <p class="text-white/80 text-[10px] sm:text-xs font-bold mt-0.5 tracking-wider truncate">${subtituloPainel}</p>
+                    </div>
+                </div>
+                <div class="flex gap-2 relative z-10 shrink-0 items-center">
+                    <span id="badge-status-header" class="bg-white/20 text-white text-[9px] font-black px-3 py-1.5 rounded-full shadow-sm uppercase tracking-widest border border-transparent transition-colors">CARREGANDO...</span>
+                    <button id="btn-voltar-portal" class="bg-white/20 hover:bg-white/30 text-white text-[10px] font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2">
+                        ← <span class="hidden sm:inline">Portal</span>
+                    </button>
+                    <button id="btn-voltar-dashboard" class="hidden bg-slate-900 hover:bg-black text-white text-[10px] font-bold px-4 py-2 rounded-lg transition-colors flex items-center gap-2 shadow-md">
+                        ← Mesa
+                    </button>
+                </div>
+            </div>
+            <div id="main-content-area" class="flex-1 flex flex-col bg-white rounded-t-3xl -mt-4 relative z-20 overflow-hidden shadow-[0_-8px_30px_-15px_rgba(0,0,0,0.3)]">
+                <!-- Conteúdo injetado dinamicamente aqui -->
+            </div>
+        `;
+
+        document.getElementById('btn-voltar-portal').onclick = () => window.location.href = window.location.pathname;
+        document.getElementById('btn-voltar-dashboard').onclick = () => {
+            const url = new URL(window.location.href);
+            url.searchParams.delete('assistidoId');
+            url.searchParams.delete('aid');
+            window.history.pushState({}, '', url);
+            this.assistidoId = null;
+            this.iniciarDashboardOriginal();
+        };
+    },
+
+    // ─── DASHBOARD ORIGINAL (IMAGEM 1) ────────────────────────────────────────
+
+    async iniciarDashboardOriginal() {
         this._cancelarListeners();
+        document.getElementById('btn-voltar-portal').classList.remove('hidden');
+        document.getElementById('btn-voltar-dashboard').classList.add('hidden');
         
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
             if (snap.exists()) {
                 const fechou = snap.data().fechada === true;
                 if (fechou !== this.pautaFechada) {
                     this.pautaFechada = fechou;
-                    this.renderizarKanban();
+                    this.renderizarDashboard();
                 }
             }
         });
@@ -127,19 +173,230 @@ export const AtendimentoExternoService = {
         this.unsubscribeDashboard = onSnapshot(collection(db, "pautas", this.pautaId, "attendances"), (snap) => {
             this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
             this.atualizarBadgeHeader();
-            this.renderizarKanban();
+            this.renderizarDashboard();
         });
-
-        this.prepararFiltroKanban();
     },
+
+    renderizarDashboard() {
+        const container = document.getElementById('main-content-area');
+        if (!container) return;
+
+        // Construção das Abas
+        let html = `
+            <div class="flex gap-2 overflow-x-auto custom-scrollbar px-6 pt-6 pb-4 border-b border-slate-100 bg-slate-50/50 shrink-0">
+                <button id="btn-tab-mesa" class="tab-dash-btn shrink-0 px-5 py-3 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${this.abaDashboardAtiva === 'mesa' ? 'bg-blue-50 border border-blue-200 text-blue-700 shadow-sm' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}">
+                    💻 Minha Mesa
+                </button>
+                <button id="btn-tab-espera" class="tab-dash-btn shrink-0 px-5 py-3 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${this.abaDashboardAtiva === 'espera' ? 'bg-blue-50 border border-blue-200 text-blue-700 shadow-sm' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}">
+                    📥 Aguardando Atendimento
+                </button>
+                <button id="btn-tab-pauta-atual" class="tab-dash-btn shrink-0 px-5 py-3 text-[11px] font-black uppercase tracking-widest rounded-lg transition-all ${this.abaDashboardAtiva === 'pauta-atual' ? 'bg-slate-700 border border-slate-800 text-white shadow-md' : 'bg-white border border-slate-200 text-slate-500 hover:bg-slate-50'}">
+                    📋 Pauta Atual
+                </button>
+            </div>
+            <div id="dashboard-content" class="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar"></div>
+        `;
+        
+        // Só reconstrói as abas se elas não existirem para não piscar a tela
+        if (!document.getElementById('dashboard-content')) {
+            container.innerHTML = html;
+            
+            document.getElementById('btn-tab-mesa').onclick = () => { this.abaDashboardAtiva = 'mesa'; this.renderizarDashboard(); };
+            document.getElementById('btn-tab-espera').onclick = () => { this.abaDashboardAtiva = 'espera'; this.renderizarDashboard(); };
+            document.getElementById('btn-tab-pauta-atual').onclick = () => { this.abaDashboardAtiva = 'pauta-atual'; this.renderizarDashboard(); };
+        }
+
+        const content = document.getElementById('dashboard-content');
+        
+        if (this.abaDashboardAtiva === 'mesa') {
+            this._renderTabMinhaMesa(content);
+        } else if (this.abaDashboardAtiva === 'espera') {
+            this._renderTabAguardando(content);
+        } else {
+            this._renderTabPautaAtual(content);
+        }
+        this._setupAcoesCards();
+    },
+
+    _renderTabMinhaMesa(container) {
+        const meusCasos = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
+        if (meusCasos.length === 0) {
+            container.innerHTML = `<div class="text-center py-20 opacity-60"><span class="text-5xl block mb-4">💻</span><p class="font-black text-slate-500 uppercase tracking-widest text-sm">Sua mesa está limpa</p></div>`;
+            return;
+        }
+        meusCasos.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${meusCasos.map(a => this._htmlCard(a, 'mesa')).join('')}</div>`;
+    },
+
+    _renderTabAguardando(container) {
+        const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
+        if (espera.length === 0) {
+            container.innerHTML = `<div class="text-center py-20 opacity-60"><span class="text-5xl block mb-4">✅</span><p class="font-black text-slate-500 uppercase tracking-widest text-sm">Nenhum assistido na fila.</p></div>`;
+            return;
+        }
+        espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
+        container.innerHTML = `<div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">${espera.map(a => this._htmlCard(a, 'puxar')).join('')}</div>`;
+    },
+
+    _renderTabPautaAtual(container) {
+        const total = this.todosAtendimentosPauta.length;
+        const aguardando = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando').length;
+        const atendendo = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento').length;
+        const atendidos = this.todosAtendimentosPauta.filter(a => a.status === 'atendido' || a.status === 'aguardandoNumero').length;
+        const dist = this.todosAtendimentosPauta.filter(a => a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao').length;
+        const faltosos = this.todosAtendimentosPauta.filter(a => a.status === 'faltoso').length;
+        
+        const prontosExibicao = atendidos; // Para a caixinha verde
+        const pct = total > 0 ? Math.round(((atendidos + dist) / total) * 100) : 0;
+
+        let html = `
+            <div class="mb-8">
+                <div class="flex items-center justify-between mb-3">
+                    <div>
+                        <h2 class="font-black text-slate-800 text-lg uppercase">${escapeHTML(this.pautaNome)}</h2>
+                        <p class="text-[9px] font-bold text-slate-400 uppercase tracking-widest">${this.pautaTipo} • ${total} REGISTROS</p>
+                    </div>
+                    <span class="text-sm font-black text-slate-600">${pct}%</span>
+                </div>
+                <div class="h-1 bg-slate-100 rounded-full mb-6 overflow-hidden">
+                    <div class="h-full bg-emerald-500 transition-all" style="width:${pct}%"></div>
+                </div>
+
+                <!-- OS 4 CONTADORES (FALTOSOS ENTRA SE HOUVER) -->
+                <div class="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-3 mb-8">
+                    <div class="bg-amber-50 border border-amber-200 rounded-xl p-3 text-center shadow-sm">
+                        <div class="text-2xl font-black text-amber-600">${aguardando}</div>
+                        <div class="text-[9px] text-amber-600 font-bold uppercase tracking-widest mt-1">Aguard.</div>
+                    </div>
+                    <div class="bg-blue-50 border border-blue-200 rounded-xl p-3 text-center shadow-sm">
+                        <div class="text-2xl font-black text-blue-600">${atendendo}</div>
+                        <div class="text-[9px] text-blue-600 font-bold uppercase tracking-widest mt-1">Atend.</div>
+                    </div>
+                    <div class="bg-emerald-50 border border-emerald-200 rounded-xl p-3 text-center shadow-sm">
+                        <div class="text-2xl font-black text-emerald-600">${prontosExibicao}</div>
+                        <div class="text-[9px] text-emerald-600 font-bold uppercase tracking-widest mt-1">Prontos</div>
+                    </div>
+                    <div class="bg-cyan-50 border border-cyan-100 rounded-xl p-3 text-center shadow-sm">
+                        <div class="text-2xl font-black text-cyan-600">${dist}</div>
+                        <div class="text-[9px] text-cyan-600 font-bold uppercase tracking-widest mt-1">Distrib.</div>
+                    </div>
+                    ${faltosos > 0 ? `
+                    <div class="bg-red-50 border border-red-100 rounded-xl p-3 text-center shadow-sm">
+                        <div class="text-2xl font-black text-red-500">${faltosos}</div>
+                        <div class="text-[9px] text-red-500 font-bold uppercase tracking-widest mt-1">Faltosos</div>
+                    </div>` : ''}
+                </div>
+
+                <!-- LISTAS EXPANSÍVEIS -->
+                ${this._htmlGrupoExpansivel('Aguardando', this.todosAtendimentosPauta.filter(a => a.status === 'aguardando'), 'geral')}
+                ${this._htmlGrupoExpansivel('Em Atendimento', this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento'), 'geral')}
+                ${this._htmlGrupoExpansivel('Distribuição', this.todosAtendimentosPauta.filter(a => a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao'), 'geral')}
+                ${this._htmlGrupoExpansivel('Atendidos', this.todosAtendimentosPauta.filter(a => a.status === 'atendido' || a.status === 'aguardandoNumero'), 'geral')}
+            </div>
+        `;
+        container.innerHTML = html;
+    },
+
+    _htmlGrupoExpansivel(titulo, lista, modo) {
+        if (lista.length === 0) return '';
+        const isAberto = lista.length <= 15 ? 'open' : '';
+        
+        let icone = '📋';
+        if (titulo === 'Aguardando') icone = '⏳';
+        if (titulo === 'Em Atendimento') icone = '💻';
+        if (titulo === 'Distribuição') icone = '⚖️';
+        if (titulo === 'Atendidos') icone = '✅';
+
+        return `
+            <details class="mb-4 group" ${isAberto}>
+                <summary class="text-[11px] font-black text-slate-500 uppercase tracking-widest mb-3 cursor-pointer select-none flex items-center gap-2 hover:text-slate-700 transition-colors">
+                    <span class="text-sm transition-transform group-open:rotate-90">▶</span> 
+                    ${icone} ${titulo} (${lista.length})
+                </summary>
+                <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 pl-6 pb-2">
+                    ${lista.map(a => this._htmlCard(a, modo)).join('')}
+                </div>
+            </details>
+        `;
+    },
+
+    _htmlCard(assistido, modo) {
+        const st = statusMap[assistido.status] || { cor: 'text-slate-600 bg-slate-50 border-slate-200', txt: assistido.status };
+        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-amber-400' : '';
+        const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="bg-amber-100 text-amber-700 text-[8px] font-black px-1.5 py-0.5 rounded ml-2">URGENTE</span>` : '';
+        
+        const baseUrl = window.location.href.split('?')[0];
+        const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
+
+        const donoLabel = assistido.assignedCollaborator?.name ? `Com ${escapeHTML(assistido.assignedCollaborator.name.split(' ')[0])}` : 
+                          (assistido.attendedBy ? `Por ${escapeHTML(assistido.attendedBy.split(' ')[0])}` : 'Sem dono');
+        const hora = assistido.scheduledTime ? assistido.scheduledTime : (assistido.arrivalTime ? new Date(assistido.arrivalTime).toLocaleTimeString('pt-BR',{hour:'2-digit',minute:'2-digit'}) : '--:--');
+
+        let botoesHtml = '';
+        if (this.pautaFechada) {
+            botoesHtml = `<a href="${linkIndividual}" class="block mt-4 bg-slate-800 hover:bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center flex items-center justify-center gap-2">${ico('search', 'w-3.5 h-3.5')} Auditar / Ver Detalhes</a>`;
+        } else {
+            if (modo === 'puxar') {
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-4 bg-slate-800 hover:bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center flex items-center justify-center gap-2">${ico('search', 'w-3.5 h-3.5')} Ver Detalhes</a>`;
+            } else if (modo === 'mesa') {
+                botoesHtml = `
+                    <div class="flex gap-2 mt-4">
+                        <a href="${linkIndividual}" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center flex items-center justify-center gap-1.5">${ico('edit', 'w-3.5 h-3.5')} Continuar</a>
+                        <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
+                    </div>`;
+            } else {
+                botoesHtml = `<a href="${linkIndividual}" class="block mt-4 bg-slate-800 hover:bg-slate-900 text-white font-black text-[11px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center flex items-center justify-center gap-2">${ico('search', 'w-3.5 h-3.5')} Ver Detalhes</a>`;
+            }
+        }
+
+        return `
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm flex flex-col hover:shadow-md transition-shadow ${urgencia}">
+                <div class="flex justify-between items-start mb-3 gap-2">
+                    <h4 class="font-black text-slate-800 text-sm leading-tight flex-1">${escapeHTML(assistido.name)} ${badgeUrgencia}</h4>
+                    <span class="text-[9px] font-black px-2 py-0.5 rounded border ${st.cor} uppercase tracking-widest shrink-0 shadow-sm">${st.txt}</span>
+                </div>
+                <div class="bg-slate-50 p-3 rounded-xl border border-slate-100 flex-grow">
+                    <p class="text-[10px] font-bold text-slate-500 mb-1.5 truncate flex items-center gap-1.5">${ico('fileText', 'w-3 h-3')} ${escapeHTML(assistido.subject || 'Sem assunto')}</p>
+                    <p class="text-[10px] font-bold ${assistido.assignedCollaborator || assistido.attendedBy ? 'text-blue-600' : 'text-red-500'} mb-1.5 flex items-center gap-1.5">${ico('user', 'w-3 h-3')} ${donoLabel}</p>
+                    <p class="text-[10px] font-bold text-slate-500 flex items-center gap-1.5">${ico('clock', 'w-3 h-3')} ${hora}</p>
+                </div>
+                ${botoesHtml}
+            </div>
+        `;
+    },
+
+    _setupAcoesCards() {
+        document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
+            btn.addEventListener('click', async (e) => {
+                const b = e.currentTarget;
+                if (!confirm("Devolver este caso para a Fila de Espera?")) return;
+                try {
+                    await updateDoc(doc(db, "pautas", b.dataset.pautaId, "attendances", b.dataset.assistidoId), {
+                        status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null,
+                        history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
+                    });
+                    if (this.colaboradorAtual?.id) {
+                        await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
+                    }
+                    if (typeof showNotification === 'function') showNotification("Caso devolvido.", "info");
+                } catch (error) {
+                    alert("Erro ao devolver caso.");
+                }
+            });
+        });
+    },
+
+    // ─── TELA DO ASSISTIDO (IMAGENS 2 E 3 - COM ABAS) ─────────────────────────
 
     async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
         this._cancelarListeners();
+        document.getElementById('btn-voltar-portal').classList.add('hidden');
+        document.getElementById('btn-voltar-dashboard').classList.remove('hidden');
 
         this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
             if(snap.exists()) {
                 this.pautaFechada = snap.data().fechada === true;
-                if(this.pautaFechada) this.renderizarSplitScreen(this.assistidoData, pautaData);
+                if(this.pautaFechada) this.renderizarTelaIndividual(this.assistidoData, pautaData);
             }
         });
 
@@ -158,297 +415,99 @@ export const AtendimentoExternoService = {
             return;
         }
 
-        this.renderizarSplitScreen(assistido, pautaData);
+        this.renderizarTelaIndividual(assistido, pautaData);
         this.atualizarBadgeHeader();
     },
 
-    _cancelarListeners() {
-        if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
-        if (this.unsubscribePauta) { this.unsubscribePauta(); this.unsubscribePauta = null; }
-    },
+    renderizarTelaIndividual(assistido, pautaData) {
+        const container = document.getElementById('main-content-area');
+        if (!container) return;
 
-    async carregarColaboradoresGerais() {
-        try {
-            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
-            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { this.todosColaboradores = []; }
-    },
-
-    _gerarTokenSeguro() {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID().substring(0, 8);
-        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
-    },
-
-    showError(titulo, message) {
-        const shell = document.getElementById('shell-atendimento');
-        if (shell) shell.classList.add('hidden');
-        
-        const wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = `
-            <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
-                <div class="bg-red-600 p-6 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
-                    <h1 class="text-white font-black text-2xl uppercase tracking-widest text-center">Acesso Negado</h1>
-                </div>
-                <div class="p-8 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
-                    <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
-                    <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
-                    <p class="text-gray-500 font-semibold text-sm">${message}</p>
-                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-900 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
-                </div>
-            </div>`;
-    },
-
-    atualizarBadgeHeader() {
-        const badge = document.getElementById('status-indicator');
-        if (!badge) return;
-
-        const isNaTelaIndividual = !!this.assistidoId;
-        const meusCasos = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome
-        );
-
-        const livre = meusCasos.length === 0 && !isNaTelaIndividual;
-
-        badge.innerHTML = livre 
-            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span class="hidden sm:inline">LIVRE</span>`
-            : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span> <span class="hidden sm:inline">OCUPADO</span>`;
-        
-        badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-2 transition-colors`;
-
-        if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
-            const novoStatus = livre ? 'disponivel' : 'ocupado';
-            if (this.colaboradorAtual.status !== novoStatus) {
-                this.colaboradorAtual.status = novoStatus; 
-                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), { status: novoStatus }).catch(()=>{});
+        // Muda as cores do header conforme o status (Verde se finalizado, normal se não)
+        const header = document.getElementById('header-bg');
+        if (header) {
+            if (['atendido', 'aguardandoNumero'].includes(assistido.status) || this.pautaFechada) {
+                header.className = "bg-emerald-700 p-6 sm:px-8 sm:py-7 text-white flex items-center justify-between relative overflow-hidden shrink-0 transition-colors";
+            } else {
+                header.className = "bg-slate-800 p-6 sm:px-8 sm:py-7 text-white flex items-center justify-between relative overflow-hidden shrink-0 transition-colors";
             }
         }
-    },
 
-    // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
+        let html = `
+            <div class="px-6 py-5 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-4 bg-white shrink-0">
+                <div>
+                    <h2 class="font-black text-slate-800 text-xl uppercase tracking-tight">${escapeHTML(assistido.name)}</h2>
+                    <p class="text-xs font-bold text-slate-500 uppercase tracking-widest mt-1">${escapeHTML(assistido.subject || 'Sem assunto')}</p>
+                </div>
+                ${assistido.numeroProcesso ? `<span class="bg-slate-100 border border-slate-200 text-slate-600 font-mono text-xs font-black px-3 py-1.5 rounded-lg shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span>` : ''}
+            </div>
 
-    _ajustarGrelhaKanban() {
-        // Altera a grid do HTML para suportar 4 colunas em vez de 3
-        const grid = document.querySelector('#view-dashboard .grid');
-        if (grid) {
-            grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0 pb-2';
+            <!-- AS 2 ABAS DAS IMAGENS 2 E 3 -->
+            <div class="flex border-b border-slate-200 bg-slate-50/50 shrink-0 px-6 pt-4 gap-4">
+                <button id="tab-btn-fluxo" class="pb-3 text-[11px] uppercase tracking-widest transition-colors ${this.abaIndividualAtiva === 'fluxo' ? 'border-b-2 border-slate-800 font-black text-slate-800' : 'border-b-2 border-transparent font-bold text-slate-400 hover:text-slate-600'}">
+                    Encerramento / Fluxo
+                </button>
+                <button id="tab-btn-historico" class="pb-3 text-[11px] uppercase tracking-widest transition-colors ${this.abaIndividualAtiva === 'historico' ? 'border-b-2 border-slate-800 font-black text-slate-800' : 'border-b-2 border-transparent font-bold text-slate-400 hover:text-slate-600'}">
+                    Histórico Recepção
+                </button>
+            </div>
+
+            <div id="individual-content" class="flex-1 overflow-y-auto p-6 bg-white custom-scrollbar"></div>
+        `;
+
+        if (!document.getElementById('individual-content')) {
+            container.innerHTML = html;
             
-            // Injeta a 4ª coluna HTML se ela não existir
-            if (!document.getElementById('kanban-pauta-geral')) {
-                const col4 = document.createElement('div');
-                col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
-                col4.innerHTML = `
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
-                        <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
-                    </div>
-                    <div id="kanban-pauta-geral" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
-                `;
-                grid.appendChild(col4);
-            }
+            document.getElementById('tab-btn-fluxo').onclick = () => { this.abaIndividualAtiva = 'fluxo'; this.renderizarTelaIndividual(assistido, pautaData); };
+            document.getElementById('tab-btn-historico').onclick = () => { this.abaIndividualAtiva = 'historico'; this.renderizarTelaIndividual(assistido, pautaData); };
+        }
 
-            // Altera o título da 3ª coluna para "Meus Concluídos"
-            const titleCol3 = document.querySelector('#kanban-auditoria')?.previousElementSibling?.querySelector('h3');
-            if (titleCol3) titleCol3.innerHTML = '✅ Meus Concluídos';
+        const content = document.getElementById('individual-content');
+        
+        if (this.abaIndividualAtiva === 'fluxo') {
+            this._renderAbaFluxo(content, assistido, pautaData);
+        } else {
+            this._renderAbaHistorico(content, assistido);
         }
     },
 
-    renderizarKanban() {
-        document.getElementById('view-dashboard').classList.remove('hidden');
-        document.getElementById('view-dashboard').classList.add('flex');
-        document.getElementById('view-atendimento').classList.add('hidden');
-        document.getElementById('view-atendimento').classList.remove('flex');
-        
-        const url = new URL(window.location.href);
-        url.searchParams.delete('assistidoId');
-        window.history.pushState({}, '', url);
-
-        // 1. FILA DE ESPERA
-        const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
-        
-        // 2. MINHA MESA (Atendendo agora)
-        const mesa = this.todosAtendimentosPauta.filter(a => a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome);
-        
-        // 3. MEUS CONCLUÍDOS (O que eu fiz)
-        const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
-            const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
-            return isDone && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
-        });
-
-        // 4. PAUTA GERAL (Tudo o resto: atendendo por outros, concluído por outros, etc.)
-        const pautaGeral = this.todosAtendimentosPauta.filter(a => {
-            const isMine = (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || 
-                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-            const isEspera = a.status === 'aguardando';
-            return !isMine && !isEspera && a.status !== 'faltoso';
-        });
-
-        espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        mesa.sort((a,b) => new Date(b.inAttendanceTime || 0) - new Date(a.inAttendanceTime || 0));
-        meusConcluidos.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
-        pautaGeral.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
-
-        this._injetarCardsColuna('kanban-espera', 'count-espera', espera, 'puxar', 'Ninguém na fila.');
-        this._injetarCardsColuna('kanban-mesa', 'count-mesa', mesa, 'mesa', 'Sua mesa está limpa.');
-        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', meusConcluidos, 'auditoria', 'Nenhum concluído por você.');
-        this._injetarCardsColuna('kanban-pauta-geral', 'count-pauta-geral', pautaGeral, 'auditoria', 'Sem outros casos em andamento.');
-
-        this._setupAcoesCards();
-    },
-
-    prepararFiltroKanban() {
-        const searchInput = document.getElementById('kanban-search');
-        if (!searchInput) return;
-
-        searchInput.addEventListener('input', (e) => {
-            const termo = e.target.value.toLowerCase().trim();
-            document.querySelectorAll('.kanban-card').forEach(card => {
-                const texto = card.textContent.toLowerCase();
-                card.style.display = texto.includes(termo) ? '' : 'none';
-            });
-        });
-    },
-
-    _injetarCardsColuna(colunaId, countId, lista, modo, msgVazio) {
-        const container = document.getElementById(colunaId);
-        const count = document.getElementById(countId);
-        if (!container || !count) return;
-
-        count.textContent = lista.length;
-
-        if (lista.length === 0) {
+    _renderAbaFluxo(container, assistido, pautaData) {
+        if (this.pautaFechada) {
             container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 opacity-60">
-                    <span class="text-3xl text-slate-300 mb-2">${ico('inbox')}</span>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">${msgVazio}</p>
+                <div class="bg-red-50 border border-red-200 p-10 rounded-3xl text-center shadow-sm max-w-3xl mx-auto mt-4">
+                    <div class="w-16 h-16 bg-red-500 rounded-full text-white flex items-center justify-center mx-auto mb-4">${ico('lock', 'w-8 h-8')}</div>
+                    <h3 class="text-xl font-black text-red-800 uppercase tracking-widest mb-2">PAUTA ENCERRADA</h3>
+                    <p class="text-sm font-bold text-red-600">Ações bloqueadas pelo Coordenador.</p>
                 </div>
             `;
             return;
         }
-        container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
-    },
 
-    _htmlCardKanban(assistido, modo) {
-        const st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
-        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
-        const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
-        
-        const baseUrl = window.location.href.split('?')[0];
-        const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
-
-        const donoLabel = assistido.assignedCollaborator?.name ? `Com ${escapeHTML(assistido.assignedCollaborator.name.split(' ')[0])}` : 
-                          (assistido.attendedBy ? `Por ${escapeHTML(assistido.attendedBy.split(' ')[0])}` : '');
-
-        let botoesHtml = '';
-        if (this.pautaFechada) {
-            botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
-            if (modo === 'auditoria') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
-            }
-        } else {
-            if (modo === 'puxar') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Atender</a>`;
-            } else if (modo === 'mesa') {
-                botoesHtml = `
-                    <div class="flex gap-2 mt-3">
-                        <a href="${linkIndividual}" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Abrir</a>
-                        <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
-                    </div>`;
-            } else {
-                botoesHtml = `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-900 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
-            }
+        if (['atendido', 'aguardandoNumero'].includes(assistido.status)) {
+            container.innerHTML = `
+                <div class="bg-emerald-50 border border-emerald-200 p-10 rounded-3xl text-center shadow-sm max-w-3xl mx-auto mt-4">
+                    <div class="w-16 h-16 bg-emerald-500 rounded-full text-white flex items-center justify-center mx-auto mb-4">${ico('check', 'w-8 h-8')}</div>
+                    <h3 class="text-xl font-black text-emerald-800 uppercase tracking-widest mb-2">PROTOCOLO ENCERRADO</h3>
+                    <p class="text-sm font-bold text-emerald-600">Salvo por ${escapeHTML(assistido.attendedBy || 'Servidor')}.</p>
+                </div>
+                <div class="max-w-3xl mx-auto mt-6">
+                    <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex items-center justify-center gap-2">
+                        👉 IR PARA MESA
+                    </button>
+                </div>
+            `;
+            return;
         }
 
-        return `
-            <div class="kanban-card bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow ${urgencia}">
-                <div class="flex justify-between items-start mb-2 gap-2">
-                    <h4 class="font-black text-slate-800 text-sm leading-tight line-clamp-2">${escapeHTML(assistido.name)}</h4>
-                    ${badgeUrgencia}
-                </div>
-                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-3 truncate">
-                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span> ${escapeHTML(assistido.subject || 'Sem assunto')}
-                </div>
-                <div class="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
-                    <span class="text-[9px] font-black px-2 py-1 rounded-md border ${st.cor} uppercase tracking-widest">${st.txt}</span>
-                    <span class="font-bold text-[9px] text-slate-400 uppercase truncate max-w-[80px] text-right">${donoLabel}</span>
-                </div>
-                ${botoesHtml}
-            </div>
-        `;
-    },
+        // Se não estiver fechado nem finalizado, mostra as opções de ação
+        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
+        const showDistribuicao = pautaData.useDistributionFlow && !isDefensor;
 
-    _setupAcoesCards() {
-        document.querySelectorAll('.btn-devolver-caso').forEach(btn => {
-            btn.addEventListener('click', async (e) => {
-                const b = e.currentTarget;
-                if (!confirm("Devolver este caso para a Fila de Espera?")) return;
-
-                try {
-                    await updateDoc(doc(db, "pautas", b.dataset.pautaId, "attendances", b.dataset.assistidoId), {
-                        status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null,
-                        history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
-                    });
-                    if (this.colaboradorAtual?.id) {
-                        await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
-                    }
-                    if (typeof showNotification === 'function') showNotification("Caso devolvido.", "info");
-                } catch (error) {
-                    console.error(error);
-                    alert("Erro ao devolver caso.");
-                }
-            });
-        });
-
-        document.querySelectorAll('.btn-auditar-nativo').forEach(btn => {
-            btn.addEventListener('click', (e) => {
-                const b = e.currentTarget;
-                if (window.abrirMonitoramento) {
-                    window.abrirMonitoramento(this.pautaId, b.dataset.assistidoId, b.dataset.assistidoNome);
-                } else {
-                    alert("Módulo de Monitoramento Nativo não encontrado. Volte e use o botão 'Ver Dossiê' dentro do atendimento.");
-                }
-            });
-        });
-    },
-
-    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL + HISTÓRICO ORIGINAL) 
-
-    renderizarSplitScreen(assistido, pautaData) {
-        document.getElementById('view-dashboard').classList.add('hidden');
-        document.getElementById('view-dashboard').classList.remove('flex');
-        document.getElementById('view-atendimento').classList.remove('hidden');
-        document.getElementById('view-atendimento').classList.add('flex');
-
-        const baseUrl = window.location.href.split('?')[0];
-        window.history.pushState({}, '', `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`);
-
-        document.getElementById('assistido-nome').textContent = assistido.name || 'Assistido';
-        document.getElementById('assistido-assunto').textContent = assistido.subject || 'Sem assunto';
+        let html = `<div class="max-w-3xl mx-auto mt-2">`;
         
-        document.getElementById('btn-voltar-portal').onclick = () => {
-            this.assistidoId = null;
-            this.assistidoData = null;
-            this.renderizarKanban();
-        };
-
-        this._renderizarLadoEsquerdo(assistido);
-
-        if (this.pautaFechada) {
-            this._renderizarPainelFechado();
-        } else if (['atendido', 'aguardandoNumero'].includes(assistido.status)) {
-            this._renderizarPainelFinalizado(assistido);
-        } else {
-            this._renderizarPainelAcoes(assistido, pautaData);
-        }
-    },
-
-    _renderizarLadoEsquerdo(assistido) {
-        const container = document.getElementById('aba-historico');
-        let html = '';
-
-        // 1. AVISO DE TRANSFERÊNCIA (SE HOUVER)
         if (assistido.historicoTransferencia) {
             html += `
-                <div class="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
+                <div class="bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
                     <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
                     <div class="bg-blue-100 p-2 rounded-lg shrink-0 text-blue-600">${ico('refresh', 'w-5 h-5')}</div>
                     <div>
@@ -458,222 +517,10 @@ export const AtendimentoExternoService = {
                 </div>`;
         }
 
-        // 2. BOTÕES NATIVOS NO TOPO
         html += `
             <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
-                <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
-                    <span class="text-2xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-8 h-8')}</span>
-                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Editar Checklist (Original)</span>
-                </button>
-                <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
-                    <span class="text-2xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-8 h-8')}</span>
-                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Linha do Tempo Completa</span>
-                </button>
-            </div>
-        `;
-
-        // 3. INJEÇÃO DO HISTÓRICO ORIGINAL DA RECEPÇÃO
-        const chk = assistido.documentChecklist || {};
-        const baseDeDados = documentsData || window.documentsData || {};
-        
-        if (!chk.action) {
-            html += `<div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl"><span class="text-4xl block mb-2 text-slate-300">${ico('inbox')}</span><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhum checklist da recepção registado.</p></div>`;
-        } else {
-            const actionData = baseDeDados[chk.action];
-            const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
-            
-            html += `
-                <div class="bg-slate-900 p-5 rounded-2xl mb-6 shadow-md relative overflow-hidden">
-                    <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5">Ação Selecionada na Recepção</p>
-                    <p class="text-base font-black text-white uppercase leading-tight">${actionTitle}</p>
-                </div>`;
-
-            // PERFIL SOCIOECONÔMICO
-            if (chk.socioData) {
-                const s = chk.socioData;
-                let socioHtml = '';
-                const addLinha = (label, val) => {
-                    if (val && val.trim() !== '' && val !== 'Selecione' && val !== 'R$ 0,00' && !val.includes('Selecione')) {
-                        socioHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${label}</span><span class="text-xs font-bold text-slate-700 text-right w-2/3 break-words">${escapeHTML(val)}</span></div>`;
-                    }
-                };
-                addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda', s.ganhos); addLinha('Fonte Renda', s.fonteRenda);
-                
-                if (socioHtml) {
-                    html += `
-                        <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} PERFIL SOCIOECONÔMICO</h4>
-                            <div class="space-y-1">${socioHtml}</div>
-                        </div>`;
-                }
-            }
-
-            // LISTA DE DOCUMENTOS
-            if (chk.checkedIds && chk.checkedIds.length > 0) {
-                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                         <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                         <ul class="space-y-2">`;
-                chk.checkedIds.forEach(id => {
-                    if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
-                    let docName = id.replace(/-/g, ' ').toUpperCase();
-                    if (actionData && id.startsWith('doc-')) {
-                        const parts = id.split('-');
-                        const dIdx = parseInt(parts.pop());
-                        const sIdx = parseInt(parts.pop());
-                        if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
-                            const docObj = actionData.sections[sIdx].docs[dIdx];
-                            if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
-                        }
-                    }
-                    const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-                    const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
-                    html += `
-                        <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center">
-                            <span class="font-bold text-slate-700 pr-2 flex items-center gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} ${docName}</span> 
-                            <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
-                        </li>`;
-                });
-                html += `</ul></div>`;
-            }
-            
-            // DEMANDAS ACUMULADAS
-            if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
-                html += `
-                    <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
-                        <h4 class="text-[10px] font-black text-violet-800 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                            <span>${ico('scale', 'w-3.5 h-3.5')}</span> DEMANDAS ACUMULADAS
-                        </h4>
-                        <ul class="space-y-2">
-                            ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-3 rounded-xl border border-violet-100 shadow-sm flex items-center gap-2 font-medium text-slate-700"><span class="text-violet-500 font-black">•</span> ${escapeHTML(dem)}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-
-            // PLANILHA DE GASTOS
-            if (chk.expenseData && chk.expenseData.checkExibirGastos) {
-                const g = chk.expenseData;
-                const categorias = [
-                    { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
-                    { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
-                    { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
-                    { id: 'outras', label: 'Outras' }
-                ];
-
-                let totalGastos = 0;
-                let gastosHtml = '';
-                
-                categorias.forEach(c => {
-                    if (g[c.id] && g[c.id] !== 'R$ 0,00') {
-                        gastosHtml += `<div class="flex justify-between items-center text-xs py-2 border-b border-emerald-100/50"><span class="text-emerald-800 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100">${g[c.id]}</span></div>`;
-                        const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                        totalGastos += num;
-                    }
-                });
-
-                if (totalGastos > 0) {
-                    const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                    html += `
-                        <div class="bg-emerald-50 p-5 rounded-2xl mb-6 border border-emerald-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 flex items-center gap-1.5">
-                                <span>${ico('coins', 'w-3.5 h-3.5')}</span> PLANILHA DE GASTOS
-                            </h4>
-                            <div class="space-y-1 mb-4">
-                                ${gastosHtml}
-                            </div>
-                            <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-2 text-sm items-center">
-                                <span class="uppercase tracking-widest">TOTAL</span>
-                                <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${totalFormatado}</span>
-                            </div>
-                        </div>
-                    `;
-                }
-            }
-
-            // DADOS DO RÉU
-            if (chk.reuData && chk.reuData.checkReuUnico) {
-                const reu = chk.reuData;
-                html += `
-                    <div class="bg-rose-50 p-5 rounded-2xl mb-6 border border-rose-200 shadow-sm">
-                        <h4 class="text-[10px] font-black text-rose-800 uppercase tracking-widest mb-4 flex items-center gap-1.5"><span>${ico('user', 'w-3.5 h-3.5')}</span> POLO PASSIVO (RÉU)</h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs text-slate-700 bg-white p-4 rounded-xl border border-rose-100 shadow-sm">
-                            ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${reu.nome}</p>` : ''}
-                            ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${reu.cpf}</p>` : ''}
-                            ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${reu.telefone}</p>` : ''}
-                            ${reu.cep ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
-                            ${reu.empresa ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
-        }
-        
-        container.innerHTML = html;
-
-        // VINCULANDO AÇÕES AOS BOTÕES NATIVOS (DETALHES.JS E MONITORAMENTO.JS)
-        setTimeout(() => {
-            const btnDocs = document.getElementById('btn-nativ-docs');
-            const btnTime = document.getElementById('btn-nativ-time');
-            
-            if (btnDocs) {
-                btnDocs.addEventListener('click', () => {
-                    if (typeof window.openDetailsModal === 'function') {
-                        window.openDetailsModal({ assistedId: assistido.id, pautaId: this.pautaId, allAssisted: this.todosAtendimentosPauta, db: db });
-                    } else if (window.openDetailsModal) {
-                        window.openDetailsModal(assistido, this.pautaId);
-                    } else {
-                        alert("Módulo de Detalhes Original não carregado na página.");
-                    }
-                });
-            }
-
-            if (btnTime) {
-                btnTime.addEventListener('click', () => {
-                    if (window.abrirMonitoramento) {
-                        window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
-                    } else {
-                        alert("Módulo de Monitoramento Nativo não carregado na página.");
-                    }
-                });
-            }
-        }, 100);
-    },
-
-    _renderizarPainelFechado() {
-        const aba = document.getElementById('aba-encerramento');
-        aba.innerHTML = `
-            <div class="text-center p-6 bg-red-50 rounded-2xl border border-red-200 shadow-sm mt-4 mb-6">
-                <div class="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('lock', 'w-6 h-6')}</div>
-                <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
-                <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
-            </div>
-            <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
-        `;
-    },
-
-    _renderizarPainelFinalizado(assistido) {
-        const aba = document.getElementById('aba-encerramento');
-        aba.innerHTML = `
-            <div class="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm mt-4 mb-6">
-                <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
-                <h2 class="text-lg font-black text-emerald-800 uppercase tracking-wider mb-2">Protocolo Concluído</h2>
-                <p class="text-xs font-bold text-emerald-700 leading-relaxed">Atendimento salvo por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
-                ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
-            </div>
-            <button onclick="document.getElementById('btn-voltar-portal').click()" class="w-full bg-slate-800 hover:bg-slate-900 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
-        `;
-    },
-
-    _renderizarPainelAcoes(assistido, pautaData) {
-        const aba = document.getElementById('aba-encerramento');
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const showDistribuicao = pautaData.useDistributionFlow && !isDefensor;
-
-        let html = `
-            <div class="grid grid-cols-1 gap-3 mb-6">
-                <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 p-4 rounded-2xl text-left transition-all shadow-md group">
-                    <span class="block text-emerald-600 mb-1">${ico('checkCircle', 'w-7 h-7')}</span>
+                <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 p-5 rounded-2xl text-left transition-all shadow-md group">
+                    <span class="block text-emerald-600 mb-2">${ico('checkCircle', 'w-8 h-8')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">${isDefensor ? "Concluir / Assinar" : "Finalizar Protocolo"}</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encerrar o caso</span>
                 </button>
@@ -681,13 +528,13 @@ export const AtendimentoExternoService = {
 
         if (showDistribuicao) {
             html += `
-                <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-blue-50 hover:border-blue-300 group">
-                    <span class="block text-blue-600 mb-1">${ico('send', 'w-7 h-7')}</span>
+                <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:bg-blue-50 hover:border-blue-300 group">
+                    <span class="block text-blue-600 mb-2">${ico('send', 'w-8 h-8')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">Enviar ao Defensor</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encaminhar petição</span>
                 </button>
-                <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-amber-50 hover:border-amber-300 group">
-                    <span class="block text-amber-600 mb-1">${ico('helpCircle', 'w-7 h-7')}</span>
+                <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:bg-amber-50 hover:border-amber-300 group">
+                    <span class="block text-amber-600 mb-2">${ico('helpCircle', 'w-8 h-8')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">Pedir Avaliação</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Dúvidas com defensor</span>
                 </button>
@@ -696,8 +543,8 @@ export const AtendimentoExternoService = {
 
         if (isDefensor) {
             html += `
-                <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-orange-50 hover:border-orange-300 group">
-                    <span class="block text-orange-600 mb-1">${ico('arrowLeft', 'w-7 h-7')}</span>
+                <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:bg-orange-50 hover:border-orange-300 group">
+                    <span class="block text-orange-600 mb-2">${ico('arrowLeft', 'w-8 h-8')}</span>
                     <span class="block font-black text-slate-800 text-sm mt-2">Devolver c/ Erro</span>
                     <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Retornar ao servidor</span>
                 </button>
@@ -705,85 +552,86 @@ export const AtendimentoExternoService = {
         }
 
         html += `
-            <div class="grid grid-cols-2 gap-3">
-                <button id="btn-opt-transferir" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-indigo-50 hover:border-indigo-300 group">
-                    <span class="block text-indigo-600 mb-1">${ico('refresh', 'w-5 h-5')}</span>
-                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Transferir</span>
+                <button id="btn-opt-transferir" class="fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:bg-indigo-50 hover:border-indigo-300 group">
+                    <span class="block text-indigo-600 mb-2">${ico('refresh', 'w-8 h-8')}</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">Transferir Caso</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Para colega</span>
                 </button>
-                <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-slate-100 hover:border-slate-300 group">
-                    <span class="block text-slate-600 mb-1">${ico('pause', 'w-5 h-5')}</span>
-                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Pausar</span>
+                <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:bg-slate-100 hover:border-slate-300 group">
+                    <span class="block text-slate-600 mb-2">${ico('pause', 'w-8 h-8')}</span>
+                    <span class="block font-black text-slate-800 text-sm mt-2">Pausar</span>
+                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Voltar p/ Fila</span>
                 </button>
             </div>
-        </div>`;
-
-        html += `
-            <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 mb-6 shadow-sm">
-                <label class="block text-[10px] font-black text-indigo-800 uppercase tracking-widest mb-3 flex items-center gap-1.5"><span>${ico('clipboard', 'w-3.5 h-3.5')}</span> Demandas Adicionais (Estatística)</label>
-                <div class="flex gap-2 mb-3">
-                    <input type="text" id="input-nova-demanda-externo" class="flex-grow p-3 border border-indigo-200 rounded-xl text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Ex: Divórcio, Alimentos...">
-                    <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-3 rounded-xl text-[10px] hover:bg-indigo-700 transition-colors shadow-sm uppercase tracking-wider shrink-0">Adicionar</button>
-                </div>
-                <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
-            </div>
-
-            <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
-                    <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 1045239">
-                </div>
-            </div>
-
-            <div id="config-distribuicao" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Defensor(a)</label>
-                    <select id="select-defensor-distribuicao" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Nota Interna</label>
-                    <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-correcao" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Defensor(a) Avaliador</label>
-                    <select id="select-defensor-correcao" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Dúvida</label>
-                    <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-devolver" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1.5">Devolver para</label>
-                    <select id="select-servidor-devolver" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1.5">Motivo</label>
-                    <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-transferencia" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1.5">Transferir para</label>
-                    <select id="select-transferir-colega" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"></select>
-                </div>
-            </div>
-
-            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-black text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto mb-2">
-                EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4')}
-            </button>
         `;
 
-        aba.innerHTML = html;
+        html += `
+            <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-6 rounded-2xl border border-indigo-100 mb-6 shadow-sm">
+                <label class="block text-[10px] font-black text-indigo-800 uppercase tracking-widest mb-3 flex items-center gap-1.5"><span>${ico('clipboard', 'w-4 h-4')}</span> Demandas Adicionais (Estatística)</label>
+                <div class="flex gap-3 mb-4">
+                    <input type="text" id="input-nova-demanda-externo" class="flex-grow p-3 border border-indigo-200 rounded-xl text-sm outline-none bg-white focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Ex: Divórcio, Alimentos...">
+                    <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-6 py-3 rounded-xl text-xs hover:bg-indigo-700 transition-colors shadow-sm uppercase tracking-wider shrink-0">Adicionar</button>
+                </div>
+                <div id="container-lista-demandas-externo" class="space-y-2 max-h-40 overflow-y-auto pr-1 custom-scrollbar"></div>
+            </div>
+
+            <div id="config-numero-processo" class="bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-2 flex items-center gap-1.5"><span>${ico('fileText', 'w-4 h-4')}</span> Nº CNP / Processo (Opcional)</label>
+                    <input type="text" id="input-numero-caso" value="${assistido.numeroProcesso || ''}" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 1045239">
+                </div>
+            </div>
+
+            <div id="config-distribuicao" class="hidden bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Defensor(a)</label>
+                    <select id="select-defensor-distribuicao" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-2">Nota Interna</label>
+                    <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
+                </div>
+            </div>
+
+            <div id="config-correcao" class="hidden bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Defensor(a) Avaliador</label>
+                    <select id="select-defensor-correcao" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-2">Dúvida</label>
+                    <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
+                </div>
+            </div>
+
+            <div id="config-devolver" class="hidden bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2">Devolver para</label>
+                    <select id="select-servidor-devolver" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-slate-700"></select>
+                </div>
+                <div>
+                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-2">Motivo</label>
+                    <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
+                </div>
+            </div>
+
+            <div id="config-transferencia" class="hidden bg-white p-6 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
+                <div>
+                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-2">Transferir para</label>
+                    <select id="select-transferir-colega" class="w-full p-4 border border-slate-200 rounded-xl text-sm bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"></select>
+                </div>
+            </div>
+
+            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-black text-white font-black py-5 rounded-2xl shadow-xl transition-all text-sm uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-4">
+                EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4')}
+            </button>
+            </div> <!-- End max-w-3xl -->
+        `;
+
+        container.innerHTML = html;
         this.povoarSelectsDinamicos();
         this.atualizarListaDemandasInterfaceExterna();
 
-        this.fluxoSelecionado = 'direto';
         const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
         const configBoxes = {
             'direto': document.getElementById('config-numero-processo'),
@@ -796,7 +644,7 @@ export const AtendimentoExternoService = {
 
         const setAtivo = (btnClicado, fluxo) => {
             this.fluxoSelecionado = fluxo;
-            botoesFluxo.forEach(b => b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:shadow-md group');
+            botoesFluxo.forEach(b => b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-5 rounded-2xl text-left transition-all hover:shadow-md group');
             const coresAvas = {
                 'direto': 'bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 shadow-md',
                 'distribuicao': 'bg-blue-50 border border-blue-300 ring-2 ring-blue-100 shadow-md',
@@ -805,7 +653,7 @@ export const AtendimentoExternoService = {
                 'transferir': 'bg-indigo-50 border border-indigo-300 ring-2 ring-indigo-100 shadow-md',
                 'pausar': 'bg-slate-100 border border-slate-400 ring-2 ring-slate-200 shadow-md'
             };
-            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-2xl text-left transition-all shadow-md group`;
+            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-5 rounded-2xl text-left transition-all shadow-md group`;
 
             Object.keys(configBoxes).forEach(key => {
                 if(configBoxes[key]) configBoxes[key].classList.add('hidden');
@@ -825,6 +673,145 @@ export const AtendimentoExternoService = {
         document.getElementById('btn-add-demanda-externo').onclick = () => this.adicionarNovaDemandaFluxoExterno();
         document.getElementById('btn-finalizar-dinamico').onclick = () => this.finalizarProcesso();
     },
+
+    _renderAbaHistorico(container, assistido) {
+        let html = `<div class="max-w-4xl mx-auto mt-2 pb-10">`;
+
+        // 1. Checklist Original (detalhes.js format)
+        const chk = assistido.documentChecklist || {};
+        const baseDeDados = documentsData || window.documentsData || {};
+        
+        if (!chk.action) {
+            html += `
+                <div class="text-center py-20 opacity-60">
+                    <div class="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">${ico('inbox', 'w-8 h-8 text-slate-400')}</div>
+                    <p class="text-sm font-bold uppercase tracking-widest text-slate-500">Nenhum checklist de documentos registrado na recepção.</p>
+                </div>
+            </div>`; // end max-w-4xl
+            container.innerHTML = html;
+            return;
+        }
+
+        const actionData = baseDeDados[chk.action];
+        const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
+        
+        html += `
+            <div class="bg-slate-900 p-6 rounded-2xl mb-8 shadow-lg relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-white opacity-5 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
+                <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5 relative z-10">Ação / Pedido Principal</p>
+                <p class="text-xl font-black text-white uppercase leading-tight relative z-10">${actionTitle}</p>
+            </div>`;
+
+        // PERFIL SOCIOECONÔMICO
+        if (chk.socioData) {
+            const s = chk.socioData;
+            let socioHtml = '';
+            const addLinha = (label, val) => {
+                if (val && val.trim() !== '' && val !== 'Selecione' && val !== 'R$ 0,00' && !val.includes('Selecione')) {
+                    socioHtml += `<div class="flex flex-col sm:flex-row sm:justify-between sm:items-center py-3 border-b border-slate-100 gap-1"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${label}</span><span class="text-sm font-bold text-slate-700 sm:text-right w-full sm:w-2/3 break-words">${escapeHTML(val)}</span></div>`;
+                }
+            };
+            addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda Familiar', s.ganhos); addLinha('Fonte de Renda', s.fonteRenda);
+            
+            if (socioHtml) {
+                html += `
+                    <div class="bg-white p-6 rounded-2xl mb-8 border border-slate-200 shadow-sm">
+                        <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">${ico('user', 'w-4 h-4 text-blue-500')} PERFIL SOCIOECONÔMICO</h4>
+                        <div class="space-y-1">${socioHtml}</div>
+                    </div>`;
+            }
+        }
+
+        // LISTA DE DOCUMENTOS
+        if (chk.checkedIds && chk.checkedIds.length > 0) {
+            html += `<div class="bg-white p-6 rounded-2xl mb-8 border border-slate-200 shadow-sm">
+                     <h4 class="text-xs font-black text-slate-800 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-slate-100 pb-3">${ico('fileText', 'w-4 h-4 text-emerald-500')} DOCUMENTOS RECOLHIDOS (${chk.checkedIds.length})</h4>
+                     <ul class="space-y-3 mt-4">`;
+            chk.checkedIds.forEach(id => {
+                if (id.startsWith('reu-') || id.startsWith('gasto-')) return;
+                let docName = id.replace(/-/g, ' ').toUpperCase();
+                if (actionData && id.startsWith('doc-')) {
+                    const parts = id.split('-');
+                    const dIdx = parseInt(parts.pop());
+                    const sIdx = parseInt(parts.pop());
+                    if (!isNaN(sIdx) && !isNaN(dIdx) && actionData.sections[sIdx]) {
+                        const docObj = actionData.sections[sIdx].docs[dIdx];
+                        if (docObj) docName = typeof docObj === 'string' ? docObj : docObj.text;
+                    }
+                }
+                const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
+                const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-50 border-amber-200' : 'text-blue-700 bg-blue-50 border-blue-200';
+                html += `
+                    <li class="text-sm bg-slate-50 border border-slate-100 p-4 rounded-xl flex justify-between items-center shadow-sm">
+                        <span class="font-bold text-slate-700 pr-3 flex items-center gap-3">${ico('checkCircle', 'w-5 h-5 text-emerald-500 shrink-0')} ${docName}</span> 
+                        <span class="font-black text-[10px] uppercase tracking-widest ${tipoClass} px-3 py-1 rounded-lg border shrink-0">${tipo}</span>
+                    </li>`;
+            });
+            html += `</ul></div>`;
+        }
+        
+        // PLANILHA DE GASTOS
+        if (chk.expenseData && chk.expenseData.checkExibirGastos) {
+            const g = chk.expenseData;
+            const categorias = [
+                { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
+                { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
+                { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
+                { id: 'outras', label: 'Outras' }
+            ];
+
+            let totalGastos = 0;
+            let gastosHtml = '';
+            
+            categorias.forEach(c => {
+                if (g[c.id] && g[c.id] !== 'R$ 0,00') {
+                    gastosHtml += `<div class="flex justify-between items-center py-2.5 border-b border-emerald-100/50"><span class="text-sm text-emerald-800 font-bold">${c.label}</span><span class="font-black text-emerald-900 bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-100">${g[c.id]}</span></div>`;
+                    const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
+                    totalGastos += num;
+                }
+            });
+
+            if (totalGastos > 0) {
+                const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                html += `
+                    <div class="bg-emerald-50 p-6 rounded-2xl mb-8 border border-emerald-200 shadow-sm">
+                        <h4 class="text-xs font-black text-emerald-800 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-emerald-200 pb-3">
+                            <span>${ico('coins', 'w-4 h-4')}</span> PLANILHA DE GASTOS
+                        </h4>
+                        <div class="space-y-1 mb-5">
+                            ${gastosHtml}
+                        </div>
+                        <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-300 pt-4 mt-2 items-center">
+                            <span class="text-sm uppercase tracking-widest">NECESSIDADE APURADA</span>
+                            <span class="bg-white px-4 py-2 rounded-xl shadow-md border border-emerald-400 text-xl">${totalFormatado}</span>
+                        </div>
+                    </div>
+                `;
+            }
+        }
+
+        // DADOS DO RÉU
+        if (chk.reuData && chk.reuData.checkReuUnico) {
+            const reu = chk.reuData;
+            html += `
+                <div class="bg-rose-50 p-6 rounded-2xl mb-8 border border-rose-200 shadow-sm">
+                    <h4 class="text-xs font-black text-rose-800 uppercase tracking-widest mb-4 flex items-center gap-2 border-b border-rose-200 pb-3"><span>${ico('user', 'w-4 h-4')}</span> DADOS DO PÓLO PASSIVO (RÉU)</h4>
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-sm text-slate-700 bg-white p-5 rounded-xl border border-rose-100 shadow-sm">
+                        ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${reu.nome}</p>` : ''}
+                        ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${reu.cpf}</p>` : ''}
+                        ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${reu.telefone}</p>` : ''}
+                        ${reu.cep ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
+                        ${reu.empresa ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
+
+        html += `</div>`;
+        container.innerHTML = html;
+    },
+
+    // ─── AÇÕES DE FINALIZAÇÃO ─────────────────────────────────────────────────
 
     adicionarNovaDemandaFluxoExterno() {
         const input = document.getElementById('input-nova-demanda-externo');
@@ -853,9 +840,9 @@ export const AtendimentoExternoService = {
 
         this.demandasAdicionaisLocais.forEach((dem, index) => {
             const div = document.createElement('div');
-            div.className = "flex justify-between items-center bg-white border border-indigo-100 p-2.5 rounded-xl shadow-sm text-xs";
+            div.className = "flex justify-between items-center bg-white border border-indigo-100 p-3 rounded-xl shadow-sm text-xs";
             div.innerHTML = `
-                <span class="font-bold text-slate-700 flex items-center gap-1.5">${ico('scale', 'w-3 h-3 text-indigo-400')} ${escapeHTML(dem)}</span>
+                <span class="font-bold text-slate-700 flex items-center gap-2">${ico('scale', 'w-3.5 h-3.5 text-indigo-400')} ${escapeHTML(dem)}</span>
                 <button type="button" class="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-colors" data-index="${index}">Remover</button>
             `;
             div.querySelector('button').onclick = () => this.removerDemandaFluxoExterno(index);
@@ -1131,7 +1118,7 @@ export const AtendimentoExternoService = {
                 alert(`${tituloSucesso}\n${subtituloSucesso}`);
             }
             
-            document.getElementById('btn-voltar-portal').click();
+            document.getElementById('btn-voltar-dashboard').click();
 
         } catch (error) {
             console.error("Erro no processamento:", error);
