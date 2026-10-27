@@ -249,29 +249,46 @@
 </head>
 <body class="p-0 pt-10 sm:p-0 sm:pt-10 md:p-0 md:pt-10">
 
-    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) -->
-    <nav class="fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-2.5 shadow-sm">
-        <div class="flex items-center gap-3">
-            <span class="text-white font-black text-[11px] sm:text-xs uppercase tracking-widest flex items-center gap-2">
+    <!-- MENU SUPERIOR FIXO (TOP BAR PROFISSIONAL) - OCULTO POR PADRÃO (SÓ APARECE LOGADO) -->
+    <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[9999] flex justify-between items-center px-4 py-1.5 shadow-sm">
+        <!-- LADO ESQUERDO: SIGEP e Links Extras -->
+        <div class="flex items-center gap-4 w-1/3">
+            <span class="text-white font-black text-xs sm:text-sm uppercase tracking-widest flex items-center gap-2">
                 <svg class="w-4 h-4 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z"></path></svg>
                 SIGEP
             </span>
+            <div class="hidden md:flex items-center gap-3 text-[10px] font-bold text-slate-300 uppercase tracking-wider ml-4">
+                <button onclick="document.getElementById('feedback-global-modal').classList.remove('hidden')" class="hover:text-blue-400 transition-colors flex items-center gap-1.5 bg-slate-800 px-2 py-1 rounded border border-slate-700">
+                    <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
+                    Ouvidoria
+                </button>
+                <a href="manual.html" target="_blank" class="hover:text-green-400 transition-colors">Wiki</a>
+                <a href="termos.html" target="_blank" class="hover:text-green-400 transition-colors">Termos</a>
+                <a href="politica.html" target="_blank" class="hover:text-green-400 transition-colors">Privacidade</a>
+            </div>
         </div>
-        <div class="flex items-center gap-3 sm:gap-6 text-[10px] sm:text-xs font-bold text-slate-300 uppercase tracking-wider">
-            <a href="manual.html" target="_blank" class="hover:text-green-400 transition-colors flex items-center gap-1.5" title="Acessar Wiki e Procedimentos">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"></path></svg>
-                <span class="hidden sm:inline">Manual (Wiki)</span><span class="sm:hidden">Wiki</span>
-            </a>
-            <a href="termos.html" target="_blank" class="hidden sm:flex hover:text-green-400 transition-colors items-center gap-1.5">Termos</a>
-            <a href="politica.html" target="_blank" class="hidden sm:flex hover:text-green-400 transition-colors items-center gap-1.5">Privacidade</a>
-            <button onclick="document.getElementById('feedback-global-modal').classList.remove('hidden')" class="hover:text-blue-400 transition-colors flex items-center gap-1.5 bg-slate-800 px-3 py-1.5 rounded-lg border border-slate-700">
-                <svg class="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 8h10M7 12h4m1 8l-4-4H5a2 2 0 01-2-2V6a2 2 0 012-2h14a2 2 0 012 2v8a2 2 0 01-2 2h-3l-4 4z"></path></svg>
-                Ouvidoria
+
+        <!-- CENTRO: Logo e Nome do Sistema -->
+        <div class="flex items-center justify-center gap-2 w-1/3 absolute left-1/2 transform -translate-x-1/2 pointer-events-none">
+            <img src="https://alexdovale.github.io/ponto.codoc/imagem.png" alt="Logo SIGEP" class="h-6 sm:h-7 w-auto drop-shadow-sm">
+            <span class="text-white font-black text-[10px] sm:text-xs uppercase tracking-widest hidden sm:block whitespace-nowrap">
+                Sistema de Gerenciamento de Pauta
+            </span>
+        </div>
+
+        <!-- LADO DIREITO: Botão Sair -->
+        <div class="flex items-center justify-end w-1/3">
+            <button id="logout-btn-app-top" title="Sair do Sistema" class="flex items-center gap-1.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 hover:text-red-300 font-bold px-2.5 py-1 rounded-lg border border-red-500/20 transition-colors text-[10px] sm:text-[11px] uppercase tracking-wider" onclick="if(window.app && window.app.auth) { window.app.auth.signOut().then(() => window.location.reload()); } else { window.location.reload(); }">
+                <span class="hidden sm:inline">Sair</span>
+                <svg xmlns="http://www.w3.org/2000/svg" class="w-3.5 h-3.5" fill="currentColor" viewBox="0 0 16 16">
+                    <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
+                    <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
+                </svg>
             </button>
         </div>
     </nav>
 
-    <div id="offline-indicator" class="fixed top-12 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
+    <div id="offline-indicator" class="fixed top-0 left-0 w-full bg-red-600 text-white text-center py-1 text-sm font-bold hidden z-[100] transition-all duration-300">
         <svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3z"/><path d="M12 9v4M12 17h.01"/></svg> Sem conexão. Trabalhando em Modo Offline no SIGEP.
     </div>
 
@@ -404,6 +421,11 @@
         <div id="pauta-selection-container" class="hidden w-full max-w-6xl mx-auto px-2 sm:px-0">
             <!-- CABEÇALHO COM LOGO E BOTÕES GLOBAIS -->
             <div class="flex flex-col justify-center items-center w-full relative mb-6 sm:mb-8 pt-2">
+                <button id="open-feedback-global-btn" title="Enviar Sugestão ou Reportar Erro" class="absolute top-0 left-0 bg-white text-blue-600 border border-slate-200 font-bold px-3 py-2 rounded-lg hover:bg-blue-50 transition flex items-center gap-2 shadow-sm text-xs sm:text-sm">
+                    <svg class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M7.5 8.25h9m-9 3H12m-9.75 1.51c0 1.6 1.123 2.994 2.707 3.227 1.129.166 2.27.293 3.423.379.35.026.67.21.865.501L12 21l2.755-4.133a1.14 1.14 0 01.865-.501 48.172 48.172 0 003.423-.379c1.584-.233 2.707-1.626 2.707-3.228V6.741c0-1.602-1.123-2.995-2.707-3.228A48.394 48.394 0 0012 3c-2.392 0-4.744.175-7.043.513C3.373 3.746 2.25 5.14 2.25 6.741v6.018z" /></svg>
+                    <span class="hidden sm:inline uppercase tracking-widest text-[10px]">Ouvidoria</span>
+                </button>
+                
                 <button id="logout-btn-pautas" title="Sair do Sistema e Retornar ao Login" class="absolute top-0 right-0 bg-slate-600 text-white font-bold p-2 rounded-lg hover:bg-slate-700 transition" onclick="var logoutBtn = document.getElementById('logout-btn-app'); if(logoutBtn) logoutBtn.click(); else window.location.reload();">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
                         <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
@@ -424,12 +446,11 @@
 
             <!-- MENU PRINCIPAL PADRONIZADO COM TOOLTIPS -->
             <div class="flex flex-col sm:flex-row flex-wrap justify-center items-center w-full gap-3 mb-6">
-                <!-- BOTÃO DA MESA DIGITAL -->
+                <!-- BOTÃO MESA DIGITAL -->
                 <button id="btn-mesa-digital" onclick="window.open('mesa_digital.html', '_blank')" title="Acesse sua Mesa Digital para chamar os assistidos da sua pauta." class="w-full sm:w-auto bg-blue-600 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-blue-700 transition shadow-md text-sm flex items-center gap-2 justify-center">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"></path></svg>
                     Mesa Digital
                 </button>
-
                 <button id="btn-recepcao-central" title="Acesse a visão geral da recepção para gerenciar a chegada dos assistidos nas unidades." class="w-full sm:w-auto bg-slate-700 text-white font-bold py-2.5 px-6 rounded-lg hover:bg-slate-800 transition shadow-md text-sm">
                     Recepção Central
                 </button>
@@ -658,13 +679,6 @@
             <header class="mb-4 sm:mb-6 space-y-4">
                 <div class="flex justify-center items-center w-full relative">
                     <h1 class="text-lg sm:text-xl font-semibold text-slate-600 text-center pr-10">Sistema de Gerenciamento de Pauta </h1>
-                    
-                    <button id="logout-btn-app" title="Sair" class="absolute top-0 right-0 bg-slate-600 text-white font-bold p-2 rounded-lg hover:bg-slate-700 transition">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" fill="currentColor" class="bi bi-box-arrow-right" viewBox="0 0 16 16">
-                            <path fill-rule="evenodd" d="M10 12.5a.5.5 0 0 1-.5.5h-8a.5.5 0 0 1-.5-.5v-9a.5.5 0 0 1 .5-.5h8a.5.5 0 0 1 .5.5v2a.5.5 0 0 0 1 0v-2A1.5 1.5 0 0 0 9.5 2h-8A1.5 1.5 0 0 0 0 3.5v9A1.5 1.5 0 0 0 1.5 14h8a1.5 1.5 0 0 0 1.5-1.5v-2a.5.5 0 0 0-1 0v2z"/>
-                            <path fill-rule="evenodd" d="M15.854 8.354a.5.5 0 0 0 0-.708l-3-3a.5.5 0 0 0-.708.708L14.293 7.5H5.5a.5.5 0 0 0 0 1h8.793l-2.147 2.146a.5.5 0 0 0 .708.708l3-3z"/>
-                        </svg>
-                    </button>
                 </div>
 
                 <div class="bg-white p-3 sm:p-4 rounded-lg shadow-sm space-y-4">
@@ -829,7 +843,7 @@
                             
                             <div class="relative ml-2 sm:ml-4 shrink-0"> 
                                 <button id="pauta-settings-toggle" class="z-10 flex items-center justify-center p-2.5 text-slate-600 bg-slate-200 hover:bg-slate-300 rounded-lg transition-colors duration-200" title="Configurações da Pauta">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-settings"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 6.2 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a2 2 0 0 1-2-2h2a2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06-.06a1.65 1.65 0 0 0-.33 1.82V15z"></path></svg>
                                 </button>
                                 <div id="pauta-settings-panel" class="hidden absolute top-full right-0 mt-2 w-56 p-3 bg-white rounded-lg shadow-xl border border-slate-200 z-30 space-y-2">
                                     <p class="text-xs font-bold text-slate-500 uppercase mb-2">Mostrar Colunas:</p>
@@ -1144,9 +1158,9 @@
     </div> 
     
     <footer id="main-footer" class="w-full py-6 bg-white border-t border-slate-300 mt-auto">
-        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-between items-center gap-6">
+        <div id="footer-inner-container" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col md:flex-row justify-center items-center gap-6">
             
-            <div id="footer-links" class="flex flex-wrap justify-center md:justify-start gap-4 text-sm text-slate-600 font-semibold w-full md:w-auto">
+            <div id="footer-links" class="hidden flex-wrap justify-center md:justify-start gap-4 text-sm text-slate-600 font-semibold w-full md:w-auto">
                 <a href="manual.html" target="_blank" class="hover:text-green-600 transition-colors">Manual do Utilizador</a>
                 <a href="termos.html" target="_blank" class="hover:text-green-600 transition-colors">Termos de Uso</a>
                 <a href="politica.html" target="_blank" class="hover:text-green-600 transition-colors">Política de Privacidade</a>
@@ -1159,6 +1173,29 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"></path></svg>
                     <span>Alto Contraste</span>
                 </button>
+                <!-- MODAL DO MANUAL / WIKI (PADRÃO MINIMALISTA SIGEP) -->
+                <div id="manual-modal" class="hidden fixed inset-0 bg-slate-900/60 z-[9999] flex items-center justify-center p-4 backdrop-blur-sm transition-opacity">
+                    <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl flex flex-col max-h-[90vh] overflow-hidden">
+                        <div class="p-6 pb-4 border-b border-slate-100 flex justify-between items-center shrink-0 bg-white">
+                            <div>
+                                <h2 class="font-bold text-xl text-slate-800">Manual / Wiki do Sistema</h2>
+                                <p class="text-sm text-slate-500 mt-0.5">Guia de procedimentos e documentação de ajuda</p>
+                            </div>
+                            <button onclick="document.getElementById('manual-modal').classList.add('hidden')" class="text-slate-400 hover:text-slate-600 transition-colors bg-slate-100 p-2 rounded-full shadow-sm">
+                                <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                            </button>
+                        </div>
+                        
+                        <!-- Conteúdo carregado externamente do manual.html -->
+                        <div class="scrollable-content p-6 overflow-y-auto flex-1 space-y-4 text-slate-700 text-sm bg-slate-50/50 custom-scrollbar">
+                            <!-- O script nativo injeta o manual.html aqui -->
+                        </div>
+            
+                        <div class="p-4 border-t border-slate-100 bg-white flex justify-end shrink-0">
+                            <button onclick="document.getElementById('manual-modal').classList.add('hidden')" class="px-6 py-2.5 bg-slate-200 hover:bg-slate-300 text-slate-700 font-bold rounded-xl transition-colors text-sm">Fechar</button>
+                        </div>
+                    </div>
+                </div>
 
                 <div title="Nossos servidores são monitorados 24/7 para garantir máxima disponibilidade e evitar quedas do sistema durante o seu trabalho." class="cursor-help flex items-center gap-1.5 text-xs text-slate-500 bg-slate-50 px-2.5 py-1.5 rounded-lg border border-slate-200 shadow-sm">
                     <svg class="w-4 h-4 text-blue-500" fill="currentColor" viewBox="0 0 20 20"><path fill-rule="evenodd" d="M2.166 4.999A11.954 11.954 0 0010 1.944 11.954 11.954 0 0017.834 5c.11.65.166 1.32.166 2.001 1.059 13.04-8.031 16.945-8.031 16.945S2.166 19.384 2.166 7.001A11.92 11.92 0 012.166 5zM8 11a2 2 0 114 0 2 2 0 01-4 0z" clip-rule="evenodd"></path></svg>
@@ -1531,6 +1568,25 @@
     <script src="https://vlibras.gov.br/app/vlibras-plugin.js"></script>
     <script>
         new window.VLibras.Widget('https://vlibras.gov.br/app');
+    </script>
+
+    <!-- SCRIPT DE EXIBIÇÃO DA BARRA SUPERIOR -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const loginContainer = document.getElementById('login-container');
+            const topNavBar = document.getElementById('top-nav-bar');
+            
+            if (loginContainer && topNavBar) {
+                const observer = new MutationObserver(() => {
+                    if (loginContainer.classList.contains('hidden')) {
+                        topNavBar.classList.remove('hidden');
+                    } else {
+                        topNavBar.classList.add('hidden');
+                    }
+                });
+                observer.observe(loginContainer, { attributes: true, attributeFilter: ['class'] });
+            }
+        });
     </script>
 
     <!-- SCRIPT DE SALVAMENTO DE OUVIDORIA NO FIREBASE -->
