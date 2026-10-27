@@ -5,7 +5,7 @@ import {
     getDocs, arrayUnion, onSnapshot, query, where
 } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
-import { documentsData } from './detalhes.js';
+import { documentsData, EXPENSE_CATEGORIES_COMUNS, EXPENSE_CATEGORIES_EXCLUSIVAS } from './detalhes.js';
 import { PDFService } from './pdfService.js';
 import { EmailService } from './emailService.js';
 import { showNotification, playSound, escapeHTML } from './utils.js';
@@ -188,6 +188,7 @@ export const AtendimentoExternoService = {
         this.atualizarBadgeHeader();
         this._assinaturaAssistido = this._assinaturaDados(assistido);
         this._escutarAssistido(pautaData);
+        this._registrarAbertura(assistido);
         this.setupListeners();
     },
 
@@ -226,6 +227,17 @@ export const AtendimentoExternoService = {
         );
     },
 
+    // Auditoria: quem abriu o caso na Mesa Digital (não repete se a última abertura foi da mesma pessoa)
+    _registrarAbertura(assistido) {
+        if (this.pautaFechada || !this.colaboradorNome) return;
+        if (['atendido', 'aguardandoNumero', 'faltoso'].includes(assistido.status)) return;
+        const ultimo = (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).slice(-1)[0] || '';
+        if (ultimo.startsWith('Aberto na Mesa Digital') && ultimo.includes(`(por ${this.colaboradorNome})`)) return;
+        updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistido.id), {
+            historicoAcoes: arrayUnion(this._registroHistorico('Aberto na Mesa Digital'))
+        }).catch(() => {});
+    },
+
     _cancelarListeners() {
         if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
         if (this.unsubscribePauta) { this.unsubscribePauta(); this.unsubscribePauta = null; }
@@ -237,6 +249,12 @@ export const AtendimentoExternoService = {
             const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
             this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
         } catch { this.todosColaboradores = []; }
+    },
+
+    // Registro no formato do Monitoramento: "ação (por Fulano) às HH:MM" -> aparece em "Últimos eventos" e no Dossiê PDF
+    _registroHistorico(descricao, iso = new Date().toISOString(), autor = this.colaboradorNome) {
+        const hora = new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        return `${descricao} (por ${autor || 'Mesa Digital'}) às ${hora}`;
     },
 
     _gerarTokenSeguro() {
@@ -275,16 +293,19 @@ export const AtendimentoExternoService = {
         const livre = meusCasos.length === 0 && !isNaTelaIndividual;
 
         badge.innerHTML = livre 
-            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span class="hidden sm:inline">LIVRE</span>`
-            : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0"></span> <span class="hidden sm:inline">OCUPADO</span>`;
+            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span>LIVRE</span>`
+            : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span> <span>OCUPADO</span>`;
         
-        badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-3 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-2 transition-colors`;
+        badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
 
         if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
             const novoStatus = livre ? 'disponivel' : 'ocupado';
             if (this.colaboradorAtual.status !== novoStatus) {
                 this.colaboradorAtual.status = novoStatus; 
-                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), { status: novoStatus }).catch(()=>{});
+                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
+                    status: novoStatus,
+                    currentAttendance: livre ? null : (meusCasos[0]?.id || this.assistidoId || null)
+                }).catch(()=>{});
             }
         }
     },
@@ -338,7 +359,10 @@ export const AtendimentoExternoService = {
                 if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
                 this.assistidoId = null;
                 this.assistidoData = null;
+                this._ajustarGrelhaKanban();
                 this.renderizarKanban();
+                this.iniciarDashboardKanban();   // religa a sincronização em tempo real da mesa
+                this.atualizarBadgeHeader();
             };
         } else {
             if (spans[0]) spans[0].textContent = 'Voltar às Pautas';
@@ -349,8 +373,19 @@ export const AtendimentoExternoService = {
         this._modoVoltar = modo;
     },
 
+    _atualizarCabecalhoDashboard() {
+        const titulo = document.getElementById('assistido-nome');
+        const sub = document.getElementById('assistido-assunto');
+        if (titulo) titulo.textContent = this.pautaNome || 'Mesa de Trabalho';
+        if (sub) {
+            const cargo = this.colaboradorAtual?.cargo ? ` • ${this.colaboradorAtual.cargo}` : '';
+            sub.textContent = `${this.colaboradorNome || ''}${cargo}`;
+        }
+    },
+
     renderizarKanban() {
         this._configurarBotaoVoltar('portal');
+        this._atualizarCabecalhoDashboard();
         document.getElementById('view-dashboard').classList.remove('hidden');
         document.getElementById('view-dashboard').classList.add('flex');
         document.getElementById('view-atendimento').classList.add('hidden');
@@ -525,6 +560,7 @@ export const AtendimentoExternoService = {
                 try {
                     await updateDoc(doc(db, "pautas", b.dataset.pautaId, "attendances", b.dataset.assistidoId), {
                         status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null,
+                        historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a fila de espera')),
                         history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
                     });
                     if (this.colaboradorAtual?.id) {
@@ -597,36 +633,59 @@ export const AtendimentoExternoService = {
         corpo.appendChild(btn);
     },
 
-    // Linha do tempo nativa, montada a partir de assistido.history
+    // Linha do tempo nativa: junta o que foi feito na Mesa Digital (history) com o log do Monitoramento (historicoAcoes)
     abrirLinhaDoTempo(assistido) {
         const rotulos = {
             APROVADO_E_CONCLUIDO: 'Concluído', APROVADO_AGUARDANDO_NUMERO: 'Aguardando CNP',
             ENVIADO_PARA_REVISAO: 'Enviado ao defensor', ENVIADO_PARA_CORRECAO: 'Enviado para avaliação',
             DEVOLVIDO_COM_ERRO: 'Devolvido para correção', TRANSFERENCIA_DE_CASO: 'Transferido',
-            ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila'
+            ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila',
+            DEVOLVIDO_PARA_CORRECAO: 'Devolvido para correção', APROVADO_E_DISTRIBUIDO: 'Distribuído'
         };
-        const eventos = (Array.isArray(assistido.history) ? [...assistido.history] : [])
-            .sort((a, b) => new Date(a.at || 0) - new Date(b.at || 0));
+        const hhmm = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+        const fmtData = (d) => d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+
+        const doMesa = (Array.isArray(assistido.history) ? assistido.history : []).map(ev => ({
+            quando: ev.at ? new Date(ev.at) : new Date(0),
+            rotulo: rotulos[ev.action] || String(ev.action || 'Movimentação').replace(/_/g, ' '),
+            texto: ev.msg || '', por: ev.by || '', exibe: ev.at ? fmtData(new Date(ev.at)) : '',
+            chave: `${ev.by}|${ev.at ? hhmm(ev.at) : ''}`
+        }));
+        const chavesMesa = new Set(doMesa.map(e => e.chave));
+
+        // Log do Monitoramento: "ação (por Fulano) às HH:MM" (sem data, então usamos o dia da chegada/criação)
+        const base = new Date(assistido.arrivalTime || assistido.createdAt || Date.now());
+        const doMonitor = [];
+        (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).forEach(txt => {
+            const m = String(txt).match(/^(.*?)(?: \(por (.+?)\))? às (\d{2}):(\d{2})$/);
+            const quando = new Date(base);
+            if (m) quando.setHours(parseInt(m[3]), parseInt(m[4]), 0, 0);
+            const ev = { quando, rotulo: m ? m[1] : String(txt), texto: '', por: m?.[2] || '', exibe: m ? `${m[3]}:${m[4]}` : '', chave: m ? `${m[2] || ''}|${m[3]}:${m[4]}` : '' };
+            if (!ev.chave || !chavesMesa.has(ev.chave) || /^Aberto na Mesa Digital/.test(ev.rotulo)) doMonitor.push(ev);
+        });
+
+        const eventos = [];
+        if (assistido.arrivalTime) eventos.push({ quando: new Date(assistido.arrivalTime), rotulo: 'Chegada na recepção', texto: '', por: '', exibe: hhmm(assistido.arrivalTime) });
+        eventos.push(...doMesa, ...doMonitor);
+        eventos.sort((a, b) => a.quando - b.quando);
 
         const corpo = this._criarOverlay('overlay-linha-tempo', `Linha do tempo • ${escapeHTML(assistido.name || 'Assistido')}`, 'max-w-xl');
         if (eventos.length === 0) {
             corpo.innerHTML = `<div class="text-center py-16 bg-white rounded-2xl border border-slate-200"><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhuma movimentação registrada.</p></div>`;
             return;
         }
-        corpo.innerHTML = `<ol class="relative border-l-2 border-slate-200 ml-3 space-y-5">${eventos.map(ev => {
-            const quando = ev.at ? new Date(ev.at).toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' }) : '';
-            return `<li class="ml-5">
+        corpo.innerHTML = `<ol class="relative border-l-2 border-slate-200 ml-3 space-y-5">${eventos.map(ev => `
+            <li class="ml-5">
                 <span class="absolute -left-[7px] w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></span>
                 <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
                     <div class="flex justify-between items-start gap-3">
-                        <p class="text-xs font-black text-slate-800">${escapeHTML(rotulos[ev.action] || String(ev.action || 'Movimentação').replace(/_/g, ' '))}</p>
-                        <span class="text-[10px] font-bold text-slate-400 shrink-0">${quando}</span>
+                        <p class="text-xs font-black text-slate-800">${escapeHTML(ev.rotulo)}</p>
+                        <span class="text-[10px] font-bold text-slate-400 shrink-0">${ev.exibe}</span>
                     </div>
-                    ${ev.msg ? `<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(ev.msg)}</p>` : ''}
-                    ${ev.by ? `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">por ${escapeHTML(ev.by)}</p>` : ''}
+                    ${ev.texto ? `<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(ev.texto)}</p>` : ''}
+                    ${ev.por ? `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">por ${escapeHTML(ev.por)}</p>` : ''}
                 </div>
-            </li>`;
-        }).join('')}</ol>`;
+            </li>`).join('')}</ol>`;
     },
 
     // ─── PAUTA COMPLETA (visível para todos os colaboradores) ─────────────────
@@ -753,7 +812,7 @@ export const AtendimentoExternoService = {
         }
 
         // 2. BOTÕES NO TOPO (Editar checklist só aparece se o módulo original estiver carregado)
-        const temDetalhes = typeof window.openDetailsModal === 'function';
+        const temDetalhes = typeof window.openDetailsModal === 'function' && !!document.getElementById('assisted-details-modal');
         if (mostrarBotoes) html += `
             <div class="grid grid-cols-1 ${temDetalhes ? 'sm:grid-cols-2' : ''} gap-4 mb-6">
                 ${temDetalhes ? `
@@ -850,37 +909,34 @@ export const AtendimentoExternoService = {
             // PLANILHA DE GASTOS
             if (chk.expenseData && chk.expenseData.checkExibirGastos) {
                 const g = chk.expenseData;
-                const categorias = [
-                    { id: 'moradia', label: 'Moradia' }, { id: 'alimentacao', label: 'Alimentação' },
-                    { id: 'educacao', label: 'Educação' }, { id: 'saude', label: 'Saúde' },
-                    { id: 'vestuario', label: 'Vestuário' }, { id: 'lazer', label: 'Lazer' },
-                    { id: 'outras', label: 'Outras' }
-                ];
+                const moradores = Math.max(1, parseInt(g.quantidadeMoradores) || 1);
+                const num = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
+                const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const linha = (rotulo, detalhe, valor) => `<div class="flex justify-between items-center gap-3 text-xs py-2 border-b border-emerald-100/50"><span class="text-emerald-800 font-bold">${rotulo}${detalhe ? `<span class="block text-[10px] font-medium text-emerald-600/80">${detalhe}</span>` : ''}</span><span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100 shrink-0">${valor}</span></div>`;
 
-                let totalGastos = 0;
-                let gastosHtml = '';
-                
-                categorias.forEach(c => {
-                    if (g[c.id] && g[c.id] !== 'R$ 0,00') {
-                        gastosHtml += `<div class="flex justify-between items-center text-xs py-2 border-b border-emerald-100/50"><span class="text-emerald-800 font-bold uppercase tracking-wider">${c.label}</span><span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100">${g[c.id]}</span></div>`;
-                        const num = parseFloat(String(g[c.id]).replace(/[R$\s]/g, '').replace(/\./g, '').replace(',', '.')) || 0;
-                        totalGastos += num;
-                    }
+                let totalFamilia = 0, totalCrianca = 0, htmlFamilia = '', htmlCrianca = '';
+                EXPENSE_CATEGORIES_COMUNS.forEach(c => {
+                    const v = num(g[c.id]);
+                    if (v > 0) { totalFamilia += v / moradores; htmlFamilia += linha(escapeHTML(c.label), `total ${brl(v)}`, brl(v / moradores)); }
+                });
+                EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
+                    const v = num(g[c.id]);
+                    if (v > 0) { totalCrianca += v; htmlCrianca += linha(escapeHTML(c.label), 'integral', brl(v)); }
                 });
 
-                if (totalGastos > 0) {
-                    const totalFormatado = totalGastos.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
+                const totalGeral = totalFamilia + totalCrianca;
+                if (totalGeral > 0) {
                     html += `
                         <div class="bg-emerald-50 p-5 rounded-2xl mb-6 border border-emerald-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-4 flex items-center gap-1.5">
+                            <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1 flex items-center gap-1.5">
                                 <span>${ico('coins', 'w-3.5 h-3.5')}</span> PLANILHA DE GASTOS
                             </h4>
-                            <div class="space-y-1 mb-4">
-                                ${gastosHtml}
-                            </div>
-                            <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-2 text-sm items-center">
-                                <span class="uppercase tracking-widest">TOTAL</span>
-                                <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${totalFormatado}</span>
+                            <p class="text-[10px] font-bold text-emerald-700/70 mb-3">${moradores} ${moradores === 1 ? 'pessoa' : 'pessoas'} na residência</p>
+                            ${htmlFamilia ? `<p class="text-[10px] font-black text-emerald-700 uppercase mt-2">Cota da família (rateio 1/${moradores})</p>${htmlFamilia}` : ''}
+                            ${htmlCrianca ? `<p class="text-[10px] font-black text-sky-700 uppercase mt-3">Exclusivos da criança</p>${htmlCrianca}` : ''}
+                            <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-4 text-sm items-center">
+                                <span class="uppercase tracking-widest">Necessidade mensal</span>
+                                <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${brl(totalGeral)}</span>
                             </div>
                             <button data-baixar-planilha class="mt-5 w-full bg-white border border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
                                 ${ico('fileText', 'w-4 h-4')} Baixar planilha PDF
@@ -900,6 +956,10 @@ export const AtendimentoExternoService = {
                             ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${reu.nome}</p>` : ''}
                             ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${reu.cpf}</p>` : ''}
                             ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${reu.telefone}</p>` : ''}
+                            ${reu.ocupacao ? `<p><b class="text-rose-900 font-black block mb-1">Ocupação:</b> ${escapeHTML(reu.ocupacao)}${reu.profissao ? ' — ' + escapeHTML(reu.profissao) : ''}</p>` : ''}
+                            ${reu.estadoCivil ? `<p><b class="text-rose-900 font-black block mb-1">Estado civil:</b> ${escapeHTML(reu.estadoCivil)}</p>` : ''}
+                            ${reu.ganhos ? `<p><b class="text-rose-900 font-black block mb-1">Ganhos:</b> ${escapeHTML(reu.ganhos)}${reu.fonteRenda ? ' (' + escapeHTML(reu.fonteRenda) + ')' : ''}</p>` : ''}
+                            ${reu.referencia ? `<p class="sm:col-span-2"><b class="text-rose-900 font-black block mb-1">Ponto de referência:</b> ${escapeHTML(reu.referencia)}</p>` : ''}
                             ${reu.cep ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${reu.rua}, ${reu.numero} ${reu.complemento ? ' - '+reu.complemento : ''} - ${reu.bairro}, ${reu.cidade}/${reu.uf} (CEP: ${reu.cep})</p>` : ''}
                             ${reu.empresa ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${reu.empresa} - ${reu.rua_comercial}, ${reu.numero_comercial} - ${reu.cidade_comercial}/${reu.uf_comercial}</p>` : ''}
                         </div>
@@ -908,6 +968,23 @@ export const AtendimentoExternoService = {
             }
         }
         
+        // ACOMPANHAMENTO (campos do Monitoramento: Verde, link principal, observações e arquivos enviados)
+        const arquivos = Array.isArray(assistido.documentosDigitalizados) ? assistido.documentosDigitalizados : [];
+        if (assistido.noVerde || assistido.pdfLink || assistido.pdfObservacoes || arquivos.length) {
+            const urlOk = (u) => /^https?:\/\//i.test(u || '') ? escapeHTML(u) : '#';
+            html += `
+                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
+                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('folder', 'w-3.5 h-3.5')} ACOMPANHAMENTO</h4>
+                    <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
+                        <span class="text-[11px] font-bold text-slate-600">Verde</span>
+                        <span class="px-2.5 py-1 rounded-lg font-black text-[9px] uppercase ${assistido.noVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-600'}">${assistido.noVerde ? 'Inserido' : 'Pendente'}</span>
+                    </div>
+                    ${assistido.pdfLink ? `<a href="${urlOk(assistido.pdfLink)}" target="_blank" rel="noopener" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold py-2 rounded-xl mb-3">Abrir link principal</a>` : ''}
+                    ${assistido.pdfObservacoes ? `<p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 italic mb-3">${escapeHTML(assistido.pdfObservacoes)}</p>` : ''}
+                    ${arquivos.map(d => `<div class="flex justify-between items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 mb-1.5"><span class="text-[11px] font-bold text-slate-700 truncate">${escapeHTML(d.titulo || d.nomeArquivo || 'Arquivo')}</span><a href="${urlOk(d.url)}" target="_blank" rel="noopener" class="bg-slate-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">Abrir</a></div>`).join('')}
+                </div>`;
+        }
+
         container.innerHTML = html;
 
         const btnPlanilha = container.querySelector('[data-baixar-planilha]');
@@ -1260,6 +1337,7 @@ export const AtendimentoExternoService = {
                     finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
                     numeroProcesso: numProcessoSeguro,
                     demandas: objetoDemandasFinal, 
+                    historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
                         by: colabSeguro,
@@ -1293,6 +1371,7 @@ export const AtendimentoExternoService = {
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal, 
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para assinatura do Defensor(a) ${def}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_REVISAO',
                         by: colabSeguro,
@@ -1326,6 +1405,7 @@ export const AtendimentoExternoService = {
                     enviadoPor: colabSeguro, 
                     delegationToken: novoToken,
                     demandas: objetoDemandasFinal,
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para avaliação do Defensor(a) ${def}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'ENVIADO_PARA_CORRECAO',
                         by: colabSeguro,
@@ -1352,11 +1432,12 @@ export const AtendimentoExternoService = {
 
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: serv, email: colaboradorDestinoObj?.email || '' },
+                    assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: serv, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Devolvido p/ Correção por ${colabSeguro}. Msg: ${nota}`,
                     demandas: objetoDemandasFinal,
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Devolvido para correção na mesa de ${serv}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'DEVOLVIDO_COM_ERRO',
                         by: colabSeguro,
@@ -1365,6 +1446,9 @@ export const AtendimentoExternoService = {
                     })
                 });
 
+                if (colaboradorDestinoObj?.id) {
+                    updateDoc(doc(db, "pautas", pautaIdSeguro, "collaborators", colaboradorDestinoObj.id), { status: 'ocupado', currentAttendance: assistidoIdSeguro }).catch(() => {});
+                }
                 tituloSucesso = "Processo Devolvido!";
                 subtituloSucesso = `O colega ${serv} deve corrigir o documento.`;
             }
@@ -1382,11 +1466,12 @@ export const AtendimentoExternoService = {
 
                 await updateDoc(docRef, {
                     status: 'emAtendimento', 
-                    assignedCollaborator: { name: colega, email: colaboradorDestinoObj?.email || '' },
+                    assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: colega, email: colaboradorDestinoObj?.email || '' },
                     inAttendanceTime: timestampIso, 
                     delegationToken: novoToken,
                     historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
                     demandas: objetoDemandasFinal,
+                    historicoAcoes: arrayUnion(this._registroHistorico(`Transferido para a mesa de ${colega}`, timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'TRANSFERENCIA_DE_CASO',
                         by: colabSeguro,
@@ -1395,6 +1480,9 @@ export const AtendimentoExternoService = {
                     })
                 });
 
+                if (colaboradorDestinoObj?.id) {
+                    updateDoc(doc(db, "pautas", pautaIdSeguro, "collaborators", colaboradorDestinoObj.id), { status: 'ocupado', currentAttendance: assistidoIdSeguro }).catch(() => {});
+                }
                 tituloSucesso = "Transferência Ativa!";
                 subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
             } 
@@ -1407,6 +1495,7 @@ export const AtendimentoExternoService = {
                     inAttendanceTime: null,
                     distributionStatus: null,
                     demandas: objetoDemandasFinal,
+                    historicoAcoes: arrayUnion(this._registroHistorico('Atendimento pausado e devolvido à fila de espera', timestampIso, colabSeguro)),
                     history: arrayUnion({
                         action: 'ATENDIMENTO_PAUSADO',
                         by: colabSeguro,
