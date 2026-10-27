@@ -30,9 +30,9 @@
         .animate-fade-in { animation: fadeIn 0.4s ease-in-out forwards; }
     </style>
 </head>
-<body class="flex flex-col min-h-screen pt-10"> <!-- pt-10 compensa a barra fina no topo -->
+<body class="flex flex-col min-h-screen pt-10">
 
-    <!-- MENU SUPERIOR FIXO (TOP BAR BEM MAIS FINA) - OCULTO ATÉ O LOGIN -->
+    <!-- MENU SUPERIOR FIXO (TOP BAR) - OCULTO ATÉ O LOGIN -->
     <nav id="top-nav-bar" class="hidden fixed top-0 left-0 w-full bg-slate-900 border-b border-slate-800 z-[50] flex justify-between items-center px-4 py-1 shadow-sm h-10">
         <div class="flex items-center gap-4 w-1/3">
             <span class="text-white font-black text-xs uppercase tracking-widest flex items-center gap-2">
@@ -69,7 +69,7 @@
         <p id="loading-text" class="mt-4 text-slate-700 font-bold text-sm text-center">Verificando credenciais...</p>
     </div>
 
-    <!-- WRAPPER PRINCIPAL - GARANTE CENTRALIZAÇÃO -->
+    <!-- WRAPPER PRINCIPAL -->
     <div id="main-wrapper" class="flex-1 flex flex-col items-center justify-center w-full px-4 sm:px-6">
         
         <!-- TELA DE LOGIN -->
@@ -103,7 +103,7 @@
                         <input type="password" id="login-password" required placeholder="••••••••" class="w-full px-3 py-2.5 border border-slate-300 rounded-lg shadow-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm sm:text-base bg-slate-50 focus:bg-white transition-colors">
                     </div>
                     <div class="text-right mt-1">
-                        <!-- AQUI ESTÁ O ID CORRIGIDO (forgot-password-link) -->
+                        <!-- LINK RECUPERAR CORRIGIDO -->
                         <a href="#" id="forgot-password-link" class="text-xs sm:text-sm text-blue-600 hover:underline font-semibold">Esqueci minha senha</a>
                     </div>
                     <button type="submit" id="btn-entrar" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-lg shadow-md text-sm font-bold text-white bg-blue-600 hover:bg-blue-700 transition-colors">
@@ -118,8 +118,9 @@
             </div>
         </div>
 
-        <!-- TELA DE SELEÇÃO DE PAUTAS (O NOVO PORTAL EXTERNO) -->
+        <!-- TELA DE SELEÇÃO DE PAUTAS -->
         <div id="pauta-selector-container" class="w-full max-w-7xl mx-auto py-6 sm:py-10 hidden animate-fade-in my-auto">
+            <!-- Barra de Filtro e Pesquisa -->
             <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8 gap-4 w-full">
                 <div class="w-full md:w-1/2">
                     <h2 class="text-2xl font-black text-slate-800 tracking-tight uppercase">Suas Pautas Vinculadas</h2>
@@ -155,11 +156,11 @@
                 <form id="troca-senha-form" class="space-y-4">
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Nova Senha</label>
-                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                        <input type="password" id="nova-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50">
                     </div>
                     <div>
                         <label class="block text-sm font-medium text-slate-700 mb-1">Confirmar Senha</label>
-                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-1 focus:ring-blue-500 outline-none text-sm bg-slate-50">
+                        <input type="password" id="confirma-senha" required minlength="6" class="w-full px-4 py-2 border border-slate-300 rounded-md focus:ring-2 focus:ring-blue-500 outline-none text-sm bg-slate-50">
                     </div>
                     <button type="submit" id="btn-salvar-senha" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2.5 rounded-md shadow-md transition-all text-sm mt-2">
                         Salvar e Acessar
@@ -169,7 +170,7 @@
         </div>
 
         <!-- SHELL PRINCIPAL DA MESA -->
-        <div id="shell-atendimento" class="hidden w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[88vh] mt-4 mb-4">
+        <div id="shell-atendimento" class="hidden w-full max-w-6xl mx-auto bg-white rounded-2xl shadow-xl overflow-hidden flex-col border border-slate-200 animate-fade-in h-[85vh] mt-2 mb-6">
             <div id="header-bg" class="bg-slate-800 p-5 text-white transition-all duration-500 flex items-center justify-between relative overflow-hidden shrink-0">
                 <div class="absolute top-0 right-0 w-48 h-48 bg-blue-500 opacity-10 rounded-full blur-2xl -mr-10 -mt-10 pointer-events-none"></div>
                 
@@ -187,9 +188,6 @@
                     <div id="status-indicator" class="hidden bg-emerald-50 text-emerald-600 border border-emerald-200 text-[10px] font-black px-3 py-1.5 rounded-lg shadow-sm uppercase tracking-widest animate-pulse flex items-center gap-1.5">
                         <span class="w-2 h-2 rounded-full bg-emerald-500"></span> ONLINE
                     </div>
-                    <button id="btn-logout-mesa" class="bg-slate-700 hover:bg-red-600 text-white text-[10px] font-black px-4 py-1.5 rounded-lg shadow-sm border border-slate-600 hover:border-red-400 uppercase tracking-widest transition flex items-center gap-1.5" title="Encerrar Sessão">
-                        SAIR
-                    </button>
                 </div>
             </div>
 
@@ -242,13 +240,12 @@
                 </div>
             </div>
             
-            <div class="bg-white px-6 py-4 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
+            <div class="bg-white px-6 py-3 border-t border-slate-200 flex justify-between items-center text-[10px] font-bold text-slate-400 shrink-0 select-none">
                 <span>SIGEP • Mesa Unificada de Trabalho</span>
                 <span class="font-mono text-[9px] bg-slate-100 px-2 py-1 rounded">v2.0-2026</span>
             </div>
         </div>
-
-    </div><!-- Fim do Main Wrapper -->
+    </div>
 
     <!-- SCRIPT DE LOGIN E PORTAL -->
     <script type="module">
@@ -256,10 +253,13 @@
         import { getFirestore, doc, getDoc, getDocs, collection, query, where, updateDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
         import { firebaseConfig } from './js/config.js';
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { PDFService } from './js/pdfService.js'; // INJETA A LOGICA NATIVA DOS PDFS
 
         const appFirebase = initializeApp(firebaseConfig);
         const db = getFirestore(appFirebase);
         const auth = getAuth(appFirebase);
+        
+        window.PDFService = PDFService; // Torna o PDFService global para o botão
 
         const UI = {
             loading: document.getElementById('loading-container'),
@@ -315,7 +315,7 @@
                 const snap = await getDocs(q);
                 
                 if (snap.empty) {
-                    alert("Acesso Negado: Você não está vinculado a esta pauta. Redirecionando para o Portal.");
+                    alert("Acesso Negado: Você não está vinculado a esta pauta.");
                     window.location.href = window.location.pathname;
                     return false;
                 }
@@ -325,9 +325,15 @@
 
                 if (STATE.matricula) {
                     const userGeralSnap = await getDoc(doc(db, "colaboradores_gerais", STATE.matricula));
-                    if (userGeralSnap.exists() && userGeralSnap.data().cadastroAtivo !== true) {
-                        showUI(UI.modalSenha);
-                        return false; 
+                    if (userGeralSnap.exists()) {
+                        const dadosUser = userGeralSnap.data();
+                        
+                        // CORREÇÃO:
+                        // Só obriga a trocar se for explicitamente false (Primeiro Acesso)
+                        if (dadosUser.cadastroAtivo === false) {
+                            showUI(UI.modalSenha);
+                            return false; 
+                        }
                     }
                 }
                 return true;
@@ -345,9 +351,25 @@
                 const pautasRef = collection(db, "pautas");
                 const pautasSnap = await getDocs(pautasRef);
                 let pautasVinculadas = [];
+                
+                // REGRA DOS 7 DIAS (PAUTAS INATIVAS) - APLICADA EXATAMENTE COMO NO MAIN.JS
+                const dataLimite = new Date();
+                dataLimite.setDate(dataLimite.getDate() - 7);
 
                 for (let docSnap of pautasSnap.docs) {
                     const pautaData = docSnap.data();
+                    
+                    // Bloqueia pautas inativas, apagadas, ou antigas (Regra do Sistema Principal)
+                    if (pautaData.isDeleted || pautaData.status === 'inativa') continue;
+                    
+                    // APLICAÇÃO DA LÓGICA DE VALIDADE DOS 7 DIAS
+                    if (pautaData.createdAt) {
+                        const dataCriacao = new Date(pautaData.createdAt);
+                        const dataExpiracao = new Date(dataCriacao);
+                        dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                        if (new Date() > dataExpiracao) continue; // Ignora pautas vencidas
+                    }
+
                     const colabRef = collection(db, "pautas", docSnap.id, "collaborators");
                     const q = query(colabRef, where("email", "==", STATE.usuarioAuth.email));
                     const colabSnap = await getDocs(q);
@@ -364,7 +386,7 @@
                         <div class="col-span-full text-center py-20 bg-white rounded-2xl border border-slate-200 shadow-sm">
                             <span class="text-6xl block mb-4 text-slate-300">📭</span>
                             <p class="text-slate-700 font-bold text-lg uppercase tracking-wider">Nenhuma pauta encontrada</p>
-                            <p class="text-sm text-slate-500 mt-2">Você não foi adicionado a nenhuma mesa de trabalho. Fale com o coordenador.</p>
+                            <p class="text-sm text-slate-500 mt-2">Você não foi adicionado a nenhuma mesa de trabalho ativa nos últimos 7 dias.</p>
                         </div>`;
                 } else {
                     pautasVinculadas.sort((a, b) => {
@@ -471,9 +493,8 @@
             }
         }
 
-        // AGORA O EVENTO ESTÁ LIGADO CORRETAMENTE AO ID
         document.getElementById('forgot-password-link').addEventListener('click', async (e) => {
-            e.preventDefault(); // Previne que a página pule para o topo
+            e.preventDefault(); 
             const emailInput = document.getElementById('login-email').value.trim();
             UI.errLogin.classList.add('hidden');
 
@@ -511,6 +532,7 @@
             try {
                 await updatePassword(STATE.usuarioAuth, nova);
                 if (STATE.matricula) {
+                    const { updateDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
                     await updateDoc(doc(db, "colaboradores_gerais", STATE.matricula), {
                         cadastroAtivo: true,
                         updatedAt: new Date().toISOString()
