@@ -1,4 +1,3 @@
-
 <!DOCTYPE html>
 <html lang="pt-BR" class="scroll-smooth">
 <head>
@@ -27,19 +26,20 @@
         main::-webkit-scrollbar-thumb { background: #94a3b8; border-radius: 4px; }
         
         h1, h2, h3, h4 { color: #1e293b; }
-        .wiki-link { @apply block px-4 py-2 rounded-lg text-sm text-gray-600 hover:bg-green-50 hover:text-green-700 transition; }
-        .wiki-link.active { @apply bg-green-100 text-green-800 font-bold; }
-        .section-title { @apply text-2xl font-bold border-b pb-2 mb-4 mt-8 text-green-800 flex items-center gap-2; }
-        .sub-title { @apply text-lg font-bold mt-8 mb-3 text-gray-800 flex items-center gap-2; }
-        p { @apply mb-4 leading-relaxed text-gray-700; }
-        ul { @apply list-disc ml-6 mb-6 space-y-2 text-gray-700; }
-        ol { @apply list-decimal ml-6 mb-6 space-y-2 text-gray-700; }
-        code { @apply bg-gray-100 text-red-600 px-1 rounded text-sm font-mono break-all; }
+        .wiki-link { display: block; padding: 0.5rem 1rem; border-radius: 0.5rem; font-size: 0.875rem; color: #4b5563; text-decoration: none; transition: all 0.2s; }
+        .wiki-link:hover { background-color: #f0fdf4; color: #15803d; }
+        .wiki-link.active { background-color: #dcfce7; color: #166534; font-weight: bold; }
+        .section-title { font-size: 1.5rem; font-weight: bold; border-bottom: 1px solid #e2e8f0; padding-bottom: 0.5rem; margin-bottom: 1rem; margin-top: 2rem; color: #166534; display: flex; align-items: center; gap: 0.5rem; }
+        .sub-title { font-size: 1.125rem; font-weight: bold; margin-top: 2rem; margin-bottom: 0.75rem; color: #1f2937; display: flex; align-items: center; gap: 0.5rem; }
+        p { margin-bottom: 1rem; line-height: 1.6; color: #374151; }
+        ul { list-style-type: disc; margin-left: 1.5rem; margin-bottom: 1.5rem; space-y: 0.5rem; color: #374151; }
+        ol { list-style-type: decimal; margin-left: 1.5rem; margin-bottom: 1.5rem; space-y: 0.5rem; color: #374151; }
+        code { background-color: #f1f5f9; color: #dc2626; padding: 0.125rem 0.25rem; border-radius: 0.25rem; font-size: 0.875rem; font-family: monospace; word-break: break-all; }
         
-        .note-box { @apply bg-blue-50 border-l-4 border-blue-500 p-4 text-blue-800 mb-6 text-sm rounded-r-lg shadow-sm; }
-        .warning-box { @apply bg-yellow-50 border-l-4 border-yellow-500 p-4 text-yellow-800 mb-6 text-sm rounded-r-lg shadow-sm; }
-        .alert-box { @apply bg-red-50 border-l-4 border-red-500 p-4 text-red-800 mb-6 text-sm rounded-r-lg shadow-sm; }
-        .success-box { @apply bg-green-50 border-l-4 border-green-500 p-4 text-green-800 mb-6 text-sm rounded-r-lg shadow-sm; }
+        .note-box { background-color: #eff6ff; border-left: 4px solid #3b82f6; padding: 1rem; color: #1e40af; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .warning-box { background-color: #fefce8; border-left: 4px solid #eab308; padding: 1rem; color: #854d0e; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .alert-box { background-color: #fef2f2; border-left: 4px solid #ef4444; padding: 1rem; color: #991b1b; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
+        .success-box { background-color: #f0fdf4; border-left: 4px solid #22c55e; padding: 1rem; color: #166534; margin-bottom: 1.5rem; font-size: 0.875rem; border-top-right-radius: 0.5rem; border-bottom-right-radius: 0.5rem; box-shadow: 0 1px 2px 0 rgba(0, 0, 0, 0.05); }
     </style>
 </head>
 <body class="flex flex-col h-screen overflow-hidden">
@@ -75,12 +75,16 @@
                 <a href="#painel-individual" class="wiki-link">4. Painel de Triagem & Detalhes</a>
                 <a href="#meu-painel" class="wiki-link">5. "Meu Painel" Pessoal</a>
 
+                <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Módulos Avançados</p>
+                <a href="#captacao-externa" class="wiki-link">6. Captação Externa (Autocadastro)</a>
+                <a href="#mesa-digital" class="wiki-link">7. Mesa Digital & Puxadas</a>
+
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Gestão e Governança</p>
-                <a href="#central-pdf" class="wiki-link">6.1 Central de PDFs e Relatórios</a>
-                <a href="#lgpd" class="wiki-link">6.2 Privacidade e LGPD</a>
+                <a href="#central-pdf" class="wiki-link">8.1 Central de PDFs e Relatórios</a>
+                <a href="#lgpd" class="wiki-link">8.2 Privacidade e LGPD</a>
                 
                 <p class="px-4 text-xs font-bold text-gray-400 uppercase tracking-wider mt-6 mb-2">Sistema</p>
-                <a href="#tecnologia" class="wiki-link">7. Monitoramento e Sentry</a>
+                <a href="#tecnologia" class="wiki-link">9. Monitoramento e Sentry</a>
             </nav>
         </aside>
 
@@ -174,7 +178,7 @@
                         <li><svg class="w-4 h-4 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg> <strong>Fechar Pauta / Zerar Pauta:</strong> Protege ou limpa a pauta (Requer senha).</li>
                     </ul>
 
-                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Exibição (Engrenagem <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>)</h4>
+                    <h4 class="font-bold text-gray-800 mt-4 mb-2">B. O Menu de Exibição (Engrenagem <svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 1 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 1 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 1 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 1 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg> )</h4>
                     <p>Permite ligar ou desligar as colunas do seu painel <em>Kanban</em> (Em Atendimento, Distribuição, Faltosos), ajudando a limpar visualmente a tela em celulares ou telas pequenas.</p>
                 </section>
 
@@ -256,12 +260,31 @@
                     </ul>
                 </section>
 
-                <!-- SEÇÃO 6: GESTÃO, PDFs e LGPD -->
+                <!-- SEÇÃO 6: MÓDULOS AVANÇADOS -->
+                <section id="captacao-externa" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>🌐</span> 6. Captação Externa (Autocadastro)</h2>
+                    <p>O módulo de <strong>Captação Externa</strong> permite que o assistido preencha seus dados de forma remota antes do atendimento presencial.</p>
+                    <ul>
+                        <li><strong>Geração do Link:</strong> Disponível nas opções da pauta para compartilhar um link seguro de cadastro direto com o cidadão.</li>
+                        <li><strong>Agilização:</strong> Os dados informados chegam validados para a equipe, reduzindo o tempo de triagem no balcão.</li>
+                    </ul>
+                </section>
+
+                <section id="mesa-digital" class="mb-16 pt-8 border-t border-slate-100">
+                    <h2 class="section-title"><span>⚡</span> 7. Mesa Digital & Gestão de Puxadas</h2>
+                    <p>A <strong>Mesa Digital</strong> centraliza a atuação individual dos colaboradores fora do balcão principal.</p>
+                    <div class="success-box">
+                        <strong>🔔 Monitor de Puxadas em Tempo Real</strong>
+                        <p class="mt-2 text-green-900">Quando um colaborador solicita antecipar um caso através da função <em>"Puxar para mim"</em>, o coordenador recebe um alerta visual em tempo real no botão <strong>PUXADA(S)</strong> ao lado do menu de Ações. Através do monitor integrado, é possível analisar a justificativa e decidir por <em>Autorizar e Delegar</em> ou <em>Negar e Devolver</em> com um único clique.</p>
+                    </div>
+                </section>
+
+                <!-- SEÇÃO 8: GESTÃO E GOVERNANÇA -->
                 <section id="central-pdf" class="mb-16 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> 6. Gestão, Central de PDFs e LGPD</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 9V2h12v7"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg></span> 8. Gestão, Central de PDFs e LGPD</h2>
                     <p>O SIGEP não apenas organiza a fila, mas é uma verdadeira máquina de gerar documentos oficiais para compor os processos.</p>
 
-                    <h3 class="sub-title">6.1. Central de Documentos e Relatórios em PDF</h3>
+                    <h3 class="sub-title">8.1. Central de Documentos e Relatórios em PDF</h3>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4">
                         <div class="bg-white border p-4 rounded-lg shadow-sm">
                             <strong class="text-blue-700">Estatísticas da Pauta (Dashboard)</strong>
@@ -285,7 +308,7 @@
                         </div>
                     </div>
 
-                    <h3 class="sub-title mt-10" id="lgpd"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 6.2. Privacidade, LGPD e o Prazo da Pauta</h3>
+                    <h3 class="sub-title mt-10" id="lgpd"><span><svg class="w-5 h-5 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/></svg></span> 8.2. Privacidade, LGPD e o Prazo da Pauta</h3>
                     <p>O SIGEP opera em conformidade com a LGPD. Ele é projetado para agilidade diária e não funciona como arquivo morto perpétuo (este papel cabe ao Verde/Solar).</p>
 
                     <div class="alert-box">
@@ -299,9 +322,9 @@
                     </div>
                 </section>
 
-                <!-- SEÇÃO 7: SENTRY E TECNOLOGIA -->
+                <!-- SEÇÃO 9: SENTRY E TECNOLOGIA -->
                 <section id="tecnologia" class="mb-10 pt-8 border-t border-slate-100">
-                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg></span> 7. Monitoramento Avançado (Sentry)</h2>
+                    <h2 class="section-title"><span><svg class="w-6 h-6 shrink-0 inline-block align-middle" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 12h-2.48a2 2 0 0 0-1.93 1.46l-2.35 8.36a.25.25 0 0 1-.48 0L9.24 2.18a.25.25 0 0 0-.48 0l-2.35 8.36A2 2 0 0 1 4.49 12H2"/></svg></span> 9. Monitoramento Avançado (Sentry)</h2>
                     <p>Para garantir que o sistema não deixe a equipe na mão durante um mutirão com centenas de pessoas, o SIGEP conta com integração nativa ao <strong>Sentry</strong> (Monitoramento de Infraestrutura).</p>
                     
                     <ul class="mt-4">
@@ -368,4 +391,3 @@
     </script>
 </body>
 </html>
-
