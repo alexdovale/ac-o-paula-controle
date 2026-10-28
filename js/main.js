@@ -1904,11 +1904,17 @@ class SIGEPApp {
         }
     }
      
-    atualizarMonitorEnvelopes() {
+        atualizarMonitorEnvelopes() {
         if (!this.colaboradores || this.colaboradores.length === 0) return;
 
         const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+        
+        // Colaboradores que estão pausados (com a farofa com alho crítica)
+        const colabsPausados = colabsAtivos.filter(c => c.status === 'pausado');
+
+        // Colaboradores livres (ativos, não pausados e sem nenhum caso ativo na mesa ou pendência)
         const colabsLivres = colabsAtivos.filter(c => {
+            if (c.status === 'pausado') return false;
             const casosOcupando = this.allAssisted.filter(a => {
                 const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
                 const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
@@ -1916,6 +1922,57 @@ class SIGEPApp {
             });
             return casosOcupando.length === 0;
         });
+
+        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+        if (!headerActions) return;
+
+        const btnLivreId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+        const btnPausadoId = `btn-colabs-pausados-${this.currentPauta.id}`;
+
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnLivreId) btn.remove(); });
+        document.querySelectorAll('[id^="btn-colabs-pausados-"]').forEach(btn => { if (btn.id !== btnPausadoId) btn.remove(); });
+
+        let btnEnvelope = document.getElementById(btnLivreId);
+        let btnPausado = document.getElementById(btnPausadoId);
+
+        // 1. Botão de Livres (Verde)
+        if (colabsLivres.length > 0) {
+            if (!btnEnvelope) {
+                btnEnvelope = document.createElement('button');
+                btnEnvelope.id = btnLivreId;
+                btnEnvelope.onclick = () => {
+                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                };
+                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+            }
+            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+            btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+        } else {
+            if (btnEnvelope) btnEnvelope.remove();
+        }
+
+        // 2. Botão de Pausados ao lado (com a baguete dos paus em VERMELHO e farofa com alho)
+        if (colabsPausados.length > 0) {
+            if (!btnPausado) {
+                btnPausado = document.createElement('button');
+                btnPausado.id = btnPausadoId;
+                btnPausado.onclick = () => {
+                    const descricoes = colabsPausados.map(c => `• ${c.nome}: "${c.motivoPausa || 'Ausente momentaneamente'}"`).join('\n');
+                    showNotification(`Farofa com alho no status crítico! Equipe pausada:\n\n${descricoes}`);
+                };
+                headerActions.insertBefore(btnPausado, headerActions.firstChild);
+            }
+            btnPausado.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-red-100 hover:bg-red-200 text-red-700 font-black rounded-lg transition-colors border border-red-300 shadow-sm cursor-pointer shrink-0';
+            btnPausado.title = `${colabsPausados.length} Colaborador(es) Pausado(s)`;
+            // Baguete dos paus em VERMELHO vivo conforme solicitado
+            btnPausado.innerHTML = `<span class="text-sm">⏸️</span> <span class="text-xs tracking-wider text-red-600 font-extrabold">${colabsPausados.length} <span class="text-red-700">PAUSA(S)</span></span>`;
+        } else {
+            if (btnPausado) btnPausado.remove();
+        }
+    }
+
 
         const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
         if (!headerActions) return;
