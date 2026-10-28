@@ -2214,7 +2214,7 @@ class SIGEPApp {
                     }).join('')}
                 </div>
             </div>`;
-    },
+    }
     
     saveColumnPreferences() {
         const preferences = {
