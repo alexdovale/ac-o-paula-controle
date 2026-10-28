@@ -1,1977 +1,2502 @@
+// js/main.js - SIGEP APP PRINCIPAL (COMPLETO COM ROUTER E MÓDULO DE COLETAS E ORDENAÇÃO)
+
 import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-import { getAuth } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-import {
-    getFirestore, doc, getDoc, updateDoc, collection,
-    getDocs, arrayUnion, onSnapshot, query, where
-} from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+import { getAuth, onAuthStateChanged, EmailAuthProvider, reauthenticateWithCredential } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+import { getFirestore, collection, doc, onSnapshot, addDoc, updateDoc, deleteDoc, query, where, getDoc, getDocs, writeBatch, arrayUnion, arrayRemove, enableMultiTabIndexedDbPersistence, or, and, setDoc } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 import { firebaseConfig } from './config.js';
-import { documentsData, EXPENSE_CATEGORIES_COMUNS, EXPENSE_CATEGORIES_EXCLUSIVAS } from './detalhes.js';
-import { PDFService } from './pdfService.js';
-import { EmailService } from './emailService.js';
-import { showNotification, playSound, escapeHTML } from './utils.js';
+import { AuthService } from './auth.js';
+import { PautaService } from './pauta.js';
+import { UIService } from './ui.js?v=4';
+import CollaboratorService from './colaboradores.js'; 
+window.CollaboratorService = CollaboratorService;  
+import { ModalService } from './modal.js?v=20260707';
+import { NotesService } from './notes.js?v=20260313';
+import { StatisticsService } from './estatisticas.js?v=20260313';
+import { PDFService } from './pdfService.js?v=novo_pdf_v2';
+import { EmailService } from './emailService.js?v=20260313';
+import { escapeHTML, showNotification, normalizeText, copyToClipboard, formatTime, playSound } from './utils.js?v=20260313';
+import { setupDetailsModal, openDetailsModal } from './detalhes.js';
+import { DashboardService } from './dashboardService.js';
+import { subjectTree, flatSubjects } from './assuntos.js';
+import { showConfirmModal } from './confirmModal.js';
+import { 
+    logAction, loadUsersList, cleanupOldData, approveUser, updateUserRole, 
+    deleteUser, loadAuditLogs, exportAuditLogsPDF, loadDashboardData, 
+    populateUserFilter, setupAdminSearch, abrirGerenciadorUnidades,
+    abrirImportadorUnidades, abrirModalUsuariosPorUnidade, AdminService
+} from './admin.js';
+import { parsePautaCSV } from './csvHandler.js';
+import { getChecklistHTML } from './checklist.js';
+import { PainelGeralService } from './painelGeralService.js';
+import { MonitoramentoService } from './monitoramento.js';
+
+import { PautaConfigService } from './pautaConfig.js';
+import { RecepçãoCentralService } from './recepcaoCentral.js';
+import { ImportadorOrgaosService } from './importadorOrgaos.js';
+import { renderEstruturaAtual } from './estruturaAtual.js';
+import { abrirModalNovaRecepcao } from './novaRecepcao.js';
+import { abrirGerenciarUnidades as abrirGerenciarUnidadesUsuario } from './gerenciarUnidadesUsuario.js';
+import { SIGEPRouter, ROUTES } from './router.js';
+import { PermissoesService } from './permissoes.js';
+import { PerfilService } from './perfilService.js';
+
+// Módulos de Coletas & BI
+import { ColetasBuilderService } from './coletasBuilderService.js?v=2';
+window.ColetasBuilderService = ColetasBuilderService;
+
+import { ColetasBiService } from './coletasBiService.js';
+window.ColetasBiService = ColetasBiService;
+
+import { BiEventosService } from './biEventosService.js';
+window.BiEventosService = BiEventosService;
+
+import { injetarModais } from './modais.js';
 import { ico } from './icons.js';
+injetarModais();
 
-// ─── HELPERS DE STATUS E CORES ────────────────────────────────────────────────
-
-const statusMap = {
-    pauta:                    { cor: 'text-slate-600 border-slate-200 bg-slate-50',      txt: 'Na Pauta' },
-    aguardando:               { cor: 'text-amber-700 border-amber-200 bg-amber-50',      txt: 'Espera' },
-    emAtendimento:            { cor: 'text-blue-700 border-blue-200 bg-blue-50',         txt: 'Atendendo' },
-    aguardandoDistribuicao:   { cor: 'text-cyan-700 border-cyan-200 bg-cyan-50',         txt: 'No Defensor' },
-    aguardandoCorrecao:       { cor: 'text-orange-700 border-orange-200 bg-orange-50',   txt: 'Avaliação' },
-    atendido:                 { cor: 'text-emerald-700 border-emerald-200 bg-emerald-50',txt: 'Concluído' },
-    aguardandoNumero:         { cor: 'text-indigo-700 border-indigo-200 bg-indigo-50',   txt: 'Aguard. CNP' },
-    faltoso:                  { cor: 'text-red-700 border-red-200 bg-red-50',            txt: 'Faltoso' },
-    aguardandoAutorizacaoPuxada: { cor: 'text-violet-700 border-violet-200 bg-violet-50', txt: 'Puxada pendente' },
-};
-
-const app = initializeApp(firebaseConfig);
-const auth = getAuth(app);
-const db = getFirestore(app);
-
-// ─── SERVIÇO PRINCIPAL ────────────────────────────────────────────────────────
-
-export const AtendimentoExternoService = {
-
-    pautaId: null,
-    pautaNome: 'Pauta',
-    pautaTipo: '',
-    pautaFechada: false,
-    assistidoId: null,
-    colaboradorNome: null,
-    colaboradorId: null,
-    fluxoSelecionado: null,
-    assistidoData: null,
-    todosColaboradores: [],
-    colaboradorAtual: null,
-    isProcessing: false,
-    todosAtendimentosPauta: [],
-    demandasAdicionaisLocais: [],
-    unsubscribeDashboard: null,
-    unsubscribePauta: null,
-    unsubscribeAssistido: null,
-    pautaCompletaAberta: false,
-    _gruposPautaEstado: {},
-    _assinaturaAssistido: '',
-
-    // ─── INIT ─────────────────────────────────────────────────────────────────
+class SIGEPApp { 
+    constructor() {
+        this.db = null;
+        this.auth = null;
+        this.currentUser = null;
+        this.currentPauta = null;
+        this.currentPautaData = null;
+        this.allAssisted = [];
+        this.colaboradores = [];
+        this.currentUserName = '';
+        this.currentPautaOwnerId = null;
+        this.isPautaClosed = false;
+        this.customRoomsList = [];
+        this.unsubscribeFromAttendances = null;
+        this.unsubscribeFromCollaborators = null;
+        this.unsubscribePuxadas = null;
+        this.currentPautaFilter = 'all';
+        
+        this.currentMode = localStorage.getItem('sigep_current_mode') || 'normal';
+        this.currentUnidadeExibicao = localStorage.getItem('sigep_unidade_ativa') || 'todas';
+        
+        this.init();
+    }
 
     async init() {
-        console.log("Mesa Digital V4 Inicializada (Gerador Verde Integrado)");
-
-        const urlParams = new URLSearchParams(window.location.search.replace(/&amp;/g, '&'));
-        this.pautaId       = urlParams.get('pautaId') || urlParams.get('pid');
-        this.assistidoId   = urlParams.get('assistidoId') || urlParams.get('aid');
-        const tokenRecebido= urlParams.get('token');
-
-        if (!this.pautaId) {
-            this.showError("Link Incompleto", "Falta o identificador da pauta na URL.");
-            return;
-        }
-
         try {
-            if (typeof auth.authStateReady === 'function') await auth.authStateReady();
-            const user = auth.currentUser;
-            if (!user) {
-                this.showError("Acesso Negado", "Sessão expirada. Volte e faça login novamente no painel principal.");
-                return;
+            const app = initializeApp(firebaseConfig);
+            this.db   = getFirestore(app);
+            this.auth = getAuth(app);
+
+            // PAINEL PÚBLICO: link ?painel=true abre direto, sem login
+            if (new URLSearchParams(window.location.search).get('painel') === 'true') {
+                window.app = this;
+                const { PainelPublicoService } = await import('./painelPublico.js');
+                await PainelPublicoService.init(this);
+                return; 
             }
-
-            const pautaDoc = await getDoc(doc(db, "pautas", this.pautaId));
-            if (!pautaDoc.exists()) {
-                this.showError("Pauta não localizada", "A pauta informada não existe mais no sistema.");
-                return;
+    
+            this.router = new SIGEPRouter(this, {
+                UIService,
+                DashboardService,
+                RecepçãoCentralService,
+                PerfilService,
+                Permissoes: PermissoesService,
+                showNotification,
+            });
+            this.router.init();
+    
+            DashboardService.init(this);
+            await this.setupOfflinePersistence();
+            
+            this.setupEventListeners();
+            this.setupAuthListener();        
+    
+            setupDetailsModal({ db: this.db });
+            this.loadExternalModalsContent();
+            PautaConfigService.init(this);
+            this.setupModoListeners();
+    
+            window.app = this;
+    
+            if (AdminService?.setupAdminEvents) {
+                AdminService.setupAdminEvents(this);
             }
-            const pautaData = pautaDoc.data();
-            this.pautaNome = pautaData.name || 'Pauta';
-            this.pautaTipo = pautaData.type || 'agendamento';
-            this.pautaFechada = pautaData.fechada === true;
-
-            const colabRef = collection(db, "pautas", this.pautaId, "collaborators");
-            const q = query(colabRef, where("email", "==", user.email));
-            const snap = await getDocs(q);
-
-            if (snap.empty) {
-                this.showError("Acesso Negado", "O seu usuário não está vinculado como colaborador desta pauta.");
-                return;
-            }
-
-            this.colaboradorAtual = { id: snap.docs[0].id, ...snap.docs[0].data() };
-            this.colaboradorNome = this.colaboradorAtual.nome;
-            this.colaboradorId = this.colaboradorAtual.id;
-
-            await this.carregarColaboradoresGerais();
-
-            if (this.assistidoId) {
-                await this.iniciarAtendimentoIndividual(tokenRecebido, pautaData);
-                return;
-            }
-
-            this._ajustarGrelhaKanban();
-            await this.iniciarDashboardKanban();
-
+    
         } catch (error) {
-            console.error("Erro na inicialização:", error);
-            this.showError("Conexão Perdida", "Falha ao conectar com o banco de dados.");
+            console.error('Erro na inicialização:', error);
+            showNotification('Erro ao iniciar o sistema SIGEP', 'error');
         }
-    },
+    }
 
-    // ─── LÓGICA DE DADOS (DASHBOARD) ──────────────────────────────────────────
+    showPautaSelectionScreen() {
+        document.getElementById('app-container')?.classList.add('hidden');
+        document.getElementById('dashboard-container')?.classList.add('hidden');
+        document.getElementById('admin-container')?.classList.add('hidden');
+        document.getElementById('modo-selection-screen')?.classList.add('hidden');
+        document.getElementById('coletas-container')?.classList.add('hidden');
+        document.getElementById('meu-perfil-container')?.classList.add('hidden');
+        document.getElementById('pauta-selection-container')?.classList.remove('hidden');
+    }
+    
+    showAppScreen() {
+        if (this.router) this.router.navigate(ROUTES.APP, {}, false);
+    }
+    
+    showLoginScreen() {
+        if (this.router) this.router.navigate(ROUTES.LOGIN, {}, false);
+    }
+    
+    showDashboardScreen() {
+        if (this.router) this.router.navigate(ROUTES.DASHBOARD, {}, false);
+    }
+    
+    showRecepcaoCentralScreen() {
+        if (this.router) this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false);
+    }
 
-    async iniciarDashboardKanban() {
-        this._cancelarListeners();
+    showAdminScreen() {
+        if (this.router) this.router.navigate(ROUTES.ADMIN, {}, false);
+    }
 
-        this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
-            if (snap.exists()) {
-                const fechou = snap.data().fechada === true;
-                if (fechou !== this.pautaFechada) {
-                    this.pautaFechada = fechou;
-                    this.renderizarKanban();
-                }
-            }
-        });
+    showColetasScreen() {
+        if (this.router) this.router.navigate(ROUTES.COLETAS, {}, false);
+    }
 
-        let primeiraCarga = true;
-        let meusAnteriores = new Set();
-        this.unsubscribeDashboard = onSnapshot(
-            collection(db, "pautas", this.pautaId, "attendances"),
-            (snap) => {
-                this.todosAtendimentosPauta = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+    fecharColetas() {
+        try { window.ColetasBiService?.fechar?.(); } catch (e) { console.warn(e); }
+        const construtor = document.getElementById('container-construtor-coleta');
+        if (construtor) { construtor.classList.add('hidden'); construtor.innerHTML = ''; }
+        document.getElementById('coletas-container')?.classList.add('hidden');
+    }
 
-                if (!primeiraCarga) {
-                    snap.docChanges().forEach(change => {
-                        if (change.type === 'added' && change.doc.data().status === 'aguardando') {
-                            if (typeof showNotification === 'function') showNotification(`Novo assistido na fila: ${change.doc.data().name}`, "info");
-                            if (typeof playSound === 'function') playSound();
-                        }
-                    });
-                }
-                const meusAgora = new Set(this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a)).map(a => a.id));
-                if (!primeiraCarga) {
-                    this.todosAtendimentosPauta.forEach(a => {
-                        if (meusAgora.has(a.id) && !meusAnteriores.has(a.id)) {
-                            if (typeof showNotification === 'function') showNotification(`Novo caso na sua mesa: ${a.name}`, "info");
-                            if (typeof playSound === 'function') playSound();
-                        }
-                    });
-                }
-                meusAnteriores = meusAgora;
-                primeiraCarga = false;
-
-                this.atualizarBadgeHeader();
-                this.renderizarKanban();
-                if (this.pautaCompletaAberta) this._renderizarPautaCompleta();
-            },
-            (error) => console.error("Erro no realtime:", error)
-        );
-
-        this.prepararFiltroKanban();
-        this._ligarCliqueNosCards();
-    },
-
-    async iniciarAtendimentoIndividual(tokenRecebido, pautaData) {
-        this._cancelarListeners();
-
-        this.unsubscribePauta = onSnapshot(doc(db, "pautas", this.pautaId), (snap) => {
-            if (snap.exists()) {
-                this.pautaFechada = snap.data().fechada === true;
-                if (this.pautaFechada) this.renderizarSplitScreen(this.assistidoData, pautaData);
-            }
-        });
-
-        const docSnap = await getDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId));
-        if (!docSnap.exists()) {
-            this.showError("Processo não encontrado", "Este assistido não está mais na pauta.");
-            return;
-        }
-
-        const assistido = { id: docSnap.id, ...docSnap.data() };
-        this.assistidoData = assistido;
-        this.demandasAdicionaisLocais = assistido.demandas?.descricoes ? [...assistido.demandas.descricoes] : [];
-
-        if (tokenRecebido && assistido.delegationToken && assistido.delegationToken !== tokenRecebido) {
-            this.showError("Acesso Seguro", "Este link expirou (o caso foi repassado). Abra o caso pela sua mesa.");
-            return;
-        }
-
-        this.renderizarSplitScreen(assistido, pautaData);
-        this.atualizarBadgeHeader();
-        this._assinaturaAssistido = this._assinaturaDados(assistido);
-        this._escutarAssistido(pautaData);
-        this._registrarAbertura(assistido);
-        this.setupListeners();
-    },
-
-    _assinaturaDados(a) {
-        return JSON.stringify([a.name, a.subject, a.status, a.documentChecklist || null, a.demandas?.descricoes || null, a.historicoTransferencia || null]);
-    },
-
-    _escutarAssistido(pautaData) {
-        if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
-        this.unsubscribeAssistido = onSnapshot(
-            doc(db, "pautas", this.pautaId, "attendances", this.assistidoId),
-            (snap) => {
-                if (!snap.exists() || !this.assistidoId) return;
-                const novo = snap.data();
-                const statusAnterior = this.assistidoData?.status;
-                const assinatura = this._assinaturaDados(novo);
-                if (assinatura === this._assinaturaAssistido) return;
-                this._assinaturaAssistido = assinatura;
-                this.assistidoData = { id: snap.id, ...novo };
-
-                const nomeEl = document.getElementById('assistido-nome');
-                const assuntoEl = document.getElementById('assistido-assunto');
-                if (nomeEl) nomeEl.textContent = novo.name || 'Assistido';
-                if (assuntoEl) assuntoEl.textContent = novo.subject || 'Sem assunto';
-
-                if (statusAnterior !== novo.status && !this.isProcessing) {
-                    this.renderizarSplitScreen(this.assistidoData, pautaData);
+    _modalOpeners() {
+        return {
+            [ROUTES.MONITOR_EQUIPE]: () => PainelGeralService.abrirPainel(this),
+            [ROUTES.COMPARTILHAMENTO]: () => {
+                const modal = document.getElementById('share-modal');
+                if (!modal || !this.currentPautaData) return;
+                document.getElementById('share-toggle').checked = this.currentPautaData.isPublic || false;
+                document.getElementById('mask-names-check').checked = this.currentPautaData.maskNames || false;
+                const isPublic = this.currentPautaData.isPublic;
+                document.getElementById('share-status-text').textContent = isPublic ? 'Público' : 'Privado';
+                if (isPublic) {
+                    document.getElementById('share-link-container').classList.remove('hidden');
+                    const link = `${window.location.origin}${window.location.pathname.replace('index.html', '')}acompanhamento.html?id=${this.currentPauta.id}`;
+                    document.getElementById('share-link-input').value = link;
+                    document.getElementById('open-external-btn').href = link;
                 } else {
-                    this._renderizarLadoEsquerdo(this.assistidoData);
+                    document.getElementById('share-link-container').classList.add('hidden');
+                }
+                modal.classList.remove('hidden');
+            },
+            [ROUTES.TOTEM]: () => {
+                const totemUrl = `${window.location.origin}${window.location.pathname.replace('index.html', '')}totem.html?pautaId=${this.currentPauta.id}&r=app`;
+                window.open(totemUrl, '_blank');
+            },
+            [ROUTES.ESTATISTICAS]: () => {
+                if (typeof StatisticsService?.showModal === 'function') {
+                    StatisticsService.showModal(this.allAssisted || [], this.currentPautaData?.useDelegationFlow, this.currentPauta?.name);
                 }
             },
-            (error) => console.error("Erro no realtime do assistido:", error)
-        );
-    },
-
-    _registrarAbertura(assistido) {
-        if (this.pautaFechada || !this.colaboradorNome) return;
-        if (['atendido', 'aguardandoNumero', 'faltoso'].includes(assistido.status)) return;
-        const ultimo = (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).slice(-1)[0] || '';
-        if (ultimo.startsWith('Aberto na Mesa Digital') && ultimo.includes(`(por ${this.colaboradorNome})`)) return;
-        updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistido.id), {
-            historicoAcoes: arrayUnion(this._registroHistorico('Aberto na Mesa Digital'))
-        }).catch(() => {});
-    },
-
-    _cancelarListeners() {
-        if (this.unsubscribeDashboard) { this.unsubscribeDashboard(); this.unsubscribeDashboard = null; }
-        if (this.unsubscribePauta) { this.unsubscribePauta(); this.unsubscribePauta = null; }
-        if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
-    },
-
-    async carregarColaboradoresGerais() {
-        try {
-            const snap = await getDocs(collection(db, "pautas", this.pautaId, "collaborators"));
-            this.todosColaboradores = snap.docs.map(d => ({ id: d.id, ...d.data() }));
-        } catch { this.todosColaboradores = []; }
-    },
-
-    _registroHistorico(descricao, iso = new Date().toISOString(), autor = this.colaboradorNome) {
-        const hora = new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        return `${descricao} (por ${autor || 'Mesa Digital'}) às ${hora}`;
-    },
-
-    _gerarTokenSeguro() {
-        if (typeof crypto !== 'undefined' && crypto.randomUUID) return crypto.randomUUID().substring(0, 8);
-        return Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
-    },
-
-    showError(titulo, message) {
-        const shell = document.getElementById('shell-atendimento');
-        if (shell) shell.classList.add('hidden');
-
-        const wrapper = document.getElementById('main-wrapper');
-        wrapper.innerHTML = `
-            <div class="w-full max-w-lg mx-auto my-auto animate-fade-in mt-10">
-                <div class="bg-red-600 p-6 rounded-t-3xl shadow-xl flex flex-col items-center justify-center">
-                    <h1 class="text-white font-black text-2xl uppercase tracking-widest text-center">Acesso Negado</h1>
-                </div>
-                <div class="p-8 text-center bg-white rounded-b-3xl shadow-xl border border-gray-200">
-                    <span class="text-6xl block mb-6 text-red-400">${ico('lock', 'w-16 h-16 inline-block')}</span>
-                    <h2 class="text-lg font-black text-gray-800 uppercase tracking-wide mb-2">${titulo}</h2>
-                    <p class="text-gray-500 font-semibold text-sm">${message}</p>
-                    <button onclick="window.location.href = window.location.pathname" class="mt-8 w-full bg-slate-800 text-white font-black px-6 py-4 rounded-xl hover:bg-slate-950 transition-colors uppercase tracking-widest text-sm shadow-md active:scale-95">VOLTAR AO PORTAL</button>
-                </div>
-            </div>`;
-    },
-
-    atualizarBadgeHeader() {
-        const badge = document.getElementById('status-indicator');
-        if (!badge) return;
-
-        const isNaTelaIndividual = !!this.assistidoId;
-        const meusCasos = this.todosAtendimentosPauta.filter(a =>
-            a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome
-        );
-
-        const livre = meusCasos.length === 0 && !isNaTelaIndividual;
-
-        badge.innerHTML = livre
-            ? `<span class="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span> <span>LIVRE</span>`
-            : `<span class="w-2 h-2 rounded-full bg-amber-500 shrink-0 animate-pulse"></span> <span>OCUPADO</span>`;
-
-        badge.className = `bg-white border ${livre ? 'text-emerald-700 border-emerald-200' : 'text-amber-700 border-amber-200'} text-[9px] sm:text-[10px] font-black px-2.5 sm:px-4 py-2 rounded-lg shadow-sm uppercase tracking-widest flex items-center gap-1.5 sm:gap-2 shrink-0 transition-colors`;
-
-        // Proteção contra loop infinito de atualizações no Firestore
-        if (this.colaboradorAtual?.id && this.colaboradorAtual.id !== 'manual') {
-            const novoStatus = livre ? 'disponivel' : 'ocupado';
-            const atendimentoAtualId = livre ? null : (meusCasos[0]?.id || this.assistidoId || null);
-
-            if (this.colaboradorAtual.status !== novoStatus || this.colaboradorAtual.currentAttendance !== atendimentoAtualId) {
-                this.colaboradorAtual.status = novoStatus;
-                this.colaboradorAtual.currentAttendance = atendimentoAtualId;
-
-                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), {
-                    status: novoStatus,
-                    currentAttendance: atendimentoAtualId
-                }).catch(() => {});
-            }
-        }
-    },
-
-    _ehDefensor() {
-        return this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor') === true;
-    },
-
-    _ehPendenteDoDefensor(a) {
-        return this._ehDefensor()
-            && ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status)
-            && a.defensorResponsavel === this.colaboradorNome;
-    },
-    _pertenceAMim(a) {
-        return (a.status === 'emAtendimento' && a.assignedCollaborator?.name === this.colaboradorNome) || this._ehPendenteDoDefensor(a);
-    },
-
-    // ─── RENDERIZAÇÃO: KANBAN COM 4 COLUNAS ───────────────────────────────────
-
-    _ajustarGrelhaKanban() {
-        const grid = document.querySelector('#view-dashboard .grid');
-        if (grid) {
-            grid.className = 'grid grid-cols-1 lg:grid-cols-4 gap-4 flex-1 min-h-0 pb-2';
-
-            if (!document.getElementById('kanban-pauta-geral')) {
-                const col4 = document.createElement('div');
-                col4.className = "bg-white rounded-2xl shadow-sm border border-slate-200 flex flex-col overflow-hidden h-full max-h-[60vh] lg:max-h-full";
-                col4.innerHTML = `
-                    <div class="p-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center shrink-0">
-                        <h3 class="font-black text-slate-700 uppercase tracking-widest text-[11px] flex items-center gap-2">📋 Pauta Geral</h3>
-                        <div class="flex items-center gap-2">
-                            <button id="btn-pauta-completa" class="bg-slate-800 hover:bg-slate-950 text-white font-black text-[9px] uppercase tracking-widest px-3 py-1.5 rounded-lg transition active:scale-95">Ver completa</button>
-                            <span id="count-pauta-geral" class="bg-slate-200 text-slate-600 px-2.5 py-1 rounded-lg text-[10px] font-black">0</span>
-                        </div>
-                    </div>
-                    <div id="kanban-pauta-geral" class="flex-1 overflow-y-auto p-3 space-y-3 custom-scrollbar bg-slate-50/50"></div>
-                `;
-                grid.appendChild(col4);
-                col4.querySelector('#btn-pauta-completa').onclick = () => this.abrirPautaCompleta();
-            }
-
-            const titleCol3 = document.querySelector('#kanban-auditoria')?.previousElementSibling?.querySelector('h3');
-            if (titleCol3) titleCol3.innerHTML = '✅ Meus Concluídos';
-        }
-    },
-
-    _configurarBotaoVoltar(modo) {
-        if (this._modoVoltar === modo) return;
-        const antigo = document.getElementById('btn-voltar-portal');
-        if (!antigo) return;
-        const btn = antigo.cloneNode(true);
-        antigo.replaceWith(btn);
-        const spans = btn.querySelectorAll('span');
-        if (modo === 'mesa') {
-            if (spans[0]) spans[0].textContent = 'Voltar à Mesa';
-            if (spans[1]) spans[1].textContent = 'Voltar';
-            btn.title = 'Voltar à Mesa de Trabalho';
-            btn.onclick = () => {
-                if (this.unsubscribeAssistido) { this.unsubscribeAssistido(); this.unsubscribeAssistido = null; }
-                this.assistidoId = null;
-                this.assistidoData = null;
-                this._ajustarGrelhaKanban();
-                this.renderizarKanban();
-                this.iniciarDashboardKanban();
-                this.atualizarBadgeHeader();
-            };
-        } else {
-            if (spans[0]) spans[0].textContent = 'Voltar às Pautas';
-            if (spans[1]) spans[1].textContent = 'Voltar';
-            btn.title = 'Voltar ao Portal de Pautas';
-            btn.onclick = () => { window.location.href = window.location.pathname; };
-        }
-        this._modoVoltar = modo;
-    },
-
-    _atualizarCabecalhoDashboard() {
-        const titulo = document.getElementById('assistido-nome');
-        const sub = document.getElementById('assistido-assunto');
-        if (titulo) titulo.textContent = this.pautaNome || 'Mesa de Trabalho';
-        if (sub) {
-            const cargo = this.colaboradorAtual?.cargo ? ` • ${this.colaboradorAtual.cargo}` : '';
-            sub.textContent = `${this.colaboradorNome || ''}${cargo}`;
-        }
-    },
-
-    renderizarKanban() {
-        this._configurarBotaoVoltar('portal');
-        this._atualizarCabecalhoDashboard();
-        document.getElementById('view-dashboard').classList.remove('hidden');
-        document.getElementById('view-dashboard').classList.add('flex');
-        document.getElementById('view-atendimento').classList.add('hidden');
-        document.getElementById('view-atendimento').classList.remove('flex');
-
-        const url = new URL(window.location.href);
-        if (url.searchParams.has('assistidoId')) {
-            url.searchParams.delete('assistidoId');
-            window.history.pushState({}, '', url);
-        }
-
-        const espera = this.todosAtendimentosPauta.filter(a => a.status === 'aguardando');
-        const mesa = this.todosAtendimentosPauta.filter(a => this._pertenceAMim(a));
-        const meusConcluidos = this.todosAtendimentosPauta.filter(a => {
-            const isDone = ['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status);
-            return isDone && !this._ehPendenteDoDefensor(a) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome);
-        });
-
-        const pautaGeral = this.todosAtendimentosPauta.filter(a => {
-            const isMine = this._pertenceAMim(a) ||
-                           (['atendido', 'aguardandoNumero', 'aguardandoDistribuicao', 'aguardandoCorrecao'].includes(a.status) && (a.enviadoPor === this.colaboradorNome || a.attendedBy === this.colaboradorNome));
-            const isEspera = a.status === 'aguardando';
-            return !isMine && !isEspera && a.status !== 'faltoso';
-        });
-
-        espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0));
-        mesa.sort((a,b) => new Date(b.enviadoEm || b.inAttendanceTime || 0) - new Date(a.enviadoEm || a.inAttendanceTime || 0));
-        meusConcluidos.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
-        pautaGeral.sort((a,b) => new Date(b.attendedAt || b.inAttendanceTime || 0) - new Date(a.attendedAt || a.inAttendanceTime || 0));
-
-        this._injetarCardsColuna('kanban-espera', 'count-espera', espera, 'puxar', 'Ninguém na fila.');
-        this._injetarCardsColuna('kanban-mesa', 'count-mesa', mesa, 'mesa', 'Sua mesa está limpa.');
-        this._injetarCardsColuna('kanban-auditoria', 'count-auditoria', meusConcluidos, 'auditoria', 'Nenhum concluído por você.');
-        this._injetarCardsColuna('kanban-pauta-geral', 'count-pauta-geral', pautaGeral, 'auditoria', 'Sem outros casos em andamento.');
-
-        this._setupAcoesCards();
-        this._aplicarFiltroKanban();
-    },
-
-    _ligarCliqueNosCards() {
-        if (this._cliqueCardsPronto) return;
-        this._cliqueCardsPronto = true;
-        document.addEventListener('click', (e) => {
-            if (e.target.closest('a, button, input, select, textarea')) return;
-            const card = e.target.closest('.kanban-card[data-assistido-id]');
-            if (card) this.abrirHistoricoRapido(card.dataset.assistidoId);
-        });
-    },
-
-    setupListeners() {
-        document.getElementById('tab-btn-encerramento')?.addEventListener('click', () => this.switchTab('encerramento'));
-        document.getElementById('tab-btn-historico')?.addEventListener('click', () => this.switchTab('historico'));
-    },
-
-    switchTab(tab) {
-        const btnEnc = document.getElementById('tab-btn-encerramento');
-        const btnHis = document.getElementById('tab-btn-historico');
-        const abaEnc = document.getElementById('aba-encerramento');
-        const abaHis = document.getElementById('aba-historico');
-        if (!abaEnc || !abaHis) return;
-        const ativo = 'flex-1 py-3.5 text-center font-black text-[11px] uppercase tracking-widest border-b-2 transition-colors';
-        const inativo = 'flex-1 py-3.5 text-center font-bold text-[11px] uppercase tracking-widest text-slate-400 border-b-2 border-transparent hover:text-slate-600 transition-colors';
-        if (tab === 'encerramento') {
-            if (btnEnc) btnEnc.className = `${ativo} text-slate-800 border-slate-800`;
-            if (btnHis) btnHis.className = inativo;
-            abaEnc.classList.remove('hidden'); abaHis.classList.add('hidden');
-        } else {
-            if (btnHis) btnHis.className = `${ativo} text-indigo-600 border-indigo-600`;
-            if (btnEnc) btnEnc.className = inativo;
-            abaHis.classList.remove('hidden'); abaEnc.classList.add('hidden');
-        }
-    },
-
-    _aplicarFiltroKanban() {
-        const searchInput = document.getElementById('kanban-search');
-        const termo = (searchInput?.value || '').toLowerCase().trim();
-        document.querySelectorAll('#view-dashboard .kanban-card').forEach(card => {
-            card.style.display = !termo || card.textContent.toLowerCase().includes(termo) ? '' : 'none';
-        });
-    },
-
-    prepararFiltroKanban() {
-        const searchInput = document.getElementById('kanban-search');
-        if (!searchInput || searchInput.dataset.filtroPronto) return;
-        searchInput.dataset.filtroPronto = '1';
-        searchInput.addEventListener('input', () => this._aplicarFiltroKanban());
-    },
-
-    _injetarCardsColuna(colunaId, countId, lista, modo, msgVazio) {
-        const container = document.getElementById(colunaId);
-        const count = document.getElementById(countId);
-        if (!container || !count) return;
-
-        count.textContent = lista.length;
-
-        if (lista.length === 0) {
-            container.innerHTML = `
-                <div class="flex flex-col items-center justify-center py-10 opacity-60">
-                    <span class="text-3xl text-slate-300 mb-2">${ico('inbox')}</span>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-slate-400 text-center">${msgVazio}</p>
-                </div>
-            `;
-            return;
-        }
-        container.innerHTML = lista.map(item => this._htmlCardKanban(item, modo)).join('');
-    },
-
-    // CORRIGIDO: nome com underscore (as chamadas usam this._htmlCardKanban)
-    _htmlCardKanban(assistido, modo) {
-        let st = statusMap[assistido.status] || { cor: 'text-slate-600 border-slate-200 bg-slate-50', txt: assistido.status };
-        const ehPendente = ['aguardandoDistribuicao', 'aguardandoCorrecao'].includes(assistido.status);
-        const paraMim = this._ehPendenteDoDefensor(assistido);
-        if (paraMim) {
-            st = { ...st, txt: assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : (assistido.finalidadeEnvio === 'distribuir' ? 'Distribuir' : 'Assinar') };
-        }
-        const primeiroNome = (n) => escapeHTML(String(n || '').split(' ')[0]);
-        const urgencia = assistido.priority === 'URGENTE' ? 'border-l-[4px] border-l-red-500' : '';
-        const badgeUrgencia = assistido.priority === 'URGENTE' ? `<span class="text-red-500 shrink-0 animate-pulse">${ico('alertCircle', 'w-4 h-4')}</span>` : '';
-
-        const baseUrl = window.location.href.split('?')[0];
-        const linkIndividual = `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`;
-
-        let donoLabel = assistido.assignedCollaborator?.name ? `Com ${primeiroNome(assistido.assignedCollaborator.name)}` :
-                        (assistido.attendedBy ? `Por ${primeiroNome(assistido.attendedBy)}` : '');
-        if (ehPendente) {
-            donoLabel = paraMim ? (assistido.enviadoPor ? `De ${primeiroNome(assistido.enviadoPor)}` : '') : (assistido.defensorResponsavel ? `Com ${primeiroNome(assistido.defensorResponsavel)}` : 'Distribuição');
-        }
-
-        const puxadaPendente = assistido.status === 'aguardandoAutorizacaoPuxada';
-        if (puxadaPendente) {
-            donoLabel = assistido.solicitacaoPuxada?.solicitante ? `Pede ${primeiroNome(assistido.solicitacaoPuxada.solicitante)}` : '';
-        }
-
-        let botoesHtml = '';
-        if (this.pautaFechada) {
-            botoesHtml = `<div class="mt-3 text-center py-2 bg-slate-100 rounded-lg text-[9px] font-black text-slate-400 uppercase tracking-widest">Pauta Encerrada</div>`;
-            if (modo === 'auditoria') {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-slate-800 hover:bg-slate-950 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95">Auditar / Histórico</a>`;
-            }
-        } else if (puxadaPendente) {
-            const sol = assistido.solicitacaoPuxada || {};
-            const souEu = sol.solicitante === this.colaboradorNome;
-            const motivo = sol.motivo ? `<p class="mt-2 text-[10px] text-slate-500 italic bg-violet-50 border border-violet-100 rounded-lg p-2">${escapeHTML(sol.motivo)}</p>` : '';
-            if (souEu) {
-                botoesHtml = `${motivo}<div class="mt-3 text-center py-2 bg-violet-50 rounded-lg text-[9px] font-black text-violet-700 uppercase tracking-widest">Aguardando autorização</div>`;
-            } else {
-                botoesHtml = `${motivo}
-                    <div class="flex gap-2 mt-3">
-                        <button class="btn-autorizar-puxada flex-1 bg-violet-600 hover:bg-violet-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-assistido-id="${assistido.id}">Autorizar</button>
-                        <button class="btn-negar-puxada flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-assistido-id="${assistido.id}">Negar</button>
-                    </div>`;
-            }
-        } else {
-            if (modo === 'puxar') {
-                botoesHtml = `<button type="button" class="btn-puxar-caso block w-full mt-3 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Puxar para mim</button>`;
-            } else if (modo === 'mesa' && ehPendente) {
-                botoesHtml = `<a href="${linkIndividual}" class="block mt-3 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">${assistido.status === 'aguardandoCorrecao' ? 'Avaliar' : 'Abrir / Assinar'}</a>`;
-            } else if (modo === 'mesa') {
-                botoesHtml = `
-                    <div class="flex gap-2 mt-3">
-                        <a href="${linkIndividual}" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Abrir</a>
-                        <button class="btn-devolver-caso flex-1 bg-white border border-slate-200 hover:bg-slate-50 text-slate-600 font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm active:scale-95" data-pauta-id="${this.pautaId}" data-assistido-id="${assistido.id}">Devolver</button>
-                    </div>`;
-            } else {
-                if (assistido.status === 'aguardandoNumero') {
-                    botoesHtml += `<a href="${linkIndividual}" class="block mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl transition shadow-sm text-center active:scale-95">Registrar CNP</a>`;
-                }
-                botoesHtml += `<button class="btn-auditar-nativo block w-full mt-3 bg-slate-800 hover:bg-slate-950 text-white font-black text-[10px] uppercase tracking-widest py-2 rounded-lg transition shadow-sm text-center active:scale-95" data-assistido-id="${assistido.id}" data-assistido-nome="${escapeHTML(assistido.name)}">Histórico Rápido</button>`;
-            }
-        }
-
-        return `
-            <div class="kanban-card cursor-pointer bg-white p-4 rounded-2xl shadow-sm border border-slate-200 flex flex-col hover:shadow-md transition-shadow ${urgencia}" data-assistido-id="${assistido.id}" title="Ver histórico do checklist">
-                <div class="flex justify-between items-start mb-2 gap-2">
-                    <h4 class="font-black text-slate-800 text-sm leading-tight line-clamp-2">${escapeHTML(assistido.name)}</h4>
-                    ${badgeUrgencia}
-                </div>
-                <div class="flex items-center gap-1.5 text-[10px] font-bold text-slate-500 mb-3 truncate">
-                    <span class="w-1.5 h-1.5 rounded-full bg-slate-300 shrink-0"></span> ${escapeHTML(assistido.subject || 'Sem assunto')}
-                </div>
-                <div class="flex justify-between items-center mt-auto pt-2 border-t border-slate-100">
-                    <span class="text-[9px] font-black px-2 py-1 rounded-md border ${st.cor} uppercase tracking-widest">${st.txt}</span>
-                    <span class="font-bold text-[9px] text-slate-400 uppercase truncate max-w-[80px] text-right">${donoLabel}</span>
-                </div>
-                ${botoesHtml}
-            </div>
-        `;
-    },
-
-    _setupAcoesCards() {
-        document.querySelectorAll('.btn-devolver-caso:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', async (e) => {
-                const b = e.currentTarget;
-                if (!confirm("Devolver este caso para a Fila de Espera?")) return;
-
-                try {
-                    await updateDoc(doc(db, "pautas", b.dataset.pautaId, "attendances", b.dataset.assistidoId), {
-                        status: 'aguardando', assignedCollaborator: null, inAttendanceTime: null,
-                        historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a fila de espera')),
-                        history: arrayUnion({ action: 'DEVOLVIDO_PARA_FILA', by: this.colaboradorNome, msg: `Devolvido para a fila por ${this.colaboradorNome}`, at: new Date().toISOString() })
-                    });
-                    if (this.colaboradorAtual?.id) {
-                        await updateDoc(doc(db, "pautas", this.pautaId, "collaborators", this.colaboradorAtual.id), { status: 'disponivel', currentAttendance: null }).catch(() => {});
-                    }
-                    if (typeof showNotification === 'function') showNotification("Caso devolvido.", "info");
-                } catch (error) {
-                    console.error(error);
-                    alert("Erro ao devolver caso.");
-                }
-            });
-        });
-
-        document.querySelectorAll('.btn-auditar-nativo:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', (e) => this.abrirHistoricoRapido(e.currentTarget.dataset.assistidoId));
-        });
-
-        // Botão "Puxar para mim"
-        document.querySelectorAll('.btn-puxar-caso:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', (e) => {
-                const b = e.currentTarget;
-                this._solicitarPuxarCaso(b.dataset.assistidoId, b.dataset.assistidoNome);
-            });
-        });
-
-        // Autorizar / negar puxada
-        document.querySelectorAll('.btn-autorizar-puxada:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', (e) => this._autorizarPuxada(e.currentTarget.dataset.assistidoId));
-        });
-        document.querySelectorAll('.btn-negar-puxada:not([data-bound])').forEach(btn => {
-            btn.dataset.bound = '1';
-            btn.addEventListener('click', (e) => this._negarPuxada(e.currentTarget.dataset.assistidoId));
-        });
-    },
-
-    // ─── SOLICITAÇÃO DE PUXADA COM TEXTO LIVRE ─────────────────────────────────
-
-    _solicitarPuxarCaso(assistidoId, nomeAssistido) {
-        const motivo = prompt(`Informe o motivo para puxar "${nomeAssistido}" para a sua mesa:`, "Atendimento prioritário / Urgência");
-        if (motivo === null) return;
-
-        const timestampIso = new Date().toISOString();
-        const colabNome = this.colaboradorNome || 'Colaborador';
-
-        updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
-            status: 'aguardandoAutorizacaoPuxada',
-            solicitacaoPuxada: {
-                solicitante: colabNome,
-                solicitanteId: this.colaboradorId || '',
-                solicitanteEmail: this.colaboradorAtual?.email || '',
-                motivo: motivo || 'Sem justificativa informada',
-                solicitadoEm: timestampIso
+            [ROUTES.EDITAR_NOME_PAUTA]: () => {
+                document.getElementById('edit-pauta-name-input').value = this.currentPauta?.name || '';
+                document.getElementById('edit-pauta-modal')?.classList.remove('hidden');
             },
-            historicoAcoes: arrayUnion(this._registroHistorico(`Solicitou puxar caso para si (Motivo: ${motivo || 'não informado'})`, timestampIso, colabNome))
-        }).then(() => {
-            if (typeof showNotification === 'function') {
-                showNotification("Solicitação enviada para a pauta!", "success");
-            } else {
-                alert("Solicitação enviada com sucesso!");
-            }
-        }).catch(err => {
-            console.error(err);
-            alert("Erro ao solicitar puxada de caso.");
-        });
-    },
-
-    async _autorizarPuxada(assistidoId) {
-        const a = this.todosAtendimentosPauta.find(x => x.id === assistidoId);
-        const sol = a?.solicitacaoPuxada;
-        if (!a || !sol) return;
-        if (!confirm(`Autorizar que ${sol.solicitante} puxe "${a.name}" para a mesa dele(a)?`)) return;
-
-        const iso = new Date().toISOString();
-        const destino = this.todosColaboradores.find(c => c.nome === sol.solicitante);
-        try {
-            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
-                status: 'emAtendimento',
-                assignedCollaborator: { id: destino?.id || sol.solicitanteId || 'manual', name: sol.solicitante, email: destino?.email || sol.solicitanteEmail || '' },
-                inAttendanceTime: iso,
-                solicitacaoPuxada: null,
-                historicoAcoes: arrayUnion(this._registroHistorico(`Puxada autorizada para ${sol.solicitante}`, iso)),
-                history: arrayUnion({ action: 'TRANSFERENCIA_DE_CASO', by: this.colaboradorNome, msg: `Puxada autorizada por ${this.colaboradorNome} para ${sol.solicitante}`, at: iso })
-            });
-            if (destino?.id) {
-                updateDoc(doc(db, "pautas", this.pautaId, "collaborators", destino.id), { status: 'ocupado', currentAttendance: assistidoId }).catch(() => {});
-            }
-            if (typeof showNotification === 'function') showNotification("Puxada autorizada.", "success");
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao autorizar a puxada.");
-        }
-    },
-
-    async _negarPuxada(assistidoId) {
-        const a = this.todosAtendimentosPauta.find(x => x.id === assistidoId);
-        const sol = a?.solicitacaoPuxada;
-        if (!a) return;
-        if (!confirm(`Negar a solicitação e devolver "${a.name}" para a fila de espera?`)) return;
-
-        const iso = new Date().toISOString();
-        try {
-            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", assistidoId), {
-                status: 'aguardando',
-                solicitacaoPuxada: null,
-                historicoAcoes: arrayUnion(this._registroHistorico(`Puxada negada${sol?.solicitante ? ` (solicitante: ${sol.solicitante})` : ''}`, iso))
-            });
-            if (typeof showNotification === 'function') showNotification("Solicitação negada. Caso voltou para a fila.", "info");
-        } catch (error) {
-            console.error(error);
-            alert("Erro ao negar a puxada.");
-        }
-    },
-
-    // ─── OVERLAYS ─────────────────────────────────────────────────────────────
-
-    _criarOverlay(id, titulo, larguraMax = 'max-w-3xl') {
-        document.getElementById(id)?.remove();
-        const el = document.createElement('div');
-        el.id = id;
-        el.className = 'fixed inset-0 z-[9999] bg-slate-900/60 flex items-stretch sm:items-center justify-center sm:p-6';
-        el.innerHTML = `
-            <div class="bg-slate-50 w-full ${larguraMax} sm:rounded-3xl shadow-2xl flex flex-col max-h-full overflow-hidden">
-                <div class="flex items-center justify-between gap-3 px-5 py-4 bg-white border-b border-slate-200 shrink-0">
-                    <h3 class="font-black text-slate-800 text-sm sm:text-base leading-tight truncate">${titulo}</h3>
-                    <button data-fechar class="shrink-0 bg-slate-100 hover:bg-slate-200 text-slate-600 font-black text-[10px] uppercase tracking-widest px-4 py-2 rounded-lg active:scale-95">Fechar</button>
-                </div>
-                <div data-corpo class="flex-1 overflow-y-auto p-4 sm:p-5 custom-scrollbar"></div>
-            </div>`;
-        document.body.appendChild(el);
-
-        const fechar = () => this._fecharOverlay(id);
-        el.querySelector('[data-fechar]').onclick = fechar;
-        el.addEventListener('click', (e) => { if (e.target === el) fechar(); });
-        if (!this._escOverlayPronto) {
-            this._escOverlayPronto = true;
-            document.addEventListener('keydown', (e) => {
-                if (e.key !== 'Escape') return;
-                ['overlay-linha-tempo', 'overlay-historico-rapido', 'overlay-pauta-completa'].forEach(i => { if (document.getElementById(i)) this._fecharOverlay(i); });
-            });
-        }
-        return el.querySelector('[data-corpo]');
-    },
-
-    _fecharOverlay(id) {
-        document.getElementById(id)?.remove();
-        if (id === 'overlay-pauta-completa') this.pautaCompletaAberta = false;
-    },
-
-    abrirHistoricoRapido(assistidoId) {
-        const assistido = this.todosAtendimentosPauta.find(a => a.id === assistidoId);
-        if (!assistido) { alert("Assistido não encontrado na pauta."); return; }
-
-        const corpo = this._criarOverlay('overlay-historico-rapido', `Histórico • ${escapeHTML(assistido.name || 'Assistido')}`);
-        this._renderizarLadoEsquerdo({ ...assistido, id: assistido.id }, corpo, { botoes: false });
-
-        const btn = document.createElement('button');
-        btn.className = 'w-full mt-2 bg-blue-600 hover:bg-blue-700 text-white font-black text-[10px] uppercase tracking-widest py-3 rounded-xl active:scale-95';
-        btn.textContent = 'Linha do tempo completa';
-        btn.onclick = () => {
-            if (typeof window.abrirMonitoramento === 'function') window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
-            else this.abrirLinhaDoTempo(assistido);
+            [ROUTES.CONFIGURACAO_PAUTA]: () => PautaConfigService.abrirModalEdicao(this),
+            [ROUTES.COMPARTILHAR_PAUTA]: () => ModalService?.openMembersModal?.(this),
+            [ROUTES.COLABORADORES_PAUTA]: () => CollaboratorService.openModal(this),
+            [ROUTES.ANOTACOES_PAUTA]: () => NotesService.openModal()
         };
-        corpo.appendChild(btn);
-    },
+    }
 
-    abrirLinhaDoTempo(assistido) {
-        const rotulos = {
-            APROVADO_E_CONCLUIDO: 'Concluído', APROVADO_AGUARDANDO_NUMERO: 'Aguardando CNP',
-            ENVIADO_PARA_REVISAO: 'Enviado ao defensor', ENVIADO_PARA_CORRECAO: 'Enviado para avaliação',
-            DEVOLVIDO_COM_ERRO: 'Devolvido para correção', TRANSFERENCIA_DE_CASO: 'Transferido',
-            ATENDIMENTO_PAUSADO: 'Atendimento pausado', DEVOLVIDO_PARA_FILA: 'Devolvido para a fila',
-            DEVOLVIDO_PARA_CORRECAO: 'Devolvido para correção', APROVADO_E_DISTRIBUIDO: 'Distribuído',
-            DEVOLVIDO_PARA_DISTRIBUICAO: 'Devolvido à distribuição'
-        };
-        const hhmm = (iso) => new Date(iso).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-        const fmtData = (d) => d.toLocaleString('pt-BR', { dateStyle: 'short', timeStyle: 'short' });
+    async openPautaModal(route) {
+        const abrir = this._modalOpeners()[route];
+        if (abrir) await abrir();
+    }
 
-        const doMesa = (Array.isArray(assistido.history) ? assistido.history : []).map(ev => ({
-            quando: ev.at ? new Date(ev.at) : new Date(0),
-            rotulo: rotulos[ev.action] || String(ev.action || 'Movimentação').replace(/_/g, ' '),
-            texto: ev.msg || '', por: ev.by || '', exibe: ev.at ? fmtData(new Date(ev.at)) : '',
-            chave: `${ev.by}|${ev.at ? hhmm(ev.at) : ''}`
-        }));
-        const chavesMesa = new Set(doMesa.map(e => e.chave));
+    closePautaModals() {
+        ['share-modal', 'statistics-modal', 'edit-pauta-modal', 'edit-pauta-config-modal', 'bi-links-modal', 'collaborators-modal', 'members-modal', 'notes-modal']
+            .forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.getElementById('painel-geral-externo-modal')?.remove();
+    }
 
-        const base = new Date(assistido.arrivalTime || assistido.createdAt || Date.now());
-        const doMonitor = [];
-        (Array.isArray(assistido.historicoAcoes) ? assistido.historicoAcoes : []).forEach(txt => {
-            const m = String(txt).match(/^(.*?)(?: \(por (.+?)\))? às (\d{2}):(\d{2})$/);
-            const quando = new Date(base);
-            if (m) quando.setHours(parseInt(m[3]), parseInt(m[4]), 0, 0);
-            const ev = { quando, rotulo: m ? m[1] : String(txt), texto: '', por: m?.[2] || '', exibe: m ? `${m[3]}:${m[4]}` : '', chave: m ? `${m[2] || ''}|${m[3]}:${m[4]}` : '' };
-            if (!ev.chave || !chavesMesa.has(ev.chave) || /^Aberto na Mesa Digital/.test(ev.rotulo)) doMonitor.push(ev);
-        });
-
-        const eventos = [];
-        if (assistido.arrivalTime) eventos.push({ quando: new Date(assistido.arrivalTime), rotulo: 'Chegada na recepção', texto: '', por: '', exibe: hhmm(assistido.arrivalTime) });
-        eventos.push(...doMesa, ...doMonitor);
-        eventos.sort((a, b) => a.quando - b.quando);
-
-        const corpo = this._criarOverlay('overlay-linha-tempo', `Linha do tempo • ${escapeHTML(assistido.name || 'Assistido')}`, 'max-w-xl');
-        if (eventos.length === 0) {
-            corpo.innerHTML = `<div class="text-center py-16 bg-white rounded-2xl border border-slate-200"><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhuma movimentação registrada.</p></div>`;
-            return;
-        }
-        corpo.innerHTML = `<ol class="relative border-l-2 border-slate-200 ml-3 space-y-5">${eventos.map(ev => `
-            <li class="ml-5">
-                <span class="absolute -left-[7px] w-3 h-3 rounded-full bg-blue-500 border-2 border-white"></span>
-                <div class="bg-white p-4 rounded-xl border border-slate-200 shadow-sm">
-                    <div class="flex justify-between items-start gap-3">
-                        <p class="text-xs font-black text-slate-800">${escapeHTML(ev.rotulo)}</p>
-                        <span class="text-[10px] font-bold text-slate-400 shrink-0">${ev.exibe}</span>
-                    </div>
-                    ${ev.texto ? `<p class="text-xs text-slate-600 mt-1.5 leading-relaxed">${escapeHTML(ev.texto)}</p>` : ''}
-                    ${ev.por ? `<p class="text-[10px] font-bold text-slate-400 uppercase tracking-wider mt-2">por ${escapeHTML(ev.por)}</p>` : ''}
-                </div>
-            </li>`).join('')}</ol>`;
-    },
-
-    abrirPautaCompleta() {
-        this.pautaCompletaAberta = true;
-        this._criarOverlay('overlay-pauta-completa', escapeHTML(this.pautaNome), 'max-w-6xl');
-        this._renderizarPautaCompleta();
-    },
-
-    _renderizarPautaCompleta() {
-        const corpo = document.querySelector('#overlay-pauta-completa [data-corpo]');
-        if (!corpo) { this.pautaCompletaAberta = false; return; }
-
-        corpo.querySelectorAll('details[data-grupo]').forEach(d => { this._gruposPautaEstado[d.dataset.grupo] = d.open; });
-        const scrollTop = corpo.scrollTop;
-
-        const todos = this.todosAtendimentosPauta;
-        const por = (...status) => todos.filter(a => status.includes(a.status));
-        const espera = por('aguardando');
-        const atendendo = por('emAtendimento');
-        const revisao = por('aguardandoDistribuicao', 'aguardandoCorrecao');
-        const concluidos = por('atendido', 'aguardandoNumero');
-        const faltosos = por('faltoso');
-        const total = todos.length;
-        const pct = total > 0 ? Math.round((concluidos.length / total) * 100) : 0;
-
-        if (total === 0) {
-            corpo.innerHTML = `<div class="text-center py-20 bg-white rounded-2xl border border-slate-200"><p class="font-black text-slate-700 uppercase tracking-widest text-sm">Pauta vazia</p><p class="text-xs text-slate-500 mt-2">Ainda não há assistidos nesta pauta.</p></div>`;
-            return;
-        }
-
-        const kpi = (n, label, cor) => `
-            <div class="bg-${cor}-50 border border-${cor}-100 rounded-2xl p-4 text-center shadow-sm">
-                <div class="text-2xl font-black text-${cor}-600">${n}</div>
-                <div class="text-[9px] text-${cor}-600 font-bold uppercase tracking-wider mt-1">${label}</div>
-            </div>`;
-
-        const grupo = (titulo, lista, abertoPadrao) => {
-            if (lista.length === 0) return '';
-            const aberto = this._gruposPautaEstado[titulo] ?? (abertoPadrao ?? lista.length <= 8);
-            return `
-                <details data-grupo="${titulo}" ${aberto ? 'open' : ''} class="mb-4 bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
-                    <summary class="p-4 bg-slate-50 text-[11px] font-black text-slate-700 uppercase tracking-widest cursor-pointer select-none flex justify-between items-center hover:bg-slate-100">
-                        <span>${titulo} <span class="bg-slate-200 text-slate-600 px-2 py-0.5 rounded-full ml-2">${lista.length}</span></span>
-                    </summary>
-                    <div class="p-4 grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4">
-                        ${lista.map(a => this._htmlCardKanban(a, 'auditoria')).join('')}
-                    </div>
-                </details>`;
-        };
-
-        corpo.innerHTML = `
-            <div class="flex items-center justify-between mb-3 bg-white p-4 rounded-xl shadow-sm border border-slate-200">
-                <div>
-                    <p class="font-black text-slate-800 text-sm">${total} ${total === 1 ? 'assistido' : 'assistidos'} na pauta</p>
-                    <p class="text-[10px] text-slate-500 uppercase tracking-wider mt-1">${escapeHTML(this.pautaTipo)}${this.pautaFechada ? ' • encerrada' : ''}</p>
-                </div>
-                <span class="text-sm font-black text-emerald-600 bg-emerald-50 px-3 py-1 rounded-lg border border-emerald-100">${pct}% concluído</span>
-            </div>
-            <div class="h-2 bg-slate-200 rounded-full mb-5 overflow-hidden"><div class="h-full bg-emerald-500" style="width:${pct}%"></div></div>
-            <div class="grid grid-cols-2 sm:grid-cols-5 gap-3 mb-6">
-                ${kpi(espera.length, 'Espera', 'amber')}
-                ${kpi(atendendo.length, 'Atendendo', 'blue')}
-                ${kpi(revisao.length, 'Com defensor / avaliação', 'cyan')}
-                ${kpi(concluidos.length, 'Concluídos', 'emerald')}
-                ${kpi(faltosos.length, 'Faltosos', 'red')}
-            </div>
-            ${grupo('Aguardando', espera.sort((a,b) => (a.checkInOrder || 0) - (b.checkInOrder || 0)))}
-            ${grupo('Em atendimento', atendendo)}
-            ${grupo('Com defensor / avaliação', revisao)}
-            ${grupo('Concluídos', concluidos, false)}
-            ${grupo('Faltosos', faltosos, false)}
-        `;
-
-        this._setupAcoesCards();
-        corpo.scrollTop = scrollTop;
-    },
-
-    // ─── RENDERIZAÇÃO: SPLIT-SCREEN (ATENDIMENTO INDIVIDUAL) ──────────────────
-
-    renderizarSplitScreen(assistido, pautaData) {
-        document.getElementById('view-dashboard').classList.add('hidden');
-        document.getElementById('view-dashboard').classList.remove('flex');
-        document.getElementById('view-atendimento').classList.remove('hidden');
-        document.getElementById('view-atendimento').classList.add('flex');
-
-        const baseUrl = window.location.href.split('?')[0];
-        window.history.pushState({}, '', `${baseUrl}?pautaId=${this.pautaId}&assistidoId=${assistido.id}`);
-
-        document.getElementById('assistido-nome').textContent = assistido.name || 'Assistido';
-        document.getElementById('assistido-assunto').textContent = assistido.subject || 'Sem assunto';
-
-        this._configurarBotaoVoltar('mesa');
-
-        this._renderizarLadoEsquerdo(assistido);
-
-        if (this.pautaFechada) {
-            this._renderizarPainelFechado();
-        } else if (['atendido', 'aguardandoNumero'].includes(assistido.status)) {
-            this._renderizarPainelFinalizado(assistido);
-        } else {
-            this._renderizarPainelAcoes(assistido, pautaData);
-        }
-    },
-
-    _infoDocumento(id, actionData) {
-        let nome = id.replace(/-/g, ' ').toUpperCase(), secao = 'Outros';
-        if (actionData && id.startsWith('doc-')) {
-            const parts = id.split('-');
-            const dIdx = parseInt(parts.pop());
-            const sIdx = parseInt(parts.pop());
-            const sec = actionData.sections[sIdx];
-            if (!isNaN(sIdx) && !isNaN(dIdx) && sec) {
-                secao = sec.title;
-                const docObj = sec.docs[dIdx];
-                if (docObj) nome = typeof docObj === 'string' ? docObj : docObj.text;
-            }
-        }
-        return { nome, secao };
-    },
-
-    _brl(v) { return Number(v || 0).toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' }); },
-
-    _calcularGastos(g) {
-        const moradores = Math.max(1, parseInt(g?.quantidadeMoradores) || 1);
-        const num = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
-        const familia = [], crianca = [];
-        let totalFamilia = 0, totalCrianca = 0;
-        EXPENSE_CATEGORIES_COMUNS.forEach(c => { const v = num(g?.[c.id]); if (v > 0) { totalFamilia += v / moradores; familia.push({ label: c.label, total: v, cota: v / moradores }); } });
-        EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => { const v = num(g?.[c.id]); if (v > 0) { totalCrianca += v; crianca.push({ label: c.label, total: v }); } });
-        return { moradores, familia, crianca, totalFamilia, totalCrianca, total: totalFamilia + totalCrianca };
-    },
-
-    async _baixarChecklistPdf(assistido) {
-        const svc = PDFService?.generateChecklistPDF ? PDFService : window.PDFService;
-        if (!svc || typeof svc.generateChecklistPDF !== 'function') { alert("Módulo de PDF não carregado."); return; }
-
-        const chk = assistido.documentChecklist || {};
-        const actionData = (documentsData || {})[chk.action];
-        const ids = (chk.checkedIds || []).filter(id => !id.startsWith('reu-') && !id.startsWith('gasto-'));
-        const documentosTextos = ids.map(id => ({ id, text: this._infoDocumento(id, actionData).nome }));
-
-        const g = chk.expenseData;
-        const despesasTextos = [];
-        if (g?.checkExibirGastos) {
-            const c = this._calcularGastos(g);
-            if (c.total > 0) {
-                despesasTextos.push(`Quantidade de pessoas na residência: ${c.moradores}`);
-                c.familia.forEach(i => despesasTextos.push(`${i.label}: Total ${this._brl(i.total)} / Cota (1/${c.moradores}): ${this._brl(i.cota)}`));
-                c.crianca.forEach(i => despesasTextos.push(`${i.label}: ${this._brl(i.total)} (Integral)`));
-                despesasTextos.push(`NECESSIDADE MENSAL APURADA: ${this._brl(c.total)}`);
-            }
-        }
-
-        const checklistData = {
-            checkedIds: chk.checkedIds || [], docTypes: chk.docTypes || {}, reuData: chk.reuData || {},
-            expenseData: g || {}, socioData: chk.socioData || {},
-            demandasAdicionais: assistido.demandas?.descricoes || [], textosDespesas: despesasTextos
-        };
-
-        try {
-            showNotification("Gerando PDF do checklist...", "info");
-            const r = await svc.generateChecklistPDF(assistido.name || 'Assistido', actionData?.title || chk.action || '', checklistData, documentosTextos, despesasTextos);
-            if (r) showNotification("PDF emitido com sucesso!", "success");
-        } catch (e) {
-            console.error(e);
-            showNotification("Erro na emissão do PDF", "error");
-        }
-    },
-
-    _copiarTextoPeticao(assistido) {
-        const c = this._calcularGastos(assistido.documentChecklist?.expenseData);
-        if (c.total === 0) { showNotification("Os valores de despesa estão zerados.", "warning"); return; }
-        const nome = assistido.name || 'O requerente';
-        const pessoas = `${c.moradores} ${c.moradores === 1 ? 'pessoa' : 'pessoas'}`;
-        const txt = [
-            `Em relação às despesas mensais para a manutenção e subsistência de ${nome}, conforme os dados colhidos em triagem socioeconômica, o montante apurado corresponde a ${this._brl(c.total)}.`,
-            '',
-            `O referido valor engloba tanto as despesas exclusivas quanto o rateio proporcional das despesas do núcleo familiar (composto por ${pessoas}), divididas da seguinte forma:`,
-            '',
-            `Cota-parte de despesas residenciais e alimentares (rateio de 1/${c.moradores}):`,
-            ...(c.familia.length ? c.familia.map(i => `• ${i.label} (total ${this._brl(i.total)}; cota: ${this._brl(i.cota)})`) : ['• Nenhuma despesa informada nesta categoria.']),
-            `Subtotal proporcional: ${this._brl(c.totalFamilia)}`,
-            '',
-            'Despesas exclusivas (100% da necessidade):',
-            ...(c.crianca.length ? c.crianca.map(i => `• ${i.label} (integral: ${this._brl(i.total)})`) : ['• Nenhuma despesa informada nesta categoria.']),
-            `Subtotal exclusivo: ${this._brl(c.totalCrianca)}`
-        ].join('\n');
-        navigator.clipboard.writeText(txt)
-            .then(() => showNotification("Texto copiado! Cole na petição.", "success"))
-            .catch(() => showNotification("Não foi possível copiar o texto.", "error"));
-    },
-
-    _renderizarLadoEsquerdo(assistido, container = document.getElementById('aba-historico'), opcoes = {}) {
-        const mostrarBotoes = opcoes.botoes !== false;
+    async renderAdminContent() {
+        const container = document.getElementById('admin-content');
         if (!container) return;
-        let html = '';
-        const fmtEnd = (rua, num, comp, bairro, cidade, uf, cep) => [
-            [rua, num].filter(Boolean).join(', '), comp, bairro, [cidade, uf].filter(Boolean).join('/'), cep ? `CEP ${cep}` : ''
-        ].filter(Boolean).join(' - ');
-
-        if (assistido.historicoTransferencia) {
-            html += `
-                <div class="w-full bg-blue-50 border border-blue-200 p-4 rounded-xl shadow-sm mb-6 flex items-start gap-4 relative overflow-hidden">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-blue-500"></div>
-                    <div class="bg-blue-100 p-2 rounded-lg shrink-0 text-blue-600">${ico('refresh', 'w-5 h-5')}</div>
-                    <div>
-                        <p class="text-[10px] font-black uppercase tracking-widest text-blue-600 mb-1">Última Movimentação</p>
-                        <p class="text-xs font-bold leading-relaxed text-slate-700">${escapeHTML(assistido.historicoTransferencia)}</p>
-                    </div>
-                </div>`;
-        }
-
-        const temDetalhes = typeof window.openDetailsModal === 'function' && !!document.getElementById('assisted-details-modal');
-        if (mostrarBotoes) html += `
-            <div class="grid grid-cols-1 ${temDetalhes ? 'sm:grid-cols-2' : ''} gap-4 mb-6">
-                ${temDetalhes ? `
-                <button id="btn-nativ-docs" class="bg-indigo-600 hover:bg-indigo-700 text-white p-4 rounded-2xl shadow-sm border border-indigo-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
-                    <span class="text-2xl text-indigo-200 group-hover:text-white transition-colors">${ico('folder', 'w-8 h-8')}</span>
-                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Editar Checklist (Original)</span>
-                </button>` : ''}
-                <button id="btn-nativ-time" class="bg-blue-600 hover:bg-blue-700 text-white p-4 rounded-2xl shadow-sm border border-blue-500 flex flex-col items-center justify-center gap-2 transition-transform active:scale-95 group">
-                    <span class="text-2xl text-blue-200 group-hover:text-white transition-colors">${ico('clock', 'w-8 h-8')}</span>
-                    <span class="font-black uppercase tracking-widest text-[10px] text-center">Linha do Tempo Completa</span>
+        
+        container.innerHTML = `
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800">Painel do Administrador</h2>
+            </div>
+            
+            <div class="mb-6 flex flex-wrap gap-3">
+                <button id="btn-unidades-master" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>${ico('building')}</span> Gerenciar Unidades / Órgãos
+                </button>
+                <button id="btn-recepcoes-master" class="bg-purple-600 hover:bg-purple-700 text-white font-bold px-5 py-2.5 rounded-xl transition shadow-md flex items-center gap-2 text-sm">
+                    <span>${ico('landmark')}</span> Gerenciar Recepções (Unidades de Apoio)
                 </button>
             </div>
+            
+            <div class="mb-8">
+                <div class="mb-4">
+                    <input type="text" id="search-pendentes" placeholder="Buscar usuário pendente..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
+                <h3 class="text-lg font-bold text-amber-700 mb-3 border-b pb-2">${ico('clock', 'w-5 h-5')} Usuários Pendentes</h3>
+                <div id="pending-users-list" class="space-y-2"></div>
+                <div id="pagination-pendentes" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8">
+                <div class="mb-4">
+                    <input type="text" id="search-usuarios" placeholder="Buscar usuário..." class="w-full sm:w-80 px-4 py-2 border rounded-lg">
+                </div>
+                <h3 class="text-lg font-bold text-slate-800 mb-3 border-b pb-2">${ico('users', 'w-5 h-5')} Usuários do Sistema</h3>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-sm border-collapse">
+                        <thead class="bg-slate-100">
+                            <tr>
+                                <th class="p-3 text-left">Usuário / Perfil Atual</th>
+                                <th class="p-3 text-center">Unidades</th>
+                                <th class="p-3 text-center">Alterar Permissão</th>
+                                <th class="p-3 text-center">Ações</th>
+                            </tr>
+                        </thead>
+                        <tbody id="approved-users-list" class="divide-y divide-slate-100"></tbody>
+                    </table>
+                </div>
+                <div id="pagination-usuarios" class="mt-4"></div>
+            </div>
+            
+            <div class="mt-8 pt-4 border-t">
+                <div class="flex flex-wrap gap-3 mb-4">
+                    <button id="view-audit-logs-btn" class="bg-blue-600 text-white px-4 py-2 rounded-lg">${ico('search')} Carregar Logs</button>
+                    <button id="export-audit-pdf-btn" class="hidden bg-red-600 text-white px-4 py-2 rounded-lg">${ico('fileText')} Exportar PDF</button>
+                    <button id="cleanup-old-data-btn" class="bg-amber-600 text-white px-4 py-2 rounded-lg">${ico('trash')} Limpar Dados</button>
+                    <button id="btn-load-dashboard" class="bg-emerald-600 text-white px-4 py-2 rounded-lg">${ico('chart')} BI Dashboard</button>
+                </div>
+                
+                <div class="mb-4 flex flex-wrap gap-4 items-center justify-between">
+                    <div id="search-logs" class="w-full sm:w-80"></div>
+                    <div id="page-size-logs"></div>
+                </div>
+                
+                <div id="audit-filters-section" class="hidden grid grid-cols-1 sm:grid-cols-4 gap-3 mb-4">
+                    <select id="filter-log-user"><option value="all">Todos usuários</option></select>
+                    <select id="filter-log-action"><option value="all">Todas ações</option></select>
+                    <input type="date" id="filter-log-start">
+                    <input type="date" id="filter-log-end">
+                </div>
+                <div id="audit-logs-container" class="hidden overflow-x-auto">
+                    <div class="border rounded-xl overflow-hidden">
+                        <table class="w-full text-sm">
+                            <thead class="bg-slate-100">
+                                <tr>
+                                    <th class="p-3">Data/Hora</th>
+                                    <th class="p-3">Usuário</th>
+                                    <th class="p-3">Ação</th>
+                                    <th class="p-3">Detalhes</th>
+                                </tr>
+                            </thead>
+                            <tbody id="audit-logs-table-body"></tbody>
+                        </table>
+                    </div>
+                </div>
+                <div id="pagination-logs" class="mt-4"></div>
+                <div id="dashboard-results" class="hidden mt-6"></div>
+            </div>
+
+            <div id="permissoes-container" class="mt-10 pt-6 border-t"></div>
         `;
-
-        const notaEnvio = assistido.notasRevisao || assistido.reviewMotivoDevolucao;
-        if (notaEnvio && ['aguardandoDistribuicao', 'aguardandoCorrecao', 'emAtendimento'].includes(assistido.status)) {
-            html += `
-                <div class="w-full bg-amber-50 border border-amber-200 p-4 rounded-xl shadow-sm mb-6 relative overflow-hidden">
-                    <div class="absolute left-0 top-0 bottom-0 w-1.5 bg-amber-400"></div>
-                    <p class="text-[10px] font-black uppercase tracking-widest text-amber-700 mb-1">Nota${assistido.enviadoPor ? ` de ${escapeHTML(assistido.enviadoPor)}` : ''}${assistido.finalidadeEnvio ? ` • ${assistido.finalidadeEnvio === 'distribuir' ? 'distribuir' : assistido.finalidadeEnvio === 'corrigir' ? 'corrigir' : 'assinar'}` : ''}</p>
-                    <p class="text-xs font-bold leading-relaxed text-slate-700">${escapeHTML(notaEnvio)}</p>
-                </div>`;
+        
+        if (AdminService?.setupAdminEvents) {
+            AdminService.setupAdminEvents(this);
         }
+        PermissoesService.renderAdmin(document.getElementById('permissoes-container'), this);
+    }
 
-        const txtVal = (v) => Array.isArray(v) ? v.filter(Boolean).join(' | ') : (v == null ? '' : String(v));
-        const linhasId = [
-            ['Nome', assistido.name], ['CPF', assistido.cpf], ['Telefone', assistido.telefone || assistido.phone],
-            ['Agendamento', assistido.numeroAgendamento || assistido.numAgendamento], ['Assunto', assistido.subject],
-            ['Horário agendado', assistido.scheduledTime],
-            ['Chegada', assistido.arrivalTime ? new Date(assistido.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' }) : ''],
-            ['Sala', assistido.room], ['Nº do processo', assistido.numeroProcesso]
-        ].filter(([, v]) => txtVal(v).trim() !== '');
-        if (linhasId.length) {
-            html += `
-                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} IDENTIFICAÇÃO</h4>
-                    <div class="space-y-1">${linhasId.map(([k, v]) => `<div class="flex justify-between items-center py-2 border-b border-slate-100 gap-3"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest shrink-0">${k}</span><span class="text-xs font-bold text-slate-700 text-right break-words">${escapeHTML(txtVal(v))}</span></div>`).join('')}</div>
-                </div>`;
-        }
+    setupModoListeners() {
+        document.getElementById('btn-modo-normal')?.addEventListener('click', () => {
+            this.currentMode = 'normal';
+            localStorage.setItem('sigep_current_mode', 'normal');
+            this.abrirModalSelecaoUnidade();
+        });
+    
+        document.getElementById('btn-modo-evento')?.addEventListener('click', async () => {
+            this.currentMode = 'evento';
+            localStorage.setItem('sigep_current_mode', 'evento');
+            localStorage.removeItem('sigep_app_state');
+            
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+            this.applyRoleBasedUI();
+            showNotification('Modo Evento ativado', 'info', 3000);
+        });
+    }
 
-        const chk = assistido.documentChecklist || {};
-        const baseDeDados = documentsData || window.documentsData || {};
+    async abrirModalSelecaoUnidade() {
+        const modal = document.getElementById('select-unidade-modal');
+        const select = document.getElementById('modal-unidade-select');
+        if (!modal || !select) return;
 
-        if (!chk.action) {
-            html += `<div class="text-center py-10 bg-slate-50 border border-slate-200 rounded-2xl"><span class="text-4xl block mb-2 text-slate-300">${ico('inbox')}</span><p class="text-xs font-bold uppercase tracking-widest text-slate-500">Nenhum checklist da recepção registado.</p></div>`;
-        } else {
-            const actionData = baseDeDados[chk.action];
-            const actionTitle = actionData ? actionData.title : chk.action.replace(/_/g, ' ').toUpperCase();
+        select.innerHTML = '<option value="todas">Carregando...</option>';
+        modal.classList.remove('hidden');
 
-            html += `
-                <div class="bg-slate-900 p-5 rounded-2xl mb-6 shadow-md relative overflow-hidden">
-                    <p class="text-[10px] text-blue-400 font-black uppercase tracking-widest mb-1.5">Ação Selecionada na Recepção</p>
-                    <p class="text-base font-black text-white uppercase leading-tight">${actionTitle}</p>
-                </div>`;
+        const userUnidades = this.currentUser?.unidades || [];
+        const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
 
-            if (chk.socioData) {
-                const s = chk.socioData;
-                let socioHtml = '';
-                const addLinha = (label, val) => {
-                    if (val && val.trim() !== '' && val !== 'Selecione' && val !== 'R$ 0,00' && !val.includes('Selecione')) {
-                        socioHtml += `<div class="flex justify-between items-center py-2 border-b border-slate-100"><span class="text-[10px] font-black text-slate-400 uppercase tracking-widest">${label}</span><span class="text-xs font-bold text-slate-700 text-right w-2/3 break-words">${escapeHTML(val)}</span></div>`;
-                    }
-                };
-                addLinha('Ocupação', s.ocupacao); addLinha('Profissão', s.profissao); addLinha('Estado Civil', s.estadoCivil); addLinha('Renda', s.ganhos); addLinha('Fonte Renda', s.fonteRenda);
-
-                if (socioHtml) {
-                    html += `
-                        <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('user', 'w-3.5 h-3.5')} PERFIL SOCIOECONÔMICO</h4>
-                            <div class="space-y-1">${socioHtml}</div>
-                        </div>`;
-                }
-            }
-
-            const idsDocs = (chk.checkedIds || []).filter(id => !id.startsWith('reu-') && !id.startsWith('gasto-'));
-            if (idsDocs.length > 0) {
-                const totalPrevisto = actionData
-                    ? actionData.sections.reduce((t, sec) => t + sec.docs.filter(d => !(typeof d === 'object' && d.type === 'title')).length, 0)
-                    : 0;
-                const grupos = new Map();
-                idsDocs.forEach(id => {
-                    const info = this._infoDocumento(id, actionData);
-                    if (!grupos.has(info.secao)) grupos.set(info.secao, []);
-                    grupos.get(info.secao).push({ id, nome: info.nome });
-                });
-                html += `<div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                       <div class="flex items-center justify-between gap-2 mb-4">
-                           <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest flex items-center gap-1.5">${ico('fileText', 'w-3.5 h-3.5')} DOCUMENTOS RECOLHIDOS</h4>
-                           <span class="text-[10px] font-black px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 shrink-0">${idsDocs.length}${totalPrevisto ? ` de ${totalPrevisto}` : ''}</span>
-                       </div>
-                       <button data-baixar-checklist class="w-full mb-4 bg-slate-800 hover:bg-slate-950 text-white font-black py-2.5 rounded-xl text-[10px] uppercase tracking-widest shadow-sm active:scale-95 flex items-center justify-center gap-2">${ico('fileText', 'w-3.5 h-3.5')} Baixar checklist completo (PDF)</button>`;
-                grupos.forEach((docs, secao) => {
-                    html += `<p class="text-[10px] font-black text-sky-700 uppercase tracking-wider mt-3 mb-2">${escapeHTML(secao)}</p><ul class="space-y-2">`;
-                    docs.forEach(({ id, nome }) => {
-                        const tipo = chk.docTypes && chk.docTypes[id] ? chk.docTypes[id] : 'Físico';
-                        const tipoClass = tipo === 'Físico' ? 'text-amber-700 bg-amber-100 border-amber-200' : 'text-blue-700 bg-blue-100 border-blue-200';
-                        html += `
-                            <li class="text-xs bg-slate-50 border border-slate-100 p-3 rounded-xl flex justify-between items-center gap-2">
-                                <span class="font-bold text-slate-700 pr-2 flex items-start gap-2">${ico('checkCircle', 'w-4 h-4 text-emerald-500 shrink-0')} <span>${escapeHTML(nome)}</span></span>
-                                <span class="font-black text-[9px] uppercase tracking-widest ${tipoClass} px-2.5 py-1 rounded-lg border shrink-0">${tipo}</span>
-                            </li>`;
+        if (isAdmin) {
+            try {
+                const snap = await getDocs(collection(this.db, "unidades"));
+                const allUnidades = snap.docs.map(d => d.data().nome).filter(Boolean).sort();
+                
+                let html = `<option value="todas">Todas as Unidades (Visão Admin)</option>`;
+                if (userUnidades.length > 0) {
+                    html += `<optgroup label="Minhas Unidades Vinculadas">`;
+                    userUnidades.forEach(u => {
+                        const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
+                        if (nome) html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
                     });
-                    html += `</ul>`;
-                });
-                html += `</div>`;
-            }
-
-            if (assistido.demandas && assistido.demandas.descricoes && assistido.demandas.descricoes.length > 0) {
-                html += `
-                    <div class="bg-violet-50 p-5 rounded-2xl mb-6 border border-violet-200 shadow-sm relative overflow-hidden">
-                        <div class="absolute top-0 left-0 w-1 h-full bg-violet-500"></div>
-                        <h4 class="text-[10px] font-black text-violet-800 uppercase tracking-widest mb-3 pl-1 flex items-center gap-1">
-                            <span>${ico('scale', 'w-3.5 h-3.5')}</span> DEMANDAS ACUMULADAS
-                        </h4>
-                        <ul class="space-y-2">
-                            ${assistido.demandas.descricoes.map(dem => `<li class="text-xs bg-white p-3 rounded-xl border border-violet-100 shadow-sm flex items-center gap-2 font-medium text-slate-700"><span class="text-violet-500 font-black">•</span> ${escapeHTML(dem)}</li>`).join('')}
-                        </ul>
-                    </div>
-                `;
-            }
-
-            if (chk.expenseData && chk.expenseData.checkExibirGastos) {
-                const g = chk.expenseData;
-                const moradores = Math.max(1, parseInt(g.quantidadeMoradores) || 1);
-                const num = (v) => (!v || v === 'R$ 0,00') ? 0 : (parseFloat(String(v).replace(/[^\d,]/g, '').replace(',', '.')) || 0);
-                const brl = (v) => v.toLocaleString('pt-BR', { style: 'currency', currency: 'BRL' });
-                const linha = (rotulo, detalhe, valor) => `<div class="flex justify-between items-center gap-3 text-xs py-2 border-b border-emerald-100/50"><span class="text-emerald-800 font-bold">${rotulo}${detalhe ? `<span class="block text-[10px] font-medium text-emerald-600/80">${detalhe}</span>` : ''}</span><span class="font-black text-emerald-900 bg-white px-2 py-0.5 rounded shadow-sm border border-emerald-100 shrink-0">${valor}</span></div>`;
-
-                let totalFamilia = 0, totalCrianca = 0, htmlFamilia = '', htmlCrianca = '';
-                EXPENSE_CATEGORIES_COMUNS.forEach(c => {
-                    const v = num(g[c.id]);
-                    if (v > 0) { totalFamilia += v / moradores; htmlFamilia += linha(escapeHTML(c.label), `total ${brl(v)}`, brl(v / moradores)); }
-                });
-                EXPENSE_CATEGORIES_EXCLUSIVAS.forEach(c => {
-                    const v = num(g[c.id]);
-                    if (v > 0) { totalCrianca += v; htmlCrianca += linha(escapeHTML(c.label), 'integral', brl(v)); }
-                });
-
-                const totalGeral = totalFamilia + totalCrianca;
-                if (totalGeral > 0) {
-                    html += `
-                        <div class="bg-emerald-50 p-5 rounded-2xl mb-6 border border-emerald-200 shadow-sm">
-                            <h4 class="text-[10px] font-black text-emerald-800 uppercase tracking-widest mb-1 flex items-center gap-1.5">
-                                <span>${ico('coins', 'w-3.5 h-3.5')}</span> PLANILHA DE GASTOS
-                            </h4>
-                            <p class="text-[10px] font-bold text-emerald-700/70 mb-3">${moradores} ${moradores === 1 ? 'pessoa' : 'pessoas'} na residência</p>
-                            ${htmlFamilia ? `<p class="text-[10px] font-black text-emerald-700 uppercase mt-2">Cota da família (rateio 1/${moradores})</p>${htmlFamilia}` : ''}
-                            ${htmlCrianca ? `<p class="text-[10px] font-black text-sky-700 uppercase mt-3">Exclusivos da criança</p>${htmlCrianca}` : ''}
-                            <div class="flex justify-between font-black text-emerald-950 border-t-2 border-emerald-200 pt-4 mt-4 text-sm items-center">
-                                <span class="uppercase tracking-widest">Necessidade mensal</span>
-                                <span class="bg-white px-3 py-1 rounded-lg shadow-sm border border-emerald-300 text-lg">${brl(totalGeral)}</span>
-                            </div>
-                            <button data-baixar-planilha class="mt-5 w-full bg-white border border-emerald-300 text-emerald-700 font-black py-3 rounded-xl text-xs hover:bg-emerald-100 transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
-                                ${ico('fileText', 'w-4 h-4')} Baixar planilha PDF
-                            </button>
-                            <button data-copiar-texto class="mt-3 w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3 rounded-xl text-xs transition-colors shadow-sm flex items-center justify-center gap-2 uppercase tracking-widest active:scale-95">
-                                ${ico('clipboard', 'w-4 h-4')} Copiar texto para a petição
-                            </button>
-                        </div>
-                    `;
+                    html += `</optgroup><optgroup label="Todas as Unidades do Sistema">`;
                 }
+                allUnidades.forEach(nome => {
+                    html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
+                });
+                if (userUnidades.length > 0) html += `</optgroup>`;
+                select.innerHTML = html;
+            } catch (err) {
+                select.innerHTML = `<option value="todas">Erro ao carregar unidades</option>`;
             }
-
-            if (chk.reuData && chk.reuData.checkReuUnico) {
-                const reu = chk.reuData;
-                html += `
-                    <div class="bg-rose-50 p-5 rounded-2xl mb-6 border border-rose-200 shadow-sm">
-                        <h4 class="text-[10px] font-black text-rose-800 uppercase tracking-widest mb-4 flex items-center gap-1.5"><span>${ico('user', 'w-3.5 h-3.5')}</span> POLO PASSIVO (RÉU)</h4>
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6 text-xs text-slate-700 bg-white p-4 rounded-xl border border-rose-100 shadow-sm">
-                            ${reu.nome ? `<p><b class="text-rose-900 font-black block mb-1">Nome Completo:</b> ${escapeHTML(reu.nome)}</p>` : ''}
-                            ${reu.cpf ? `<p><b class="text-rose-900 font-black block mb-1">CPF:</b> ${escapeHTML(reu.cpf)}</p>` : ''}
-                            ${reu.telefone ? `<p><b class="text-rose-900 font-black block mb-1">Telefone:</b> ${escapeHTML(reu.telefone)}</p>` : ''}
-                            ${reu.ocupacao ? `<p><b class="text-rose-900 font-black block mb-1">Ocupação:</b> ${escapeHTML(reu.ocupacao)}${reu.profissao ? ' — ' + escapeHTML(reu.profissao) : ''}</p>` : ''}
-                            ${reu.estadoCivil ? `<p><b class="text-rose-900 font-black block mb-1">Estado civil:</b> ${escapeHTML(reu.estadoCivil)}</p>` : ''}
-                            ${reu.ganhos ? `<p><b class="text-rose-900 font-black block mb-1">Ganhos:</b> ${escapeHTML(reu.ganhos)}${reu.fonteRenda ? ' (' + escapeHTML(reu.fonteRenda) + ')' : ''}</p>` : ''}
-                            ${reu.referencia ? `<p class="sm:col-span-2"><b class="text-rose-900 font-black block mb-1">Ponto de referência:</b> ${escapeHTML(reu.referencia)}</p>` : ''}
-                            ${(reu.rua || reu.cep) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço Residencial:</b> ${escapeHTML(fmtEnd(reu.rua, reu.numero, reu.complemento, reu.bairro, reu.cidade, reu.uf, reu.cep))}</p>` : ''}
-                            ${(reu.empresa || reu.rua_comercial) ? `<p class="sm:col-span-2 pt-3 border-t border-rose-100"><b class="text-rose-900 font-black block mb-1.5">Endereço de Trabalho:</b> ${escapeHTML([reu.empresa, fmtEnd(reu.rua_comercial, reu.numero_comercial, reu.complemento_comercial, reu.bairro_comercial, reu.cidade_comercial, reu.uf_comercial, reu.cep_comercial)].filter(Boolean).join(' — '))}</p>` : ''}
-                        </div>
-                    </div>
-                `;
-            }
+        } else {
+            let html = `<option value="todas">Todas as minhas unidades</option>`;
+            userUnidades.forEach(u => {
+                const nome = typeof u === 'string' ? u : (u.unidadeNome || u.nome || u.name);
+                if (nome) html += `<option value="${escapeHTML(nome)}">${escapeHTML(nome)}</option>`;
+            });
+            select.innerHTML = html;
         }
 
-        const arquivos = Array.isArray(assistido.documentosDigitalizados) ? assistido.documentosDigitalizados : [];
-        if (assistido.noVerde || assistido.pdfLink || assistido.pdfObservacoes || arquivos.length) {
-            const urlOk = (u) => /^https?:\/\//i.test(u || '') ? escapeHTML(u) : '#';
-            html += `
-                <div class="bg-white p-5 rounded-2xl mb-6 border border-slate-200 shadow-sm">
-                    <h4 class="text-[10px] font-black text-slate-500 uppercase tracking-widest mb-4 flex items-center gap-1.5">${ico('folder', 'w-3.5 h-3.5')} ACOMPANHAMENTO</h4>
-                    <div class="flex items-center justify-between bg-slate-50 p-2.5 rounded-xl border border-slate-200 mb-3">
-                        <span class="text-[11px] font-bold text-slate-600">Verde</span>
-                        <span class="px-2.5 py-1 rounded-lg font-black text-[9px] uppercase ${assistido.noVerde ? 'bg-green-600 text-white' : 'bg-slate-200 text-slate-600'}">${assistido.noVerde ? 'Inserido' : 'Pendente'}</span>
-                    </div>
-                    ${assistido.pdfLink ? `<a href="${urlOk(assistido.pdfLink)}" target="_blank" rel="noopener" class="block text-center bg-slate-100 hover:bg-slate-200 text-slate-700 border border-slate-200 text-[11px] font-bold py-2 rounded-xl mb-3">Abrir link principal</a>` : ''}
-                    ${assistido.pdfObservacoes ? `<p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-200 italic mb-3">${escapeHTML(assistido.pdfObservacoes)}</p>` : ''}
-                    ${arquivos.map(d => `<div class="flex justify-between items-center gap-2 bg-slate-50 p-2 rounded-xl border border-slate-200 mb-1.5"><span class="text-[11px] font-bold text-slate-700 truncate">${escapeHTML(d.titulo || d.nomeArquivo || 'Arquivo')}</span><a href="${urlOk(d.url)}" target="_blank" rel="noopener" class="bg-slate-700 text-white text-[10px] font-bold px-2.5 py-1 rounded-lg shrink-0">Abrir</a></div>`).join('')}
-                </div>`;
+        if (this.currentUnidadeExibicao) {
+            const options = Array.from(select.options).map(opt => opt.value);
+            if (options.includes(this.currentUnidadeExibicao)) select.value = this.currentUnidadeExibicao;
         }
 
-        container.innerHTML = html;
+        document.getElementById('cancel-unidade-modal').onclick = () => {
+            modal.classList.add('hidden');
+        };
 
-        const btnPlanilha = container.querySelector('[data-baixar-planilha]');
-        if (btnPlanilha) {
-            btnPlanilha.onclick = () => {
-                const gerar = PDFService?.generatePlanilhaGastosPDF || window.PDFService?.generatePlanilhaGastosPDF;
-                const dono = PDFService?.generatePlanilhaGastosPDF ? PDFService : window.PDFService;
-                if (typeof gerar === 'function') gerar.call(dono, assistido.name || 'Assistido', assistido.documentChecklist.expenseData);
-                else alert("Módulo de PDF não carregado.");
+        document.getElementById('confirm-unidade-modal').onclick = async () => {
+            this.currentUnidadeExibicao = select.value;
+            localStorage.setItem('sigep_unidade_ativa', select.value);
+            modal.classList.add('hidden');
+            
+            localStorage.removeItem('sigep_app_state');
+            await this.router.navigate(ROUTES.PAUTA_SELECTION, {}, true);
+            this.applyRoleBasedUI();
+            showNotification('Modo Normal ativado', 'info', 3000);
+        };
+    }
+
+    voltarParaSelecaoModo() {
+        this._teardownPauta();
+        this.router.navigate(ROUTES.MODO_SELECTION, {}, false);
+        showNotification('Modo alterado com sucesso!', 'info', 2000);
+    }
+
+    mostrarSeletorTipoEvento() {
+        return new Promise((resolve) => {
+            const modal = document.createElement('div');
+            modal.className = 'fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50';
+            modal.innerHTML = `
+                <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4">
+                    <h3 class="text-lg font-bold mb-2"> Tipo de Evento</h3>
+                    <p class="text-sm text-gray-600 mb-4">Selecione o tipo da pauta:</p>
+                    <div class="space-y-3">
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="mutirao">
+                            <div class="font-bold"> Mutirão</div>
+                            <div class="text-xs text-gray-500">Evento concentrado com múltiplos atendimentos</div>
+                        </button>
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="plantao">
+                            <div class="font-bold"> Plantão</div>
+                            <div class="text-xs text-gray-500">Atendimento emergencial contínuo</div>
+                        </button>
+                        <button class="tipo-evento-btn w-full text-left p-3 border rounded-lg hover:bg-blue-50 transition" data-tipo="acao_social">
+                            <div class="font-bold"> Ação Social</div>
+                            <div class="text-xs text-gray-500">Atividade comunitária externa</div>
+                        </button>
+                    </div>
+                    <button id="cancel-tipo-evento" class="mt-4 w-full p-2 bg-gray-200 rounded-lg hover:bg-gray-300 transition">Cancelar</button>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            const handleSelect = (tipo) => {
+                modal.remove();
+                resolve(tipo);
             };
+            
+            modal.querySelectorAll('.tipo-evento-btn').forEach(btn => {
+                btn.addEventListener('click', () => handleSelect(btn.dataset.tipo));
+            });
+            
+            modal.querySelector('#cancel-tipo-evento').addEventListener('click', () => {
+                modal.remove();
+                resolve(null);
+            });
+        });
+    }
+
+    mostrarIndicadorModo() {
+        let indicador = document.getElementById('modo-indicador');
+        
+        if (!indicador) {
+            indicador = document.createElement('div');
+            indicador.id = 'modo-indicador';
+            document.body.appendChild(indicador);
         }
-
-        container.querySelector('[data-baixar-checklist]')?.addEventListener('click', () => this._baixarChecklistPdf(assistido));
-        container.querySelector('[data-copiar-texto]')?.addEventListener('click', () => this._copiarTextoPeticao(assistido));
-
-        if (!mostrarBotoes) return;
-
+        
+        if (this.currentMode === 'normal') {
+            indicador.textContent = 'Modo Normal';
+            indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-blue-600 transition-all duration-300';
+        } else {
+            indicador.textContent = 'Modo Evento';
+            indicador.className = 'fixed top-4 right-4 z-50 px-4 py-2 rounded-full text-white font-bold shadow-lg bg-purple-600 transition-all duration-300';
+        }
+        
+        indicador.style.display = 'block';
+        indicador.style.opacity = '1';
+        
         setTimeout(() => {
-            const btnDocs = container.querySelector('#btn-nativ-docs');
-            const btnTime = container.querySelector('#btn-nativ-time');
+            indicador.style.opacity = '0';
+            setTimeout(() => {
+                if (indicador) indicador.style.display = 'none';
+            }, 500);
+        }, 3000);
+    }
 
-            if (btnDocs) {
-                btnDocs.addEventListener('click', () => {
-                    if (typeof window.openDetailsModal === 'function') {
-                        window.openDetailsModal({ assistedId: assistido.id, pautaId: this.pautaId, allAssisted: this.todosAtendimentosPauta, db: db });
-                    } else if (window.openDetailsModal) {
-                        window.openDetailsModal(assistido, this.pautaId);
-                    } else {
-                        alert("Módulo de Detalhes Original não carregado na página.");
-                    }
-                });
+    setupAuthListener() {
+        onAuthStateChanged(this.auth, async (user) => {
+            try {
+                if (user) {
+                    await AuthService.handleAuthState(this, user);
+                    await this.loadUserPreferences();
+                    await PermissoesService.carregar(this);
+                    this.applyRoleBasedUI();
+                    await this.router.resolveInitialRoute();
+                } else {
+                    this.currentUser = null;
+                    PermissoesService.limpar();
+                    await this.router.navigate(ROUTES.LOGIN, {}, true);
+                }
+            } catch (error) {
+                console.error("Erro crítico na verificação de autenticação:", error);
+                await this.router.navigate(ROUTES.LOGIN, {}, true);
+            } finally {
+                this.hideLoadingScreen();
             }
+        });
+    }
 
-            if (btnTime) {
-                btnTime.addEventListener('click', () => {
-                    if (window.abrirMonitoramento) window.abrirMonitoramento(this.pautaId, assistido.id, assistido.name);
-                    else this.abrirLinhaDoTempo(assistido);
-                });
+    hideLoadingScreen() {
+        const idsDeCarregamento = [
+            'loading-screen', 'global-loader', 'splash-screen', 
+            'loading-container', 'auth-loading-spinner'
+        ];
+        idsDeCarregamento.forEach(id => {
+            const loader = document.getElementById(id);
+            if (loader) {
+                loader.classList.add('hidden');
+                loader.style.display = 'none'; 
             }
-        }, 100);
-    },
+        });
+    }
 
-    _renderizarPainelFechado() {
-        const aba = document.getElementById('aba-encerramento');
-        aba.innerHTML = `
-            <div class="text-center p-6 bg-red-50 rounded-2xl border border-red-200 shadow-sm mt-4 mb-6">
-                <div class="w-14 h-14 bg-red-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('lock', 'w-6 h-6')}</div>
-                <h2 class="text-lg font-black text-red-800 uppercase tracking-wider mb-2">Pauta Fechada</h2>
-                <p class="text-xs font-bold text-red-700 leading-relaxed">O Coordenador fechou a pauta. Você está em modo somente leitura. Nenhuma ação pode ser executada neste assistido.</p>
-            </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest active:scale-95">Voltar para a Mesa</button>
-        `;
-    },
-
-    async registrarCnpFinal() {
-        if (this.pautaFechada || this.isProcessing) return;
-        const cnp = document.getElementById('input-cnp-final')?.value.trim() || '';
-        if (!cnp) { alert("Informe o número do processo (CNP)."); return; }
-
-        this.isProcessing = true;
+    async setupOfflinePersistence() {
         try {
-            const iso = new Date().toISOString();
-            await updateDoc(doc(db, "pautas", this.pautaId, "attendances", this.assistidoId), {
-                status: 'atendido',
-                numeroProcesso: cnp,
-                finalizadoPeloColaborador: true,
-                distributionStatus: 'completed',
-                historicoAcoes: arrayUnion(this._registroHistorico(`CNP registrado: ${cnp}`, iso)),
-                history: arrayUnion({ action: 'APROVADO_E_DISTRIBUIDO', by: this.colaboradorNome || 'Sistema', msg: `Nº CNP: ${cnp}`, at: iso })
+            await enableMultiTabIndexedDbPersistence(this.db);
+        } catch (err) {
+            console.warn('Cache/Offline warning:', err.code);
+        }
+        window.addEventListener('offline', () => document.getElementById('offline-indicator')?.classList.remove('hidden'));
+        window.addEventListener('online', () => {
+            document.getElementById('offline-indicator')?.classList.add('hidden');
+            showNotification("Conexão restabelecida!", "success");
+            playSound('notification');
+        });
+    }
+
+    async loadExternalModalsContent() {
+        const modalsToLoad = [
+            { selector: '#policy-content', url: './politica.html' },
+            { selector: '#manual-modal .scrollable-content', url: './manual.html' },
+            { selector: '#terms-modal .scrollable-content', url: './termos.html' }
+        ];
+
+        for (const item of modalsToLoad) {
+            try {
+                const response = await fetch(item.url);
+                if (response.ok) {
+                    const html = await response.text();
+                    const container = document.querySelector(item.selector);
+                    if (container) container.innerHTML = html; 
+                }
+            } catch (error) {
+                console.error(`Erro ao tentar buscar ${item.url}:`, error);
+            }
+        }
+    }
+
+    setupEventListeners() {
+        this.setupAuthEvents();
+        this.setupNavigationEvents();
+        this.setupPautaMenuEvents();
+        this.setupPautaSettingsEvents();
+        this.setupAttendanceEvents();
+        this.setupChecklistEvents();
+        this.setupMiscEvents();
+        this.setupGlobalModalsAndFooterEvents();
+        
+        NotesService.setup();
+        UIService.setupFooterModals();
+        this.setupSubjectsAutocomplete();
+        this.setupColetas();
+    }
+
+    setupAuthEvents() {
+        AuthService.setupEvents(this);
+    }
+
+    setupNavigationEvents() {
+        document.getElementById('view-dashboard-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.DASHBOARD, {}, false));
+        document.getElementById('dashboard-back-to-pautas-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));        
+        document.getElementById('btn-recepcao-central')?.addEventListener('click', () => this.router.navigate(ROUTES.RECEPCAO_CENTRAL, {}, false));
+        
+        document.getElementById('open-user-preferences-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.MEU_PERFIL, {}, false));
+        document.getElementById('perfil-back-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false));
+        
+        document.getElementById('admin-panel-btn')?.addEventListener('click', () => this.router.navigate(ROUTES.ADMIN, {}, false));
+        
+        document.getElementById('back-to-pautas-btn')?.addEventListener('click', () => {
+            this._teardownPauta();
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
+        });
+
+        document.getElementById('btn-trocar-modo')?.addEventListener('click', () => this.voltarParaSelecaoModo());
+        document.getElementById('btn-trocar-modo-app')?.addEventListener('click', () => this.voltarParaSelecaoModo());
+        document.getElementById('btn-trocar-unidade')?.addEventListener('click', () => this.abrirModalSelecaoUnidade());
+
+        document.getElementById('create-pauta-btn')?.addEventListener('click', async () => {
+            const modoAtual = this.currentMode;
+            if (modoAtual === 'evento') {
+                const tipoEvento = await this.mostrarSeletorTipoEvento();
+                if (!tipoEvento) return;
+                this.tipoPautaSelecionado = tipoEvento;
+            } else {
+                this.tipoPautaSelecionado = 'normal';
+            }
+            document.getElementById('pauta-type-modal')?.classList.remove('hidden');
+        });
+
+        document.addEventListener('click', (e) => {
+            const actionsToggle = document.getElementById('actions-toggle');
+            const actionsPanel = document.getElementById('actions-panel');
+            
+            if (actionsPanel && actionsPanel.contains(e.target)) {
+                return;
+            }
+
+            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.contains(e.target) && !actionsToggle?.contains(e.target)) {
+                actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            
+            const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+            const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+            if (pautaSettingsPanel && !pautaSettingsPanel.classList.contains('hidden') && pautaSettingsToggle && !pautaSettingsToggle.contains(e.target)) {
+                 pautaSettingsPanel.classList.add('hidden');
+                 document.getElementById('pauta-settings-arrow')?.classList.remove('rotate-180');
+            }
+        });
+        
+        document.getElementById('modo-back-to-login')?.addEventListener('click', () => {
+            localStorage.removeItem('sigep_active_screen');
+            localStorage.removeItem('sigep_app_state');
+            document.getElementById('modo-selection-screen')?.classList.add('hidden');
+            document.getElementById('login-container')?.classList.remove('hidden');
+            AuthService.logout(this.auth);
+            const cleanUrl = window.location.origin + window.location.pathname;
+            window.history.pushState({}, '', cleanUrl);
+        });
+    }
+
+    setupPautaMenuEvents() {
+        document.getElementById('actions-toggle')?.addEventListener('click', UIService.toggleActionsPanel);
+
+        // Botões do menu de Ações: cada um navega para a sua rota e o router abre o modal.
+        const irParaRota = (btnId, rota) => {
+            document.getElementById(btnId)?.addEventListener('click', (e) => {
+                e.preventDefault(); 
+                if (!this.currentPauta) return;
+                e.stopImmediatePropagation();
+                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                this.router.navigate(rota, { pautaId: this.currentPauta.id }, false);
             });
-            if (typeof showNotification === 'function') showNotification("CNP registrado. Caso concluído!", "success");
-            document.getElementById('btn-voltar-dashboard').click();
+        };
+        
+        irParaRota('btn-painel-geral-externo', ROUTES.MONITOR_EQUIPE);
+        irParaRota('share-pauta-btn', ROUTES.COMPARTILHAMENTO);
+        irParaRota('open-totem-btn', ROUTES.TOTEM);
+        irParaRota('view-stats-btn', ROUTES.ESTATISTICAS);
+        irParaRota('edit-pauta-name-btn', ROUTES.EDITAR_NOME_PAUTA);
+        irParaRota('edit-pauta-config-btn', ROUTES.CONFIGURACAO_PAUTA);
+        irParaRota('manage-members-btn', ROUTES.COMPARTILHAR_PAUTA);
+        irParaRota('manage-collaborators-btn', ROUTES.COLABORADORES_PAUTA);
+        irParaRota('notes-btn', ROUTES.ANOTACOES_PAUTA);
+
+        document.getElementById('btn-monitor-pauta-global')?.addEventListener('click', (e) => {
+            e.preventDefault(); 
+            if (!this.currentPauta) return;
+            document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            if (window.abrirMonitoramentoGlobal) window.abrirMonitoramentoGlobal();
+        });
+
+        document.getElementById('share-toggle')?.addEventListener('change', async (e) => {
+            const isPublic = e.target.checked;
+            const statusText = document.getElementById('share-status-text');
+            const linkContainer = document.getElementById('share-link-container');
+            const linkInput = document.getElementById('share-link-input');
+            const openBtn = document.getElementById('open-external-btn');
+
+            if (this.currentPauta && this.currentPauta.id) {
+                try {
+                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isPublic: isPublic });
+                    if(this.currentPautaData) this.currentPautaData.isPublic = isPublic;
+                } catch (err) {
+                    showNotification("Erro ao publicar a pauta.", "error");
+                    e.target.checked = !isPublic;
+                    return;
+                }
+            }
+
+            if (isPublic) {
+                statusText.textContent = 'Público';
+                statusText.classList.remove('text-gray-900');
+                statusText.classList.add('text-pink-600');
+                linkContainer.classList.remove('hidden');
+                
+                const pautaId = this.currentPauta?.id || 'ID_DA_PAUTA';
+                const baseUrl = window.location.origin + window.location.pathname.replace('index.html', '');
+                const shareUrl = `${baseUrl}acompanhamento.html?id=${pautaId}`;
+                
+                if (linkInput) linkInput.value = shareUrl;
+                if (openBtn) openBtn.href = shareUrl;
+            } else {
+                statusText.textContent = 'Privado';
+                statusText.classList.remove('text-pink-600');
+                statusText.classList.add('text-gray-900');
+                linkContainer.classList.add('hidden');
+            }
+        });
+
+        document.getElementById('mask-names-check')?.addEventListener('change', async (e) => {
+            const maskNames = e.target.checked;
+            if (this.currentPauta && this.currentPauta.id) {
+                try {
+                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { maskNames: maskNames });
+                    if(this.currentPautaData) this.currentPautaData.maskNames = maskNames;
+                } catch (err) {}
+            }
+        });
+
+        document.getElementById('copy-share-link-btn')?.addEventListener('click', () => {
+            const linkInput = document.getElementById('share-link-input');
+            if (linkInput && linkInput.value) {
+                navigator.clipboard.writeText(linkInput.value);
+                if (window.showNotification) {
+                    window.showNotification("Link público copiado com sucesso!", "success");
+                } else {
+                    alert("Link copiado!");
+                }
+            }
+        });
+    }
+
+    setupPautaSettingsEvents() {
+        const pautaSettingsToggle = document.getElementById('pauta-settings-toggle');
+        const pautaSettingsPanel = document.getElementById('pauta-settings-panel');
+        if (pautaSettingsToggle && pautaSettingsPanel) {
+            pautaSettingsToggle.addEventListener('click', (e) => {
+                e.stopPropagation();
+                pautaSettingsPanel.classList.toggle('hidden');
+                if (!pautaSettingsPanel.classList.contains('hidden')) this.loadColumnPreferences();
+            });
+        }
+
+        document.getElementById('toggle-em-atendimento')?.addEventListener('change', () => this.saveColumnPreferences());
+        document.getElementById('toggle-distribuicao')?.addEventListener('change', () => this.saveColumnPreferences());
+        document.getElementById('toggle-faltosos')?.addEventListener('change', () => this.saveColumnPreferences());
+
+        document.getElementById('btn-manage-rooms')?.addEventListener('click', () => {
+            const listContainer = document.getElementById('manage-rooms-list');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+            
+            if (this.currentPautaData?.type === 'multisala' && this.customRoomsList?.length > 0) {
+                this.customRoomsList.forEach((room) => {
+                    const div = document.createElement('div');
+                    div.className = "flex gap-2 items-center mb-3 bg-gray-50 p-2 rounded-lg border";
+                    div.innerHTML = `<input type="text" class="room-edit-input flex-1 p-2 border rounded" data-original="${escapeHTML(room)}" value="${escapeHTML(room)}">`;
+                    listContainer.appendChild(div);
+                });
+            }
+            document.getElementById('manage-rooms-modal')?.classList.remove('hidden');
+        });
+        
+        document.getElementById('save-manage-rooms-btn')?.addEventListener('click', async () => {
+            const inputs = document.querySelectorAll('.room-edit-input');
+            const newRoomsList = [];
+            const roomChanges = []; 
+            inputs.forEach(input => {
+                const newName = input.value.trim();
+                if (newName) {
+                    newRoomsList.push(newName);
+                    if (newName !== input.dataset.original) roomChanges.push({ oldName: input.dataset.original, newName });
+                }
+            });
+
+            try {
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { customRooms: newRoomsList, rooms: newRoomsList });
+                this.customRoomsList = newRoomsList;
+                if (this.currentPautaData) this.currentPautaData.customRooms = newRoomsList;
+
+                if (roomChanges.length > 0) {
+                    const batch = writeBatch(this.db);
+                    let hasChanges = false;
+                    this.allAssisted.forEach(assisted => {
+                        const change = roomChanges.find(c => c.oldName === assisted.room);
+                        if (change) {
+                            batch.update(doc(this.db, "pautas", this.currentPauta.id, "attendances", assisted.id), { room: change.newName });
+                            hasChanges = true;
+                        }
+                    });
+                    if (hasChanges) await batch.commit();
+                }
+                document.getElementById('manage-rooms-modal')?.classList.add('hidden');
+                if (typeof UIService.renderAssistedLists === 'function') UIService.renderAssistedLists(this);
+            } catch (error) {
+                showNotification("Erro ao atualizar salas.", "error");
+            }
+        });
+
+        const openCloseModal = (isReopen) => {
+            document.getElementById('close-modal-title').textContent = isReopen ? 'Reabrir Pauta' : 'Fechar Pauta';
+            document.getElementById('close-pauta-password').value = '';
+            document.getElementById('confirm-close-pauta-btn').textContent = isReopen ? 'Reabrir' : 'Confirmar';
+            document.getElementById('close-pauta-modal').classList.remove('hidden');
+        };
+        document.getElementById('close-pauta-btn')?.addEventListener('click', () => openCloseModal(false));
+        document.getElementById('reopen-pauta-btn')?.addEventListener('click', () => openCloseModal(true));
+        
+        document.getElementById('confirm-close-pauta-btn')?.addEventListener('click', async () => {
+            const password = document.getElementById('close-pauta-password')?.value;
+            const isReopen = document.getElementById('confirm-close-pauta-btn')?.textContent.includes('Reabrir');
+            const user = this.auth.currentUser;
+            
+            if (!user || user.uid !== this.currentPautaOwnerId) return showNotification("Sem permissão.", "error");
+
+            try {
+                await reauthenticateWithCredential(user, EmailAuthProvider.credential(user.email, password));
+                await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { isClosed: !isReopen });
+                this.isPautaClosed = !isReopen;
+                UIService.togglePautaLock(this);
+                document.getElementById('close-pauta-modal')?.classList.add('hidden');
+                showNotification(`Pauta ${isReopen ? 'reaberta' : 'fechada'}.`, 'success');
+            } catch (error) {
+                showNotification("Senha incorreta.", "error");
+            }
+        });
+        
+        document.getElementById('reset-all-btn')?.addEventListener('click', () => document.getElementById('reset-confirm-modal').classList.remove('hidden'));
+        document.getElementById('confirm-reset-btn')?.addEventListener('click', async () => {
+            const snapshot = await getDocs(collection(this.db, "pautas", this.currentPauta.id, "attendances"));
+            const batch = writeBatch(this.db);
+            snapshot.docs.forEach(doc => batch.delete(doc.ref));
+            await batch.commit();
+            document.getElementById('reset-confirm-modal')?.classList.add('hidden');
+            showNotification("Pauta zerada com sucesso.", "success");
+        });
+
+        // 1. INJEÇÃO DO GRUPO "PAINEL DA TV" NO MENU AÇÕES
+        const observerMenuAcoes = new MutationObserver(() => {
+            const actionsPanel = document.getElementById('actions-panel');
+            if (actionsPanel && !actionsPanel.classList.contains('hidden') && !actionsPanel.classList.contains('opacity-0')) {
+                const tvAtivada = this.currentPautaData?.useTvPanel !== false;
+                let tvGroup = document.getElementById('tv-panel-actions-group');
+                
+                if (!tvGroup) {
+                    tvGroup = document.createElement('div');
+                    tvGroup.id = 'tv-panel-actions-group';
+                    tvGroup.innerHTML = `
+                        <div class="h-px bg-slate-100 my-2 mx-3"></div>
+                        <p class="px-4 pt-1 pb-1.5 text-[11px] text-slate-400 uppercase tracking-wider font-bold">Painel da TV / Fila</p>
+                        
+                        <button id="config-local-tv-btn" class="w-full text-left px-4 py-2 hover:bg-indigo-50 flex items-center gap-3 transition-colors">
+                            <span class="w-7 h-7 rounded-lg bg-indigo-100 text-indigo-600 flex items-center justify-center text-sm shadow-sm shrink-0">${ico('mapPin')}</span>
+                            <span>
+                                <span class="text-sm font-semibold text-slate-700 block leading-tight">Meu Local (Guichê)</span>
+                                <span class="text-[11px] font-normal text-slate-400 block leading-tight mt-0.5">Definir de onde estou chamando</span>
+                            </span>
+                        </button>
+
+                        <button id="abrir-config-tv-btn" class="w-full text-left px-4 py-2 hover:bg-purple-50 flex items-center gap-3 transition-colors">
+                            <span class="w-7 h-7 rounded-lg bg-purple-100 text-purple-600 flex items-center justify-center text-sm shadow-sm shrink-0">${ico('tv')}</span>
+                            <span>
+                                <span class="text-sm font-semibold text-purple-800 block leading-tight">Configurar Painel TV</span>
+                                <span class="text-[11px] font-normal text-purple-500 block leading-tight mt-0.5">Logo, Som, Vídeo e Modo Visual</span>
+                            </span>
+                        </button>
+                    `;
+                    
+                    const totemBtnOriginal = document.getElementById('open-totem-btn');
+                    if (totemBtnOriginal && totemBtnOriginal.parentNode) {
+                        totemBtnOriginal.parentNode.insertBefore(tvGroup, totemBtnOriginal.nextSibling);
+                    } else {
+                        actionsPanel.appendChild(tvGroup);
+                    }
+
+                    tvGroup.querySelector('#config-local-tv-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        if (this.currentPauta) {
+                            const localSalvo = localStorage.getItem('sigep_tv_local_' + this.currentPauta.id);
+                            const novoLocal = prompt(
+                                "Qual o seu Local de Atendimento atual?\n(Ex: Guichê 1, Sala 3, Mesa 5)\n\nIsso será usado para chamar os assistidos na TV de forma automática.",
+                                localSalvo || ""
+                            );
+                            if (novoLocal !== null && novoLocal.trim() !== "") {
+                                localStorage.setItem('sigep_tv_local_' + this.currentPauta.id, novoLocal.trim());
+                                showNotification(`Local da TV definido como: ${novoLocal.trim()}`, "success");
+                            }
+                            actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                        }
+                    });
+
+                    tvGroup.querySelector('#abrir-config-tv-btn').addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        this.abrirModalConfigTVPauta();
+                        actionsPanel.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                        document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+                    });
+                }
+
+                if (tvAtivada) {
+                    tvGroup.classList.remove('hidden');
+                } else {
+                    tvGroup.classList.add('hidden');
+                }
+                PermissoesService.aplicarUI(this.currentUser);
+            }
+        });
+        
+        const actionsPanelEl = document.getElementById('actions-panel');
+        if (actionsPanelEl) {
+            observerMenuAcoes.observe(actionsPanelEl, { attributes: true, attributeFilter: ['class'] });
+        }
+
+        // 2. INJEÇÃO DO INTERRUPTOR "USAR PAINEL DA TV" DENTRO DO MODAL DE EDIÇÃO DE CONFIGURAÇÕES
+        const observerEdicao = new MutationObserver(() => {
+            const modalEdicao = document.getElementById('edit-pauta-config-modal');
+            if (modalEdicao && !modalEdicao.classList.contains('hidden')) {
+                let divConfigTV = document.getElementById('edit-use-tv-panel-container');
+                if (!divConfigTV) {
+                    const btnCancelarSalvar = document.getElementById('confirm-edit-pauta-config-btn')?.parentNode;
+                    if (btnCancelarSalvar) {
+                        divConfigTV = document.createElement('div');
+                        divConfigTV.id = 'edit-use-tv-panel-container';
+                        divConfigTV.className = 'mb-4 p-3 bg-indigo-50 rounded-lg border border-indigo-100 mx-5';
+                        divConfigTV.innerHTML = `
+                            <label class="flex items-center cursor-pointer gap-3">
+                                <input type="checkbox" id="edit-use-tv-panel" class="w-5 h-5 text-indigo-600 rounded focus:ring-indigo-500 cursor-pointer">
+                                <div>
+                                    <span class="block text-sm font-bold text-slate-800">${ico('tv')} Utilizar Painel da TV</span>
+                                    <span class="block text-[10px] text-slate-500">Se ativado, exibe o configurador do Painel TV no menu Ações e envia chamadas para a TV.</span>
+                                </div>
+                            </label>
+                        `;
+                        btnCancelarSalvar.parentNode.insertBefore(divConfigTV, btnCancelarSalvar);
+
+                        const btnSalvar = document.getElementById('confirm-edit-pauta-config-btn');
+                        if (btnSalvar && !btnSalvar.hasAttribute('data-tv-hooked')) {
+                            btnSalvar.setAttribute('data-tv-hooked', 'true');
+                            btnSalvar.addEventListener('click', async () => {
+                                if (!this.currentPauta?.id) return;
+                                const tvVal = document.getElementById('edit-use-tv-panel')?.checked ?? true;
+                                try {
+                                    await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { useTvPanel: tvVal });
+                                    if (this.currentPautaData) this.currentPautaData.useTvPanel = tvVal;
+                                    const tvGroupMenu = document.getElementById('tv-panel-actions-group');
+                                    if (tvGroupMenu) tvGroupMenu.classList.toggle('hidden', !tvVal);
+                                } catch (e) {
+                                    console.error("Erro ao salvar useTvPanel:", e);
+                                }
+                            });
+                        }
+                    }
+                }
+                const tvCheck = document.getElementById('edit-use-tv-panel');
+                if (tvCheck && this.currentPautaData) {
+                    tvCheck.checked = this.currentPautaData.useTvPanel !== false;
+                }
+            }
+        });
+        
+        const modalEdicaoEl = document.getElementById('edit-pauta-config-modal');
+        if (modalEdicaoEl) observerEdicao.observe(modalEdicaoEl, { attributes: true, attributeFilter: ['class'] });
+    }
+
+    setupAttendanceEvents() {
+        document.getElementById('call-next-assisted-btn')?.addEventListener('click', () => PautaService.callNextAssisted(this));
+        
+        document.getElementById('add-assisted-btn')?.addEventListener('click', () => {
+            if (typeof PautaService.addAssisted === 'function') PautaService.addAssisted(this);
+            else document.getElementById('add-assisted-modal')?.classList.remove('hidden');
+        });
+
+        document.body.addEventListener('click', (e) => {
+            PautaService.handleCardActions(e, this);
+            
+            const removeBtn = e.target.closest('.remove-member-btn');
+            if (removeBtn) {
+                const email = removeBtn.dataset.email;
+                if (this.currentPautaData && email === this.currentPautaData.ownerEmail) {
+                    return showNotification("O dono da pauta não pode ser removido!", "error");
+                }
+                if (confirm(`Remover ${email} da pauta?`)) {
+                    getDocs(query(collection(this.db, "users"), where("email", "==", email))).then(async snapshot => {
+                        if (!snapshot.empty) {
+                            await updateDoc(doc(this.db, "pautas", this.currentPauta.id), { 
+                                members: arrayRemove(snapshot.docs[0].id), memberEmails: arrayRemove(email) 
+                            });
+                            if (typeof ModalService?.openMembersModal === 'function') await ModalService.openMembersModal(this);
+                        }
+                    });
+                }
+            }
+        });
+
+        this._bindModalConfirmation('confirm-edit-assisted-btn', async () => {
+            const name = document.getElementById('edit-assisted-name')?.value.trim();
+            if (!name) return showNotification("O nome não pode ficar em branco.", "error");
+            
+            const updatedData = {
+                name: name,
+                cpf: document.getElementById('edit-assisted-cpf')?.value.trim() || '',
+                numAgendamento: document.getElementById('edit-assisted-num-agendamento')?.value.trim() || '',
+                subject: document.getElementById('edit-assisted-subject')?.value.trim() || '',
+                scheduledTime: document.getElementById('edit-scheduled-time')?.value || null,
+            };
+            const roomSelect = document.getElementById('edit-room-select');
+            if (roomSelect && !roomSelect.parentElement.classList.contains('hidden')) updatedData.room = roomSelect.value || null;
+            
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, updatedData, this.currentUserName);
+            
+            if (window.MonitoramentoService) {
+                await window.MonitoramentoService.registrarAcaoHistorico(this.currentPauta.id, window.assistedIdToHandle, "Dados do assistido editados manualmente", this);
+            }
+            
+            document.getElementById('edit-assisted-modal')?.classList.add('hidden');
+        });
+
+        this._bindModalConfirmation('confirm-priority-reason-btn', async () => {
+            const selectedChips = Array.from(document.querySelectorAll('.p-chip.selected')).map(chip => chip.dataset.value);
+            const customReason = document.getElementById('priority-reason-input')?.value.trim() || '';
+            let finalReason = selectedChips.join(', ');
+            if (customReason) finalReason = finalReason ? `${finalReason} | Obs: ${customReason}` : customReason;
+
+            if (!finalReason) return showNotification("Selecione um motivo.", "error");
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { priority: 'URGENTE', priorityReason: finalReason }, this.currentUserName);
+            document.getElementById('priority-reason-modal')?.classList.add('hidden');
+        });
+
+        this._bindModalConfirmation('save-demands-btn', async () => {
+            const items = document.getElementById('demands-modal-list-container')?.querySelectorAll('li') || [];
+            const descricoes = Array.from(items).map(li => li.querySelector('span')?.textContent || '');
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { demandas: { quantidade: descricoes.length, descricoes: descricoes } }, this.currentUserName);
+            document.getElementById('demands-modal')?.classList.add('hidden');
+        });
+
+        this._bindModalConfirmation('confirm-arrival-btn', async () => {
+            const time = document.getElementById('arrival-time-input')?.value;
+            if (!time) return showNotification("Informe o horário", "error");
+            const arrivalDate = new Date();
+            arrivalDate.setHours(...time.split(':'), 0, 0);
+            
+            const roomSelect = document.getElementById('arrival-room-select');
+            const room = roomSelect && !roomSelect.classList.contains('hidden') ? roomSelect.value : null;
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { status: 'aguardando', arrivalTime: arrivalDate.toISOString(), checkInOrder: Date.now(), room: room }, this.currentUserName);
+            document.getElementById('arrival-modal')?.classList.add('hidden');
+        });
+        
+        document.getElementById('confirm-attendant-btn')?.addEventListener('click', async () => {
+            const nomeFinal = document.getElementById('attendant-select')?.value || null;
+            const useDist = this.currentPautaData?.useDistributionFlow === true;
+            const novoStatus = useDist ? 'aguardandoDistribuicao' : 'atendido';
+
+            let attendantData = nomeFinal;
+            const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+            if (selectedCollab) attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+
+            const mapaProdutividadeBI = {};
+            if (novoStatus === 'atendido') {
+                mapaProdutividadeBI[this.currentUserName || "Servidor"] = 1; 
+                if (nomeFinal) mapaProdutividadeBI[nomeFinal] = 1;
+            }
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { 
+                status: novoStatus, attendant: attendantData, enviadoPor: this.currentUserName || "Servidor",
+                attendedBy: nomeFinal, trabalhosPorUsuario: novoStatus === 'atendido' ? mapaProdutividadeBI : null, attendedTime: new Date().toISOString() 
+            }, this.currentUserName);
+            
+            document.getElementById('attendant-modal')?.classList.add('hidden');
+        });
+
+        document.getElementById('confirm-edit-attendant-btn')?.addEventListener('click', async () => {
+            const nomeFinal = document.getElementById('edit-attendant-select')?.value || null;
+            if (!nomeFinal) {
+                showNotification("Selecione um novo atendente.", "warning");
+                return;
+            }
+
+            let attendantData = nomeFinal;
+            const selectedCollab = this.colaboradores?.find(c => c.nome === nomeFinal);
+            if (selectedCollab) {
+                attendantData = { nome: selectedCollab.nome, cargo: selectedCollab.cargo, equipe: selectedCollab.equipe };
+            }
+
+            await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, { 
+                attendant: attendantData, 
+                attendedBy: nomeFinal,
+                assignedCollaborator: { id: selectedCollab ? selectedCollab.id : 'manual', name: nomeFinal }
+            }, this.currentUserName);
+            
+            document.getElementById('edit-attendant-modal')?.classList.add('hidden');
+            showNotification("Atendente atualizado com sucesso!", "success");
+        });
+        
+        document.getElementById('confirm-select-collaborator-btn')?.addEventListener('click', async () => {
+            const isAcaoRapida = ['reagendar', 'agendar', 'consulta', 'outros'].includes(window.assistedTipoAcao);
+            if (!isAcaoRapida && window.selectedCollaboratorId === null) return showNotification("Selecione um colaborador.", "warning");
+            
+            const isSilentMode = localStorage.getItem('sigep_silent_mode') === 'true' || document.getElementById('toggle-silent-mode')?.checked;
+            
+            if (isAcaoRapida) {
+                await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                    status: 'atendido', attendedBy: window.selectedCollaboratorName || this.currentUserName,
+                    enviadoPor: this.currentUserName || 'Sistema', inAttendanceTime: new Date().toISOString(),
+                    tipoAcaoRapida: window.assistedTipoDescricao, finalizadoPeloColaborador: true
+                }, this.currentUserName);
+            } else if (window.assistedTipoAcao === 'atender_direto') {
+                await PautaService.finishAttendance(this, window.assistedIdToHandle, window.selectedCollaboratorName || this.currentUserName, []);
+            } else {
+                let colabData = null, emailDestino = null;
+                const novoToken = Math.random().toString(36).substring(2, 10) + Date.now().toString(36).substring(4);
+                
+                if (window.selectedCollaboratorName) {
+                    const collab = this.colaboradores?.find(c => c.nome === window.selectedCollaboratorName);
+                    emailDestino = collab?.email || null;
+                    colabData = { id: window.selectedCollaboratorId, name: window.selectedCollaboratorName, email: emailDestino };
+                }
+
+                await PautaService.updateStatus(this.db, this.currentPauta.id, window.assistedIdToHandle, {
+                    status: 'emAtendimento', assignedCollaborator: colabData, enviadoPor: this.currentUserName || 'Sistema',
+                    inAttendanceTime: new Date().toISOString(), ...(window.selectedCollaboratorName && { delegationToken: novoToken })
+                }, this.currentUserName);
+
+                if (emailDestino && !isSilentMode) {
+                    EmailService.sendDelegationEmail(emailDestino, window.selectedCollaboratorName, window.assistedNameToHandle, this.currentUserName, this.currentPauta.id, window.assistedIdToHandle, novoToken);
+                }
+            }
+            document.getElementById('select-collaborator-modal')?.classList.add('hidden');
+        });
+    }
+
+    setupChecklistEvents() {
+        document.getElementById('save-checklist-btn')?.addEventListener('click', async () => {
+            const assistedId = window.assistedIdToHandle || window.currentAssistedId;
+            const container = document.getElementById('checklist-container');
+            const checkedItems = Array.from(container.querySelectorAll('.doc-checkbox:checked')).map(cb => ({
+                id: cb.id, type: document.querySelector(`input[name="type-${cb.id}"]:checked`)?.value || 'Físico'
+            }));
+
+            const checklistData = {
+                action: window.currentChecklistAction, 
+                checkedIds: checkedItems.map(item => item.id),
+                docTypes: checkedItems.reduce((acc, item) => { acc[item.id] = item.type; return acc; }, {}),
+                reuData: window.getReuDataFromForm ? window.getReuDataFromForm() : {},
+                expenseData: window.getExpenseDataFromForm ? window.getExpenseDataFromForm() : {}
+            };
+
+            await updateDoc(doc(this.db, "pautas", this.currentPauta.id, "attendances", assistedId), {
+                documentChecklist: checklistData, documentState: 'saved'
+            });
+            showNotification("Checklist salvo com sucesso!", "success");
+        });
+
+        document.getElementById('print-checklist-btn')?.addEventListener('click', async () => {
+            const { handlePdf } = await import('./detalhes.js');
+            if (typeof handlePdf === 'function') await handlePdf();
+        });
+        
+        document.getElementById('reset-checklist-btn')?.addEventListener('click', () => {
+            if (confirm("Deseja mudar de assunto? Isso apagará o checklist atual.") && typeof window.switchToActionSelectionView === 'function') {
+                window.switchToActionSelectionView();
+            }
+        });
+        document.getElementById('back-to-action-selection-btn')?.addEventListener('click', () => {
+            if (typeof window.switchToActionSelectionView === 'function') window.switchToActionSelectionView();
+        });
+    }
+
+    setupMiscEvents() {
+        document.getElementById('file-upload')?.addEventListener('change', (e) => PautaService.handleCSVUpload(e, this));
+        document.getElementById('toggle-faltosos-btn')?.addEventListener('click', UIService.toggleFaltosos);
+        
+        ['pauta-search', 'aguardando-search', 'em-atendimento-search', 'atendidos-search', 'faltosos-search'].forEach(id => {
+            document.getElementById(id)?.addEventListener('input', () => UIService.renderAssistedLists(this));
+        });
+
+        const handlePDF = (type, e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopImmediatePropagation();
+                document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+                document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            }
+            
+            const nomePauta = this.currentPauta?.name || 'Pauta';
+            if (type === 'atendidos') PDFService.generateAtendidosPDF((this.allAssisted || []).filter(a => a.status === 'atendido'), nomePauta);
+            if (type === 'faltosos') {
+                const f = (this.allAssisted || []).filter(a => a.status === 'faltoso');
+                if (f.length === 0) return showNotification("Nenhum assistido faltoso.", "info");
+                PDFService.generateFaltososPDF(f, nomePauta);
+            }
+            if (type === 'colaboradores') PDFService.generateCollaboratorsPDF(this.colaboradores, this.allAssisted || [], nomePauta);
+        };
+        
+        document.getElementById('download-pdf-btn')?.addEventListener('click', (e) => handlePDF('atendidos', e));
+        document.getElementById('btn-metrica-atendidos')?.addEventListener('click', (e) => handlePDF('atendidos', e));
+        document.getElementById('download-faltosos-pdf-btn')?.addEventListener('click', (e) => handlePDF('faltosos', e));
+
+        document.getElementById('btn-gerar-ata-social')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopImmediatePropagation();
+            document.getElementById('actions-panel')?.classList.add('opacity-0', 'scale-95', 'pointer-events-none');
+            document.getElementById('actions-arrow')?.classList.remove('rotate-180');
+            
+            document.getElementById('ata-acao-nome').value = this.currentPauta?.name || '';
+            document.getElementById('ata-data').value = new Date().toISOString().split('T')[0];
+            document.getElementById('ata-total').value = this.allAssisted.filter(a => a.status === 'atendido').length;
+            document.getElementById('ata-social-modal').classList.remove('hidden');
+        });
+        
+        document.getElementById('confirm-ata-modal-btn')?.addEventListener('click', (e) => {
+            e.preventDefault();
+            const data = { 
+                acao: document.getElementById('ata-acao-nome')?.value, 
+                endereco: document.getElementById('ata-endereco')?.value, 
+                data: document.getElementById('ata-data')?.value, 
+                orgao: document.getElementById('ata-orgao')?.value, 
+                totalAtendimentos: document.getElementById('ata-total')?.value 
+            };
+            if (!data.acao || !data.endereco || !data.data || !data.orgao) return showNotification("Preencha os campos obrigatórios.", "error");
+            document.getElementById('ata-social-modal').classList.add('hidden');
+            const handler = confirm("Deseja VISUALIZAR a Ata antes de baixar?") ? PDFService.previewAtaAcaoSocial : PDFService.generateAtaAcaoSocial;
+            handler(this.currentPauta?.name, this.colaboradores, this.allAssisted.filter(a => a.status === 'atendido'), data);
+        });
+
+        document.getElementById('collaborator-form-modal')?.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const nome = document.getElementById('collaborator-name-modal')?.value.trim();
+            if (!nome) return showNotification("Nome obrigatório", "error");
+            await CollaboratorService.saveCollaborator(this, {
+                nome: nome, cargo: document.getElementById('collaborator-role-modal')?.value,
+                equipe: document.getElementById('collaborator-team-modal')?.value, email: document.getElementById('collaborator-email-modal')?.value || '',
+                telefone: document.getElementById('collaborator-phone-modal')?.value || '', transporte: document.querySelector('input[name="transporte-colaborador"]:checked')?.value || 'Meios Próprios'
+            });
+        });
+    }
+
+    setupGlobalModalsAndFooterEvents() {
+        document.querySelectorAll('[id^="cancel-"], [id^="close"]').forEach(btn => {
+            if (btn) btn.addEventListener('click', (e) => e.target.closest('.fixed')?.classList.add('hidden'));
+        });
+
+        document.getElementById('format-help-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('format-help-modal').classList.remove('hidden'); });
+        document.getElementById('privacy-policy-link')?.addEventListener('click', (e) => { e.preventDefault(); document.getElementById('privacy-policy-modal').classList.remove('hidden'); });
+
+        const toggleLogicBtn = document.getElementById('toggle-logic-btn-padrao');
+        const logicContent = document.getElementById('logic-explanation-padrao-content');
+        if (toggleLogicBtn && logicContent) {
+            toggleLogicBtn.addEventListener('click', () => {
+                logicContent.classList.toggle('hidden');
+            });
+        }
+
+        document.querySelectorAll('.p-chip').forEach(chip => {
+            chip.addEventListener('click', function(e) {
+                e.preventDefault();
+                this.classList.toggle('selected');
+            });
+        });
+    }
+
+    _bindModalConfirmation(btnId, callback) {
+        document.getElementById(btnId)?.addEventListener('click', callback);
+    }
+
+    async loadPautasWithFilter(filterOptions = null) {
+        const user = this.auth.currentUser;
+        if (!user) return;
+        
+        const pautasList = document.getElementById('pautas-list');
+        if (!pautasList) return;
+        pautasList.innerHTML = '<p class="col-span-full text-center py-8">Carregando pautas SIGEP...</p>';
+        
+        try {
+            const userDoc = await getDoc(doc(this.db, "users", user.uid));
+            if (userDoc.exists()) {
+                const userData = userDoc.data();
+                this.currentUser = { ...this.currentUser, ...userData };
+            }
+        } catch (err) {
+            console.warn("Aviso: erro ao buscar dados adicional do usuário.", err);
+        }
+    
+        try {
+            let pautasMap = new Map();
+            const isAdmin = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
+            const modoAtual = this.currentMode;
+
+            let qUser;
+            const orgaoDoUsuario = this.currentUser.orgaoId || 'padrao_dprj';
+
+            if (this.currentUser?.role === 'superadmin_global') {
+                qUser = query(collection(this.db, "pautas"));
+            } else if (isAdmin) {
+                qUser = query(collection(this.db, "pautas"), where("orgaoId", "==", orgaoDoUsuario));
+            } else {
+                qUser = query(
+                    collection(this.db, "pautas"),
+                    and(
+                        where("orgaoId", "==", orgaoDoUsuario),
+                        or(
+                            where("owner", "==", user.uid),
+                            where("members", "array-contains", user.uid)
+                        )
+                    )
+                );
+            }
+            
+            const snapUser = await getDocs(qUser);
+            snapUser.docs.forEach(doc => pautasMap.set(doc.id, { id: doc.id, ...doc.data() }));
+            
+            let pautas = Array.from(pautasMap.values());
+            
+            const tiposEventoValidos = ['mutirao', 'plantao', 'acao_social', 'mutirão', 'evento', 'mutirao_atendimento'];
+
+            if (modoAtual === 'evento') {
+                pautas = pautas.filter(p => {
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    return tiposEventoValidos.some(t => tipoPauta.includes(t)) || 
+                           String(p.name || '').toLowerCase().includes('mutirão') || 
+                           String(p.name || '').toLowerCase().includes('plantão');
+                });
+            } else {
+                pautas = pautas.filter(p => {
+                    const tipoPauta = String(p.tipo || p.type || 'normal').toLowerCase().trim();
+                    const ehMutiraoNoNome = String(p.name || '').toLowerCase().includes('mutirão') || String(p.name || '').toLowerCase().includes('plantão');
+                    return !tiposEventoValidos.some(t => tipoPauta.includes(t)) && !ehMutiraoNoNome;
+                });
+            }
+
+            if (this.currentUnidadeExibicao && this.currentUnidadeExibicao !== 'todas') {
+                pautas = pautas.filter(p => p.unidadeNome === this.currentUnidadeExibicao);
+            }
+
+            const btnTrocarUnidade = document.getElementById('btn-trocar-unidade');
+            if (btnTrocarUnidade) {
+                if (modoAtual === 'normal') {
+                    btnTrocarUnidade.classList.remove('hidden');
+                    btnTrocarUnidade.classList.add('flex');
+                } else {
+                    btnTrocarUnidade.classList.add('hidden');
+                    btnTrocarUnidade.classList.remove('flex');
+                }
+            }
+            
+            this.mostrarIndicadorModo();
+            let filteredPautas = [...pautas];
+            
+            if (filterOptions) {
+                switch (filterOptions.tipo) {
+                    case 'periodo':
+                        if (filterOptions.dataInicial && filterOptions.dataFinal) {
+                            const dataInicial = new Date(filterOptions.dataInicial);
+                            const dataFinal = new Date(filterOptions.dataFinal);
+                            dataFinal.setHours(23, 59, 59);
+                            filteredPautas = filteredPautas.filter(pauta => {
+                                if (!pauta.createdAt) return false;
+                                const dataCriacao = new Date(pauta.createdAt);
+                                return dataCriacao >= dataInicial && dataCriacao <= dataFinal;
+                            });
+                        }
+                        if (filterOptions.tipoPauta && filterOptions.tipoPauta !== 'todos') {
+                            filteredPautas = filteredPautas.filter(pauta => pauta.type === filterOptions.tipoPauta);
+                        }
+                        break;
+                        
+                    case 'unidades':
+                        const userUnidades = this.currentUser?.unidades || [];
+                        const isAdminFiltro = this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global';
+                        if (!isAdminFiltro && userUnidades.length > 0) {
+                            const userUnidadesNomes = userUnidades.map(u => u.unidadeNome);
+                            filteredPautas = filteredPautas.filter(pauta => userUnidadesNomes.includes(pauta.unidadeNome));
+                        }
+                        if (filterOptions.unidade && filterOptions.unidade !== 'todas') {
+                            filteredPautas = filteredPautas.filter(pauta => pauta.unidadeNome === filterOptions.unidade);
+                        }
+                        if (filterOptions.status && filterOptions.status !== 'todas') {
+                            filteredPautas = filteredPautas.filter(pauta => {
+                                if (!pauta.createdAt) return false;
+                                const dataCriacao = new Date(pauta.createdAt);
+                                const dataExpiracao = new Date(dataCriacao);
+                                dataExpiracao.setDate(dataCriacao.getDate() + 7);
+                                const isExpired = new Date() > dataExpiracao;
+                                if (filterOptions.status === 'ativas') return !isExpired && !pauta.isClosed;
+                                else if (filterOptions.status === 'expiradas') return isExpired || pauta.isClosed;
+                                return true;
+                            });
+                        }
+                        break;
+                }
+            }
+            
+            // FILTRO DE ABAS (TODAS, MINHAS, ATIVAS, EXPIRADAS)
+            switch (this.currentPautaFilter) {
+                case 'my': 
+                    filteredPautas = filteredPautas.filter(p => p.owner === user.uid); 
+                    break;
+                case 'shared': 
+                    filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); 
+                    break;
+                case 'active':
+                    // REGRA LGPD E FECHADAS: Aplica apenas na aba "Ativas" (pautas abertas e com menos de 7 dias)
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (p.isClosed === true || p.fechada === true) return false;
+                        if (!p.createdAt) return false;
+                        const dExp = new Date(p.createdAt); 
+                        dExp.setDate(dExp.getDate() + 7);
+                        return new Date() <= dExp;
+                    }); 
+                    break;
+                case 'expired':
+                    // REGRA LGPD E FECHADAS: Pautas com mais de 7 dias ou explicitamente fechadas
+                    filteredPautas = filteredPautas.filter(p => {
+                        if (p.isClosed === true || p.fechada === true) return true;
+                        if (!p.createdAt) return false;
+                        const dExp = new Date(p.createdAt); 
+                        dExp.setDate(dExp.getDate() + 7);
+                        return new Date() > dExp;
+                    }); 
+                    break;
+                default:
+                    // 'all': Não filtra nada, mostra tudo (Histórico completo)
+                    break;
+            }
+
+            const searchInput = document.getElementById('search-pautas-input');
+            if (searchInput && searchInput.value) {
+                const termo = searchInput.value.toLowerCase().trim();
+                filteredPautas = filteredPautas.filter(p => (p.name || '').toLowerCase().includes(termo));
+            }
+
+            filteredPautas.sort((a, b) => {
+                const getTempo = (dataStrObj) => {
+                    if (!dataStrObj) return 0;
+                    if (dataStrObj.seconds) return dataStrObj.seconds * 1000;
+                    const parseado = new Date(dataStrObj).getTime();
+                    return isNaN(parseado) ? 0 : parseado;
+                };
+                return getTempo(b.createdAt) - getTempo(a.createdAt);
+            });
+            
+            if (filteredPautas.length === 0) {
+                const modoTexto = this.currentMode === 'normal' ? 'Normal' : 'Evento (Mutirão/Plantão/Ação Social)';
+                pautasList.innerHTML = `<p class="col-span-full text-center py-8 text-gray-500">Nenhuma pauta do tipo ${modoTexto} encontrada.</p>`;
+                return;
+            }
+            
+            UIService.renderPautaCards(filteredPautas, user.uid, user.email, this);
+            
         } catch (error) {
-            console.error(error);
-            alert(`Erro ao registrar o CNP: ${error.message}`);
-        } finally {
-            this.isProcessing = false;
+            console.error("Erro fatal ao carregar pautas:", error);
+            if (pautasList) pautasList.innerHTML = `<p class="col-span-full text-center text-red-500">Erro: ${error.message}</p>`;
         }
-    },
+    }
 
-    _renderizarPainelFinalizado(assistido) {
-        const aba = document.getElementById('aba-encerramento');
-        if (assistido.status === 'aguardandoNumero') {
-            aba.innerHTML = `
-                <div class="p-6 bg-indigo-50 rounded-2xl border border-indigo-200 shadow-sm mt-4 mb-6">
-                    <h2 class="text-base font-black text-indigo-800 uppercase tracking-wider mb-2 text-center">Aguardando Nº do Processo</h2>
-                    <p class="text-xs font-bold text-indigo-700 leading-relaxed text-center mb-4">Aprovado por <b>${escapeHTML(assistido.attendedBy || 'Defensor')}</b>. Informe o CNP para concluir a distribuição.</p>
-                    <input type="text" id="input-cnp-final" class="w-full p-3 border border-indigo-200 rounded-xl text-sm bg-white focus:ring-2 focus:ring-indigo-500 outline-none font-mono" placeholder="Ex: 1045239">
-                    <button id="btn-registrar-cnp" class="w-full mt-3 bg-indigo-600 hover:bg-indigo-700 text-white font-black py-3.5 rounded-xl shadow-md text-xs uppercase tracking-widest active:scale-95">Registrar CNP e Concluir</button>
+    // FUNÇÃO MESTRA PARA O MODAL DE CONFIGURAÇÃO DA TV NA PAUTA INDIVIDUAL
+    async abrirModalConfigTVPauta() {
+        if (!this.currentPauta) return;
+        const pautaId = this.currentPauta.id;
+        const pautaName = this.currentPauta.name;
+        
+        let logoAtual = '';
+        try {
+            const configSnap = await getDoc(doc(this.db, "pautas", pautaId, "painel", "config"));
+            if (configSnap.exists()) logoAtual = configSnap.data().logoUrl || '';
+        } catch(e) {}
+
+        const cacheConfig = JSON.parse(localStorage.getItem(`sigep_tv_config_${pautaId}`) || '{}');
+        const modoAtual = cacheConfig.modo || 'tv';
+        const videoAtual = cacheConfig.video || '';
+        const somAtual = cacheConfig.som !== undefined ? cacheConfig.som : true;
+
+        const modalId = 'modal-config-tv-individual';
+        let modal = document.getElementById(modalId);
+        if (modal) modal.remove();
+
+        modal = document.createElement('div');
+        modal.id = modalId;
+        modal.className = 'fixed inset-0 bg-slate-900/60 z-[200] flex items-center justify-center p-4 backdrop-blur-sm animate-fade-in';
+        
+        modal.innerHTML = `
+        <div class="bg-white rounded-2xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[90vh]" onclick="event.stopPropagation()">
+            <div class="px-6 py-5 border-b border-slate-100 flex justify-between items-center bg-slate-50">
+                <div>
+                    <h3 class="font-bold text-xl text-slate-800">Configurar Painel da TV</h3>
+                    <p class="text-sm font-semibold text-slate-500 mt-0.5">${escapeHTML(pautaName)}</p>
                 </div>
-                <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
-            `;
-            document.getElementById('btn-registrar-cnp').onclick = () => this.registrarCnpFinal();
-            return;
-        }
-        aba.innerHTML = `
-            <div class="text-center p-6 bg-emerald-50 rounded-2xl border border-emerald-200 shadow-sm mt-4 mb-6">
-                <div class="w-14 h-14 bg-emerald-500 rounded-full flex items-center justify-center text-white mx-auto shadow-sm mb-4">${ico('check', 'w-8 h-8')}</div>
-                <h2 class="text-lg font-black text-emerald-800 uppercase tracking-wider mb-2">Protocolo Concluído</h2>
-                <p class="text-xs font-bold text-emerald-700 leading-relaxed">Atendimento salvo por <b>${escapeHTML(assistido.attendedBy || 'Servidor')}</b>.</p>
-                ${assistido.numeroProcesso ? `<div class="mt-4 pt-3 border-t border-emerald-200"><span class="bg-white px-3 py-1.5 rounded-lg border border-emerald-300 text-emerald-900 font-mono text-sm font-black shadow-sm">CNP: ${escapeHTML(assistido.numeroProcesso)}</span></div>` : ''}
+                <button class="text-slate-400 hover:text-slate-600 transition-colors fechar-modal-tv bg-white p-2 rounded-full shadow-sm">
+                    <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 18L18 6M6 6l12 12"/></svg>
+                </button>
             </div>
-            <button onclick="document.getElementById('btn-voltar-dashboard').click()" class="w-full bg-slate-800 hover:bg-slate-950 text-white font-black py-4 rounded-xl shadow-md transition-all text-xs uppercase tracking-widest mb-3 active:scale-95">Voltar para a Mesa</button>
-        `;
-    },
-
-    // ─── GERADOR DE LINKS DIRETOS PARA O VERDE ──────────────────────────────
-
-    _gerarUrlVerde(idCaso) {
-        const limpo = String(idCaso || '').trim();
-        if (!/^\d+$/.test(limpo) || parseInt(limpo, 10) <= 0) return '';
-        return `https://verde.rj.def.br/verde/pages/caso/prontuario.xhtml?idCaso=${limpo}&vtPauta=true`;
-    },
-
-    _htmlCartaoVerde(assistido, isDefensor) {
-        const idCasoAtual = assistido.numeroProcesso || assistido.idCasoVerde || '';
-        const urlGerada = this._gerarUrlVerde(idCasoAtual);
-
-        return `
-            <div class="bg-slate-900 p-5 rounded-2xl border border-slate-800 shadow-md mb-6">
-                <p class="text-[10px] font-black uppercase tracking-widest text-emerald-400 mb-1">Gerador de Link Direto • VERDE</p>
-                <p class="text-xs font-medium text-slate-300 mb-3">Informe o Número do Caso (ID) para gerar o link de acesso:</p>
-
-                <div class="mb-3">
-                    <input type="text" id="input-id-caso-verde" value="${escapeHTML(idCasoAtual)}" placeholder="Ex: 7039722" class="w-full p-3 bg-slate-800 border border-slate-700 rounded-xl text-xs font-mono text-white outline-none focus:ring-2 focus:ring-emerald-500">
+            
+            <div class="p-6 overflow-y-auto space-y-7 bg-white flex-1 custom-scrollbar">
+                <!-- Modos de Visualização -->
+                <div>
+                    <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">1. Modo de visualização</span>
+                    <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'fila' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="fila" class="hidden" ${modoAtual === 'fila' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">${ico('clipboard', 'w-8 h-8')}</div>
+                            <div class="font-bold text-slate-800 text-sm">Lista (Fila)</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Visão em grade mostrando quem está nas mesas e os próximos da fila.</div>
+                        </label>
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'tv' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="tv" class="hidden" ${modoAtual === 'tv' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">${ico('tv', 'w-8 h-8')}</div>
+                            <div class="font-bold text-slate-800 text-sm">TV Padrão</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Painel de chamada limpo (fundo azul) com aviso sonoro e histórico.</div>
+                        </label>
+                        <label class="tv-modo-card relative border-2 rounded-xl p-5 text-center cursor-pointer transition-all ${modoAtual === 'video' ? 'border-blue-500 bg-blue-50 ring-2 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                            <input type="radio" name="tv_modo" value="video" class="hidden" ${modoAtual === 'video' ? 'checked' : ''}>
+                            <div class="text-3xl mb-2">▶️</div>
+                            <div class="font-bold text-slate-800 text-sm">TV + Vídeo</div>
+                            <div class="text-[11px] font-medium text-slate-500 mt-1.5 leading-tight">Exibe vídeos institucionais dividindo a tela com os últimos chamados.</div>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- YouTube (Só aparece se Vídeo selecionado) -->
+                <div id="tv-video-container" class="transition-opacity duration-300 ${modoAtual === 'video' ? 'opacity-100' : 'opacity-50 pointer-events-none'}">
+                    <label class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">2. Link do YouTube (Obrigatório para Modo Vídeo)</label>
+                    <input type="text" id="tv_video_url" value="${escapeHTML(videoAtual)}" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:ring-2 focus:ring-blue-500 outline-none font-mono" placeholder="Ex: https://www.youtube.com/watch?v=XyZ123...">
                 </div>
 
-                <div id="container-link-verde-gerado" class="${urlGerada ? '' : 'hidden'} space-y-2 mt-3 pt-3 border-t border-slate-800">
-                    <div class="p-2.5 bg-slate-800/80 rounded-xl border border-slate-700/50 break-all font-mono text-[10px] text-emerald-300 select-all" id="texto-url-gerada">
-                        ${urlGerada}
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <!-- Som -->
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Aviso Sonoro</span>
+                        <div class="grid grid-cols-2 gap-3">
+                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === true ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                                <input type="radio" name="tv_som" value="1" class="hidden" ${somAtual === true ? 'checked' : ''}>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bell')} Ativado</span>
+                            </label>
+                            <label class="tv-som-card border-2 rounded-xl p-3.5 text-center cursor-pointer transition-all ${somAtual === false ? 'border-blue-500 bg-blue-50 ring-1 ring-blue-200' : 'border-slate-200 hover:border-blue-300 hover:bg-slate-50'}">
+                                <input type="radio" name="tv_som" value="0" class="hidden" ${somAtual === false ? 'checked' : ''}>
+                                <span class="font-bold text-slate-700 text-sm flex items-center justify-center gap-2">${ico('bellOff')} Silencioso</span>
+                            </label>
+                        </div>
                     </div>
-                    <div class="flex gap-2 pt-1">
-                        <button type="button" id="btn-copiar-link-verde" class="flex-1 bg-white/10 hover:bg-white/20 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl active:scale-95 transition-colors">Copiar Link</button>
-                        <a href="${urlGerada}" id="btn-abrir-link-verde" target="_blank" rel="noopener" class="flex-1 text-center bg-emerald-600 hover:bg-emerald-700 text-white font-black text-[10px] uppercase tracking-widest py-2.5 rounded-xl shadow-sm active:scale-95 transition-colors">Abrir no VERDE &nearr;</a>
+
+                    <!-- Logo -->
+                    <div>
+                        <span class="block text-sm font-extrabold text-slate-800 mb-3 uppercase tracking-wide">Logo do Painel Público</span>
+                        <div class="flex items-center gap-4 bg-slate-50 p-4 rounded-xl border border-slate-200">
+                            <div id="tv-logo-preview" class="w-24 h-24 bg-white border border-dashed border-slate-300 rounded-lg flex items-center justify-center shrink-0 overflow-hidden relative">
+                            </div>
+                            <div class="flex-1">
+                                <div class="flex flex-col gap-2">
+                                    <button type="button" id="tv-logo-enviar" class="px-3 py-2 bg-indigo-600 text-white text-xs font-bold rounded-lg hover:bg-indigo-700 transition-colors w-full text-center shadow-sm">Subir Imagem</button>
+                                    <button type="button" id="tv-logo-remover" class="px-3 py-2 bg-white border border-slate-300 text-slate-600 text-xs font-bold rounded-lg hover:bg-slate-100 transition-colors w-full text-center">Usar Padrão</button>
+                                    <input type="file" id="tv-logo-file" accept="image/png,image/jpeg,image/webp,image/svg+xml" class="hidden">
+                                </div>
+                                <p class="text-[9px] font-semibold text-slate-500 mt-2 leading-tight">Aceito: PNG, JPG, WebP ou SVG (máx. 5MB).</p>
+                            </div>
+                        </div>
                     </div>
+                </div>
+
+                <!-- Link Gerado -->
+                 <div>
+                    <span class="block text-sm font-extrabold text-slate-800 mb-2 uppercase tracking-wide">PIN de acesso (opcional)</span>
+                    <input type="password" id="tv_pin_novo" maxlength="12" autocomplete="new-password" class="w-full p-3.5 bg-slate-50 border border-slate-200 rounded-xl text-sm outline-none" placeholder="Digite um PIN para proteger o painel (vazio = manter)">
+                    <label class="flex items-center gap-2 mt-2 text-xs font-semibold text-slate-600"><input type="checkbox" id="tv_pin_remover"> Remover PIN (deixar o painel aberto)</label>
+                </div>
+                
+                <div class="bg-blue-50/50 border border-blue-100 p-5 rounded-xl">
+                    <div class="flex justify-between items-center mb-2">
+                        <span class="block text-xs font-extrabold text-blue-900 uppercase tracking-wider">Link gerado para a Smart TV</span>
+                        <span class="bg-blue-200 text-blue-800 text-[9px] font-bold px-2 py-0.5 rounded uppercase">Copia e cola no navegador da TV</span>
+                    </div>
+                    <textarea id="tv_preview_link" readonly class="w-full bg-white border border-blue-200 rounded-lg p-3 text-xs font-mono text-blue-700 outline-none resize-none h-16 shadow-inner"></textarea>
+                </div>
+            </div>
+            
+            <div class="px-6 py-5 border-t border-slate-200 bg-slate-50 flex flex-col sm:flex-row gap-3 justify-end items-center">
+                <button class="w-full sm:w-auto px-5 py-3 rounded-xl font-bold text-slate-600 hover:bg-slate-200 transition-colors fechar-modal-tv text-sm">Cancelar</button>
+                <button id="tv-btn-copiar" class="w-full sm:w-auto px-6 py-3 rounded-xl font-bold bg-slate-800 text-white hover:bg-slate-900 transition-colors text-sm shadow-md flex items-center justify-center gap-2">${ico('clipboard')} Copiar Link</button>
+                <button id="tv-btn-salvar-abrir" class="w-full sm:w-auto px-6 py-3 rounded-xl font-black bg-blue-600 text-white hover:bg-blue-700 transition-colors text-sm shadow-lg flex items-center justify-center gap-2">${ico('monitor')} Salvar e Abrir TV</button>
+            </div>
+        </div>
+        `;
+        
+        modal.addEventListener('click', () => modal.remove());
+        document.body.appendChild(modal);
+
+        const desenharPreview = () => {
+            const box = document.getElementById('tv-logo-preview');
+            box.replaceChildren();
+            if (logoAtual) {
+                const img = document.createElement('img');
+                img.src = logoAtual; img.alt = 'Logo do órgão';
+                img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;padding:4px;';
+                box.appendChild(img);
+            } else {
+                const t = document.createElement('span');
+                t.className = 'text-[10px] font-bold text-center leading-tight'; t.style.color = '#94a3b8'; t.innerHTML = 'Logo<br>SIGEP<br>(Padrão)';
+                box.appendChild(t);
+            }
+        };
+        desenharPreview();
+
+        const updatePreview = () => {
+            const modo  = modal.querySelector('input[name="tv_modo"]:checked').value;
+            const video = encodeURIComponent(document.getElementById('tv_video_url').value.trim());
+            const som   = modal.querySelector('input[name="tv_som"]:checked').value;
+            
+            const containerVideo = document.getElementById('tv-video-container');
+            if (modo === 'video') {
+                containerVideo.classList.remove('opacity-50', 'pointer-events-none');
+                containerVideo.classList.add('opacity-100');
+            } else {
+                containerVideo.classList.add('opacity-50', 'pointer-events-none');
+                containerVideo.classList.remove('opacity-100');
+            }
+
+            const nome = encodeURIComponent(pautaName);
+            const baseUrl = window.location.origin + window.location.pathname;
+            const link = `${baseUrl}?painel=true&pautas=${pautaId}&nome=${nome}&modo=${modo}&video=${video}&som=${som}`;
+
+            document.getElementById('tv_preview_link').value = link;
+            return { link, modo, video, som };
+        };
+
+        const ligarGrupo = (name, cardClass, extraClassesAtivo) => {
+            modal.querySelectorAll(`input[name="${name}"]`).forEach(radio => {
+                radio.addEventListener('change', () => {
+                    modal.querySelectorAll(`.${cardClass}`).forEach(c => {
+                        c.classList.remove('border-blue-500', 'bg-blue-50', 'ring-2', 'ring-1', 'ring-blue-200');
+                        c.classList.add('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
+                    });
+                    const pai = radio.closest(`.${cardClass}`);
+                    pai.classList.remove('border-slate-200', 'hover:border-blue-300', 'hover:bg-slate-50');
+                    pai.classList.add(...extraClassesAtivo.split(' '));
+                    updatePreview();
+                });
+            });
+        };
+        ligarGrupo('tv_modo', 'tv-modo-card', 'border-blue-500 bg-blue-50 ring-2 ring-blue-200');
+        ligarGrupo('tv_som', 'tv-som-card', 'border-blue-500 bg-blue-50 ring-1 ring-blue-200');
+
+        document.getElementById('tv_video_url').addEventListener('input', updatePreview);
+        updatePreview();
+
+        const reduzirImagem = (file) => new Promise((resolve, reject) => {
+            if (!/^image\//.test(file.type)) return reject(new Error('Arquivo não é uma imagem.'));
+            if (file.size > 5 * 1024 * 1024) return reject(new Error('Imagem maior que 5 MB.'));
+            const reader = new FileReader();
+            reader.onerror = () => reject(new Error('Falha ao ler o arquivo.'));
+            reader.onload = () => {
+                if (file.type === 'image/svg+xml') {
+                    return reader.result.length > 400000 ? reject(new Error('SVG muito grande.')) : resolve(reader.result);
+                }
+                const img = new Image();
+                img.onerror = () => reject(new Error('Imagem inválida.'));
+                img.onload = () => {
+                    const escala = Math.min(1, 160 / img.height, 480 / img.width);
+                    const c = document.createElement('canvas');
+                    c.width = Math.max(1, Math.round(img.width * escala));
+                    c.height = Math.max(1, Math.round(img.height * escala));
+                    c.getContext('2d').drawImage(img, 0, 0, c.width, c.height);
+                    const out = c.toDataURL('image/png');
+                    out.length > 500000 ? reject(new Error('Imagem complexa demais.')) : resolve(out);
+                };
+                img.src = reader.result;
+            };
+            reader.readAsDataURL(file);
+        });
+
+        document.getElementById('tv-logo-enviar').addEventListener('click', () => document.getElementById('tv-logo-file').click());
+        document.getElementById('tv-logo-file').addEventListener('change', async (e) => {
+            const file = e.target.files?.[0];
+            if (!file) return;
+            try { logoAtual = await reduzirImagem(file); desenharPreview(); updatePreview(); }
+            catch (err) { showNotification(err.message, 'error'); }
+            e.target.value = '';
+        });
+        document.getElementById('tv-logo-remover').addEventListener('click', () => { logoAtual = ''; desenharPreview(); updatePreview(); });
+
+        modal.querySelectorAll('.fechar-modal-tv').forEach(b => b.addEventListener('click', () => modal.remove()));
+
+        const saveConfig = async () => {
+            const data = updatePreview();
+            const configToSave = { modo: data.modo, video: decodeURIComponent(data.video), som: data.som === '1' };
+
+            localStorage.setItem(`sigep_tv_config_${pautaId}`, JSON.stringify(configToSave));
+
+            const orgaoId = this.currentUser?.orgaoId || null;
+            try {
+                const payload = { logoUrl: logoAtual || '', orgaoId, atualizadoEm: new Date().toISOString() };
+                const pinNovo = document.getElementById('tv_pin_novo')?.value.trim();
+                if (document.getElementById('tv_pin_remover')?.checked) {
+                    payload.tvPinHash = '';
+                } else if (pinNovo) {
+                    const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode('sigep-tv:' + pinNovo));
+                    payload.tvPinHash = [...new Uint8Array(buf)].map(b => b.toString(16).padStart(2, '0')).join('');
+                }
+                await setDoc(doc(this.db, "pautas", pautaId, "painel", "config"), payload, { merge: true });
+            } catch (err) {
+                console.warn('Falha ao salvar logo do painel no banco:', err);
+            }
+
+            return data.link;
+        };
+
+        document.getElementById('tv-btn-copiar').addEventListener('click', async () => {
+            const link = await saveConfig();
+            navigator.clipboard.writeText(link).then(() => {
+                showNotification("Configuração salva e link copiado!", "success");
+                modal.remove();
+            }).catch(() => showNotification("Erro ao copiar o link.", "error"));
+        });
+
+        document.getElementById('tv-btn-salvar-abrir').addEventListener('click', async () => {
+            const link = await saveConfig();
+            window.open(link, '_blank');
+            modal.remove();
+        });
+    }
+
+    async loadPauta(pautaId, pautaName, pautaType) {
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                const pautaData = pautaDoc.data();
+                let dataBase = pautaData.dataAtuacao ? new Date(pautaData.dataAtuacao) : new Date(pautaData.createdAt);
+                const expirationDate = new Date(dataBase);
+                expirationDate.setDate(dataBase.getDate() + 7);
+                if (new Date() > expirationDate) {
+                    showNotification("Esta pauta expirou (prazo LGPD de 7 dias a partir da data de atuação) e não pode mais ser acessada.", "error");
+                    return;
+                }
+            }
+        } catch (error) {
+            console.error("Erro ao verificar expiração:", error);
+        }
+
+        this.currentPauta = { id: pautaId, name: pautaName, type: pautaType };
+        document.getElementById('pauta-title').textContent = pautaName;
+
+        try {
+            const pautaDoc = await getDoc(doc(this.db, "pautas", pautaId));
+            if (pautaDoc.exists()) {
+                this.currentPautaData = pautaDoc.data();
+
+                const tvAtivada = this.currentPautaData.useTvPanel !== false;
+                const tvGroupMenu = document.getElementById('tv-panel-actions-group');
+                if (tvGroupMenu) {
+                    tvGroupMenu.classList.toggle('hidden', !tvAtivada);
+                }
+                
+                const tolerancia = this.currentPautaData.toleranciaAtraso || this.currentPautaData.tolerancia || 15;
+                
+                const descPontuais = document.getElementById('desc-pontuais');
+                if (descPontuais) descPontuais.innerHTML = `Agendados que chegam no horário (ou com até <b>${tolerancia} min</b> de tolerância). O desempate é por quem fez o check-in na recepção primeiro.`;
+                
+                const descAtrasados = document.getElementById('desc-atrasados');
+                if (descAtrasados) descAtrasados.innerHTML = `Atrasos superiores a <b>${tolerancia} min</b>. Perdem o direito ao horário agendado original e passam a valer pelo horário real em que chegaram na unidade.`;
+                
+                const descExemplo2 = document.getElementById('desc-exemplo2');
+                if (descExemplo2) descExemplo2.innerHTML = `* Pedro atrasou mais de <b>${tolerancia} min</b>. O sistema o "pune" e a hora dele passa a ser a hora real (09:20), ficando atrás da Ana (09:10).`;
+
+                if (!this.currentPautaData.modo) this.currentPautaData.modo = 'normal';
+                this.currentPautaOwnerId = this.currentPautaData.owner;
+                this.isPautaClosed = this.currentPautaData.isClosed || false;
+
+                if (this.currentPautaData.isPublic === undefined) {
+                    this.currentPautaData.isPublic = true;
+                    updateDoc(doc(this.db, "pautas", pautaId), { isPublic: true }).catch(err => console.error(err));
+                }
+                
+                if (this.currentPautaData.type === 'multisala' && this.currentPautaData.customRooms) {
+                    this.customRoomsList = this.currentPautaData.customRooms;
+                } else if (this.currentPautaData.type === 'multisala' && this.currentPautaData.rooms) {
+                    this.customRoomsList = this.currentPautaData.rooms;
+                } else {
+                    this.customRoomsList = [];
+                }
+
+                setTimeout(() => { UIService.togglePautaLock(this); }, 100);
+                this.loadColumnPreferences();
+                this.applyRoleBasedUI();
+                
+                const btnManageRooms = document.getElementById('btn-manage-rooms');
+                if (btnManageRooms) {
+                    btnManageRooms.classList.toggle('hidden', this.currentPautaData.type !== 'multisala');
+                }
+
+                if (typeof PautaService.populateRoomSelects === 'function') {
+                    PautaService.populateRoomSelects(this);
+                }
+
+                const tipoConfig = String(this.currentPautaData.type || this.currentPautaData.tipo || 'hibrido').toLowerCase();
+                const tabAgendamento = document.getElementById('tab-agendamento');
+                const tabAvulso = document.getElementById('tab-avulso');
+                const navTabs = document.getElementById('nav-tabs-atendimento');
+
+                if (tabAgendamento && tabAvulso) {
+                    tabAgendamento.classList.remove('hidden');
+                    tabAvulso.classList.remove('hidden');
+                    if (navTabs) navTabs.classList.remove('hidden');
+
+                    if (tipoConfig === 'agendamento' && this.currentPautaData.permiteAvulso !== true) {
+                        tabAvulso.classList.add('hidden');
+                        UIService.switchTab('agendamento', this);
+                    } 
+                    else if (tipoConfig === 'avulso' && this.currentPautaData.permiteAgendamento !== true) {
+                        tabAgendamento.classList.add('hidden');
+                        UIService.switchTab('avulso', this);
+                    } 
+                    else {
+                        UIService.switchTab('agendamento', this);
+                    }
+                }
+            }
+
+            this.setupRealtimeListener(pautaId);
+            this.setupOuvinteSolicitacoesPuxada(pautaId);
+            
+            if (typeof CollaboratorService?.setupListener === 'function') {
+                CollaboratorService.setupListener(this, pautaId);
+            } else if (typeof window.CollaboratorService?.setupListener === 'function') {
+                window.CollaboratorService.setupListener(this, pautaId);
+            }
+            
+            const appContainer = document.getElementById('app-container');
+            if (appContainer && appContainer.classList.contains('hidden')) {
+                document.getElementById('pauta-selection-container')?.classList.add('hidden');
+                document.getElementById('dashboard-container')?.classList.add('hidden');
+                document.getElementById('admin-container')?.classList.add('hidden');
+                document.getElementById('modo-selection-screen')?.classList.add('hidden');
+                appContainer.classList.remove('hidden');
+            }
+
+        } catch (error) {
+            console.error("Erro ao carregar pauta:", error);
+            showNotification("Erro ao carregar pauta", "error");
+        }
+    }
+
+    _teardownPauta() {
+        if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
+        if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
+        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
+
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
+
+        this.currentPauta = null;
+        this.allAssisted  = [];
+        this.colaboradores = [];
+
+        localStorage.removeItem('lastPautaId');
+        localStorage.removeItem('lastPautaName');
+        localStorage.removeItem('lastPautaType');
+    }
+
+    setupRealtimeListener(pautaId) {
+        if (this.unsubscribeFromAttendances) this.unsubscribeFromAttendances();
+        const attendanceRef = collection(this.db, "pautas", pautaId, "attendances");
+        this.unsubscribeFromAttendances = onSnapshot(attendanceRef, (snapshot) => {
+            this.allAssisted = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            UIService.renderAssistedLists(this);
+            this.atualizarMonitorEnvelopes();
+
+            setTimeout(() => { 
+                if (typeof PautaService.injectRoomSearches === 'function') PautaService.injectRoomSearches(this); 
+            }, 150);
+        }, (error) => {
+            console.error("Erro no snapshot:", error);
+            showNotification("Erro ao carregar dados em tempo real", "error");
+        });
+    }
+
+    async deletePauta(pautaId, pautaName) {
+        const pautaRef = doc(this.db, "pautas", pautaId);
+        const pautaSnap = await getDoc(pautaRef);
+        
+        if (!pautaSnap.exists()) return showNotification("Pauta não encontrada!", "error");
+        
+        const pautaData = pautaSnap.data();
+        const currentUserId = this.auth.currentUser?.uid;
+        
+        if (pautaData.owner !== currentUserId && this.currentUser?.role !== 'admin' && this.currentUser?.role !== 'superadmin') {
+            return showNotification("Você não tem permissão para excluir esta pauta!", "error");
+        }
+        
+        if (!confirm(`ATENÇÃO: Tem certeza que deseja excluir a pauta "${pautaName}"?\n\nEsta ação NÃO pode ser desfeita!`)) return;
+        
+        showNotification(`Excluindo pauta "${pautaName}"...`, "info");
+        
+        try {
+            const attendancesSnap = await getDocs(collection(this.db, "pautas", pautaId, "attendances"));
+            const batch = writeBatch(this.db);
+            let operationCount = 0;
+            
+            for (const doc of attendancesSnap.docs) {
+                batch.delete(doc.ref);
+                operationCount++;
+                if (operationCount >= 490) { await batch.commit(); operationCount = 0; }
+            }
+            if (operationCount > 0) await batch.commit();
+            await deleteDoc(pautaRef);
+            
+            showNotification(`Pauta "${pautaName}" excluída com sucesso!`, "success");
+            await this.loadPautasWithFilter();
+            
+        } catch (error) {
+            console.error("Erro ao excluir pauta:", error);
+            showNotification("Erro ao excluir pauta. Tente novamente.", "error");
+        }
+    }
+    
+    atualizarMonitorEnvelopes() {
+        if (!this.colaboradores || this.colaboradores.length === 0) return;
+
+        const colabsAtivos = this.colaboradores.filter(c => c.presente === true);
+        const colabsLivres = colabsAtivos.filter(c => {
+            const casosOcupando = this.allAssisted.filter(a => {
+                const emAtendimentoNormal = a.status === 'emAtendimento' && a.assignedCollaborator?.name === c.nome;
+                const pendenteAssinatura = (a.status === 'aguardandoDistribuicao' || a.status === 'aguardandoCorrecao') && a.defensorResponsavel === c.nome;
+                return emAtendimentoNormal || pendenteAssinatura;
+            });
+            return casosOcupando.length === 0;
+        });
+
+        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end');
+        if (!headerActions) return;
+
+        const btnId = `btn-colabs-disponiveis-${this.currentPauta.id}`;
+        document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => { if (btn.id !== btnId) btn.remove(); });
+
+        let btnEnvelope = document.getElementById(btnId);
+
+        if (colabsLivres.length > 0) {
+            if (!btnEnvelope) {
+                btnEnvelope = document.createElement('button');
+                btnEnvelope.id = btnId;
+                btnEnvelope.onclick = () => {
+                    const nomes = colabsLivres.map(c => `• ${c.nome} (${c.cargo || 'Membro'})`).join('\n');
+                    showNotification(`Equipe livre no momento na pauta ${this.currentPauta.name}:\n\n${nomes}`);
+                };
+                headerActions.insertBefore(btnEnvelope, headerActions.firstChild);
+            }
+            
+            btnEnvelope.className = 'mr-3 flex items-center justify-center gap-1.5 px-3 py-2 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 font-black rounded-lg transition-colors border border-emerald-300 shadow-sm animate-pulse cursor-pointer shrink-0';
+            btnEnvelope.title = `${colabsLivres.length} Colaborador(es) Livre(s)`;
+            btnEnvelope.innerHTML = `<span class="text-sm">${ico('mail')}</span> <span class="text-xs tracking-wider">${colabsLivres.length} LIVRE(S)</span>`;
+        } else {
+            if (btnEnvelope) btnEnvelope.remove();
+        }
+    }
+
+    setupColetas() {
+        document.getElementById('btn-modulo-coletas')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.COLETAS, {}, false);
+        });
+
+        document.getElementById('coletas-back-btn')?.addEventListener('click', () => {
+            this.router.navigate(ROUTES.PAUTA_SELECTION, {}, false);
+        });
+
+        document.getElementById('btn-nova-coleta')?.addEventListener('click', async () => {
+            const nome = prompt("Qual o nome desta Coleta Estatística? (Ex: Produtividade - Varas de Família)");
+            if (!nome) return;
+
+            try {
+                const novaColeta = {
+                    nomeDaColeta: nome, dicionarioDeCampos: [], linksExternos: [],
+                    criadoPor: this.currentUserName || this.auth?.currentUser?.email || 'Sistema',
+                    criadoEm: new Date().toISOString()
+                };
+                
+                const { collection, addDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+                await addDoc(collection(this.db, "formularios_coleta"), novaColeta);
+                
+                showNotification("Nova coleta criada com sucesso!", "success");
+                this.listarColetas();
+            } catch (error) {
+                showNotification("Erro ao criar coleta no banco de dados.", "error");
+            }
+        });
+    }
+
+    async listarColetas() {
+        const container = document.getElementById('lista-de-coletas');
+        if (!container) return;
+        
+        container.innerHTML = '<p class="text-center text-slate-400 py-4 font-bold animate-pulse">Buscando coletas ativas...</p>';
+
+        try {
+            const { collection, getDocs } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+            const querySnapshot = await getDocs(collection(this.db, "formularios_coleta"));
+            if (querySnapshot.empty) {
+                container.innerHTML = '<p class="text-center text-slate-400 py-4">Nenhuma coleta estatística criada ainda.</p>';
+                return;
+            }
+
+            let html = '';
+            querySnapshot.forEach(docSnap => {
+                const data = docSnap.data();
+                html += `
+                    <div class="bg-white border border-slate-200 p-4 rounded-xl flex flex-col sm:flex-row justify-between items-start sm:items-center shadow-sm gap-4 mb-3">
+                        <div>
+                            <h5 class="font-black text-slate-800 text-sm uppercase">${escapeHTML(data.nomeDaColeta)}</h5>
+                            <p class="text-[11px] font-bold text-slate-500 mt-1">${ico('bookOpen', 'w-3.5 h-3.5')} ${data.dicionarioDeCampos?.length || 0} campos cadastrados | ${ico('link', 'w-3.5 h-3.5')} ${data.linksExternos?.length || 0} links gerados</p>
+                        </div>
+                        <div class="flex gap-2 w-full sm:w-auto">
+                            <button onclick="window.abrirConstrutor('${docSnap.id}')" class="flex-1 sm:flex-none bg-indigo-100 hover:bg-indigo-200 text-indigo-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-indigo-200 shadow-sm">${ico('settings', 'w-3.5 h-3.5')} Configurar</button>
+                            <button onclick="window.verResultados('${docSnap.id}')" class="flex-1 sm:flex-none bg-emerald-100 hover:bg-emerald-200 text-emerald-800 font-bold px-4 py-2 rounded-lg text-xs transition border border-emerald-200 shadow-sm">${ico('trendingUp', 'w-3.5 h-3.5')} Resultados</button>
+                        </div>
+                    </div>
+                `;
+            });
+            container.innerHTML = html;
+        } catch (error) {
+            container.innerHTML = '<p class="text-center text-red-500 py-4 font-bold">Erro ao carregar do servidor.</p>';
+        }
+    }
+
+    setupSubjectsAutocomplete() {
+        const datalist = document.getElementById('subjects-list');
+        if (!datalist) return;
+        flatSubjects.forEach(subject => {
+            const option = document.createElement('option');
+            option.value = subject.value;
+            datalist.appendChild(option);
+        });
+
+        const subjectInput = document.getElementById('assisted-subject');
+        const descriptionBox = document.getElementById('subject-description');
+        
+        if (subjectInput) {
+            subjectInput.addEventListener('input', (e) => {
+                const query = e.target.value.toLowerCase();
+                const filtered = flatSubjects.filter(item => item.value.toLowerCase().includes(query) || item.description.toLowerCase().includes(query));
+                datalist.innerHTML = '';
+                filtered.forEach(subject => {
+                    const option = document.createElement('option');
+                    option.value = subject.value;
+                    datalist.appendChild(option);
+                });
+            });
+
+            subjectInput.addEventListener('change', () => {
+                const value = subjectInput.value;
+                let selectedText = value.includes(' > ') ? value.split(' > ').pop() : value;
+                subjectInput.value = selectedText;
+
+                const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === selectedText);
+                if (found?.description && descriptionBox) {
+                    descriptionBox.textContent = found.description;
+                    descriptionBox.classList.remove('hidden');
+                } else if (descriptionBox) {
+                    descriptionBox.classList.add('hidden');
+                }
+            });
+        }
+
+        document.getElementById('subject-info-btn')?.addEventListener('click', () => {
+            const value = subjectInput?.value || '';
+            const found = flatSubjects.find(s => s.value === value || s.value.split(' > ').pop() === value);
+            if (found?.description && descriptionBox) {
+                descriptionBox.textContent = found.description;
+                descriptionBox.classList.toggle('hidden');
+            } else if (descriptionBox) {
+                descriptionBox.textContent = 'Selecione um assunto válido.';
+                descriptionBox.classList.remove('hidden');
+            }
+        });
+    }
+
+    async loadUserPreferences() {
+        if (!this.auth?.currentUser || !this.db) return;
+        try {
+            const docSnap = await getDoc(doc(this.db, "users", this.auth.currentUser.uid));
+            if (docSnap.exists()) {
+                const userData = docSnap.data();
+                this.currentUser = { ...this.currentUser, ...userData }; 
+                
+                this.currentUser.orgaoId = userData.orgaoId || 'padrao_dprj'; 
+                
+                this.userPreferences = userData.preferences || { enableSoundsSuccess: true };
+                this.applyRoleBasedUI(); 
+            }
+        } catch (error) { 
+            console.error("Erro ao carregar perfil:", error); 
+        }
+    }
+
+    applyRoleBasedUI() {
+        if (!this.currentUser) return;
+        const isAdmin = (this.currentUser?.role === 'admin' || this.currentUser?.role === 'superadmin' || this.currentUser?.role === 'superadmin_global');
+        document.querySelectorAll('#admin-panel-btn, #admin-btn-main').forEach(b => { if (b) b.classList.toggle('hidden', !isAdmin); });
+        PermissoesService.aplicarUI(this.currentUser);
+    }
+
+    async openUserPreferencesModal() {
+        if (!this.auth?.currentUser) return showNotification("Você precisa estar logado.", "error");
+
+        const nameInput = document.getElementById('pref-user-name');
+        if (nameInput) nameInput.value = this.currentUserName || 'Não informado';
+        
+        const emailInput = document.getElementById('pref-user-email');
+        if (emailInput) emailInput.value = this.auth.currentUser.email || 'Não informado';
+
+        await this.loadUserPreferences(); 
+
+        const setChecked = (id, value) => { const el = document.getElementById(id); if (el) el.checked = value; };
+        setChecked('pref-enable-sounds-success', this.userPreferences.enableSoundsSuccess || false);
+        setChecked('pref-enable-sounds-error', this.userPreferences.enableSoundsError || false);
+        setChecked('pref-enable-sounds-info', this.userPreferences.enableSoundsInfo || false);
+        setChecked('pref-enable-sounds-warning', this.userPreferences.enableSoundsWarning || false);
+        setChecked('pref-show-toasts-success', this.userPreferences.showToastsSuccess || false);
+        setChecked('pref-show-toasts-error', this.userPreferences.showToastsError || false);
+        setChecked('pref-show-toasts-info', this.userPreferences.showToastsInfo || false);
+        setChecked('pref-show-toasts-warning', this.userPreferences.showToastsWarning || false);
+
+        document.getElementById('user-preferences-modal')?.classList.remove('hidden');
+    }
+
+    applyUserPreferences() {
+        console.log("Aplicando preferências:", this.userPreferences);
+    }
+
+    getDefaultNotificationPreferences() {
+        return {
+            enableSoundsSuccess: true, enableSoundsError: true, enableSoundsInfo: true, enableSoundsWarning: true,
+            showToastsSuccess: true, showToastsError: true, showToastsInfo: true, showToastsWarning: true,
+        };
+    }
+    
+    // ─── CENTRAL DE SOLICITAÇÕES DE PUXADA DE CASOS ───────────────────────────
+
+    setupOuvinteSolicitacoesPuxada(pautaId) {
+        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
+        
+        const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
+        const q = query(attendancesRef, where("status", "==", "aguardandoAutorizacaoPuxada"));
+
+        this.unsubscribePuxadas = onSnapshot(q, (snapshot) => {
+            const solicitacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+            this.atualizarBadgeNotificacaoPauta(solicitacoes);
+        });
+    }
+
+    atualizarBadgeNotificacaoPauta(solicitacoes) {
+        let badge = document.getElementById('badge-puxadas-pendentes');
+        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header');
+        
+        if (solicitacoes.length > 0) {
+            if (!badge && headerActions) {
+                badge = document.createElement('button');
+                badge.id = 'badge-puxadas-pendentes';
+                badge.className = 'mr-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-3 rounded-lg transition text-xs flex items-center gap-2 shadow-md animate-pulse shrink-0';
+                badge.onclick = () => this.abrirModalGestaoPuxadas(solicitacoes);
+                headerActions.prepend(badge);
+            }
+            if (badge) {
+                badge.innerHTML = `🔔 Pedidos de Puxada <span class="bg-white text-amber-700 px-2 py-0.5 rounded-full text-xs font-black">${solicitacoes.length}</span>`;
+            }
+        } else if (badge) {
+            badge.remove();
+        }
+    }
+
+    abrirModalGestaoPuxadas(solicitacoes) {
+        let modal = document.getElementById('modal-gestao-puxadas');
+        if (!modal) {
+            modal = document.createElement('div');
+            modal.id = 'modal-gestao-puxadas';
+            modal.className = 'fixed inset-0 bg-slate-900/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm';
+            document.body.appendChild(modal);
+        }
+
+        modal.innerHTML = `
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 class="font-black text-sm uppercase tracking-wider">Solicitações de Atendimento Pendentes (${solicitacoes.length})</h3>
+                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
+                </div>
+                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50 flex-1 custom-scrollbar">
+                    ${solicitacoes.map(item => {
+                        const urgenciaBadge = item.priority === 'URGENTE' ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Urgente</span>` : '';
+                        const horarioAgendado = item.scheduledTime ? `Agendado: <b>${escapeHTML(item.scheduledTime)}</b>` : '';
+                        const chegada = item.arrivalTime ? `Chegada: <b>${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>` : '';
+
+                        return `
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                                <div class="flex justify-between items-start gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
+                                            ${urgenciaBadge}
+                                        </div>
+                                        <p class="text-xs text-slate-500 font-bold">Assunto: ${escapeHTML(item.subject || 'Sem assunto')}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0">Solicitante: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    ${horarioAgendado ? `<span>${horarioAgendado}</span>` : ''}
+                                    ${chegada ? `<span>• ${chegada}</span>` : ''}
+                                    ${item.room ? `<span>• Sala/Local: <b>${escapeHTML(item.room)}</b></span>` : ''}
+                                </div>
+
+                                <p class="text-xs text-slate-600 bg-amber-50/60 p-3 rounded-xl border border-amber-100 italic">
+                                    <b>Motivo informado:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem motivo')}"
+                                </p>
+
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
+                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Abrir Atendimento</button>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
                 </div>
             </div>`;
-    },
+    }
+    
+    saveColumnPreferences() {
+        const preferences = {
+            showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
+            showDistribuicao: document.getElementById('toggle-distribuicao')?.checked || false,
+            showFaltosos: document.getElementById('toggle-faltosos')?.checked || false,
+        };
+        localStorage.setItem('sigap_column_preferences', JSON.stringify(preferences));
+        this.applyColumnPreferences(preferences);
+    }
 
-    _setupGeradorVerde(assistido) {
-        const inputId = document.getElementById('input-id-caso-verde');
-        const containerLink = document.getElementById('container-link-verde-gerado');
-        const textoUrl = document.getElementById('texto-url-gerada');
-        const btnAbrir = document.getElementById('btn-abrir-link-verde');
-        const btnCopiar = document.getElementById('btn-copiar-link-verde');
+    loadColumnPreferences() {
+        const savedPreferences = localStorage.getItem('sigap_column_preferences');
+        let preferences = savedPreferences ? JSON.parse(savedPreferences) : { showEmAtendimento: true, showDistribuicao: true, showFaltosos: false };
 
-        if (!inputId) return;
+        const chkEmAtendimento = document.getElementById('toggle-em-atendimento');
+        const chkDistribuicao = document.getElementById('toggle-distribuicao');
+        const chkFaltosos = document.getElementById('toggle-faltosos');
+        
+        if(chkEmAtendimento) chkEmAtendimento.checked = preferences.showEmAtendimento;
+        if(chkDistribuicao) chkDistribuicao.checked = preferences.showDistribuicao;
+        if(chkFaltosos) chkFaltosos.checked = preferences.showFaltosos;
+        
+        this.applyColumnPreferences(preferences);
+    }
 
-        const processarValor = (rawVal) => {
-            // Extrai apenas os números da string (ex: "CNP 7039722" vira "7039722")
-            const apenasNumeros = rawVal.replace(/\D/g, '');
+    applyColumnPreferences(preferences) {
+        const useDelegationFlow = this.currentPautaData?.useDelegationFlow;
+        const useDistributionFlow = this.currentPautaData?.useDistributionFlow;
 
-            if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
-                inputId.value = apenasNumeros;
-                const url = this._gerarUrlVerde(apenasNumeros);
-                if (textoUrl) textoUrl.textContent = url;
-                if (btnAbrir) btnAbrir.href = url;
-                if (containerLink) containerLink.classList.remove('hidden');
+        const emAtendimentoColumn = document.getElementById('em-atendimento-column');
+        const distribuicaoColumn = document.getElementById('distribuicao-column');
+        const faltososColumn = document.getElementById('faltosos-column');
+
+        if (emAtendimentoColumn) emAtendimentoColumn.classList.toggle('hidden', !(useDelegationFlow && preferences.showEmAtendimento));
+        if (distribuicaoColumn) distribuicaoColumn.classList.toggle('hidden', !(useDistributionFlow && preferences.showDistribuicao));
+        
+        if (faltososColumn) {
+            const pautaColumn = document.getElementById('pauta-column');
+            if (this.currentPautaData?.type === 'agendamento' && preferences.showFaltosos && pautaColumn && !pautaColumn.classList.contains('hidden')) {
+                 faltososColumn.classList.remove('hidden');
+            }
+        }
+    }
+}
+
+// ============================================================
+// INICIALIZAÇÃO GLOBAL E COMPATIBILIDADE LEGADA
+// ============================================================
+
+window.showNotification = showNotification;
+window.openDetailsModal = openDetailsModal;
+
+window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColaborador) {
+    const pautaId = window.app?.currentPauta?.id || new URLSearchParams(window.location.search).get('pautaId');
+    if (!pautaId) {
+        alert("ID da pauta não encontrado.");
+        return;
+    }
+
+    try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        
+        // 1. Atualiza o status no Firebase para emAtendimento e define o colaborador
+        await updateDoc(docRef, {
+            status: 'emAtendimento',
+            assignedCollaborator: { name: nomeColaborador },
+            inAttendanceTime: new Date().toISOString(),
+            solicitacaoPuxada: null,
+            historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
+        });
+
+        // 2. Fecha apenas a janelinha de solicitações pendentes
+        document.getElementById('modal-gestao-puxadas')?.remove();
+
+        if (window.showNotification) {
+            window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
+        }
+
+        // 3. DEFINE AS VARIÁVEIS GLOBAIS DO ASSISTIDO NA APLICAÇÃO
+        window.assistedIdToHandle = assistidoId;
+        window.assistedNameToHandle = nomeAssistido;
+
+        // 4. ABRE DIRETAMENTE O MODAL "Definir Local e Delegar" (Sem recarregar a página!)
+        if (typeof PautaService?.abrirModalDefinirLocal === 'function') {
+            PautaService.abrirModalDefinirLocal(assistidoId, nomeAssistido);
+        } else {
+            const modalDefinirLocal = document.getElementById('modal-definir-local-delegar') || document.getElementById('definir-local-modal') || document.getElementById('attendant-modal');
+            if (modalDefinirLocal) {
+                modalDefinirLocal.classList.remove('hidden');
             } else {
-                if (containerLink) containerLink.classList.add('hidden');
+                const card = document.querySelector(`[data-assistido-id="${assistidoId}"]`);
+                const btnAtender = card?.querySelector('.btn-atender, button[data-action="atender"]');
+                if (btnAtender) {
+                    btnAtender.click();
+                }
             }
-        };
+        }
 
-        inputId.addEventListener('input', (e) => {
-            processarValor(e.target.value);
+        // 5. PRÉ-PREENCHE O COLABORADOR SOLICITANTE NO CAMPO DE DELEGAÇÃO
+        setTimeout(() => {
+            const selectCollab = document.getElementById('attendant-select') || document.getElementById('select-atribuir-colaborador') || document.querySelector('select[name="colaborador"]');
+            if (selectCollab) {
+                for (let opt of selectCollab.options) {
+                    if (opt.value === nomeColaborador || opt.textContent.includes(nomeColaborador)) {
+                        selectCollab.value = opt.value;
+                        break;
+                    }
+                }
+            }
+        }, 200);
+
+    } catch (e) {
+        console.error("Erro ao autorizar puxada:", e);
+        alert("Erro ao autorizar atendimento.");
+    }
+};
+
+window.recusarPuxada = async function(assistidoId) {
+    const pautaId = window.app?.currentPauta?.id;
+    if (!pautaId) return;
+    
+    try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
+        await updateDoc(docRef, {
+            status: 'aguardando', // Devolve para a fila normal
+            solicitacaoPuxada: null,
+            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
         });
+        if (window.showNotification) window.showNotification("Solicitação recusada e caso devolvido à fila.", "info");
+    } catch(e) {
+        console.error(e);
+    }
+};
 
-        // Colagem inteligente (Smart Paste)
-        inputId.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
-            processarValor(colarTexto);
+window.app = new SIGEPApp();
+
+window.renderEstruturaAtual = renderEstruturaAtual;
+window.abrirModalNovaRecepcao = abrirModalNovaRecepcao;
+window.abrirGerenciarUnidades = abrirGerenciarUnidadesUsuario;
+
+window.loadUsersList = loadUsersList;
+window.cleanupOldData = cleanupOldData;
+window.approveUser = approveUser;
+window.updateUserRole = updateUserRole;
+window.deleteUser = deleteUser;
+window.loadAuditLogs = loadAuditLogs;
+window.exportAuditLogsPDF = exportAuditLogsPDF;
+window.loadDashboardData = loadDashboardData;
+window.populateUserFilter = populateUserFilter;
+window.setupAdminSearch = setupAdminSearch;
+window.abrirGerenciadorUnidades = abrirGerenciadorUnidades;
+window.abrirImportadorUnidades = abrirImportadorUnidades;
+window.abrirModalUsuariosPorUnidade = abrirModalUsuariosPorUnidade;
+
+window.switchToChecklistView = function() {
+    document.getElementById('document-action-selection')?.classList.add('hidden');
+    document.getElementById('document-checklist-view')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.remove('hidden');
+    document.getElementById('checklist-search-container')?.classList.remove('hidden');
+};
+
+window.switchToActionSelectionView = function() {
+    document.getElementById('document-checklist-view')?.classList.add('hidden');
+    document.getElementById('document-action-selection')?.classList.remove('hidden');
+    document.getElementById('document-checklist-view-header')?.classList.add('hidden');
+    document.getElementById('checklist-search-container')?.classList.add('hidden');
+};
+
+window.getReuDataFromForm = function() {
+    return {
+        checkReuUnico: document.getElementById('check-reu-unico')?.checked || false,
+        nome: document.getElementById('nome-reu')?.value || '',
+        cpf: document.getElementById('cpf-reu')?.value || '',
+        telefone: document.getElementById('telefone-reu')?.value || '',
+        cep: document.getElementById('cep-reu')?.value || '',
+        rua: document.getElementById('rua-reu')?.value || '',
+        numero: document.getElementById('numero-reu')?.value || '',
+        complemento: document.getElementById('complemento-reu')?.value || '',
+        bairro: document.getElementById('bairro-reu')?.value || '',
+        cidade: document.getElementById('cidade-reu')?.value || '',
+        uf: document.getElementById('estado-reu')?.value || '',
+        referencia: document.getElementById('referencia-reu')?.value || '',
+        empresa: document.getElementById('empresa-reu')?.value || '',
+        rua_comercial: document.getElementById('rua-comercial-reu')?.value || '',
+        numero_comercial: document.getElementById('numero-comercial-reu')?.value || '',
+        complemento_comercial: document.getElementById('complemento-comercial-reu')?.value || '',
+        bairro_comercial: document.getElementById('bairro-comercial-reu')?.value || '',
+        cidade_comercial: document.getElementById('cidade-comercial-reu')?.value || '',
+        uf_comercial: document.getElementById('estado-comercial-reu')?.value || '',
+        cep_comercial: document.getElementById('cep-comercial-reu')?.value || ''
+    };
+};
+
+window.getExpenseDataFromForm = function() {
+    return {
+        checkExibirGastos: document.getElementById('check-exibir-gastos')?.checked ?? true,
+        moradia: document.getElementById('expense-moradia')?.value || '',
+        alimentacao: document.getElementById('expense-alimentacao')?.value || '',
+        educacao: document.getElementById('expense-educacao')?.value || '',
+        saude: document.getElementById('expense-saude')?.value || '',
+        vestuario: document.getElementById('expense-vestuario')?.value || '',
+        lazer: document.getElementById('expense-lazer')?.value || '',
+        outras: document.getElementById('expense-outras')?.value || ''
+    };
+};
+
+window.sortColaboradores = function(criterio) {
+    if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.sortColaboradores === 'function') {
+        CollaboratorService.sortColaboradores(window.app, criterio);
+    } else {
+        if (!window.app || !window.app.colaboradores) return;
+        
+        window._sortColabDir = window._sortColabDir === 'asc' ? 'desc' : 'asc';
+        const direction = window._sortColabDir === 'asc' ? 1 : -1;
+        
+        window.app.colaboradores.sort((a, b) => {
+            let valA = (a[criterio] || '').toString().toLowerCase();
+            let valB = (b[criterio] || '').toString().toLowerCase();
+            if (valA < valB) return -1 * direction;
+            if (valA > valB) return 1 * direction;
+            return 0;
         });
-
-        if (btnCopiar) {
-            btnCopiar.onclick = () => {
-                const url = textoUrl?.textContent?.trim();
-                if (url) {
-                    navigator.clipboard?.writeText(url).then(() => {
-                        if (typeof showNotification === 'function') showNotification("Link copiado para a área de transferência!", "success");
-                        else alert("Link copiado!");
-                    }).catch(() => {});
-                }
-            };
-        }
-    },
-
-    _renderizarPainelAcoes(assistido, pautaData) {
-        const aba = document.getElementById('aba-encerramento');
-        const isDefensor = this.colaboradorAtual?.cargo?.toLowerCase().includes('defensor');
-        const temDefensorNaPauta = this.todosColaboradores.some(c => c.cargo?.toLowerCase().includes('defensor'));
-        const showDistribuicao = (pautaData.useDistributionFlow || temDefensorNaPauta) && !isDefensor;
-
-        let html = this._htmlCartaoVerde(assistido, isDefensor) + `
-            <div class="grid grid-cols-1 gap-3 mb-6">
-                <button id="btn-opt-direto" class="fluxo-opt-btn bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 p-4 rounded-2xl text-left transition-all shadow-md group">
-                    <span class="block text-emerald-600 mb-1">${ico('checkCircle', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">${isDefensor ? "Concluir e Distribuir" : "Finalizar Protocolo"}</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Encerrar atendimento definitivo</span>
-                </button>
-        `;
-
-        if (showDistribuicao) {
-            html += `
-                <button id="btn-opt-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-blue-50 hover:border-blue-300 group">
-                    <span class="block text-blue-600 mb-1">${ico('send', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Enviar ao Defensor</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Assinar ou distribuir</span>
-                </button>
-                <button id="btn-opt-correcao" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-amber-50 hover:border-amber-300 group">
-                    <span class="block text-amber-600 mb-1">${ico('helpCircle', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Pedir Correção / Avaliação</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Defensor corrige ou avalia</span>
-                </button>
-            `;
-        }
-
-        if (isDefensor) {
-            html += `
-                <button id="btn-opt-devolver" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-orange-50 hover:border-orange-300 group">
-                    <span class="block text-orange-600 mb-1">${ico('arrowLeft', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Devolver p/ Correção</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Retornar à mesa de origem</span>
-                </button>
-                <button id="btn-opt-devolver-dist" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-cyan-50 hover:border-cyan-300 group">
-                    <span class="block text-cyan-600 mb-1">${ico('inbox', 'w-7 h-7')}</span>
-                    <span class="block font-black text-slate-800 text-sm mt-2">Devolver à Distribuição</span>
-                    <span class="block text-[10px] text-slate-500 mt-1 uppercase tracking-wider font-bold">Voltar para a fila de distribuição</span>
-                </button>
-            `;
-        }
-
-        html += `
-            <div class="grid grid-cols-2 gap-3">
-                <button id="btn-opt-transferir" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-indigo-50 hover:border-indigo-300 group">
-                    <span class="block text-indigo-600 mb-1">${ico('refresh', 'w-5 h-5')}</span>
-                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Transferir</span>
-                </button>
-                <button id="btn-opt-pausar" class="fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:bg-slate-100 hover:border-slate-300 group">
-                    <span class="block text-slate-600 mb-1">${ico('pause', 'w-5 h-5')}</span>
-                    <span class="block font-black text-slate-800 text-[11px] uppercase mt-2">Pausar Atendimento</span>
-                </button>
-            </div>
-        </div>`;
-
-        html += `
-            <div id="secao-demandas-adicionais-externo" class="bg-indigo-50 p-5 rounded-2xl border border-indigo-100 mb-6 shadow-sm">
-                <label class="block text-[10px] font-black text-indigo-800 uppercase tracking-widest mb-3 flex items-center gap-1.5"><span>${ico('clipboard', 'w-3.5 h-3.5')}</span> Demandas Adicionais (Estatística)</label>
-                <div class="flex gap-2 mb-3">
-                    <input type="text" id="input-nova-demanda-externo" class="flex-grow p-3 border border-indigo-200 rounded-xl text-xs outline-none bg-white focus:ring-2 focus:ring-indigo-500 font-medium" placeholder="Ex: Divórcio, Alimentos...">
-                    <button type="button" id="btn-add-demanda-externo" class="bg-indigo-600 text-white font-bold px-4 py-3 rounded-xl text-[10px] hover:bg-indigo-700 transition-colors shadow-sm uppercase tracking-wider shrink-0">Adicionar</button>
-                </div>
-                <div id="container-lista-demandas-externo" class="space-y-1.5 max-h-32 overflow-y-auto pr-1 custom-scrollbar"></div>
-            </div>
-
-            <div id="config-numero-processo" class="bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-slate-500 uppercase tracking-widest mb-1.5 flex items-center gap-1.5"><span>${ico('fileText', 'w-3.5 h-3.5')}</span> Nº CNP / Processo (Opcional)</label>
-                    <input type="text" id="input-numero-caso" value="${escapeHTML(assistido.numeroProcesso || '')}" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 focus:bg-white focus:ring-2 focus:ring-emerald-500 outline-none font-mono placeholder:font-sans" placeholder="Ex: 7039722">
-                </div>
-            </div>
-
-            <div id="config-distribuicao" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Defensor(a)</label>
-                    <select id="select-defensor-distribuicao" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Finalidade</label>
-                    <select id="select-finalidade-envio" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 font-bold text-slate-700">
-                        <option value="assinar">Assinar</option>
-                        <option value="distribuir">Distribuir</option>
-                    </select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-blue-500 uppercase tracking-widest mb-1.5">Nota Interna</label>
-                    <textarea id="notas-distribuicao-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-blue-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-correcao" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Defensor(a) Avaliador</label>
-                    <select id="select-defensor-correcao" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-amber-500 uppercase tracking-widest mb-1.5">Dúvida</label>
-                    <textarea id="notas-correcao-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-amber-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-devolver" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1.5">Devolver para</label>
-                    <select id="select-servidor-devolver" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 font-bold text-slate-700"></select>
-                </div>
-                <div>
-                    <label class="block text-[10px] font-black text-orange-500 uppercase tracking-widest mb-1.5">Motivo</label>
-                    <textarea id="notas-devolver-dinamico" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-orange-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-devolver-dist" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-cyan-600 uppercase tracking-widest mb-1.5">Observação para a distribuição</label>
-                    <textarea id="notas-devolver-dist" rows="2" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-cyan-500 resize-none"></textarea>
-                </div>
-            </div>
-
-            <div id="config-transferencia" class="hidden bg-white p-5 rounded-2xl border border-slate-200 mb-6 shadow-sm space-y-4">
-                <div>
-                    <label class="block text-[10px] font-black text-indigo-500 uppercase tracking-widest mb-1.5">Transferir para</label>
-                    <select id="select-transferir-colega" class="w-full p-3 border border-slate-200 rounded-xl text-xs bg-slate-50 outline-none focus:ring-2 focus:ring-indigo-500 font-bold text-slate-700"></select>
-                </div>
-            </div>
-
-            <button id="btn-finalizar-dinamico" class="w-full bg-slate-900 hover:bg-slate-950 text-white font-black py-4 rounded-2xl shadow-lg transition-all text-xs uppercase tracking-widest active:scale-95 flex justify-center items-center gap-2 mt-auto mb-2">
-                EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4')}
-            </button>
-        `;
-
-        aba.innerHTML = html;
-        this.povoarSelectsDinamicos();
-        this.atualizarListaDemandasInterfaceExterna();
-        this._setupGeradorVerde(assistido);
-
-        this.fluxoSelecionado = 'direto';
-        const botoesFluxo = document.querySelectorAll('.fluxo-opt-btn');
-        const configBoxes = {
-            'direto': document.getElementById('config-numero-processo'),
-            'distribuicao': document.getElementById('config-distribuicao'),
-            'correcao': document.getElementById('config-correcao'),
-            'devolver': document.getElementById('config-devolver'),
-            'devolverDist': document.getElementById('config-devolver-dist'),
-            'transferir': document.getElementById('config-transferencia'),
-            'pausar': null
-        };
-
-        const setAtivo = (btnClicado, fluxo) => {
-            this.fluxoSelecionado = fluxo;
-            botoesFluxo.forEach(b => b.className = 'fluxo-opt-btn bg-white border border-slate-200 p-4 rounded-2xl text-left transition-all hover:shadow-md group');
-            const coresAvas = {
-                'direto': 'bg-emerald-50 border border-emerald-300 ring-2 ring-emerald-100 shadow-md',
-                'distribuicao': 'bg-blue-50 border border-blue-300 ring-2 ring-blue-100 shadow-md',
-                'correcao': 'bg-amber-50 border border-amber-300 ring-2 ring-amber-100 shadow-md',
-                'devolver': 'bg-orange-50 border border-orange-300 ring-2 ring-orange-100 shadow-md',
-                'devolverDist': 'bg-cyan-50 border border-cyan-300 ring-2 ring-cyan-100 shadow-md',
-                'transferir': 'bg-indigo-50 border border-indigo-300 ring-2 ring-indigo-100 shadow-md',
-                'pausar': 'bg-slate-100 border border-slate-400 ring-2 ring-slate-200 shadow-md'
-            };
-            btnClicado.className = `fluxo-opt-btn ${coresAvas[fluxo]} p-4 rounded-2xl text-left transition-all shadow-md group`;
-
-            Object.keys(configBoxes).forEach(key => {
-                if (configBoxes[key]) configBoxes[key].classList.add('hidden');
-            });
-            if (configBoxes[fluxo]) configBoxes[fluxo].classList.remove('hidden');
-        };
-
-        document.getElementById('btn-opt-direto')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'direto'));
-        document.getElementById('btn-opt-dist')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'distribuicao'));
-        document.getElementById('btn-opt-correcao')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'correcao'));
-        document.getElementById('btn-opt-devolver')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolver'));
-        document.getElementById('btn-opt-devolver-dist')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'devolverDist'));
-        document.getElementById('btn-opt-transferir')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'transferir'));
-        document.getElementById('btn-opt-pausar')?.addEventListener('click', (e) => setAtivo(e.currentTarget, 'pausar'));
-
-        document.getElementById('btn-opt-direto')?.click();
-
-        document.getElementById('btn-add-demanda-externo').onclick = () => this.adicionarNovaDemandaFluxoExterno();
-        document.getElementById('btn-finalizar-dinamico').onclick = () => this.finalizarProcesso();
-    },
-
-    adicionarNovaDemandaFluxoExterno() {
-        const input = document.getElementById('input-nova-demanda-externo');
-        const text = input ? input.value.trim() : '';
-        if (text) {
-            this.demandasAdicionaisLocais.push(text);
-            input.value = '';
-            this.atualizarListaDemandasInterfaceExterna();
-        }
-    },
-
-    removerDemandaFluxoExterno(index) {
-        this.demandasAdicionaisLocais.splice(index, 1);
-        this.atualizarListaDemandasInterfaceExterna();
-    },
-
-    atualizarListaDemandasInterfaceExterna() {
-        const container = document.getElementById('container-lista-demandas-externo');
-        if (!container) return;
-        container.innerHTML = '';
-
-        if (this.demandasAdicionaisLocais.length === 0) {
-            container.innerHTML = `<p class="text-[10px] text-indigo-400 font-medium text-center py-3 bg-white/50 rounded-xl border border-dashed border-indigo-200">Nenhum caso extra somado.</p>`;
-            return;
-        }
-
-        this.demandasAdicionaisLocais.forEach((dem, index) => {
-            const div = document.createElement('div');
-            div.className = "flex justify-between items-center bg-white border border-indigo-100 p-2.5 rounded-xl shadow-sm text-xs";
-            div.innerHTML = `
-                <span class="font-bold text-slate-700 flex items-center gap-1.5">${ico('scale', 'w-3 h-3 text-indigo-400')} ${escapeHTML(dem)}</span>
-                <button type="button" class="text-[9px] font-bold text-red-500 hover:text-red-700 bg-red-50 hover:bg-red-100 px-2 py-1 rounded-lg transition-colors" data-index="${index}">Remover</button>
-            `;
-            div.querySelector('button').onclick = () => this.removerDemandaFluxoExterno(index);
-            container.appendChild(div);
-        });
-    },
-
-    povoarSelectsDinamicos() {
-        const defensores = this.todosColaboradores.filter(c => c.cargo?.toLowerCase().includes('defensor'));
-        const equipeTecnica = this.todosColaboradores.filter(c => !c.cargo?.toLowerCase().includes('defensor'));
-        const todosMenosEu = this.todosColaboradores.filter(c => c.nome !== this.colaboradorNome);
-
-        const preencher = (idSelect, lista, defaultOpt, valueToSelect = null) => {
-            const select = document.getElementById(idSelect);
-            if (!select) return;
-            select.innerHTML = `<option value="">${defaultOpt}</option>`;
-            lista.forEach(c => {
-                const opt = document.createElement('option');
-                opt.value = c.nome;
-                opt.textContent = `${c.nome} ${c.cargo ? '- '+c.cargo : ''}`;
-                if (valueToSelect === c.nome) opt.selected = true;
-                select.appendChild(opt);
-            });
-        };
-
-        preencher('select-defensor-distribuicao', defensores, '--- SELECIONE ---');
-        preencher('select-defensor-correcao', defensores, '--- SELECIONE ---');
-        preencher('select-transferir-colega', todosMenosEu, '--- SELECIONE ---');
-
-        const enviadoPorInicial = this.assistidoData?.enviadoPor || '';
-        preencher('select-servidor-devolver', equipeTecnica, '--- SELECIONE ---', enviadoPorInicial);
-    },
-
-    async finalizarProcesso() {
-        if (this.pautaFechada) {
-            alert("Ação negada. A pauta foi fechada pelo administrador.");
-            return;
-        }
-
-        if (!this.fluxoSelecionado || this.isProcessing) return;
-
-        this.isProcessing = true;
-        const btnFinalizar = document.getElementById('btn-finalizar-dinamico');
-        btnFinalizar.disabled = true;
-        btnFinalizar.innerHTML = '<span class="animate-pulse">PROCESSANDO...</span>';
-
-        const numProcessoSeguro = document.getElementById('input-numero-caso')?.value.trim() || '';
-        const colabSeguro = this.colaboradorNome || 'Sistema';
-        const pautaIdSeguro = this.pautaId || '';
-        const assistidoIdSeguro = this.assistidoId || '';
-
-        let tituloSucesso = "Atendimento Atualizado!";
-        let subtituloSucesso = "Ação registrada com sucesso.";
-        let colaboradorDestinoObj = null;
-
-        const objetoDemandasFinal = {
-            quantidade: this.demandasAdicionaisLocais.length,
-            descricoes: this.demandasAdicionaisLocais
-        };
-
-        try {
-            const pautaDoc = await getDoc(doc(db, "pautas", pautaIdSeguro));
-            const pautaConfigAtiva = pautaDoc.exists() ? pautaDoc.data() : { useDistributionFlow: false };
-            const temDistribuicaoAtiva = pautaConfigAtiva.useDistributionFlow === true;
-
-            const docRef = doc(db, "pautas", pautaIdSeguro, "attendances", assistidoIdSeguro);
-            const novoToken = this._gerarTokenSeguro();
-            const timestampIso = new Date().toISOString();
-
-            const atualizacaoDeResponsavel = {
-                assignedCollaborator: {
-                    id: this.colaboradorId || this.colaboradorAtual?.id || '',
-                    name: this.colaboradorNome
-                }
-            };
-
-            if (this.fluxoSelecionado === 'direto') {
-                const enviadoPorColaborador = this.assistidoData?.enviadoPor || null;
-                const mapaProdutividadeBI = {};
-                if (enviadoPorColaborador) mapaProdutividadeBI[enviadoPorColaborador] = 1;
-                mapaProdutividadeBI[colabSeguro] = 1;
-
-                let statusDestinoFinal = 'aguardandoNumero';
-                if (numProcessoSeguro || !temDistribuicaoAtiva) statusDestinoFinal = 'atendido';
-
-                await updateDoc(docRef, {
-                    ...atualizacaoDeResponsavel,
-                    status: statusDestinoFinal,
-                    attendedBy: colabSeguro,
-                    enviadoPor: enviadoPorColaborador,
-                    trabalhosPorUsuario: mapaProdutividadeBI,
-                    creatorEmail: enviadoPorColaborador ? null : (this.colaboradorAtual?.email || null),
-                    attendedAt: timestampIso,
-                    finalizadoPeloColaborador: statusDestinoFinal === 'atendido',
-                    numeroProcesso: numProcessoSeguro,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(statusDestinoFinal === 'atendido' ? (numProcessoSeguro ? `Atendimento concluído na Mesa Digital — CNP ${numProcessoSeguro}` : 'Atendimento concluído na Mesa Digital') : 'Aprovado na Mesa Digital, aguardando nº do processo', timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: statusDestinoFinal === 'atendido' ? 'APROVADO_E_CONCLUIDO' : 'APROVADO_AGUARDANDO_NUMERO',
-                        by: colabSeguro,
-                        msg: numProcessoSeguro ? `Nº CNP: ${numProcessoSeguro}` : 'Aprovado e protocolado internamente',
-                        at: timestampIso
-                    })
-                });
-
-                tituloSucesso = "Atendimento Finalizado!";
-                subtituloSucesso = statusDestinoFinal === 'atendido' ? "Processo concluído e salvo." : "Atendimento encerrado sem número de processo.";
-            }
-            else if (this.fluxoSelecionado === 'distribuicao') {
-                const def = document.getElementById('select-defensor-distribuicao')?.value || '';
-                const nota = document.getElementById('notas-distribuicao-dinamico')?.value || '';
-                const finalidade = document.getElementById('select-finalidade-envio')?.value === 'distribuir' ? 'distribuir' : 'assinar';
-                const verboFinalidade = finalidade === 'distribuir' ? 'distribuição' : 'assinatura';
-                if (!def) {
-                    alert("Obrigatório selecionar um Defensor.");
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false;
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
-                    return;
-                }
-
-                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
-
-                await updateDoc(docRef, {
-                    ...atualizacaoDeResponsavel,
-                    status: 'aguardandoDistribuicao',
-                    defensorResponsavel: def,
-                    notasRevisao: nota,
-                    numeroProcesso: numProcessoSeguro,
-                    finalidadeEnvio: finalidade,
-                    enviadoEm: timestampIso,
-                    distributionStatus: 'pending',
-                    enviadoPor: colabSeguro,
-                    delegationToken: novoToken,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para ${verboFinalidade} do Defensor(a) ${def}`, timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'ENVIADO_PARA_REVISAO',
-                        by: colabSeguro,
-                        msg: nota || `Enviado para ${verboFinalidade} do Defensor(a) ${def}`,
-                        at: timestampIso
-                    })
-                });
-
-                tituloSucesso = "Enviado à Distribuição!";
-                subtituloSucesso = `O Defensor(a) ${def} já recebeu o documento.`;
-            }
-            else if (this.fluxoSelecionado === 'correcao') {
-                const def = document.getElementById('select-defensor-correcao')?.value || '';
-                const nota = document.getElementById('notas-correcao-dinamico')?.value || '';
-                if (!def) {
-                    alert("Obrigatório selecionar um Defensor.");
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false;
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
-                    return;
-                }
-
-                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === def);
-
-                await updateDoc(docRef, {
-                    ...atualizacaoDeResponsavel,
-                    status: 'aguardandoCorrecao',
-                    defensorResponsavel: def,
-                    notasRevisao: nota,
-                    reviewMotivoDevolucao: nota,
-                    numeroProcesso: numProcessoSeguro,
-                    finalidadeEnvio: 'corrigir',
-                    enviadoEm: timestampIso,
-                    enviadoPor: colabSeguro,
-                    delegationToken: novoToken,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(`Enviado para avaliação do Defensor(a) ${def}`, timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'ENVIADO_PARA_CORRECAO',
-                        by: colabSeguro,
-                        msg: nota || `Avaliação solicitada ao Defensor(a) ${def}`,
-                        at: timestampIso
-                    })
-                });
-
-                tituloSucesso = "Enviado p/ Avaliação!";
-                subtituloSucesso = `O Defensor(a) ${def} avaliará a dúvida inserida.`;
-            }
-            else if (this.fluxoSelecionado === 'devolver') {
-                const serv = document.getElementById('select-servidor-devolver')?.value || '';
-                const nota = document.getElementById('notas-devolver-dinamico')?.value || '';
-                if (!serv) {
-                    alert("Selecione o profissional de destino.");
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false;
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
-                    return;
-                }
-
-                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === serv);
-
-                await updateDoc(docRef, {
-                    status: 'emAtendimento',
-                    assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: serv, email: colaboradorDestinoObj?.email || '' },
-                    inAttendanceTime: timestampIso,
-                    delegationToken: novoToken,
-                    historicoTransferencia: `Devolvido p/ Correção por ${colabSeguro}. Msg: ${nota}`,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(`Devolvido para correção na mesa de ${serv}`, timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'DEVOLVIDO_COM_ERRO',
-                        by: colabSeguro,
-                        msg: nota || `Retornado para correção na mesa de ${serv}`,
-                        at: timestampIso
-                    })
-                });
-
-                if (colaboradorDestinoObj?.id) {
-                    updateDoc(doc(db, "pautas", pautaIdSeguro, "collaborators", colaboradorDestinoObj.id), { status: 'ocupado', currentAttendance: assistidoIdSeguro }).catch(() => {});
-                }
-                tituloSucesso = "Processo Devolvido!";
-                subtituloSucesso = `O colega ${serv} deve corrigir o documento.`;
-            }
-            else if (this.fluxoSelecionado === 'devolverDist') {
-                const nota = document.getElementById('notas-devolver-dist')?.value || '';
-
-                await updateDoc(docRef, {
-                    status: 'aguardandoDistribuicao',
-                    distributionStatus: 'pending',
-                    defensorResponsavel: null,
-                    finalidadeEnvio: 'distribuir',
-                    enviadoEm: timestampIso,
-                    notasRevisao: nota,
-                    numeroProcesso: numProcessoSeguro,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico('Devolvido para a distribuição', timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'DEVOLVIDO_PARA_DISTRIBUICAO',
-                        by: colabSeguro,
-                        msg: nota || 'Devolvido pelo defensor para a fila de distribuição',
-                        at: timestampIso
-                    })
-                });
-
-                tituloSucesso = "Devolvido à Distribuição!";
-                subtituloSucesso = "O caso voltou para a fila de distribuição.";
-            }
-            else if (this.fluxoSelecionado === 'transferir') {
-                const colega = document.getElementById('select-transferir-colega')?.value || '';
-                if (!colega) {
-                    alert("Selecione um colega.");
-                    this.isProcessing = false;
-                    btnFinalizar.disabled = false;
-                    btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
-                    return;
-                }
-
-                colaboradorDestinoObj = this.todosColaboradores.find(c => c.nome === colega);
-
-                await updateDoc(docRef, {
-                    status: 'emAtendimento',
-                    assignedCollaborator: { id: colaboradorDestinoObj?.id || 'manual', name: colega, email: colaboradorDestinoObj?.email || '' },
-                    inAttendanceTime: timestampIso,
-                    delegationToken: novoToken,
-                    historicoTransferencia: `Transferência de ${colabSeguro} para ${colega}.`,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico(`Transferido para a mesa de ${colega}`, timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'TRANSFERENCIA_DE_CASO',
-                        by: colabSeguro,
-                        msg: `Caso repassado para a mesa do colega ${colega}`,
-                        at: timestampIso
-                    })
-                });
-
-                if (colaboradorDestinoObj?.id) {
-                    updateDoc(doc(db, "pautas", pautaIdSeguro, "collaborators", colaboradorDestinoObj.id), { status: 'ocupado', currentAttendance: assistidoIdSeguro }).catch(() => {});
-                }
-                tituloSucesso = "Transferência Ativa!";
-                subtituloSucesso = `Caso transferido com sucesso para ${colega}.`;
-            }
-            else if (this.fluxoSelecionado === 'pausar') {
-                await updateDoc(docRef, {
-                    status: 'aguardando',
-                    assignedCollaborator: null,
-                    delegatedBy: null,
-                    delegatedAt: null,
-                    inAttendanceTime: null,
-                    distributionStatus: null,
-                    demandas: objetoDemandasFinal,
-                    historicoAcoes: arrayUnion(this._registroHistorico('Atendimento pausado e devolvido à fila de espera', timestampIso, colabSeguro)),
-                    history: arrayUnion({
-                        action: 'ATENDIMENTO_PAUSADO',
-                        by: colabSeguro,
-                        msg: 'Atendimento pausado pelo colaborador. Retornado para a fila de Espera.',
-                        at: timestampIso
-                    })
-                });
-
-                tituloSucesso = "Pausa Registrada";
-                subtituloSucesso = "O assistido foi mandado de volta à fila de espera.";
-            }
-
-            if (colaboradorDestinoObj && colaboradorDestinoObj.email) {
-                if (typeof EmailService !== 'undefined' && EmailService.sendDelegationEmail) {
-                    await EmailService.sendDelegationEmail(
-                        colaboradorDestinoObj.email,
-                        colaboradorDestinoObj.nome,
-                        this.assistidoData?.name || "Assistido",
-                        colabSeguro,
-                        pautaIdSeguro,
-                        assistidoIdSeguro,
-                        novoToken
-                    );
-                }
-            }
-
-            if (typeof showNotification === 'function') {
-                showNotification(tituloSucesso, "success");
-            } else {
-                alert(`${tituloSucesso}\n${subtituloSucesso}`);
-            }
-
-            document.getElementById('btn-voltar-dashboard').click();
-
-        } catch (error) {
-            console.error("Erro no processamento:", error);
-            alert(`Erro ao salvar no banco de dados. Motivo: ${error.message}`);
-            if (btnFinalizar) {
-                btnFinalizar.disabled = false;
-                btnFinalizar.innerHTML = `EXECUTAR AÇÃO ${ico('arrowRight', 'w-4 h-4 inline-block')}`;
-            }
-        } finally {
-            this.isProcessing = false;
+        
+        if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.renderModalList === 'function') {
+            CollaboratorService.renderModalList(window.app);
+        } else if (typeof CollaboratorService !== 'undefined' && typeof CollaboratorService.updateList === 'function') {
+            CollaboratorService.updateList(window.app);
         }
     }
 };
 
-export default AtendimentoExternoService;
-window.AtendimentoExternoService = AtendimentoExternoService;
+window.abrirConstrutor = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    
+    try {
+        const { doc, getDoc } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
+        const docRef = doc(window.app.db, "formularios_coleta", coletaId);
+        const docSnap = await getDoc(docRef);
+        
+        if (docSnap.exists() && window.ColetasBuilderService) {
+            const container = document.getElementById('container-construtor-coleta');
+            
+            container.innerHTML = window.ColetasBuilderService.renderConstrutorHTML(docSnap.data(), coletaId);
+            container.classList.remove('hidden');
+            
+            window.ColetasBuilderService.initEventos(window.app.db, coletaId, docSnap.data());
+        } else {
+            showNotification("Erro: Serviço construtor não carregado.", "error");
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification("Erro ao carregar estrutura da coleta.", "error");
+    }
+};
+
+window.verResultados = async (coletaId) => {
+    if (!window.app || !window.app.db) return;
+    window.ColetasBiService.abrirResultados(window.app.db, coletaId);
+};
+
+window.ApiIntegration = {
+    simularSincronizacaoVerde: function(pautaId) {
+        console.log("Simulando sincronização verde para a pauta:", pautaId);
+        showNotification("Sincronização simulada com sucesso!", "success");
+    }
+};
+
+window.abrirMonitoramento = function(pautaId, assistidoId, assistidoNome) {
+    if(window.MonitoramentoService) window.MonitoramentoService.abrirMonitoramento(pautaId, assistidoId, assistidoNome, window.app);
+};
+
+window.abrirMonitoramentoGlobal = function() {
+    if(window.MonitoramentoService) window.MonitoramentoService.abrirMonitoramentoGlobal(window.app);
+};
+
+window.toggleMonitorVerde = function(pautaId, assistidoId, isVerde) {
+    if(window.MonitoramentoService && window.MonitoramentoService.toggleMonitorVerde) {}
+};
+
+window.salvarMonitorLink = function(pautaId, assistidoId, inputId) {};
+
+window.salvarMonitorObs = function(pautaId, assistidoId, inputId) {};
+
+window.registrarAcaoHistorico = function(pautaId, assistidoId, descricaoAcao) {
+    if(window.MonitoramentoService) window.MonitoramentoService.registrarAcaoHistorico(pautaId, assistidoId, descricaoAcao, window.app);
+};
+
+window.renderizarListaMonitorGlobal = function(filtro = '') {
+    if(window.MonitoramentoService) window.MonitoramentoService.renderizarListaMonitorGlobal(window.app, filtro);
+};
