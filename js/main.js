@@ -1806,7 +1806,6 @@ class SIGEPApp {
             }
 
             this.setupRealtimeListener(pautaId);
-            this.setupOuvinteSolicitacoesPuxada(pautaId);
             
             if (typeof CollaboratorService?.setupListener === 'function') {
                 CollaboratorService.setupListener(this, pautaId);
@@ -1832,7 +1831,6 @@ class SIGEPApp {
     _teardownPauta() {
         if (this.unsubscribeFromAttendances)  this.unsubscribeFromAttendances();
         if (this.unsubscribeFromCollaborators) this.unsubscribeFromCollaborators();
-        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
 
         document.querySelectorAll('[id^="btn-colabs-disponiveis-"]').forEach(btn => btn.remove());
 
@@ -2120,75 +2118,6 @@ class SIGEPApp {
         };
     }
 
-    // ─── CENTRAL DE SOLICITAÇÕES DE PUXADA DE CASOS ───────────────────────────
-
-    setupOuvinteSolicitacoesPuxada(pautaId) {
-        if (this.unsubscribePuxadas) this.unsubscribePuxadas();
-        
-        const attendancesRef = collection(this.db, "pautas", pautaId, "attendances");
-        const q = query(attendancesRef, where("status", "==", "aguardandoAutorizacaoPuxada"));
-
-        this.unsubscribePuxadas = onSnapshot(q, (snapshot) => {
-            const solicitacoes = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-            this.atualizarBadgeNotificacaoPauta(solicitacoes);
-        });
-    }
-
-    atualizarBadgeNotificacaoPauta(solicitacoes) {
-        let badge = document.getElementById('badge-puxadas-pendentes');
-        const headerActions = document.querySelector('.relative.flex.items-center.w-full.sm\\:w-auto.justify-end') || document.querySelector('header');
-        
-        if (solicitacoes.length > 0) {
-            if (!badge && headerActions) {
-                badge = document.createElement('button');
-                badge.id = 'badge-puxadas-pendentes';
-                badge.className = 'mr-3 bg-amber-500 hover:bg-amber-600 text-white font-black py-2 px-3 rounded-lg transition text-xs flex items-center gap-2 shadow-md animate-pulse shrink-0';
-                badge.onclick = () => this.abrirModalGestaoPuxadas(solicitacoes);
-                headerActions.prepend(badge);
-            }
-            if (badge) {
-                badge.innerHTML = `🔔 Pedidos de Puxada <span class="bg-white text-amber-700 px-2 py-0.5 rounded-full text-xs font-black">${solicitacoes.length}</span>`;
-            }
-        } else if (badge) {
-            badge.remove();
-        }
-    }
-
-    abrirModalGestaoPuxadas(solicitacoes) {
-        let modal = document.getElementById('modal-gestao-puxadas');
-        if (!modal) {
-            modal = document.createElement('div');
-            modal.id = 'modal-gestao-puxadas';
-            modal.className = 'fixed inset-0 bg-slate-900/80 z-[99999] flex items-center justify-center p-4 backdrop-blur-sm';
-            document.body.appendChild(modal);
-        }
-
-        modal.innerHTML = `
-            <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
-                    <h3 class="font-black text-sm uppercase tracking-wider">Solicitações de Atendimento (${solicitacoes.length})</h3>
-                    <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
-                </div>
-                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50">
-                    ${solicitacoes.map(item => `
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
-                                <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md uppercase">Por: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
-                            </div>
-                            <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
-                                <b>Motivo:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem motivo')}"
-                            </p>
-                            <div class="flex gap-2 pt-2">
-                                <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
-                                <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Chamar</button>
-                            </div>
-                        </div>
-                    `).join('')}
-                </div>
-            </div>`;
-    }
-
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -2240,54 +2169,6 @@ class SIGEPApp {
 
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
-window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColaborador) {
-    const pautaId = window.app?.currentPauta?.id;
-    if (!pautaId) return;
-
-    try {
-        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        
-        await updateDoc(docRef, {
-            status: 'emAtendimento',
-            assignedCollaborator: { name: nomeColaborador },
-            inAttendanceTime: new Date().toISOString(),
-            solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion(`Puxada autorizada e atendida por ${nomeColaborador}`)
-        });
-
-        document.getElementById('modal-gestao-puxadas')?.remove();
-
-        // Dispara o modal de chamada na TV integrado do sistema se estiver disponível
-        if (typeof window.abrirModalChamadaTV === 'function') {
-            window.abrirModalChamadaTV(nomeAssistido);
-        } else if (typeof PautaService?.callSpecificAssisted === 'function') {
-            // Caso utilize a chamada direta do serviço de pauta
-        }
-
-        if (window.showNotification) window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
-    } catch (e) {
-        console.error(e);
-        alert("Erro ao autorizar atendimento.");
-    }
-};
-
-window.recusarPuxada = async function(assistidoId) {
-    const pautaId = window.app?.currentPauta?.id;
-    if (!pautaId) return;
-    
-    try {
-        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        await updateDoc(docRef, {
-            status: 'aguardando',
-            solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
-        });
-        document.getElementById('modal-gestao-puxadas')?.remove();
-        if (window.showNotification) window.showNotification("Solicitação recusada.", "info");
-    } catch(e) {
-        console.error(e);
-    }
-};
 window.app = new SIGEPApp();
 
 window.renderEstruturaAtual = renderEstruturaAtual;
