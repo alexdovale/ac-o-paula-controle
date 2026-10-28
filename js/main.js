@@ -2126,6 +2126,8 @@ class SIGEPApp {
 
     // ─── CENTRAL DE SOLICITAÇÕES DE PUXADA DE CASOS ───────────────────────────
 
+    // ─── OUVINTE DE SOLICITAÇÕES DE PUXADA ───────────────────────────────────
+
     setupOuvinteSolicitacoesPuxada(pautaId) {
         if (this.unsubscribePuxadas) this.unsubscribePuxadas();
         
@@ -2168,31 +2170,52 @@ class SIGEPApp {
         }
 
         modal.innerHTML = `
-            <div class="bg-white w-full max-w-lg rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[80vh]">
-                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white">
-                    <h3 class="font-black text-sm uppercase tracking-wider">Solicitações de Atendimento (${solicitacoes.length})</h3>
+            <div class="bg-white w-full max-w-2xl rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[85vh]">
+                <div class="bg-slate-900 px-6 py-4 flex justify-between items-center text-white shrink-0">
+                    <h3 class="font-black text-sm uppercase tracking-wider">Solicitações de Atendimento Pendentes (${solicitacoes.length})</h3>
                     <button onclick="document.getElementById('modal-gestao-puxadas')?.remove()" class="text-slate-400 hover:text-white text-2xl font-bold">&times;</button>
                 </div>
-                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50">
-                    ${solicitacoes.map(item => `
-                        <div class="bg-white p-4 rounded-2xl border border-slate-200 shadow-sm space-y-2">
-                            <div class="flex justify-between items-start">
-                                <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
-                                <span class="text-[10px] font-bold bg-blue-50 text-blue-600 px-2.5 py-1 rounded-md uppercase">Por: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                <div class="p-5 overflow-y-auto space-y-4 bg-slate-50 flex-1 custom-scrollbar">
+                    ${solicitacoes.map(item => {
+                        // Formata os dados de exibição do card original
+                        const urgenciaBadge = item.priority === 'URGENTE' ? `<span class="bg-red-100 text-red-600 px-2 py-0.5 rounded text-[10px] font-black uppercase tracking-wider">Urgente</span>` : '';
+                        const horarioAgendado = item.scheduledTime ? `Agendado: <b>${escapeHTML(item.scheduledTime)}</b>` : '';
+                        const chegada = item.arrivalTime ? `Chegada: <b>${new Date(item.arrivalTime).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}</b>` : '';
+
+                        return `
+                            <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+                                <div class="flex justify-between items-start gap-2">
+                                    <div>
+                                        <div class="flex items-center gap-2 mb-1">
+                                            <h4 class="font-black text-slate-800 text-base">${escapeHTML(item.name)}</h4>
+                                            ${urgenciaBadge}
+                                        </div>
+                                        <p class="text-xs text-slate-500 font-bold">Assunto: ${escapeHTML(item.subject || 'Sem assunto')}</p>
+                                    </div>
+                                    <span class="text-[10px] font-black bg-blue-50 text-blue-700 px-2.5 py-1 rounded-md uppercase tracking-wider shrink-0">Solicitante: ${escapeHTML(item.solicitacaoPuxada?.solicitante || 'Colaborador')}</span>
+                                </div>
+
+                                <div class="flex flex-wrap gap-3 text-[11px] text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+                                    ${horarioAgendado ? `<span>${horarioAgendado}</span>` : ''}
+                                    ${chegada ? `<span>• ${chegada}</span>` : ''}
+                                    ${item.room ? `<span>• Sala/Local: <b>${escapeHTML(item.room)}</b></span>` : ''}
+                                </div>
+
+                                <p class="text-xs text-slate-600 bg-amber-50/60 p-3 rounded-xl border border-amber-100 italic">
+                                    <b>Motivo informado:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem motivo')}"
+                                </p>
+
+                                <div class="flex gap-2 pt-2">
+                                    <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
+                                    <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Abrir Atendimento</button>
+                                </div>
                             </div>
-                            <p class="text-xs text-slate-600 bg-slate-50 p-3 rounded-xl border border-slate-100 italic">
-                                <b>Motivo:</b> "${escapeHTML(item.solicitacaoPuxada?.motivo || 'Sem motivo')}"
-                            </p>
-                            <div class="flex gap-2 pt-2">
-                                <button onclick="window.recusarPuxada('${item.id}')" class="flex-1 bg-red-50 hover:bg-red-100 text-red-600 font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition">Recusar</button>
-                                <button onclick="window.autorizarEChamarTV('${item.id}', '${escapeHTML(item.name)}', '${escapeHTML(item.solicitacaoPuxada?.solicitante || '')}')" class="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white font-black py-2.5 rounded-xl text-xs uppercase tracking-wider transition shadow-sm">Autorizar e Chamar</button>
-                            </div>
-                        </div>
-                    `).join('')}
+                        `;
+                    }).join('')}
                 </div>
             </div>`;
-    }
-
+    },
+    
     saveColumnPreferences() {
         const preferences = {
             showEmAtendimento: document.getElementById('toggle-em-atendimento')?.checked || false,
@@ -2249,26 +2272,33 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
     if (!pautaId) return;
 
     try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
         
+        // Atualiza o status para emAtendimento e preenche o colaborador solicitante
         await updateDoc(docRef, {
             status: 'emAtendimento',
             assignedCollaborator: { name: nomeColaborador },
             inAttendanceTime: new Date().toISOString(),
             solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion(`Puxada autorizada e atendida por ${nomeColaborador}`)
+            historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
         });
 
+        // Fecha o modal de gestão de puxadas
         document.getElementById('modal-gestao-puxadas')?.remove();
 
-        // Dispara o modal de chamada na TV integrado do sistema se estiver disponível
-        if (typeof window.abrirModalChamadaTV === 'function') {
-            window.abrirModalChamadaTV(nomeAssistido);
-        } else if (typeof PautaService?.callSpecificAssisted === 'function') {
-            // Caso utilize a chamada direta do serviço de pauta
+        if (window.showNotification) {
+            window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        if (window.showNotification) window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
+        // ABRIR O MODAL/PAINEL DE ATENDIMENTO/ATRIBUIÇÃO COM O COLABORADOR JÁ PREENCHIDO
+        // Dispara a função nativa do seu sistema que abre o modal de delegação/atendimento do caso
+        if (typeof window.app?.loadPauta === 'function') {
+            // Se preferir abrir diretamente a tela individual do assistido na mesa:
+            const baseUrl = window.location.href.split('?')[0];
+            window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
+        }
+
     } catch (e) {
         console.error(e);
         alert("Erro ao autorizar atendimento.");
@@ -2280,18 +2310,19 @@ window.recusarPuxada = async function(assistidoId) {
     if (!pautaId) return;
     
     try {
+        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
         await updateDoc(docRef, {
-            status: 'aguardando',
+            status: 'aguardando', // Devolve para a fila normal
             solicitacaoPuxada: null,
             historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
         });
-        document.getElementById('modal-gestao-puxadas')?.remove();
-        if (window.showNotification) window.showNotification("Solicitação recusada.", "info");
+        if (window.showNotification) window.showNotification("Solicitação recusada e caso devolvido à fila.", "info");
     } catch(e) {
         console.error(e);
     }
 };
+
 window.app = new SIGEPApp();
 
 window.renderEstruturaAtual = renderEstruturaAtual;
