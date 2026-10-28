@@ -1263,17 +1263,30 @@ export const AtendimentoExternoService = {
 
         if (!inputId) return;
 
-        inputId.addEventListener('input', (e) => {
-            const val = e.target.value.trim();
-            // Validação estrita: apenas números inteiros positivos
-            if (/^\d+$/.test(val) && parseInt(val, 10) > 0) {
-                const url = this._gerarUrlVerde(val);
+        const processarValor = (rawVal) => {
+            // Extrai apenas os números da string (ex: "CNP 7039722" vira "7039722")
+            const apenasNumeros = rawVal.replace(/\D/g, '');
+            
+            if (apenasNumeros && parseInt(apenasNumeros, 10) > 0) {
+                inputId.value = apenasNumeros;
+                const url = this._gerarUrlVerde(apenasNumeros);
                 if (textoUrl) textoUrl.textContent = url;
                 if (btnAbrir) btnAbrir.href = url;
                 if (containerLink) containerLink.classList.remove('hidden');
             } else {
                 if (containerLink) containerLink.classList.add('hidden');
             }
+        };
+
+        inputId.addEventListener('input', (e) => {
+            processarValor(e.target.value);
+        });
+
+        // Evento de colagem inteligente (Smart Paste)
+        inputId.addEventListener('paste', (e) => {
+            e.preventDefault();
+            const colarTexto = (e.clipboardData || window.clipboardData).getData('text');
+            processarValor(colarTexto);
         });
 
         if (btnCopiar) {
