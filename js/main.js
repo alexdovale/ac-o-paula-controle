@@ -1397,21 +1397,25 @@ class SIGEPApp {
                 }
             }
             
-            switch (this.currentPautaFilter) {
+            sswitch (this.currentPautaFilter) {
                 case 'my': filteredPautas = filteredPautas.filter(p => p.owner === user.uid); break;
                 case 'shared': filteredPautas = filteredPautas.filter(p => p.members?.includes(user.email) && p.owner !== user.uid); break;
                 case 'active':
                     filteredPautas = filteredPautas.filter(p => {
                         if (!p.createdAt) return false;
                         const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
-                        return new Date() <= dExp && !p.isClosed;
+                        return new Date() <= dExp && !p.isClosed && p.fechada !== true;
                     }); break;
                 case 'expired':
                     filteredPautas = filteredPautas.filter(p => {
                         if (!p.createdAt) return false;
                         const dExp = new Date(p.createdAt); dExp.setDate(dExp.getDate() + 7);
-                        return new Date() > dExp || p.isClosed;
+                        return new Date() > dExp || p.isClosed || p.fechada === true;
                     }); break;
+                default:
+                    // Oculta automaticamente pautas fechadas ou encerradas na listagem principal
+                    filteredPautas = filteredPautas.filter(p => !p.isClosed && p.fechada !== true);
+                    break;
             }
 
             const searchInput = document.getElementById('search-pautas-input');
