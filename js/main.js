@@ -2277,14 +2277,17 @@ class SIGEPApp {
 window.showNotification = showNotification;
 window.openDetailsModal = openDetailsModal;
 window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColaborador) {
-    const pautaId = window.app?.currentPauta?.id;
-    if (!pautaId) return;
+    const pautaId = window.app?.currentPauta?.id || new URLSearchParams(window.location.search).get('pautaId');
+    if (!pautaId) {
+        alert("ID da pauta não encontrado.");
+        return;
+    }
 
     try {
         const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
         const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        
-        // Atualiza o status para emAtendimento e preenche o colaborador solicitante
+
+        // 1. Atualiza o status e define o colaborador solicitante
         await updateDoc(docRef, {
             status: 'emAtendimento',
             assignedCollaborator: { name: nomeColaborador },
@@ -2293,45 +2296,41 @@ window.autorizarEChamarTV = async function(assistidoId, nomeAssistido, nomeColab
             historicoAcoes: arrayUnion(`Puxada autorizada para ${nomeColaborador}`)
         });
 
-        // Fecha o modal de gestão de puxadas
+        // 2. Fecha o modal de gestão de pedidos de puxada
         document.getElementById('modal-gestao-puxadas')?.remove();
 
         if (window.showNotification) {
             window.showNotification(`Atendimento autorizado para ${nomeColaborador}!`, "success");
         }
 
-        // ABRIR O MODAL/PAINEL DE ATENDIMENTO/ATRIBUIÇÃO COM O COLABORADOR JÁ PREENCHIDO
-        // Dispara a função nativa do seu sistema que abre o modal de delegação/atendimento do caso
-        if (typeof window.app?.loadPauta === 'function') {
-            // Se preferir abrir diretamente a tela individual do assistido na mesa:
+        // 3. ABRE O POP-UP NATIVO DE ATENDIMENTO / CHAMADA NA TV COM O COLABORADOR JÁ PREENCHIDO
+        // Define as variáveis globais que o seu sistema usa para identificar o assistido atual
+        window.assistedIdToHandle = assistidoId;
+        window.assistedNameToHandle = nomeAssistido;
+        window.selectedCollaboratorName = nomeColaborador;
+
+        // Se o seu sistema tiver a função ou modal padrão de escolher atendente/chamar na TV:
+        const modalAtendente = document.getElementById('select-collaborator-modal') || document.getElementById('attendant-modal');
+        if (modalAtendente) {
+            // Se houver um select do colaborador no modal, pré-seleciona o nome dele
+            const selectCollab = document.getElementById('attendant-select') || document.getElementById('collaborator-select');
+            if (selectCollab) {
+                selectCollab.value = nomeColaborador;
+            }
+            modalAtendente.classList.remove('hidden');
+        } else if (typeof window.app?.abrirModalAtendimento === 'function') {
+            window.app.abrirModalAtendimento(assistidoId);
+        } else {
+            // Alternativa: Se preferir abrir o modal de chamada direta na TV / Guichê
             const baseUrl = window.location.href.split('?')[0];
             window.location.href = `${baseUrl}?pautaId=${pautaId}&assistidoId=${assistidoId}`;
         }
 
     } catch (e) {
-        console.error(e);
+        console.error("Erro ao autorizar puxada:", e);
         alert("Erro ao autorizar atendimento.");
     }
 };
-
-window.recusarPuxada = async function(assistidoId) {
-    const pautaId = window.app?.currentPauta?.id;
-    if (!pautaId) return;
-    
-    try {
-        const { doc, updateDoc, arrayUnion } = await import("https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js");
-        const docRef = doc(window.app.db, "pautas", pautaId, "attendances", assistidoId);
-        await updateDoc(docRef, {
-            status: 'aguardando', // Devolve para a fila normal
-            solicitacaoPuxada: null,
-            historicoAcoes: arrayUnion("Solicitação de puxada recusada pela pauta")
-        });
-        if (window.showNotification) window.showNotification("Solicitação recusada e caso devolvido à fila.", "info");
-    } catch(e) {
-        console.error(e);
-    }
-};
-
 window.app = new SIGEPApp();
 
 window.renderEstruturaAtual = renderEstruturaAtual;
